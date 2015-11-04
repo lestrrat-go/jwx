@@ -13,7 +13,7 @@ import (
 )
 
 func TestJwksRoundtrip(t *testing.T) {
-	ks1 := &KeySet{}
+	ks1 := &Set{}
 	for _, use := range []string{"enc", "sig"} {
 		for i := 0; i < 2; i++ {
 			key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -38,7 +38,7 @@ func TestJwksRoundtrip(t *testing.T) {
 		return
 	}
 
-	ks2, err := ParseKeySet(bytes.NewReader(buf))
+	ks2, err := ParseSet(bytes.NewReader(buf))
 	if !assert.NoError(t, err, "JSON unmarshal succeeded") {
 		return
 	}

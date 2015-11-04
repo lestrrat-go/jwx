@@ -12,9 +12,9 @@ import (
 // upon which keys are present in the parsed JSON object
 type rawKey map[string]interface{}
 
-// KeySet is a convenience struct to allow generating and parsing
+// Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
-type KeySet struct {
+type Set struct {
 	Keys []JsonWebKey `json:"keys"`
 }
 

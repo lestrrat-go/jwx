@@ -7,8 +7,8 @@ import (
 )
 
 // LookupKeyId looks for keys matching the given key id. Note that the
-// KeySet *may* contain multiple keys with the same key id
-func (s KeySet) LookupKeyId(kid string) []JsonWebKey {
+// Set *may* contain multiple keys with the same key id
+func (s Set) LookupKeyId(kid string) []JsonWebKey {
 	var keys []JsonWebKey
 	for _, key := range s.Keys {
 		if key.Kid() == kid {
@@ -18,7 +18,7 @@ func (s KeySet) LookupKeyId(kid string) []JsonWebKey {
 	return keys
 }
 
-func ParseKeySet(rdr io.Reader) (*KeySet, error) {
+func ParseSet(rdr io.Reader) (*Set, error) {
 	m := make(map[string]interface{})
 	if err := json.NewDecoder(rdr).Decode(&m); err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func ParseKeySet(rdr io.Reader) (*KeySet, error) {
 		return nil, errors.New("invalid 'keys' parameter")
 	}
 
-	ks := KeySet{}
+	ks := Set{}
 	for _, c := range v {
 		conf, ok := c.(map[string]interface{})
 		if !ok {
