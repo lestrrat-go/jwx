@@ -62,7 +62,7 @@ type Signer interface {
 }
 
 type Verifier interface {
-	Verify([]byte) error
+	Verify([]byte, []byte) error
 }
 
 type RSASign struct {

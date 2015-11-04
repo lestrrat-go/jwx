@@ -40,24 +40,8 @@ func TestCompact_EncodeDecode(t *testing.T) {
 	if !assert.Equal(t, buffer.Buffer("Hello, World!"), c.Payload, "Payload is decoded") {
 		return
 	}
-	t.Logf("c.Payload = %s", c.Payload)
 
-	h, err := hdr.Base64Encode()
-	if assert.NoError(t, err) {
-		return
-	}
-
-	p, err := payload.Base64Encode()
-	if assert.NoError(t, err) {
-		return
-	}
-
-	err = signer.Verify(
-		append(append(h, '.'), p...),
-		c.Signature,
-	)
-
-	if !assert.NoError(t, err, "Verify is successful") {
+	if !assert.NoError(t, c.Verify(signer), "Verify is successful") {
 		return
 	}
 }

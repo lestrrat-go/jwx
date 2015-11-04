@@ -15,6 +15,10 @@ func FromUint(v uint64) Buffer {
 	return Buffer(bytes.TrimLeft(data, "\x00"))
 }
 
+func (b Buffer) Bytes() []byte {
+	return []byte(b)
+}
+
 func (b Buffer) Base64Encode() ([]byte, error) {
 	enc := base64.RawURLEncoding
 	out := make([]byte, enc.EncodedLen(len(b)))
@@ -31,7 +35,7 @@ func (b *Buffer) Base64Decode(v []byte) error {
 }
 
 func (b Buffer) MarshalJSON() ([]byte, error) {
-	return json.Marshal([]byte(b))
+	return json.Marshal(b.Bytes())
 }
 
 func (b *Buffer) UnmarshalJSON(data []byte) error {
