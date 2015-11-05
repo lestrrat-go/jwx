@@ -57,10 +57,12 @@ type Compact struct {
 var ErrInvalidCompactPartsCount = errors.New("compact JWS format must have three parts")
 var ErrUnsupportedAlgorithm = errors.New("unspported algorithm")
 
+// Signer generates signature for the given payload
 type Signer interface {
 	Sign([]byte) ([]byte, error)
 }
 
+// Verifier is used to verify the signature against the payload
 type Verifier interface {
 	Verify([]byte, []byte) error
 }

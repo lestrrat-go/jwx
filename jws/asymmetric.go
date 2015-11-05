@@ -12,6 +12,10 @@ func (s RSASign) hash() (crypto.Hash, error) {
 	switch s.Algorithm {
 	case RS256, PS256:
 		hash = crypto.SHA256
+	case RS384, PS384:
+		hash = crypto.SHA384
+	case RS512, PS512:
+		hash = crypto.SHA512
 	default:
 		return 0, ErrUnsupportedAlgorithm
 	}
@@ -36,9 +40,9 @@ func (s RSASign) Sign(payload []byte) ([]byte, error) {
 	h.Write(payload)
 
 	switch s.Algorithm {
-	case RS256:
+	case RS256, RS384, RS512:
 		return rsa.SignPKCS1v15(rand.Reader, privkey, hash, h.Sum(nil))
-	case PS256:
+	case PS256, PS384, PS512:
 		return rsa.SignPSS(rand.Reader, privkey, hash, h.Sum(nil), &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthAuto,
 		})
@@ -67,9 +71,9 @@ func (s RSASign) Verify(payload, signature []byte) error {
 	h.Write(payload)
 
 	switch s.Algorithm {
-	case RS256:
+	case RS256, RS384, RS512:
 		return rsa.VerifyPKCS1v15(pubkey, hash, h.Sum(nil), signature)
-	case PS256:
+	case PS256, PS384, PS512:
 		return rsa.VerifyPSS(pubkey, hash, h.Sum(nil), signature, nil)
 	default:
 		return ErrUnsupportedAlgorithm
