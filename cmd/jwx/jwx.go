@@ -32,7 +32,7 @@ func _main() int {
 	flag.StringVar(&c.JWKLocation, "jwk", "", "JWK location, either a local file or a URL")
 	flag.Parse()
 
-	key, err := fetchKey(c)
+	key, err := fetchJWK(c)
 	if err != nil {
 		log.Printf("Failed to fetch JWK: %s", err)
 		return 0
@@ -100,10 +100,11 @@ func _main() int {
 	return 1
 }
 
-func fetchKey(c Config) (*jwk.Set, error) {
+func fetchJWK(c Config) (*jwk.Set, error) {
 	var content io.Reader
 	loc := c.JWKLocation
 	if strings.HasPrefix(loc, "http://") || strings.HasPrefix(loc, "https://") {
+		log.Printf("JWK: fetching from %s\n", loc)
 		u, err := url.Parse(loc)
 		if err != nil {
 			return nil, err

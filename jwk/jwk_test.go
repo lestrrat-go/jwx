@@ -43,7 +43,37 @@ func TestJwksRoundtrip(t *testing.T) {
 		return
 	}
 
-	t.Logf("%#v", ks2)
+	for _, use := range []string{"enc", "sig"} {
+		for i := 0; i < 2; i++ {
+			kid := use + strconv.Itoa(i)
+			keys := ks2.LookupKeyId(kid)
+			if !assert.Len(t, keys, 1, "Should be 1 key") {
+				return
+			}
+			key1 := keys[0]
+
+			pk1, ok := key1.(*RsaPrivateKey)
+			if !assert.True(t, ok, "Should be RsaPrivateKey") {
+				return
+			}
+
+			keys = ks1.LookupKeyId(kid)
+			if !assert.Len(t, keys, 1, "Should be 1 key") {
+				return
+			}
+
+			key2 := keys[0]
+			pk2, ok := key2.(*RsaPrivateKey)
+			if !assert.True(t, ok, "Should be RsaPrivateKey") {
+				return
+			}
+
+			if !assert.Equal(t, pk2, pk1, "Keys should match") {
+				return
+			}
+		}
+	}
+	spew.Dump(ks1, ks2)
 }
 
 func TestRsaPrivateKey(t *testing.T) {
