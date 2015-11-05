@@ -28,7 +28,7 @@ func (s RSASign) Sign(payload []byte) ([]byte, error) {
 	}
 
 	privkey := s.PrivateKey
-	if privkey != nil {
+	if privkey == nil {
 		return nil, errors.New("cannot proceed with Sign(): no private key available")
 	}
 
