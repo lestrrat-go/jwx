@@ -21,7 +21,7 @@ func TestCompact_EncodeDecode(t *testing.T) {
 		Algorithm: "RS256",
 	}
 
-	payload := buffer.Buffer("Hello, World!")
+	payload := Buffer("Hello, World!")
 	buf, err := Encode(hdr, payload, signer)
 	if !assert.NoError(t, err, "Encode is successful") {
 		return

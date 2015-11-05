@@ -7,13 +7,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBuffer_Convert(t *testing.T) {
+	v1 := []byte{'a', 'b', 'c'}
+	b := Buffer(v1)
+
+	if !assert.Equal(t, v1, b.Bytes()) {
+		return
+	}
+
+	v2 := "abc"
+	b = Buffer(v2)
+	if !assert.Equal(t, []byte(v2), b.Bytes()) {
+		return
+	}
+
+}
+
 func TestBuffer_Base64Encode(t *testing.T) {
 	b := Buffer{'a', 'b', 'c'}
 	v, err := b.Base64Encode()
-	if assert.NoError(t, err, "Base64 encode is successful") {
+	if !assert.NoError(t, err, "Base64 encode is successful") {
 		return
 	}
-	assert.Equal(t, []byte{'Y', 'W', 'J', 'j'}, v)
+	if !assert.Equal(t, []byte{'Y', 'W', 'J', 'j'}, v) {
+		return
+	}
 }
 
 func TestJSON(t *testing.T) {
@@ -33,5 +51,7 @@ func TestJSON(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, b1, b2)
+	if !assert.Equal(t, b1, b2) {
+		return
+	}
 }
