@@ -11,15 +11,15 @@ import (
 
 func TestCompact_EncodeDecode(t *testing.T) {
 	for _, alg := range []SignatureAlgorithm{RS256, RS384, RS512, PS256, PS384, PS512} {
-		t.Logf("alg = %s", alg)
 		key, err := rsa.GenerateKey(rand.Reader, 2048)
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
 		}
 
 		signer := RSASign{PrivateKey: key, Algorithm: alg}
-		hdr := &Header{}
+		hdr := NewHeader()
 		hdr.Algorithm = alg
+		hdr.KeyId     = "foo"
 
 		payload := buffer.Buffer("Hello, World!")
 		buf, err := Encode(hdr, payload, signer)
@@ -29,11 +29,6 @@ func TestCompact_EncodeDecode(t *testing.T) {
 
 		c, err := ParseCompact(buf)
 		if !assert.NoError(t, err, "ParseCompact is successful") {
-			return
-		}
-
-		h2 := Header{}
-		if !assert.NoError(t, c.Header.JsonDecode(&h2), "Can JSON decode header") {
 			return
 		}
 

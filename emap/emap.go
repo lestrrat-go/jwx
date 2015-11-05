@@ -67,19 +67,19 @@ type Hmap map[string]interface{}
 
 func (h Hmap) Get(name string, t reflect.Type, consume ...bool) (interface{}, error) {
 	v, ok := h[name]
-	if !ok || reflect.TypeOf(v) == nil {
+	if !ok {
 		return nil, errors.New("missing '" + name + "'")
-	}
-
-	rv := reflect.ValueOf(v)
-
-	if !rv.Type().ConvertibleTo(t) {
-		return nil, errors.New("invalid '" + name + "'")
 	}
 
 	if len(consume) == 0 || consume[0] {
 		delete(h, name)
 	}
+
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || !rv.Type().ConvertibleTo(t) {
+		return nil, errors.New("invalid '" + name + "'")
+	}
+
 	return rv.Convert(t).Interface(), nil
 }
 

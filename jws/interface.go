@@ -41,7 +41,7 @@ type EssentialHeader struct {
 	// TODO 	Jwk        `json:"jwk,omitempty"`
 	Algorithm              SignatureAlgorithm `json:"alg,omitempty"`
 	ContentType            string             `json:"cty,omitempty"`
-	Critical               []string           `json:crit,omitempty"`
+	Critical               []string           `json:"crit,omitempty"`
 	JwkSetUrl              *url.URL           `json:"jku,omitempty"`
 	KeyId                  string             `json:"kid,omitempty"`
 	Type                   string             `json:"typ,omitempty"` // e.g. "JWT"
@@ -53,7 +53,7 @@ type EssentialHeader struct {
 
 // Header represents a jws header.
 type Header struct {
-	EssentialHeader `json:"-"`
+	*EssentialHeader `json:"-"`
 	PrivateParams   map[string]interface{} `json:"-"`
 }
 
@@ -80,4 +80,19 @@ type RSASign struct {
 	Algorithm  SignatureAlgorithm
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
+}
+
+type Signature struct {
+	Header    Header `json:"header"`    // Raw JWS Unprotected Heders
+	Protected string `json:"protected"` // Base64 encoded JWS Protected Headers
+	Signature []byte `json:"signature"` // Base64 encoded signature
+
+}
+
+// Message represents a full JWS encoded message. Flattened serialization
+// is not supported as a struct, but rather it's represented as a
+// Message struct with only one `signature` element
+type Message struct {
+	Payload    buffer.Buffer `json:"payload"`
+	Signatures []Signature   `json:"signatures"`
 }

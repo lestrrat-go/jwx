@@ -10,12 +10,19 @@ import (
 	"github.com/lestrrat/go-jwx/emap"
 )
 
+func NewHeader() *Header {
+	return &Header{
+		EssentialHeader: &EssentialHeader{},
+		PrivateParams:   map[string]interface{}{},
+	}
+}
+
 func (h Header) MarshalJSON() ([]byte, error) {
 	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
 }
 
 func (h *Header) UnmarshalJSON(data []byte) error {
-	return emap.MergeUnmarshal(data, &h.EssentialHeader, &h.PrivateParams)
+	return emap.MergeUnmarshal(data, h.EssentialHeader, &h.PrivateParams)
 }
 
 func (h *EssentialHeader) Construct(m map[string]interface{}) error {
@@ -24,12 +31,16 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 		h.Algorithm = SignatureAlgorithm(alg)
 	}
 	h.ContentType, _ = r.GetString("cty")
-	h.Critical, _ = r.GetStringSlice("crit")
 	h.KeyId, _ = r.GetString("kid")
 	h.Type, _ = r.GetString("typ")
-	h.X509CertChain, _ = r.GetStringSlice("x5c")
 	h.X509CertThumbprint, _ = r.GetString("x5t")
 	h.X509CertThumbprintS256, _ = r.GetString("x5t#256")
+	if v, err := r.GetStringSlice("crit"); err != nil {
+		h.Critical = v
+	}
+	if v, err := r.GetStringSlice("x5c"); err != nil {
+		h.X509CertChain = v
+	}
 	if v, err := r.GetString("jku"); err == nil {
 		u, err := url.Parse(v)
 		if err == nil {
@@ -95,7 +106,7 @@ func Encode(hdr Base64Encoder, payload Base64Encoder, signer Signer) ([]byte, er
 }
 
 // ParseCompact parses a JWS value serialized via compact serialization.
-func ParseCompact(buf []byte) (*Compact, error) {
+func ParseCompact(buf []byte) (*Message, error) {
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 3 {
 		return nil, ErrInvalidCompactPartsCount
@@ -109,24 +120,37 @@ func ParseCompact(buf []byte) (*Compact, error) {
 
 	out := make([]byte, p0Len+p1Len+p2Len)
 
-	c := Compact{}
-	c.Header = buffer.Buffer(out[:p0Len])
-	if _, err := enc.Decode(c.Header, parts[0]); err != nil {
+	hdrbuf := buffer.Buffer(out[:p0Len])
+	if _, err := enc.Decode(hdrbuf, parts[0]); err != nil {
 		return nil, err
 	}
-	c.Header = bytes.TrimRight(c.Header, "\x00")
+	hdrbuf = bytes.TrimRight(hdrbuf, "\x00")
 
-	c.Payload = out[p0Len : p0Len+p1Len]
-	if _, err := enc.Decode(c.Payload, parts[1]); err != nil {
+	payload := out[p0Len : p0Len+p1Len]
+	if _, err := enc.Decode(payload, parts[1]); err != nil {
 		return nil, err
 	}
-	c.Payload = bytes.TrimRight(c.Payload, "\x00")
+	payload = bytes.TrimRight(payload, "\x00")
 
-	c.Signature = out[p0Len+p1Len-1 : p0Len+p1Len+p2Len]
-	if _, err := enc.Decode(c.Signature, parts[2]); err != nil {
+	signature := out[p0Len+p1Len-1 : p0Len+p1Len+p2Len]
+	if _, err := enc.Decode(signature, parts[2]); err != nil {
 		return nil, err
 	}
-	c.Signature = bytes.TrimRight(c.Signature, "\x00")
+	signature = bytes.TrimRight(signature, "\x00")
 
-	return &c, nil
+	hdr := NewHeader()
+	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
+		return nil, err
+	}
+
+	m := &Message{
+		Payload: payload,
+		Signatures: []Signature{
+			Signature{
+				Header:    *hdr,
+				Signature: signature,
+			},
+		},
+	}
+	return m, nil
 }
