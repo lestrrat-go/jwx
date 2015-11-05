@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-jwx/jws"
 )
@@ -38,6 +38,23 @@ func _main() int {
 		return 0
 	}
 
+	keybuf, err := json.MarshalIndent(key, "", "  ")
+	if err != nil {
+		log.Printf("Failed to marshal JWK: %s", err)
+		return 0
+	}
+	log.Printf("=== JWK ===")
+	for _, l := range bytes.Split(keybuf, []byte{'\n'}) {
+		log.Printf("%s", l)
+	}
+
+	// TODO make it flexible
+	pubkey, err := (key.Keys[0]).(*jwk.RsaPublicKey).PublicKey()
+	if err != nil {
+		log.Printf("Failed to get public key from JWK: %s", err)
+		return 0
+	}
+
 	var payload io.Reader
 	if c.Payload == "" {
 		payload = os.Stdin
@@ -57,44 +74,46 @@ func _main() int {
 		return 0
 	}
 
-	data, err := jws.ParseCompact(buf)
+	message, err := jws.ParseCompact(buf)
 	if err != nil {
 		log.Printf("Failed to parse JWS: %s", err)
 		return 0
 	}
 
-	header := jws.Header{}
-	if err := data.Header.JsonDecode(&header); err != nil {
-		log.Printf("Failed to decode JWS header: %s", err)
-		return 0
+	log.Printf("=== Payload ===")
+	// See if this is JSON. if it is, display it nicely
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(message.Payload, &m); err == nil {
+		payloadbuf, err := json.MarshalIndent(m, "", "  ")
+		if err != nil {
+			log.Printf("Failed to marshal payload: %s", err)
+			return 0
+		}
+		for _, l := range bytes.Split(payloadbuf, []byte{'\n'}) {
+			log.Printf("%s", l)
+		}
+	} else {
+		log.Printf("%s", message.Payload)
 	}
 
-	// TODO make it flexible
-	pubkey, err := (key.Keys[0]).(*jwk.RsaPublicKey).PublicKey()
-	if err != nil {
-		log.Printf("Failed to get public key from JWK: %s", err)
-		return 0
-	}
-	signer := jws.RSASign{
-		Algorithm: header.Algorithm,
-		PublicKey: pubkey,
-	}
+	for i, sig := range message.Signatures {
+		log.Printf("=== Signature %d ===", i)
+		sigbuf, err := json.MarshalIndent(sig, "", "  ")
+		if err != nil {
+			log.Printf("ERROR: Failed to marshal signature %d as JSON: %s", i, err)
+			return 0
+		}
+		for _, l := range bytes.Split(sigbuf, []byte{'\n'}) {
+			log.Printf("%s", l)
+		}
 
-	log.Printf("%#v\n", key)
-
-	log.Printf("=== Deserialized JWS Data ===\n")
-	log.Printf("Headers:\n")
-	log.Printf("    %s\n", data.Header)
-	log.Printf("Payload:\n")
-	log.Printf("    %s\n", data.Payload)
-	log.Printf("Signature (Base64 encoded):\n")
-	v, _ := buffer.Buffer(data.Signature).Base64Encode()
-	log.Printf("    %s\n", v)
-	log.Printf("\n")
-
-	if err := data.Verify(signer); err != nil {
-		log.Printf("Bad signature: %s", err)
-		return 0
+		signer := jws.RSASign{
+			Algorithm: sig.Header.Algorithm,
+			PublicKey: pubkey,
+		}
+		if err := message.Verify(signer); err == nil {
+			log.Printf("=== Verified with signature %d! ===", i)
+		}
 	}
 
 	return 1
