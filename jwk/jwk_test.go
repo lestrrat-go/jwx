@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,7 +72,6 @@ func TestJwksRoundtrip(t *testing.T) {
 			}
 		}
 	}
-	spew.Dump(ks1, ks2)
 }
 
 func TestRsaPrivateKey(t *testing.T) {
@@ -109,7 +107,6 @@ func TestRsaPrivateKey(t *testing.T) {
 	}
 
 	if !assert.Equal(t, k1, k3, "keys match") {
-		spew.Dump(k1, k3)
 		return
 	}
 }
