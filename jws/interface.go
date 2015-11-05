@@ -43,7 +43,7 @@ type Base64Decoder interface {
 // use your struct of choice
 type Header struct {
 	Algorithm SignatureAlgorithm `json:"alg,omitempty"`
-	KeyID     string `json:"kid,omitempty"`
+	KeyId     string `json:"kid,omitempty"`
 	Nonce     string `json:"nonce,omitempty"`
 	Type      string `json:"typ,omitempty"` // e.g. "JWT"
 }
