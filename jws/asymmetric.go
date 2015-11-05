@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 )
 
 func (s RSASign) hash() (crypto.Hash, error) {
@@ -26,14 +27,19 @@ func (s RSASign) Sign(payload []byte) ([]byte, error) {
 		return nil, ErrUnsupportedAlgorithm
 	}
 
+	privkey := s.PrivateKey
+	if privkey != nil {
+		return nil, errors.New("cannot proceed with Sign(): no private key available")
+	}
+
 	h := hash.New()
 	h.Write(payload)
 
 	switch s.Algorithm {
 	case RS256:
-		return rsa.SignPKCS1v15(rand.Reader, s.PrivateKey, hash, h.Sum(nil))
+		return rsa.SignPKCS1v15(rand.Reader, privkey, hash, h.Sum(nil))
 	case PS256:
-		return rsa.SignPSS(rand.Reader, s.PrivateKey, hash, h.Sum(nil), &rsa.PSSOptions{
+		return rsa.SignPSS(rand.Reader, privkey, hash, h.Sum(nil), &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthAuto,
 		})
 	default:
@@ -49,14 +55,22 @@ func (s RSASign) Verify(payload, signature []byte) error {
 		return ErrUnsupportedAlgorithm
 	}
 
+	pubkey := s.PublicKey
+	if pubkey == nil {
+		if s.PrivateKey == nil {
+			return errors.New("cannot proceed with Verify(): no private/public key available")
+		}
+		pubkey = &s.PrivateKey.PublicKey
+	}
+
 	h := hash.New()
 	h.Write(payload)
 
 	switch s.Algorithm {
 	case RS256:
-		return rsa.VerifyPKCS1v15(&s.PrivateKey.PublicKey, hash, h.Sum(nil), signature)
+		return rsa.VerifyPKCS1v15(pubkey, hash, h.Sum(nil), signature)
 	case PS256:
-		return rsa.VerifyPSS(&s.PrivateKey.PublicKey, hash, h.Sum(nil), signature, nil)
+		return rsa.VerifyPSS(pubkey, hash, h.Sum(nil), signature, nil)
 	default:
 		return ErrUnsupportedAlgorithm
 	}

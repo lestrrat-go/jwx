@@ -42,7 +42,7 @@ type Base64Decoder interface {
 // accepts interfaces into functions such as `Encode` so you can
 // use your struct of choice
 type Header struct {
-	Algorithm string `json:"alg,omitempty"`
+	Algorithm SignatureAlgorithm `json:"alg,omitempty"`
 	KeyID     string `json:"kid,omitempty"`
 	Nonce     string `json:"nonce,omitempty"`
 	Type      string `json:"typ,omitempty"` // e.g. "JWT"
@@ -68,4 +68,5 @@ type Verifier interface {
 type RSASign struct {
 	Algorithm  SignatureAlgorithm
 	PrivateKey *rsa.PrivateKey
+	PublicKey  *rsa.PublicKey
 }
