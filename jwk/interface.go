@@ -30,15 +30,15 @@ type JsonWebKey interface {
 // Essential defines the common data that any JsonWebKey may
 // carry with it.
 type Essential struct {
-	Algorithm                     string   `json:"alg,omitempty"`
-	KeyId                         string   `json:"kid,omitempty"`
-	KeyOps                        []string `json:"key_ops,omitempty"`
-	KeyType                       string   `json:"kty,omitempty"`
-	Use                           string   `json:"use,omitempty"`
-	X509Url                       *url.URL `json:"x5u,omitempty"`
-	X509CertificateChain          []string `json:"x5c,omitempty"`
-	X509CertificateThumbprint     string   `json:"x5t,omitempty"`
-	X509CertificateThumbprintS256 string   `json:"x5t#S256,omitempty"`
+	Algorithm              string   `json:"alg,omitempty"`
+	KeyId                  string   `json:"kid,omitempty"`
+	KeyOps                 []string `json:"key_ops,omitempty"`
+	KeyType                string   `json:"kty,omitempty"`
+	Use                    string   `json:"use,omitempty"`
+	X509Url                *url.URL `json:"x5u,omitempty"`
+	X509CertChain          []string `json:"x5c,omitempty"`
+	X509CertThumbprint     string   `json:"x5t,omitempty"`
+	X509CertThumbprintS256 string   `json:"x5t#S256,omitempty"`
 }
 
 // RsaPublicKey is a type of JWK generated from RSA public keys

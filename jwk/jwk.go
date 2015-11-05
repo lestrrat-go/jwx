@@ -63,13 +63,17 @@ func constructEssential(m map[string]interface{}) (*Essential, error) {
 	e.KeyId, _ = r.GetString("kid")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.6
-	if v, err := r.Get("x5u", reflect.TypeOf(e.X509Url)); err == nil {
-		e.X509Url = v.(*url.URL)
+	if v, err := r.GetString("x5u"); err == nil {
+		u, err := url.Parse(v)
+		if err != nil {
+			return nil, err
+		}
+		e.X509Url = u
 	}
 
 	// https://tools.ietf.org/html/rfc7517#section-4.7
-	if v, err := r.Get("x5c", reflect.TypeOf(e.X509CertificateChain)); err == nil {
-		e.X509CertificateChain = v.([]string)
+	if v, err := r.Get("x5c", reflect.TypeOf(e.X509CertChain)); err == nil {
+		e.X509CertChain = v.([]string)
 	}
 
 	return e, nil

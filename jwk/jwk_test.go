@@ -67,7 +67,7 @@ func TestJwksRoundtrip(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, pk2, pk1, "Keys should match") {
+			if !assert.Equal(t, pk1, pk2, "Keys should match (kid = %s)", kid) {
 				return
 			}
 		}
