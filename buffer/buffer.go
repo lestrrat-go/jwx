@@ -19,6 +19,10 @@ func (b Buffer) Bytes() []byte {
 	return []byte(b)
 }
 
+func (b Buffer) Len() int {
+	return len(b)
+}
+
 func (b Buffer) Base64Encode() ([]byte, error) {
 	enc := base64.RawURLEncoding
 	out := make([]byte, enc.EncodedLen(len(b)))
