@@ -6,12 +6,6 @@ import (
 	"github.com/lestrrat/go-jwx/buffer"
 )
 
-// rawKey is used to parse through the JSON object from which to
-// construct the actual JWK's. The only reason this exists is to
-// allow the parser to decide which type of key to create based
-// upon which keys are present in the parsed JSON object
-type rawKey map[string]interface{}
-
 // Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
 type Set struct {

@@ -18,9 +18,8 @@ func TestCompact_EncodeDecode(t *testing.T) {
 		}
 
 		signer := RSASign{PrivateKey: key, Algorithm: alg}
-		hdr := &Header{
-			Algorithm: alg,
-		}
+		hdr := &Header{}
+		hdr.Algorithm = alg
 
 		payload := buffer.Buffer("Hello, World!")
 		buf, err := Encode(hdr, payload, signer)

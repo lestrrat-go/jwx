@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/emap"
 )
 
 // Parse parses JWK in JSON format from the incoming `io.Reader`.
@@ -39,7 +40,7 @@ func constructKey(m map[string]interface{}) (JsonWebKey, error) {
 }
 
 func constructEssential(m map[string]interface{}) (*Essential, error) {
-	r := rawKey(m)
+	r := emap.Hmap(m)
 	e := &Essential{}
 
 	var err error
@@ -97,7 +98,7 @@ func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
 
 	k := &RsaPublicKey{Essential: e}
 
-	r := rawKey(m)
+	r := emap.Hmap(m)
 	if v, err := r.GetByteSlice("e"); err == nil {
 		k.E = buffer.Buffer(v)
 	}
@@ -127,7 +128,7 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 
 	k := &RsaPrivateKey{RsaPublicKey: pubkey}
 
-	r := rawKey(m)
+	r := emap.Hmap(m)
 	if v, err := r.GetByteSlice("d"); err == nil {
 		k.D = buffer.Buffer(v)
 	}

@@ -4,9 +4,48 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/emap"
 )
+
+func (h Header) MarshalJSON() ([]byte, error) {
+	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
+}
+
+func (h *Header) UnmarshalJSON(data []byte) error {
+	return emap.MergeUnmarshal(data, &h.EssentialHeader, &h.PrivateParams)
+}
+
+func (h *EssentialHeader) Construct(m map[string]interface{}) error {
+	r := emap.Hmap(m)
+	if alg, err := r.GetString("alg"); err == nil {
+		h.Algorithm = SignatureAlgorithm(alg)
+	}
+	h.ContentType, _ = r.GetString("cty")
+	h.Critical, _ = r.GetStringSlice("crit")
+	h.KeyId, _ = r.GetString("kid")
+	h.Type, _ = r.GetString("typ")
+	h.X509CertChain, _ = r.GetStringSlice("x5c")
+	h.X509CertThumbprint, _ = r.GetString("x5t")
+	h.X509CertThumbprintS256, _ = r.GetString("x5t#256")
+	if v, err := r.GetString("jku"); err == nil {
+		u, err := url.Parse(v)
+		if err == nil {
+			h.JwkSetUrl = u
+		}
+	}
+
+	if v, err := r.GetString("x5u"); err == nil {
+		u, err := url.Parse(v)
+		if err == nil {
+			h.X509Url = u
+		}
+	}
+
+	return nil
+}
 
 func (h Header) Base64Encode() ([]byte, error) {
 	b, err := json.Marshal(h)

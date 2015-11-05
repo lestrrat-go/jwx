@@ -3,6 +3,7 @@ package jws
 import (
 	"crypto/rsa"
 	"errors"
+	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
 )
@@ -36,16 +37,24 @@ type Base64Decoder interface {
 	Base64Decode([]byte) error
 }
 
-// Header is a very basic jws header. You may need to do use your own
-// header or structs from other libraries in order to achieve some
-// advanced functionalities. For this `jwx` library intentially only
-// accepts interfaces into functions such as `Encode` so you can
-// use your struct of choice
+type EssentialHeader struct {
+	// TODO 	Jwk        `json:"jwk,omitempty"`
+	Algorithm              SignatureAlgorithm `json:"alg,omitempty"`
+	ContentType            string             `json:"cty,omitempty"`
+	Critical               []string           `json:crit,omitempty"`
+	JwkSetUrl              *url.URL           `json:"jku,omitempty"`
+	KeyId                  string             `json:"kid,omitempty"`
+	Type                   string             `json:"typ,omitempty"` // e.g. "JWT"
+	X509Url                *url.URL           `json:"x5u,omitempty"`
+	X509CertChain          []string           `json:"x5c,omitempty"`
+	X509CertThumbprint     string             `json:"x5t,omitempty"`
+	X509CertThumbprintS256 string             `json:"x5t#S256,omitempty"`
+}
+
+// Header represents a jws header.
 type Header struct {
-	Algorithm SignatureAlgorithm `json:"alg,omitempty"`
-	KeyId     string `json:"kid,omitempty"`
-	Nonce     string `json:"nonce,omitempty"`
-	Type      string `json:"typ,omitempty"` // e.g. "JWT"
+	EssentialHeader `json:"-"`
+	PrivateParams   map[string]interface{} `json:"-"`
 }
 
 type Compact struct {
