@@ -75,16 +75,19 @@ func ParseCompact(buf []byte) (*Compact, error) {
 	if _, err := enc.Decode(c.Header, parts[0]); err != nil {
 		return nil, err
 	}
+	c.Header = bytes.TrimRight(c.Header, "\x00")
 
-	c.Payload = out[p0Len : p0Len+p1Len-1]
+	c.Payload = out[p0Len : p0Len+p1Len]
 	if _, err := enc.Decode(c.Payload, parts[1]); err != nil {
 		return nil, err
 	}
+	c.Payload = bytes.TrimRight(c.Payload, "\x00")
 
-	c.Signature = out[p0Len+p1Len : p0Len+p1Len+p2Len-1]
+	c.Signature = out[p0Len+p1Len-1 : p0Len+p1Len+p2Len]
 	if _, err := enc.Decode(c.Signature, parts[2]); err != nil {
 		return nil, err
 	}
+	c.Signature = bytes.TrimRight(c.Signature, "\x00")
 
 	return &c, nil
 }
