@@ -1,4 +1,4 @@
-// emap provides utility functions for maps
+// Package emap provides utility functions for maps
 //
 // MergeMarshal/MergeUnmarshal are used to serialize/deserialize
 // JSON object map which may have different required/known fields
