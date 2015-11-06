@@ -62,8 +62,13 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	e.Use, _ = r.GetString("use")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.3
-	if v, err := r.Get("key_ops", reflect.TypeOf(e.KeyOps)); err == nil {
-		e.KeyOps = v.([]string)
+	if v, err := r.GetStringSlice("key_ops"); err != nil {
+		if len(v) > 0 {
+			e.KeyOps = make([]KeyOperation, len(v))
+			for i, x := range v {
+				e.KeyOps[i] = KeyOperation(x)
+			}
+		}
 	}
 
 	// https://tools.ietf.org/html/rfc7517#section-4.4
