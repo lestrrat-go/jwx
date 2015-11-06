@@ -159,7 +159,7 @@ func fetchJWK(c Config) (*jwk.Set, error) {
 	k, err := jwk.Parse(rdr)
 	if err == nil {
 		// Found it
-		return &jwk.Set{Keys: []jwk.JsonWebKey{k}}, nil
+		return &jwk.Set{Keys: []jwk.JSONWebKey{k}}, nil
 	}
 	parseErrs := []error{err}
 

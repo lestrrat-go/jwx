@@ -13,7 +13,7 @@ import (
 // Parse parses JWK in JSON format from the incoming `io.Reader`.
 // If you are expecting that you *might* get a KeySet, you should
 // fallback to using ParseKeySet
-func Parse(rdr io.Reader) (JsonWebKey, error) {
+func Parse(rdr io.Reader) (JSONWebKey, error) {
 	m := make(map[string]interface{})
 	if err := json.NewDecoder(rdr).Decode(&m); err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func Parse(rdr io.Reader) (JsonWebKey, error) {
 	return constructKey(m)
 }
 
-func constructKey(m map[string]interface{}) (JsonWebKey, error) {
+func constructKey(m map[string]interface{}) (JSONWebKey, error) {
 	switch m["kty"] {
 	case "RSA":
 		if _, ok := m["d"]; ok {

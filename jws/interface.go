@@ -26,7 +26,7 @@ type EssentialHeader struct {
 	Algorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
 	ContentType            string                 `json:"cty,omitempty"`
 	Critical               []string               `json:"crit,omitempty"`
-	Jwk                    jwk.JsonWebKey         `json:"jwk,omitempty"` // public key
+	Jwk                    jwk.JSONWebKey         `json:"jwk,omitempty"` // public key
 	JwkSetUrl              *url.URL               `json:"jku,omitempty"`
 	KeyID                  string                 `json:"kid,omitempty"`
 	Type                   string                 `json:"typ,omitempty"` // e.g. "JWT"
@@ -47,7 +47,7 @@ var ErrUnsupportedAlgorithm = errors.New("unspported algorithm")
 
 // Signer generates signature for the given payload
 type Signer interface {
-	Jwk() jwk.JsonWebKey
+	Jwk() jwk.JSONWebKey
 	Kid() string
 	Alg() jwa.SignatureAlgorithm
 	Sign([]byte) ([]byte, error)
@@ -60,7 +60,7 @@ type Verifier interface {
 
 type RsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
-	JsonWebKey *jwk.RsaPublicKey
+	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
@@ -68,7 +68,7 @@ type RsaSign struct {
 
 type EcdsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
-	JsonWebKey *jwk.RsaPublicKey
+	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *ecdsa.PrivateKey
 }

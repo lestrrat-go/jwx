@@ -9,19 +9,19 @@ import (
 // Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
 type Set struct {
-	Keys []JsonWebKey `json:"keys"`
+	Keys []JSONWebKey `json:"keys"`
 }
 
-// JsonWebKey defines the minimal interface for each of the
+// JSONWebKey defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
-type JsonWebKey interface {
+type JSONWebKey interface {
 	Kid() string
 	Kty() string
 }
 
-// Essential defines the common data that any JsonWebKey may
+// Essential defines the common data that any JSONWebKey may
 // carry with it.
 type Essential struct {
 	Algorithm              string   `json:"alg,omitempty"`
