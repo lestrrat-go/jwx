@@ -120,12 +120,16 @@ func Parse(buf []byte) (*Message, error) {
 	}
 
 	if buf[0] == '{' {
-		return ParseJSON(buf)
+		return parseJSON(buf)
 	}
-	return ParseCompact(buf)
+	return parseCompact(buf)
 }
 
-func ParseJSON(buf []byte) (*Message, error) {
+func ParseString(s string) (*Message, error) {
+	return Parse([]byte(s))
+}
+
+func parseJSON(buf []byte) (*Message, error) {
 	m := struct {
 		*Message
 		*Signature
@@ -147,8 +151,8 @@ func ParseJSON(buf []byte) (*Message, error) {
 	return m.Message, nil
 }
 
-// ParseCompact parses a JWS value serialized via compact serialization.
-func ParseCompact(buf []byte) (*Message, error) {
+// parseCompact parses a JWS value serialized via compact serialization.
+func parseCompact(buf []byte) (*Message, error) {
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 3 {
 		return nil, ErrInvalidCompactPartsCount

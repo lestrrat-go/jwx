@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -37,7 +36,7 @@ func TestJwksRoundtrip(t *testing.T) {
 		return
 	}
 
-	ks2, err := ParseSet(bytes.NewReader(buf))
+	ks2, err := Parse(buf)
 	if !assert.NoError(t, err, "JSON unmarshal succeeded") {
 		return
 	}
@@ -101,12 +100,12 @@ func TestRsaPrivateKey(t *testing.T) {
 		return
 	}
 
-	k3, err := Parse(bytes.NewReader(jsonbuf))
+	k3, err := Parse(jsonbuf)
 	if !assert.NoError(t, err, "Parse should succeed") {
 		return
 	}
 
-	if !assert.Equal(t, k1, k3, "keys match") {
+	if !assert.Equal(t, k1, k3.Keys[0], "keys match") {
 		return
 	}
 }

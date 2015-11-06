@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,13 +8,13 @@ import (
 
 func TestParse_RsaPrivateKey(t *testing.T) {
 	/* TODO: implement "EC"
-         {"kty":"EC",
-          "crv":"P-256",
-          "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-          "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-          "d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE",
-          "use":"enc",
-          "kid":"1"},
+	   {"kty":"EC",
+	    "crv":"P-256",
+	    "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+	    "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+	    "d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE",
+	    "use":"enc",
+	    "kid":"1"},
 	*/
 
 	s := `{"keys":
@@ -33,7 +32,7 @@ func TestParse_RsaPrivateKey(t *testing.T) {
           "kid":"2011-04-29"}
        ]
      }`
-	set, err := ParseSet(strings.NewReader(s))
+	set, err := ParseString(s)
 	if !assert.NoError(t, err, "Parsing private key is successful") {
 		return
 	}

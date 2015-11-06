@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -74,7 +73,7 @@ func _main() int {
 		return 0
 	}
 
-	message, err := jws.ParseCompact(buf)
+	message, err := jws.Parse(buf)
 	if err != nil {
 		log.Printf("Failed to parse JWS: %s", err)
 		return 0
@@ -155,20 +154,10 @@ func fetchJWK(c Config) (*jwk.Set, error) {
 		return nil, err
 	}
 
-	rdr := bytes.NewReader(buf)
-	k, err := jwk.Parse(rdr)
-	if err == nil {
-		// Found it
-		return &jwk.Set{Keys: []jwk.JSONWebKey{k}}, nil
+	k, err := jwk.Parse(buf)
+	if err != nil {
+		return nil, err
 	}
-	parseErrs := []error{err}
 
-	rdr.Seek(0, 0)
-	s, err := jwk.ParseSet(rdr)
-	if err == nil {
-		return s, nil
-	}
-	parseErrs = append(parseErrs, err)
-
-	return nil, fmt.Errorf("Could not parse JWK file %s, %s", parseErrs[0].Error(), parseErrs[1].Error())
+	return k, nil
 }

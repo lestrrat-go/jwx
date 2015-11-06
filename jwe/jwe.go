@@ -87,12 +87,16 @@ func Parse(buf []byte) (*Message, error) {
 	}
 
 	if buf[0] == '{' {
-		return ParseJSON(buf)
+		return parseJSON(buf)
 	}
-	return ParseCompact(buf)
+	return parseCompact(buf)
 }
 
-func ParseJSON(buf []byte) (*Message, error) {
+func ParseString(s string) (*Message, error) {
+	return Parse([]byte(s))
+}
+
+func parseJSON(buf []byte) (*Message, error) {
 	m := struct {
 		*Message
 		*Recipient
@@ -114,7 +118,7 @@ func ParseJSON(buf []byte) (*Message, error) {
 	return m.Message, nil
 }
 
-func ParseCompact(buf []byte) (*Message, error) {
+func parseCompact(buf []byte) (*Message, error) {
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
 		return nil, ErrInvalidCompactPartsCount

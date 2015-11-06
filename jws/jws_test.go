@@ -33,7 +33,7 @@ func TestRoundtrip_Compact(t *testing.T) {
 			return
 		}
 
-		c, err := ParseCompact(buf)
+		c, err := Parse(buf)
 		if !assert.NoError(t, err, "ParseCompact is successful") {
 			return
 		}

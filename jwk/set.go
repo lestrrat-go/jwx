@@ -1,10 +1,6 @@
 package jwk
 
-import (
-	"encoding/json"
-	"errors"
-	"io"
-)
+import "errors"
 
 // LookupKeyID looks for keys matching the given key id. Note that the
 // Set *may* contain multiple keys with the same key id
@@ -18,12 +14,7 @@ func (s Set) LookupKeyID(kid string) []JSONWebKey {
 	return keys
 }
 
-func ParseSet(rdr io.Reader) (*Set, error) {
-	m := make(map[string]interface{})
-	if err := json.NewDecoder(rdr).Decode(&m); err != nil {
-		return nil, err
-	}
-
+func constructSet(m map[string]interface{}) (*Set, error) {
 	raw, ok := m["keys"]
 	if !ok {
 		return nil, errors.New("missing 'keys' parameter")

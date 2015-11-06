@@ -3,7 +3,6 @@ package jwk
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/url"
 	"reflect"
 
@@ -13,9 +12,9 @@ import (
 // Parse parses JWK in JSON format from the incoming `io.Reader`.
 // If you are expecting that you *might* get a KeySet, you should
 // fallback to using ParseKeySet
-func Parse(rdr io.Reader) (JSONWebKey, error) {
+func Parse(buf []byte) (*Set, error) {
 	m := make(map[string]interface{})
-	if err := json.NewDecoder(rdr).Decode(&m); err != nil {
+	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, err
 	}
 
@@ -23,7 +22,18 @@ func Parse(rdr io.Reader) (JSONWebKey, error) {
 	// out of this JSON is based on parameters within the already parsed
 	// JSON (m). In order to do this, we have to go through the tedious
 	// task of parsing the contents of this map :/
-	return constructKey(m)
+	if _, ok := m["keys"]; ok {
+		return constructSet(m)
+	}
+	k, err := constructKey(m)
+	if err != nil {
+		return nil, err
+	}
+	return &Set{Keys: []JSONWebKey{k}}, nil
+}
+
+func ParseString(s string) (*Set, error) {
+	return Parse([]byte(s))
 }
 
 func constructKey(m map[string]interface{}) (JSONWebKey, error) {
