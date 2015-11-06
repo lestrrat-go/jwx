@@ -188,7 +188,7 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 	}, nil
 }
 
-func (s EcdsaSign) Alg() jwa.SignatureAlgorithm {
+func (sign EcdsaSign) Alg() jwa.SignatureAlgorithm {
 	return s.Algorithm
 }
 
@@ -199,11 +199,11 @@ func (s *EcdsaSign) Jwk() jwk.JSONWebKey {
 	return s.JSONWebKey
 }
 
-func (s EcdsaSign) Kid() string {
+func (sign EcdsaSign) Kid() string {
 	return s.KeyID
 }
 
-func (s EcdsaSign) hash() (crypto.Hash, error) {
+func (sign EcdsaSign) hash() (crypto.Hash, error) {
 	alg := s.Algorithm
 	var hash crypto.Hash
 	switch alg {
@@ -258,7 +258,7 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 
 	keyBytes := curveBits / 8
 	if curveBits%8 > 0 {
-		keyBytes += 1
+		keyBytes++
 	}
 
 	rBytes := r.Bytes()
