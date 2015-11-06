@@ -52,7 +52,7 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	if v, err := r.GetString("jku"); err == nil {
 		u, err := url.Parse(v)
 		if err == nil {
-			h.JwkSetUrl = u
+			h.JwkSetURL = u
 		}
 	}
 

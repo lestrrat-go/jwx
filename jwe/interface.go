@@ -18,7 +18,7 @@ type EssentialHeader struct {
 	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
 	Critical               []string                       `json:"crit,omitempty"`
 	Jwk                    jwk.JSONWebKey                 `json:"jwk,omitempty"` // public key
-	JwkSetUrl              *url.URL                       `json:"jku,omitempty"`
+	JwkSetURL              *url.URL                       `json:"jku,omitempty"`
 	KeyID                  string                         `json:"kid,omitempty"`
 	Type                   string                         `json:"typ,omitempty"` // e.g. "JWT"
 	X509Url                *url.URL                       `json:"x5u,omitempty"`
