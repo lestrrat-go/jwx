@@ -189,22 +189,22 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 }
 
 func (sign EcdsaSign) Alg() jwa.SignatureAlgorithm {
-	return s.Algorithm
+	return sign.Algorithm
 }
 
-func (s *EcdsaSign) Jwk() jwk.JSONWebKey {
-	if s.JSONWebKey == nil {
+func (sign *EcdsaSign) Jwk() jwk.JSONWebKey {
+	if sign.JSONWebKey == nil {
 		return nil
 	}
-	return s.JSONWebKey
+	return sign.JSONWebKey
 }
 
 func (sign EcdsaSign) Kid() string {
-	return s.KeyID
+	return sign.KeyID
 }
 
 func (sign EcdsaSign) hash() (crypto.Hash, error) {
-	alg := s.Algorithm
+	alg := sign.Algorithm
 	var hash crypto.Hash
 	switch alg {
 	case jwa.ES256:
