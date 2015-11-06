@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/emap"
+	"github.com/lestrrat/go-jwx/jwa"
 )
 
 func NewHeader() *Header {
@@ -35,7 +36,7 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	r := emap.Hmap(m)
 	if alg, err := r.GetString("alg"); err == nil {
-		h.Algorithm = SignatureAlgorithm(alg)
+		h.Algorithm = jwa.SignatureAlgorithm(alg)
 	}
 	h.ContentType, _ = r.GetString("cty")
 	h.KeyId, _ = r.GetString("kid")
@@ -195,4 +196,3 @@ func ParseCompact(buf []byte) (*Message, error) {
 	}
 	return m, nil
 }
-

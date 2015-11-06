@@ -10,6 +10,7 @@ import (
 	"log"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
@@ -73,9 +74,9 @@ func (m *MultiSign) AddSigner(s Signer) {
 	m.Signers = append(m.Signers, s)
 }
 
-func NewRsaSign(alg SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, error) {
+func NewRsaSign(alg jwa.SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, error) {
 	switch alg {
-	case RS256, RS384, RS512, PS256, PS384, PS512:
+	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -86,7 +87,7 @@ func NewRsaSign(alg SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, error) {
 	}, nil
 }
 
-func (s RsaSign) Alg() SignatureAlgorithm {
+func (s RsaSign) Alg() jwa.SignatureAlgorithm {
 	return s.Algorithm
 }
 
@@ -104,11 +105,11 @@ func (s *RsaSign) Kid() string {
 func (s RsaSign) hash() (crypto.Hash, error) {
 	var hash crypto.Hash
 	switch s.Algorithm {
-	case RS256, PS256:
+	case jwa.RS256, jwa.PS256:
 		hash = crypto.SHA256
-	case RS384, PS384:
+	case jwa.RS384, jwa.PS384:
 		hash = crypto.SHA384
-	case RS512, PS512:
+	case jwa.RS512, jwa.PS512:
 		hash = crypto.SHA512
 	default:
 		return 0, ErrUnsupportedAlgorithm
@@ -134,9 +135,9 @@ func (s RsaSign) Sign(payload []byte) ([]byte, error) {
 	h.Write(payload)
 
 	switch s.Algorithm {
-	case RS256, RS384, RS512:
+	case jwa.RS256, jwa.RS384, jwa.RS512:
 		return rsa.SignPKCS1v15(rand.Reader, privkey, hash, h.Sum(nil))
-	case PS256, PS384, PS512:
+	case jwa.PS256, jwa.PS384, jwa.PS512:
 		return rsa.SignPSS(rand.Reader, privkey, hash, h.Sum(nil), &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthAuto,
 		})
@@ -165,18 +166,18 @@ func (s RsaSign) Verify(payload, signature []byte) error {
 	h.Write(payload)
 
 	switch s.Algorithm {
-	case RS256, RS384, RS512:
+	case jwa.RS256, jwa.RS384, jwa.RS512:
 		return rsa.VerifyPKCS1v15(pubkey, hash, h.Sum(nil), signature)
-	case PS256, PS384, PS512:
+	case jwa.PS256, jwa.PS384, jwa.PS512:
 		return rsa.VerifyPSS(pubkey, hash, h.Sum(nil), signature, nil)
 	default:
 		return ErrUnsupportedAlgorithm
 	}
 }
 
-func NewEcdsaSign(alg SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign, error) {
+func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign, error) {
 	switch alg {
-	case ES256, ES384, ES512:
+	case jwa.ES256, jwa.ES384, jwa.ES512:
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -187,7 +188,7 @@ func NewEcdsaSign(alg SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign, er
 	}, nil
 }
 
-func (s EcdsaSign) Alg() SignatureAlgorithm {
+func (s EcdsaSign) Alg() jwa.SignatureAlgorithm {
 	return s.Algorithm
 }
 
@@ -205,16 +206,16 @@ func (s EcdsaSign) Kid() string {
 func (s EcdsaSign) hash() (crypto.Hash, error) {
 	alg := s.Algorithm
 	var hash crypto.Hash
-  switch alg {
-  case ES256:
-    hash = crypto.SHA256
-  case ES384:
-    hash = crypto.SHA384
-  case ES512:
-    hash = crypto.SHA512
+	switch alg {
+	case jwa.ES256:
+		hash = crypto.SHA256
+	case jwa.ES384:
+		hash = crypto.SHA384
+	case jwa.ES512:
+		hash = crypto.SHA512
 	default:
 		return 0, ErrUnsupportedAlgorithm
-  }
+	}
 
 	return hash, nil
 }
@@ -256,7 +257,7 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 	}
 
 	keyBytes := curveBits / 8
-	if curveBits % 8 > 0 {
+	if curveBits%8 > 0 {
 		keyBytes += 1
 	}
 
@@ -266,13 +267,10 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 
 	sBytes := s.Bytes()
 	sBytesPadded := make([]byte, keyBytes)
-  copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
 
 	out := append(rBytesPadded, sBytesPadded...)
 
 	return out, nil
 }
-
-// Verify checks that signature generated for `payload` matches `signature`.
-// This fulfills the `Verifier` interface
 

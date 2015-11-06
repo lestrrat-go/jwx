@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRoundtrip_Compact(t *testing.T) {
-	for _, alg := range []SignatureAlgorithm{RS256, RS384, RS512, PS256, PS384, PS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
 		key, err := rsa.GenerateKey(rand.Reader, 2048)
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
@@ -90,7 +91,7 @@ func TestParse_UnsecuredCompact(t *testing.T) {
 	}
 
 	sig := m.Signatures[0]
-	if !assert.Equal(t, sig.Header.Algorithm, NoSignature, "Algorithm = 'none'") {
+	if !assert.Equal(t, sig.Header.Algorithm, jwa.NoSignature, "Algorithm = 'none'") {
 		return
 	}
 	if !assert.Empty(t, sig.Signature, "Signature should be empty") {

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,14 +27,14 @@ func TestMultiSigner(t *testing.T) {
 
 	ms := &MultiSign{}
 
-	s1, err := NewRsaSign(RS256, rsakey)
+	s1, err := NewRsaSign(jwa.RS256, rsakey)
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
 	s1.KeyId = "2010-12-29"
 	ms.AddSigner(s1)
 
-	s2, err := NewEcdsaSign(ES256, dsakey)
+	s2, err := NewEcdsaSign(jwa.ES256, dsakey)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}
