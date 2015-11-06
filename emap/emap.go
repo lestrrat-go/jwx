@@ -85,6 +85,15 @@ func (h Hmap) Get(name string, t reflect.Type, consume ...bool) (interface{}, er
 	return rv.Convert(t).Interface(), nil
 }
 
+func (h Hmap) GetInt64(name string, consume ...bool) (int64, error) {
+	v, err := h.Get(name, reflect.TypeOf(int64(0)), consume...)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.(int64), nil
+}
+
 func (h Hmap) GetByteSlice(name string, consume ...bool) ([]byte, error) {
 	v, err := h.Get(name, reflect.TypeOf([]byte(nil)), consume...)
 	if err != nil {

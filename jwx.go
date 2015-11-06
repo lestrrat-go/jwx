@@ -5,6 +5,7 @@
 //    JWE (https://tools.ietf.org/html/rfc7516)
 //    JWK (https://tools.ietf.org/html/rfc7517)
 //    JWS (https://tools.ietf.org/html/rfc7515)
+//    JWT (https://tools.ietf.org/html/rfc7519)
 //
 // The primary focus of this library tool set is to implement the extremely
 // flexible OAuth2 / OpenID Connect protocols. There are many other libraries
