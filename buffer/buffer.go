@@ -53,8 +53,3 @@ func (b *Buffer) UnmarshalJSON(data []byte) error {
 	}
 	return b.Base64Decode([]byte(x))
 }
-
-// JsonDecode decodes the buffer into interface v
-func (b Buffer) JsonDecode(v interface{}) error {
-	return json.NewDecoder(bytes.NewBuffer(b)).Decode(v)
-}
