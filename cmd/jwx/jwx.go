@@ -107,7 +107,7 @@ func _main() int {
 			log.Printf("%s", l)
 		}
 
-		signer := jws.RSASign{
+		signer := jws.RsaSign{
 			Algorithm: sig.Header.Algorithm,
 			PublicKey: pubkey,
 		}
