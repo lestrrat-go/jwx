@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/emap"
 )
 
@@ -99,12 +98,12 @@ func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
 	k := &RsaPublicKey{Essential: e}
 
 	r := emap.Hmap(m)
-	if v, err := r.GetByteSlice("e"); err == nil {
-		k.E = buffer.Buffer(v)
+	if v, err := r.GetBuffer("e"); err == nil {
+		k.E = v
 	}
 
-	if v, err := r.GetByteSlice("n"); err == nil {
-		k.N = buffer.Buffer(v)
+	if v, err := r.GetBuffer("n"); err == nil {
+		k.N = v
 	}
 
 	return k, nil
@@ -129,16 +128,16 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 	k := &RsaPrivateKey{RsaPublicKey: pubkey}
 
 	r := emap.Hmap(m)
-	if v, err := r.GetByteSlice("d"); err == nil {
-		k.D = buffer.Buffer(v)
+	if v, err := r.GetBuffer("d"); err == nil {
+		k.D = v
 	}
 
-	if v, err := r.GetByteSlice("p"); err == nil {
-		k.P = buffer.Buffer(v)
+	if v, err := r.GetBuffer("p"); err == nil {
+		k.P = v
 	}
 
-	if v, err := r.GetByteSlice("q"); err == nil {
-		k.Q = buffer.Buffer(v)
+	if v, err := r.GetBuffer("q"); err == nil {
+		k.Q = v
 	}
 
 	return k, nil

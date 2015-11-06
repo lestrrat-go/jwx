@@ -1,7 +1,7 @@
 // emap provides utility functions for maps
 //
-// MergMarshal/MergeUnmarshal are used to serialize/deserialize 
-// JSON object map which may have different required/known fields 
+// MergeMarshal/MergeUnmarshal are used to serialize/deserialize
+// JSON object map which may have different required/known fields
 // and possibly any number of extra parameters
 package emap
 
@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+
+	"github.com/lestrrat/go-jwx/buffer"
 )
 
 type Constructor interface {
@@ -116,3 +118,16 @@ func (h Hmap) GetStringSlice(name string, consume ...bool) ([]string, error) {
 	return v.([]string), nil
 }
 
+func (h Hmap) GetBuffer(name string, consume ...bool) (buffer.Buffer, error) {
+	b := buffer.Buffer{}
+	v, err := h.GetString(name, consume...)
+	if err != nil {
+		return b, err
+	}
+
+	if err := b.Base64Decode([]byte(v)); err != nil {
+		return b, err
+	}
+
+	return b, nil
+}

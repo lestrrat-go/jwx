@@ -34,7 +34,7 @@ func (b *Buffer) Base64Decode(v []byte) error {
 	enc := base64.RawURLEncoding
 	out := make([]byte, enc.DecodedLen(len(v)))
 	enc.Decode(out, v)
-	*b = Buffer(out)
+	*b = Buffer(bytes.TrimRight(out, "\x00"))
 	return nil
 }
 
