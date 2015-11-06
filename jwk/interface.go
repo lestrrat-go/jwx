@@ -25,7 +25,7 @@ type JsonWebKey interface {
 // carry with it.
 type Essential struct {
 	Algorithm              string   `json:"alg,omitempty"`
-	KeyId                  string   `json:"kid,omitempty"`
+	KeyID                  string   `json:"kid,omitempty"`
 	KeyOps                 []string `json:"key_ops,omitempty"`
 	KeyType                string   `json:"kty,omitempty"`
 	Use                    string   `json:"use,omitempty"`

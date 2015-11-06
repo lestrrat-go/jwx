@@ -28,7 +28,7 @@ type EssentialHeader struct {
 	Critical               []string               `json:"crit,omitempty"`
 	Jwk                    jwk.JsonWebKey         `json:"jwk,omitempty"` // public key
 	JwkSetUrl              *url.URL               `json:"jku,omitempty"`
-	KeyId                  string                 `json:"kid,omitempty"`
+	KeyID                  string                 `json:"kid,omitempty"`
 	Type                   string                 `json:"typ,omitempty"` // e.g. "JWT"
 	X509Url                *url.URL               `json:"x5u,omitempty"`
 	X509CertChain          []string               `json:"x5c,omitempty"`
@@ -61,7 +61,7 @@ type Verifier interface {
 type RsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
 	JsonWebKey *jwk.RsaPublicKey
-	KeyId      string
+	KeyID      string
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
 }
@@ -69,7 +69,7 @@ type RsaSign struct {
 type EcdsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
 	JsonWebKey *jwk.RsaPublicKey
-	KeyId      string
+	KeyID      string
 	PrivateKey *ecdsa.PrivateKey
 }
 

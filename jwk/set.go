@@ -6,9 +6,9 @@ import (
 	"io"
 )
 
-// LookupKeyId looks for keys matching the given key id. Note that the
+// LookupKeyID looks for keys matching the given key id. Note that the
 // Set *may* contain multiple keys with the same key id
-func (s Set) LookupKeyId(kid string) []JsonWebKey {
+func (s Set) LookupKeyID(kid string) []JsonWebKey {
 	var keys []JsonWebKey
 	for _, key := range s.Keys {
 		if key.Kid() == kid {

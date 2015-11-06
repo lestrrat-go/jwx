@@ -39,7 +39,7 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 		h.Algorithm = jwa.SignatureAlgorithm(alg)
 	}
 	h.ContentType, _ = r.GetString("cty")
-	h.KeyId, _ = r.GetString("kid")
+	h.KeyID, _ = r.GetString("kid")
 	h.Type, _ = r.GetString("typ")
 	h.X509CertThumbprint, _ = r.GetString("x5t")
 	h.X509CertThumbprintS256, _ = r.GetString("x5t#256")

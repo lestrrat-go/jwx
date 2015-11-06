@@ -25,7 +25,7 @@ func TestRoundtrip_Compact(t *testing.T) {
 		}
 		hdr := NewHeader()
 		hdr.Algorithm = alg
-		hdr.KeyId = "foo"
+		hdr.KeyID = "foo"
 
 		payload := buffer.Buffer("Hello, World!")
 		buf, err := Encode(hdr, payload, signer)

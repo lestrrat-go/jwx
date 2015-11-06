@@ -31,7 +31,7 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 		if k := signer.Jwk(); k != nil {
 			log.Printf("%#v", k)
 			protected.Jwk = k
-			protected.KeyId = k.Kid()
+			protected.KeyID = k.Kid()
 		}
 
 		protbuf, err := json.Marshal(protected)
@@ -48,13 +48,13 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 
 		hdr := NewHeader()
 
-		if hdr.KeyId == "" {
-			if protected.KeyId != "" {
+		if hdr.KeyID == "" {
+			if protected.KeyID != "" {
 				// Use the JWK in the protected field...
-				hdr.KeyId = protected.KeyId
+				hdr.KeyID = protected.KeyID
 			} else if signer.Kid() != "" {
 				// Or, get it from the signer
-				hdr.KeyId = signer.Kid()
+				hdr.KeyID = signer.Kid()
 			}
 		}
 
@@ -99,7 +99,7 @@ func (s *RsaSign) Jwk() jwk.JsonWebKey {
 }
 
 func (s *RsaSign) Kid() string {
-	return s.KeyId
+	return s.KeyID
 }
 
 func (s RsaSign) hash() (crypto.Hash, error) {
@@ -200,7 +200,7 @@ func (s *EcdsaSign) Jwk() jwk.JsonWebKey {
 }
 
 func (s EcdsaSign) Kid() string {
-	return s.KeyId
+	return s.KeyID
 }
 
 func (s EcdsaSign) hash() (crypto.Hash, error) {

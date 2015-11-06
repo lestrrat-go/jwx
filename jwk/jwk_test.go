@@ -26,7 +26,7 @@ func TestJwksRoundtrip(t *testing.T) {
 			}
 
 			k.Use = use
-			k.KeyId = use + strconv.Itoa(i)
+			k.KeyID = use + strconv.Itoa(i)
 
 			ks1.Keys = append(ks1.Keys, k)
 		}
@@ -45,7 +45,7 @@ func TestJwksRoundtrip(t *testing.T) {
 	for _, use := range []string{"enc", "sig"} {
 		for i := 0; i < 2; i++ {
 			kid := use + strconv.Itoa(i)
-			keys := ks2.LookupKeyId(kid)
+			keys := ks2.LookupKeyID(kid)
 			if !assert.Len(t, keys, 1, "Should be 1 key") {
 				return
 			}
@@ -56,7 +56,7 @@ func TestJwksRoundtrip(t *testing.T) {
 				return
 			}
 
-			keys = ks1.LookupKeyId(kid)
+			keys = ks1.LookupKeyID(kid)
 			if !assert.Len(t, keys, 1, "Should be 1 key") {
 				return
 			}

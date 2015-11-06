@@ -60,7 +60,7 @@ func constructEssential(m map[string]interface{}) (*Essential, error) {
 	e.Algorithm, _ = r.GetString("alg")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.5
-	e.KeyId, _ = r.GetString("kid")
+	e.KeyID, _ = r.GetString("kid")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.6
 	if v, err := r.GetString("x5u"); err == nil {
@@ -156,7 +156,7 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 }
 
 func (e Essential) Kid() string {
-	return e.KeyId
+	return e.KeyID
 }
 
 func (e Essential) Kty() string {

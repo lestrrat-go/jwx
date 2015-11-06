@@ -31,14 +31,14 @@ func TestMultiSigner(t *testing.T) {
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
-	s1.KeyId = "2010-12-29"
+	s1.KeyID = "2010-12-29"
 	ms.AddSigner(s1)
 
 	s2, err := NewEcdsaSign(jwa.ES256, dsakey)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}
-	s2.KeyId = "e9bc097a-ce51-4036-9562-d2ade882db0d"
+	s2.KeyID = "e9bc097a-ce51-4036-9562-d2ade882db0d"
 	ms.AddSigner(s2)
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
