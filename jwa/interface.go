@@ -1,6 +1,7 @@
 package jwa
 
-// Signature algorithms
+// SignatureAlgorithm represents the various signature algorithms
+// as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm string
 
 const (
@@ -19,6 +20,8 @@ const (
 	PS512                          = "PS512" // RSASSA-PSS using SHA512 and MGF1-SHA512
 )
 
+// KeyEncryptionAlgorithm represents the various encryption
+// algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
 type KeyEncryptionAlgorithm string
 
 const (
@@ -41,6 +44,8 @@ const (
 	PBES2_HS512_A256KW                        = "PBES2-HS512+A256KW" // PBES2 + HMAC-SHA512 + AES key wrap (256)
 )
 
+// ContentEncryptionAlgorithm represents the various encryption
+// algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm string
 
 const (
@@ -52,6 +57,8 @@ const (
 	A256GCM                                  = "A256GCM"       // AES-GCM (256)
 )
 
+// CompressionAlgorithm represents the compression algorithms
+// as described in https://tools.ietf.org/html/rfc7518#section-7.3
 type CompressionAlgorithm string
 
 const (
