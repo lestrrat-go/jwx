@@ -39,17 +39,19 @@ func (b *Buffer) Base64Decode(v []byte) error {
 }
 
 func (b Buffer) MarshalJSON() ([]byte, error) {
-	return json.Marshal(b.Bytes())
+	v, err := b.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(string(v))
 }
 
 func (b *Buffer) UnmarshalJSON(data []byte) error {
-	var x []byte
+	var x string
 	if err := json.Unmarshal(data, &x); err != nil {
 		return err
 	}
-
-	*b = Buffer(x)
-	return nil
+	return b.Base64Decode([]byte(x))
 }
 
 // JsonDecode decodes the buffer into interface v

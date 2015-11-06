@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -22,6 +23,12 @@ func (h Header) MarshalJSON() ([]byte, error) {
 }
 
 func (h *Header) UnmarshalJSON(data []byte) error {
+	if h.EssentialHeader == nil {
+		h.EssentialHeader = &EssentialHeader{}
+	}
+	if h.PrivateParams == nil {
+		h.PrivateParams = map[string]interface{}{}
+	}
 	return emap.MergeUnmarshal(data, h.EssentialHeader, &h.PrivateParams)
 }
 
@@ -105,6 +112,40 @@ func Encode(hdr Base64Encoder, payload Base64Encoder, signer Signer) ([]byte, er
 	return ss, nil
 }
 
+func Parse(buf []byte) (*Message, error) {
+	buf = bytes.TrimSpace(buf)
+	if len(buf) == 0 {
+		return nil, errors.New("empty buffer")
+	}
+
+	if buf[0] == '{' {
+		return ParseJSON(buf)
+	}
+	return ParseCompact(buf)
+}
+
+func ParseJSON(buf []byte) (*Message, error) {
+	m := struct {
+		*Message
+		*Signature
+	}{}
+
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return nil, err
+	}
+
+	// if the "signature" field exist, treat it as a flattened
+	if m.Signature != nil {
+		if len(m.Message.Signatures) != 0 {
+			return nil, errors.New("invalid message: mixed flattened/full json serialization")
+		}
+
+		m.Message.Signatures = []Signature{*m.Signature}
+	}
+
+	return m.Message, nil
+}
+
 // ParseCompact parses a JWS value serialized via compact serialization.
 func ParseCompact(buf []byte) (*Message, error) {
 	parts := bytes.Split(buf, []byte{'.'})
@@ -144,7 +185,7 @@ func ParseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := &Message{
-		Payload: payload,
+		Payload: buffer.Buffer(payload),
 		Signatures: []Signature{
 			Signature{
 				Header:    *hdr,
@@ -154,3 +195,4 @@ func ParseCompact(buf []byte) (*Message, error) {
 	}
 	return m, nil
 }
+

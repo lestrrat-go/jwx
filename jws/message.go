@@ -22,3 +22,5 @@ func (m Message) Verify(v Verifier) error {
 
 	return errors.New("none of the signatures could be verified")
 }
+
+
