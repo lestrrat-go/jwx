@@ -10,9 +10,9 @@ import (
 
 func NewRsaPublicKey(pk *rsa.PublicKey) (*RsaPublicKey, error) {
 	k := &RsaPublicKey{
-		Essential: &Essential{KeyType: "RSA"},
-		N:         buffer.Buffer(pk.N.Bytes()),
-		E:         buffer.FromUint(uint64(pk.E)),
+		EssentialHeader: &EssentialHeader{KeyType: "RSA"},
+		N:               buffer.Buffer(pk.N.Bytes()),
+		E:               buffer.FromUint(uint64(pk.E)),
 	}
 	return k, nil
 }

@@ -21,9 +21,9 @@ type JSONWebKey interface {
 	Kty() string
 }
 
-// Essential defines the common data that any JSONWebKey may
+// EssentialHeader defines the common data that any JSONWebKey may
 // carry with it.
-type Essential struct {
+type EssentialHeader struct {
 	Algorithm              string   `json:"alg,omitempty"`
 	KeyID                  string   `json:"kid,omitempty"`
 	KeyOps                 []string `json:"key_ops,omitempty"`
@@ -37,7 +37,7 @@ type Essential struct {
 
 // RsaPublicKey is a type of JWK generated from RSA public keys
 type RsaPublicKey struct {
-	*Essential
+	*EssentialHeader
 	E buffer.Buffer `json:"e"`
 	N buffer.Buffer `json:"n"`
 }

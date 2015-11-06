@@ -48,9 +48,9 @@ func constructKey(m map[string]interface{}) (JSONWebKey, error) {
 	}
 }
 
-func constructEssential(m map[string]interface{}) (*Essential, error) {
+func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error) {
 	r := emap.Hmap(m)
-	e := &Essential{}
+	e := &EssentialHeader{}
 
 	var err error
 	// https://tools.ietf.org/html/rfc7517#section-4.1
@@ -90,7 +90,7 @@ func constructEssential(m map[string]interface{}) (*Essential, error) {
 }
 
 func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
-	e, err := constructEssential(m)
+	e, err := constructEssentialHeader(m)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
 		}
 	}
 
-	k := &RsaPublicKey{Essential: e}
+	k := &RsaPublicKey{EssentialHeader: e}
 
 	r := emap.Hmap(m)
 	if v, err := r.GetBuffer("e"); err == nil {
@@ -165,10 +165,10 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 	return k, nil
 }
 
-func (e Essential) Kid() string {
+func (e EssentialHeader) Kid() string {
 	return e.KeyID
 }
 
-func (e Essential) Kty() string {
+func (e EssentialHeader) Kty() string {
 	return e.KeyType
 }
