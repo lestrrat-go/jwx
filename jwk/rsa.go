@@ -51,3 +51,45 @@ func (k *RsaPublicKey) PublicKey() (*rsa.PublicKey, error) {
 		E: int((&big.Int{}).SetBytes(k.E.Bytes()).Int64()),
 	}, nil
 }
+
+func (k *RsaPrivateKey) PrivateKey() (*rsa.PrivateKey, error) {
+	pubkey, err := k.PublicKey()
+	if err != nil {
+		return nil, err
+	}
+
+	if k.D.Len() == 0 {
+		return nil, errors.New("missing parameter 'D'")
+	}
+	if k.P.Len() == 0 {
+		return nil, errors.New("missing parameter 'P'")
+	}
+	if k.Q.Len() == 0 {
+		return nil, errors.New("missing parameter 'Q'")
+	}
+
+	privkey := &rsa.PrivateKey{
+		PublicKey: *pubkey,
+		D:         (&big.Int{}).SetBytes(k.D.Bytes()),
+		Primes: []*big.Int{
+			(&big.Int{}).SetBytes(k.P.Bytes()),
+			(&big.Int{}).SetBytes(k.Q.Bytes()),
+		},
+	}
+
+	if k.Dp.Len() > 0 {
+		privkey.Precomputed.Dp = (&big.Int{}).SetBytes(k.Dp.Bytes())
+	}
+	if k.Dq.Len() > 0 {
+		privkey.Precomputed.Dq = (&big.Int{}).SetBytes(k.Dq.Bytes())
+	}
+	if k.Qi.Len() > 0 {
+		privkey.Precomputed.Qinv = (&big.Int{}).SetBytes(k.Qi.Bytes())
+	}
+
+	if err := privkey.Validate(); err != nil {
+		return nil, err
+	}
+
+	return privkey, nil
+}

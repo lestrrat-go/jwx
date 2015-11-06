@@ -45,7 +45,10 @@ type RsaPublicKey struct {
 // RsaPrivateKey is a type of JWK generated from RSA private keys
 type RsaPrivateKey struct {
 	*RsaPublicKey
-	D buffer.Buffer `json:"d"`
-	P buffer.Buffer `json:"p"`
-	Q buffer.Buffer `json:"q"`
+	D  buffer.Buffer `json:"d"`
+	P  buffer.Buffer `json:"p"`
+	Q  buffer.Buffer `json:"q"`
+	Dp buffer.Buffer `json:"dp,omitempty"`
+	Dq buffer.Buffer `json:"dq,omitempty"`
+	Qi buffer.Buffer `json:"qi,omitempty"`
 }

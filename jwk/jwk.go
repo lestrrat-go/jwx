@@ -140,6 +140,18 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 		k.Q = v
 	}
 
+	if v, err := r.GetBuffer("dp"); err == nil {
+		k.Dp = v
+	}
+
+	if v, err := r.GetBuffer("dq"); err == nil {
+		k.Dq = v
+	}
+
+	if v, err := r.GetBuffer("qi"); err == nil {
+		k.Qi = v
+	}
+
 	return k, nil
 }
 
