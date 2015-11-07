@@ -59,8 +59,8 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 		}
 
 		sig := Signature{
-			Header:    *hdr,
-			Protected: protbuf,
+			PublicHeader:    *hdr,
+			ProtectedHeader: EncodedHeader{*protected},
 			Signature: buffer.Buffer(sigbuf),
 		}
 

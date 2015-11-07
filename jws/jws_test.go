@@ -91,7 +91,7 @@ func TestParse_UnsecuredCompact(t *testing.T) {
 	}
 
 	sig := m.Signatures[0]
-	if !assert.Equal(t, sig.Header.Algorithm, jwa.NoSignature, "Algorithm = 'none'") {
+	if !assert.Equal(t, sig.MergedHeaders().Algorithm(), jwa.NoSignature, "Algorithm = 'none'") {
 		return
 	}
 	if !assert.Empty(t, sig.Signature, "Signature should be empty") {
@@ -122,6 +122,12 @@ func TestParse_CompleteJSON(t *testing.T) {
 	}
 
 	if !assert.Len(t, m.Signatures, 2, "There should be 2 signatures") {
+		return
+	}
+
+	var sigs []Signature
+	sigs = m.LookupSignature("2010-12-29")
+	if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
 		return
 	}
 

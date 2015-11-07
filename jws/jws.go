@@ -7,75 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 )
-
-func NewHeader() *Header {
-	return &Header{
-		EssentialHeader: &EssentialHeader{},
-		PrivateParams:   map[string]interface{}{},
-	}
-}
-
-func (h Header) MarshalJSON() ([]byte, error) {
-	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
-}
-
-func (h *Header) UnmarshalJSON(data []byte) error {
-	if h.EssentialHeader == nil {
-		h.EssentialHeader = &EssentialHeader{}
-	}
-	if h.PrivateParams == nil {
-		h.PrivateParams = map[string]interface{}{}
-	}
-	return emap.MergeUnmarshal(data, h.EssentialHeader, &h.PrivateParams)
-}
-
-func (h *EssentialHeader) Construct(m map[string]interface{}) error {
-	r := emap.Hmap(m)
-	if alg, err := r.GetString("alg"); err == nil {
-		h.Algorithm = jwa.SignatureAlgorithm(alg)
-	}
-	h.ContentType, _ = r.GetString("cty")
-	h.KeyID, _ = r.GetString("kid")
-	h.Type, _ = r.GetString("typ")
-	h.X509CertThumbprint, _ = r.GetString("x5t")
-	h.X509CertThumbprintS256, _ = r.GetString("x5t#256")
-	if v, err := r.GetStringSlice("crit"); err != nil {
-		h.Critical = v
-	}
-	if v, err := r.GetStringSlice("x5c"); err != nil {
-		h.X509CertChain = v
-	}
-	if v, err := r.GetString("jku"); err == nil {
-		u, err := url.Parse(v)
-		if err == nil {
-			h.JwkSetURL = u
-		}
-	}
-
-	if v, err := r.GetString("x5u"); err == nil {
-		u, err := url.Parse(v)
-		if err == nil {
-			h.X509Url = u
-		}
-	}
-
-	return nil
-}
-
-func (h Header) Base64Encode() ([]byte, error) {
-	b, err := json.Marshal(h)
-	if err != nil {
-		return nil, err
-	}
-
-	return buffer.Buffer(b).Base64Encode()
-}
 
 // Encode takes a header, a payload, and a signer, and produces a signed
 // compact serialization format of the given header and payload.
@@ -150,6 +85,12 @@ func parseJSON(buf []byte) (*Message, error) {
 		m.Message.Signatures = []Signature{*m.Signature}
 	}
 
+	for _, sig := range m.Message.Signatures {
+		if sig.ProtectedHeader.Algorithm == "" {
+			sig.ProtectedHeader.Algorithm = jwa.NoSignature
+		}
+	}
+
 	return m.Message, nil
 }
 
@@ -191,14 +132,12 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 
+	s := NewSignature()
+	s.Signature = signature
+	s.ProtectedHeader = EncodedHeader{*hdr}
 	m := &Message{
-		Payload: buffer.Buffer(payload),
-		Signatures: []Signature{
-			Signature{
-				Header:    *hdr,
-				Signature: signature,
-			},
-		},
+		Payload:    buffer.Buffer(payload),
+		Signatures: []Signature{*s},
 	}
 	return m, nil
 }

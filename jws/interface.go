@@ -11,6 +11,11 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+var (
+	ErrInvalidCompactPartsCount = errors.New("compact JWS format must have three parts")
+	ErrUnsupportedAlgorithm = errors.New("unspported algorithm")
+)
+
 // Base64Encoder can encode itself into base64. But you can do more such as
 // filling default values, validating them, etc. This is used in `Encode()`
 // as both headers and payloads
@@ -42,8 +47,11 @@ type Header struct {
 	PrivateParams    map[string]interface{} `json:"-"`
 }
 
-var ErrInvalidCompactPartsCount = errors.New("compact JWS format must have three parts")
-var ErrUnsupportedAlgorithm = errors.New("unspported algorithm")
+// EncodedHeader represents a header value that is base64 encoded
+// in JSON format
+type EncodedHeader struct {
+	Header
+}
 
 // Signer generates signature for the given payload
 type Signer interface {
@@ -73,10 +81,15 @@ type EcdsaSign struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
+type MergedHeader struct {
+	ProtectedHeader *EncodedHeader
+	PublicHeader *Header
+}
+
 type Signature struct {
-	Header    Header        `json:"header"`              // Raw JWS Unprotected Heders
-	Protected buffer.Buffer `json:"protected,omitempty"` // Base64 encoded JWS Protected Headers
-	Signature buffer.Buffer `json:"signature"`           // Base64 encoded signature
+	PublicHeader    Header        `json:"header"`              // Raw JWS Unprotected Heders
+	ProtectedHeader EncodedHeader `json:"protected,omitempty"` // Base64 encoded JWS Protected Headers
+	Signature       buffer.Buffer `json:"signature"`           // Base64 encoded signature
 }
 
 // Message represents a full JWS encoded message. Flattened serialization
