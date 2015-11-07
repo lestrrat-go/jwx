@@ -107,7 +107,7 @@ func _main() int {
 		}
 
 		signer := jws.RsaSign{
-			Algorithm: sig.Header.Algorithm,
+			Algorithm: sig.ProtectedHeader.Algorithm,
 			PublicKey: pubkey,
 		}
 		if err := message.Verify(signer); err == nil {
