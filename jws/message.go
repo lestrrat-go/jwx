@@ -6,7 +6,7 @@ import (
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/emap"
+	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 )
 

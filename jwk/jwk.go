@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/lestrrat/go-jwx/emap"
+	"github.com/lestrrat/go-jwx/internal/emap"
 )
 
 // Parse parses JWK in JSON format from the incoming `io.Reader`.

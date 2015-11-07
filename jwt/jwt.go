@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/lestrrat/go-jwx/emap"
+	"github.com/lestrrat/go-jwx/internal/emap"
 )
 
 func (n NumericDate) MarshalJSON() ([]byte, error) {
