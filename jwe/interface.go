@@ -38,12 +38,29 @@ type Recipient struct {
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
+type AEADParts struct {
+	CipherText           buffer.Buffer `json:"ciphertext"`
+	InitializationVector buffer.Buffer `json:"iv,omitempty"`
+	Tag                  buffer.Buffer `json:"tag,omitempty"`
+}
+
 type Message struct {
-	AdditionalAuthenticatedData buffer.Buffer `json:"aad"`
-	CipherText                  buffer.Buffer `json:"ciphertext"`
-	InitializationVector        buffer.Buffer `json:"iv,omitempty"`
-	Protected                   buffer.Buffer `json:"protected,omitempty"`
-	Recipients                  []Recipient   `json:"recipients"`
-	AuthenticationTag           buffer.Buffer `json:"tag,omitempty"`
-	Unprotected                 string        `json:"unprotected,omitempty"`
+	AEADParts
+	AuthenticatedData buffer.Buffer `json:"aad,omitempty"`
+	Protected         Header        `json:"protected,omitempty"`
+	Recipients        []Recipient   `json:"recipients"`
+	Unprotected       string        `json:"unprotected,omitempty"`
+}
+
+type MultiEncrypter interface {
+	MultiEncrypt([]byte) (*Message, error)
+}
+
+type Encrypter interface {
+	Encrypt([]byte, []byte, []byte) (*AEADParts, error)
+}
+
+type MultiEncrypt struct {
+	ContentEncryption jwa.ContentEncryptionAlgorithm
+	Encrypters        []Encrypter
 }

@@ -10,7 +10,7 @@ import (
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/emap"
+	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
@@ -18,6 +18,12 @@ func NewHeader() *Header {
 	return &Header{
 		EssentialHeader: &EssentialHeader{},
 		PrivateParams:   map[string]interface{}{},
+	}
+}
+
+func NewMessage() *Message {
+	return &Message{
+		AEADParts: AEADParts{},
 	}
 }
 
@@ -168,15 +174,14 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	tagbuf = bytes.TrimRight(tagbuf, "\x00")
 
-	m := &Message{
-		AuthenticationTag:    tagbuf,
-		CipherText:           ctbuf,
-		InitializationVector: ivbuf,
-		Recipients: []Recipient{
-			Recipient{
-				Header:       *hdr,
-				EncryptedKey: enckeybuf,
-			},
+	m := NewMessage()
+	m.Tag = tagbuf
+	m.CipherText = ctbuf
+	m.InitializationVector = ivbuf
+	m.Recipients = []Recipient{
+		Recipient{
+			Header:       *hdr,
+			EncryptedKey: enckeybuf,
 		},
 	}
 	return m, nil
