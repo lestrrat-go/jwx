@@ -76,6 +76,31 @@ func (h Header) Base64Encode() ([]byte, error) {
 	return buffer.Buffer(b).Base64Encode()
 }
 
+func DecodeEncodedHeader(buf buffer.Buffer) (*EncodedHeader, error) {
+	hdr := EncodedHeader{}
+
+	buf2 := buffer.Buffer{}
+	if err := buf2.Base64Decode(buf.Bytes()); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(buf2.Bytes(), &hdr.Header); err != nil {
+		return nil, err
+	}
+	hdr.encoded = buf
+	return &hdr, nil
+}
+
+func (e *EncodedHeader) SigningInput() (buffer.Buffer, error) {
+	if e.encoded.Len() == 0 {
+		buf, err := e.Base64Encode()
+		if err != nil {
+			return buffer.Buffer{}, err
+		}
+		e.encoded = buf
+	}
+	return e.encoded, nil
+}
+
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
@@ -108,15 +133,15 @@ func NewSignature() *Signature {
 	h1 := NewHeader()
 	h2 := NewHeader()
 	return &Signature{
-		PublicHeader: *h1,
-		ProtectedHeader: EncodedHeader{*h2},
+		PublicHeader:    *h1,
+		ProtectedHeader: EncodedHeader{Header: *h2},
 	}
 }
 
 func (s Signature) MergedHeaders() MergedHeader {
 	return MergedHeader{
 		ProtectedHeader: &s.ProtectedHeader,
-		PublicHeader: &s.PublicHeader,
+		PublicHeader:    &s.PublicHeader,
 	}
 }
 
@@ -164,7 +189,7 @@ func (m Message) Verify(v Verifier) error {
 	}
 
 	for _, sig := range m.Signatures {
-		h, err := sig.ProtectedHeader.Base64Encode()
+		h, err := sig.ProtectedHeader.SigningInput()
 		if err != nil {
 			return err
 		}

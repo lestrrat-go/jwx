@@ -13,7 +13,8 @@ import (
 
 var (
 	ErrInvalidCompactPartsCount = errors.New("compact JWS format must have three parts")
-	ErrUnsupportedAlgorithm = errors.New("unspported algorithm")
+	ErrInvalidMac               = errors.New("invalid mac")
+	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")
 )
 
 // Base64Encoder can encode itself into base64. But you can do more such as
@@ -51,6 +52,7 @@ type Header struct {
 // in JSON format
 type EncodedHeader struct {
 	Header
+	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
 // Signer generates signature for the given payload
@@ -83,7 +85,7 @@ type EcdsaSign struct {
 
 type MergedHeader struct {
 	ProtectedHeader *EncodedHeader
-	PublicHeader *Header
+	PublicHeader    *Header
 }
 
 type Signature struct {
@@ -107,4 +109,11 @@ type MultiSigner interface {
 
 type MultiSign struct {
 	Signers []Signer
+}
+
+type HmacSign struct {
+	Algorithm jwa.SignatureAlgorithm
+	JSONWebKey *jwk.RsaPublicKey
+	KeyID      string
+	Key       []byte
 }

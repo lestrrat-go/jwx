@@ -48,6 +48,50 @@ func TestRoundtrip_Compact(t *testing.T) {
 	}
 }
 
+const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" + ` "http://example.com/is_root":true}`
+
+// TestEncode_HS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.1 works
+func TestEncode_HS256Compact(t *testing.T) {
+	const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
+	const hmacKey = `AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow`
+	const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
+
+	hmacKeyDecoded := buffer.Buffer{}
+	hmacKeyDecoded.Base64Decode([]byte(hmacKey))
+
+	sign, err := NewHmacSign(jwa.HS256, hmacKeyDecoded.Bytes())
+	if !assert.NoError(t, err, "HmacSign created successfully") {
+		return
+	}
+
+	out, err := Encode(
+		buffer.Buffer(hdr),
+		buffer.Buffer(examplePayload),
+		sign,
+	)
+	if !assert.NoError(t, err, "Encode should succeed") {
+		return
+	}
+
+	if !assert.Equal(t, expected, string(out), "generated compact serialization should match") {
+		return
+	}
+
+	msg, err := Parse(out)
+	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
+		return
+	}
+
+	hdrs := msg.Signatures[0].MergedHeaders()
+	if !assert.Equal(t, hdrs.Algorithm(), jwa.HS256, "Algorithm in header matches") {
+		return
+	}
+
+	if !assert.NoError(t, Verify(buffer.Buffer(hdr), buffer.Buffer(examplePayload), msg.Signatures[0].Signature.Bytes(), sign), "Verify succeeds") {
+		return
+	}
+}
+
 func TestParse_CompactEncoded(t *testing.T) {
 	// Appendix-A.4.1
 	s := `eyJhbGciOiJFUzUxMiJ9.UGF5bG9hZA.AdwMgeerwtHoh-l192l60hp9wAHZFVJbLfD_UxMi70cwnZOYaRI1bKPWROc-mZZqwqT2SI-KGDKB34XO0aw_7XdtAG8GaSwFKdCAPZgoXD2YBJZCPEX3xKpRwcdOO8KpEHwJjyqOgzDO7iKvU8vcnwNrmxYbSW9ERBXukOXolLzeO_Jn`

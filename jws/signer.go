@@ -3,11 +3,14 @@ package jws
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/json"
 	"errors"
-	"log"
+	"hash"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
@@ -29,7 +32,6 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 		protected.Algorithm = signer.Alg()
 
 		if k := signer.Jwk(); k != nil {
-			log.Printf("%#v", k)
 			protected.Jwk = k
 			protected.KeyID = k.Kid()
 		}
@@ -60,8 +62,8 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 
 		sig := Signature{
 			PublicHeader:    *hdr,
-			ProtectedHeader: EncodedHeader{*protected},
-			Signature: buffer.Buffer(sigbuf),
+			ProtectedHeader: EncodedHeader{Header: *protected},
+			Signature:       buffer.Buffer(sigbuf),
 		}
 
 		msg.Signatures = append(msg.Signatures, sig)
@@ -274,3 +276,62 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 	return out, nil
 }
 
+func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
+	return &HmacSign{
+		Algorithm: alg,
+		Key:       key,
+	}, nil
+}
+
+func (s HmacSign) hmac() (hash.Hash, error) {
+	var h func() hash.Hash
+	switch s.Algorithm {
+	case jwa.HS256:
+		h = sha256.New
+	case jwa.HS384:
+		h = sha512.New384
+	case jwa.HS512:
+		h = sha512.New
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	return hmac.New(h, s.Key), nil
+}
+
+func (s HmacSign) Sign(payload []byte) ([]byte, error) {
+	h, err := s.hmac()
+	if err != nil {
+		return nil, err
+	}
+	h.Write(payload)
+	b := h.Sum(nil)
+	return b, nil
+}
+
+func (s HmacSign) Verify(payload []byte, mac []byte) error {
+	expected, err := s.Sign(payload)
+	if err != nil {
+		return err
+	}
+
+	if !hmac.Equal(mac, expected) {
+		return ErrInvalidMac
+	}
+	return nil
+}
+
+func (s HmacSign) Alg() jwa.SignatureAlgorithm {
+	return s.Algorithm
+}
+
+func (s HmacSign) Jwk() jwk.JSONWebKey {
+	if s.JSONWebKey == nil {
+		return nil
+	}
+	return s.JSONWebKey
+}
+
+func (s HmacSign) Kid() string {
+	return s.KeyID
+}

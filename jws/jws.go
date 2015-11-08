@@ -12,18 +12,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-// Encode takes a header, a payload, and a signer, and produces a signed
-// compact serialization format of the given header and payload.
-//
-// The header and the payload need only be able to produce the base64
-// encoded version of itself for flexibility.
-//
-// The signer can be anything that implements the Signer interface.
-//
-// See also: Compact Serialization https://tools.ietf.org/html/rfc7515#section-3.1
-func Encode(hdr Base64Encoder, payload Base64Encoder, signer Signer) ([]byte, error) {
-	// [encoded header].[encoded payload].[signed payload]
-
+func encodeSigningInputValue(hdr, payload Base64Encoder) ([]byte, error) {
 	h, err := hdr.Base64Encode()
 	if err != nil {
 		return nil, err
@@ -34,9 +23,27 @@ func Encode(hdr Base64Encoder, payload Base64Encoder, signer Signer) ([]byte, er
 		return nil, err
 	}
 
-	ss := append(append(h, '.'), p...)
+	return append(append(h, '.'), p...), nil
+}
 
-	b, err := signer.Sign(ss)
+// Encode takes a header, a payload, and a signer, and produces a signed
+// compact serialization format of the given header and payload.
+//
+// The header and the payload need only be able to produce the base64
+// encoded version of itself for flexibility.
+//
+// The signer can be anything that implements the Signer interface.
+//
+// See also: Compact Serialization https://tools.ietf.org/html/rfc7515#section-3.1
+func Encode(hdr, payload Base64Encoder, signer Signer) ([]byte, error) {
+	// [encoded header].[encoded payload].[signed payload]
+
+	siv, err := encodeSigningInputValue(hdr, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := signer.Sign(siv)
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +52,16 @@ func Encode(hdr Base64Encoder, payload Base64Encoder, signer Signer) ([]byte, er
 	out := make([]byte, enc.EncodedLen(len(b))+1)
 	out[0] = '.'
 	enc.Encode(out[1:], b)
-	ss = append(ss, out...)
+	return append(siv, out...), nil
+}
 
-	return ss, nil
+func Verify(hdr, payload Base64Encoder, sig []byte, verify Verifier) error {
+	siv, err := encodeSigningInputValue(hdr, payload)
+	if err != nil {
+		return err
+	}
+
+	return verify.Verify(siv, sig)
 }
 
 func Parse(buf []byte) (*Message, error) {
@@ -103,38 +117,26 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	enc := base64.RawURLEncoding
 
-	p0Len := enc.DecodedLen(len(parts[0]))
-	p1Len := enc.DecodedLen(len(parts[1]))
-	p2Len := enc.DecodedLen(len(parts[2]))
-
-	out := make([]byte, p0Len+p1Len+p2Len)
-
-	hdrbuf := buffer.Buffer(out[:p0Len])
-	if _, err := enc.Decode(hdrbuf, parts[0]); err != nil {
+	hdr, err := DecodeEncodedHeader(parts[0])
+	if err != nil {
 		return nil, err
 	}
-	hdrbuf = bytes.TrimRight(hdrbuf, "\x00")
 
-	payload := out[p0Len : p0Len+p1Len]
+	payload := make([]byte, enc.DecodedLen(len(parts[1])))
 	if _, err := enc.Decode(payload, parts[1]); err != nil {
 		return nil, err
 	}
 	payload = bytes.TrimRight(payload, "\x00")
 
-	signature := out[p0Len+p1Len-1 : p0Len+p1Len+p2Len]
+	signature := make([]byte, enc.DecodedLen(len(parts[2])))
 	if _, err := enc.Decode(signature, parts[2]); err != nil {
 		return nil, err
 	}
 	signature = bytes.TrimRight(signature, "\x00")
 
-	hdr := NewHeader()
-	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
-		return nil, err
-	}
-
 	s := NewSignature()
 	s.Signature = signature
-	s.ProtectedHeader = EncodedHeader{*hdr}
+	s.ProtectedHeader = *hdr
 	m := &Message{
 		Payload:    buffer.Buffer(payload),
 		Signatures: []Signature{*s},
