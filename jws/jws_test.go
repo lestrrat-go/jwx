@@ -5,12 +5,70 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestParse_EmptyByteBuffer(t *testing.T) {
+	_, err := Parse([]byte{})
+	if !assert.Error(t, err, "Parsing an empty buffer should result in an error") {
+		return
+	}
+}
+
+const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
+
+func TestParse_CompactSerializationMissingParts(t *testing.T) {
+	incoming := strings.Join(
+		(strings.Split(
+			exampleCompactSerialization,
+			".",
+		))[:2],
+		".",
+	)
+	_, err := ParseString(incoming)
+	if !assert.Equal(t, ErrInvalidCompactPartsCount, err, "Parsing compact serialization with less than 3 parts should be an error") {
+		return
+	}
+}
+
+func TestParse_CompactSerializationBadHeader(t *testing.T) {
+	parts := strings.Split(exampleCompactSerialization, ".")
+	parts[0] = "%badvalue%"
+	incoming := strings.Join(parts, ".")
+
+	_, err := ParseString(incoming)
+	if !assert.Error(t, err, "Parsing compact serialization with bad header should be an error") {
+		return
+	}
+}
+
+func TestParse_CompactSerializationBadPayload(t *testing.T) {
+	parts := strings.Split(exampleCompactSerialization, ".")
+	parts[1] = "%badvalue%"
+	incoming := strings.Join(parts, ".")
+
+	_, err := ParseString(incoming)
+	if !assert.Error(t, err, "Parsing compact serialization with bad payload should be an error") {
+		return
+	}
+}
+
+func TestParse_CompactSerializationBadSignature(t *testing.T) {
+	parts := strings.Split(exampleCompactSerialization, ".")
+	parts[2] = "%badvalue%"
+	incoming := strings.Join(parts, ".")
+
+	t.Logf("incoming = '%s'", incoming)
+	_, err := ParseString(incoming)
+	if !assert.Error(t, err, "Parsing compact serialization with bad signature should be an error") {
+		return
+	}
+}
 
 func TestRoundtrip_Compact(t *testing.T) {
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
@@ -33,17 +91,30 @@ func TestRoundtrip_Compact(t *testing.T) {
 			return
 		}
 
-		c, err := Parse(buf)
-		if !assert.NoError(t, err, "ParseCompact is successful") {
-			return
-		}
+		for i := 0; i < 2; i++ {
+			var c *Message
+			switch i {
+			case 0:
+				c, err = Parse(buf)
+				if !assert.NoError(t, err, "Parse([]byte) is successful") {
+					return
+				}
+			case 1:
+				c, err = ParseString(string(buf))
+				if !assert.NoError(t, err, "ParseString(string) is successful") {
+					return
+				}
+			default:
+				panic("what?!")
+			}
 
-		if !assert.Equal(t, buffer.Buffer("Hello, World!"), c.Payload, "Payload is decoded") {
-			return
-		}
+			if !assert.Equal(t, buffer.Buffer("Hello, World!"), c.Payload, "Payload is decoded") {
+				return
+			}
 
-		if !assert.NoError(t, c.Verify(signer), "Verify is successful") {
-			return
+			if !assert.NoError(t, c.Verify(signer), "Verify is successful") {
+				return
+			}
 		}
 	}
 }
