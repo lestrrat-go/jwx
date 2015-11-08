@@ -1,9 +1,10 @@
+// Package jwt implements JSON Web Tokens as described in https://tools.ietf.org/html/rfc7519
 package jwt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
@@ -64,12 +65,12 @@ func (c *ClaimSet) UnmarshalJSON(data []byte) error {
 }
 
 func (c *EssentialClaims) Construct(m map[string]interface{}) error {
-	log.Printf("%#v", m)
 	r := emap.Hmap(m)
 	c.Audience, _ = r.GetString("aud")
 	c.Expiration, _ = r.GetInt64("exp")
 	c.IssuedAt, _ = r.GetInt64("iat")
 	c.Issuer, _ = r.GetString("iss")
+	c.JwtID, _ = r.GetString("jti")
 	if v, err := r.GetString("nbf"); err != nil {
 		if v != "" {
 			t, err := time.Parse(numericDateFmt, v)
@@ -80,7 +81,73 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 		}
 	}
 	c.Subject, _ = r.GetString("sub")
-	c.JwtID, _ = r.GetString("jti")
-	log.Printf("%#v", c)
+	return nil
+}
+
+var ErrInvalidValue = errors.New("invalid value for key")
+
+// Set takes a key and a value, and sets the appropriate values in the
+// `ClaimSet` for you. If the key is a known ("Essential") claim, it is set
+// in `c.EssentialClaim` struct, which means that some amoutn of type safety
+// is asserted. Otherwise it is assumed to be a private claim as is.
+//
+// Set returns an error if a known essential claim name is used and its type
+// does not match with the type given in `value`.
+// If you want to rely on compile time check for types, you should be
+// assigning values directly to the struct.
+func (c *ClaimSet) Set(key string, value interface{}) error {
+	switch key {
+	case "aud":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.Audience = v
+	case "exp":
+		v, ok := value.(int64)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.Expiration = v
+	case "iat":
+		v, ok := value.(int64)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.IssuedAt = v
+	case "iss":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.Issuer = v
+	case "jti":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.JwtID = v
+	case "nbf":
+		switch value.(type) {
+		case NumericDate:
+			v := value.(NumericDate)
+			c.NotBefore = &NumericDate{v.Time}
+		case *NumericDate:
+			c.NotBefore = value.(*NumericDate)
+		case time.Time:
+			c.NotBefore = &NumericDate{value.(time.Time)}
+		default:
+			return ErrInvalidValue
+		}
+	case "sub":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidValue
+		}
+		c.Subject = v
+	default:
+		c.PrivateClaims[key] = value
+	}
+
 	return nil
 }

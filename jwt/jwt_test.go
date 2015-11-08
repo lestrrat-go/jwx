@@ -10,9 +10,9 @@ import (
 
 func TestClaimSet(t *testing.T) {
 	c1 := NewClaimSet()
-	c1.PrivateClaims["nonce"] = "AbCdEfG"
-	c1.Subject = "foobar@example.com"
-	c1.IssuedAt = time.Now().Unix()
+	c1.Set("nonce", "AbCdEfG")
+	c1.Set("sub", "foobar@example.com")
+	c1.Set("iat", time.Now().Unix())
 
 	jsonbuf1, err := json.MarshalIndent(c1, "", "  ")
 	if !assert.NoError(t, err, "JSON marshal should succeed") {
