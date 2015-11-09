@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"hash"
+	"math/big"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
@@ -187,6 +188,7 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 	return &EcdsaSign{
 		Algorithm:  alg,
 		PrivateKey: key,
+		PublicKey:  &key.PublicKey,
 	}, nil
 }
 
@@ -235,18 +237,9 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 		return nil, errors.New("cannot proceed with Sign(): no private key available")
 	}
 
+	keysiz := hash.Size()
 	curveBits := privkey.Curve.Params().BitSize
-	bitsizeOk := false
-	switch hash {
-	case crypto.SHA256:
-		bitsizeOk = curveBits == 256
-	case crypto.SHA384:
-		bitsizeOk = curveBits == 384
-	case crypto.SHA512:
-		bitsizeOk = curveBits == 512
-	}
-
-	if !bitsizeOk {
+	if curveBits != keysiz*8 {
 		return nil, errors.New("key size does not match curve bit size")
 	}
 
@@ -258,22 +251,46 @@ func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	keyBytes := curveBits / 8
-	if curveBits%8 > 0 {
-		keyBytes++
+	out := make([]byte, keysiz*2)
+	keys := [][]byte{r.Bytes(), s.Bytes()}
+	for i, data := range keys {
+		start := i * keysiz
+		padlen := keysiz - len(data)
+		copy(out[start+padlen:], data)
 	}
 
-	rBytes := r.Bytes()
-	rBytesPadded := make([]byte, keyBytes)
-	copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-	sBytes := s.Bytes()
-	sBytesPadded := make([]byte, keyBytes)
-	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-	out := append(rBytesPadded, sBytesPadded...)
-
 	return out, nil
+}
+
+func (s EcdsaSign) Verify(payload, signature []byte) error {
+	pubkey := s.PublicKey
+	if pubkey == nil {
+		if s.PrivateKey == nil {
+			return errors.New("cannot proceed with Verify(): no private/public key available")
+		}
+		pubkey = &s.PrivateKey.PublicKey
+	}
+
+	hash, err := s.hash()
+	if err != nil {
+		return ErrUnsupportedAlgorithm
+	}
+
+	keysiz := hash.Size()
+	if len(signature) != 2*keysiz {
+		return ErrInvalidEcdsaSignatureSize
+	}
+
+	h := hash.New()
+	h.Write(payload)
+
+	rv := (&big.Int{}).SetBytes(signature[:keysiz])
+	sv := (&big.Int{}).SetBytes(signature[keysiz:])
+
+	if !ecdsa.Verify(pubkey, h.Sum(nil), rv, sv) {
+		return ErrInvalidSignature
+	}
+	return nil
 }
 
 func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
@@ -316,7 +333,7 @@ func (s HmacSign) Verify(payload []byte, mac []byte) error {
 	}
 
 	if !hmac.Equal(mac, expected) {
-		return ErrInvalidMac
+		return ErrInvalidSignature
 	}
 	return nil
 }

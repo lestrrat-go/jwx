@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	ErrInvalidCompactPartsCount = errors.New("compact JWS format must have three parts")
-	ErrInvalidMac               = errors.New("invalid mac")
-	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")
+	ErrInvalidCompactPartsCount  = errors.New("compact JWS format must have three parts")
+	ErrInvalidSignature          = errors.New("invalid signature")
+	ErrUnsupportedAlgorithm      = errors.New("unspported algorithm")
+	ErrInvalidEcdsaSignatureSize = errors.New("invalid signature size of ecdsa algorithm")
 )
 
 // Base64Encoder can encode itself into base64. But you can do more such as
@@ -81,6 +82,7 @@ type EcdsaSign struct {
 	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *ecdsa.PrivateKey
+	PublicKey  *ecdsa.PublicKey
 }
 
 type MergedHeader struct {
@@ -112,8 +114,8 @@ type MultiSign struct {
 }
 
 type HmacSign struct {
-	Algorithm jwa.SignatureAlgorithm
+	Algorithm  jwa.SignatureAlgorithm
 	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
-	Key       []byte
+	Key        []byte
 }

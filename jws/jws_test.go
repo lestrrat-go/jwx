@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/internal/ecdsautil"
 	"github.com/lestrrat/go-jwx/internal/rsautil"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
@@ -209,6 +210,55 @@ func TestEncode_RS256Compact(t *testing.T) {
 
 	hdrs := msg.Signatures[0].MergedHeaders()
 	if !assert.Equal(t, hdrs.Algorithm(), jwa.RS256, "Algorithm in header matches") {
+		return
+	}
+
+	if !assert.NoError(t, Verify(buffer.Buffer(hdr), buffer.Buffer(examplePayload), msg.Signatures[0].Signature.Bytes(), sign), "Verify succeeds") {
+		return
+	}
+}
+
+// TestEncode_ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
+func TestEncode_ES256Compact(t *testing.T) {
+	const hdr = `{"alg":"ES256"}`
+	const jwksrc = `{
+    "kty":"EC",
+    "crv":"P-256",
+    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+  }`
+
+	privkey, err := ecdsautil.PrivateKeyFromJSON([]byte(jwksrc))
+	if !assert.NoError(t, err, "parsing jwk should be successful") {
+		return
+	}
+
+	sign, err := NewEcdsaSign(jwa.ES256, privkey)
+	if !assert.NoError(t, err, "RsaSign created successfully") {
+		return
+	}
+
+	out, err := Encode(
+		buffer.Buffer(hdr),
+		buffer.Buffer(examplePayload),
+		sign,
+	)
+	if !assert.NoError(t, err, "Encode should succeed") {
+		return
+	}
+
+	// The signature contains random factor, so unfortunately we can't match
+	// the output against a fixed expected outcome. We'll wave doing an
+	// exact match, and just try to verify using the signature
+
+	msg, err := Parse(out)
+	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
+		return
+	}
+
+	hdrs := msg.Signatures[0].MergedHeaders()
+	if !assert.Equal(t, hdrs.Algorithm(), jwa.ES256, "Algorithm in header matches") {
 		return
 	}
 
