@@ -13,9 +13,11 @@ import (
 
 var (
 	ErrInvalidCompactPartsCount  = errors.New("compact JWS format must have three parts")
-	ErrInvalidSignature          = errors.New("invalid signature")
-	ErrUnsupportedAlgorithm      = errors.New("unspported algorithm")
 	ErrInvalidEcdsaSignatureSize = errors.New("invalid signature size of ecdsa algorithm")
+	ErrInvalidSignature          = errors.New("invalid signature")
+	ErrMissingPrivateKey         = errors.New("missing private key")
+	ErrMissingPublicKey          = errors.New("missing public key")
+	ErrUnsupportedAlgorithm      = errors.New("unspported algorithm")
 )
 
 // Base64Encoder can encode itself into base64. But you can do more such as

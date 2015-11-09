@@ -131,7 +131,7 @@ func (s RsaSign) Sign(payload []byte) ([]byte, error) {
 
 	privkey := s.PrivateKey
 	if privkey == nil {
-		return nil, errors.New("cannot proceed with Sign(): no private key available")
+		return nil, ErrMissingPrivateKey
 	}
 
 	h := hash.New()
@@ -160,7 +160,7 @@ func (s RsaSign) Verify(payload, signature []byte) error {
 	pubkey := s.PublicKey
 	if pubkey == nil {
 		if s.PrivateKey == nil {
-			return errors.New("cannot proceed with Verify(): no private/public key available")
+			return ErrMissingPublicKey
 		}
 		pubkey = &s.PrivateKey.PublicKey
 	}
