@@ -186,3 +186,31 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	return m, nil
 }
+
+func Encode(hdr, enckey, iv Base64Encoder, encrypt Encrypter) ([]byte, error) {
+
+// jBASE64URL(UTF8(JWE Protected Header)) || '.' ||
+//   BASE64URL(JWE Encrypted Key) || '.' || BASE64URL(JWE Initialization
+//   Vector) || '.' || BASE64URL(JWE Ciphertext) || '.' || BASE64URL(JWE
+//   Authentication Tag).
+	parts := make([][]byte, 5)
+	hdrbuf, err := hdr.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	parts[0] = hdrbuf
+
+	keybuf, err := enckey.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	parts[1] = keybuf
+
+	ivbuf, err := iv.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	parts[2] = ivbuf
+
+	return nil, nil
+}

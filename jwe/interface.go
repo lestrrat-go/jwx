@@ -9,7 +9,22 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
-var ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
+var (
+	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
+	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")
+	ErrMissingPrivateKey        = errors.New("missing private key")
+)
+
+// Base64Encoder can encode itself into base64. But you can do more such as
+// filling default values, validating them, etc. This is used in `Encode()`
+// as both headers and payloads
+type Base64Encoder interface {
+	Base64Encode() ([]byte, error)
+}
+
+type Base64Decoder interface {
+	Base64Decode([]byte) error
+}
 
 type EssentialHeader struct {
 	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg"`

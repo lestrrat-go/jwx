@@ -47,7 +47,6 @@ const (
 // ContentEncryptionAlgorithm represents the various encryption
 // algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm string
-
 const (
 	A128CBC_HS256 ContentEncryptionAlgorithm = "A128CBC-HS256" // AES-CBC + HMAC-SHA256 (128)
 	A192CBC_HS384 ContentEncryptionAlgorithm = "A192CBC-HS384" // AES-CBC + HMAC-SHA384 (192)
