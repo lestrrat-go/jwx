@@ -1,13 +1,8 @@
 package jwe
 
 import (
-	"crypto/aes"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/jwe/aescbc"
-	"github.com/lestrrat/go-jwx/jwe/keywrap"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,30 +51,29 @@ func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 	if !assert.NoError(t, err, "Parse string should succeed") {
 		return
 	}
-
-	spew.Dump(msg)
+	_ = msg
 }
 
-// https://tools.ietf.org/html/rfc7516#appendix-A.3
+// This test uses Appendix 3 to verify some low level tools for
+// KeyWrap and CBC HMAC encryption.
 // This test uses a static cek so that we can validate the results
 // against the contents in the above Appendix
-func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
-	const plaintxt = `Live long and prosper.`
-	var encHeader = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0`
-	_ = encHeader
+func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
+	var plaintext = []byte{
+		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
+		112, 114, 111, 115, 112, 101, 114, 46,
+	}
 	var cek = []byte{
 		4, 211, 31, 197, 84, 157, 252, 254, 11, 100, 157, 250, 63, 170, 106,
 		206, 107, 124, 212, 45, 111, 107, 9, 219, 200, 177, 0, 240, 143, 156,
 		44, 207,
 	}
-	var encKey = []byte{
-		232, 160, 123, 211, 183, 76, 245, 132, 200, 128, 123, 75, 190, 216,
-		22, 67, 201, 138, 193, 186, 9, 91, 122, 31, 246, 90, 28, 139, 57, 3,
-		76, 124, 193, 11, 98, 37, 173, 61, 104, 57,
-	}
-	var encIv = []byte{
+	var iv = []byte{
 		3, 22, 60, 12, 43, 67, 104, 105, 108, 108, 105, 99, 111, 116, 104,
 		101,
+	}
+	var sharedkey = []byte{
+		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 	var aad = []byte{
 		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
@@ -87,30 +81,6 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		77, 84, 73, 52, 81, 48, 74, 68, 76, 85, 104, 84, 77, 106, 85, 50, 73,
 		110, 48,
 	}
-
-	// Generate the encryption key.
-	var jwkoct = `GawgguFyGrWKav7AX4VKUg`
-	var key buffer.Buffer
-	key.Base64Decode([]byte(jwkoct))
-
-	block, err := aes.NewCipher(key.Bytes())
-	if !assert.NoError(t, err, "Failed to create new cipher") {
-		return
-	}
-	newEncKey, err := keywrap.Wrap(block, cek)
-	if !assert.NoError(t, err, "Failed to wrap key") {
-		return
-	}
-	if !assert.Equal(t, encKey, newEncKey, "keys should match") {
-		return
-	}
-
-	aead, err := aescbc.New(cek, aes.NewCipher)
-	if !assert.NoError(t, err, "AEAD created") {
-		return
-	}
-	t.Logf("%#v", aead)
-
 	var ciphertext = []byte{
 		40, 57, 83, 181, 119, 33, 133, 148, 198, 185, 243, 24, 152, 230, 6,
 		75, 129, 223, 127, 19, 210, 82, 183, 230, 168, 33, 215, 104, 143,
@@ -121,17 +91,70 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		194, 85,
 	}
 	var combinedCipherTxt = append(ciphertext, authtag...)
-	newCipherTxt := aead.Seal(nil, encIv, []byte(plaintxt), aad)
-	if !assert.Equal(t, combinedCipherTxt, newCipherTxt, "Generated cipher text does not match") {
+
+	enckey, err := AESKeyWrap.KeyEncrypt(cek, sharedkey)
+	if !assert.NoError(t, err, "Failed to encrypt key") {
 		return
 	}
 
-	data, err := aead.Open(nil, encIv, newCipherTxt, aad)
-	if !assert.NoError(t, err, "AEAD Open succeeds") {
+	cipher := CbcHmacCipher{keysize: 8}
+
+	encrypted, err := cipher.encrypt(cek, iv, enckey, plaintext, aad)
+	if !assert.NoError(t, err, "encrypt() successful") {
 		return
 	}
 
-	if !assert.Equal(t, plaintxt, string(data), "decrypt works") {
+	if !assert.Equal(t, combinedCipherTxt, encrypted, "Generated cipher text does not match") {
+		return
+	}
+
+	data, err := cipher.decrypt(cek, iv, enckey, encrypted, aad)
+	if !assert.NoError(t, err, "decrypt successful") {
+		return
+	}
+
+	if !assert.Equal(t, plaintext, data, "decrypt works") {
+		return
+	}
+}
+
+// https://tools.ietf.org/html/rfc7516#appendix-A.3. Note that cek is dynamically
+// generated, so the encrypted values will NOT match that of the RFC.
+func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
+	var plaintext = []byte{
+		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
+		112, 114, 111, 115, 112, 101, 114, 46,
+	}
+	var encHeader = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0`
+	_ = encHeader
+	var sharedkey = []byte{
+		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
+	}
+	var aad = []byte{
+		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
+		83, 49, 99, 105, 76, 67, 74, 108, 98, 109, 77, 105, 79, 105, 74, 66,
+		77, 84, 73, 52, 81, 48, 74, 68, 76, 85, 104, 84, 77, 106, 85, 50, 73,
+		110, 48,
+	}
+
+	c := &Crypt{
+		cekgen: NewRandomKeyGenerate(32),
+		ivgen:  NewRandomKeyGenerate(16),
+		cipher: CbcHmacCipher{keysize: 8},
+		keyenc: AESKeyWrap,
+	}
+
+	cek, iv, ciphertext, err := c.Encrypt(sharedkey, plaintext, aad)
+	if !assert.NoError(t, err, "Failed to encrypt data") {
+		return
+	}
+
+	data, err := c.Decrypt(cek, iv, sharedkey, ciphertext, aad)
+	if !assert.NoError(t, err, "Decrypt successful") {
+		return
+	}
+
+	if !assert.Equal(t, plaintext, data, "roundtrip gives us the same data") {
 		return
 	}
 }

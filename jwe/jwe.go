@@ -189,7 +189,7 @@ func parseCompact(buf []byte) (*Message, error) {
 
 func Encode(hdr, enckey, iv Base64Encoder, encrypt Encrypter) ([]byte, error) {
 
-// jBASE64URL(UTF8(JWE Protected Header)) || '.' ||
+// BASE64URL(UTF8(JWE Protected Header)) || '.' ||
 //   BASE64URL(JWE Encrypted Key) || '.' || BASE64URL(JWE Initialization
 //   Vector) || '.' || BASE64URL(JWE Ciphertext) || '.' || BASE64URL(JWE
 //   Authentication Tag).

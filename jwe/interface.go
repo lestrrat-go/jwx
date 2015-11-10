@@ -79,3 +79,4 @@ type MultiEncrypt struct {
 	ContentEncryption jwa.ContentEncryptionAlgorithm
 	Encrypters        []Encrypter
 }
+
