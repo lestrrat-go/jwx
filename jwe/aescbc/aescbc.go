@@ -13,7 +13,9 @@ import (
 	"github.com/lestrrat/go-jwx/internal/padbuf"
 )
 
-const NonceSize = 16
+const (
+	NonceSize = 16
+)
 
 type AesCbcHmac struct {
 	blockCipher  cipher.Block
@@ -92,12 +94,6 @@ func ensureSize(dst []byte, n int) []byte {
 
 // Seal fulfills the crypto.AEAD interface
 func (c AesCbcHmac) Seal(dst, nonce, plaintext, data []byte) []byte {
-	/* original code:
-	// Output buffer -- must take care not to mangle plaintext input.
-	ciphertext := make([]byte, len(plaintext)+c.Overhead())[:len(plaintext)]
-	copy(ciphertext, plaintext)
-	ciphertext = padBuffer(ciphertext, c.blockCipher.BlockSize())
-	*/
 	ctlen := len(plaintext)
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)

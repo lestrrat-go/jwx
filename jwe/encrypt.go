@@ -9,7 +9,6 @@ import (
 	"io"
 
 	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-jwx/jwe/aescbc"
 	"github.com/lestrrat/go-jwx/jwe/keywrap"
 )
 
@@ -232,30 +231,17 @@ func (g RandomKeyGenerate) KeyGenerate() ([]byte, error) {
 	return buf, nil
 }
 
-type CbcHmacCipher struct {
-	keysize int
-}
-
-func (c CbcHmacCipher) KeySize() int {
-	return c.keysize // DUMMY
-}
-
-// returns the cipher text or an error
-func (c CbcHmacCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, error) {
-	aead, err := aescbc.New(cek, aes.NewCipher)
+func NewCrypt(alg jwa.ContentEncryptionAlgorithm) (*Crypt, error) {
+	cipher, err := BuildCipher(alg)
 	if err != nil {
 		return nil, err
 	}
 
-	ciphertext := aead.Seal(nil, iv, plaintext, aad)
-	return ciphertext, nil
-}
-
-func (c CbcHmacCipher) decrypt(cek, iv, ciphertxt, aad []byte) ([]byte, error) {
-	aead, err := aescbc.New(cek, aes.NewCipher)
-	if err != nil {
-		return nil, err
-	}
-
-	return aead.Open(nil, iv, ciphertxt, aad)
+	// other fields must be changed depending no more input parameters
+	return &Crypt{
+		cipher: cipher,
+		cekgen: NewRandomKeyGenerate(32),
+		ivgen:  NewRandomKeyGenerate(16),
+		keyenc: AESKeyWrap,
+	}, nil
 }

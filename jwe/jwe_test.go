@@ -3,6 +3,7 @@ package jwe
 import (
 	"testing"
 
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,7 +106,10 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	cipher := CbcHmacCipher{keysize: 8}
+	cipher, err := BuildCipher(jwa.A128CBC_HS256)
+	if !assert.NoError(t, err, "BuildCipher is successful") {
+		return
+	}
 
 	encrypted, err := cipher.encrypt(cek, iv, plaintext, aad)
 	if !assert.NoError(t, err, "encrypt() successful") {
@@ -140,11 +144,9 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		110, 48,
 	}
 
-	c := &Crypt{
-		cekgen: NewRandomKeyGenerate(32),
-		ivgen:  NewRandomKeyGenerate(16),
-		cipher: CbcHmacCipher{keysize: 8},
-		keyenc: AESKeyWrap,
+	c, err := NewCrypt(jwa.A128CBC_HS256)
+	if !assert.NoError(t, err, "NewCrypt is successful") {
+		return
 	}
 
 	cek, iv, ciphertext, err := c.Encrypt(plaintext, aad)
