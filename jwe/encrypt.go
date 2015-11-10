@@ -161,8 +161,8 @@ type KeyGenerator interface {
 
 type ContentCipher interface {
 	KeySize() int
-	encrypt(cek, iv, key, aad, plaintext []byte) ([]byte, error)
-	decrypt(cek, iv, key, aad, ciphertext []byte) ([]byte, error)
+	encrypt(cek, iv, aad, plaintext []byte) ([]byte, error)
+	decrypt(cek, iv, aad, ciphertext []byte) ([]byte, error)
 }
 
 type KeyEncrypter interface {
@@ -179,7 +179,7 @@ type Crypt struct {
 	ivgen  KeyGenerator
 }
 
-func (c Crypt) Encrypt(key, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
+func (c Crypt) Encrypt(plaintext, aad []byte) ([]byte, []byte, []byte, error) {
 	cek, err := c.cekgen.KeyGenerate()
 	if err != nil {
 		return nil, nil, nil, err
@@ -190,12 +190,7 @@ func (c Crypt) Encrypt(key, plaintext, aad []byte) ([]byte, []byte, []byte, erro
 		return nil, nil, nil, err
 	}
 
-	enckey, err := c.keyenc.KeyEncrypt(cek, key)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	encrypted, err := c.cipher.encrypt(cek, iv, enckey, plaintext, aad)
+	encrypted, err := c.cipher.encrypt(cek, iv, plaintext, aad)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -203,8 +198,8 @@ func (c Crypt) Encrypt(key, plaintext, aad []byte) ([]byte, []byte, []byte, erro
 	return cek, iv, encrypted, nil
 }
 
-func (c Crypt) Decrypt(cek, iv, key, ciphertext, aad []byte) ([]byte, error) {
-	return c.cipher.decrypt(cek, iv, key, ciphertext, aad)
+func (c Crypt) Decrypt(cek, iv, ciphertext, aad []byte) ([]byte, error) {
+	return c.cipher.decrypt(cek, iv, ciphertext, aad)
 }
 
 type StaticKeyGenerate []byte
@@ -246,7 +241,7 @@ func (c CbcHmacCipher) KeySize() int {
 }
 
 // returns the cipher text or an error
-func (c CbcHmacCipher) encrypt(cek, iv, key, plaintext, aad []byte) ([]byte, error) {
+func (c CbcHmacCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, error) {
 	aead, err := aescbc.New(cek, aes.NewCipher)
 	if err != nil {
 		return nil, err
@@ -256,7 +251,7 @@ func (c CbcHmacCipher) encrypt(cek, iv, key, plaintext, aad []byte) ([]byte, err
 	return ciphertext, nil
 }
 
-func (c CbcHmacCipher) decrypt(cek, iv, key, ciphertxt, aad []byte) ([]byte, error) {
+func (c CbcHmacCipher) decrypt(cek, iv, ciphertxt, aad []byte) ([]byte, error) {
 	aead, err := aescbc.New(cek, aes.NewCipher)
 	if err != nil {
 		return nil, err

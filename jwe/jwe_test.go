@@ -75,6 +75,11 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	var sharedkey = []byte{
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
+	var encsharedkey = []byte{
+		232, 160, 123, 211, 183, 76, 245, 132, 200, 128, 123, 75, 190, 216,
+		22, 67, 201, 138, 193, 186, 9, 91, 122, 31, 246, 90, 28, 139, 57, 3,
+		76, 124, 193, 11, 98, 37, 173, 61, 104, 57,
+	}
 	var aad = []byte{
 		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
 		83, 49, 99, 105, 76, 67, 74, 108, 98, 109, 77, 105, 79, 105, 74, 66,
@@ -96,10 +101,13 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	if !assert.NoError(t, err, "Failed to encrypt key") {
 		return
 	}
+	if !assert.Equal(t, encsharedkey, enckey, "encrypted keys match") {
+		return
+	}
 
 	cipher := CbcHmacCipher{keysize: 8}
 
-	encrypted, err := cipher.encrypt(cek, iv, enckey, plaintext, aad)
+	encrypted, err := cipher.encrypt(cek, iv, plaintext, aad)
 	if !assert.NoError(t, err, "encrypt() successful") {
 		return
 	}
@@ -108,7 +116,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	data, err := cipher.decrypt(cek, iv, enckey, encrypted, aad)
+	data, err := cipher.decrypt(cek, iv, encrypted, aad)
 	if !assert.NoError(t, err, "decrypt successful") {
 		return
 	}
@@ -125,11 +133,6 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
 		112, 114, 111, 115, 112, 101, 114, 46,
 	}
-	var encHeader = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0`
-	_ = encHeader
-	var sharedkey = []byte{
-		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
-	}
 	var aad = []byte{
 		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
 		83, 49, 99, 105, 76, 67, 74, 108, 98, 109, 77, 105, 79, 105, 74, 66,
@@ -144,12 +147,12 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		keyenc: AESKeyWrap,
 	}
 
-	cek, iv, ciphertext, err := c.Encrypt(sharedkey, plaintext, aad)
+	cek, iv, ciphertext, err := c.Encrypt(plaintext, aad)
 	if !assert.NoError(t, err, "Failed to encrypt data") {
 		return
 	}
 
-	data, err := c.Decrypt(cek, iv, sharedkey, ciphertext, aad)
+	data, err := c.Decrypt(cek, iv, ciphertext, aad)
 	if !assert.NoError(t, err, "Decrypt successful") {
 		return
 	}
