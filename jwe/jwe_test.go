@@ -147,7 +147,8 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	}
 }
 
-// https://tools.ietf.org/html/rfc7516#appendix-A.1. 
+// This test parses the example found in https://tools.ietf.org/html/rfc7516#appendix-A.1,
+// and checks if we can roundtrip to the same compact serialization format.
 func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	const serialized = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
 
@@ -156,11 +157,18 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, _ := JSONSerialize{Pretty: true}.Serialize(msg)
-	t.Logf("%s", jsonbuf)
+	// Test decrypting?
 
-	jsonbuf, _ = CompactSerialize{}.Serialize(msg)
-	t.Logf("%s", jsonbuf)
+	jsonbuf, err := CompactSerialize{}.Serialize(msg)
+	if !assert.NoError(t, err, "Compact serialize succeeded") {
+		return
+	}
+
+	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
+		jsonbuf, _ = JSONSerialize{Pretty: true}.Serialize(msg)
+		t.Logf("%s", jsonbuf)
+		return
+	}
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.1. Note that cek is dynamically

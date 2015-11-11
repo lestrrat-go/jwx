@@ -23,8 +23,8 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, errors.New("invalid protected header")
 	}
 	hcopy.Copy(m.ProtectedHeader.Header)
-
 	hcopy.Algorithm = recipient.Header.Algorithm
+	hcopy.ContentEncryption = recipient.Header.ContentEncryption
 	for k, v := range recipient.Header.PrivateParams {
 		hcopy.PrivateParams[k] = v
 	}
