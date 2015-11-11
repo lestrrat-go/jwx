@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -14,17 +15,102 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-func NewHeader() *Header {
-	return &Header{
-		EssentialHeader: &EssentialHeader{},
-		PrivateParams:   map[string]interface{}{},
-	}
+func debug(f string, args ...interface{}) {
+	log.Printf(f, args...)
 }
 
-func NewMessage() *Message {
-	return &Message{
-		AEADParts: AEADParts{},
+func (h *Header) Set(key string, value interface{}) error {
+	switch key {
+	case "alg":
+		var v jwa.KeyEncryptionAlgorithm
+		s, ok := value.(string)
+		if ok {
+			v = jwa.KeyEncryptionAlgorithm(s)
+		} else {
+			v, ok = value.(jwa.KeyEncryptionAlgorithm)
+			if !ok {
+				return ErrInvalidHeaderValue
+			}
+		}
+		h.Algorithm = v
+	case "enc":
+		var v jwa.ContentEncryptionAlgorithm
+		s, ok := value.(string)
+		if ok {
+			v = jwa.ContentEncryptionAlgorithm(s)
+		} else {
+			v, ok = value.(jwa.ContentEncryptionAlgorithm)
+			if !ok {
+				return ErrInvalidHeaderValue
+			}
+		}
+		h.ContentEncryption = v
+	case "cty":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.ContentType = v
+	case "kid":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.KeyID = v
+	case "typ":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.Type = v
+	case "x5t":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertThumbprint = v
+	case "x5t#256":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertThumbprintS256 = v
+	case "x5c":
+		v, ok := value.([]string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertChain = v
+	case "crit":
+		v, ok := value.([]string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.Critical = v
+	case "jku":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		u, err := url.Parse(v)
+		if err != nil {
+			return ErrInvalidHeaderValue
+		}
+		h.JwkSetURL = u
+	case "x5u":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		u, err := url.Parse(v)
+		if err != nil {
+			return ErrInvalidHeaderValue
+		}
+		h.X509Url = u
+	default:
+		h.PrivateParams[key] = value
 	}
+	return nil
 }
 
 func (h Header) MarshalJSON() ([]byte, error) {
@@ -38,51 +124,16 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	if h.PrivateParams == nil {
 		h.PrivateParams = map[string]interface{}{}
 	}
-	return emap.MergeUnmarshal(data, h.EssentialHeader, &h.PrivateParams)
-}
 
-func (h *EssentialHeader) Construct(m map[string]interface{}) error {
-	r := emap.Hmap(m)
-	{
-		alg, err := r.GetString("alg")
-		if err != nil {
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	for name, value := range m {
+		if err := h.Set(name, value); err != nil {
 			return err
 		}
-		h.Algorithm = jwa.KeyEncryptionAlgorithm(alg)
 	}
-
-	{
-		alg, err := r.GetString("enc")
-		if err != nil {
-			return err
-		}
-		h.ContentEncryption = jwa.ContentEncryptionAlgorithm(alg)
-	}
-	h.ContentType, _ = r.GetString("cty")
-	h.KeyID, _ = r.GetString("kid")
-	h.Type, _ = r.GetString("typ")
-	h.X509CertThumbprint, _ = r.GetString("x5t")
-	h.X509CertThumbprintS256, _ = r.GetString("x5t#256")
-	if v, err := r.GetStringSlice("crit"); err != nil {
-		h.Critical = v
-	}
-	if v, err := r.GetStringSlice("x5c"); err != nil {
-		h.X509CertChain = v
-	}
-	if v, err := r.GetString("jku"); err == nil {
-		u, err := url.Parse(v)
-		if err == nil {
-			h.JwkSetURL = u
-		}
-	}
-
-	if v, err := r.GetString("x5u"); err == nil {
-		u, err := url.Parse(v)
-		if err == nil {
-			h.X509Url = u
-		}
-	}
-
 	return nil
 }
 
@@ -187,6 +238,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	return m, nil
 }
 
+/*
 func Encode(hdr, enckey, iv Base64Encoder, encrypt Encrypter) ([]byte, error) {
 
 // BASE64URL(UTF8(JWE Protected Header)) || '.' ||
@@ -212,5 +264,11 @@ func Encode(hdr, enckey, iv Base64Encoder, encrypt Encrypter) ([]byte, error) {
 	}
 	parts[2] = ivbuf
 
+
+//	msg := NewMessage()
+//	msg.Crypter = append(msg.Crypter, NewRsaCrypt(contentalg, pubkey))
+
+
 	return nil, nil
 }
+*/

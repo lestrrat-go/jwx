@@ -13,14 +13,29 @@ import (
 )
 
 // TODO GCM family
-type KeyWrapEncrypt int
+type KeyWrapEncrypt struct {
+	alg jwa.KeyEncryptionAlgorithm
+	KeyID     string
+	sharedkey []byte
+}
 
-const (
-	AESKeyWrap KeyWrapEncrypt = iota + 1
-)
+func NewAesKeyWrap(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
+	return KeyWrapEncrypt{
+		alg: alg,
+		sharedkey: sharedkey,
+	}, nil
+}
 
-func (kw KeyWrapEncrypt) KeyEncrypt(cek, sharedKey []byte) ([]byte, error) {
-	block, err := aes.NewCipher(sharedKey)
+func (kw KeyWrapEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.alg
+}
+
+func (kw KeyWrapEncrypt) Kid() string {
+	return kw.KeyID
+}
+
+func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		println("newcipher failed")
 		return nil, err
@@ -30,19 +45,6 @@ func (kw KeyWrapEncrypt) KeyEncrypt(cek, sharedKey []byte) ([]byte, error) {
 		return nil, err
 	}
 	return encrypted, nil
-}
-
-func (m *MultiEncrypt) MultiEncrypt(payload []byte, aad []byte) (*Message, error) {
-	msg := NewMessage()
-	msg.AuthenticatedData = aad
-	msg.Protected = *NewHeader()
-	msg.Protected.ContentEncryption = m.ContentEncryption
-	/*
-		for _, encrypt := range m.Encrypters {
-			parts := encrypt.Encrypt(payload)
-		}
-	*/
-	return nil, nil
 }
 
 type KeyDecoder interface {
@@ -82,10 +84,6 @@ func (e RsaOaepKeyDecode) KeyDecode(payload []byte) ([]byte, error) {
 	return nil, nil
 	//	h := hash.New()
 	//	return rsa.DecryptOAEP(h, rand.Reader, privkey, payload)
-}
-
-type Decrypter interface {
-	Decrypter()
 }
 
 type CbcHmacDecrypt struct {
@@ -135,7 +133,7 @@ func (d CbcHmacDecrypt) hash() (crypto.Hash, error) {
 	return hash, nil
 }
 
-func (d CbcHmacDecrypt) Decrypt(key, hdr, iv, ciphertxt, payload []byte) ([]byte, error) {
+func (d CbcHmacDecrypt) Decrypt(key, hdr, iv, ciphertxt, tag, payload []byte) ([]byte, error) {
 	hash, err := d.hash()
 	if err != nil {
 		return nil, err
@@ -149,6 +147,7 @@ func (d CbcHmacDecrypt) Decrypt(key, hdr, iv, ciphertxt, payload []byte) ([]byte
 	h.Write(hdr)
 	h.Write(iv)
 	h.Write(ciphertxt)
+	h.Write(tag)
 	h.Write(ek)
 	return nil, nil
 }
@@ -160,45 +159,47 @@ type KeyGenerator interface {
 
 type ContentCipher interface {
 	KeySize() int
-	encrypt(cek, iv, aad, plaintext []byte) ([]byte, error)
-	decrypt(cek, iv, aad, ciphertext []byte) ([]byte, error)
-}
-
-type KeyEncrypter interface {
-	KeyEncrypt([]byte, []byte) ([]byte, error)
+	encrypt(cek, iv, aad, plaintext []byte) ([]byte, []byte, error)
+	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
 }
 
 type Crypt struct {
-	jwa.ContentEncryptionAlgorithm
-	jwa.KeyEncryptionAlgorithm
-	jwa.CompressionAlgorithm
-	keyenc KeyEncrypter
+	alg jwa.ContentEncryptionAlgorithm
+	keysize int
+	tagsize int
 	cipher ContentCipher
 	cekgen KeyGenerator
 	ivgen  KeyGenerator
 }
 
-func (c Crypt) Encrypt(plaintext, aad []byte) ([]byte, []byte, []byte, error) {
+func (c Crypt) Algorithm() jwa.ContentEncryptionAlgorithm {
+	return c.alg
+}
+
+func (c Crypt) Encrypt(plaintext, aad []byte) ([]byte, []byte, []byte, []byte, error) {
 	cek, err := c.cekgen.KeyGenerate()
 	if err != nil {
-		return nil, nil, nil, err
+		debug("cekgen.KeyGenerate failed")
+		return nil, nil, nil, nil, err
 	}
 
 	iv, err := c.ivgen.KeyGenerate()
 	if err != nil {
-		return nil, nil, nil, err
+		debug("ivgen.KeyGenerate failed")
+		return nil, nil, nil, nil, err
 	}
 
-	encrypted, err := c.cipher.encrypt(cek, iv, plaintext, aad)
+	encrypted, tag, err := c.cipher.encrypt(cek, iv, plaintext, aad)
 	if err != nil {
-		return nil, nil, nil, err
+		debug("cipher.encrypt failed")
+		return nil, nil, nil, nil, err
 	}
 
-	return cek, iv, encrypted, nil
+	return cek, iv, encrypted, tag, nil
 }
 
-func (c Crypt) Decrypt(cek, iv, ciphertext, aad []byte) ([]byte, error) {
-	return c.cipher.decrypt(cek, iv, ciphertext, aad)
+func (c Crypt) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
+	return c.cipher.decrypt(cek, iv, ciphertext, tag, aad)
 }
 
 type StaticKeyGenerate []byte
@@ -231,17 +232,22 @@ func (g RandomKeyGenerate) KeyGenerate() ([]byte, error) {
 	return buf, nil
 }
 
-func NewCrypt(alg jwa.ContentEncryptionAlgorithm) (*Crypt, error) {
-	cipher, err := BuildCipher(alg)
+func NewAesCrypt(contentAlg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*Crypt, error) {
+	cipher, err := NewAesContentCipher(contentAlg, sharedkey)
 	if err != nil {
 		return nil, err
 	}
 
-	// other fields must be changed depending no more input parameters
 	return &Crypt{
+		alg: contentAlg,
 		cipher: cipher,
-		cekgen: NewRandomKeyGenerate(32),
+		cekgen: NewRandomKeyGenerate(cipher.KeySize() * 2),
 		ivgen:  NewRandomKeyGenerate(16),
-		keyenc: AESKeyWrap,
+		keysize: cipher.KeySize() * 2,
+		tagsize: 16,
 	}, nil
+}
+
+func (c Crypt) KeySize() int {
+	return c.keysize
 }

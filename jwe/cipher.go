@@ -3,6 +3,7 @@ package jwe
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rsa"
 
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwe/aescbc"
@@ -25,27 +26,26 @@ func (f AeadFetchFunc) AeadFetch(key []byte) (cipher.AEAD, error) {
 var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
+		debug("GcmAeadFetch: failed to create cipher")
 		return nil, err
 	}
 
 	return cipher.NewGCM(aescipher)
 })
 var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
-	return aescbc.New(key, aes.NewCipher)
+	aead, err := aescbc.New(key, aes.NewCipher)
+	if err != nil {
+		debug("CbcAeadFetch: failed to create aead fetcher")
+		return nil, err
+	}
+	return aead, nil
 })
 
 type AesContentCipher struct {
 	AeadFetcher
-	keysize int
-	tagsize int
-}
-
-func NewContentCipher(keysize int, f AeadFetcher) *AesContentCipher {
-	return &AesContentCipher{
-		keysize: keysize,
-		tagsize: TagSize,
-		AeadFetcher: f,
-	}
+	sharedkey []byte
+	keysize   int
+	tagsize   int
 }
 
 func (c AesContentCipher) KeySize() int {
@@ -56,7 +56,7 @@ func (c AesContentCipher) TagSize() int {
 	return c.tagsize
 }
 
-func BuildCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
+func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*AesContentCipher, error) {
 	var keysize int
 	var fetcher AeadFetcher
 	switch alg {
@@ -82,24 +82,45 @@ func BuildCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
 		return nil, ErrUnsupportedAlgorithm
 	}
 
-	return NewContentCipher(keysize, fetcher), nil
+	return &AesContentCipher{
+		keysize: keysize,
+		sharedkey: sharedkey,
+		tagsize: TagSize,
+		AeadFetcher: fetcher,
+	}, nil
 }
 
-func (c AesContentCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, error) {
+func (c AesContentCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, []byte, error) {
 	aead, err := c.AeadFetch(cek)
 	if err != nil {
-		return nil, err
+		debug("AeadFetch failed")
+		return nil, nil, err
 	}
 
 	ciphertext := aead.Seal(nil, iv, plaintext, aad)
-	return ciphertext, nil
+	tagoffset  := len(ciphertext) - c.TagSize()
+
+	return ciphertext[:tagoffset], ciphertext[tagoffset:], nil
 }
 
-func (c AesContentCipher) decrypt(cek, iv, ciphertxt, aad []byte) ([]byte, error) {
+func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) ([]byte, error) {
 	aead, err := c.AeadFetch(cek)
 	if err != nil {
 		return nil, err
 	}
 
-	return aead.Open(nil, iv, ciphertxt, aad)
+	combined := make([]byte, len(ciphertxt) + len(tag))
+	copy(combined, ciphertxt)
+	copy(combined[len(ciphertxt):], tag)
+	return aead.Open(nil, iv, combined, aad)
+}
+
+type RsaContentCipher struct {
+	pubkey *rsa.PublicKey
+}
+
+func NewRsaContentCipher(alg jwa.ContentEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RsaContentCipher, error) {
+	return &RsaContentCipher{
+		pubkey: pubkey,
+	}, nil
 }

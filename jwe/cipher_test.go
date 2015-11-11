@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestContentCipher(t *testing.T) {
+func TestAesContentCipher(t *testing.T) {
 	algs := []jwa.ContentEncryptionAlgorithm{
 		jwa.A128GCM,
 		jwa.A192GCM,
@@ -17,7 +17,7 @@ func TestContentCipher(t *testing.T) {
 		jwa.A256CBC_HS512,
 	}
 	for _, alg := range algs {
-		c, err := BuildCipher(alg)
+		c, err := NewAesContentCipher(alg, []byte{})
 		if !assert.NoError(t, err, "BuildCipher for %s succeeds", alg) {
 			return
 		}
