@@ -4,6 +4,7 @@ package jwe
 
 import (
 	"bytes"
+	"compress/flate"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
@@ -236,8 +237,21 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 		return nil, errors.New("failed to decrypt key")
 	}
 
-	if h.Compression != "" {
-		panic("compression not implemented")
+	if h.Compression == jwa.Deflate {
+		output := bytes.Buffer{}
+		w, _ := flate.NewWriter(&output, 1)
+		in := plaintext
+		for len(in) > 0 {
+			n, err := w.Write(in)
+			if err != nil {
+				return nil, err
+			}
+			in = in[n:]
+		}
+		if err := w.Close(); err != nil {
+			return nil, err
+		}
+		plaintext = output.Bytes()
 	}
 
 	return plaintext, nil
