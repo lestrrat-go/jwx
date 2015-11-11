@@ -33,7 +33,7 @@ func (c GenericContentCrypt) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]by
 }
 
 func NewAesCrypt(contentAlg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*GenericContentCrypt, error) {
-	cipher, err := NewAesContentCipher(contentAlg, sharedkey)
+	cipher, err := NewAesContentCipher(contentAlg)
 	if err != nil {
 		return nil, err
 	}

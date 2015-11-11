@@ -65,19 +65,24 @@ type KeyEncrypter interface {
 	KeyEncrypt([]byte) ([]byte, error)
 }
 
+type KeyDecrypter interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	KeyDecrypt([]byte) ([]byte, error)
+}
+
 type Recipient struct {
 	Header       *Header       `json:"header"`
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
 type Message struct {
-	CipherText           buffer.Buffer  `json:"ciphertext"`
-	ProtectedHeader      *EncodedHeader `json:"protected"`
-	InitializationVector buffer.Buffer  `json:"iv,omitempty"`
-	Tag                  buffer.Buffer  `json:"tag,omitempty"`
 	AuthenticatedData    buffer.Buffer  `json:"aad,omitempty"`
+	CipherText           buffer.Buffer  `json:"ciphertext"`
+	InitializationVector buffer.Buffer  `json:"iv,omitempty"`
+	ProtectedHeader      *EncodedHeader `json:"protected"`
 	Recipients           []Recipient    `json:"recipients"`
-	Unprotected          string         `json:"unprotected,omitempty"`
+	Tag                  buffer.Buffer  `json:"tag,omitempty"`
+	UnprotectedHeader    *Header `json:"unprotected,omitempty"`
 }
 
 // Encrypter is the top level structure that encrypts the given
@@ -162,7 +167,6 @@ type AeadFetchFunc func([]byte) (cipher.AEAD, error)
 
 type AesContentCipher struct {
 	AeadFetcher
-	sharedkey []byte
 	keysize   int
 	tagsize   int
 }

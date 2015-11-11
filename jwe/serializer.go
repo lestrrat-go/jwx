@@ -22,11 +22,17 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	if m.ProtectedHeader == nil || m.ProtectedHeader.Header == nil {
 		return nil, errors.New("invalid protected header")
 	}
-	hcopy.Copy(m.ProtectedHeader.Header)
-	hcopy.Algorithm = recipient.Header.Algorithm
-	hcopy.ContentEncryption = recipient.Header.ContentEncryption
-	for k, v := range recipient.Header.PrivateParams {
-		hcopy.PrivateParams[k] = v
+	err := hcopy.Copy(m.ProtectedHeader.Header)
+	if err != nil {
+		return nil, err
+	}
+	hcopy, err = hcopy.Merge(m.UnprotectedHeader)
+	if err != nil {
+		return nil, err
+	}
+	hcopy, err = hcopy.Merge(recipient.Header)
+	if err != nil {
+		return nil, err
 	}
 
 	protected, err := EncodedHeader{Header: hcopy}.Base64Encode()

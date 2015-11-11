@@ -43,7 +43,7 @@ func (c AesContentCipher) TagSize() int {
 	return c.tagsize
 }
 
-func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*AesContentCipher, error) {
+func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	var keysize int
 	var fetcher AeadFetcher
 	switch alg {
@@ -71,7 +71,6 @@ func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (
 
 	return &AesContentCipher{
 		keysize:     keysize,
-		sharedkey:   sharedkey,
 		tagsize:     TagSize,
 		AeadFetcher: fetcher,
 	}, nil
@@ -93,6 +92,7 @@ func (c AesContentCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, []byt
 func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) ([]byte, error) {
 	aead, err := c.AeadFetch(cek)
 	if err != nil {
+		debug("AeadFetch failed for %v", cek)
 		return nil, err
 	}
 

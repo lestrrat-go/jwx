@@ -17,7 +17,7 @@ func TestAesContentCipher(t *testing.T) {
 		jwa.A256CBC_HS512,
 	}
 	for _, alg := range algs {
-		c, err := NewAesContentCipher(alg, []byte{})
+		c, err := NewAesContentCipher(alg)
 		if !assert.NoError(t, err, "BuildCipher for %s succeeds", alg) {
 			return
 		}

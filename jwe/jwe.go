@@ -4,12 +4,15 @@ package jwe
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
 )
 
 func debug(f string, args ...interface{}) {
@@ -80,6 +83,12 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 
+	// We need the protected header to contain the content encryption
+	// algorithm. XXX probably other headers need to go there too
+	protected := NewEncodedHeader()
+	protected.ContentEncryption = hdr.ContentEncryption
+	hdr.ContentEncryption = ""
+
 	enckeybuf := buffer.Buffer(out[p0Len : p0Len+p1Len])
 	if _, err := enc.Decode(enckeybuf, parts[1]); err != nil {
 		return nil, err
@@ -104,7 +113,14 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	tagbuf = bytes.TrimRight(tagbuf, "\x00")
 
+	b64hdrbuf, err := hdrbuf.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+
 	m := NewMessage()
+	m.AuthenticatedData = b64hdrbuf
+	m.ProtectedHeader = protected
 	m.Tag = tagbuf
 	m.CipherText = ctbuf
 	m.InitializationVector = ivbuf
@@ -115,4 +131,114 @@ func parseCompact(buf []byte) (*Message, error) {
 		},
 	}
 	return m, nil
+}
+
+// BuildKeyDecrypter creates a new KeyDecrypter instance from the given
+// parameters. It is used by the DecryptMessage fucntion to create
+// key decrypter(s) from the given message. `keysize` is only used by
+// some decrypters. Use the value from ContentCipher.KeySize().
+func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize int) (KeyDecrypter, error) {
+	switch alg {
+	case jwa.RSA1_5:
+		privkey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+		}
+		return NewRSAPKCS15KeyDecrypt(alg, privkey, keysize), nil
+	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		privkey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+		}
+		return NewRSAOAEPKeyDecrypt(alg, privkey), nil
+	}
+
+	return nil, ErrUnsupportedAlgorithm
+}
+
+func BuildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
+	switch alg {
+	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
+		return NewAesContentCipher(alg)
+	}
+
+	return nil, ErrUnsupportedAlgorithm
+}
+
+func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
+	var err error
+
+	if len(m.Recipients) == 0 {
+		return nil, errors.New("no recipients, can not proceed with decrypt")
+	}
+
+	enc := m.ProtectedHeader.ContentEncryption
+
+	h := NewHeader()
+	if err := h.Copy(m.ProtectedHeader.Header); err != nil {
+		return nil, err
+	}
+	h, err = h.Merge(m.UnprotectedHeader)
+	if err != nil {
+		debug("failed to merge unprotected header")
+		return nil, err
+	}
+
+	aad := m.AuthenticatedData.Bytes()
+	ciphertext := m.CipherText.Bytes()
+	iv := m.InitializationVector.Bytes()
+	tag := m.Tag.Bytes()
+
+	cipher, err := BuildContentCipher(enc)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
+	}
+	keysize := cipher.KeySize()
+
+	var plaintext []byte
+	for _, recipient := range m.Recipients {
+		h2 := NewHeader()
+		if err := h2.Copy(h); err != nil {
+			debug("failed to copy header: %s", err)
+			continue
+		}
+
+		h2, err := h2.Merge(recipient.Header)
+		if err != nil {
+			debug("Failed to merge! %s", err)
+			continue
+		}
+
+		k, err := BuildKeyDecrypter(h2.Algorithm, key, keysize)
+		if err != nil {
+			debug("failed to crete key decrypter: %s", err)
+			continue
+		}
+
+		cek, err := k.KeyDecrypt(recipient.EncryptedKey)
+		if err != nil {
+			debug("failed to decrypt key: %s", err)
+			continue
+		}
+
+		debug("cek        = %v", cek)
+		debug("iv	       = %v", iv)
+		debug("ciphertext = %v", ciphertext)
+		debug("tag        = %v", tag)
+		debug("aad        = %v", aad)
+		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
+		if err == nil {
+			break
+		}
+	}
+
+	if plaintext == nil {
+		return nil, errors.New("failed to decrypt key")
+	}
+
+	if h.Compression != "" {
+		panic("compression not implemented")
+	}
+
+	return plaintext, nil
 }
