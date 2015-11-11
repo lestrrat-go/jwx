@@ -3,7 +3,6 @@ package jwt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 

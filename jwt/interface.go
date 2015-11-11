@@ -1,6 +1,9 @@
 package jwt
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type NumericDate struct {
 	time.Time
