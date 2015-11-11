@@ -4,6 +4,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
+	"errors"
+	"fmt"
 
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwe/aescbc"
@@ -76,30 +78,73 @@ func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher,
 	}, nil
 }
 
-func (c AesContentCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, []byte, error) {
-	aead, err := c.AeadFetch(cek)
+func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, tag []byte, err error) {
+	var aead cipher.AEAD
+	aead, err = c.AeadFetch(cek)
 	if err != nil {
 		debug("AeadFetch failed")
-		return nil, nil, err
+		return
 	}
 
-	ciphertext := aead.Seal(nil, iv, plaintext, aad)
-	tagoffset := len(ciphertext) - c.TagSize()
+	// Seal may panic (argh!), so protect ourselves from that
+	defer func() {
+		if e := recover(); e != nil {
+			switch e.(type) {
+			case error:
+				err = e.(error)
+			case string:
+				err = errors.New(e.(string))
+			default:
+				err = fmt.Errorf("%s", e)
+			}
+			return
+		}
+	}()
 
-	return ciphertext[:tagoffset], ciphertext[tagoffset:], nil
+	if c.NonceGenerator == nil {
+		iv, err = NewRandomKeyGenerate(aead.NonceSize()).KeyGenerate()
+	} else {
+		iv, err = c.NonceGenerator.KeyGenerate()
+	}
+	if err != nil {
+		return
+	}
+
+	ciphertext = aead.Seal(nil, iv, plaintext, aad)
+	tagoffset := len(ciphertext) - c.TagSize()
+	tag = ciphertext[tagoffset:]
+	ciphertext = ciphertext[:tagoffset]
+
+	return
 }
 
-func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) ([]byte, error) {
+func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	aead, err := c.AeadFetch(cek)
 	if err != nil {
 		debug("AeadFetch failed for %v", cek)
 		return nil, err
 	}
 
+	// Open may panic (argh!), so protect ourselves from that
+	defer func() {
+		if e := recover(); e != nil {
+			switch e.(type) {
+			case error:
+				err = e.(error)
+			case string:
+				err = errors.New(e.(string))
+			default:
+				err = fmt.Errorf("%s", e)
+			}
+			return
+		}
+	}()
+
 	combined := make([]byte, len(ciphertxt)+len(tag))
 	copy(combined, ciphertxt)
 	copy(combined[len(ciphertxt):], tag)
-	return aead.Open(nil, iv, combined, aad)
+	plaintext, err = aead.Open(nil, iv, combined, aad)
+	return
 }
 
 func NewRsaContentCipher(alg jwa.ContentEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RsaContentCipher, error) {

@@ -126,7 +126,7 @@ type KeyGenerator interface {
 
 type ContentCipher interface {
 	KeySize() int
-	encrypt(cek, iv, aad, plaintext []byte) ([]byte, []byte, error)
+	encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
 	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
 }
 
@@ -144,6 +144,8 @@ type StaticKeyGenerate []byte
 type RandomKeyGenerate struct {
 	keysize int
 }
+
+type DynamicKeyGenerate struct {}
 
 // Serializer converts an encrypted message into a byte buffer
 type Serializer interface {
@@ -167,6 +169,7 @@ type AeadFetchFunc func([]byte) (cipher.AEAD, error)
 
 type AesContentCipher struct {
 	AeadFetcher
+	NonceGenerator KeyGenerator
 	keysize   int
 	tagsize   int
 }

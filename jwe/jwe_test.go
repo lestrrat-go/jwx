@@ -95,8 +95,9 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	if !assert.NoError(t, err, "NewAesContentCipher is successful") {
 		return
 	}
+	cipher.NonceGenerator = StaticKeyGenerate(iv)
 
-	encrypted, tag, err := cipher.encrypt(cek, iv, plaintext, aad)
+	iv, encrypted, tag, err := cipher.encrypt(cek, plaintext, aad)
 	if !assert.NoError(t, err, "encrypt() successful") {
 		return
 	}
@@ -227,7 +228,7 @@ func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 	_ = privkey
 
-	c, err := NewAesCrypt(jwa.A128GCM, []byte{})
+	c, err := NewAesCrypt(jwa.A128GCM)
 	if !assert.NoError(t, err, "NewCrypt successful") {
 		return
 	}
@@ -264,7 +265,7 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 
-	c, err := NewAesCrypt(jwa.A128CBC_HS256, []byte("hello, world!"))
+	c, err := NewAesCrypt(jwa.A128CBC_HS256)
 	if !assert.NoError(t, err, "NewCrypt is successful") {
 		return
 	}

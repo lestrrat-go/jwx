@@ -13,13 +13,10 @@ func (c GenericContentCrypt) Encrypt(plaintext, aad []byte) ([]byte, []byte, []b
 		return nil, nil, nil, nil, err
 	}
 
-	iv, err := c.ivgen.KeyGenerate()
-	if err != nil {
-		debug("ivgen.KeyGenerate failed")
-		return nil, nil, nil, nil, err
-	}
-
-	encrypted, tag, err := c.cipher.encrypt(cek, iv, plaintext, aad)
+	debug("cek        = %v", cek)
+	debug("ciphertext = %v", plaintext)
+	debug("aad        = %v", aad)
+	iv, encrypted, tag, err := c.cipher.encrypt(cek, plaintext, aad)
 	if err != nil {
 		debug("cipher.encrypt failed")
 		return nil, nil, nil, nil, err
@@ -32,7 +29,7 @@ func (c GenericContentCrypt) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]by
 	return c.cipher.decrypt(cek, iv, ciphertext, tag, aad)
 }
 
-func NewAesCrypt(contentAlg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*GenericContentCrypt, error) {
+func NewAesCrypt(contentAlg jwa.ContentEncryptionAlgorithm) (*GenericContentCrypt, error) {
 	cipher, err := NewAesContentCipher(contentAlg)
 	if err != nil {
 		return nil, err
@@ -42,7 +39,6 @@ func NewAesCrypt(contentAlg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (*
 		alg:     contentAlg,
 		cipher:  cipher,
 		cekgen:  NewRandomKeyGenerate(cipher.KeySize() * 2),
-		ivgen:   NewRandomKeyGenerate(16),
 		keysize: cipher.KeySize() * 2,
 		tagsize: 16,
 	}, nil
