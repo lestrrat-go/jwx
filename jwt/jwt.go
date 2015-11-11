@@ -84,8 +84,6 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	return nil
 }
 
-var ErrInvalidValue = errors.New("invalid value for key")
-
 // Set takes a key and a value, and sets the appropriate values in the
 // `ClaimSet` for you. If the key is a known ("Essential") claim, it is set
 // in `c.EssentialClaim` struct, which means that some amoutn of type safety

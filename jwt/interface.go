@@ -6,6 +6,8 @@ type NumericDate struct {
 	time.Time
 }
 
+var ErrInvalidValue = errors.New("invalid value for key")
+
 const numericDateFmt = "2006-01-02T15:04:05Z UTC"
 
 type EssentialHeader struct {
