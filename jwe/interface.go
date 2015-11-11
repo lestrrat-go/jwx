@@ -1,6 +1,8 @@
 package jwe
 
 import (
+	"crypto/cipher"
+	"crypto/rsa"
 	"errors"
 	"net/url"
 
@@ -44,6 +46,7 @@ type EssentialHeader struct {
 }
 
 // Header represents a jws header.
+
 type Header struct {
 	*EssentialHeader `json:"-"`
 	PrivateParams    map[string]interface{} `json:"-"`
@@ -77,8 +80,10 @@ type Message struct {
 	Unprotected          string        `json:"unprotected,omitempty"`
 }
 
-type MultiEncrypter interface {
-	MultiEncrypt([]byte) (*Message, error)
+// Encrypter is the top level structure that encrypts the given
+// payload to a JWE message
+type Encrypter interface {
+	Encrypt([]byte) (*Message, error)
 }
 
 type ContentEncrypter interface {
@@ -86,50 +91,82 @@ type ContentEncrypter interface {
 	Encrypt([]byte, []byte) ([]byte, []byte, []byte, []byte, error)
 }
 
-type MultiEncrypt struct {
+// Encrypt is the default Encrypter implementation.
+type Encrypt struct {
 	ContentEncrypter ContentEncrypter
-	KeyGenerator     KeyGenerator
+	KeyGenerator     KeyGenerator // KeyGenerator creates the random CEK.
 	KeyEncrypters    []KeyEncrypter
-	// KeyGenerator creates the random CEK.
 }
 
-// In JWE, multiple recipients may exist -- they receive an encrypted version
-// of the CEK, using their key encryption algorithm of choice. On the other hand,
-// there's only one content cipher.
+// TODO GCM family
+type KeyWrapEncrypt struct {
+	alg       jwa.KeyEncryptionAlgorithm
+	KeyID     string
+	sharedkey []byte
+}
 
-func (e MultiEncrypt) BuildMessage(plaintext, aad []byte) (*Message, error) {
-	cek, err := e.KeyGenerator.KeyGenerate()
-	if err != nil {
-		return nil, err
-	}
+type KeyDecoder interface {
+	KeyDecode([]byte) ([]byte, error)
+}
 
-	recipients := make([]Recipient, len(e.KeyEncrypters))
-	for i, enc := range e.KeyEncrypters {
-		r := NewRecipient()
-		r.Header.Set("alg", enc.Algorithm())
-		if v := enc.Kid(); v != "" {
-			r.Header.Set("kid", v)
-		}
-		enckey, err := enc.KeyEncrypt(cek)
-		if err != nil {
-			return nil, err
-		}
-		r.EncryptedKey = enckey
-		recipients[i] = *r
-	}
+type RsaOaepKeyDecode struct {
+	Algorithm  jwa.KeyEncryptionAlgorithm
+	PrivateKey *rsa.PrivateKey
+}
 
-	_, iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(plaintext, aad)
+type KeyGenerator interface {
+	KeySize() int
+	KeyGenerate() ([]byte, error)
+}
 
-	protected := EncodedHeader{Header: *NewHeader()}
-	protected.ContentEncryption = e.ContentEncrypter.Algorithm()
+type ContentCipher interface {
+	KeySize() int
+	encrypt(cek, iv, aad, plaintext []byte) ([]byte, []byte, error)
+	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
+}
 
-	return &Message{
-		AuthenticatedData:    aad,
-		CipherText:           ciphertext,
-		InitializationVector: iv,
-		ProtectedHeader:      protected,
-		Recipients:           recipients,
-		Tag:                  tag,
-		//		Unprotected: TODO
-	}, nil
+type GenericContentCrypt struct {
+	alg     jwa.ContentEncryptionAlgorithm
+	keysize int
+	tagsize int
+	cipher  ContentCipher
+	cekgen  KeyGenerator
+	ivgen   KeyGenerator
+}
+
+type StaticKeyGenerate []byte
+
+type RandomKeyGenerate struct {
+	keysize int
+}
+
+// Serializer converts an encrypted message into a byte buffer
+type Serializer interface {
+	Serialize(*Message) ([]byte, error)
+}
+
+// CompactSerialize serializes the message into JWE compact serialized format
+type CompactSerialize struct{}
+
+// JSONSerialize serializes the message into JWE JSON serialized format. If you
+// set `Pretty` to true, `json.MarshalIndent` is used instead of `json.Marshal`
+type JSONSerialize struct {
+	Pretty bool
+}
+
+type AeadFetcher interface {
+	AeadFetch([]byte) (cipher.AEAD, error)
+}
+
+type AeadFetchFunc func([]byte) (cipher.AEAD, error)
+
+type AesContentCipher struct {
+	AeadFetcher
+	sharedkey []byte
+	keysize   int
+	tagsize   int
+}
+
+type RsaContentCipher struct {
+	pubkey *rsa.PublicKey
 }

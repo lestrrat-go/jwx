@@ -6,20 +6,6 @@ import (
 	"errors"
 )
 
-// Serializer converts an encrypted message into a byte buffer
-type Serializer interface {
-	Serialize(*Message) ([]byte, error)
-}
-
-// CompactSerialize serializes the message into JWE compact serialized format
-type CompactSerialize struct{}
-
-// JSONSerialize serializes the message into JWE JSON serialized format. If you
-// set `Pretty` to true, `json.MarshalIndent` is used instead of `json.Marshal`
-type JSONSerialize struct {
-	Pretty bool
-}
-
 // Serialize converts the mssage into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	if len(m.Recipients) != 1 {

@@ -227,13 +227,11 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	e := MultiEncrypt{
-		ContentEncrypter: c,
-		KeyEncrypters:    []KeyEncrypter{k},
-		KeyGenerator:     NewRandomKeyGenerate(c.KeySize() * 2),
-	}
+	kg := NewRandomKeyGenerate(c.KeySize() * 2)
 
-	msg, err := e.BuildMessage(plaintext, aad)
+	e := NewEncrypt(c, kg, k)
+
+	msg, err := e.Encrypt(plaintext, aad)
 	if !assert.NoError(t, err, "BuildMessage successful") {
 		return
 	}

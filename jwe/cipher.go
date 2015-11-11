@@ -13,12 +13,6 @@ const (
 	TagSize = 16
 )
 
-type AeadFetcher interface {
-	AeadFetch([]byte) (cipher.AEAD, error)
-}
-
-type AeadFetchFunc func([]byte) (cipher.AEAD, error)
-
 func (f AeadFetchFunc) AeadFetch(key []byte) (cipher.AEAD, error) {
 	return f(key)
 }
@@ -40,13 +34,6 @@ var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	}
 	return aead, nil
 })
-
-type AesContentCipher struct {
-	AeadFetcher
-	sharedkey []byte
-	keysize   int
-	tagsize   int
-}
 
 func (c AesContentCipher) KeySize() int {
 	return c.keysize
@@ -83,9 +70,9 @@ func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm, sharedkey []byte) (
 	}
 
 	return &AesContentCipher{
-		keysize: keysize,
-		sharedkey: sharedkey,
-		tagsize: TagSize,
+		keysize:     keysize,
+		sharedkey:   sharedkey,
+		tagsize:     TagSize,
 		AeadFetcher: fetcher,
 	}, nil
 }
@@ -98,7 +85,7 @@ func (c AesContentCipher) encrypt(cek, iv, plaintext, aad []byte) ([]byte, []byt
 	}
 
 	ciphertext := aead.Seal(nil, iv, plaintext, aad)
-	tagoffset  := len(ciphertext) - c.TagSize()
+	tagoffset := len(ciphertext) - c.TagSize()
 
 	return ciphertext[:tagoffset], ciphertext[tagoffset:], nil
 }
@@ -109,14 +96,10 @@ func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) ([]byte, 
 		return nil, err
 	}
 
-	combined := make([]byte, len(ciphertxt) + len(tag))
+	combined := make([]byte, len(ciphertxt)+len(tag))
 	copy(combined, ciphertxt)
 	copy(combined[len(ciphertxt):], tag)
 	return aead.Open(nil, iv, combined, aad)
-}
-
-type RsaContentCipher struct {
-	pubkey *rsa.PublicKey
 }
 
 func NewRsaContentCipher(alg jwa.ContentEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RsaContentCipher, error) {
