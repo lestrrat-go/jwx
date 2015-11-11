@@ -110,7 +110,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	m.InitializationVector = ivbuf
 	m.Recipients = []Recipient{
 		Recipient{
-			Header:       *hdr,
+			Header:       hdr,
 			EncryptedKey: enckeybuf,
 		},
 	}

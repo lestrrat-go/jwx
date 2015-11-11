@@ -12,7 +12,7 @@ import (
 
 func NewRecipient() *Recipient {
 	return &Recipient{
-		Header: *NewHeader(),
+		Header: NewHeader(),
 	}
 }
 
@@ -20,6 +20,12 @@ func NewHeader() *Header {
 	return &Header{
 		EssentialHeader: &EssentialHeader{},
 		PrivateParams:   map[string]interface{}{},
+	}
+}
+
+func NewEncodedHeader() *EncodedHeader {
+	return &EncodedHeader{
+		Header: NewHeader(),
 	}
 }
 

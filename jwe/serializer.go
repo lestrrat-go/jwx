@@ -17,13 +17,19 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	// The protected header must be a merge between the message-wide
 	// protected header AND the recipient header
 	hcopy := NewHeader()
-	hcopy.Copy(&m.ProtectedHeader.Header)
+	// There's something wrong if m.ProtectedHeader.Header is nil, but
+	// it could happen
+	if m.ProtectedHeader == nil || m.ProtectedHeader.Header == nil {
+		return nil, errors.New("invalid protected header")
+	}
+	hcopy.Copy(m.ProtectedHeader.Header)
+
 	hcopy.Algorithm = recipient.Header.Algorithm
 	for k, v := range recipient.Header.PrivateParams {
 		hcopy.PrivateParams[k] = v
 	}
 
-	protected, err := EncodedHeader{Header: *hcopy}.Base64Encode()
+	protected, err := EncodedHeader{Header: hcopy}.Base64Encode()
 	if err != nil {
 		return nil, err
 	}

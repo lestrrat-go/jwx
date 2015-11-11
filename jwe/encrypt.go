@@ -47,7 +47,7 @@ func (e Encrypt) Encrypt(plaintext []byte, aad ...[]byte) (*Message, error) {
 	}
 	_, iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(plaintext, realAad)
 
-	protected := EncodedHeader{Header: *NewHeader()}
+	protected := NewEncodedHeader()
 	protected.ContentEncryption = e.ContentEncrypter.Algorithm()
 
 	return &Message{

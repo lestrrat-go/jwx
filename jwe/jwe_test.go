@@ -122,7 +122,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	r.Header.Set("alg", jwa.A128KW)
 	r.EncryptedKey = enckey
 
-	protected := EncodedHeader{Header: *NewHeader()}
+	protected := NewEncodedHeader()
 	protected.Set("enc", jwa.A128CBC_HS256)
 
 	msg := NewMessage()
@@ -145,6 +145,22 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		}
 		t.Logf("%#s", serialized)
 	}
+}
+
+// https://tools.ietf.org/html/rfc7516#appendix-A.1. 
+func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
+	const serialized = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+
+	msg, err := ParseString(serialized)
+	if !assert.NoError(t, err, "parse successful") {
+		return
+	}
+
+	jsonbuf, _ := JSONSerialize{Pretty: true}.Serialize(msg)
+	t.Logf("%s", jsonbuf)
+
+	jsonbuf, _ = CompactSerialize{}.Serialize(msg)
+	t.Logf("%s", jsonbuf)
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.1. Note that cek is dynamically

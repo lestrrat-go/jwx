@@ -55,7 +55,7 @@ type Header struct {
 // EncodedHeader represents a header value that is base64 encoded
 // in JSON format
 type EncodedHeader struct {
-	Header
+	*Header
 	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
@@ -66,18 +66,18 @@ type KeyEncrypter interface {
 }
 
 type Recipient struct {
-	Header       Header        `json:"header"`
+	Header       *Header       `json:"header"`
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
 type Message struct {
-	CipherText           buffer.Buffer `json:"ciphertext"`
-	ProtectedHeader      EncodedHeader `json:"protected"`
-	InitializationVector buffer.Buffer `json:"iv,omitempty"`
-	Tag                  buffer.Buffer `json:"tag,omitempty"`
-	AuthenticatedData    buffer.Buffer `json:"aad,omitempty"`
-	Recipients           []Recipient   `json:"recipients"`
-	Unprotected          string        `json:"unprotected,omitempty"`
+	CipherText           buffer.Buffer  `json:"ciphertext"`
+	ProtectedHeader      *EncodedHeader `json:"protected"`
+	InitializationVector buffer.Buffer  `json:"iv,omitempty"`
+	Tag                  buffer.Buffer  `json:"tag,omitempty"`
+	AuthenticatedData    buffer.Buffer  `json:"aad,omitempty"`
+	Recipients           []Recipient    `json:"recipients"`
+	Unprotected          string         `json:"unprotected,omitempty"`
 }
 
 // Encrypter is the top level structure that encrypts the given
