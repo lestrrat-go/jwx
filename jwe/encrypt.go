@@ -13,14 +13,14 @@ func NewEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *Encry
 }
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
-// Note that althought the method signature reads as if you can
-// pass multiple `aad`s, you only have the choice of passing exactly
-// one aad, or none at all
-func (e Encrypt) Encrypt(plaintext []byte, aad ...[]byte) (*Message, error) {
+func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 	cek, err := e.KeyGenerator.KeyGenerate()
 	if err != nil {
 		return nil, err
 	}
+
+	protected := NewEncodedHeader()
+	protected.Set("enc", e.ContentEncrypter.Algorithm())
 
 	// In JWE, multiple recipients may exist -- they receive an
 	// encrypted version of the CEK, using their key encryption
@@ -40,18 +40,16 @@ func (e Encrypt) Encrypt(plaintext []byte, aad ...[]byte) (*Message, error) {
 		recipients[i] = *r
 	}
 
-	// ...on the other hand, there's only one content cipher.
-	var realAad []byte
-	if len(aad) > 0 {
-		realAad = aad[0]
+	aad, err := protected.Base64Encode()
+	if err != nil {
+		return nil, err
 	}
-	_, iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(plaintext, realAad)
 
-	protected := NewEncodedHeader()
-	protected.ContentEncryption = e.ContentEncrypter.Algorithm()
+	// ...on the other hand, there's only one content cipher.
+	_, iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(plaintext, aad)
 
 	return &Message{
-		AuthenticatedData:    realAad,
+		AuthenticatedData:    aad,
 		CipherText:           ciphertext,
 		InitializationVector: iv,
 		ProtectedHeader:      protected,
