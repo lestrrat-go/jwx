@@ -28,6 +28,19 @@ func (kw KeyWrapEncrypt) Kid() string {
 	return kw.KeyID
 }
 
+func (kw KeyWrapEncrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
+	block, err := aes.NewCipher(kw.sharedkey)
+	if err != nil {
+		return nil, err
+	}
+
+	cek, err := keywrap.Unwrap(block, enckey)
+	if err != nil {
+		return nil, err
+	}
+	return cek, nil
+}
+
 func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
@@ -41,14 +54,41 @@ func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	return encrypted, nil
 }
 
-type RSAPKCS15KeyDecrypt struct {
-	alg       jwa.KeyEncryptionAlgorithm
-	privkey   *rsa.PrivateKey
-	generator KeyGenerator
+func NewRSAKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) *RSAKeyEncrypt {
+	return &RSAKeyEncrypt{
+		alg:    alg,
+		pubkey: pubkey,
+	}
+}
+
+func (e RSAKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return e.alg
+}
+
+func (e RSAKeyEncrypt) Kid() string {
+	return e.KeyID
+}
+
+func (e RSAKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+	debug("RSA.KeyEncrypt: cek = %x", cek)
+	if e.alg == jwa.RSA1_5 {
+		return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
+	}
+
+	var hash hash.Hash
+	switch e.alg {
+	case jwa.RSA_OAEP:
+		hash = sha1.New()
+	case jwa.RSA_OAEP_256:
+		hash = sha256.New()
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+	return rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
 }
 
 func NewRSAPKCS15KeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey, keysize int) *RSAPKCS15KeyDecrypt {
-	generator := NewRandomKeyGenerate(keysize)
+	generator := NewRandomKeyGenerate(keysize * 2)
 	return &RSAPKCS15KeyDecrypt{
 		alg:       alg,
 		privkey:   privkey,
@@ -73,13 +113,15 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	}()
 
 	// Perform some input validation.
-	keyBytes := d.privkey.PublicKey.N.BitLen() / 8
-	if keyBytes != len(enckey) {
+	expectedlen := d.privkey.PublicKey.N.BitLen() / 8
+	if expectedlen != len(enckey) {
 		// Input size is incorrect, the encrypted payload should always match
 		// the size of the public modulus (e.g. using a 2048 bit key will
 		// produce 256 bytes of output). Reject this since it's invalid input.
 		return nil, errors.New("input size for key decrypt is incorrect")
 	}
+
+	var err error
 
 	cek, err := d.generator.KeyGenerate()
 	if err != nil {
@@ -90,8 +132,13 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	// prevent chosen-ciphertext attacks as described in RFC 3218, "Preventing
 	// the Million Message Attack on Cryptographic Message Syntax". We are
 	// therefore deliberatly ignoring errors here.
-	_ = rsa.DecryptPKCS1v15SessionKey(rand.Reader, d.privkey, enckey, cek)
+	debug("OAEP.KeyDecrypt: enckey = %x", enckey)
+	err = rsa.DecryptPKCS1v15SessionKey(rand.Reader, d.privkey, enckey, cek)
+	if err != nil {
+		return nil, err
+	}
 
+	debug("OAEP.KeyDecrypt: cek = %x", cek)
 	return cek, nil
 }
 
@@ -121,6 +168,7 @@ func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
+	debug("OAEP.KeyDecrypt: enckey = %x", enckey)
 	return rsa.DecryptOAEP(hash, rand.Reader, d.privkey, enckey, []byte{})
 }
 
@@ -135,19 +183,3 @@ func (d DirectDecrypt) Decrypt() ([]byte, error) {
 	return cek, nil
 }
 
-type AesKeyWrapDecrypt struct {
-	Key []byte
-}
-
-func (d AesKeyWrapDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	block, err := aes.NewCipher(d.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	cek, err := keywrap.Unwrap(block, enckey)
-	if err != nil {
-		return nil, err
-	}
-	return cek, nil
-}

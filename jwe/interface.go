@@ -4,6 +4,7 @@ import (
 	"crypto/cipher"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -18,6 +19,19 @@ var (
 	ErrMissingPrivateKey        = errors.New("missing private key")
 )
 
+type errUnsupportedAlgorithm struct {
+	alg     string
+	purpose string
+}
+
+func NewErrUnsupportedAlgorithm(alg, purpose string) errUnsupportedAlgorithm {
+	return errUnsupportedAlgorithm{alg: alg, purpose: purpose}
+}
+
+func (e errUnsupportedAlgorithm) Error() string {
+	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
+}
+
 // Base64Encoder can encode itself into base64. But you can do more such as
 // filling default values, validating them, etc. This is used in `Encode()`
 // as both headers and payloads
@@ -30,7 +44,7 @@ type Base64Decoder interface {
 }
 
 type EssentialHeader struct {
-	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg"`
+	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
 	ContentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
 	ContentType            string                         `json:"cty,omitempty"`
 	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
@@ -82,7 +96,7 @@ type Message struct {
 	ProtectedHeader      *EncodedHeader `json:"protected"`
 	Recipients           []Recipient    `json:"recipients"`
 	Tag                  buffer.Buffer  `json:"tag,omitempty"`
-	UnprotectedHeader    *Header `json:"unprotected,omitempty"`
+	UnprotectedHeader    *Header        `json:"unprotected,omitempty"`
 }
 
 // Encrypter is the top level structure that encrypts the given
@@ -93,7 +107,7 @@ type Encrypter interface {
 
 type ContentEncrypter interface {
 	Algorithm() jwa.ContentEncryptionAlgorithm
-	Encrypt([]byte, []byte) ([]byte, []byte, []byte, []byte, error)
+	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
 }
 
 // Encrypt is the default Encrypter implementation.
@@ -145,7 +159,7 @@ type RandomKeyGenerate struct {
 	keysize int
 }
 
-type DynamicKeyGenerate struct {}
+type DynamicKeyGenerate struct{}
 
 // Serializer converts an encrypted message into a byte buffer
 type Serializer interface {
@@ -170,10 +184,22 @@ type AeadFetchFunc func([]byte) (cipher.AEAD, error)
 type AesContentCipher struct {
 	AeadFetcher
 	NonceGenerator KeyGenerator
-	keysize   int
-	tagsize   int
+	keysize        int
+	tagsize        int
 }
 
 type RsaContentCipher struct {
 	pubkey *rsa.PublicKey
+}
+
+type RSAPKCS15KeyDecrypt struct {
+	alg       jwa.KeyEncryptionAlgorithm
+	privkey   *rsa.PrivateKey
+	generator KeyGenerator
+}
+
+type RSAKeyEncrypt struct {
+	alg    jwa.KeyEncryptionAlgorithm
+	pubkey *rsa.PublicKey
+	KeyID  string
 }

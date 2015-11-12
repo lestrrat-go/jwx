@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // Serialize converts the mssage into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
+	spew.Dump(m)
 	if len(m.Recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
@@ -24,17 +29,19 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	}
 	err := hcopy.Copy(m.ProtectedHeader.Header)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("copy header failed (protected): %s", err)
 	}
 	hcopy, err = hcopy.Merge(m.UnprotectedHeader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("merge header failed (unprotected): %s", err)
 	}
 	hcopy, err = hcopy.Merge(recipient.Header)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("merge header failed (recipient): %s", err)
 	}
 
+	jsonbuf, _ := json.Marshal(hcopy)
+	log.Printf("Serialize (Compact): %s", jsonbuf)
 	protected, err := EncodedHeader{Header: hcopy}.Base64Encode()
 	if err != nil {
 		return nil, err

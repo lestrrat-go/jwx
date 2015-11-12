@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"log"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/internal/rsautil"
@@ -173,6 +174,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	if !assert.NoError(t, err, "parse successful") {
 		return
 	}
+	log.Printf("------ ParseString done")
 
 	// Test decrypting?
 	plaintext, err := DecryptMessage(msg, privkey)
@@ -196,8 +198,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 }
 
-// https://tools.ietf.org/html/rfc7516#appendix-A.1. Note that cek is dynamically
-// generated, so the encrypted values will NOT match that of the RFC.
+// https://tools.ietf.org/html/rfc7516#appendix-A.1.
 func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 	var plaintext = []byte{
 		84, 104, 101, 32, 116, 114, 117, 101, 32, 115, 105, 103, 110, 32,
@@ -206,18 +207,23 @@ func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 		101, 100, 103, 101, 32, 98, 117, 116, 32, 105, 109, 97, 103, 105,
 		110, 97, 116, 105, 111, 110, 46,
 	}
+	var cek = []byte{
+		4, 211, 31, 197, 84, 157, 252, 254, 11, 100, 157, 250, 63, 170, 106,
+		206, 107, 124, 212, 45, 111, 107, 9, 219, 200, 177, 0, 240, 143, 156,
+		44, 207,
+	}
 	var aad = []byte{
 		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 48, 69,
 		116, 84, 48, 70, 70, 85, 67, 73, 115, 73, 109, 86, 117, 89, 121, 73,
 		54, 73, 107, 69, 121, 78, 84, 90, 72, 81, 48, 48, 105, 102, 81,
 	}
 
-	c, err := NewAesCrypt(jwa.A128GCM)
+	c, err := NewAesCrypt(jwa.A256GCM)
 	if !assert.NoError(t, err, "NewCrypt successful") {
 		return
 	}
 
-	cek, iv, ciphertext, tag, err := c.Encrypt(plaintext, aad)
+	iv, ciphertext, tag, err := c.Encrypt(cek, plaintext, aad)
 	if !assert.NoError(t, err, "Failed to encrypt data") {
 		return
 	}
@@ -232,6 +238,77 @@ func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 }
 
+func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
+	var plaintext = []byte{
+		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
+		112, 114, 111, 115, 112, 101, 114, 46,
+	}
+	var jwksrc = []byte(`{"kty":"RSA",
+      "n":"sXchDaQebHnPiGvyDOAT4saGEUetSyo9MKLOoWFsueri23bOdgWp4Dy1WlUzewbgBHod5pcM9H95GQRV3JDXboIRROSBigeC5yjU1hGzHHyXss8UDprecbAYxknTcQkhslANGRUZmdTOQ5qTRsLAt6BTYuyvVRdhS8exSZEy_c4gs_7svlJJQ4H9_NxsiIoLwAEk7-Q3UXERGYw_75IDrGA84-lA_-Ct4eTlXHBIY2EaV7t7LjJaynVJCpkv4LKjTTAumiGUIuQhrNhZLuF_RJLqHpM2kgWFLU7-VTdL1VbC2tejvcI2BlMkEpk1BzBZI0KQB0GaDWFLN-aEAw3vRw",
+      "e":"AQAB",
+      "d":"VFCWOqXr8nvZNyaaJLXdnNPXZKRaWCjkU5Q2egQQpTBMwhprMzWzpR8Sxq1OPThh_J6MUD8Z35wky9b8eEO0pwNS8xlh1lOFRRBoNqDIKVOku0aZb-rynq8cxjDTLZQ6Fz7jSjR1Klop-YKaUHc9GsEofQqYruPhzSA-QgajZGPbE_0ZaVDJHfyd7UUBUKunFMScbflYAAOYJqVIVwaYR5zWEEceUjNnTNo_CVSj-VvXLO5VZfCUAVLgW4dpf1SrtZjSt34YLsRarSb127reG_DUwg9Ch-KyvjT1SkHgUWRVGcyly7uvVGRSDwsXypdrNinPA4jlhoNdizK2zF2CWQ",
+      "p":"9gY2w6I6S6L0juEKsbeDAwpd9WMfgqFoeA9vEyEUuk4kLwBKcoe1x4HG68ik918hdDSE9vDQSccA3xXHOAFOPJ8R9EeIAbTi1VwBYnbTp87X-xcPWlEPkrdoUKW60tgs1aNd_Nnc9LEVVPMS390zbFxt8TN_biaBgelNgbC95sM",
+      "q":"uKlCKvKv_ZJMVcdIs5vVSU_6cPtYI1ljWytExV_skstvRSNi9r66jdd9-yBhVfuG4shsp2j7rGnIio901RBeHo6TPKWVVykPu1iYhQXw1jIABfw-MVsN-3bQ76WLdt2SDxsHs7q7zPyUyHXmps7ycZ5c72wGkUwNOjYelmkiNS0",
+      "dp":"w0kZbV63cVRvVX6yk3C8cMxo2qCM4Y8nsq1lmMSYhG4EcL6FWbX5h9yuvngs4iLEFk6eALoUS4vIWEwcL4txw9LsWH_zKI-hwoReoP77cOdSL4AVcraHawlkpyd2TWjE5evgbhWtOxnZee3cXJBkAi64Ik6jZxbvk-RR3pEhnCs",
+      "dq":"o_8V14SezckO6CNLKs_btPdFiO9_kC1DsuUTd2LAfIIVeMZ7jn1Gus_Ff7B7IVx3p5KuBGOVF8L-qifLb6nQnLysgHDh132NDioZkhH7mI7hPG-PYE_odApKdnqECHWw0J-F0JWnUd6D2B_1TvF9mXA2Qx-iGYn8OVV1Bsmp6qU",
+      "qi":"eNho5yRBEBxhGBtQRww9QirZsB66TrfFReG_CcteI1aCneT0ELGhYlRlCtUkTRclIfuEPmNsNDPbLoLqqCVznFbvdB7x-Tl-m0l_eFTj2KiqwGqE9PZB9nNTwMVvH3VRRSLWACvPnSiwP8N5Usy-WRXS-V7TbpxIhvepTfE0NNo"
+     }`)
+	privkey, err := rsautil.PrivateKeyFromJSON(jwksrc)
+	if !assert.NoError(t, err, "PrivateKey created") {
+		return
+	}
+
+	c, err := NewAesCrypt(jwa.A128CBC_HS256)
+	if !assert.NoError(t, err, "NewAesCrypt is successful") {
+		return
+	}
+
+	k := NewRSAKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
+
+	kg := NewRandomKeyGenerate(c.KeySize())
+
+	log.Printf("Encrypt now")
+	e := NewEncrypt(c, kg, k)
+	msg, err := e.Encrypt(plaintext)
+	if !assert.NoError(t, err, "Encrypt successful") {
+		return
+	}
+
+	log.Printf("DecryptMessage now")
+	plaintext2, err := DecryptMessage(msg, privkey)
+	if !assert.NoError(t, err, "Decrypt message succeeded") {
+		return
+	}
+
+	if !assert.Equal(t, plaintext, plaintext2, "Decrypted correct plaintext") {
+		return
+	}
+
+	log.Printf("compact serialize now")
+	jsonbuf, err := CompactSerialize{}.Serialize(msg)
+	if !assert.NoError(t, err, "Compact serialization successful") {
+		return
+	}
+
+	t.Logf("compact serialization: %s", jsonbuf)
+
+	log.Printf("parse compact serialize now")
+	msg2, err := Parse(jsonbuf)
+	if !assert.NoError(t, err, "Parse successful") {
+		return
+	}
+
+	log.Printf("====== decrypt compact serialize now")
+	plaintext3, err := DecryptMessage(msg2, privkey)
+	if !assert.NoError(t, err, "Decrypt message succeeded") {
+		return
+	}
+
+	if !assert.Equal(t, plaintext, plaintext3, "Roundtrip is successful!") {
+		return
+	}
+}
+
 // https://tools.ietf.org/html/rfc7516#appendix-A.3. Note that cek is dynamically
 // generated, so the encrypted values will NOT match that of the RFC.
 func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
@@ -239,18 +316,12 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
 		112, 114, 111, 115, 112, 101, 114, 46,
 	}
-	var aad = []byte{
-		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
-		83, 49, 99, 105, 76, 67, 74, 108, 98, 109, 77, 105, 79, 105, 74, 66,
-		77, 84, 73, 52, 81, 48, 74, 68, 76, 85, 104, 84, 77, 106, 85, 50, 73,
-		110, 48,
-	}
 	var sharedkey = []byte{
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 
 	c, err := NewAesCrypt(jwa.A128CBC_HS256)
-	if !assert.NoError(t, err, "NewCrypt is successful") {
+	if !assert.NoError(t, err, "NewAesCrypt is successful") {
 		return
 	}
 
@@ -259,22 +330,16 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	kg := NewRandomKeyGenerate(c.KeySize() * 2)
+	kg := NewRandomKeyGenerate(c.KeySize())
 
 	e := NewEncrypt(c, kg, k)
 
 	msg, err := e.Encrypt(plaintext)
-	if !assert.NoError(t, err, "BuildMessage successful") {
-		return
-	}
-	_ = msg
-
-	cek, iv, ciphertext, tag, err := c.Encrypt(plaintext, aad)
-	if !assert.NoError(t, err, "Failed to encrypt data") {
+	if !assert.NoError(t, err, "Encrypt successful") {
 		return
 	}
 
-	data, err := c.Decrypt(cek, iv, ciphertext, tag, aad)
+	data, err := DecryptMessage(msg, sharedkey)
 	if !assert.NoError(t, err, "Decrypt successful") {
 		return
 	}

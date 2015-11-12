@@ -59,6 +59,7 @@ func parseJSON(buf []byte) (*Message, error) {
 }
 
 func parseCompact(buf []byte) (*Message, error) {
+	debug("Parse(Compact): buf = '%s'", buf)
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
 		return nil, ErrInvalidCompactPartsCount
@@ -78,6 +79,8 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 	hdrbuf = bytes.TrimRight(hdrbuf, "\x00")
+debug("p0     = %x", out[:p0Len])
+debug("hdrbuf = %x", hdrbuf)
 
 	hdr := NewHeader()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
@@ -114,13 +117,15 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	tagbuf = bytes.TrimRight(tagbuf, "\x00")
 
-	b64hdrbuf, err := hdrbuf.Base64Encode()
+	m := NewMessage()
+/*
+	v, err := protected.Base64Encode()
 	if err != nil {
 		return nil, err
 	}
-
-	m := NewMessage()
-	m.AuthenticatedData = b64hdrbuf
+	m.AuthenticatedData.Base64Decode(v)
+*/
+	m.AuthenticatedData.SetBytes(hdrbuf.Bytes())
 	m.ProtectedHeader = protected
 	m.Tag = tagbuf
 	m.CipherText = ctbuf
@@ -152,9 +157,15 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize 
 			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
 		}
 		return NewRSAOAEPKeyDecrypt(alg, privkey), nil
+	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("[]byte is required as the key to build this key decrypter")
+		}
+		return NewAesKeyWrap(alg, sharedkey)
 	}
 
-	return nil, ErrUnsupportedAlgorithm
+	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
 }
 
 func BuildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
@@ -185,7 +196,18 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	aad := m.AuthenticatedData.Bytes()
+	debug("DecryptMessage: aad (bytes)   = %s", m.AuthenticatedData.Bytes())
+	{
+		b64, _ := m.AuthenticatedData.Base64Encode()
+		debug("DecryptMessage: aad (encoded) = %s", b64)
+	}
+
+	// Now, this is weird. If Message contains 1
+
+	aad, err := m.AuthenticatedData.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
 	ciphertext := m.CipherText.Bytes()
 	iv := m.InitializationVector.Bytes()
 	tag := m.Tag.Bytes()
@@ -195,6 +217,7 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
 	}
 	keysize := cipher.KeySize()
+	debug("cipher.keysize = %d", keysize)
 
 	var plaintext []byte
 	for _, recipient := range m.Recipients {
@@ -212,25 +235,27 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 
 		k, err := BuildKeyDecrypter(h2.Algorithm, key, keysize)
 		if err != nil {
-			debug("failed to crete key decrypter: %s", err)
+			debug("failed to create key decrypter: %s", err)
 			continue
 		}
 
-		cek, err := k.KeyDecrypt(recipient.EncryptedKey)
+		debug("DecryptMessage: encrypted_key = %x", recipient.EncryptedKey.Bytes())
+		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
 			debug("failed to decrypt key: %s", err)
 			continue
 		}
 
-		debug("cek        = %v", cek)
-		debug("iv	       = %v", iv)
-		debug("ciphertext = %v", ciphertext)
-		debug("tag        = %v", tag)
-		debug("aad        = %v", aad)
+		debug("DecryptMessage: cek        = %x (%d)", cek, len(cek))
+		debug("DecryptMessage: iv         = %x", iv)
+		debug("DecryptMessage: ciphertext = %x", ciphertext)
+		debug("DecryptMessage: tag        = %x", tag)
+		debug("DecryptMessage: aad        = %x", aad)
 		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
 		if err == nil {
 			break
 		}
+		debug("DecryptMessage: cipher.decrypt: %s", err)
 	}
 
 	if plaintext == nil {

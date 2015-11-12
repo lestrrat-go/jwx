@@ -18,6 +18,7 @@ func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	debug("Encrypt: generated cek len = %d", len(cek))
 
 	protected := NewEncodedHeader()
 	protected.Set("enc", e.ContentEncrypter.Algorithm())
@@ -37,7 +38,14 @@ func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 			return nil, err
 		}
 		r.EncryptedKey = enckey
+		debug("Encrypt: encrypted_key = %x", enckey)
 		recipients[i] = *r
+	}
+
+	// If there's only one recipient, you want to include that in the
+	// protected header
+	if len(recipients) == 1 {
+		protected.Set("alg", recipients[0].Header.Algorithm)
 	}
 
 	aad, err := protected.Base64Encode()
@@ -46,15 +54,21 @@ func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	// ...on the other hand, there's only one content cipher.
-	_, iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(plaintext, aad)
+	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
 
-	return &Message{
-		AuthenticatedData:    aad,
-		CipherText:           ciphertext,
-		InitializationVector: iv,
-		ProtectedHeader:      protected,
-		Recipients:           recipients,
-		Tag:                  tag,
-		//		Unprotected: TODO
-	}, nil
+	debug("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
+	debug("Encrypt.Encrypt: aad        = %x", aad)
+	debug("Encrypt.Encrypt: ciphertext = %x", ciphertext)
+	debug("Encrypt.Encrypt: iv         = %x", iv)
+	debug("Encrypt.Encrypt: tag        = %x", tag)
+
+	msg := NewMessage()
+	msg.AuthenticatedData.Base64Decode(aad)
+	msg.CipherText = ciphertext
+	msg.InitializationVector = iv
+	msg.ProtectedHeader = protected
+	msg.Recipients = recipients
+	msg.Tag = tag
+
+	return msg, nil
 }
