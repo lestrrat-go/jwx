@@ -6,13 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // Serialize converts the mssage into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
-	spew.Dump(m)
 	if len(m.Recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
