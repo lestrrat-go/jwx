@@ -1,4 +1,4 @@
-// jwe implements JWE https://tools.ietf.org/html/rfc7516
+// Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 
 package jwe
 

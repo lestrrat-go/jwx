@@ -145,7 +145,7 @@ import(
   "log"
 
   "github.com/lestrrat/go-jwx/jwa"
-  "github.com/lestrrat/go-jwx/jws"
+  "github.com/lestrrat/go-jwx/jwe"
 )
 
 func main() {
@@ -155,7 +155,7 @@ func main() {
     return
   }
 
-  c = jwe.NewAesCrypt(jwa.A128CBC_HS256)
+  c, err := jwe.NewAesCrypt(jwa.A128CBC_HS256)
   if err != nil {
     log.Printf("failed to create content encrypter: %s", err)
     return
@@ -165,7 +165,7 @@ func main() {
   kg := NewRandomKeyGenerate(c.KeySize())
 
   e := NewEncrypt(c, kg, k)
-  msg, err := e.Encrypt("Lorem Ipsum")
+  msg, err := e.Encrypt([]byte("Lorem Ipsum"))
   if err != nil {
     log.Printf("failed to encrypt payload: %s", err)
     return
@@ -177,12 +177,13 @@ func main() {
     return
   }
 
-  if decrypted != "Lorem Ipsum" {
+  if string(decrypted) != "Lorem Ipsum" {
     log.Printf("WHAT?!")
     return
   }
 }
 ```
+
 ## Why?
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
