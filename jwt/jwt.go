@@ -3,7 +3,6 @@ package jwt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -83,8 +82,6 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	c.Subject, _ = r.GetString("sub")
 	return nil
 }
-
-var ErrInvalidValue = errors.New("invalid value for key")
 
 // Set takes a key and a value, and sets the appropriate values in the
 // `ClaimSet` for you. If the key is a known ("Essential") claim, it is set

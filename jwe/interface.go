@@ -1,7 +1,10 @@
 package jwe
 
 import (
+	"crypto/cipher"
+	"crypto/rsa"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -9,11 +12,40 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
-var ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
+var (
+	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
+	ErrInvalidHeaderValue       = errors.New("invalid value for header key")
+	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")
+	ErrMissingPrivateKey        = errors.New("missing private key")
+)
+
+type errUnsupportedAlgorithm struct {
+	alg     string
+	purpose string
+}
+
+func NewErrUnsupportedAlgorithm(alg, purpose string) errUnsupportedAlgorithm {
+	return errUnsupportedAlgorithm{alg: alg, purpose: purpose}
+}
+
+func (e errUnsupportedAlgorithm) Error() string {
+	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
+}
+
+// Base64Encoder can encode itself into base64. But you can do more such as
+// filling default values, validating them, etc. This is used in `Encode()`
+// as both headers and payloads
+type Base64Encoder interface {
+	Base64Encode() ([]byte, error)
+}
+
+type Base64Decoder interface {
+	Base64Decode([]byte) error
+}
 
 type EssentialHeader struct {
-	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg"`
-	ContentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc"`
+	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
+	ContentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
 	ContentType            string                         `json:"cty,omitempty"`
 	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
 	Critical               []string                       `json:"crit,omitempty"`
@@ -28,39 +60,146 @@ type EssentialHeader struct {
 }
 
 // Header represents a jws header.
+
 type Header struct {
 	*EssentialHeader `json:"-"`
 	PrivateParams    map[string]interface{} `json:"-"`
 }
 
+// EncodedHeader represents a header value that is base64 encoded
+// in JSON format
+type EncodedHeader struct {
+	*Header
+	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
+}
+
+type KeyEncrypter interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	Kid() string
+	KeyEncrypt([]byte) ([]byte, error)
+}
+
+type KeyDecrypter interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	KeyDecrypt([]byte) ([]byte, error)
+}
+
 type Recipient struct {
-	Header       Header        `json:"header"`
+	Header       *Header       `json:"header"`
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
-type AEADParts struct {
-	CipherText           buffer.Buffer `json:"ciphertext"`
-	InitializationVector buffer.Buffer `json:"iv,omitempty"`
-	Tag                  buffer.Buffer `json:"tag,omitempty"`
-}
-
 type Message struct {
-	AEADParts
-	AuthenticatedData buffer.Buffer `json:"aad,omitempty"`
-	Protected         Header        `json:"protected,omitempty"`
-	Recipients        []Recipient   `json:"recipients"`
-	Unprotected       string        `json:"unprotected,omitempty"`
+	AuthenticatedData    buffer.Buffer  `json:"aad,omitempty"`
+	CipherText           buffer.Buffer  `json:"ciphertext"`
+	InitializationVector buffer.Buffer  `json:"iv,omitempty"`
+	ProtectedHeader      *EncodedHeader `json:"protected"`
+	Recipients           []Recipient    `json:"recipients"`
+	Tag                  buffer.Buffer  `json:"tag,omitempty"`
+	UnprotectedHeader    *Header        `json:"unprotected,omitempty"`
 }
 
-type MultiEncrypter interface {
-	MultiEncrypt([]byte) (*Message, error)
-}
-
+// Encrypter is the top level structure that encrypts the given
+// payload to a JWE message
 type Encrypter interface {
-	Encrypt([]byte, []byte, []byte) (*AEADParts, error)
+	Encrypt([]byte) (*Message, error)
 }
 
-type MultiEncrypt struct {
-	ContentEncryption jwa.ContentEncryptionAlgorithm
-	Encrypters        []Encrypter
+type ContentEncrypter interface {
+	Algorithm() jwa.ContentEncryptionAlgorithm
+	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
+}
+
+// Encrypt is the default Encrypter implementation.
+type Encrypt struct {
+	ContentEncrypter ContentEncrypter
+	KeyGenerator     KeyGenerator // KeyGenerator creates the random CEK.
+	KeyEncrypters    []KeyEncrypter
+}
+
+// TODO GCM family
+type KeyWrapEncrypt struct {
+	alg       jwa.KeyEncryptionAlgorithm
+	KeyID     string
+	sharedkey []byte
+}
+
+type KeyDecoder interface {
+	KeyDecode([]byte) ([]byte, error)
+}
+
+type RsaOaepKeyDecode struct {
+	Algorithm  jwa.KeyEncryptionAlgorithm
+	PrivateKey *rsa.PrivateKey
+}
+
+type KeyGenerator interface {
+	KeySize() int
+	KeyGenerate() ([]byte, error)
+}
+
+type ContentCipher interface {
+	KeySize() int
+	encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
+	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
+}
+
+type GenericContentCrypt struct {
+	alg     jwa.ContentEncryptionAlgorithm
+	keysize int
+	tagsize int
+	cipher  ContentCipher
+	cekgen  KeyGenerator
+	ivgen   KeyGenerator
+}
+
+type StaticKeyGenerate []byte
+
+type RandomKeyGenerate struct {
+	keysize int
+}
+
+type DynamicKeyGenerate struct{}
+
+// Serializer converts an encrypted message into a byte buffer
+type Serializer interface {
+	Serialize(*Message) ([]byte, error)
+}
+
+// CompactSerialize serializes the message into JWE compact serialized format
+type CompactSerialize struct{}
+
+// JSONSerialize serializes the message into JWE JSON serialized format. If you
+// set `Pretty` to true, `json.MarshalIndent` is used instead of `json.Marshal`
+type JSONSerialize struct {
+	Pretty bool
+}
+
+type AeadFetcher interface {
+	AeadFetch([]byte) (cipher.AEAD, error)
+}
+
+type AeadFetchFunc func([]byte) (cipher.AEAD, error)
+
+type AesContentCipher struct {
+	AeadFetcher
+	NonceGenerator KeyGenerator
+	keysize        int
+	tagsize        int
+}
+
+type RsaContentCipher struct {
+	pubkey *rsa.PublicKey
+}
+
+type RSAPKCS15KeyDecrypt struct {
+	alg       jwa.KeyEncryptionAlgorithm
+	privkey   *rsa.PrivateKey
+	generator KeyGenerator
+}
+
+type RSAKeyEncrypt struct {
+	alg    jwa.KeyEncryptionAlgorithm
+	pubkey *rsa.PublicKey
+	KeyID  string
 }

@@ -33,6 +33,11 @@ func (b Buffer) Len() int {
 	return len(b)
 }
 
+func (b *Buffer) SetBytes(b2 []byte) {
+	*b = make([]byte, len(b2))
+	copy(*b, b2)
+}
+
 // Base64Encode encodes the contents of the Buffer using base64.RawURLEncoding
 func (b Buffer) Base64Encode() ([]byte, error) {
 	enc := base64.RawURLEncoding
