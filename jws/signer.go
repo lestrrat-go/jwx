@@ -23,11 +23,11 @@ import (
 // to the end users that this is a generic signer that should be used
 // for 99% of the cases
 func NewSigner(signers ...PayloadSigner) *MultiSign {
-	return NewMultiSigner(signers...)
+	return NewMultiSign(signers...)
 }
 
-// NewMultiSigner creates a new MultiSign object
-func NewMultiSigner(signers ...PayloadSigner) *MultiSign {
+// NewMultiSign creates a new MultiSign object
+func NewMultiSign(signers ...PayloadSigner) *MultiSign {
 	ms := &MultiSign{}
 	for _, s := range signers {
 		ms.AddSigner(s)
