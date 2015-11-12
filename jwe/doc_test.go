@@ -8,7 +8,7 @@ import(
   "github.com/lestrrat/go-jwx/jwa"
 )
 
-func main() {
+func ExampleJWE() {
   privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     log.Printf("failed to generate private key: %s", err)

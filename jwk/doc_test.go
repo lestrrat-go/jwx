@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func main() {
+func ExampleJWK() {
 	res, err := http.Get("https://foobar.domain/json")
 	if err != nil {
 		log.Printf("failed to make HTTP request: %s", err)
@@ -36,7 +36,11 @@ func main() {
 	// Assuming RsaPublicKey...
 	key := keys[0].(*RsaPublicKey)
 
-	pubkey := key.PublicKey()
+	pubkey, err := key.PublicKey()
+	if err != nil {
+		log.Printf("failed to generate public key: %s", err)
+		return
+	}
 	// Use pubkey for jws.Verify() or whatever
 	_ = pubkey
 }

@@ -79,7 +79,12 @@ func main() {
   // Assuming RsaPublicKey...
   key := keys[0].(*jwk.RsaPublicKey)
 
-  pubkey := key.PublicKey()
+  pubkey, err := key.PublicKey()
+  if err != nil {
+    log.Printf("failed to create public key: %s", err)
+    return
+  }
+
   // Use pubkey for jws.Verify() or whatever
 }
 ```
