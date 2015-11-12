@@ -114,11 +114,6 @@ type Message struct {
 	Signatures []Signature   `json:"signatures"`
 }
 
-type MultiSigner interface {
-	MultiSign(buffer.Buffer) (*Message, error)
-	AddSigner(PayloadSigner)
-}
-
 type MultiSign struct {
 	Signers []PayloadSigner
 }
