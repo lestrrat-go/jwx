@@ -38,6 +38,8 @@ func main() {
 
 ### JWK
 
+See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwk#pkg-examples
+
 ```
 import(
   "io/ioutil"
@@ -83,6 +85,8 @@ func main() {
 ```
 
 ### JWS
+
+See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jws#pkg-examples
 
 ```
 import(
@@ -131,6 +135,8 @@ func main() {
 ```
 
 ### JWE
+
+See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwe#pkg-examples
 
 ```
 import(
