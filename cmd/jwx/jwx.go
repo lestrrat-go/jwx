@@ -106,11 +106,12 @@ func _main() int {
 			log.Printf("%s", l)
 		}
 
-		signer := jws.RsaSign{
-			Algorithm: sig.ProtectedHeader.Algorithm,
-			PublicKey: pubkey,
+		v, err := jws.NewRsaVerify(sig.ProtectedHeader.Algorithm, pubkey)
+		if err != nil {
+			log.Printf("ERROR: Failed to create verifier: %s", err)
+			continue
 		}
-		if err := message.Verify(signer); err == nil {
+		if err := v.Verify(message); err == nil {
 			log.Printf("=== Verified with signature %d! ===", i)
 		}
 	}

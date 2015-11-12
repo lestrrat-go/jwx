@@ -54,16 +54,16 @@ type Header struct {
 // EncodedHeader represents a header value that is base64 encoded
 // in JSON format
 type EncodedHeader struct {
-	Header
+	*Header
 	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
-// Signer generates signature for the given payload
-type Signer interface {
+// PayloadSigner generates signature for the given payload
+type PayloadSigner interface {
 	Jwk() jwk.JSONWebKey
 	Kid() string
 	Alg() jwa.SignatureAlgorithm
-	Sign([]byte) ([]byte, error)
+	PayloadSign([]byte) ([]byte, error)
 }
 
 // Verifier is used to verify the signature against the payload
@@ -93,8 +93,8 @@ type MergedHeader struct {
 }
 
 type Signature struct {
-	PublicHeader    Header        `json:"header"`              // Raw JWS Unprotected Heders
-	ProtectedHeader EncodedHeader `json:"protected,omitempty"` // Base64 encoded JWS Protected Headers
+	PublicHeader    *Header        `json:"header"`              // Raw JWS Unprotected Heders
+	ProtectedHeader *EncodedHeader `json:"protected,omitempty"` // Base64 encoded JWS Protected Headers
 	Signature       buffer.Buffer `json:"signature"`           // Base64 encoded signature
 }
 
@@ -108,11 +108,11 @@ type Message struct {
 
 type MultiSigner interface {
 	MultiSign(buffer.Buffer) (*Message, error)
-	AddSigner(Signer)
+	AddSigner(PayloadSigner)
 }
 
 type MultiSign struct {
-	Signers []Signer
+	Signers []PayloadSigner
 }
 
 type HmacSign struct {
@@ -121,3 +121,13 @@ type HmacSign struct {
 	KeyID      string
 	Key        []byte
 }
+
+type Serializer interface {
+	Serialize(*Message) ([]byte, error)
+}
+
+type CompactSerialize struct{}
+type JSONSerialize struct {
+	Pretty bool
+}
+

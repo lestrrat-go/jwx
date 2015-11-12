@@ -32,10 +32,10 @@ func encodeSigningInputValue(hdr, payload Base64Encoder) ([]byte, error) {
 // The header and the payload need only be able to produce the base64
 // encoded version of itself for flexibility.
 //
-// The signer can be anything that implements the Signer interface.
+// The signer can be anything that implements the PayloadSigner interface.
 //
 // See also: Compact Serialization https://tools.ietf.org/html/rfc7515#section-3.1
-func Encode(hdr, payload Base64Encoder, signer Signer) ([]byte, error) {
+func Encode(hdr, payload Base64Encoder, signer PayloadSigner) ([]byte, error) {
 	// [encoded header].[encoded payload].[signed payload]
 
 	siv, err := encodeSigningInputValue(hdr, payload)
@@ -43,7 +43,7 @@ func Encode(hdr, payload Base64Encoder, signer Signer) ([]byte, error) {
 		return nil, err
 	}
 
-	b, err := signer.Sign(siv)
+	b, err := signer.PayloadSign(siv)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	s := NewSignature()
 	s.Signature = signature
-	s.ProtectedHeader = *hdr
+	s.ProtectedHeader = hdr
 	m := &Message{
 		Payload:    buffer.Buffer(payload),
 		Signatures: []Signature{*s},

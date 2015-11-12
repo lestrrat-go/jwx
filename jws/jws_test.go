@@ -115,7 +115,12 @@ func TestRoundtrip_Compact(t *testing.T) {
 				return
 			}
 
-			if !assert.NoError(t, c.Verify(signer), "Verify is successful") {
+			v, err := NewRsaVerify(alg, &key.PublicKey)
+			if !assert.NoError(t, err, "Verify created") {
+				return
+			}
+
+			if !assert.NoError(t, v.Verify(c), "Verify is successful") {
 				return
 			}
 		}
@@ -213,7 +218,12 @@ func TestEncode_RS256Compact(t *testing.T) {
 		return
 	}
 
-	if !assert.NoError(t, Verify(buffer.Buffer(hdr), buffer.Buffer(examplePayload), msg.Signatures[0].Signature.Bytes(), sign), "Verify succeeds") {
+	v, err := NewRsaVerify(jwa.RS256, &privkey.PublicKey)
+	if !assert.NoError(t, err, "Verify created") {
+		return
+	}
+
+	if !assert.NoError(t, v.Verify(msg), "Verify succeeds") {
 		return
 	}
 }

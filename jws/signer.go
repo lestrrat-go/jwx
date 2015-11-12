@@ -18,7 +18,16 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
-func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
+func NewMultiSign(signers ...PayloadSigner) *MultiSign {
+	ms := &MultiSign{}
+	for _, s := range signers {
+		ms.AddSigner(s)
+	}
+	return ms
+}
+
+// Sign takes a payload, and creates a JWS signed message.
+func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 	encoded, err := buffer.Buffer(payload).Base64Encode()
 	if err != nil {
 		return nil, err
@@ -44,7 +53,7 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 
 		ss := append(append(protbuf, '.'), encoded...)
 
-		sigbuf, err := signer.Sign(ss)
+		sigbuf, err := signer.PayloadSign(ss)
 		if err != nil {
 			return nil, err
 		}
@@ -62,8 +71,8 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 		}
 
 		sig := Signature{
-			PublicHeader:    *hdr,
-			ProtectedHeader: EncodedHeader{Header: *protected},
+			PublicHeader:    hdr,
+			ProtectedHeader: &EncodedHeader{Header: protected},
 			Signature:       buffer.Buffer(sigbuf),
 		}
 
@@ -73,10 +82,12 @@ func (m *MultiSign) MultiSign(payload []byte) (*Message, error) {
 	return msg, nil
 }
 
-func (m *MultiSign) AddSigner(s Signer) {
+// AddSigner takes a PayloadSigner and appends it to the list of signers
+func (m *MultiSign) AddSigner(s PayloadSigner) {
 	m.Signers = append(m.Signers, s)
 }
 
+// NewRsaSign creates a signer that signs payloads using the given private key
 func NewRsaSign(alg jwa.SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, error) {
 	switch alg {
 	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
@@ -105,9 +116,9 @@ func (s *RsaSign) Kid() string {
 	return s.KeyID
 }
 
-func (s RsaSign) hash() (crypto.Hash, error) {
+func hashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 	var hash crypto.Hash
-	switch s.Algorithm {
+	switch alg {
 	case jwa.RS256, jwa.PS256:
 		hash = crypto.SHA256
 	case jwa.RS384, jwa.PS384:
@@ -123,8 +134,8 @@ func (s RsaSign) hash() (crypto.Hash, error) {
 
 // Sign generates a sign based on the Algorithm instance variable.
 // This fulfills the `Signer` interface
-func (s RsaSign) Sign(payload []byte) ([]byte, error) {
-	hash, err := s.hash()
+func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
+	hash, err := hashForAlg(s.Algorithm)
 	if err != nil {
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -146,35 +157,6 @@ func (s RsaSign) Sign(payload []byte) ([]byte, error) {
 		})
 	default:
 		return nil, ErrUnsupportedAlgorithm
-	}
-}
-
-// Verify checks that signature generated for `payload` matches `signature`.
-// This fulfills the `Verifier` interface
-func (s RsaSign) Verify(payload, signature []byte) error {
-	hash, err := s.hash()
-	if err != nil {
-		return ErrUnsupportedAlgorithm
-	}
-
-	pubkey := s.PublicKey
-	if pubkey == nil {
-		if s.PrivateKey == nil {
-			return ErrMissingPublicKey
-		}
-		pubkey = &s.PrivateKey.PublicKey
-	}
-
-	h := hash.New()
-	h.Write(payload)
-
-	switch s.Algorithm {
-	case jwa.RS256, jwa.RS384, jwa.RS512:
-		return rsa.VerifyPKCS1v15(pubkey, hash, h.Sum(nil), signature)
-	case jwa.PS256, jwa.PS384, jwa.PS512:
-		return rsa.VerifyPSS(pubkey, hash, h.Sum(nil), signature, nil)
-	default:
-		return ErrUnsupportedAlgorithm
 	}
 }
 
@@ -225,8 +207,8 @@ func (sign EcdsaSign) hash() (crypto.Hash, error) {
 }
 
 // Sign generates a sign based on the Algorithm instance variable.
-// This fulfills the `Signer` interface
-func (sign EcdsaSign) Sign(payload []byte) ([]byte, error) {
+// This fulfills the `PayloadSigner` interface
+func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	hash, err := sign.hash()
 	if err != nil {
 		return nil, err
@@ -316,7 +298,7 @@ func (s HmacSign) hmac() (hash.Hash, error) {
 	return hmac.New(h, s.Key), nil
 }
 
-func (s HmacSign) Sign(payload []byte) ([]byte, error) {
+func (s HmacSign) PayloadSign(payload []byte) ([]byte, error) {
 	h, err := s.hmac()
 	if err != nil {
 		return nil, err
@@ -327,7 +309,7 @@ func (s HmacSign) Sign(payload []byte) ([]byte, error) {
 }
 
 func (s HmacSign) Verify(payload []byte, mac []byte) error {
-	expected, err := s.Sign(payload)
+	expected, err := s.PayloadSign(payload)
 	if err != nil {
 		return err
 	}

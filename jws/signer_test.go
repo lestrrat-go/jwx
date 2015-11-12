@@ -26,7 +26,7 @@ func TestRsaSign_SignWithBadAlgorithm(t *testing.T) {
 		Algorithm: jwa.SignatureAlgorithm("FooBar"),
 	}
 
-	_, err := s.Sign([]byte{'a', 'b', 'c'})
+	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
 	if !assert.Equal(t, ErrUnsupportedAlgorithm, err, "Sign with unknown algorithm should return error") {
 		return
 	}
@@ -37,19 +37,42 @@ func TestRsaSign_SignWithNoPrivateKey(t *testing.T) {
 		Algorithm: jwa.RS256,
 	}
 
-	_, err := s.Sign([]byte{'a', 'b', 'c'})
+	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
 	if !assert.Equal(t, ErrMissingPrivateKey, err, "Sign with no private key should return error") {
 		return
 	}
 }
 
-func TestRsaSign_VerifyWithNoPrivateKey(t *testing.T) {
-	s := &RsaSign{
-		Algorithm: jwa.RS256,
+func TestRsaSign_VerifyWithNoPublicKey(t *testing.T) {
+	_, err := NewRsaVerify(jwa.RS256, nil)
+	if !assert.Equal(t, ErrMissingPublicKey, err, "Verify with no private key should return error") {
+		return
+	}
+}
+
+func TestRsaSign_SignVerify(t *testing.T) {
+	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, "RSA key generated") {
+		return
 	}
 
-	err := s.Verify([]byte{'a', 'b', 'c'}, []byte{'d', 'e', 'f'})
-	if !assert.Equal(t, ErrMissingPublicKey, err, "Verify with no private key should return error") {
+	s, err := NewRsaSign(jwa.RS256, rsakey)
+	if !assert.NoError(t, err, "RsaSign created") {
+		return
+	}
+
+	payload := []byte("Hello, world")
+	signed, err := s.PayloadSign(payload)
+	if !assert.NoError(t, err, "Payload signed") {
+		return
+	}
+
+	v, err := NewRsaVerify(jwa.RS256, &rsakey.PublicKey)
+	if !assert.NoError(t, err, "RsaVerify created") {
+		return
+	}
+
+	if !assert.NoError(t, v.PayloadVerify(payload, signed), "Payload verified") {
 		return
 	}
 }
@@ -82,7 +105,7 @@ func TestMultiSigner(t *testing.T) {
 	ms.AddSigner(s2)
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
-	m, err := ms.MultiSign(buffer.Buffer(v))
+	m, err := ms.Sign(buffer.Buffer(v))
 	if !assert.NoError(t, err, "MultiSign succeeded") {
 		return
 	}
