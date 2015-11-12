@@ -23,6 +23,14 @@ func FromUint(v uint64) Buffer {
 	return Buffer(bytes.TrimLeft(data, "\x00"))
 }
 
+func FromBase64(v []byte) (Buffer, error) {
+	b := Buffer{}
+	if err := b.Base64Decode(v); err != nil {
+		return Buffer(nil), err
+	}
+	return b, nil
+}
+
 // Bytes returns the raw bytes that comprises the Buffer
 func (b Buffer) Bytes() []byte {
 	return []byte(b)
@@ -50,7 +58,9 @@ func (b Buffer) Base64Encode() ([]byte, error) {
 func (b *Buffer) Base64Decode(v []byte) error {
 	enc := base64.RawURLEncoding
 	out := make([]byte, enc.DecodedLen(len(v)))
-	enc.Decode(out, v)
+	if _, err := enc.Decode(out, v); err != nil {
+		return err
+	}
 	*b = Buffer(bytes.TrimRight(out, "\x00"))
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
+	"hash"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -56,7 +57,15 @@ type Header struct {
 // in JSON format
 type EncodedHeader struct {
 	*Header
-	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
+	// This is a special field. It's ONLY set when parsed from a serialized form.
+	// It's used for verification purposes, because header representations (such as
+	// JSON key order) may differ from what the source encoded with and what the
+	// go json package uses
+	// 
+	// If this field is populated (Len() > 0), it will be used for signature
+	// calculation.
+	// If you change the header values, make sure to clear this field, too
+	Source buffer.Buffer  `json:"-"`
 }
 
 // PayloadSigner generates signature for the given payload
@@ -119,6 +128,7 @@ type HmacSign struct {
 	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	Key        []byte
+	hash       func() hash.Hash
 }
 
 type Serializer interface {

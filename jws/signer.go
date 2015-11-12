@@ -251,15 +251,21 @@ func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 }
 
 func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
+	h, err := hmacHashForAlg(alg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &HmacSign{
 		Algorithm: alg,
 		Key:       key,
+		hash:      h,
 	}, nil
 }
 
-func (s HmacSign) hmac() (hash.Hash, error) {
+func hmacHashForAlg(alg jwa.SignatureAlgorithm) (func() hash.Hash, error) {
 	var h func() hash.Hash
-	switch s.Algorithm {
+	switch alg {
 	case jwa.HS256:
 		h = sha256.New
 	case jwa.HS384:
@@ -270,29 +276,15 @@ func (s HmacSign) hmac() (hash.Hash, error) {
 		return nil, ErrUnsupportedAlgorithm
 	}
 
-	return hmac.New(h, s.Key), nil
+	return h, nil
 }
 
 func (s HmacSign) PayloadSign(payload []byte) ([]byte, error) {
-	h, err := s.hmac()
-	if err != nil {
-		return nil, err
-	}
+	hfunc := s.hash
+	h := hmac.New(hfunc, s.Key)
 	h.Write(payload)
 	b := h.Sum(nil)
 	return b, nil
-}
-
-func (s HmacSign) Verify(payload []byte, mac []byte) error {
-	expected, err := s.PayloadSign(payload)
-	if err != nil {
-		return err
-	}
-
-	if !hmac.Equal(mac, expected) {
-		return ErrInvalidSignature
-	}
-	return nil
 }
 
 func (s HmacSign) Alg() jwa.SignatureAlgorithm {

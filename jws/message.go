@@ -162,31 +162,6 @@ func (h Header) Base64Encode() ([]byte, error) {
 	return buffer.Buffer(b).Base64Encode()
 }
 
-func DecodeEncodedHeader(buf buffer.Buffer) (*EncodedHeader, error) {
-	hdr := EncodedHeader{}
-
-	buf2 := buffer.Buffer{}
-	if err := buf2.Base64Decode(buf.Bytes()); err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(buf2.Bytes(), &hdr.Header); err != nil {
-		return nil, err
-	}
-	hdr.encoded = buf
-	return &hdr, nil
-}
-
-func (e *EncodedHeader) SigningInput() (buffer.Buffer, error) {
-	if e.encoded.Len() == 0 {
-		buf, err := e.Base64Encode()
-		if err != nil {
-			return buffer.Buffer{}, err
-		}
-		e.encoded = buf
-	}
-	return e.encoded, nil
-}
-
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
@@ -211,6 +186,8 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(b.Bytes(), &e.Header); err != nil {
 		return err
 	}
+
+	e.Source = b
 
 	return nil
 }
@@ -266,25 +243,4 @@ func (m Message) LookupSignature(kid string) []Signature {
 		sigs = append(sigs, sig)
 	}
 	return sigs
-}
-
-func (m Message) Verify(v Verifier) error {
-	p, err := m.Payload.Base64Encode()
-	if err != nil {
-		return err
-	}
-
-	for _, sig := range m.Signatures {
-		h, err := sig.ProtectedHeader.SigningInput()
-		if err != nil {
-			return err
-		}
-
-		buf := append(append(h, '.'), p...)
-		if err := v.Verify(buf, sig.Signature); err == nil {
-			return nil
-		}
-	}
-
-	return errors.New("none of the signatures could be verified")
 }

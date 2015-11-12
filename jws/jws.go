@@ -117,16 +117,21 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	enc := base64.RawURLEncoding
 
-	hdr, err := DecodeEncodedHeader(parts[0])
+	hdrbuf, err := buffer.FromBase64(parts[0])
 	if err != nil {
 		return nil, err
 	}
 
-	payload := make([]byte, enc.DecodedLen(len(parts[1])))
-	if _, err := enc.Decode(payload, parts[1]); err != nil {
+	hdr := &EncodedHeader{Header: NewHeader()}
+	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
 		return nil, err
 	}
-	payload = bytes.TrimRight(payload, "\x00")
+	hdr.Source = hdrbuf
+
+	payload, err := buffer.FromBase64(parts[1])
+	if err != nil {
+		return nil, err
+	}
 
 	signature := make([]byte, enc.DecodedLen(len(parts[2])))
 	if _, err := enc.Decode(signature, parts[2]); err != nil {

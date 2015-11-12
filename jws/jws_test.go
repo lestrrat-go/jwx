@@ -159,12 +159,21 @@ func TestEncode_HS256Compact(t *testing.T) {
 		return
 	}
 
+	{
+		jsonbuf, _ := json.MarshalIndent(msg, "" , "  ")
+		t.Logf("%s", jsonbuf)
+	}
+
 	hdrs := msg.Signatures[0].MergedHeaders()
 	if !assert.Equal(t, hdrs.Algorithm(), jwa.HS256, "Algorithm in header matches") {
 		return
 	}
 
-	if !assert.NoError(t, Verify(buffer.Buffer(hdr), buffer.Buffer(examplePayload), msg.Signatures[0].Signature.Bytes(), sign), "Verify succeeds") {
+	v, err := NewHmacVerify(jwa.HS256, hmacKeyDecoded.Bytes())
+	if !assert.NoError(t, err, "HmacVerify created") {
+		return
+	}
+	if !assert.NoError(t, v.Verify(msg), "Verify succeeds") {
 		return
 	}
 }

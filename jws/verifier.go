@@ -3,6 +3,7 @@ package jws
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rsa"
 	"errors"
 	"math/big"
@@ -15,6 +16,7 @@ type payloadVerifier interface {
 }
 
 func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) error {
+	var err error
 	payload, err := m.Payload.Base64Encode()
 	if err != nil {
 		return err
@@ -24,9 +26,17 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 			continue
 		}
 
-		phbuf, err := sig.ProtectedHeader.Base64Encode()
-		if err != nil {
-			continue
+		var phbuf []byte
+		if sig.ProtectedHeader.Source.Len() > 0 {
+			phbuf, err = sig.ProtectedHeader.Source.Base64Encode()
+			if err != nil {
+				continue
+			}
+		} else {
+			phbuf, err = sig.ProtectedHeader.Base64Encode()
+			if err != nil {
+				continue
+			}
 		}
 		siv := bytes.Join(
 			[][]byte{
@@ -131,6 +141,36 @@ func (v EcdsaVerify) PayloadVerify(payload, signature []byte) error {
 	sv := (&big.Int{}).SetBytes(signature[keysiz:])
 
 	if !ecdsa.Verify(pubkey, h.Sum(nil), rv, sv) {
+		return ErrInvalidSignature
+	}
+	return nil
+}
+
+type HmacVerify struct {
+	signer *HmacSign
+}
+
+func NewHmacVerify(alg jwa.SignatureAlgorithm, key []byte) (*HmacVerify, error) {
+	s, err := NewHmacSign(alg, key)
+	if err != nil {
+		return nil, err
+	}
+	return &HmacVerify{signer: s}, nil
+}
+
+// Verify checks that signature generated for `payload` matches `signature`.
+// This fulfills the `Verifier` interface
+func (v HmacVerify) Verify(m *Message) error {
+	return doMessageVerify(v.signer.Algorithm, v, m)
+}
+
+func (v HmacVerify) PayloadVerify(payload, mac []byte) error {
+	expected, err := v.signer.PayloadSign(payload)
+	if err != nil {
+		return err
+	}
+
+	if !hmac.Equal(mac, expected) {
 		return ErrInvalidSignature
 	}
 	return nil
