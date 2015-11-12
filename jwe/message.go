@@ -133,63 +133,67 @@ func (h1 *Header) Merge(h2 *Header) (*Header, error) {
 		return nil, err
 	}
 
-	if h2.Algorithm != "" {
-		h3.Algorithm = h2.Algorithm
-	}
-
-	if h2.ContentEncryption != "" {
-		h3.ContentEncryption = h2.ContentEncryption
-	}
-
-	if h2.ContentType != "" {
-		h3.ContentType = h2.ContentType
-	}
-
-	if h2.Compression != "" {
-		h3.Compression = h2.Compression
-	}
-
-	if h2.Critical != nil {
-		h3.Critical = h2.Critical
-	}
-
-	if h2.Jwk != nil {
-		h3.Jwk = h2.Jwk
-	}
-
-	if h2.JwkSetURL != nil {
-		h3.JwkSetURL = h2.JwkSetURL
-	}
-
-	if h2.KeyID != "" {
-		h3.KeyID = h2.KeyID
-	}
-
-	if h2.Type != "" {
-		h3.Type = h2.Type
-	}
-
-	if h2.X509Url != nil {
-		h3.X509Url = h2.X509Url
-	}
-
-	if h2.X509CertChain != nil {
-		h3.X509CertChain = h2.X509CertChain
-	}
-
-	if h2.X509CertThumbprint != "" {
-		h3.X509CertThumbprint = h2.X509CertThumbprint
-	}
-
-	if h2.X509CertThumbprintS256 != "" {
-		h3.X509CertThumbprintS256 = h2.X509CertThumbprintS256
-	}
+	h3.EssentialHeader.Merge(h2.EssentialHeader)
 
 	for k, v := range h2.PrivateParams {
 		h3.PrivateParams[k] = v
 	}
 
 	return h3, nil
+}
+
+func (h1 *EssentialHeader) Merge(h2 *EssentialHeader) {
+	if h2.Algorithm != "" {
+		h1.Algorithm = h2.Algorithm
+	}
+
+	if h2.ContentEncryption != "" {
+		h1.ContentEncryption = h2.ContentEncryption
+	}
+
+	if h2.ContentType != "" {
+		h1.ContentType = h2.ContentType
+	}
+
+	if h2.Compression != "" {
+		h1.Compression = h2.Compression
+	}
+
+	if h2.Critical != nil {
+		h1.Critical = h2.Critical
+	}
+
+	if h2.Jwk != nil {
+		h1.Jwk = h2.Jwk
+	}
+
+	if h2.JwkSetURL != nil {
+		h1.JwkSetURL = h2.JwkSetURL
+	}
+
+	if h2.KeyID != "" {
+		h1.KeyID = h2.KeyID
+	}
+
+	if h2.Type != "" {
+		h1.Type = h2.Type
+	}
+
+	if h2.X509Url != nil {
+		h1.X509Url = h2.X509Url
+	}
+
+	if h2.X509CertChain != nil {
+		h1.X509CertChain = h2.X509CertChain
+	}
+
+	if h2.X509CertThumbprint != "" {
+		h1.X509CertThumbprint = h2.X509CertThumbprint
+	}
+
+	if h2.X509CertThumbprintS256 != "" {
+		h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+	}
 }
 
 func (h1 *Header) Copy(h2 *Header) error {
@@ -200,6 +204,16 @@ func (h1 *Header) Copy(h2 *Header) error {
 		return errors.New("copy target is nil")
 	}
 
+	h1.EssentialHeader.Copy(h2.EssentialHeader)
+
+	for k, v := range h2.PrivateParams {
+		h1.PrivateParams[k] = v
+	}
+
+	return nil
+}
+
+func (h1 *EssentialHeader) Copy(h2 *EssentialHeader) {
 	h1.Algorithm = h2.Algorithm
 	h1.ContentEncryption = h2.ContentEncryption
 	h1.ContentType = h2.ContentType
@@ -213,12 +227,6 @@ func (h1 *Header) Copy(h2 *Header) error {
 	h1.X509CertChain = h2.X509CertChain
 	h1.X509CertThumbprint = h2.X509CertThumbprint
 	h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
-
-	for k, v := range h2.PrivateParams {
-		h1.PrivateParams[k] = v
-	}
-
-	return nil
 }
 
 func (h Header) MarshalJSON() ([]byte, error) {
