@@ -15,4 +15,8 @@
 //    https://github.com/coreos/oidc
 //    https://golang.org/x/oauth2
 //
+// This library exists because there was a need for a toolset that encompasses
+// the whole set of JWx technologies, in a highly customizable manner.
+//
+// You can find more high level documentation at Github (https://github.com/lestrrat/go-jwx)
 package jwx
