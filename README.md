@@ -70,14 +70,14 @@ func main() {
 
   // If you KNOW you have exactly one key, you can just
   // use set.Keys[0]
-  keys := set.LoookupKeyID("mykey")
+  keys := set.LookupKeyID("mykey")
   if len(keys) == 0 {
     log.Printf("failed to lookup key: %s", err)
     return
   }
 
   // Assuming RsaPublicKey...
-  key := keys[0].(\*jwk.RsaPublicKey)
+  key := keys[0].(*jwk.RsaPublicKey)
 
   pubkey := key.PublicKey()
   // Use pubkey for jws.Verify() or whatever

@@ -1,3 +1,5 @@
+// Package jwk implements JWK as described in https://tools.ietf.org/html/rfc7517
+
 package jwk
 
 import (
