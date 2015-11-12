@@ -24,7 +24,7 @@ type Header struct {
 }
 
 type EssentialClaims struct {
-	Audience   string       `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	Audience   []string     `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	Expiration int64        `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	IssuedAt   int64        `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
 	Issuer     string       `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1

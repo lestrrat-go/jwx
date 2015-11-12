@@ -9,10 +9,12 @@ import (
 	"github.com/lestrrat/go-jwx/internal/emap"
 )
 
+// MarshalJSON generates JSON representation of this instant
 func (n NumericDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.UTC().Format(numericDateFmt))
 }
 
+// UnmarshalJSON parses the JSON representation and initializes this NumericDate
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -28,6 +30,7 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// NewClaimSet creates a new ClaimSet
 func NewClaimSet() *ClaimSet {
 	return &ClaimSet{
 		EssentialClaims: &EssentialClaims{},
@@ -35,6 +38,7 @@ func NewClaimSet() *ClaimSet {
 	}
 }
 
+// MarshalJSON generates JSON representation of this claim set
 func (c *ClaimSet) MarshalJSON() ([]byte, error) {
 	// Reverting time back for machines whose time is not perfectly in sync.
 	// If client machine's time is in the future according
@@ -53,6 +57,7 @@ func (c *ClaimSet) MarshalJSON() ([]byte, error) {
 	return emap.MergeMarshal(c.EssentialClaims, c.PrivateClaims)
 }
 
+// UnmarshalJSON parses the JSON representation and initializes this ClaimSet
 func (c *ClaimSet) UnmarshalJSON(data []byte) error {
 	if c.EssentialClaims == nil {
 		c.EssentialClaims = &EssentialClaims{}
@@ -63,9 +68,10 @@ func (c *ClaimSet) UnmarshalJSON(data []byte) error {
 	return emap.MergeUnmarshal(data, c.EssentialClaims, &c.PrivateClaims)
 }
 
+// Construct takes a map and initializes the essential claims with its values
 func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	r := emap.Hmap(m)
-	c.Audience, _ = r.GetString("aud")
+	c.Audience, _ = r.GetStringSlice("aud")
 	c.Expiration, _ = r.GetInt64("exp")
 	c.IssuedAt, _ = r.GetInt64("iat")
 	c.Issuer, _ = r.GetString("iss")
@@ -83,6 +89,31 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	return nil
 }
 
+func (c *ClaimSet) Get(key string) interface{} {
+	switch key {
+	case "aud":
+		return c.Audience
+	case "exp":
+		return c.Expiration
+	case "iat":
+		return c.IssuedAt
+	case "iss":
+		return c.Issuer
+	case "jti":
+		return c.JwtID
+	case "nbf":
+		return c.NotBefore
+	case "sub":
+		return c.Subject
+	}
+
+	v, ok := c.PrivateClaims[key]
+	if !ok {
+		return nil
+	}
+	return v
+}
+
 // Set takes a key and a value, and sets the appropriate values in the
 // `ClaimSet` for you. If the key is a known ("Essential") claim, it is set
 // in `c.EssentialClaim` struct, which means that some amoutn of type safety
@@ -95,11 +126,15 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 func (c *ClaimSet) Set(key string, value interface{}) error {
 	switch key {
 	case "aud":
-		v, ok := value.(string)
-		if !ok {
+		// for "aud", we allow either a string or a string slice
+		switch value.(type) {
+		case []string:
+			c.Audience = value.([]string)
+		case string:
+			c.Audience = []string{value.(string)}
+		default:
 			return ErrInvalidValue
 		}
-		c.Audience = v
 	case "exp":
 		v, ok := value.(int64)
 		if !ok {
