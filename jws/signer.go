@@ -18,7 +18,16 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
-func NewMultiSign(signers ...PayloadSigner) *MultiSign {
+// NewSigner creates a new MultiSign object with the given PayloadSigners.
+// It is an alias to `NewMultiSign()`, but it exists so that it's clear
+// to the end users that this is a generic signer that should be used
+// for 99% of the cases
+func NewSigner(signers ...PayloadSigner) *MultiSign {
+	return NewMultiSigner(signers...)
+}
+
+// NewMultiSigner creates a new MultiSign object
+func NewMultiSigner(signers ...PayloadSigner) *MultiSign {
 	ms := &MultiSign{}
 	for _, s := range signers {
 		ms.AddSigner(s)
