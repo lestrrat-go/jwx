@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"hash"
-	"math/big"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
@@ -125,7 +124,7 @@ func (s *RsaSign) Kid() string {
 	return s.KeyID
 }
 
-func hashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
+func rsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 	var hash crypto.Hash
 	switch alg {
 	case jwa.RS256, jwa.PS256:
@@ -144,7 +143,7 @@ func hashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 // Sign generates a sign based on the Algorithm instance variable.
 // This fulfills the `Signer` interface
 func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
-	hash, err := hashForAlg(s.Algorithm)
+	hash, err := rsaHashForAlg(s.Algorithm)
 	if err != nil {
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -179,7 +178,6 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 	return &EcdsaSign{
 		Algorithm:  alg,
 		PrivateKey: key,
-		PublicKey:  &key.PublicKey,
 	}, nil
 }
 
@@ -198,8 +196,7 @@ func (sign EcdsaSign) Kid() string {
 	return sign.KeyID
 }
 
-func (sign EcdsaSign) hash() (crypto.Hash, error) {
-	alg := sign.Algorithm
+func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 	var hash crypto.Hash
 	switch alg {
 	case jwa.ES256:
@@ -218,7 +215,7 @@ func (sign EcdsaSign) hash() (crypto.Hash, error) {
 // Sign generates a sign based on the Algorithm instance variable.
 // This fulfills the `PayloadSigner` interface
 func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
-	hash, err := sign.hash()
+	hash, err := ecdsaHashForAlg(sign.Algorithm)
 	if err != nil {
 		return nil, err
 	}
@@ -251,37 +248,6 @@ func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	}
 
 	return out, nil
-}
-
-func (s EcdsaSign) Verify(payload, signature []byte) error {
-	pubkey := s.PublicKey
-	if pubkey == nil {
-		if s.PrivateKey == nil {
-			return errors.New("cannot proceed with Verify(): no private/public key available")
-		}
-		pubkey = &s.PrivateKey.PublicKey
-	}
-
-	hash, err := s.hash()
-	if err != nil {
-		return ErrUnsupportedAlgorithm
-	}
-
-	keysiz := hash.Size()
-	if len(signature) != 2*keysiz {
-		return ErrInvalidEcdsaSignatureSize
-	}
-
-	h := hash.New()
-	h.Write(payload)
-
-	rv := (&big.Int{}).SetBytes(signature[:keysiz])
-	sv := (&big.Int{}).SetBytes(signature[keysiz:])
-
-	if !ecdsa.Verify(pubkey, h.Sum(nil), rv, sv) {
-		return ErrInvalidSignature
-	}
-	return nil
 }
 
 func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {

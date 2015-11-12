@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
@@ -76,7 +77,6 @@ type RsaSign struct {
 	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *rsa.PrivateKey
-	PublicKey  *rsa.PublicKey
 }
 
 type EcdsaSign struct {
@@ -84,7 +84,6 @@ type EcdsaSign struct {
 	JSONWebKey *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *ecdsa.PrivateKey
-	PublicKey  *ecdsa.PublicKey
 }
 
 type MergedHeader struct {
@@ -95,7 +94,7 @@ type MergedHeader struct {
 type Signature struct {
 	PublicHeader    *Header        `json:"header"`              // Raw JWS Unprotected Heders
 	ProtectedHeader *EncodedHeader `json:"protected,omitempty"` // Base64 encoded JWS Protected Headers
-	Signature       buffer.Buffer `json:"signature"`           // Base64 encoded signature
+	Signature       buffer.Buffer  `json:"signature"`           // Base64 encoded signature
 }
 
 // Message represents a full JWS encoded message. Flattened serialization
@@ -131,3 +130,14 @@ type JSONSerialize struct {
 	Pretty bool
 }
 
+type RsaVerify struct {
+	alg    jwa.SignatureAlgorithm
+	hash   crypto.Hash
+	pubkey *rsa.PublicKey
+}
+
+type EcdsaVerify struct {
+	alg    jwa.SignatureAlgorithm
+	hash   crypto.Hash
+	pubkey *ecdsa.PublicKey
+}

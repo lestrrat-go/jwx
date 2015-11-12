@@ -272,7 +272,11 @@ func TestEncode_ES256Compact(t *testing.T) {
 		return
 	}
 
-	if !assert.NoError(t, Verify(buffer.Buffer(hdr), buffer.Buffer(examplePayload), msg.Signatures[0].Signature.Bytes(), sign), "Verify succeeds") {
+	v, err := NewEcdsaVerify(jwa.ES256, &privkey.PublicKey)
+	if !assert.NoError(t, err, "EcdsaVerify created") {
+		return
+	}
+	if !assert.NoError(t, v.Verify(msg), "Verify succeeds") {
 		return
 	}
 }
