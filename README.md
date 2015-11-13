@@ -3,6 +3,14 @@
 [![Build Status](https://travis-ci.org/lestrrat/go-jwx.svg?branch=master)](https://travis-ci.org/lestrrat/go-jwx)
 [![GoDoc](https://godoc.org/github.com/lestrrat/go-jwx?status.svg)](https://godoc.org/github.com/lestrrat/go-jwx)
 
+## Status
+
+* jwt - done. PR/issues welcome
+* jwk - done? probably. PR/issues welcome
+* jws - pretty much done, docs
+* jwe - high-level API (jwe.Encrypt/jwe.Decrypt), more algorithms)
+* jwa - done.
+
 ## Synopsis
 
 ### JWT
