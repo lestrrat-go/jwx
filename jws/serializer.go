@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+
+	"github.com/lestrrat/go-jwx/buffer"
 )
 
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
@@ -27,11 +29,19 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, err
 	}
 
+	b64payload, err := m.Payload.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	b64signature, err := buffer.Buffer(signature.Signature).Base64Encode()
+	if err != nil {
+		return nil, err
+	}
 	buf := bytes.Join(
 		[][]byte{
 			hdrbuf,
-			m.Payload,
-			signature.Signature,
+			b64payload,
+			b64signature,
 		},
 		[]byte{'.'},
 	)

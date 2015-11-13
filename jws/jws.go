@@ -4,6 +4,8 @@ package jws
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,56 +14,56 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-func encodeSigningInputValue(hdr, payload Base64Encoder) ([]byte, error) {
-	h, err := hdr.Base64Encode()
+// Sign is a short way to generate a JWS in compact serialization
+// for a given payload. If you need more control over the signature
+// generation process, you should manually create signers and tweak
+// the message.
+func Sign(alg jwa.SignatureAlgorithm, payload []byte, key interface{}) ([]byte, error) {
+	signer := NewMultiSign()
+	switch alg {
+	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
+		privkey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("invalid private key: *rsa.PrivateKey required")
+		}
+
+		rsasign, err := NewRsaSign(alg, privkey)
+		if err != nil {
+			return nil, err
+		}
+		signer.AddSigner(rsasign)
+	case jwa.HS256, jwa.HS384, jwa.HS512:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("invalid private key: []byte required")
+		}
+
+		hmacsign, err := NewHmacSign(alg, sharedkey)
+		if err != nil {
+			return nil, err
+		}
+		signer.AddSigner(hmacsign)
+	case jwa.ES256, jwa.ES384, jwa.ES512:
+		privkey, ok := key.(*ecdsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("invalid private key: *ecdsa.PrivateKey required")
+		}
+
+		ecdsasign, err := NewEcdsaSign(alg, privkey)
+		if err != nil {
+			return nil, err
+		}
+		signer.AddSigner(ecdsasign)
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	msg, err := signer.Sign(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := payload.Base64Encode()
-	if err != nil {
-		return nil, err
-	}
-
-	return append(append(h, '.'), p...), nil
-}
-
-// Encode takes a header, a payload, and a signer, and produces a signed
-// compact serialization format of the given header and payload.
-//
-// The header and the payload need only be able to produce the base64
-// encoded version of itself for flexibility.
-//
-// The signer can be anything that implements the PayloadSigner interface.
-//
-// See also: Compact Serialization https://tools.ietf.org/html/rfc7515#section-3.1
-func Encode(hdr, payload Base64Encoder, signer PayloadSigner) ([]byte, error) {
-	// [encoded header].[encoded payload].[signed payload]
-
-	siv, err := encodeSigningInputValue(hdr, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := signer.PayloadSign(siv)
-	if err != nil {
-		return nil, err
-	}
-
-	enc := base64.RawURLEncoding
-	out := make([]byte, enc.EncodedLen(len(b))+1)
-	out[0] = '.'
-	enc.Encode(out[1:], b)
-	return append(siv, out...), nil
-}
-
-func Verify(hdr, payload Base64Encoder, sig []byte, verify Verifier) error {
-	siv, err := encodeSigningInputValue(hdr, payload)
-	if err != nil {
-		return err
-	}
-
-	return verify.Verify(siv, sig)
+	return CompactSerialize{}.Serialize(msg)
 }
 
 func Parse(buf []byte) (*Message, error) {

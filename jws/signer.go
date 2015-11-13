@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/json"
 	"errors"
 	"hash"
 
@@ -34,6 +33,11 @@ func NewMultiSign(signers ...PayloadSigner) *MultiSign {
 	return ms
 }
 
+// SignString takes a string payload, and creates a JWS signed message.
+func (m *MultiSign) SignString(payload string) (*Message, error) {
+	return m.Sign([]byte(payload))
+}
+
 // Sign takes a payload, and creates a JWS signed message.
 func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 	encoded, err := buffer.Buffer(payload).Base64Encode()
@@ -54,14 +58,14 @@ func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 			protected.KeyID = k.Kid()
 		}
 
-		protbuf, err := json.Marshal(protected)
+		protbuf, err := protected.Base64Encode()
 		if err != nil {
 			return nil, err
 		}
 
-		ss := append(append(protbuf, '.'), encoded...)
+		siv := append(append(protbuf, '.'), encoded...)
 
-		sigbuf, err := signer.PayloadSign(ss)
+		sigbuf, err := signer.PayloadSign(siv)
 		if err != nil {
 			return nil, err
 		}

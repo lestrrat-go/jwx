@@ -73,54 +73,39 @@ func TestParse_CompactSerializationBadSignature(t *testing.T) {
 	}
 }
 
-func TestRoundtrip_Compact(t *testing.T) {
+func TestRoundtrip_RSACompact(t *testing.T) {
+	payload := []byte("Hello, World!")
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
 		key, err := rsa.GenerateKey(rand.Reader, 2048)
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
 		}
 
-		signer, err := NewRsaSign(alg, key)
-		if !assert.NoError(t, err, "RsaSign created") {
-			return
-		}
-		hdr := NewHeader()
-		hdr.Algorithm = alg
-		hdr.KeyID = "foo"
-
-		payload := buffer.Buffer("Hello, World!")
-		buf, err := Encode(hdr, payload, signer)
-		if !assert.NoError(t, err, "(%s) Encode is successful", alg) {
+		buf, err := Sign(alg, payload, key)
+		if !assert.NoError(t, err, "(%s) Signature generated successfully", alg) {
 			return
 		}
 
-		for i := 0; i < 2; i++ {
-			var c *Message
-			switch i {
-			case 0:
-				c, err = Parse(buf)
-				if !assert.NoError(t, err, "Parse([]byte) is successful") {
-					return
-				}
-			case 1:
-				c, err = ParseString(string(buf))
-				if !assert.NoError(t, err, "ParseString(string) is successful") {
-					return
-				}
-			default:
-				panic("what?!")
+		parsers := map[string]func([]byte) (*Message, error) {
+			"Parse(byte)": Parse,
+			"Parse(string)": func(b []byte) (*Message, error) { return ParseString(string(b)) },
+		}
+		for name, f := range parsers {
+			m, err := f(buf)
+			if !assert.NoError(t, err, "%s is successful", name) {
+				return
 			}
 
-			if !assert.Equal(t, buffer.Buffer("Hello, World!"), c.Payload, "Payload is decoded") {
+			if !assert.Equal(t, payload, m.Payload.Bytes(), "(%s) Payload is decoded", name) {
 				return
 			}
 
 			v, err := NewRsaVerify(alg, &key.PublicKey)
-			if !assert.NoError(t, err, "Verify created") {
+			if !assert.NoError(t, err, "(%s) Verify created", name) {
 				return
 			}
 
-			if !assert.NoError(t, v.Verify(c), "Verify is successful") {
+			if !assert.NoError(t, v.Verify(m), "(%s) Verify is successful", name) {
 				return
 			}
 		}
@@ -141,27 +126,45 @@ func TestEncode_HS256Compact(t *testing.T) {
 		return
 	}
 
-	out, err := Encode(
-		buffer.Buffer(hdr),
-		buffer.Buffer(examplePayload),
-		sign,
+	hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+	payload, err := buffer.Buffer(examplePayload).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+
+	signingInput := bytes.Join(
+		[][]byte{
+			hdrbuf,
+			payload,
+		},
+		[]byte{'.'},
 	)
-	if !assert.NoError(t, err, "Encode should succeed") {
+	signature, err := sign.PayloadSign(signingInput)
+	if !assert.NoError(t, err, "PayloadSign is successful") {
+		return
+	}
+	sigbuf, err := buffer.Buffer(signature).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
 		return
 	}
 
-	if !assert.Equal(t, expected, string(out), "generated compact serialization should match") {
+	encoded := bytes.Join(
+		[][]byte{
+			signingInput,
+			sigbuf,
+		},
+		[]byte{'.'},
+	)
+	if !assert.Equal(t, expected, string(encoded), "generated compact serialization should match") {
 		return
 	}
 
-	msg, err := Parse(out)
+	msg, err := Parse(encoded)
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
-	}
-
-	{
-		jsonbuf, _ := json.MarshalIndent(msg, "" , "  ")
-		t.Logf("%s", jsonbuf)
 	}
 
 	hdrs := msg.Signatures[0].MergedHeaders()
@@ -204,20 +207,44 @@ func TestEncode_RS256Compact(t *testing.T) {
 		return
 	}
 
-	out, err := Encode(
-		buffer.Buffer(hdr),
-		buffer.Buffer(examplePayload),
-		sign,
+	hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+	payload, err := buffer.Buffer(examplePayload).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+
+	signingInput := bytes.Join(
+		[][]byte{
+			hdrbuf,
+			payload,
+		},
+		[]byte{'.'},
 	)
-	if !assert.NoError(t, err, "Encode should succeed") {
+	signature, err := sign.PayloadSign(signingInput)
+	if !assert.NoError(t, err, "PayloadSign is successful") {
+		return
+	}
+	sigbuf, err := buffer.Buffer(signature).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
 		return
 	}
 
-	if !assert.Equal(t, expected, string(out), "generated compact serialization should match") {
+	encoded := bytes.Join(
+		[][]byte{
+			signingInput,
+			sigbuf,
+		},
+		[]byte{'.'},
+	)
+
+	if !assert.Equal(t, expected, string(encoded), "generated compact serialization should match") {
 		return
 	}
 
-	msg, err := Parse(out)
+	msg, err := Parse(encoded)
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
 	}
@@ -258,20 +285,44 @@ func TestEncode_ES256Compact(t *testing.T) {
 		return
 	}
 
-	out, err := Encode(
-		buffer.Buffer(hdr),
-		buffer.Buffer(examplePayload),
-		sign,
-	)
-	if !assert.NoError(t, err, "Encode should succeed") {
+	hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
 		return
 	}
+	payload, err := buffer.Buffer(examplePayload).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+
+	signingInput := bytes.Join(
+		[][]byte{
+			hdrbuf,
+			payload,
+		},
+		[]byte{'.'},
+	)
+	signature, err := sign.PayloadSign(signingInput)
+	if !assert.NoError(t, err, "PayloadSign is successful") {
+		return
+	}
+	sigbuf, err := buffer.Buffer(signature).Base64Encode()
+	if !assert.NoError(t, err, "base64 encode successful") {
+		return
+	}
+
+	encoded := bytes.Join(
+		[][]byte{
+			signingInput,
+			sigbuf,
+		},
+		[]byte{'.'},
+	)
 
 	// The signature contains random factor, so unfortunately we can't match
 	// the output against a fixed expected outcome. We'll wave doing an
 	// exact match, and just try to verify using the signature
 
-	msg, err := Parse(out)
+	msg, err := Parse(encoded)
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
 	}
