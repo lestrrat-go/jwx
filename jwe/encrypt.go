@@ -1,10 +1,12 @@
 package jwe
 
-// NewEncrypt creates a new Encrypt struct. The caller is responsible
+import "github.com/lestrrat/go-jwx/internal/debug"
+
+// NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
 // for instantiating valid inputs for ContentEncrypter, KeyGenerator,
 // and KeyEncrypters.
-func NewEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *Encrypt {
-	e := &Encrypt{
+func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *MultiEncrypt {
+	e := &MultiEncrypt{
 		ContentEncrypter: cc,
 		KeyGenerator:     kg,
 		KeyEncrypters:    ke,
@@ -13,12 +15,12 @@ func NewEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *Encry
 }
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
-func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
+func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	cek, err := e.KeyGenerator.KeyGenerate()
 	if err != nil {
 		return nil, err
 	}
-	debug("Encrypt: generated cek len = %d", len(cek))
+	debug.Printf("Encrypt: generated cek len = %d", len(cek))
 
 	protected := NewEncodedHeader()
 	protected.Set("enc", e.ContentEncrypter.Algorithm())
@@ -38,7 +40,7 @@ func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 			return nil, err
 		}
 		r.EncryptedKey = enckey
-		debug("Encrypt: encrypted_key = %x", enckey)
+		debug.Printf("Encrypt: encrypted_key = %x", enckey)
 		recipients[i] = *r
 	}
 
@@ -56,11 +58,11 @@ func (e Encrypt) Encrypt(plaintext []byte) (*Message, error) {
 	// ...on the other hand, there's only one content cipher.
 	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
 
-	debug("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
-	debug("Encrypt.Encrypt: aad        = %x", aad)
-	debug("Encrypt.Encrypt: ciphertext = %x", ciphertext)
-	debug("Encrypt.Encrypt: iv         = %x", iv)
-	debug("Encrypt.Encrypt: tag        = %x", tag)
+	debug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
+	debug.Printf("Encrypt.Encrypt: aad        = %x", aad)
+	debug.Printf("Encrypt.Encrypt: ciphertext = %x", ciphertext)
+	debug.Printf("Encrypt.Encrypt: iv         = %x", iv)
+	debug.Printf("Encrypt.Encrypt: tag        = %x", tag)
 
 	msg := NewMessage()
 	msg.AuthenticatedData.Base64Decode(aad)

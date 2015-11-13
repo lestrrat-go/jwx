@@ -9,15 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
-
-func debug(f string, args ...interface{}) {
-	log.Printf(f, args...)
-}
 
 func Parse(buf []byte) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
@@ -58,7 +54,7 @@ func parseJSON(buf []byte) (*Message, error) {
 }
 
 func parseCompact(buf []byte) (*Message, error) {
-	debug("Parse(Compact): buf = '%s'", buf)
+	debug.Printf("Parse(Compact): buf = '%s'", buf)
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
 		return nil, ErrInvalidCompactPartsCount
@@ -78,8 +74,8 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 	hdrbuf = bytes.TrimRight(hdrbuf, "\x00")
-debug("p0     = %x", out[:p0Len])
-debug("hdrbuf = %x", hdrbuf)
+	debug.Printf("p0     = %x", out[:p0Len])
+	debug.Printf("hdrbuf = %x", hdrbuf)
 
 	hdr := NewHeader()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
@@ -117,13 +113,13 @@ debug("hdrbuf = %x", hdrbuf)
 	tagbuf = bytes.TrimRight(tagbuf, "\x00")
 
 	m := NewMessage()
-/*
-	v, err := protected.Base64Encode()
-	if err != nil {
-		return nil, err
-	}
-	m.AuthenticatedData.Base64Decode(v)
-*/
+	/*
+		v, err := protected.Base64Encode()
+		if err != nil {
+			return nil, err
+		}
+		m.AuthenticatedData.Base64Decode(v)
+	*/
 	m.AuthenticatedData.SetBytes(hdrbuf.Bytes())
 	m.ProtectedHeader = protected
 	m.Tag = tagbuf
@@ -191,14 +187,14 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 	}
 	h, err = h.Merge(m.UnprotectedHeader)
 	if err != nil {
-		debug("failed to merge unprotected header")
+		debug.Printf("failed to merge unprotected header")
 		return nil, err
 	}
 
-	debug("DecryptMessage: aad (bytes)   = %s", m.AuthenticatedData.Bytes())
+	debug.Printf("DecryptMessage: aad (bytes)   = %s", m.AuthenticatedData.Bytes())
 	{
 		b64, _ := m.AuthenticatedData.Base64Encode()
-		debug("DecryptMessage: aad (encoded) = %s", b64)
+		debug.Printf("DecryptMessage: aad (encoded) = %s", b64)
 	}
 
 	// Now, this is weird. If Message contains 1
@@ -216,45 +212,45 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
 	}
 	keysize := cipher.KeySize()
-	debug("cipher.keysize = %d", keysize)
+	debug.Printf("cipher.keysize = %d", keysize)
 
 	var plaintext []byte
 	for _, recipient := range m.Recipients {
 		h2 := NewHeader()
 		if err := h2.Copy(h); err != nil {
-			debug("failed to copy header: %s", err)
+			debug.Printf("failed to copy header: %s", err)
 			continue
 		}
 
 		h2, err := h2.Merge(recipient.Header)
 		if err != nil {
-			debug("Failed to merge! %s", err)
+			debug.Printf("Failed to merge! %s", err)
 			continue
 		}
 
 		k, err := BuildKeyDecrypter(h2.Algorithm, key, keysize)
 		if err != nil {
-			debug("failed to create key decrypter: %s", err)
+			debug.Printf("failed to create key decrypter: %s", err)
 			continue
 		}
 
-		debug("DecryptMessage: encrypted_key = %x", recipient.EncryptedKey.Bytes())
+		debug.Printf("DecryptMessage: encrypted_key = %x", recipient.EncryptedKey.Bytes())
 		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
-			debug("failed to decrypt key: %s", err)
+			debug.Printf("failed to decrypt key: %s", err)
 			continue
 		}
 
-		debug("DecryptMessage: cek        = %x (%d)", cek, len(cek))
-		debug("DecryptMessage: iv         = %x", iv)
-		debug("DecryptMessage: ciphertext = %x", ciphertext)
-		debug("DecryptMessage: tag        = %x", tag)
-		debug("DecryptMessage: aad        = %x", aad)
+		debug.Printf("DecryptMessage: cek        = %x (%d)", cek, len(cek))
+		debug.Printf("DecryptMessage: iv         = %x", iv)
+		debug.Printf("DecryptMessage: ciphertext = %x", ciphertext)
+		debug.Printf("DecryptMessage: tag        = %x", tag)
+		debug.Printf("DecryptMessage: aad        = %x", aad)
 		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
 		if err == nil {
 			break
 		}
-		debug("DecryptMessage: cipher.decrypt: %s", err)
+		debug.Printf("DecryptMessage: cipher.decrypt: %s", err)
 	}
 
 	if plaintext == nil {

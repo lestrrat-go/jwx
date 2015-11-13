@@ -1,18 +1,21 @@
 package jwe
 
-import "github.com/lestrrat/go-jwx/jwa"
+import (
+	"github.com/lestrrat/go-jwx/internal/debug"
+	"github.com/lestrrat/go-jwx/jwa"
+)
 
 func (c GenericContentCrypt) Algorithm() jwa.ContentEncryptionAlgorithm {
 	return c.alg
 }
 
 func (c GenericContentCrypt) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
-	debug("ContentCrypt.Encrypt: cek        = %x", cek)
-	debug("ContentCrypt.Encrypt: ciphertext = %x", plaintext)
-	debug("ContentCrypt.Encrypt: aad        = %x", aad)
+	debug.Printf("ContentCrypt.Encrypt: cek        = %x", cek)
+	debug.Printf("ContentCrypt.Encrypt: ciphertext = %x", plaintext)
+	debug.Printf("ContentCrypt.Encrypt: aad        = %x", aad)
 	iv, encrypted, tag, err := c.cipher.encrypt(cek, plaintext, aad)
 	if err != nil {
-		debug("cipher.encrypt failed")
+		debug.Printf("cipher.encrypt failed")
 		return nil, nil, nil, err
 	}
 

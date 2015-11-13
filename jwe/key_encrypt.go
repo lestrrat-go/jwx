@@ -12,6 +12,7 @@ import (
 	"errors"
 	"hash"
 
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
@@ -72,7 +73,7 @@ func (e RSAKeyEncrypt) Kid() string {
 }
 
 func (e RSAKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
-	debug("RSA.KeyEncrypt: cek = %x", cek)
+	debug.Printf("RSA.KeyEncrypt: cek = %x", cek)
 	if e.alg == jwa.RSA1_5 {
 		return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
 	}
@@ -134,13 +135,13 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	// prevent chosen-ciphertext attacks as described in RFC 3218, "Preventing
 	// the Million Message Attack on Cryptographic Message Syntax". We are
 	// therefore deliberatly ignoring errors here.
-	debug("OAEP.KeyDecrypt: enckey = %x", enckey)
+	debug.Printf("OAEP.KeyDecrypt: enckey = %x", enckey)
 	err = rsa.DecryptPKCS1v15SessionKey(rand.Reader, d.privkey, enckey, cek)
 	if err != nil {
 		return nil, err
 	}
 
-	debug("OAEP.KeyDecrypt: cek = %x", cek)
+	debug.Printf("OAEP.KeyDecrypt: cek = %x", cek)
 	return cek, nil
 }
 
@@ -170,7 +171,7 @@ func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
-	debug("OAEP.KeyDecrypt: enckey = %x", enckey)
+	debug.Printf("OAEP.KeyDecrypt: enckey = %x", enckey)
 	return rsa.DecryptOAEP(hash, rand.Reader, d.privkey, enckey, []byte{})
 }
 

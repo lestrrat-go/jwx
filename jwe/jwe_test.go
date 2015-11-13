@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"log"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/internal/rsautil"
@@ -174,7 +173,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	if !assert.NoError(t, err, "parse successful") {
 		return
 	}
-	log.Printf("------ ParseString done")
+	t.Logf("------ ParseString done")
 
 	// Test decrypting?
 	plaintext, err := DecryptMessage(msg, privkey)
@@ -267,14 +266,14 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 
 	kg := NewRandomKeyGenerate(c.KeySize())
 
-	log.Printf("Encrypt now")
-	e := NewEncrypt(c, kg, k)
+	t.Logf("Encrypt now")
+	e := NewMultiEncrypt(c, kg, k)
 	msg, err := e.Encrypt(plaintext)
 	if !assert.NoError(t, err, "Encrypt successful") {
 		return
 	}
 
-	log.Printf("DecryptMessage now")
+	t.Logf("DecryptMessage now")
 	plaintext2, err := DecryptMessage(msg, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return
@@ -284,7 +283,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 		return
 	}
 
-	log.Printf("compact serialize now")
+	t.Logf("compact serialize now")
 	jsonbuf, err := CompactSerialize{}.Serialize(msg)
 	if !assert.NoError(t, err, "Compact serialization successful") {
 		return
@@ -292,13 +291,13 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 
 	t.Logf("compact serialization: %s", jsonbuf)
 
-	log.Printf("parse compact serialize now")
+	t.Logf("parse compact serialize now")
 	msg2, err := Parse(jsonbuf)
 	if !assert.NoError(t, err, "Parse successful") {
 		return
 	}
 
-	log.Printf("====== decrypt compact serialize now")
+	t.Logf("====== decrypt compact serialize now")
 	plaintext3, err := DecryptMessage(msg2, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return
@@ -332,7 +331,7 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 
 	kg := NewRandomKeyGenerate(c.KeySize())
 
-	e := NewEncrypt(c, kg, k)
+	e := NewMultiEncrypt(c, kg, k)
 
 	msg, err := e.Encrypt(plaintext)
 	if !assert.NoError(t, err, "Encrypt successful") {

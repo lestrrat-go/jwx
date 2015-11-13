@@ -100,8 +100,8 @@ type ContentEncrypter interface {
 	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
 }
 
-// Encrypt is the default Encrypter implementation.
-type Encrypt struct {
+// MultiEncrypt is the default Encrypter implementation.
+type MultiEncrypt struct {
 	ContentEncrypter ContentEncrypter
 	KeyGenerator     KeyGenerator // KeyGenerator creates the random CEK.
 	KeyEncrypters    []KeyEncrypter

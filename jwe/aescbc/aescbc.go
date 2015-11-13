@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"hash"
-	"log"
 
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/internal/padbuf"
 )
 
@@ -33,9 +33,9 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 	ikey := key[:keysize]
 	ekey := key[keysize:]
 
-	log.Printf("New: cek (key) = %x\n", key)
-	log.Printf("New: ikey      = %x\n", ikey)
-	log.Printf("New: ekey      = %x\n", ekey)
+	debug.Printf("New: cek (key) = %x\n", key)
+	debug.Printf("New: ikey      = %x\n", ikey)
+	debug.Printf("New: ekey      = %x\n", ekey)
 
 	bc, err := f(ekey)
 	if err != nil {
@@ -74,10 +74,10 @@ func (c AesCbcHmac) Overhead() int {
 }
 
 func (c AesCbcHmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
-	log.Printf("ComputeAuthTag: aad        = %x (%d)\n", aad, len(aad))
-	log.Printf("ComputeAuthTag: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
-	log.Printf("ComputeAuthTag: iv (nonce) = %x (%d)\n", nonce, len(nonce))
-	log.Printf("ComputeAuthTag: integrity  = %x (%d)\n", c.integrityKey, len(c.integrityKey))
+	debug.Printf("ComputeAuthTag: aad        = %x (%d)\n", aad, len(aad))
+	debug.Printf("ComputeAuthTag: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
+	debug.Printf("ComputeAuthTag: iv (nonce) = %x (%d)\n", nonce, len(nonce))
+	debug.Printf("ComputeAuthTag: integrity  = %x (%d)\n", c.integrityKey, len(c.integrityKey))
 
 	buf := make([]byte, len(aad)+len(nonce)+len(ciphertext)+8)
 	n := 0
@@ -89,8 +89,8 @@ func (c AesCbcHmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
 	h := hmac.New(c.hash, c.integrityKey)
 	h.Write(buf)
 	s := h.Sum(nil)
-	log.Printf("ComputeAuthTag: buf        = %x (%d)\n", buf, len(buf))
-	log.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.keysize], len(s[:c.keysize]))
+	debug.Printf("ComputeAuthTag: buf        = %x (%d)\n", buf, len(buf))
+	debug.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.keysize], len(s[:c.keysize]))
 	return s[:c.tagsize]
 }
 
@@ -126,9 +126,9 @@ func (c AesCbcHmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	n := copy(out, ciphertext)
 	n += copy(out[n:], authtag)
 
-	log.Printf("Seal: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
-	log.Printf("Seal: authtag    = %x (%d)\n", authtag, len(authtag))
-	log.Printf("Seal: ret        = %x (%d)\n", ret, len(ret))
+	debug.Printf("Seal: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
+	debug.Printf("Seal: authtag    = %x (%d)\n", authtag, len(authtag))
+	debug.Printf("Seal: ret        = %x (%d)\n", ret, len(ret))
 	return ret
 }
 
@@ -147,8 +147,8 @@ func (c AesCbcHmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 
 	expectedTag := c.ComputeAuthTag(data, nonce, ciphertext)
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
-		log.Printf("provided tag = %x\n", tag)
-		log.Printf("expected tag = %x\n", expectedTag)
+		debug.Printf("provided tag = %x\n", tag)
+		debug.Printf("expected tag = %x\n", expectedTag)
 		return nil, errors.New("invalid ciphertext (tag mismatch)")
 	}
 

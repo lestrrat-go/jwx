@@ -24,7 +24,7 @@ func ExampleEncrypt() {
 	k := NewRSAKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
 	kg := NewRandomKeyGenerate(c.KeySize())
 
-	e := NewEncrypt(c, kg, k)
+	e := NewMultiEncrypt(c, kg, k)
 	msg, err := e.Encrypt([]byte("Lorem Ipsum"))
 	if err != nil {
 		log.Printf("failed to encrypt payload: %s", err)

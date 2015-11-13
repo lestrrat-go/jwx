@@ -6,8 +6,8 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwe/aescbc"
 )
@@ -23,7 +23,7 @@ func (f AeadFetchFunc) AeadFetch(key []byte) (cipher.AEAD, error) {
 var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
-		debug("GcmAeadFetch: failed to create cipher")
+		debug.Printf("GcmAeadFetch: failed to create cipher")
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
-		debug("CbcAeadFetch: failed to create aead fetcher (%v): %s", key, err)
+		debug.Printf("CbcAeadFetch: failed to create aead fetcher (%v): %s", key, err)
 		return nil, err
 	}
 	return aead, nil
@@ -83,7 +83,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 	var aead cipher.AEAD
 	aead, err = c.AeadFetch(cek)
 	if err != nil {
-		debug("AeadFetch failed: %s", err)
+		debug.Printf("AeadFetch failed: %s", err)
 		return
 	}
 
@@ -113,15 +113,15 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()
-	log.Printf("tagsize = %d", c.TagSize())
+	debug.Printf("tagsize = %d", c.TagSize())
 	tag = combined[tagoffset:]
 	ciphertext = make([]byte, tagoffset)
 	copy(ciphertext, combined[:tagoffset])
 
-	log.Printf("encrypt: combined   = %x (%d)\n", combined, len(combined))
-	log.Printf("encrypt: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
-	log.Printf("encrypt: tag        = %x (%d)\n", tag, len(tag))
-	log.Printf("finally ciphertext = %x\n", ciphertext)
+	debug.Printf("encrypt: combined   = %x (%d)\n", combined, len(combined))
+	debug.Printf("encrypt: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
+	debug.Printf("encrypt: tag        = %x (%d)\n", tag, len(tag))
+	debug.Printf("finally ciphertext = %x\n", ciphertext)
 
 	return
 }
@@ -129,7 +129,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	aead, err := c.AeadFetch(cek)
 	if err != nil {
-		debug("AeadFetch failed for %v: %s", cek, err)
+		debug.Printf("AeadFetch failed for %v: %s", cek, err)
 		return nil, err
 	}
 
@@ -152,7 +152,7 @@ func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 	copy(combined, ciphertxt)
 	copy(combined[len(ciphertxt):], tag)
 
-	debug("AesContentCipher.decrypt: combined = %x (%d)", combined, len(combined))
+	debug.Printf("AesContentCipher.decrypt: combined = %x (%d)", combined, len(combined))
 
 	plaintext, err = aead.Open(nil, iv, combined, aad)
 	return
