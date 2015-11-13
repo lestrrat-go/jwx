@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	ErrInvalidBlockSize         = errors.New("keywrap input must be 8 byte blocks")
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
 	ErrInvalidHeaderValue       = errors.New("invalid value for header key")
 	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")

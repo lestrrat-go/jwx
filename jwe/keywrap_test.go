@@ -1,4 +1,4 @@
-package keywrap
+package jwe
 
 import (
 	"crypto/aes"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func MustHexDecode(s string) []byte {
+func mustHexDecode(s string) []byte {
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		panic(err)
@@ -46,15 +46,15 @@ func TestRFC3394_Wrap(t *testing.T) {
 		t.Logf("data     = %s", v.Data)
 		t.Logf("expected = %s", v.Expected)
 
-		kek := MustHexDecode(v.Kek)
-		data := MustHexDecode(v.Data)
-		expected := MustHexDecode(v.Expected)
+		kek := mustHexDecode(v.Kek)
+		data := mustHexDecode(v.Data)
+		expected := mustHexDecode(v.Expected)
 
 		block, err := aes.NewCipher(kek)
 		if !assert.NoError(t, err, "NewCipher is successful") {
 			return
 		}
-		out, err := Wrap(block, data)
+		out, err := keywrap(block, data)
 		if !assert.NoError(t, err, "Wrap is successful") {
 			return
 		}
@@ -63,7 +63,7 @@ func TestRFC3394_Wrap(t *testing.T) {
 			return
 		}
 
-		unwrapped, err := Unwrap(block, out)
+		unwrapped, err := keyunwrap(block, out)
 		if !assert.NoError(t, err, "Unwrap is successful") {
 			return
 		}
