@@ -5,11 +5,18 @@
 
 ## Status
 
-* jwt - done. PR/issues welcome
-* jwk - done? probably. PR/issues welcome
-* jws - pretty much done, docs
-* jwe - high-level API (jwe.Encrypt/jwe.Decrypt), more algorithms)
-* jwa - done.
+### Done
+
+PR/issues welcome. All needs more docs
+
+* jwt
+* jwk
+* jwa
+* jws - Probably will implement VerifyWithJWK() later
+
+### In progress:
+
+* jwe - high-level API (jwe.Encrypt/jwe.Decrypt), more algorithms
 
 ## Synopsis
 
