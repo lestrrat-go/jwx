@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
+	"github.com/lestrrat/go-jwx/jwa"
 )
 
 // Parse parses JWK in JSON format from the incoming `io.Reader`.
@@ -38,26 +39,53 @@ func ParseString(s string) (*Set, error) {
 }
 
 func constructKey(m map[string]interface{}) (JSONWebKey, error) {
-	switch m["kty"] {
-	case "RSA":
+	kty, ok := m["kty"].(string)
+	if !ok {
+		return nil, ErrUnsupportedKty
+	}
+
+	switch jwa.KeyType(kty) {
+	case jwa.RSA:
 		if _, ok := m["d"]; ok {
 			return constructRsaPrivateKey(m)
 		}
 		return constructRsaPublicKey(m)
+	case jwa.OctetSeq:
+		return constructSymmetricKey(m)
 	default:
-		return nil, errors.New("unsupported kty")
+		return nil, ErrUnsupportedKty
 	}
+}
+
+func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
+	r := emap.Hmap(m)
+
+	h, err := constructEssentialHeader(m)
+	if err != nil {
+		return nil, err
+	}
+
+	key := &SymmetricKey{EssentialHeader: h}
+
+	k, err := r.GetBuffer("k")
+	if err != nil {
+		return nil, err
+	}
+	key.Key = k
+
+	return key, nil
 }
 
 func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error) {
 	r := emap.Hmap(m)
 	e := &EssentialHeader{}
 
-	var err error
 	// https://tools.ietf.org/html/rfc7517#section-4.1
-	if e.KeyType, err = r.GetString("kty"); err != nil {
+	kty, err := r.GetString("kty")
+	if err != nil {
 		return nil, err
 	}
+	e.KeyType = jwa.KeyType(kty)
 
 	// https://tools.ietf.org/html/rfc7517#section-4.2
 	e.Use, _ = r.GetString("use")
@@ -175,6 +203,6 @@ func (e EssentialHeader) Kid() string {
 	return e.KeyID
 }
 
-func (e EssentialHeader) Kty() string {
+func (e EssentialHeader) Kty() jwa.KeyType {
 	return e.KeyType
 }

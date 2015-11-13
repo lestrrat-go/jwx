@@ -1,9 +1,15 @@
 package jwk
 
 import (
+	"errors"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
+)
+
+var (
+	ErrUnsupportedKty = errors.New("unsupported kty")
 )
 
 type KeyOperation string
@@ -31,16 +37,18 @@ type Set struct {
 // to perform more specific tasks with each key
 type JSONWebKey interface {
 	Kid() string
-	Kty() string
+	Kty() jwa.KeyType
 }
 
 // EssentialHeader defines the common data that any JSONWebKey may
 // carry with it.
 type EssentialHeader struct {
+	// Algorithm might be any of jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm,
+	// or jwa.ContentEncryptionAlgorithm, so it stays as string
 	Algorithm              string         `json:"alg,omitempty"`
 	KeyID                  string         `json:"kid,omitempty"`
 	KeyOps                 []KeyOperation `json:"key_ops,omitempty"`
-	KeyType                string         `json:"kty,omitempty"`
+	KeyType                jwa.KeyType    `json:"kty,omitempty"`
 	Use                    string         `json:"use,omitempty"`
 	X509Url                *url.URL       `json:"x5u,omitempty"`
 	X509CertChain          []string       `json:"x5c,omitempty"`
@@ -64,4 +72,9 @@ type RsaPrivateKey struct {
 	Dp buffer.Buffer `json:"dp,omitempty"`
 	Dq buffer.Buffer `json:"dq,omitempty"`
 	Qi buffer.Buffer `json:"qi,omitempty"`
+}
+
+type SymmetricKey struct {
+	*EssentialHeader
+	Key buffer.Buffer
 }

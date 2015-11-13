@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,5 +109,41 @@ func TestRsaPrivateKey(t *testing.T) {
 
 	if !assert.Equal(t, k1, k3.Keys[0], "keys match") {
 		return
+	}
+}
+
+func TestAppendix_A3(t *testing.T) {
+	var jwksrc = []byte(`{"keys":
+       [
+         {"kty":"oct",
+          "alg":"A128KW",
+          "k":"GawgguFyGrWKav7AX4VKUg"},
+
+         {"kty":"oct",
+          "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
+          "kid":"HMAC key used in JWS spec Appendix A.1 example"}
+       ]
+     }`)
+	set, err := Parse(jwksrc)
+	if !assert.NoError(t, err, "Parse should succeed") {
+		return
+	}
+
+	{
+		key, ok := set.Keys[0].(*SymmetricKey)
+		if !assert.True(t, ok, "set.Keys[0] should be a SymmetricKey") {
+			return
+		}
+
+		bkey, err := buffer.FromBase64([]byte("GawgguFyGrWKav7AX4VKUg"))
+		if !assert.NoError(t, err, "created key to compare") {
+			return
+		}
+
+		if !assert.Equal(t, jwa.OctetSeq, key.KeyType, "key type matches") ||
+			!assert.Equal(t, jwa.A128KW.String(), key.Algorithm, "key algorithm matches") ||
+			!assert.Equal(t, bkey, key.Key, "key content matches") {
+			return
+		}
 	}
 }
