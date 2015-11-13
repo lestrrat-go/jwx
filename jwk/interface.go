@@ -78,3 +78,14 @@ type SymmetricKey struct {
 	*EssentialHeader
 	Key buffer.Buffer
 }
+
+type EcPublicKey struct {
+	*EssentialHeader
+	Curve jwa.EllipticCurveAlgorithm `json:"crv"`
+	X     buffer.Buffer         `json:"x"`
+}
+
+type EcPrivateKey struct {
+	*EcPublicKey
+	Y buffer.Buffer `json:"y"`
+}

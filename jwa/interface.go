@@ -8,6 +8,14 @@ const (
 	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)  
 )
 
+type EllipticCurveAlgorithm string
+
+const (
+	P256 EllipticCurveAlgorithm = "P-256"
+	P384 EllipticCurveAlgorithm = "P-384"
+	P521 EllipticCurveAlgorithm = "P-521"
+)
+
 // SignatureAlgorithm represents the various signature algorithms
 // as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm string

@@ -50,30 +50,16 @@ func constructKey(m map[string]interface{}) (JSONWebKey, error) {
 			return constructRsaPrivateKey(m)
 		}
 		return constructRsaPublicKey(m)
+	case jwa.EC:
+		if _, ok := m["y"]; ok {
+			return constructEcPrivateKey(m)
+		}
+		return constructEcPublicKey(m)
 	case jwa.OctetSeq:
 		return constructSymmetricKey(m)
 	default:
 		return nil, ErrUnsupportedKty
 	}
-}
-
-func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
-	r := emap.Hmap(m)
-
-	h, err := constructEssentialHeader(m)
-	if err != nil {
-		return nil, err
-	}
-
-	key := &SymmetricKey{EssentialHeader: h}
-
-	k, err := r.GetBuffer("k")
-	if err != nil {
-		return nil, err
-	}
-	key.Key = k
-
-	return key, nil
 }
 
 func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error) {
@@ -121,6 +107,77 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	}
 
 	return e, nil
+}
+
+func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
+	r := emap.Hmap(m)
+
+	h, err := constructEssentialHeader(m)
+	if err != nil {
+		return nil, err
+	}
+
+	key := &SymmetricKey{EssentialHeader: h}
+
+	k, err := r.GetBuffer("k")
+	if err != nil {
+		return nil, err
+	}
+	key.Key = k
+
+	return key, nil
+}
+
+func constructEcPublicKey(m map[string]interface{}) (*EcPublicKey, error) {
+	e, err := constructEssentialHeader(m)
+	if err != nil {
+		return nil, err
+	}
+	r := emap.Hmap(m)
+
+	crvstr, err := r.GetString("crv")
+	if err != nil {
+		return nil, err
+	}
+	crv := jwa.EllipticCurveAlgorithm(crvstr)
+
+	x, err := r.GetBuffer("x")
+	if err != nil {
+		return nil, err
+	}
+
+	if x.Len() != crv.Size() {
+		return nil, errors.New("size of x does not match crv size")
+	}
+
+	return &EcPublicKey{
+		EssentialHeader: e,
+		Curve: jwa.EllipticCurveAlgorithm(crv),
+		X: x,
+	}, nil
+}
+
+func constructEcPrivateKey(m map[string]interface{}) (*EcPrivateKey, error) {
+	pubkey, err := constructEcPublicKey(m)
+	if err != nil {
+		return nil, err
+	}
+
+	r := emap.Hmap(m)
+	y, err := r.GetBuffer("y")
+	if err != nil {
+		return nil, err
+	}
+
+	crv := pubkey.Curve
+	if y.Len() != crv.Size() {
+		return nil, errors.New("size of y does not match crv size")
+	}
+
+	return &EcPrivateKey{
+		EcPublicKey: pubkey,
+		Y: y,
+	}, nil
 }
 
 func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
