@@ -57,27 +57,13 @@ See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwk#
 
 ```
 import(
-  "io/ioutil"
   "log"
-  "net/http"
   
   "github.com/lestrrat/go-jwx/jwk"
 )
 
 func main() {
-  res, err := http.Get("https://foobar.domain/jwk.json")
-  if err != nil {
-    log.Printf("failed to make HTTP request: %s", err)
-    return
-  }
-
-  buf, err := ioutil.ReadAll(res.Body)
-  if err != nil {
-    log.Printf("failed to read response body: %s", err)
-    return
-  }
-
-  set, err := jwk.Parse(buf)
+  set, err := jwk.Fetch("https://foobar.domain/jwk.json")
   if err != nil {
     log.Printf("failed to parse JWK: %s", err)
     return
@@ -91,16 +77,13 @@ func main() {
     return
   }
 
-  // Assuming RsaPublicKey...
-  key := keys[0].(*jwk.RsaPublicKey)
-
-  pubkey, err := key.PublicKey()
+  key, err := keys[0].Materialize()
   if err != nil {
     log.Printf("failed to create public key: %s", err)
     return
   }
 
-  // Use pubkey for jws.Verify() or whatever
+  // Use key for jws.Verify() or whatever
 }
 ```
 

@@ -1,25 +1,9 @@
 package jwk
 
-import (
-	"io/ioutil"
-	"log"
-	"net/http"
-)
+import "log"
 
-func ExampleParse() {
-	res, err := http.Get("https://foobar.domain/json")
-	if err != nil {
-		log.Printf("failed to make HTTP request: %s", err)
-		return
-	}
-
-	buf, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("failed to read response body: %s", err)
-		return
-	}
-
-	set, err := Parse(buf)
+func Example() {
+	set, err := Fetch("https://foobar.domain/json")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return
@@ -33,14 +17,11 @@ func ExampleParse() {
 		return
 	}
 
-	// Assuming RsaPublicKey...
-	key := keys[0].(*RsaPublicKey)
-
-	pubkey, err := key.PublicKey()
+	key, err := keys[0].Materialize()
 	if err != nil {
 		log.Printf("failed to generate public key: %s", err)
 		return
 	}
-	// Use pubkey for jws.Verify() or whatever
-	_ = pubkey
+	// Use key for jws.Verify() or whatever
+	_ = key
 }
