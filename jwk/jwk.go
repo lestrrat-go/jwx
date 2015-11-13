@@ -31,14 +31,14 @@ func Parse(buf []byte) (*Set, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Set{Keys: []JSONWebKey{k}}, nil
+	return &Set{Keys: []Key{k}}, nil
 }
 
 func ParseString(s string) (*Set, error) {
 	return Parse([]byte(s))
 }
 
-func constructKey(m map[string]interface{}) (JSONWebKey, error) {
+func constructKey(m map[string]interface{}) (Key, error) {
 	kty, ok := m["kty"].(string)
 	if !ok {
 		return nil, ErrUnsupportedKty
@@ -74,7 +74,7 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	e.KeyType = jwa.KeyType(kty)
 
 	// https://tools.ietf.org/html/rfc7517#section-4.2
-	e.Use, _ = r.GetString("use")
+	e.KeyUsage, _ = r.GetString("use")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.3
 	if v, err := r.GetStringSlice("key_ops"); err != nil {
@@ -261,10 +261,18 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 	return k, nil
 }
 
+func (e EssentialHeader) Alg() string {
+	return e.Algorithm
+}
+
 func (e EssentialHeader) Kid() string {
 	return e.KeyID
 }
 
 func (e EssentialHeader) Kty() jwa.KeyType {
 	return e.KeyType
+}
+
+func (e EssentialHeader) Use() string {
+	return e.KeyUsage
 }

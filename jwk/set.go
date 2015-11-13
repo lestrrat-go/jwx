@@ -4,8 +4,8 @@ import "errors"
 
 // LookupKeyID looks for keys matching the given key id. Note that the
 // Set *may* contain multiple keys with the same key id
-func (s Set) LookupKeyID(kid string) []JSONWebKey {
-	var keys []JSONWebKey
+func (s Set) LookupKeyID(kid string) []Key {
+	var keys []Key
 	for _, key := range s.Keys {
 		if key.Kid() == kid {
 			keys = append(keys, key)

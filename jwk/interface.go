@@ -8,6 +8,13 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+type KeyUsageType string
+
+const (
+	ForSignature  KeyUsageType = "sig"
+	ForEncryption KeyUsageType = "enc"
+)
+
 var (
 	ErrUnsupportedKty = errors.New("unsupported kty")
 	ErrUnsupportedCurve = errors.New("unsupported curve")
@@ -29,19 +36,27 @@ const (
 // Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
 type Set struct {
-	Keys []JSONWebKey `json:"keys"`
+	Keys []Key `json:"keys"`
 }
 
-// JSONWebKey defines the minimal interface for each of the
+// Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
-type JSONWebKey interface {
+type Key interface {
+	Alg() string
 	Kid() string
 	Kty() jwa.KeyType
+	Use() string
+
+	// Materialize creates the corresponding key. For example,
+	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
+	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
+	// and OctetSeq types create a []byte key.
+	Materialize() (interface{}, error)
 }
 
-// EssentialHeader defines the common data that any JSONWebKey may
+// EssentialHeader defines the common data that any Key may
 // carry with it.
 type EssentialHeader struct {
 	// Algorithm might be any of jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm,
@@ -50,7 +65,7 @@ type EssentialHeader struct {
 	KeyID                  string         `json:"kid,omitempty"`
 	KeyOps                 []KeyOperation `json:"key_ops,omitempty"`
 	KeyType                jwa.KeyType    `json:"kty,omitempty"`
-	Use                    string         `json:"use,omitempty"`
+	KeyUsage               string         `json:"use,omitempty"`
 	X509Url                *url.URL       `json:"x5u,omitempty"`
 	X509CertChain          []string       `json:"x5c,omitempty"`
 	X509CertThumbprint     string         `json:"x5t,omitempty"`

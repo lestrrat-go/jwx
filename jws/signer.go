@@ -117,11 +117,11 @@ func (s RsaSign) Alg() jwa.SignatureAlgorithm {
 	return s.Algorithm
 }
 
-func (s *RsaSign) Jwk() jwk.JSONWebKey {
-	if s.JSONWebKey == nil {
+func (s *RsaSign) Jwk() jwk.Key {
+	if s.JwkKey == nil {
 		return nil
 	}
-	return s.JSONWebKey
+	return s.JwkKey
 }
 
 func (s *RsaSign) Kid() string {
@@ -189,11 +189,11 @@ func (sign EcdsaSign) Alg() jwa.SignatureAlgorithm {
 	return sign.Algorithm
 }
 
-func (sign *EcdsaSign) Jwk() jwk.JSONWebKey {
-	if sign.JSONWebKey == nil {
+func (sign *EcdsaSign) Jwk() jwk.Key {
+	if sign.JwkKey == nil {
 		return nil
 	}
-	return sign.JSONWebKey
+	return sign.JwkKey
 }
 
 func (sign EcdsaSign) Kid() string {
@@ -295,11 +295,11 @@ func (s HmacSign) Alg() jwa.SignatureAlgorithm {
 	return s.Algorithm
 }
 
-func (s HmacSign) Jwk() jwk.JSONWebKey {
-	if s.JSONWebKey == nil {
+func (s HmacSign) Jwk() jwk.Key {
+	if s.JwkKey == nil {
 		return nil
 	}
-	return s.JSONWebKey
+	return s.JwkKey
 }
 
 func (s HmacSign) Kid() string {

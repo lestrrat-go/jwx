@@ -26,7 +26,7 @@ func TestJwksRoundtrip(t *testing.T) {
 				return
 			}
 
-			k.Use = use
+			k.KeyUsage = use
 			k.KeyID = use + strconv.Itoa(i)
 
 			ks1.Keys = append(ks1.Keys, k)

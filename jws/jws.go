@@ -9,12 +9,12 @@
 //
 // To sign, simply use `jws.Sign`. `payload` is a []byte buffer that
 // contains whatever data you want to sign. `alg` is one of the
-// jwa.SignatureAlgorithm constants from package jwa. For RSA and 
+// jwa.SignatureAlgorithm constants from package jwa. For RSA and
 // ECDSA family of algorithms, you will need to prepare a private key.
 // For HMAC family, you just need a []byte value. The `jws.Sign`
 // function will return the encoded JWS message on success.
 //
-// To verify, use `jws.Verify`. It will parse the `encodedjws` buffer 
+// To verify, use `jws.Verify`. It will parse the `encodedjws` buffer
 // and verify the result using `algorithm` and `key`. Upon successful
 // verification, the original payload is returned, so you can work on it.
 package jws
@@ -29,6 +29,7 @@ import (
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 )
 
 // Sign is a short way to generate a JWS in compact serialization
@@ -137,6 +138,67 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 		return nil, err
 	}
 	return msg.Payload.Bytes(), nil
+}
+
+func VerifyWithJWK(buf []byte, keyset jwk.Set) ([]byte, error) {
+	m, err := Parse(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range keyset.Keys {
+		if u := key.Use(); u != "" && u != "enc" {
+			continue
+		}
+
+		keyval, err := key.Materialize()
+		if err != nil {
+			return nil, err
+		}
+
+		alg := jwa.SignatureAlgorithm(key.Alg())
+
+		var verifier Verifier
+		switch key.Kty() {
+		case jwa.RSA:
+			pubkey, ok := keyval.(*rsa.PublicKey)
+			if !ok {
+				return nil, errors.New("invalid key: *rsa.PublicKey is required")
+			}
+			verifier, err = NewRsaVerify(alg, pubkey)
+			if err != nil {
+				return nil, err
+			}
+		case jwa.EC:
+			pubkey, ok := keyval.(*ecdsa.PublicKey)
+			if !ok {
+				return nil, errors.New("invalid key: *ecdsa.PublicKey is required")
+			}
+			verifier, err = NewEcdsaVerify(alg, pubkey)
+			if err != nil {
+				return nil, err
+			}
+		case jwa.OctetSeq:
+			sharedkey, ok := keyval.([]byte)
+			if !ok {
+				return nil, errors.New("invalid key: []byte is required")
+			}
+			verifier, err = NewHmacVerify(alg, sharedkey)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			continue
+		}
+
+		if err := verifier.Verify(m); err != nil {
+			continue
+		}
+
+		return m.Payload.Bytes(), nil
+	}
+
+	return nil, errors.New("failed to verify")
 }
 
 func Parse(buf []byte) (*Message, error) {

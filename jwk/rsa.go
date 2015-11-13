@@ -37,6 +37,10 @@ func NewRsaPrivateKey(pk *rsa.PrivateKey) (*RsaPrivateKey, error) {
 	return k, nil
 }
 
+func (k *RsaPublicKey) Materialize() (interface{}, error) {
+	return k.PublicKey()
+}
+
 // PublicKey creates a new rsa.PublicKey from the data given in the JWK
 func (k *RsaPublicKey) PublicKey() (*rsa.PublicKey, error) {
 	if k.N.Len() == 0 {
@@ -50,6 +54,10 @@ func (k *RsaPublicKey) PublicKey() (*rsa.PublicKey, error) {
 		N: (&big.Int{}).SetBytes(k.N.Bytes()),
 		E: int((&big.Int{}).SetBytes(k.E.Bytes()).Int64()),
 	}, nil
+}
+
+func (k *RsaPrivateKey) Materialize() (interface{}, error) {
+	return k.PrivateKey()
 }
 
 func (k *RsaPrivateKey) PrivateKey() (*rsa.PrivateKey, error) {

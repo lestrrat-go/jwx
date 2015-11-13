@@ -12,7 +12,7 @@ PR/issues welcome. All needs more docs
 * jwt
 * jwk
 * jwa
-* jws - Probably will implement VerifyWithJWK() later
+* jws
 
 ### In progress:
 

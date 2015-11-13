@@ -39,7 +39,7 @@ type EssentialHeader struct {
 	ContentType            string                         `json:"cty,omitempty"`
 	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
 	Critical               []string                       `json:"crit,omitempty"`
-	Jwk                    jwk.JSONWebKey                 `json:"jwk,omitempty"` // public key
+	Jwk                    jwk.Key                        `json:"jwk,omitempty"` // public key
 	JwkSetURL              *url.URL                       `json:"jku,omitempty"`
 	KeyID                  string                         `json:"kid,omitempty"`
 	Type                   string                         `json:"typ,omitempty"` // e.g. "JWT"

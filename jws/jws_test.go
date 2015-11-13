@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat/go-jwx/internal/ecdsautil"
 	"github.com/lestrrat/go-jwx/internal/rsautil"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,6 +74,34 @@ func TestParse_CompactSerializationBadSignature(t *testing.T) {
 	}
 }
 
+func TestVerifyWithJWK(t *testing.T) {
+	payload := []byte("Hello, World!")
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, "RSA key generated") {
+		return
+	}
+
+	jwkkey, err := jwk.NewRsaPublicKey(&key.PublicKey)
+	if !assert.NoError(t, err, "JWK public key generated") {
+		return
+	}
+	jwkkey.Algorithm = jwa.RS256.String()
+
+	buf, err := Sign(payload, jwa.RS256, key)
+	if !assert.NoError(t, err, "Signature generated successfully") {
+		return
+	}
+
+	verified, err := VerifyWithJWK(buf, jwk.Set{Keys: []jwk.Key{jwkkey}})
+	if !assert.NoError(t, err, "Verify is successful") {
+		return
+	}
+
+	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
+		return
+	}
+}
+
 func TestRoundtrip_RSACompact(t *testing.T) {
 	payload := []byte("Hello, World!")
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
@@ -86,8 +115,8 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 			return
 		}
 
-		parsers := map[string]func([]byte) (*Message, error) {
-			"Parse(byte)": Parse,
+		parsers := map[string]func([]byte) (*Message, error){
+			"Parse(byte)":   Parse,
 			"Parse(string)": func(b []byte) (*Message, error) { return ParseString(string(b)) },
 		}
 		for name, f := range parsers {

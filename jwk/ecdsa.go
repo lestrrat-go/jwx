@@ -24,6 +24,10 @@ func NewEcdsaPrivateKey(pk *ecdsa.PrivateKey) *EcdsaPrivateKey {
 	return privkey
 }
 
+func (k *EcdsaPublicKey) Materialize() (interface{}, error) {
+	return k.PublicKey()
+}
+
 func (k *EcdsaPublicKey) PublicKey() (*ecdsa.PublicKey, error) {
 	var crv elliptic.Curve
 	switch k.Curve {
@@ -45,7 +49,11 @@ func (k *EcdsaPublicKey) PublicKey() (*ecdsa.PublicKey, error) {
 	return pubkey, nil
 }
 
-func (k *EcdsaPrivateKey) PrivateKEy() (*ecdsa.PrivateKey, error) {
+func (k *EcdsaPrivateKey) Materialize() (interface{}, error) {
+	return k.PrivateKey()
+}
+
+func (k *EcdsaPrivateKey) PrivateKey() (*ecdsa.PrivateKey, error) {
 	pubkey, err := k.EcdsaPublicKey.PublicKey()
 	if err != nil {
 		return nil, err

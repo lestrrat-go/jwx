@@ -26,7 +26,7 @@ type EssentialHeader struct {
 	Algorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
 	ContentType            string                 `json:"cty,omitempty"`
 	Critical               []string               `json:"crit,omitempty"`
-	Jwk                    jwk.JSONWebKey         `json:"jwk,omitempty"` // public key
+	Jwk                    jwk.Key                `json:"jwk,omitempty"` // public key
 	JwkSetURL              *url.URL               `json:"jku,omitempty"`
 	KeyID                  string                 `json:"kid,omitempty"`
 	Type                   string                 `json:"typ,omitempty"` // e.g. "JWT"
@@ -50,16 +50,16 @@ type EncodedHeader struct {
 	// It's used for verification purposes, because header representations (such as
 	// JSON key order) may differ from what the source encoded with and what the
 	// go json package uses
-	// 
+	//
 	// If this field is populated (Len() > 0), it will be used for signature
 	// calculation.
 	// If you change the header values, make sure to clear this field, too
-	Source buffer.Buffer  `json:"-"`
+	Source buffer.Buffer `json:"-"`
 }
 
 // PayloadSigner generates signature for the given payload
 type PayloadSigner interface {
-	Jwk() jwk.JSONWebKey
+	Jwk() jwk.Key
 	Kid() string
 	Alg() jwa.SignatureAlgorithm
 	PayloadSign([]byte) ([]byte, error)
@@ -72,14 +72,14 @@ type Verifier interface {
 
 type RsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
-	JSONWebKey *jwk.RsaPublicKey
+	JwkKey     *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *rsa.PrivateKey
 }
 
 type EcdsaSign struct {
 	Algorithm  jwa.SignatureAlgorithm
-	JSONWebKey *jwk.RsaPublicKey
+	JwkKey     *jwk.RsaPublicKey
 	KeyID      string
 	PrivateKey *ecdsa.PrivateKey
 }
@@ -108,11 +108,11 @@ type MultiSign struct {
 }
 
 type HmacSign struct {
-	Algorithm  jwa.SignatureAlgorithm
-	JSONWebKey *jwk.RsaPublicKey
-	KeyID      string
-	Key        []byte
-	hash       func() hash.Hash
+	Algorithm jwa.SignatureAlgorithm
+	JwkKey    *jwk.RsaPublicKey
+	KeyID     string
+	Key       []byte
+	hash      func() hash.Hash
 }
 
 type Serializer interface {
