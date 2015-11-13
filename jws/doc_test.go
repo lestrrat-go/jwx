@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-func Example_JWSCompact() {
+func ExampleSign_JWSCompact() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to create private key: %s", err)
@@ -42,7 +42,7 @@ func Example_JWSCompact() {
 	log.Printf("message verified!")
 }
 
-func Example_JWSJSON() {
+func ExampleSign_JWSJSON() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to create private key: %s", err)

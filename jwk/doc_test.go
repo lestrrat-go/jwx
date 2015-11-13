@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func ExampleJWK() {
+func ExampleParse() {
 	res, err := http.Get("https://foobar.domain/json")
 	if err != nil {
 		log.Printf("failed to make HTTP request: %s", err)
