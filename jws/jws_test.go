@@ -92,7 +92,7 @@ func TestVerifyWithJWK(t *testing.T) {
 		return
 	}
 
-	verified, err := VerifyWithJWK(buf, jwk.Set{Keys: []jwk.Key{jwkkey}})
+	verified, err := VerifyWithJWK(buf, &jwk.Set{Keys: []jwk.Key{jwkkey}})
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}

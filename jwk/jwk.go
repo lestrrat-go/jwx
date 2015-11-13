@@ -4,12 +4,34 @@ package jwk
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"reflect"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 )
+
+// Fetch fetches the remote JWK and parses its contents
+func Fetch(jwkurl string) (*Set, error) {
+	res, err := http.Get(jwkurl)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to fetch JWK from remote url")
+	}
+
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return Parse(buf)
+}
 
 // Parse parses JWK in JSON format from the incoming `io.Reader`.
 // If you are expecting that you *might* get a KeySet, you should
@@ -161,9 +183,9 @@ func constructEcdsaPublicKey(m map[string]interface{}) (*EcdsaPublicKey, error) 
 
 	return &EcdsaPublicKey{
 		EssentialHeader: e,
-		Curve: jwa.EllipticCurveAlgorithm(crv),
-		X: x,
-		Y: y,
+		Curve:           jwa.EllipticCurveAlgorithm(crv),
+		X:               x,
+		Y:               y,
 	}, nil
 }
 
@@ -181,7 +203,7 @@ func constructEcdsaPrivateKey(m map[string]interface{}) (*EcdsaPrivateKey, error
 
 	return &EcdsaPrivateKey{
 		EcdsaPublicKey: pubkey,
-		D: d,
+		D:              d,
 	}, nil
 }
 

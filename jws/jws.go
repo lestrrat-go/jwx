@@ -140,7 +140,19 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 	return msg.Payload.Bytes(), nil
 }
 
-func VerifyWithJWK(buf []byte, keyset jwk.Set) ([]byte, error) {
+// VerifyWithJKU verifies the JWS message using a remote JWK
+// file represented in the url.
+func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
+	key, err := jwk.Fetch(jwkurl)
+	if err != nil {
+		return nil, err
+	}
+
+	return VerifyWithJWK(buf, key)
+}
+
+// VerifyWithJKU verifies the JWS message using JWK keys
+func VerifyWithJWK(buf []byte, keyset *jwk.Set) ([]byte, error) {
 	m, err := Parse(buf)
 	if err != nil {
 		return nil, err
