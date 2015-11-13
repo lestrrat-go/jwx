@@ -15,7 +15,7 @@ func ExampleSign_JWSCompact() {
 		return
 	}
 
-	buf, err := Sign(jwa.RS256, []byte("Lorem ipsum"), privkey)
+	buf, err := Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
 	if err != nil {
 		log.Printf("failed to sign payload: %s", err)
 		return

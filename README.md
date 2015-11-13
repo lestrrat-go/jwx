@@ -118,7 +118,7 @@ func main() {
     return
   }
 
-  buf, err := jws.Sign(jwa.RS256, []byte("Lorem Ipsum"), privkey)
+  buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
   if err != nil {
     log.Printf("failed to created JWS message: %s", err)
     return

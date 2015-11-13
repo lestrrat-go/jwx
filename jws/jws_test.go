@@ -81,7 +81,7 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 			return
 		}
 
-		buf, err := Sign(alg, payload, key)
+		buf, err := Sign(payload, alg, key)
 		if !assert.NoError(t, err, "(%s) Signature generated successfully", alg) {
 			return
 		}

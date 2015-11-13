@@ -18,7 +18,7 @@ import (
 // for a given payload. If you need more control over the signature
 // generation process, you should manually create signers and tweak
 // the message.
-func Sign(alg jwa.SignatureAlgorithm, payload []byte, key interface{}) ([]byte, error) {
+func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
 	signer := NewMultiSign()
 	switch alg {
 	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
