@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrUnsupportedKty = errors.New("unsupported kty")
+	ErrUnsupportedCurve = errors.New("unsupported curve")
 )
 
 type KeyOperation string
@@ -79,13 +80,14 @@ type SymmetricKey struct {
 	Key buffer.Buffer
 }
 
-type EcPublicKey struct {
+type EcdsaPublicKey struct {
 	*EssentialHeader
 	Curve jwa.EllipticCurveAlgorithm `json:"crv"`
-	X     buffer.Buffer         `json:"x"`
+	X     buffer.Buffer              `json:"x"`
+	Y     buffer.Buffer              `json:"y"`
 }
 
-type EcPrivateKey struct {
-	*EcPublicKey
-	Y buffer.Buffer `json:"y"`
+type EcdsaPrivateKey struct {
+	*EcdsaPublicKey
+	D buffer.Buffer `json:"d"`
 }

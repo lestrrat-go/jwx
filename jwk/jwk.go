@@ -51,10 +51,10 @@ func constructKey(m map[string]interface{}) (JSONWebKey, error) {
 		}
 		return constructRsaPublicKey(m)
 	case jwa.EC:
-		if _, ok := m["y"]; ok {
-			return constructEcPrivateKey(m)
+		if _, ok := m["d"]; ok {
+			return constructEcdsaPrivateKey(m)
 		}
-		return constructEcPublicKey(m)
+		return constructEcdsaPublicKey(m)
 	case jwa.OctetSeq:
 		return constructSymmetricKey(m)
 	default:
@@ -128,7 +128,7 @@ func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
 	return key, nil
 }
 
-func constructEcPublicKey(m map[string]interface{}) (*EcPublicKey, error) {
+func constructEcdsaPublicKey(m map[string]interface{}) (*EcdsaPublicKey, error) {
 	e, err := constructEssentialHeader(m)
 	if err != nil {
 		return nil, err
@@ -150,33 +150,38 @@ func constructEcPublicKey(m map[string]interface{}) (*EcPublicKey, error) {
 		return nil, errors.New("size of x does not match crv size")
 	}
 
-	return &EcPublicKey{
-		EssentialHeader: e,
-		Curve: jwa.EllipticCurveAlgorithm(crv),
-		X: x,
-	}, nil
-}
-
-func constructEcPrivateKey(m map[string]interface{}) (*EcPrivateKey, error) {
-	pubkey, err := constructEcPublicKey(m)
-	if err != nil {
-		return nil, err
-	}
-
-	r := emap.Hmap(m)
 	y, err := r.GetBuffer("y")
 	if err != nil {
 		return nil, err
 	}
 
-	crv := pubkey.Curve
 	if y.Len() != crv.Size() {
 		return nil, errors.New("size of y does not match crv size")
 	}
 
-	return &EcPrivateKey{
-		EcPublicKey: pubkey,
+	return &EcdsaPublicKey{
+		EssentialHeader: e,
+		Curve: jwa.EllipticCurveAlgorithm(crv),
+		X: x,
 		Y: y,
+	}, nil
+}
+
+func constructEcdsaPrivateKey(m map[string]interface{}) (*EcdsaPrivateKey, error) {
+	pubkey, err := constructEcdsaPublicKey(m)
+	if err != nil {
+		return nil, err
+	}
+
+	r := emap.Hmap(m)
+	d, err := r.GetBuffer("d")
+	if err != nil {
+		return nil, err
+	}
+
+	return &EcdsaPrivateKey{
+		EcdsaPublicKey: pubkey,
+		D: d,
 	}, nil
 }
 

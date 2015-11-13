@@ -140,8 +140,8 @@ func TestAppendix_A1(t *testing.T) {
 	}
 
 	{
-		key, ok := set.Keys[0].(*EcPrivateKey)
-		if !assert.True(t, ok, "set.Keys[0] should be a EcPrivateKey") {
+		key, ok := set.Keys[0].(*EcdsaPublicKey)
+		if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
 			return
 		}
 
