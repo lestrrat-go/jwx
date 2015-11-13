@@ -92,22 +92,22 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 		}
 		for name, f := range parsers {
 			m, err := f(buf)
-			if !assert.NoError(t, err, "%s is successful", name) {
+			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
 				return
 			}
 
-			if !assert.Equal(t, payload, m.Payload.Bytes(), "(%s) Payload is decoded", name) {
+			if !assert.Equal(t, payload, m.Payload.Bytes(), "(%s) %s: Payload is decoded", alg, name) {
 				return
 			}
+		}
 
-			v, err := NewRsaVerify(alg, &key.PublicKey)
-			if !assert.NoError(t, err, "(%s) Verify created", name) {
-				return
-			}
+		verified, err := Verify(buf, alg, &key.PublicKey)
+		if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
+			return
+		}
 
-			if !assert.NoError(t, v.Verify(m), "(%s) Verify is successful", name) {
-				return
-			}
+		if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
+			return
 		}
 	}
 }

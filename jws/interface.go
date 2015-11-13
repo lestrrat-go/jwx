@@ -67,7 +67,7 @@ type PayloadSigner interface {
 
 // Verifier is used to verify the signature against the payload
 type Verifier interface {
-	Verify([]byte, []byte) error
+	Verify(*Message) error
 }
 
 type RsaSign struct {

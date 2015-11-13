@@ -66,6 +66,62 @@ func Sign(alg jwa.SignatureAlgorithm, payload []byte, key interface{}) ([]byte, 
 	return CompactSerialize{}.Serialize(msg)
 }
 
+// Verify checks if the given JWS message is verifiable using `alg` and `key`.
+// If the verification is successful, `err` is nil, and the content of the
+// payload that was signed is returned. If you need more fine-grained
+// control of the verification process, manually call `Parse`, generate a
+// verifier, and call `Verify` on the parsed JWS message object.
+func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	msg, err := Parse(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	var verifier Verifier
+	switch alg {
+	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
+		pubkey, ok := key.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("invalid key: *rsa.PublicKey required")
+		}
+
+		rsaverify, err := NewRsaVerify(alg, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		verifier = rsaverify
+	case jwa.HS256, jwa.HS384, jwa.HS512:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("invalid key: []byte required")
+		}
+
+		hmacverify, err := NewHmacVerify(alg, sharedkey)
+		if err != nil {
+			return nil, err
+		}
+		verifier = hmacverify
+	case jwa.ES256, jwa.ES384, jwa.ES512:
+		pubkey, ok := key.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.New("invalid key: *ecdsa.PublicKey required")
+		}
+
+		ecdsaverify, err := NewEcdsaVerify(alg, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		verifier = ecdsaverify
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	if err := verifier.Verify(msg); err != nil {
+		return nil, err
+	}
+	return msg.Payload.Bytes(), nil
+}
+
 func Parse(buf []byte) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {

@@ -116,24 +116,15 @@ func main() {
     return
   }
 
-  msg, err := jws.Parse(buf)
+  // When you received a JWS message, you can verify the signature
+  // and grab the payload sent in the message in one go:
+  verified, err := jws.Verify(buf, jws.RS256, &privkey.PublicKey)
   if err != nil {
-    log.Printf("failed to parse JWS message: %s", err)
-    return
-  }
-
-  v, err := jws.NewRsaVerify(jwa.RS256, &privkey.PublicKey)
-  if err != nil {
-    log.Printf("failed to create RSA verifier: %s", err)
-    return
-  }
-
-  if err := v.Verify(msg); err != nil {
     log.Printf("failed to verify message: %s", err)
     return
   }
 
-  log.Printf("signed message verified!")
+  log.Printf("signed message verified! -> %s", verified)
 }
 ```
 
