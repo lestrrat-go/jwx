@@ -110,17 +110,15 @@ func main() {
     return
   }
 
-  rsasign, err := jws.NewRsaSign(jwa.RS256, privkey)
+  buf, err := jws.Sign(jwa.RS256, []byte("Lorem Ipsum"), privkey)
   if err != nil {
-    log.Printf("failed to create RSA signer: %s", err)
+    log.Printf("failed to created JWS message: %s", err)
     return
   }
 
-  // TODO: rename from NewMultiSigner
-  s := jws.NewSigner(rsasign)
-  msg, err := s.Sign("Lorem Ipsum")
+  msg, err := jws.Parse(buf)
   if err != nil {
-    log.Printf("failed to created JWS message: %s", err)
+    log.Printf("failed to parse JWS message: %s", err)
     return
   }
 
