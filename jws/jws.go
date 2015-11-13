@@ -1,5 +1,22 @@
 // Package jws implements the digital signature on JSON based data
 // structures as described in https://tools.ietf.org/html/rfc7515
+//
+// If you do not care about the details, the only things that you
+// would need to use are the following functions:
+//
+//     jws.Sign(payload, algorithm, key)
+//     jws.Verify(encodedjws, algorithm, key)
+//
+// To sign, simply use `jws.Sign`. `payload` is a []byte buffer that
+// contains whatever data you want to sign. `alg` is one of the
+// jwa.SignatureAlgorithm constants from package jwa. For RSA and 
+// ECDSA family of algorithms, you will need to prepare a private key.
+// For HMAC family, you just need a []byte value. The `jws.Sign`
+// function will return the encoded JWS message on success.
+//
+// To verify, use `jws.Verify`. It will parse the `encodedjws` buffer 
+// and verify the result using `algorithm` and `key`. Upon successful
+// verification, the original payload is returned, so you can work on it.
 package jws
 
 import (
