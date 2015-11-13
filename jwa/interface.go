@@ -1,5 +1,13 @@
 package jwa
 
+type KeyType string
+
+const (
+	EC       KeyType = "EC"  // Elliptic Curve
+	RSA      KeyType = "RSA" // RSA
+	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)  
+)
+
 // SignatureAlgorithm represents the various signature algorithms
 // as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm string
