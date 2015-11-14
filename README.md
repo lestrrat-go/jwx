@@ -89,7 +89,7 @@ func main() {
 
 ### JWS
 
-See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jws#pkg-examples
+See also `VerifyWithJWK` and `VerifyWithJKU`
 
 ```
 import(
