@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"crypto/rsa"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/internal/rsautil"
@@ -9,6 +10,28 @@ import (
 )
 
 const examplePayload = `The true sign of intelligence is not knowledge but imagination.`
+
+var rsaPrivKey *rsa.PrivateKey
+
+func init() {
+	var jwkstr = []byte(`
+     {"kty":"RSA",
+      "n":"oahUIoWw0K0usKNuOR6H4wkf4oBUXHTxRvgb48E-BVvxkeDNjbC4he8rUWcJoZmds2h7M70imEVhRU5djINXtqllXI4DFqcI1DgjT9LewND8MW2Krf3Spsk_ZkoFnilakGygTwpZ3uesH-PFABNIUYpOiN15dsQRkgr0vEhxN92i2asbOenSZeyaxziK72UwxrrKoExv6kc5twXTq4h-QChLOln0_mtUZwfsRaMStPs6mS6XrgxnxbWhojf663tuEQueGC-FCMfra36C9knDFGzKsNa7LZK2djYgyD3JR_MB_4NUJW_TqOQtwHYbxevoJArm-L5StowjzGy-_bq6Gw",
+      "e":"AQAB",
+      "d":"kLdtIj6GbDks_ApCSTYQtelcNttlKiOyPzMrXHeI-yk1F7-kpDxY4-WY5NWV5KntaEeXS1j82E375xxhWMHXyvjYecPT9fpwR_M9gV8n9Hrh2anTpTD93Dt62ypW3yDsJzBnTnrYu1iwWRgBKrEYY46qAZIrA2xAwnm2X7uGR1hghkqDp0Vqj3kbSCz1XyfCs6_LehBwtxHIyh8Ripy40p24moOAbgxVw3rxT_vlt3UVe4WO3JkJOzlpUf-KTVI2Ptgm-dARxTEtE-id-4OJr0h-K-VFs3VSndVTIznSxfyrj8ILL6MG_Uv8YAu7VILSB3lOW085-4qE3DzgrTjgyQ",
+      "p":"1r52Xk46c-LsfB5P442p7atdPUrxQSy4mti_tZI3Mgf2EuFVbUoDBvaRQ-SWxkbkmoEzL7JXroSBjSrK3YIQgYdMgyAEPTPjXv_hI2_1eTSPVZfzL0lffNn03IXqWF5MDFuoUYE0hzb2vhrlN_rKrbfDIwUbTrjjgieRbwC6Cl0",
+      "q":"wLb35x7hmQWZsWJmB_vle87ihgZ19S8lBEROLIsZG4ayZVe9Hi9gDVCOBmUDdaDYVTSNx_8Fyw1YYa9XGrGnDew00J28cRUoeBB_jKI1oma0Orv1T9aXIWxKwd4gvxFImOWr3QRL9KEBRzk2RatUBnmDZJTIAfwTs0g68UZHvtc",
+      "dp":"ZK-YwE7diUh0qR1tR7w8WHtolDx3MZ_OTowiFvgfeQ3SiresXjm9gZ5KLhMXvo-uz-KUJWDxS5pFQ_M0evdo1dKiRTjVw_x4NyqyXPM5nULPkcpU827rnpZzAJKpdhWAgqrXGKAECQH0Xt4taznjnd_zVpAmZZq60WPMBMfKcuE",
+      "dq":"Dq0gfgJ1DdFGXiLvQEZnuKEN0UUmsJBxkjydc3j4ZYdBiMRAy86x0vHCjywcMlYYg4yoC4YZa9hNVcsjqA3FeiL19rk8g6Qn29Tt0cj8qqyFpz9vNDBUfCAiJVeESOjJDZPYHdHY8v1b-o-Z2X5tvLx-TCekf7oxyeKDUqKWjis",
+      "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
+     }`)
+
+	var err error
+	rsaPrivKey, err = rsautil.PrivateKeyFromJSON(jwkstr)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 	expected := []byte{
@@ -176,7 +199,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	t.Logf("------ ParseString done")
 
 	// Test decrypting?
-	plaintext, err := DecryptMessage(msg, privkey)
+	plaintext, err := DecryptMessage(msg, jwa.RSA_OAEP, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return
 	}
@@ -195,10 +218,24 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		t.Logf("%s", jsonbuf)
 		return
 	}
+
+	encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+	if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+		return
+	}
+
+	plaintext, err = Decrypt(encrypted, jwa.RSA_OAEP, privkey)
+	if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+		return
+	}
+
+	if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+		return
+	}
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.1.
-func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
+func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 	var plaintext = []byte{
 		84, 104, 101, 32, 116, 114, 117, 101, 32, 115, 105, 103, 110, 32,
 		111, 102, 32, 105, 110, 116, 101, 108, 108, 105, 103, 101, 110, 99,
@@ -206,33 +243,18 @@ func TestEncode_RSAES_OAEP_AES_GCM(t *testing.T) {
 		101, 100, 103, 101, 32, 98, 117, 116, 32, 105, 109, 97, 103, 105,
 		110, 97, 116, 105, 111, 110, 46,
 	}
-	var cek = []byte{
-		4, 211, 31, 197, 84, 157, 252, 254, 11, 100, 157, 250, 63, 170, 106,
-		206, 107, 124, 212, 45, 111, 107, 9, 219, 200, 177, 0, 240, 143, 156,
-		44, 207,
-	}
-	var aad = []byte{
-		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 48, 69,
-		116, 84, 48, 70, 70, 85, 67, 73, 115, 73, 109, 86, 117, 89, 121, 73,
-		54, 73, 107, 69, 121, 78, 84, 90, 72, 81, 48, 48, 105, 102, 81,
-	}
 
-	c, err := NewAesCrypt(jwa.A256GCM)
-	if !assert.NoError(t, err, "NewCrypt successful") {
+	encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+	if !assert.NoError(t, err, "Encrypt should succeed") {
 		return
 	}
 
-	iv, ciphertext, tag, err := c.Encrypt(cek, plaintext, aad)
-	if !assert.NoError(t, err, "Failed to encrypt data") {
+	decrypted, err := Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
+	if !assert.NoError(t, err, "Decrypt should succeed") {
 		return
 	}
 
-	data, err := c.Decrypt(cek, iv, ciphertext, tag, aad)
-	if !assert.NoError(t, err, "Decrypt successful") {
-		return
-	}
-
-	if !assert.Equal(t, plaintext, data, "roundtrip gives us the same data") {
+	if !assert.Equal(t, plaintext, decrypted, "Decrypted content should match") {
 		return
 	}
 }
@@ -242,75 +264,25 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
 		112, 114, 111, 115, 112, 101, 114, 46,
 	}
-	var jwksrc = []byte(`{"kty":"RSA",
-      "n":"sXchDaQebHnPiGvyDOAT4saGEUetSyo9MKLOoWFsueri23bOdgWp4Dy1WlUzewbgBHod5pcM9H95GQRV3JDXboIRROSBigeC5yjU1hGzHHyXss8UDprecbAYxknTcQkhslANGRUZmdTOQ5qTRsLAt6BTYuyvVRdhS8exSZEy_c4gs_7svlJJQ4H9_NxsiIoLwAEk7-Q3UXERGYw_75IDrGA84-lA_-Ct4eTlXHBIY2EaV7t7LjJaynVJCpkv4LKjTTAumiGUIuQhrNhZLuF_RJLqHpM2kgWFLU7-VTdL1VbC2tejvcI2BlMkEpk1BzBZI0KQB0GaDWFLN-aEAw3vRw",
-      "e":"AQAB",
-      "d":"VFCWOqXr8nvZNyaaJLXdnNPXZKRaWCjkU5Q2egQQpTBMwhprMzWzpR8Sxq1OPThh_J6MUD8Z35wky9b8eEO0pwNS8xlh1lOFRRBoNqDIKVOku0aZb-rynq8cxjDTLZQ6Fz7jSjR1Klop-YKaUHc9GsEofQqYruPhzSA-QgajZGPbE_0ZaVDJHfyd7UUBUKunFMScbflYAAOYJqVIVwaYR5zWEEceUjNnTNo_CVSj-VvXLO5VZfCUAVLgW4dpf1SrtZjSt34YLsRarSb127reG_DUwg9Ch-KyvjT1SkHgUWRVGcyly7uvVGRSDwsXypdrNinPA4jlhoNdizK2zF2CWQ",
-      "p":"9gY2w6I6S6L0juEKsbeDAwpd9WMfgqFoeA9vEyEUuk4kLwBKcoe1x4HG68ik918hdDSE9vDQSccA3xXHOAFOPJ8R9EeIAbTi1VwBYnbTp87X-xcPWlEPkrdoUKW60tgs1aNd_Nnc9LEVVPMS390zbFxt8TN_biaBgelNgbC95sM",
-      "q":"uKlCKvKv_ZJMVcdIs5vVSU_6cPtYI1ljWytExV_skstvRSNi9r66jdd9-yBhVfuG4shsp2j7rGnIio901RBeHo6TPKWVVykPu1iYhQXw1jIABfw-MVsN-3bQ76WLdt2SDxsHs7q7zPyUyHXmps7ycZ5c72wGkUwNOjYelmkiNS0",
-      "dp":"w0kZbV63cVRvVX6yk3C8cMxo2qCM4Y8nsq1lmMSYhG4EcL6FWbX5h9yuvngs4iLEFk6eALoUS4vIWEwcL4txw9LsWH_zKI-hwoReoP77cOdSL4AVcraHawlkpyd2TWjE5evgbhWtOxnZee3cXJBkAi64Ik6jZxbvk-RR3pEhnCs",
-      "dq":"o_8V14SezckO6CNLKs_btPdFiO9_kC1DsuUTd2LAfIIVeMZ7jn1Gus_Ff7B7IVx3p5KuBGOVF8L-qifLb6nQnLysgHDh132NDioZkhH7mI7hPG-PYE_odApKdnqECHWw0J-F0JWnUd6D2B_1TvF9mXA2Qx-iGYn8OVV1Bsmp6qU",
-      "qi":"eNho5yRBEBxhGBtQRww9QirZsB66TrfFReG_CcteI1aCneT0ELGhYlRlCtUkTRclIfuEPmNsNDPbLoLqqCVznFbvdB7x-Tl-m0l_eFTj2KiqwGqE9PZB9nNTwMVvH3VRRSLWACvPnSiwP8N5Usy-WRXS-V7TbpxIhvepTfE0NNo"
-     }`)
-	privkey, err := rsautil.PrivateKeyFromJSON(jwksrc)
-	if !assert.NoError(t, err, "PrivateKey created") {
+
+	encrypted, err := Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+	if !assert.NoError(t, err, "Encrypt is successful") {
 		return
 	}
 
-	c, err := NewAesCrypt(jwa.A128CBC_HS256)
-	if !assert.NoError(t, err, "NewAesCrypt is successful") {
+	decrypted, err := Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
+	if !assert.NoError(t, err, "Decrypt successful") {
 		return
 	}
 
-	k := NewRSAKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
-
-	kg := NewRandomKeyGenerate(c.KeySize())
-
-	t.Logf("Encrypt now")
-	e := NewMultiEncrypt(c, kg, k)
-	msg, err := e.Encrypt(plaintext)
-	if !assert.NoError(t, err, "Encrypt successful") {
-		return
-	}
-
-	t.Logf("DecryptMessage now")
-	plaintext2, err := DecryptMessage(msg, privkey)
-	if !assert.NoError(t, err, "Decrypt message succeeded") {
-		return
-	}
-
-	if !assert.Equal(t, plaintext, plaintext2, "Decrypted correct plaintext") {
-		return
-	}
-
-	t.Logf("compact serialize now")
-	jsonbuf, err := CompactSerialize{}.Serialize(msg)
-	if !assert.NoError(t, err, "Compact serialization successful") {
-		return
-	}
-
-	t.Logf("compact serialization: %s", jsonbuf)
-
-	t.Logf("parse compact serialize now")
-	msg2, err := Parse(jsonbuf)
-	if !assert.NoError(t, err, "Parse successful") {
-		return
-	}
-
-	t.Logf("====== decrypt compact serialize now")
-	plaintext3, err := DecryptMessage(msg2, privkey)
-	if !assert.NoError(t, err, "Decrypt message succeeded") {
-		return
-	}
-
-	if !assert.Equal(t, plaintext, plaintext3, "Roundtrip is successful!") {
+	if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
 		return
 	}
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.3. Note that cek is dynamically
 // generated, so the encrypted values will NOT match that of the RFC.
-func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
+func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	var plaintext = []byte{
 		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
 		112, 114, 111, 115, 112, 101, 114, 46,
@@ -319,31 +291,17 @@ func TestEncode_A128KW_A128CBCHS256(t *testing.T) {
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 
-	c, err := NewAesCrypt(jwa.A128CBC_HS256)
-	if !assert.NoError(t, err, "NewAesCrypt is successful") {
+	encrypted, err := Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
+	if !assert.NoError(t, err, "Encrypt is successful") {
 		return
 	}
 
-	k, err := NewAesKeyWrap(jwa.A128KW, sharedkey)
-	if !assert.NoError(t, err, "Create key wrap") {
-		return
-	}
-
-	kg := NewRandomKeyGenerate(c.KeySize())
-
-	e := NewMultiEncrypt(c, kg, k)
-
-	msg, err := e.Encrypt(plaintext)
-	if !assert.NoError(t, err, "Encrypt successful") {
-		return
-	}
-
-	data, err := DecryptMessage(msg, sharedkey)
+	decrypted, err := Decrypt(encrypted, jwa.A128KW, sharedkey)
 	if !assert.NoError(t, err, "Decrypt successful") {
 		return
 	}
 
-	if !assert.Equal(t, plaintext, data, "roundtrip gives us the same data") {
+	if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
 		return
 	}
 }

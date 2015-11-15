@@ -16,14 +16,75 @@ import (
 )
 
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
+	contentcrypt, err := NewAesCrypt(contentalg)
+	if err != nil {
+		return nil, err
+	}
+
 	var keyenc KeyEncrypter
+	var keysize int
 	switch keyalg {
-	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+	case jwa.RSA1_5:
 		pubkey, ok := key.(*rsa.PublicKey)
 		if !ok {
 			return nil, errors.New("invalid key: *rsa.PublicKey required")
 		}
-		keyenc = NewRSAKeyEncrypt(keyalg, pubkey)
+		keyenc, err = NewRSAPKCSKeyEncrypt(keyalg, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		keysize = contentcrypt.KeySize()/2
+	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		pubkey, ok := key.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("invalid key: *rsa.PublicKey required")
+		}
+		keyenc, err = NewRSAOAEPKeyEncrypt(keyalg, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		keysize = contentcrypt.KeySize()/2
+	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("invalid key: []byte required")
+		}
+		keyenc, err = NewAesKeyWrap(keyalg, sharedkey)
+		if err != nil {
+			return nil, err
+		}
+		keysize = contentcrypt.KeySize()
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		fallthrough
+	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		fallthrough
+	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+		fallthrough
+	default:
+		debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(keysize), keyenc)
+	msg, err := enc.Encrypt(payload)
+	if err != nil {
+		debug.Printf("Encrypt: failed to encrypt: %s", err)
+		return nil, err
+	}
+
+	return CompactSerialize{}.Serialize(msg)
+}
+
+func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+/*
+	var keydec KeyEncrypter
+	switch keyalg {
+	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		pubkey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("invalid key: *rsa.PrivateKey required")
+		}
+		keydec = NewRSAKeyDecrypt(keyalg, pubkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
@@ -33,7 +94,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, err
 		}
-		keyenc = kwenc
+		keydec = kwenc
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		fallthrough
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
@@ -43,18 +104,14 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
+*/
 
-	contentcrypt, err := NewAesCrypt(contentalg)
-	if err != nil {
-		return nil, err
-	}
-	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(contentcrypt.KeySize()), keyenc)
-	msg, err := enc.Encrypt(payload)
+	msg, err := Parse(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	return CompactSerialize{}.Serialize(msg)
+	return DecryptMessage(msg, alg, key)
 }
 
 func Parse(buf []byte) (*Message, error) {
@@ -187,13 +244,13 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize 
 		if !ok {
 			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
 		}
-		return NewRSAPKCS15KeyDecrypt(alg, privkey, keysize), nil
+		return NewRSAPKCS15KeyDecrypt(alg, privkey, keysize/2), nil
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		privkey, ok := key.(*rsa.PrivateKey)
 		if !ok {
 			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
 		}
-		return NewRSAOAEPKeyDecrypt(alg, privkey), nil
+		return NewRSAOAEPKeyDecrypt(alg, privkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
@@ -214,7 +271,7 @@ func BuildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, erro
 	return nil, ErrUnsupportedAlgorithm
 }
 
-func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
+func DecryptMessage(m *Message, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	var err error
 
 	if len(m.Recipients) == 0 {
@@ -258,6 +315,10 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 
 	var plaintext []byte
 	for _, recipient := range m.Recipients {
+		if recipient.Header.Algorithm != alg {
+			continue
+		}
+
 		h2 := NewHeader()
 		if err := h2.Copy(h); err != nil {
 			debug.Printf("failed to copy header: %s", err)
@@ -280,19 +341,15 @@ func DecryptMessage(m *Message, key interface{}) ([]byte, error) {
 		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
 			debug.Printf("failed to decrypt key: %s", err)
+			return nil, errors.New("failed to decrypt key")
 			continue
 		}
 
-		debug.Printf("DecryptMessage: cek        = %x (%d)", cek, len(cek))
-		debug.Printf("DecryptMessage: iv         = %x", iv)
-		debug.Printf("DecryptMessage: ciphertext = %x", ciphertext)
-		debug.Printf("DecryptMessage: tag        = %x", tag)
-		debug.Printf("DecryptMessage: aad        = %x", aad)
 		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
 		if err == nil {
 			break
 		}
-		debug.Printf("DecryptMessage: cipher.decrypt: %s", err)
+		debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
 	}
 
 	if plaintext == nil {

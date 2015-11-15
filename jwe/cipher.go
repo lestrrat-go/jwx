@@ -24,6 +24,7 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
 		debug.Printf("GcmAeadFetch: failed to create cipher")
+		panic(err)
 		return nil, err
 	}
 

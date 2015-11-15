@@ -33,9 +33,9 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 	ikey := key[:keysize]
 	ekey := key[keysize:]
 
-	debug.Printf("New: cek (key) = %x\n", key)
-	debug.Printf("New: ikey      = %x\n", ikey)
-	debug.Printf("New: ekey      = %x\n", ekey)
+	debug.Printf("New: cek (key)             = %x (%d)\n", key, len(key))
+	debug.Printf("New: ikey                  = %x (%d)\n", ikey, len(ikey))
+	debug.Printf("New: ekey                  = %x (%d)\n", ekey, len(ekey))
 
 	bc, err := f(ekey)
 	if err != nil {

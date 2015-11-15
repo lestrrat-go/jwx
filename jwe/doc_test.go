@@ -21,7 +21,11 @@ func ExampleEncrypt() {
 		return
 	}
 
-	k := NewRSAKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
+	k, err := NewRSAPKCSKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
+	if err != nil {
+		log.Printf("failed to create key encrypter: %s", err)
+		return
+	}
 	kg := NewRandomKeyGenerate(c.KeySize())
 
 	e := NewMultiEncrypt(c, kg, k)
@@ -31,7 +35,7 @@ func ExampleEncrypt() {
 		return
 	}
 
-	decrypted, err := DecryptMessage(msg, privkey)
+	decrypted, err := DecryptMessage(msg, jwa.RSA1_5, privkey)
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
 		return

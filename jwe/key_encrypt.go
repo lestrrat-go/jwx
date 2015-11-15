@@ -57,27 +57,56 @@ func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	return encrypted, nil
 }
 
-func NewRSAKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) *RSAKeyEncrypt {
-	return &RSAKeyEncrypt{
+func NewRSAOAEPKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAOAEPKeyEncrypt, error) {
+	switch alg {
+	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+	return &RSAOAEPKeyEncrypt{
 		alg:    alg,
 		pubkey: pubkey,
-	}
+	}, nil
 }
 
-func (e RSAKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+func NewRSAPKCSKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAPKCSKeyEncrypt, error) {
+	switch alg {
+	case jwa.RSA1_5:
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	return &RSAPKCSKeyEncrypt{
+		alg:    alg,
+		pubkey: pubkey,
+	}, nil
+}
+
+func (e RSAPKCSKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return e.alg
 }
 
-func (e RSAKeyEncrypt) Kid() string {
+func (e RSAPKCSKeyEncrypt) Kid() string {
 	return e.KeyID
 }
 
-func (e RSAKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
-	debug.Printf("RSA.KeyEncrypt: cek = %x", cek)
-	if e.alg == jwa.RSA1_5 {
-		return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
-	}
+func (e RSAOAEPKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return e.alg
+}
 
+func (e RSAOAEPKeyEncrypt) Kid() string {
+	return e.KeyID
+}
+
+func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+	if e.alg != jwa.RSA1_5 {
+		debug.Printf("PKCS.KeyEncrypt: %s", e.alg)
+		return nil, ErrUnsupportedAlgorithm
+	}
+	return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
+}
+
+func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	var hash hash.Hash
 	switch e.alg {
 	case jwa.RSA_OAEP:
@@ -85,6 +114,7 @@ func (e RSAKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	case jwa.RSA_OAEP_256:
 		hash = sha256.New()
 	default:
+		debug.Printf("OAEP.KeyEncrypt: %s", e.alg)
 		return nil, ErrUnsupportedAlgorithm
 	}
 	return rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
@@ -150,11 +180,17 @@ type RSAOAEPKeyDecrypt struct {
 	privkey *rsa.PrivateKey
 }
 
-func NewRSAOAEPKeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey) *RSAOAEPKeyDecrypt {
+func NewRSAOAEPKeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey) (*RSAOAEPKeyDecrypt, error) {
+	switch alg {
+	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
 	return &RSAOAEPKeyDecrypt{
 		alg:     alg,
 		privkey: privkey,
-	}
+	}, nil
 }
 
 func (d RSAOAEPKeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {

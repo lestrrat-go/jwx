@@ -5,7 +5,7 @@ type KeyType string
 const (
 	EC       KeyType = "EC"  // Elliptic Curve
 	RSA      KeyType = "RSA" // RSA
-	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)  
+	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)
 )
 
 type EllipticCurveAlgorithm string
@@ -63,6 +63,7 @@ const (
 // ContentEncryptionAlgorithm represents the various encryption
 // algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm string
+
 const (
 	A128CBC_HS256 ContentEncryptionAlgorithm = "A128CBC-HS256" // AES-CBC + HMAC-SHA256 (128)
 	A192CBC_HS384 ContentEncryptionAlgorithm = "A192CBC-HS384" // AES-CBC + HMAC-SHA384 (192)
@@ -77,6 +78,6 @@ const (
 type CompressionAlgorithm string
 
 const (
-	NoCompression CompressionAlgorithm = ""    // No compression
-	Deflate       CompressionAlgorithm = "DEF" // DEFLATE (RFC 1951)
+	NoCompress CompressionAlgorithm = ""    // No compression
+	Deflate    CompressionAlgorithm = "DEF" // DEFLATE (RFC 1951)
 )

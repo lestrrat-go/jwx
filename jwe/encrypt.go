@@ -18,6 +18,7 @@ func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *
 func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	cek, err := e.KeyGenerator.KeyGenerate()
 	if err != nil {
+		debug.Printf("Failed to generate key: %s", err)
 		return nil, err
 	}
 	debug.Printf("Encrypt: generated cek len = %d", len(cek))
@@ -37,6 +38,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		}
 		enckey, err := enc.KeyEncrypt(cek)
 		if err != nil {
+			debug.Printf("Failed to encrypt key: %s", err)
 			return nil, err
 		}
 		r.EncryptedKey = enckey
@@ -57,6 +59,10 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 
 	// ...on the other hand, there's only one content cipher.
 	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
+	if err != nil {
+		debug.Printf("Failed to encrypt: %s", err)
+		return nil, err
+	}
 
 	debug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
 	debug.Printf("Encrypt.Encrypt: aad        = %x", aad)

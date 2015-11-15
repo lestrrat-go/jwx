@@ -188,8 +188,15 @@ type RSAPKCS15KeyDecrypt struct {
 	generator KeyGenerator
 }
 
-type RSAKeyEncrypt struct {
+type RSAOAEPKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey
 	KeyID  string
 }
+
+type RSAPKCSKeyEncrypt struct {
+	alg    jwa.KeyEncryptionAlgorithm
+	pubkey *rsa.PublicKey
+	KeyID  string
+}
+
