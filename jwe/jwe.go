@@ -15,6 +15,48 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
+	var keyenc KeyEncrypter
+	switch keyalg {
+	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		pubkey, ok := key.(*rsa.PublicKey)
+		if !ok {
+			return nil, errors.New("invalid key: *rsa.PublicKey required")
+		}
+		keyenc = NewRSAKeyEncrypt(keyalg, pubkey)
+	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("invalid key: []byte required")
+		}
+		kwenc, err := NewAesKeyWrap(keyalg, sharedkey)
+		if err != nil {
+			return nil, err
+		}
+		keyenc = kwenc
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		fallthrough
+	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		fallthrough
+	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+		fallthrough
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	contentcrypt, err := NewAesCrypt(contentalg)
+	if err != nil {
+		return nil, err
+	}
+	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(contentcrypt.KeySize()), keyenc)
+	msg, err := enc.Encrypt(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return CompactSerialize{}.Serialize(msg)
+}
+
 func Parse(buf []byte) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
