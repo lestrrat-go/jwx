@@ -38,7 +38,7 @@ So here's go-jwx. As of this writing (Nov 2015), it's still lacking a few of the
 
 See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwt#pkg-examples
 
-```
+```go
 import(
   "encoding/json"
   "log"
@@ -69,7 +69,7 @@ func main() {
 
 See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwk#pkg-examples
 
-```
+```go
 import(
   "log"
   
@@ -105,7 +105,7 @@ func main() {
 
 See also `VerifyWithJWK` and `VerifyWithJKU`
 
-```
+```go
 import(
   "crypto/rand"
   "crypto/rsa"
@@ -144,7 +144,7 @@ func main() {
 
 See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwe#pkg-examples
 
-```
+```go
 import(
   "crypto/rand"
   "crypto/rsa"
