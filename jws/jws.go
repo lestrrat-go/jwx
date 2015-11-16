@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 )
@@ -36,8 +37,11 @@ import (
 // for a given payload. If you need more control over the signature
 // generation process, you should manually create signers and tweak
 // the message.
-func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
-	signer := NewMultiSign()
+//
+//
+func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*Header) ([]byte, error) {
+	var err error
+	var signer PayloadSigner
 	switch alg {
 	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
 		privkey, ok := key.(*rsa.PrivateKey)
@@ -45,38 +49,57 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, 
 			return nil, errors.New("invalid private key: *rsa.PrivateKey required")
 		}
 
-		rsasign, err := NewRsaSign(alg, privkey)
+		signer, err = NewRsaSign(alg, privkey)
 		if err != nil {
 			return nil, err
 		}
-		signer.AddSigner(rsasign)
 	case jwa.HS256, jwa.HS384, jwa.HS512:
 		sharedkey, ok := key.([]byte)
 		if !ok {
 			return nil, errors.New("invalid private key: []byte required")
 		}
 
-		hmacsign, err := NewHmacSign(alg, sharedkey)
+		signer, err = NewHmacSign(alg, sharedkey)
 		if err != nil {
 			return nil, err
 		}
-		signer.AddSigner(hmacsign)
 	case jwa.ES256, jwa.ES384, jwa.ES512:
 		privkey, ok := key.(*ecdsa.PrivateKey)
 		if !ok {
 			return nil, errors.New("invalid private key: *ecdsa.PrivateKey required")
 		}
 
-		ecdsasign, err := NewEcdsaSign(alg, privkey)
+		signer, err = NewEcdsaSign(alg, privkey)
 		if err != nil {
 			return nil, err
 		}
-		signer.AddSigner(ecdsasign)
 	default:
 		return nil, ErrUnsupportedAlgorithm
 	}
 
-	msg, err := signer.Sign(payload)
+	if len(hdrs) > 0 {
+		if pubhdr := hdrs[0]; pubhdr != nil {
+			h, err := signer.PublicHeaders().Merge(pubhdr)
+			if err != nil {
+				return nil, err
+			}
+			signer.SetPublicHeaders(h)
+		}
+	}
+
+	if len(hdrs) > 1 {
+		if protectedhdr := hdrs[0]; protectedhdr != nil {
+			h, err := signer.ProtectedHeaders().Merge(protectedhdr)
+			if err != nil {
+				return nil, err
+			}
+			signer.SetProtectedHeaders(h)
+		}
+	}
+
+	multisigner := NewMultiSign()
+	multisigner.AddSigner(signer)
+	msg, err := multisigner.Sign(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +294,7 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 
+	debug.Printf("hdrbuf = %s", hdrbuf.Bytes())
 	hdr := &EncodedHeader{Header: NewHeader()}
 	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
 		return nil, err

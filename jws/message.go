@@ -17,6 +17,88 @@ func NewHeader() *Header {
 	}
 }
 
+func (h *Header) Set(key string, value interface{}) error {
+	switch key {
+	case "alg":
+		var v jwa.SignatureAlgorithm
+		s, ok := value.(string)
+		if ok {
+			v = jwa.SignatureAlgorithm(s)
+		} else {
+			v, ok = value.(jwa.SignatureAlgorithm)
+			if !ok {
+				return ErrInvalidHeaderValue
+			}
+		}
+		h.Algorithm = v
+	case "cty":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.ContentType = v
+	case "kid":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.KeyID = v
+	case "typ":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.Type = v
+	case "x5t":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertThumbprint = v
+	case "x5t#256":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertThumbprintS256 = v
+	case "x5c":
+		v, ok := value.([]string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.X509CertChain = v
+	case "crit":
+		v, ok := value.([]string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.Critical = v
+	case "jku":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		u, err := url.Parse(v)
+		if err != nil {
+			return ErrInvalidHeaderValue
+		}
+		h.JwkSetURL = u
+	case "x5u":
+		v, ok := value.(string)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		u, err := url.Parse(v)
+		if err != nil {
+			return ErrInvalidHeaderValue
+		}
+		h.X509Url = u
+	default:
+		h.PrivateParams[key] = value
+	}
+	return nil
+}
+
 func (h1 *Header) Merge(h2 *Header) (*Header, error) {
 	if h2 == nil {
 		return nil, errors.New("merge target is nil")

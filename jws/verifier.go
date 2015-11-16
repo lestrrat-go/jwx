@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
@@ -46,7 +47,9 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 			[]byte{'.'},
 		)
 
+		debug.Printf("siv = '%s'", siv)
 		if err := v.PayloadVerify(siv, sig.Signature.Bytes()); err != nil {
+			debug.Printf("Payload verify failed: %s", err)
 			continue
 		}
 
@@ -134,13 +137,16 @@ func (v EcdsaVerify) PayloadVerify(payload, signature []byte) error {
 		return ErrInvalidEcdsaSignatureSize
 	}
 
-	h := hfunc.New()
-	h.Write(payload)
-
 	rv := (&big.Int{}).SetBytes(signature[:keysiz])
 	sv := (&big.Int{}).SetBytes(signature[keysiz:])
 
-	if !ecdsa.Verify(pubkey, h.Sum(nil), rv, sv) {
+	h := hfunc.New()
+	h.Write(payload)
+	signed := h.Sum(nil)
+
+	debug.Printf("payload -> %s, signed -> %x", payload, signed)
+
+	if !ecdsa.Verify(pubkey, signed, rv, sv) {
 		return ErrInvalidSignature
 	}
 	return nil
@@ -161,7 +167,7 @@ func NewHmacVerify(alg jwa.SignatureAlgorithm, key []byte) (*HmacVerify, error) 
 // Verify checks that signature generated for `payload` matches `signature`.
 // This fulfills the `Verifier` interface
 func (v HmacVerify) Verify(m *Message) error {
-	return doMessageVerify(v.signer.Algorithm, v, m)
+	return doMessageVerify(v.signer.SignatureAlgorithm(), v, m)
 }
 
 func (v HmacVerify) PayloadVerify(payload, mac []byte) error {

@@ -474,3 +474,42 @@ func TestParse_FlattenedJSON(t *testing.T) {
 	jsonbuf, _ := json.MarshalIndent(m, "", "  ")
 	t.Logf("%s", jsonbuf)
 }
+
+func TestSign_HeaderValues(t *testing.T) {
+	const jwksrc = `{
+    "kty":"EC",
+    "crv":"P-256",
+    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+  }`
+
+	privkey, err := ecdsautil.PrivateKeyFromJSON([]byte(jwksrc))
+	if !assert.NoError(t, err, "parsing jwk should be successful") {
+		return
+	}
+
+	payload := []byte("Hello, World!")
+
+	hdr := NewHeader()
+	hdr.KeyID = "helloworld01"
+	encoded, err := Sign(payload, jwa.ES256, privkey, hdr)
+	if !assert.NoError(t, err, "Sign should succeed") {
+		return
+	}
+
+	// Although we set KeyID to the public header, in compact serialization
+	// there's no difference
+	msg, err := Parse(encoded)
+	if !assert.Equal(t, hdr.KeyID, msg.Signatures[0].ProtectedHeader.KeyID, "KeyID should match") {
+		return
+	}
+
+	verified, err := Verify(encoded, jwa.ES256, &privkey.PublicKey)
+	if !assert.NoError(t, err, "Verify should succeed") {
+		return
+	}
+	if !assert.Equal(t, verified, payload, "Payload should match") {
+		return
+	}
+}

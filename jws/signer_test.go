@@ -22,20 +22,14 @@ func TestRsaSign_NewRsaSignWithBadAlgorithm(t *testing.T) {
 }
 
 func TestRsaSign_SignWithBadAlgorithm(t *testing.T) {
-	s := &RsaSign{
-		Algorithm: jwa.SignatureAlgorithm("FooBar"),
-	}
-
-	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
-	if !assert.Equal(t, ErrUnsupportedAlgorithm, err, "Sign with unknown algorithm should return error") {
+	_, err := NewRsaSign(jwa.SignatureAlgorithm("FooBar"), nil)
+	if !assert.Equal(t, ErrUnsupportedAlgorithm, err, "Creating signer with unknown algorithm should return error") {
 		return
 	}
 }
 
 func TestRsaSign_SignWithNoPrivateKey(t *testing.T) {
-	s := &RsaSign{
-		Algorithm: jwa.RS256,
-	}
+	s, _ := NewRsaSign(jwa.RS256, nil)
 
 	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
 	if !assert.Equal(t, ErrMissingPrivateKey, err, "Sign with no private key should return error") {
@@ -94,14 +88,14 @@ func TestMultiSigner(t *testing.T) {
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
-	s1.KeyID = "2010-12-29"
+	s1.PublicHeaders().Set("kid", "2010-12-29")
 	ms.AddSigner(s1)
 
 	s2, err := NewEcdsaSign(jwa.ES256, dsakey)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}
-	s2.KeyID = "e9bc097a-ce51-4036-9562-d2ade882db0d"
+	s2.PublicHeaders().Set("kid", "e9bc097a-ce51-4036-9562-d2ade882db0d")
 	ms.AddSigner(s2)
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")

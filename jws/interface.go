@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrInvalidCompactPartsCount  = errors.New("compact JWS format must have three parts")
+	ErrInvalidHeaderValue        = errors.New("invalid value for header key")
 	ErrInvalidEcdsaSignatureSize = errors.New("invalid signature size of ecdsa algorithm")
 	ErrInvalidSignature          = errors.New("invalid signature")
 	ErrMissingPrivateKey         = errors.New("missing private key")
@@ -59,10 +60,12 @@ type EncodedHeader struct {
 
 // PayloadSigner generates signature for the given payload
 type PayloadSigner interface {
-	Jwk() jwk.Key
-	Kid() string
-	Alg() jwa.SignatureAlgorithm
 	PayloadSign([]byte) ([]byte, error)
+	PublicHeaders() *Header
+	ProtectedHeaders() *Header
+	SetPublicHeaders(*Header)
+	SetProtectedHeaders(*Header)
+	SignatureAlgorithm() jwa.SignatureAlgorithm
 }
 
 // Verifier is used to verify the signature against the payload
@@ -71,16 +74,14 @@ type Verifier interface {
 }
 
 type RsaSign struct {
-	Algorithm  jwa.SignatureAlgorithm
-	JwkKey     *jwk.RsaPublicKey
-	KeyID      string
+	Public     *Header
+	Protected  *Header
 	PrivateKey *rsa.PrivateKey
 }
 
 type EcdsaSign struct {
-	Algorithm  jwa.SignatureAlgorithm
-	JwkKey     *jwk.RsaPublicKey
-	KeyID      string
+	Public     *Header
+	Protected  *Header
 	PrivateKey *ecdsa.PrivateKey
 }
 
@@ -108,9 +109,8 @@ type MultiSign struct {
 }
 
 type HmacSign struct {
-	Algorithm jwa.SignatureAlgorithm
-	JwkKey    *jwk.RsaPublicKey
-	KeyID     string
+	Public     *Header
+	Protected  *Header
 	Key       []byte
 	hash      func() hash.Hash
 }

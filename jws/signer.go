@@ -12,8 +12,8 @@ import (
 	"hash"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-jwx/jwk"
 )
 
 // NewSigner creates a new MultiSign object with the given PayloadSigners.
@@ -50,13 +50,15 @@ func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 		Signatures: []Signature{},
 	}
 	for _, signer := range m.Signers {
-		protected := NewHeader()
-		protected.Algorithm = signer.Alg()
-
-		if k := signer.Jwk(); k != nil {
-			protected.Jwk = k
-			protected.KeyID = k.Kid()
+		protected, err := NewHeader().Merge(signer.PublicHeaders())
+		if err != nil {
+			return nil, err
 		}
+		protected, err = protected.Merge(signer.ProtectedHeaders())
+		if err != nil {
+			return nil, err
+		}
+		protected.Algorithm = signer.SignatureAlgorithm()
 
 		protbuf, err := protected.Base64Encode()
 		if err != nil {
@@ -70,17 +72,22 @@ func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 			return nil, err
 		}
 
-		hdr := NewHeader()
-
-		if hdr.KeyID == "" {
-			if protected.KeyID != "" {
-				// Use the JWK in the protected field...
-				hdr.KeyID = protected.KeyID
-			} else if signer.Kid() != "" {
-				// Or, get it from the signer
-				hdr.KeyID = signer.Kid()
-			}
+		hdr, err := NewHeader().Merge(signer.PublicHeaders())
+		if err != nil {
+			return nil, err
 		}
+
+		/*
+			if hdr.KeyID == "" {
+				if protected.KeyID != "" {
+					// Use the JWK in the protected field...
+					hdr.KeyID = protected.KeyID
+				} else if signer.Kid() != "" {
+					// Or, get it from the signer
+					hdr.KeyID = signer.Kid()
+				}
+			}
+		*/
 
 		sig := Signature{
 			PublicHeader:    hdr,
@@ -107,25 +114,34 @@ func NewRsaSign(alg jwa.SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, erro
 		return nil, ErrUnsupportedAlgorithm
 	}
 
+	pubhdr := NewHeader()
+	protectedhdr := NewHeader()
+	protectedhdr.Algorithm = alg
 	return &RsaSign{
-		Algorithm:  alg,
 		PrivateKey: key,
+		Protected:  protectedhdr,
+		Public:     pubhdr,
 	}, nil
 }
 
-func (s RsaSign) Alg() jwa.SignatureAlgorithm {
-	return s.Algorithm
+func (s RsaSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
+	return s.Protected.Algorithm
 }
 
-func (s *RsaSign) Jwk() jwk.Key {
-	if s.JwkKey == nil {
-		return nil
-	}
-	return s.JwkKey
+func (s RsaSign) PublicHeaders() *Header {
+	return s.Public
 }
 
-func (s *RsaSign) Kid() string {
-	return s.KeyID
+func (s RsaSign) ProtectedHeaders() *Header {
+	return s.Protected
+}
+
+func (s *RsaSign) SetPublicHeaders(h *Header) {
+	s.Public = h
+}
+
+func (s *RsaSign) SetProtectedHeaders(h *Header) {
+	s.Protected = h
 }
 
 func rsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
@@ -147,7 +163,7 @@ func rsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 // Sign generates a sign based on the Algorithm instance variable.
 // This fulfills the `Signer` interface
 func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
-	hash, err := rsaHashForAlg(s.Algorithm)
+	hash, err := rsaHashForAlg(s.SignatureAlgorithm())
 	if err != nil {
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -160,7 +176,7 @@ func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	h := hash.New()
 	h.Write(payload)
 
-	switch s.Algorithm {
+	switch s.SignatureAlgorithm() {
 	case jwa.RS256, jwa.RS384, jwa.RS512:
 		return rsa.SignPKCS1v15(rand.Reader, privkey, hash, h.Sum(nil))
 	case jwa.PS256, jwa.PS384, jwa.PS512:
@@ -179,25 +195,34 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 		return nil, ErrUnsupportedAlgorithm
 	}
 
+	pubhdr := NewHeader()
+	protectedhdr := NewHeader()
+	protectedhdr.Algorithm = alg
 	return &EcdsaSign{
-		Algorithm:  alg,
 		PrivateKey: key,
+		Protected:  protectedhdr,
+		Public:     pubhdr,
 	}, nil
 }
 
-func (sign EcdsaSign) Alg() jwa.SignatureAlgorithm {
-	return sign.Algorithm
+func (s EcdsaSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
+	return s.Protected.Algorithm
 }
 
-func (sign *EcdsaSign) Jwk() jwk.Key {
-	if sign.JwkKey == nil {
-		return nil
-	}
-	return sign.JwkKey
+func (s EcdsaSign) PublicHeaders() *Header {
+	return s.Public
 }
 
-func (sign EcdsaSign) Kid() string {
-	return sign.KeyID
+func (s EcdsaSign) ProtectedHeaders() *Header {
+	return s.Protected
+}
+
+func (s *EcdsaSign) SetPublicHeaders(h *Header) {
+	s.Public = h
+}
+
+func (s *EcdsaSign) SetProtectedHeaders(h *Header) {
+	s.Protected = h
 }
 
 func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
@@ -219,7 +244,7 @@ func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 // Sign generates a sign based on the Algorithm instance variable.
 // This fulfills the `PayloadSigner` interface
 func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
-	hash, err := ecdsaHashForAlg(sign.Algorithm)
+	hash, err := ecdsaHashForAlg(sign.SignatureAlgorithm())
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +262,10 @@ func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 
 	h := hash.New()
 	h.Write(payload)
+	signed := h.Sum(nil)
+	debug.Printf("payload = %s, signed -> %x", payload, signed)
 
-	r, s, err := ecdsa.Sign(rand.Reader, privkey, h.Sum(nil))
+	r, s, err := ecdsa.Sign(rand.Reader, privkey, signed)
 	if err != nil {
 		return nil, err
 	}
@@ -260,10 +287,14 @@ func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
 		return nil, err
 	}
 
+	pubhdr := NewHeader()
+	protectedhdr := NewHeader()
+	protectedhdr.Algorithm = alg
 	return &HmacSign{
-		Algorithm: alg,
-		Key:       key,
 		hash:      h,
+		Key:       key,
+		Protected: protectedhdr,
+		Public:    pubhdr,
 	}, nil
 }
 
@@ -291,17 +322,22 @@ func (s HmacSign) PayloadSign(payload []byte) ([]byte, error) {
 	return b, nil
 }
 
-func (s HmacSign) Alg() jwa.SignatureAlgorithm {
-	return s.Algorithm
+func (s HmacSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
+	return s.Protected.Algorithm
 }
 
-func (s HmacSign) Jwk() jwk.Key {
-	if s.JwkKey == nil {
-		return nil
-	}
-	return s.JwkKey
+func (s HmacSign) PublicHeaders() *Header {
+	return s.Public
 }
 
-func (s HmacSign) Kid() string {
-	return s.KeyID
+func (s HmacSign) ProtectedHeaders() *Header {
+	return s.Protected
+}
+
+func (s *HmacSign) SetPublicHeaders(h *Header) {
+	s.Public = h
+}
+
+func (s *HmacSign) SetProtectedHeaders(h *Header) {
+	s.Protected = h
 }
