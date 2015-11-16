@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -21,20 +22,68 @@ func main() {
 	os.Exit(_main())
 }
 
-type Config struct {
+type JWKConfig struct {
 	JWKLocation string
 	Payload     string
 }
 
+type JWEConfig struct {
+	Algorithm string
+}
+
 func _main() int {
-	c := Config{}
+	var f func() int
+	switch os.Args[1] {
+	case "jwk":
+		f = doJWK
+	case "jwe":
+		f = doJWE
+	default:
+		f = doHelp
+	}
+
+	os.Args = os.Args[1:]
+	return f()
+}
+
+func doHelp() int {
+	fmt.Println(`jwx [command] [args]`)
+	return 0
+}
+
+func doJWE() int {
+	c := JWEConfig{}
+	flag.StringVar(&c.Algorithm, "alg", "", "Key encryption algorithm")
+	flag.Parse()
+
+	return 0
+}
+
+func doJWK() int {
+	c := JWKConfig{}
 	flag.StringVar(&c.JWKLocation, "jwk", "", "JWK location, either a local file or a URL")
 	flag.Parse()
 
-	key, err := fetchJWK(c)
-	if err != nil {
-		log.Printf("Failed to fetch JWK: %s", err)
-		return 0
+	var key *jwk.Set
+	if c.JWKLocation == "" {
+		fmt.Printf("-jwk must be specified\n")
+		return 1
+	}
+
+	if u, err := url.Parse(c.JWKLocation); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		var err error
+		key, err = jwk.FetchHTTP(c.JWKLocation)
+		if err != nil {
+			log.Printf("Failed to fetch remote JWK: %s", err)
+			return 0
+		}
+	} else {
+		var err error
+		key, err = jwk.FetchFile(c.JWKLocation)
+		if err != nil {
+			log.Printf("Failed to fetch remote JWK: %s", err)
+			return 0
+		}
 	}
 
 	keybuf, err := json.MarshalIndent(key, "", "  ")
@@ -117,48 +166,4 @@ func _main() int {
 	}
 
 	return 1
-}
-
-func fetchJWK(c Config) (*jwk.Set, error) {
-	var content io.Reader
-	loc := c.JWKLocation
-	if strings.HasPrefix(loc, "http://") || strings.HasPrefix(loc, "https://") {
-		log.Printf("JWK: fetching from %s\n", loc)
-		u, err := url.Parse(loc)
-		if err != nil {
-			return nil, err
-		}
-
-		res, err := http.Get(u.String())
-		if err != nil {
-			return nil, err
-		}
-
-		if res.StatusCode != http.StatusOK {
-			return nil, errors.New("Failed to fetch JWK: " + res.Status)
-		}
-		content = res.Body
-		defer res.Body.Close()
-	} else {
-		f, err := os.Open(loc)
-		if err != nil {
-			return nil, err
-		}
-		content = f
-		defer f.Close()
-	}
-
-	// We may need to parse this twice, so read the content into memory
-	// so we can rewind it
-	buf, err := ioutil.ReadAll(content)
-	if err != nil {
-		return nil, err
-	}
-
-	k, err := jwk.Parse(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return k, nil
 }

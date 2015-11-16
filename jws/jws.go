@@ -143,7 +143,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 // VerifyWithJKU verifies the JWS message using a remote JWK
 // file represented in the url.
 func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
-	key, err := jwk.Fetch(jwkurl)
+	key, err := jwk.FetchHTTP(jwkurl)
 	if err != nil {
 		return nil, err
 	}

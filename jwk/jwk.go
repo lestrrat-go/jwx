@@ -7,14 +7,31 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-// Fetch fetches the remote JWK and parses its contents
-func Fetch(jwkurl string) (*Set, error) {
+// FetchFile fetches the local JWK from file, and parses its contents
+func FetchFile(jwkpath string) (*Set, error) {
+	f, err := os.Open(jwkpath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return Parse(buf)
+}
+
+// FetchHTTP fetches the remote JWK and parses its contents
+func FetchHTTP(jwkurl string) (*Set, error) {
 	res, err := http.Get(jwkurl)
 	if err != nil {
 		return nil, err
@@ -24,6 +41,7 @@ func Fetch(jwkurl string) (*Set, error) {
 		return nil, errors.New("failed to fetch JWK from remote url")
 	}
 
+	// XXX Check for maximum length to read?
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
