@@ -3,7 +3,7 @@ package jwk
 import "log"
 
 func Example() {
-	set, err := Fetch("https://foobar.domain/json")
+	set, err := FetchHTTP("https://foobar.domain/json")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return
