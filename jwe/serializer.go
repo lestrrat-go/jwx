@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,16 +60,7 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, err
 	}
 
-	buf := bytes.Join(
-		[][]byte{
-			protected,
-			encryptedKey,
-			iv,
-			cipher,
-			tag,
-		},
-		[]byte{'.'},
-	)
+	buf := append(append(append(append(append(append(append(append(protected, '.'), encryptedKey...), '.'), iv...), '.'), cipher...), '.'), tag...)
 	return buf, nil
 }
 
