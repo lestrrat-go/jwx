@@ -4,7 +4,6 @@
 package buffer
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -20,7 +19,14 @@ type Buffer []byte
 func FromUint(v uint64) Buffer {
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, v)
-	return Buffer(bytes.TrimLeft(data, "\x00"))
+
+	i := 0
+	for ; i < len(data); i++ {
+		if data[i] != 0x0 {
+			break
+		}
+	}
+	return Buffer(data[i:])
 }
 
 func FromBase64(v []byte) (Buffer, error) {

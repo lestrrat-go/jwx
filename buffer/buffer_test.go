@@ -7,6 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBuffer_FromUint(t *testing.T) {
+	b := FromUint(1)
+	if !assert.Equal(t, []byte{1}, b.Bytes(), "should be left trimmed") {
+		return
+	}
+}
+
 func TestBuffer_Convert(t *testing.T) {
 	v1 := []byte{'a', 'b', 'c'}
 	b := Buffer(v1)
