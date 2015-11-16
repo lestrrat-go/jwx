@@ -198,8 +198,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 	t.Logf("------ ParseString done")
 
-	// Test decrypting?
-	plaintext, err := DecryptMessage(msg, jwa.RSA_OAEP, privkey)
+	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return
 	}

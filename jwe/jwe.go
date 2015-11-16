@@ -3,11 +3,9 @@ package jwe
 
 import (
 	"bytes"
-	"compress/flate"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/debug"
@@ -75,42 +73,12 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 }
 
 func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
-	/*
-		var keydec KeyEncrypter
-		switch keyalg {
-		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-			pubkey, ok := key.(*rsa.PrivateKey)
-			if !ok {
-				return nil, errors.New("invalid key: *rsa.PrivateKey required")
-			}
-			keydec = NewRSAKeyDecrypt(keyalg, pubkey)
-		case jwa.A128KW, jwa.A192KW, jwa.A256KW:
-			sharedkey, ok := key.([]byte)
-			if !ok {
-				return nil, errors.New("invalid key: []byte required")
-			}
-			kwenc, err := NewAesKeyWrap(keyalg, sharedkey)
-			if err != nil {
-				return nil, err
-			}
-			keydec = kwenc
-		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-			fallthrough
-		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-			fallthrough
-		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-			fallthrough
-		default:
-			return nil, ErrUnsupportedAlgorithm
-		}
-	*/
-
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	return DecryptMessage(msg, alg, key)
+	return msg.Decrypt(alg, key)
 }
 
 func Parse(buf []byte) (*Message, error) {
@@ -196,13 +164,6 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	/*
-		v, err := protected.Base64Encode()
-		if err != nil {
-			return nil, err
-		}
-		m.AuthenticatedData.Base64Decode(v)
-	*/
 	m.AuthenticatedData.SetBytes(hdrbuf.Bytes())
 	m.ProtectedHeader = protected
 	m.Tag = tagbuf
@@ -218,9 +179,9 @@ func parseCompact(buf []byte) (*Message, error) {
 }
 
 // BuildKeyDecrypter creates a new KeyDecrypter instance from the given
-// parameters. It is used by the DecryptMessage fucntion to create
+// parameters. It is used by the Message.Decrypt method to create
 // key decrypter(s) from the given message. `keysize` is only used by
-// some decrypters. Use the value from ContentCipher.KeySize().
+// some decrypters. Pass the value from ContentCipher.KeySize().
 func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize int) (KeyDecrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
@@ -253,109 +214,4 @@ func BuildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, erro
 	}
 
 	return nil, ErrUnsupportedAlgorithm
-}
-
-func DecryptMessage(m *Message, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
-	var err error
-
-	if len(m.Recipients) == 0 {
-		return nil, errors.New("no recipients, can not proceed with decrypt")
-	}
-
-	enc := m.ProtectedHeader.ContentEncryption
-
-	h := NewHeader()
-	if err := h.Copy(m.ProtectedHeader.Header); err != nil {
-		return nil, err
-	}
-	h, err = h.Merge(m.UnprotectedHeader)
-	if err != nil {
-		debug.Printf("failed to merge unprotected header")
-		return nil, err
-	}
-
-	debug.Printf("DecryptMessage: aad (bytes)   = %s", m.AuthenticatedData.Bytes())
-	{
-		b64, _ := m.AuthenticatedData.Base64Encode()
-		debug.Printf("DecryptMessage: aad (encoded) = %s", b64)
-	}
-
-	// Now, this is weird. If Message contains 1
-
-	aad, err := m.AuthenticatedData.Base64Encode()
-	if err != nil {
-		return nil, err
-	}
-	ciphertext := m.CipherText.Bytes()
-	iv := m.InitializationVector.Bytes()
-	tag := m.Tag.Bytes()
-
-	cipher, err := BuildContentCipher(enc)
-	if err != nil {
-		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
-	}
-	keysize := cipher.KeySize()
-
-	var plaintext []byte
-	for _, recipient := range m.Recipients {
-		debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Header.Algorithm)
-		if recipient.Header.Algorithm != alg {
-			continue
-		}
-
-		h2 := NewHeader()
-		if err := h2.Copy(h); err != nil {
-			debug.Printf("failed to copy header: %s", err)
-			continue
-		}
-
-		h2, err := h2.Merge(recipient.Header)
-		if err != nil {
-			debug.Printf("Failed to merge! %s", err)
-			continue
-		}
-
-		k, err := BuildKeyDecrypter(h2.Algorithm, key, keysize)
-		if err != nil {
-			debug.Printf("failed to create key decrypter: %s", err)
-			continue
-		}
-
-		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
-		if err != nil {
-			debug.Printf("failed to decrypt key: %s", err)
-			return nil, errors.New("failed to decrypt key")
-			continue
-		}
-
-		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
-		if err == nil {
-			break
-		}
-		debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
-		// Keep looping because there might be another key with the same algo
-	}
-
-	if plaintext == nil {
-		return nil, errors.New("failed to find matching recipient to decrypt key")
-	}
-
-	if h.Compression == jwa.Deflate {
-		output := bytes.Buffer{}
-		w, _ := flate.NewWriter(&output, 1)
-		in := plaintext
-		for len(in) > 0 {
-			n, err := w.Write(in)
-			if err != nil {
-				return nil, err
-			}
-			in = in[n:]
-		}
-		if err := w.Close(); err != nil {
-			return nil, err
-		}
-		plaintext = output.Bytes()
-	}
-
-	return plaintext, nil
 }
