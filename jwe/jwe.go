@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
 	contentcrypt, err := NewAesCrypt(contentalg)
 	if err != nil {
@@ -72,6 +73,9 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	return CompactSerialize{}.Serialize(msg)
 }
 
+// Decrypt takes the key encryption algorithm and the corresponding
+// key to decrypt the JWE message, and returns the decrypted payload.
+// The JWE message can be either compact or full JSON format.
 func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	msg, err := Parse(buf)
 	if err != nil {
@@ -81,6 +85,8 @@ func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byt
 	return msg.Decrypt(alg, key)
 }
 
+// Parse parses the JWE message into a Message object. The JWE message
+// can be either compact or full JSON format.
 func Parse(buf []byte) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
@@ -93,6 +99,7 @@ func Parse(buf []byte) (*Message, error) {
 	return parseCompact(buf)
 }
 
+// ParseString is the same as Parse, but takes a string.
 func ParseString(s string) (*Message, error) {
 	return Parse([]byte(s))
 }

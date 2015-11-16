@@ -169,7 +169,7 @@ func main() {
     return
   }
 
-  decrypted, err := jwe.Decrypt(msg, jwa.RSA1_5, privkey)
+  decrypted, err := jwe.Decrypt(encrypted, jwa.RSA1_5, privkey)
   if err != nil {
     log.Printf("failed to decrypt: %s", err)
     return

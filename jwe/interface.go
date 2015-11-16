@@ -107,7 +107,6 @@ type MultiEncrypt struct {
 	KeyEncrypters    []KeyEncrypter
 }
 
-// TODO GCM family
 type KeyWrapEncrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	KeyID     string

@@ -23,7 +23,7 @@ func ExampleEncrypt() {
 		return
 	}
 
-	decrypted, err := Decrypt(msg, jwa.RSA1_5, privkey)
+	decrypted, err := Decrypt(encrypted, jwa.RSA1_5, privkey)
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
 		return
