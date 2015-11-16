@@ -6,7 +6,6 @@
 package emap
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/lestrrat/go-jwx/buffer"
 )
+
+var ErrInvalidJSON = errors.New("invalid JSON")
 
 type Constructor interface {
 	Construct(map[string]interface{}) error
@@ -34,10 +35,11 @@ func MergeMarshal(e interface{}, p map[string]interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	if !bytes.HasSuffix(buf, []byte{'}'}) {
-		return nil, errors.New("invalid JSON")
+	if len(buf) < 2 {
+		return nil, ErrInvalidJSON
 	}
-	if !bytes.HasPrefix(ext, []byte{'{'}) {
+
+	if buf[0] != '{' || buf[len(buf)-1] != '}' {
 		return nil, errors.New("invalid JSON")
 	}
 	buf[len(buf)-1] = ','
@@ -104,11 +106,12 @@ func (h Hmap) GetByteSlice(name string, consume ...bool) ([]byte, error) {
 	b := v.([]byte)
 	enc := base64.StdEncoding
 	out := make([]byte, enc.DecodedLen(len(b)))
-	enc.Decode(out, b)
+	n, err := enc.Decode(out, b)
+	if err != nil {
+		return nil, err
+	}
 
-	out = bytes.TrimRight(out, "\x00")
-
-	return out, nil
+	return out[:n], nil
 }
 
 func (h Hmap) GetString(name string, consume ...bool) (string, error) {
