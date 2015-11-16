@@ -1,7 +1,6 @@
 package jws
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 
@@ -37,14 +36,7 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	buf := bytes.Join(
-		[][]byte{
-			hdrbuf,
-			b64payload,
-			b64signature,
-		},
-		[]byte{'.'},
-	)
+	buf := append(append(append(append(hdrbuf, '.'), b64payload...), '.'), b64signature...)
 
 	return buf, nil
 }
