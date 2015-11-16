@@ -192,3 +192,10 @@ func main() {
 ## Contributions
 
 PRs welcome!
+
+## Credits
+
+* Work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
+* Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
+
+
