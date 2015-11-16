@@ -16,8 +16,10 @@ const (
 )
 
 var (
-	ErrUnsupportedKty = errors.New("unsupported kty")
-	ErrUnsupportedCurve = errors.New("unsupported curve")
+	ErrInvalidHeaderName  = errors.New("invalid header name")
+	ErrInvalidHeaderValue = errors.New("invalid value for header key")
+	ErrUnsupportedKty     = errors.New("unsupported kty")
+	ErrUnsupportedCurve   = errors.New("unsupported curve")
 )
 
 type KeyOperation string
