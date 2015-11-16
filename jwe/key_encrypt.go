@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -10,8 +11,10 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
@@ -100,7 +103,6 @@ func (e RSAOAEPKeyEncrypt) Kid() string {
 
 func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	if e.alg != jwa.RSA1_5 {
-		debug.Printf("PKCS.KeyEncrypt: %s", e.alg)
 		return nil, ErrUnsupportedAlgorithm
 	}
 	return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
@@ -114,8 +116,7 @@ func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	case jwa.RSA_OAEP_256:
 		hash = sha256.New()
 	default:
-		debug.Printf("OAEP.KeyEncrypt: %s", e.alg)
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.New("failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256 required")
 	}
 	return rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
 }
@@ -134,6 +135,8 @@ func (d RSAPKCS15KeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 }
 
 func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
+	debug.Printf("START PKCS.KeyDecrypt")
+	spew.Dump(enckey)
 	// Hey, these notes and workarounds were stolen from go-jose
 	defer func() {
 		// DecryptPKCS1v15SessionKey sometimes panics on an invalid payload
@@ -147,11 +150,28 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 
 	// Perform some input validation.
 	expectedlen := d.privkey.PublicKey.N.BitLen() / 8
+	if diff := len(enckey) - expectedlen; diff > 0 {
+		// If we can trim the right hand side, do so. This is necessary when
+		// you have a an input with a trailing NUL at the unfortunate location
+		// (i.e. not divisible by 6 bits boundary that base64 uses) -- in such
+		// cases the trailing NUL is padded with another NUL, and now you can't
+		// tell which one was the correct padded byte
+		// I *think* this is okay, but please please tell me if this is wrong
+		suffix := bytes.Repeat([]byte{0}, diff)
+		if bytes.HasSuffix(enckey, suffix) {
+			enckey = bytes.TrimSuffix(enckey, suffix)
+		}
+	}
+
 	if expectedlen != len(enckey) {
 		// Input size is incorrect, the encrypted payload should always match
 		// the size of the public modulus (e.g. using a 2048 bit key will
 		// produce 256 bytes of output). Reject this since it's invalid input.
-		return nil, errors.New("input size for key decrypt is incorrect")
+		return nil, fmt.Errorf(
+			"input size for key decrypt is incorrect (expected %d, got %d)",
+			expectedlen,
+			len(enckey),
+		)
 	}
 
 	var err error
@@ -165,13 +185,11 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	// prevent chosen-ciphertext attacks as described in RFC 3218, "Preventing
 	// the Million Message Attack on Cryptographic Message Syntax". We are
 	// therefore deliberatly ignoring errors here.
-	debug.Printf("OAEP.KeyDecrypt: enckey = %x", enckey)
 	err = rsa.DecryptPKCS1v15SessionKey(rand.Reader, d.privkey, enckey, cek)
 	if err != nil {
 		return nil, err
 	}
 
-	debug.Printf("OAEP.KeyDecrypt: cek = %x", cek)
 	return cek, nil
 }
 
@@ -198,6 +216,8 @@ func (d RSAOAEPKeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 }
 
 func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
+	debug.Printf("START OAEP.KeyDecrypt")
+	spew.Dump(enckey)
 	var hash hash.Hash
 	switch d.alg {
 	case jwa.RSA_OAEP:
@@ -205,9 +225,8 @@ func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	case jwa.RSA_OAEP_256:
 		hash = sha256.New()
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.New("failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256 required")
 	}
-	debug.Printf("OAEP.KeyDecrypt: enckey = %x", enckey)
 	return rsa.DecryptOAEP(hash, rand.Reader, d.privkey, enckey, []byte{})
 }
 
