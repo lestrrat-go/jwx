@@ -1,5 +1,5 @@
-// Package jwx contains tools that deal with the various JWx technologies such as
-// JWT, JWS, JWE, etc in Go.
+// Package jwx contains tools that deal with the various JWx (JOSE)
+// technologies such as JWT, JWS, JWE, etc in Go.
 //
 //    JWS (https://tools.ietf.org/html/rfc7515)
 //    JWE (https://tools.ietf.org/html/rfc7516)
@@ -17,7 +17,10 @@
 //    https://golang.org/x/oauth2
 //
 // This library exists because there was a need for a toolset that encompasses
-// the whole set of JWx technologies, in a highly customizable manner.
+// the whole set of JWx technologies in a highly customizable manner, in one package.
 //
 // You can find more high level documentation at Github (https://github.com/lestrrat/go-jwx)
 package jwx
+
+// Version describes the version of this library.
+const Version = "0.0.1"
