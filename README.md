@@ -13,10 +13,11 @@ PR/issues welcome. All needs more docs
 * jwk
 * jwa
 * jws
+* jwe
 
 ### In progress:
 
-* jwe - high-level API (jwe.Encrypt/jwe.Decrypt), more algorithms
+* jwe - more algorithms
 
 ## Why?
 
