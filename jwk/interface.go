@@ -51,6 +51,12 @@ type Key interface {
 	Kty() jwa.KeyType
 	Use() string
 
+	// Set sets a value in the JWK
+	Set(string, interface{}) error
+
+	// Get retrieves the value from the JWK
+	Get(string) (interface {}, error)
+
 	// Materialize creates the corresponding key. For example,
 	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,

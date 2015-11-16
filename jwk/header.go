@@ -6,6 +6,32 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// Get returns the value of the corresponding header. `key` should
+// be the same as the JSON key name (e.g. `alg`, `kid`, etc)
+func (h *EssentialHeader) Get(key string) (interface{}, error) {
+	switch key {
+	case "alg":
+		return h.Algorithm, nil
+	case "kid":
+		return h.KeyID, nil
+	case "kty":
+		return h.KeyType, nil
+	case "use":
+		return h.KeyUsage, nil
+	case "x5t":
+		return h.X509CertThumbprint, nil
+	case "x5t#256":
+		return h.X509CertThumbprintS256, nil
+	case "x5c":
+		return h.X509CertChain, nil
+	case "x5u":
+		return h.X509Url, nil
+	}
+	return nil, ErrInvalidHeaderName
+}
+
+// Set sets the value of the corresponding header. `key` should
+// be the same as the JSON key name (e.g. `alg`, `kid`, etc)
 func (h *EssentialHeader) Set(key string, value interface{}) error {
 	switch key {
 	case "alg":
