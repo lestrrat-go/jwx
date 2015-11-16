@@ -291,7 +291,7 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 
 func NewMessage() *Message {
 	return &Message{
-		ProtectedHeader: NewEncodedHeader(),
+		ProtectedHeader:   NewEncodedHeader(),
 		UnprotectedHeader: NewHeader(),
 	}
 }

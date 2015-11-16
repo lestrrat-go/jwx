@@ -8,6 +8,7 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash"
 
 	"github.com/lestrrat/go-jwx/internal/debug"
@@ -140,7 +141,11 @@ func (c AesCbcHmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 
 	tagOffset := len(ciphertext) - c.tagsize
 	if tagOffset%c.blockCipher.BlockSize() != 0 {
-		return nil, errors.New("invalid ciphertext (invalid length)")
+		return nil, fmt.Errorf(
+			"invalid ciphertext (invalid length: %d %% %d != 0)",
+			tagOffset,
+			c.blockCipher.BlockSize(),
+		)
 	}
 	tag := ciphertext[tagOffset:]
 	ciphertext = ciphertext[:tagOffset]

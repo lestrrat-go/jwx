@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/flate"
 	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,7 +32,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, err
 		}
-		keysize = contentcrypt.KeySize()/2
+		keysize = contentcrypt.KeySize() / 2
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		pubkey, ok := key.(*rsa.PublicKey)
 		if !ok {
@@ -43,7 +42,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, err
 		}
-		keysize = contentcrypt.KeySize()/2
+		keysize = contentcrypt.KeySize() / 2
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
@@ -76,35 +75,35 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 }
 
 func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
-/*
-	var keydec KeyEncrypter
-	switch keyalg {
-	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-		pubkey, ok := key.(*rsa.PrivateKey)
-		if !ok {
-			return nil, errors.New("invalid key: *rsa.PrivateKey required")
+	/*
+		var keydec KeyEncrypter
+		switch keyalg {
+		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+			pubkey, ok := key.(*rsa.PrivateKey)
+			if !ok {
+				return nil, errors.New("invalid key: *rsa.PrivateKey required")
+			}
+			keydec = NewRSAKeyDecrypt(keyalg, pubkey)
+		case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+			sharedkey, ok := key.([]byte)
+			if !ok {
+				return nil, errors.New("invalid key: []byte required")
+			}
+			kwenc, err := NewAesKeyWrap(keyalg, sharedkey)
+			if err != nil {
+				return nil, err
+			}
+			keydec = kwenc
+		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+			fallthrough
+		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+			fallthrough
+		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+			fallthrough
+		default:
+			return nil, ErrUnsupportedAlgorithm
 		}
-		keydec = NewRSAKeyDecrypt(keyalg, pubkey)
-	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
-		sharedkey, ok := key.([]byte)
-		if !ok {
-			return nil, errors.New("invalid key: []byte required")
-		}
-		kwenc, err := NewAesKeyWrap(keyalg, sharedkey)
-		if err != nil {
-			return nil, err
-		}
-		keydec = kwenc
-	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		fallthrough
-	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-		fallthrough
-	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-		fallthrough
-	default:
-		return nil, ErrUnsupportedAlgorithm
-	}
-*/
+	*/
 
 	msg, err := Parse(buf)
 	if err != nil {
@@ -159,21 +158,10 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, ErrInvalidCompactPartsCount
 	}
 
-	enc := base64.RawURLEncoding
-	p0Len := enc.DecodedLen(len(parts[0]))
-	p1Len := enc.DecodedLen(len(parts[1]))
-	p2Len := enc.DecodedLen(len(parts[2]))
-	p3Len := enc.DecodedLen(len(parts[3]))
-	p4Len := enc.DecodedLen(len(parts[4]))
-
-	out := make([]byte, p0Len+p1Len+p2Len+p3Len+p4Len)
-
-	hdrbuf := buffer.Buffer(out[:p0Len])
-	if _, err := enc.Decode(hdrbuf, parts[0]); err != nil {
+	hdrbuf := buffer.Buffer{}
+	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
 		return nil, err
 	}
-	hdrbuf = bytes.TrimRight(hdrbuf, "\x00")
-	debug.Printf("p0     = %x", out[:p0Len])
 	debug.Printf("hdrbuf = %x", hdrbuf)
 
 	hdr := NewHeader()
@@ -187,29 +175,25 @@ func parseCompact(buf []byte) (*Message, error) {
 	protected.ContentEncryption = hdr.ContentEncryption
 	hdr.ContentEncryption = ""
 
-	enckeybuf := buffer.Buffer(out[p0Len : p0Len+p1Len])
-	if _, err := enc.Decode(enckeybuf, parts[1]); err != nil {
+	enckeybuf := buffer.Buffer{}
+	if err := enckeybuf.Base64Decode(parts[1]); err != nil {
 		return nil, err
 	}
-	enckeybuf = bytes.TrimRight(enckeybuf, "\x00")
 
-	ivbuf := buffer.Buffer(out[p0Len+p1Len : p0Len+p1Len+p2Len])
-	if _, err := enc.Decode(ivbuf, parts[2]); err != nil {
+	ivbuf := buffer.Buffer{}
+	if err := ivbuf.Base64Decode(parts[2]); err != nil {
 		return nil, err
 	}
-	ivbuf = bytes.TrimRight(ivbuf, "\x00")
 
-	ctbuf := buffer.Buffer(out[p0Len+p1Len+p2Len : p0Len+p1Len+p2Len+p3Len])
-	if _, err := enc.Decode(ctbuf, parts[3]); err != nil {
+	ctbuf := buffer.Buffer{}
+	if err := ctbuf.Base64Decode(parts[3]); err != nil {
 		return nil, err
 	}
-	ctbuf = bytes.TrimRight(ctbuf, "\x00")
 
-	tagbuf := buffer.Buffer(out[p0Len+p1Len+p2Len+p3Len : p0Len+p1Len+p2Len+p3Len+p4Len])
-	if _, err := enc.Decode(tagbuf, parts[4]); err != nil {
+	tagbuf := buffer.Buffer{}
+	if err := tagbuf.Base64Decode(parts[4]); err != nil {
 		return nil, err
 	}
-	tagbuf = bytes.TrimRight(tagbuf, "\x00")
 
 	m := NewMessage()
 	/*
@@ -311,10 +295,10 @@ func DecryptMessage(m *Message, alg jwa.KeyEncryptionAlgorithm, key interface{})
 		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
 	}
 	keysize := cipher.KeySize()
-	debug.Printf("cipher.keysize = %d", keysize)
 
 	var plaintext []byte
 	for _, recipient := range m.Recipients {
+		debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Header.Algorithm)
 		if recipient.Header.Algorithm != alg {
 			continue
 		}
@@ -337,7 +321,6 @@ func DecryptMessage(m *Message, alg jwa.KeyEncryptionAlgorithm, key interface{})
 			continue
 		}
 
-		debug.Printf("DecryptMessage: encrypted_key = %x", recipient.EncryptedKey.Bytes())
 		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
 			debug.Printf("failed to decrypt key: %s", err)
@@ -350,10 +333,11 @@ func DecryptMessage(m *Message, alg jwa.KeyEncryptionAlgorithm, key interface{})
 			break
 		}
 		debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
+		// Keep looping because there might be another key with the same algo
 	}
 
 	if plaintext == nil {
-		return nil, errors.New("failed to decrypt key")
+		return nil, errors.New("failed to find matching recipient to decrypt key")
 	}
 
 	if h.Compression == jwa.Deflate {

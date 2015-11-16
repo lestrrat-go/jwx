@@ -28,6 +28,7 @@ func FromBase64(v []byte) (Buffer, error) {
 	if err := b.Base64Decode(v); err != nil {
 		return Buffer(nil), err
 	}
+
 	return b, nil
 }
 
@@ -58,10 +59,12 @@ func (b Buffer) Base64Encode() ([]byte, error) {
 func (b *Buffer) Base64Decode(v []byte) error {
 	enc := base64.RawURLEncoding
 	out := make([]byte, enc.DecodedLen(len(v)))
-	if _, err := enc.Decode(out, v); err != nil {
+	n, err := enc.Decode(out, v)
+	if err != nil {
 		return err
 	}
-	*b = Buffer(bytes.TrimRight(out, "\x00"))
+	out = out[:n]
+	*b = Buffer(out)
 	return nil
 }
 
@@ -75,7 +78,7 @@ func (b Buffer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(v))
 }
 
-// UnmarshalJSON unmarshals from a JSON string into a Buffer, after decoding it 
+// UnmarshalJSON unmarshals from a JSON string into a Buffer, after decoding it
 // with base64.RawURLEncoding
 func (b *Buffer) UnmarshalJSON(data []byte) error {
 	var x string

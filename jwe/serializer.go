@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 )
 
 // Serialize converts the mssage into a JWE compact serialize format byte buffer
@@ -37,8 +36,6 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, fmt.Errorf("merge header failed (recipient): %s", err)
 	}
 
-	jsonbuf, _ := json.Marshal(hcopy)
-	log.Printf("Serialize (Compact): %s", jsonbuf)
 	protected, err := EncodedHeader{Header: hcopy}.Base64Encode()
 	if err != nil {
 		return nil, err

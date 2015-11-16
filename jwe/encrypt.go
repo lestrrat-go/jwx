@@ -42,7 +42,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 			return nil, err
 		}
 		r.EncryptedKey = enckey
-		debug.Printf("Encrypt: encrypted_key = %x", enckey)
+		debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey, len(enckey))
 		recipients[i] = *r
 	}
 

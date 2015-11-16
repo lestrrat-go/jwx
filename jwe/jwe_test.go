@@ -244,18 +244,25 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 		110, 97, 116, 105, 111, 110, 46,
 	}
 
-	encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-	if !assert.NoError(t, err, "Encrypt should succeed") {
-		return
+	max := 100
+	if testing.Short() {
+		max = 1
 	}
 
-	decrypted, err := Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
-	if !assert.NoError(t, err, "Decrypt should succeed") {
-		return
-	}
+	for i := 0; i < max; i++ {
+		encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+		if !assert.NoError(t, err, "Encrypt should succeed") {
+			return
+		}
 
-	if !assert.Equal(t, plaintext, decrypted, "Decrypted content should match") {
-		return
+		decrypted, err := Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
+		if !assert.NoError(t, err, "Decrypt should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, plaintext, decrypted, "Decrypted content should match") {
+			return
+		}
 	}
 }
 
@@ -265,6 +272,12 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 		112, 114, 111, 115, 112, 101, 114, 46,
 	}
 
+	max := 100
+	if testing.Short() {
+		max = 1
+	}
+
+	for i := 0; i < max; i++ {
 	encrypted, err := Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 	if !assert.NoError(t, err, "Encrypt is successful") {
 		return
@@ -277,6 +290,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 
 	if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
 		return
+	}
 	}
 }
 
@@ -291,17 +305,24 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 
-	encrypted, err := Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
-	if !assert.NoError(t, err, "Encrypt is successful") {
-		return
+	max := 100
+	if testing.Short() {
+		max = 1
 	}
 
-	decrypted, err := Decrypt(encrypted, jwa.A128KW, sharedkey)
-	if !assert.NoError(t, err, "Decrypt successful") {
-		return
-	}
+	for i := 0; i < max; i++ {
+		encrypted, err := Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
+		if !assert.NoError(t, err, "Encrypt is successful") {
+			return
+		}
 
-	if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
-		return
+		decrypted, err := Decrypt(encrypted, jwa.A128KW, sharedkey)
+		if !assert.NoError(t, err, "Decrypt successful") {
+			return
+		}
+
+		if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
+			return
+		}
 	}
 }

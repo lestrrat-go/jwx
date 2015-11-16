@@ -55,3 +55,15 @@ func TestJSON(t *testing.T) {
 		return
 	}
 }
+
+func TestFunky(t *testing.T) {
+	s := `QD4_B3ghg0PNu-c_EAlXn3Xlb0gzAFPJSYQSI1cZZ8sPIxISgPMtNJTzgncC281IaKDXLV1aEnYuH5eH-4u4f383zlyBCGKSKSQWmqKNE7xcIqleFVNsfzOucTL4QRxfbcyHcli_symC_RGWJ6GdocE0VgyYN8t9_0sm_Nq5lcwtYEQs_hNlf1ileCjjdsUfC05zTbbrLpMjgI3IK5_QxOU81FLei4LMx3iQ1kqrIGH5FxxQMKGdx_fDaRQ-YBAA2YVqn7rs3TcwQ7NUjjz8JyDE168NlMV1WxoDC9nwOe0O6K4NzFuWpoGHTh0M-0lT5M3dy9kEBYgPtWoe_u9dogA`
+	b := Buffer{}
+	if !assert.NoError(t, b.Base64Decode([]byte(s)), "Base64Decode should work") {
+		return
+	}
+
+	if !assert.Equal(t, 257, b.Len(), "Should 257 bytes") {
+		return
+	}
+}

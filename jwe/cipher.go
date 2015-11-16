@@ -24,8 +24,7 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
 		debug.Printf("GcmAeadFetch: failed to create cipher")
-		panic(err)
-		return nil, err
+		return nil, fmt.Errorf("cipher: failed to create AES cipher for GCM: %s", err)
 	}
 
 	return cipher.NewGCM(aescipher)
@@ -34,7 +33,7 @@ var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
 		debug.Printf("CbcAeadFetch: failed to create aead fetcher (%v): %s", key, err)
-		return nil, err
+		return nil, fmt.Errorf("cipher: failed to create AES cipher for CBC: %s", err)
 	}
 	return aead, nil
 })
@@ -70,7 +69,10 @@ func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher,
 		keysize = 32 * 2
 		fetcher = CbcAeadFetch
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, fmt.Errorf(
+			"failed to create AES content cipher: %s",
+			ErrUnsupportedAlgorithm,
+		)
 	}
 
 	return &AesContentCipher{
@@ -85,6 +87,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 	aead, err = c.AeadFetch(cek)
 	if err != nil {
 		debug.Printf("AeadFetch failed: %s", err)
+		err = fmt.Errorf("failed to fetch AEAD: %s", err)
 		return
 	}
 

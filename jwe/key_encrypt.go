@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -14,7 +13,6 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
@@ -136,7 +134,6 @@ func (d RSAPKCS15KeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	debug.Printf("START PKCS.KeyDecrypt")
-	spew.Dump(enckey)
 	// Hey, these notes and workarounds were stolen from go-jose
 	defer func() {
 		// DecryptPKCS1v15SessionKey sometimes panics on an invalid payload
@@ -150,19 +147,6 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 
 	// Perform some input validation.
 	expectedlen := d.privkey.PublicKey.N.BitLen() / 8
-	if diff := len(enckey) - expectedlen; diff > 0 {
-		// If we can trim the right hand side, do so. This is necessary when
-		// you have a an input with a trailing NUL at the unfortunate location
-		// (i.e. not divisible by 6 bits boundary that base64 uses) -- in such
-		// cases the trailing NUL is padded with another NUL, and now you can't
-		// tell which one was the correct padded byte
-		// I *think* this is okay, but please please tell me if this is wrong
-		suffix := bytes.Repeat([]byte{0}, diff)
-		if bytes.HasSuffix(enckey, suffix) {
-			enckey = bytes.TrimSuffix(enckey, suffix)
-		}
-	}
-
 	if expectedlen != len(enckey) {
 		// Input size is incorrect, the encrypted payload should always match
 		// the size of the public modulus (e.g. using a 2048 bit key will
@@ -217,7 +201,6 @@ func (d RSAOAEPKeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	debug.Printf("START OAEP.KeyDecrypt")
-	spew.Dump(enckey)
 	var hash hash.Hash
 	switch d.alg {
 	case jwa.RSA_OAEP:
