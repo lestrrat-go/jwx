@@ -1,7 +1,6 @@
 package jws
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/hmac"
 	"crypto/rsa"
@@ -39,13 +38,7 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 				continue
 			}
 		}
-		siv := bytes.Join(
-			[][]byte{
-				phbuf,
-				payload,
-			},
-			[]byte{'.'},
-		)
+		siv := append(append(phbuf, '.'), payload...)
 
 		debug.Printf("siv = '%s'", siv)
 		if err := v.PayloadVerify(siv, sig.Signature.Bytes()); err != nil {
