@@ -89,6 +89,8 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	return nil
 }
 
+// Get retuns the value registered in this ClaimSet
+// with the matching key name
 func (c *ClaimSet) Get(key string) interface{} {
 	switch key {
 	case "aud":
