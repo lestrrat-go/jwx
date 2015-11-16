@@ -2,10 +2,7 @@
 // itself so that the buffer size aligns with an arbitrary block size.
 package padbuf
 
-import (
-	"bytes"
-	"errors"
-)
+import "errors"
 
 type PadBuffer []byte
 
@@ -14,13 +11,19 @@ func (pb PadBuffer) Len() int {
 }
 
 func (pb PadBuffer) Pad(n int) PadBuffer {
-	rem := n - pb.Len() % n
+	rem := n - pb.Len()%n
 	if rem == 0 {
 		return pb
 	}
 
 	newpb := pb.Resize(pb.Len() + rem)
-	copy(newpb[pb.Len():], bytes.Repeat([]byte{byte(rem)}, rem))
+
+	pad := make([]byte, rem)
+	for i := 0; i < rem; i++ {
+		pad[i] = byte(rem)
+	}
+	copy(newpb[pb.Len():], pad)
+
 	return newpb
 }
 
@@ -41,8 +44,16 @@ func (pb PadBuffer) Unpad(n int) (PadBuffer, error) {
 	}
 
 	last := pb[pb.Len()-1]
-	pad := bytes.Repeat([]byte{last}, int(last))
-	if !bytes.HasSuffix(pb, pad) {
+
+	count := 0
+	for i := pb.Len() - 1; i >= 0; i-- {
+		if pb[i] != last {
+			break
+		}
+		count++
+	}
+
+	if count != int(last) {
 		return pb, errors.New("invalid padding")
 	}
 
