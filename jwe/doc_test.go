@@ -15,27 +15,15 @@ func ExampleEncrypt() {
 		return
 	}
 
-	c, err := NewAesCrypt(jwa.A128CBC_HS256)
-	if err != nil {
-		log.Printf("failed to create content encrypter: %s", err)
-		return
-	}
+	payload := []byte("Lorem Ipsum")
 
-	k, err := NewRSAPKCSKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
-	if err != nil {
-		log.Printf("failed to create key encrypter: %s", err)
-		return
-	}
-	kg := NewRandomKeyGenerate(c.KeySize())
-
-	e := NewMultiEncrypt(c, kg, k)
-	msg, err := e.Encrypt([]byte("Lorem Ipsum"))
+	encrypted, err := Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 	if err != nil {
 		log.Printf("failed to encrypt payload: %s", err)
 		return
 	}
 
-	decrypted, err := msg.Decrypt(jwa.RSA1_5, privkey)
+	decrypted, err := Decrypt(msg, jwa.RSA1_5, privkey)
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
 		return

@@ -161,23 +161,15 @@ func main() {
     return
   }
 
-  c, err := jwe.NewAesCrypt(jwa.A128CBC_HS256)
-  if err != nil {
-    log.Printf("failed to create content encrypter: %s", err)
-    return
-  }
+  payload := []byte("Lorem Ipsum")
 
-  k := NewRSAKeyEncrypt(jwa.RSA1_5, &privkey.PublicKey)
-  kg := NewRandomKeyGenerate(c.KeySize())
-
-  e := NewEncrypt(c, kg, k)
-  msg, err := e.Encrypt([]byte("Lorem Ipsum"))
+  encrypted, err := jwe.Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
   if err != nil {
     log.Printf("failed to encrypt payload: %s", err)
     return
   }
 
-  decrypted, err := jwe.DecryptMessage(msg, privkey)
+  decrypted, err := jwe.Decrypt(msg, jwa.RSA1_5, privkey)
   if err != nil {
     log.Printf("failed to decrypt: %s", err)
     return
