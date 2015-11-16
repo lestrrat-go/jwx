@@ -174,7 +174,7 @@ func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
 	return VerifyWithJWK(buf, key)
 }
 
-// VerifyWithJKU verifies the JWS message using JWK keys
+// VerifyWithJWK verifies the JWS message using JWK keys
 func VerifyWithJWK(buf []byte, keyset *jwk.Set) ([]byte, error) {
 	m, err := Parse(buf)
 	if err != nil {
@@ -236,6 +236,8 @@ func VerifyWithJWK(buf []byte, keyset *jwk.Set) ([]byte, error) {
 	return nil, errors.New("failed to verify")
 }
 
+// Parse parses the given buffer and creates a jws.Message struct.
+// The input can be in either compact or full JSON serialization.
 func Parse(buf []byte) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
@@ -248,6 +250,7 @@ func Parse(buf []byte) (*Message, error) {
 	return parseCompact(buf)
 }
 
+// ParseString is the same as Parse, but take in a string
 func ParseString(s string) (*Message, error) {
 	return Parse([]byte(s))
 }
