@@ -67,8 +67,8 @@ type Key interface {
 // EssentialHeader defines the common data that any Key may
 // carry with it.
 type EssentialHeader struct {
-	// Algorithm might be any of jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm,
-	// or jwa.ContentEncryptionAlgorithm, so it stays as string
+	// Algorithm might be any of jwa.SignatureAlgorithm or  jwa.KeyEncryptionAlgorithm
+	// so it stays as string
 	Algorithm              string         `json:"alg,omitempty"`
 	KeyID                  string         `json:"kid,omitempty"`
 	KeyOps                 []KeyOperation `json:"key_ops,omitempty"`

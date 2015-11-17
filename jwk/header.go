@@ -35,63 +35,75 @@ func (h *EssentialHeader) Get(key string) (interface{}, error) {
 func (h *EssentialHeader) Set(key string, value interface{}) error {
 	switch key {
 	case "alg":
-		v, ok := value.(string)
-		if !ok {
+		switch value.(type) {
+		case jwa.SignatureAlgorithm:
+			h.Algorithm = value.(jwa.SignatureAlgorithm).String()
+		case jwa.KeyEncryptionAlgorithm:
+			h.Algorithm = value.(jwa.KeyEncryptionAlgorithm).String()
+		default:
 			return ErrInvalidHeaderValue
 		}
-		h.Algorithm = v
+		return nil
 	case "kid":
 		v, ok := value.(string)
 		if !ok {
 			return ErrInvalidHeaderValue
 		}
 		h.KeyID = v
+		return nil
 	case "kty":
-		var v jwa.KeyType
-		s, ok := value.(string)
-		if ok {
-			v = jwa.KeyType(s)
-		} else {
-			v, ok = value.(jwa.KeyType)
-			if !ok {
-				return ErrInvalidHeaderValue
-			}
+		switch value.(type) {
+		case jwa.KeyType:
+			h.KeyType = value.(jwa.KeyType)
+		case string:
+			h.KeyType = jwa.KeyType(value.(string))
+		default:
+			return ErrInvalidHeaderValue
 		}
-		h.KeyType = v
+		return nil
 	case "use":
 		v, ok := value.(string)
 		if !ok {
 			return ErrInvalidHeaderValue
 		}
 		h.KeyUsage = v
+		return nil
 	case "x5t":
 		v, ok := value.(string)
 		if !ok {
 			return ErrInvalidHeaderValue
 		}
 		h.X509CertThumbprint = v
+		return nil
 	case "x5t#256":
 		v, ok := value.(string)
 		if !ok {
 			return ErrInvalidHeaderValue
 		}
 		h.X509CertThumbprintS256 = v
+		return nil
 	case "x5c":
 		v, ok := value.([]string)
 		if !ok {
 			return ErrInvalidHeaderValue
 		}
 		h.X509CertChain = v
+		return nil
 	case "x5u":
-		v, ok := value.(string)
-		if !ok {
-			return ErrInvalidHeaderValue
+		switch value.(type) {
+		case string:
+			u, err := url.Parse(value.(string))
+			if err != nil {
+				return ErrInvalidHeaderValue
+			}
+			h.X509Url = u
+		case *url.URL:
+			h.X509Url = value.(*url.URL)
+		default:
+			return ErrInvalidHeaderName
 		}
-		u, err := url.Parse(v)
-		if err != nil {
-			return ErrInvalidHeaderValue
-		}
-		h.X509Url = u
+		return nil
+	default:
+		return ErrInvalidHeaderName
 	}
-	return ErrInvalidHeaderName
 }
