@@ -29,6 +29,7 @@ func FromUint(v uint64) Buffer {
 	return Buffer(data[i:])
 }
 
+// FromBase64 constructs a new Buffer from a base64 encoded data
 func FromBase64(v []byte) (Buffer, error) {
 	b := Buffer{}
 	if err := b.Base64Decode(v); err != nil {
@@ -38,9 +39,29 @@ func FromBase64(v []byte) (Buffer, error) {
 	return b, nil
 }
 
+// FromNData constructs a new Buffer from a "n:data" format
+// (I made that name up)
+func FromNData(v []byte) (Buffer, error) {
+	size := binary.BigEndian.Uint32(v)
+	buf  := make([]byte, int(size))
+	copy(buf, v[4:4+size])
+	return Buffer(buf), nil
+}
+
 // Bytes returns the raw bytes that comprises the Buffer
 func (b Buffer) Bytes() []byte {
 	return []byte(b)
+}
+
+// NData returns Datalen || Data, where Datalen is a 32 bit counter for
+// the length of the following data, and Data is the octets that comprise
+// the buffer data
+func (b Buffer) NData() []byte {
+	buf := make([]byte, 4+b.Len())
+	binary.BigEndian.PutUint32(buf, uint32(b.Len()))
+
+	copy(buf[4:], b.Bytes())
+	return buf
 }
 
 // Len returns the number of bytes that the Buffer holds

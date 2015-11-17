@@ -74,3 +74,20 @@ func TestFunky(t *testing.T) {
 		return
 	}
 }
+
+func TestBuffer_NData(t *testing.T) {
+	payload := []byte("Alice")
+	nd := Buffer(payload).NData()
+	if !assert.Equal(t, []byte{0,0,0,5,65,108,105,99,101}, nd, "NData mathces") {
+		return
+	}
+
+	b1, err := FromNData(nd)
+	if !assert.NoError(t, err, "FromNData succeeds") {
+		return
+	}
+
+	if !assert.Equal(t, payload, b1.Bytes(), "payload matches") {
+		return
+	}
+}
