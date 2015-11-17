@@ -100,7 +100,7 @@ type RsaPrivateKey struct {
 
 type SymmetricKey struct {
 	*EssentialHeader
-	Key buffer.Buffer
+	Key buffer.Buffer `json:"k"`
 }
 
 type EcdsaPublicKey struct {
