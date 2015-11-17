@@ -55,7 +55,7 @@ type Key interface {
 	Set(string, interface{}) error
 
 	// Get retrieves the value from the JWK
-	Get(string) (interface {}, error)
+	Get(string) (interface{}, error)
 
 	// Materialize creates the corresponding key. For example,
 	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
@@ -113,4 +113,12 @@ type EcdsaPublicKey struct {
 type EcdsaPrivateKey struct {
 	*EcdsaPublicKey
 	D buffer.Buffer `json:"d"`
+}
+
+type EcdhesPublicKey struct {
+	KeyEncryption     jwa.KeyEncryptionAlgorithm     `json:"alg"`
+	ContentEncryption jwa.ContentEncryptionAlgorithm `json:"enc"`
+	PublicKey         Key                            `json:"epk"`
+	UInfo             buffer.Buffer                  `json:"apu,omitempty"`
+	VInfo             buffer.Buffer                  `json:"apv,omitempty"`
 }
