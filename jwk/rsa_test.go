@@ -1,6 +1,7 @@
 package jwk
 
 import (
+	"crypto/rsa"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,9 +43,39 @@ func TestParse_RsaPrivateKey(t *testing.T) {
 		return
 	}
 
-	privkey, err := rsakey.PrivateKey()
-	if !assert.NoError(t, err, "Generating private key from JWK is successful") {
+	var privkey *rsa.PrivateKey
+	var pubkey *rsa.PublicKey
+
+	{
+		mkey, err := rsakey.RsaPublicKey.Materialize()
+		if !assert.NoError(t, err, "RsaPublickKey.Materialize is successful") {
+			return
+		}
+		var ok bool
+		pubkey, ok = mkey.(*rsa.PublicKey)
+		if !assert.True(t, ok, "Materialized key is a *rsa.PublicKey") {
+			return
+		}
+	}
+
+	if !assert.NotEmpty(t, pubkey.N, "N exists") {
 		return
+	}
+
+	if !assert.NotEmpty(t, pubkey.E, "E exists") {
+		return
+	}
+
+	{
+		mkey, err := rsakey.Materialize()
+		if !assert.NoError(t, err, "RsaPrivateKey.Materialize is successful") {
+			return
+		}
+		var ok bool
+		privkey, ok = mkey.(*rsa.PrivateKey)
+		if !assert.True(t, ok, "Materialized key is a *rsa.PrivateKey") {
+			return
+		}
 	}
 
 	if !assert.NotEmpty(t, privkey.Precomputed.Dp, "Dp exists") {

@@ -179,9 +179,14 @@ func TestAppendix_A3(t *testing.T) {
 			return
 		}
 
+		ckey, err := key.Materialize()
+		if !assert.NoError(t, err, "materialized key") {
+			return
+		}
+
 		if !assert.Equal(t, jwa.OctetSeq, key.KeyType, "key type matches") ||
 			!assert.Equal(t, jwa.A128KW.String(), key.Algorithm, "key algorithm matches") ||
-			!assert.Equal(t, bkey, key.Key, "key content matches") {
+			!assert.Equal(t, bkey.Bytes(), ckey, "key content matches") {
 			return
 		}
 	}
