@@ -74,6 +74,26 @@ func TestParse_CompactSerializationBadSignature(t *testing.T) {
 	}
 }
 
+func TestRoundtrip_HMAC(t *testing.T) {
+	payload := []byte("Lorem ipsum")
+	sharedkey := []byte("Avracadabra")
+	for _, alg := range []jwa.SignatureAlgorithm{ jwa.HS256, jwa.HS384, jwa.HS512 } {
+		signed, err := Sign(payload, alg, sharedkey)
+		if !assert.NoError(t, err, "Sign succeeds") {
+			return
+		}
+
+		verified, err := Verify(signed, alg, sharedkey)
+		if !assert.NoError(t, err, "Verify succeeded") {
+			return
+		}
+
+		if !assert.Equal(t, payload, verified, "verified payload matches") {
+			return
+		}
+	}
+}
+
 func TestVerifyWithJWK(t *testing.T) {
 	payload := []byte("Hello, World!")
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
