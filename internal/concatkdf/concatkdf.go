@@ -6,7 +6,6 @@ import (
 	"hash"
 
 	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/jwa"
 )
 
 type KDF struct {
@@ -17,7 +16,7 @@ type KDF struct {
 	z         []byte
 }
 
-func New(hash crypto.Hash, alg jwa.ContentEncryptionAlgorithm, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
+func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 	algbuf := buffer.Buffer(alg).NData()
 	apubuf := buffer.Buffer(apu).NData()
 	apvbuf := buffer.Buffer(apv).NData()
