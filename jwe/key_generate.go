@@ -1,20 +1,36 @@
 package jwe
 
 import (
+	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/binary"
+	"errors"
 	"io"
+
+	"github.com/lestrrat/go-jwx/internal/concatkdf"
+	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 )
 
+func (k ByteKey) Bytes() []byte {
+	return []byte(k)
+}
+
+// KeySize returns the size of the key
 func (g StaticKeyGenerate) KeySize() int {
 	return len(g)
 }
 
-func (g StaticKeyGenerate) KeyGenerate() ([]byte, error) {
+// KeyGenerate returns the key
+func (g StaticKeyGenerate) KeyGenerate() (ByteSource, error) {
 	buf := make([]byte, g.KeySize())
 	copy(buf, g)
-	return buf, nil
+	return ByteKey(buf), nil
 }
 
+// NewRandomKeyGenerate creates a new KeyGenerator that returns
+// randome bytes
 func NewRandomKeyGenerate(n int) RandomKeyGenerate {
 	return RandomKeyGenerate{keysize: n}
 }
@@ -23,10 +39,60 @@ func (g RandomKeyGenerate) KeySize() int {
 	return g.keysize
 }
 
-func (g RandomKeyGenerate) KeyGenerate() ([]byte, error) {
+func (g RandomKeyGenerate) KeyGenerate() (ByteSource, error) {
 	buf := make([]byte, g.keysize)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 		return nil, err
 	}
-	return buf, nil
+	return ByteKey(buf), nil
+}
+
+func NewEcdhesKeyGenerate(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey) (*EcdhesKeyGenerate, error) {
+	var keysize int
+	switch alg {
+	case jwa.ECDH_ES:
+		return nil, errors.New("unimplemented")
+	case jwa.ECDH_ES_A128KW:
+		keysize = 16
+	case jwa.ECDH_ES_A192KW:
+		keysize = 24
+	case jwa.ECDH_ES_A256KW:
+		keysize = 32
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	return &EcdhesKeyGenerate{
+		algorithm: alg,
+		keysize:   keysize,
+		pubkey:    pubkey,
+	}, nil
+}
+
+func (g EcdhesKeyGenerate) KeySize() int {
+	return g.keysize
+}
+
+func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
+	priv, err := ecdsa.GenerateKey(g.pubkey.Curve, rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	pubinfo := make([]byte, 4)
+	binary.BigEndian.PutUint32(pubinfo, uint32(g.keysize)*8)
+
+	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
+	kdf := concatkdf.New(crypto.SHA256, []byte(g.algorithm.String()), z.Bytes(), []byte{}, []byte{}, pubinfo, []byte{})
+	kek := make([]byte, g.keysize)
+	kdf.Read(kek)
+
+	return ByteWithECPrivateKey{
+		PrivateKey: priv,
+		ByteKey:    ByteKey(kek),
+	}, nil
+}
+
+func (k ByteWithECPrivateKey) HeaderPopulate(h *Header) {
+	h.Set("epk", jwk.NewEcdsaPublicKey(&k.PrivateKey.PublicKey))
 }

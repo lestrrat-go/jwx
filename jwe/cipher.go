@@ -106,14 +106,16 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 		}
 	}()
 
+	var bs ByteSource
 	if c.NonceGenerator == nil {
-		iv, err = NewRandomKeyGenerate(aead.NonceSize()).KeyGenerate()
+		bs, err = NewRandomKeyGenerate(aead.NonceSize()).KeyGenerate()
 	} else {
-		iv, err = c.NonceGenerator.KeyGenerate()
+		bs, err = c.NonceGenerator.KeyGenerate()
 	}
 	if err != nil {
 		return
 	}
+	iv = bs.Bytes()
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()

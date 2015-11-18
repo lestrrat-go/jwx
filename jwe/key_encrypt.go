@@ -1,8 +1,10 @@
 package jwe
 
 import (
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -13,6 +15,7 @@ import (
 	"fmt"
 	"hash"
 
+	"github.com/lestrrat/go-jwx/internal/concatkdf"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 )
@@ -45,7 +48,7 @@ func (kw KeyWrapEncrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	return cek, nil
 }
 
-func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		println("newcipher failed")
@@ -55,7 +58,98 @@ func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encrypted, nil
+	return ByteKey(encrypted), nil
+}
+
+func NewEcdhesKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, key *ecdsa.PublicKey) (*EcdhesKeyWrapEncrypt, error) {
+	generator, err := NewEcdhesKeyGenerate(alg, key)
+	if err != nil {
+		return nil, err
+	}
+	return &EcdhesKeyWrapEncrypt{
+		algorithm: alg,
+		generator: generator,
+	}, nil
+}
+
+func (kw EcdhesKeyWrapEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw EcdhesKeyWrapEncrypt) Kid() string {
+	return kw.KeyID
+}
+
+func (kw EcdhesKeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
+	kg, err := kw.generator.KeyGenerate()
+	if err != nil {
+		return nil, err
+	}
+
+	bwpk, ok := kg.(ByteWithECPrivateKey)
+	if !ok {
+		return nil, errors.New("key generator generated invalid key (expected ByteWithECPrivateKey)")
+	}
+
+	block, err := aes.NewCipher(bwpk.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	jek, err := keywrap(block, cek)
+	if err != nil {
+		return nil, err
+	}
+
+	bwpk.ByteKey = ByteKey(jek)
+
+	return bwpk, nil
+}
+
+func NewEcdhesKeyWrapDecrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey, apu, apv []byte, privkey *ecdsa.PrivateKey) *EcdhesKeyWrapDecrypt {
+	return &EcdhesKeyWrapDecrypt{
+		algorithm: alg,
+		apu:       apu,
+		apv:       apv,
+		privkey:   privkey,
+		pubkey:    pubkey,
+	}
+}
+
+func (kw EcdhesKeyWrapDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw EcdhesKeyWrapDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
+	var keysize uint32
+	switch kw.algorithm {
+	case jwa.ECDH_ES_A128KW:
+		keysize = 16
+	case jwa.ECDH_ES_A192KW:
+		keysize = 24
+	case jwa.ECDH_ES_A256KW:
+		keysize = 32
+	default:
+		return nil, ErrUnsupportedAlgorithm
+	}
+
+	privkey := kw.privkey
+	pubkey := kw.pubkey
+
+	pubinfo := make([]byte, 4)
+	binary.BigEndian.PutUint32(pubinfo, keysize*8)
+
+	z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
+	kdf := concatkdf.New(crypto.SHA256, []byte(kw.algorithm.String()), z.Bytes(), kw.apu, kw.apv, pubinfo, []byte{})
+	kek := make([]byte, keysize)
+	kdf.Read(kek)
+
+	block, err := aes.NewCipher(kek)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyunwrap(block, enckey)
 }
 
 func NewRSAOAEPKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAOAEPKeyEncrypt, error) {
@@ -99,14 +193,18 @@ func (e RSAOAEPKeyEncrypt) Kid() string {
 	return e.KeyID
 }
 
-func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	if e.alg != jwa.RSA1_5 {
 		return nil, ErrUnsupportedAlgorithm
 	}
-	return rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
+	encrypted, err := rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
+	if err != nil {
+		return nil, err
+	}
+	return ByteKey(encrypted), nil
 }
 
-func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
+func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	var hash hash.Hash
 	switch e.alg {
 	case jwa.RSA_OAEP:
@@ -116,7 +214,11 @@ func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) ([]byte, error) {
 	default:
 		return nil, errors.New("failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256 required")
 	}
-	return rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
+	encrypted, err := rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
+	if err != nil {
+		return nil, err
+	}
+	return ByteKey(encrypted), nil
 }
 
 func NewRSAPKCS15KeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey, keysize int) *RSAPKCS15KeyDecrypt {
@@ -160,10 +262,11 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 
 	var err error
 
-	cek, err := d.generator.KeyGenerate()
+	bk, err := d.generator.KeyGenerate()
 	if err != nil {
 		return nil, errors.New("failed to generate key")
 	}
+	cek := bk.Bytes()
 
 	// When decrypting an RSA-PKCS1v1.5 payload, we must take precautions to
 	// prevent chosen-ciphertext attacks as described in RFC 3218, "Preventing

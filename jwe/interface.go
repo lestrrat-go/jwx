@@ -2,6 +2,7 @@ package jwe
 
 import (
 	"crypto/cipher"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -34,11 +35,14 @@ func (e errUnsupportedAlgorithm) Error() string {
 }
 
 type EssentialHeader struct {
+	AgreementPartyUInfo    buffer.Buffer                  `json:"apu,omitempty"`
+	AgreementPartyVInfo    buffer.Buffer                  `json:"apv,omitempty"`
 	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
 	ContentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
 	ContentType            string                         `json:"cty,omitempty"`
 	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
 	Critical               []string                       `json:"crit,omitempty"`
+	EphemeralPublicKey     *jwk.EcdsaPublicKey            `json:"epk,omitempty"`
 	Jwk                    jwk.Key                        `json:"jwk,omitempty"` // public key
 	JwkSetURL              *url.URL                       `json:"jku,omitempty"`
 	KeyID                  string                         `json:"kid,omitempty"`
@@ -63,10 +67,14 @@ type EncodedHeader struct {
 	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
+type ByteSource interface {
+	Bytes() []byte
+}
+
 type KeyEncrypter interface {
 	Algorithm() jwa.KeyEncryptionAlgorithm
 	Kid() string
-	KeyEncrypt([]byte) ([]byte, error)
+	KeyEncrypt([]byte) (ByteSource, error)
 }
 
 type KeyDecrypter interface {
@@ -113,6 +121,20 @@ type KeyWrapEncrypt struct {
 	sharedkey []byte
 }
 
+type EcdhesKeyWrapEncrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	generator KeyGenerator
+	KeyID     string
+}
+
+type EcdhesKeyWrapDecrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	apu       []byte
+	apv       []byte
+	privkey   *ecdsa.PrivateKey
+	pubkey    *ecdsa.PublicKey
+}
+
 type KeyDecoder interface {
 	KeyDecode([]byte) ([]byte, error)
 }
@@ -122,9 +144,19 @@ type RsaOaepKeyDecode struct {
 	PrivateKey *rsa.PrivateKey
 }
 
+type ByteKey []byte
+type ByteWithECPrivateKey struct {
+	ByteKey
+	PrivateKey *ecdsa.PrivateKey
+}
+
+type HeaderPopulater interface {
+	HeaderPopulate(*Header)
+}
+
 type KeyGenerator interface {
 	KeySize() int
-	KeyGenerate() ([]byte, error)
+	KeyGenerate() (ByteSource, error)
 }
 
 type ContentCipher interface {
@@ -146,6 +178,12 @@ type StaticKeyGenerate []byte
 
 type RandomKeyGenerate struct {
 	keysize int
+}
+
+type EcdhesKeyGenerate struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	keysize   int
+	pubkey    *ecdsa.PublicKey
 }
 
 type DynamicKeyGenerate struct{}
@@ -198,4 +236,3 @@ type RSAPKCSKeyEncrypt struct {
 	pubkey *rsa.PublicKey
 	KeyID  string
 }
-

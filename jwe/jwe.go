@@ -3,6 +3,7 @@ package jwe
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 )
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
@@ -52,7 +54,17 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, err
 		}
 		keysize = contentcrypt.KeySize()
-	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		pubkey, ok := key.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.New("invalid key: *ecdsa.PublicKey required")
+		}
+		keyenc, err = NewEcdhesKeyWrapEncrypt(keyalg, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		keysize = contentcrypt.KeySize()
+	case jwa.ECDH_ES:
 		fallthrough
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		fallthrough
@@ -137,7 +149,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
 		return nil, err
 	}
-	debug.Printf("hdrbuf = %x", hdrbuf)
+	debug.Printf("hdrbuf = %s", hdrbuf)
 
 	hdr := NewHeader()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
@@ -189,7 +201,7 @@ func parseCompact(buf []byte) (*Message, error) {
 // parameters. It is used by the Message.Decrypt method to create
 // key decrypter(s) from the given message. `keysize` is only used by
 // some decrypters. Pass the value from ContentCipher.KeySize().
-func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize int) (KeyDecrypter, error) {
+func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{}, keysize int) (KeyDecrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
 		privkey, ok := key.(*rsa.PrivateKey)
@@ -209,6 +221,48 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, key interface{}, keysize 
 			return nil, errors.New("[]byte is required as the key to build this key decrypter")
 		}
 		return NewAesKeyWrap(alg, sharedkey)
+	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		epkif, err := h.Get("epk")
+		if err != nil {
+			return nil, err
+		}
+		if epkif == nil {
+			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+		}
+
+		epk, ok := epkif.(*jwk.EcdsaPublicKey)
+		if !ok {
+			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+		}
+
+		pubkey, err := epk.PublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		privkey, ok := key.(*ecdsa.PrivateKey)
+		if !ok {
+			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+		}
+		apuif, err := h.Get("apu")
+		if err != nil {
+			return nil, errors.New("'apu' key is required for this key decrypter")
+		}
+		apu, ok := apuif.(buffer.Buffer)
+		if !ok {
+			return nil, errors.New("'apu' key is required for this key decrypter")
+		}
+
+		apvif, err := h.Get("apv")
+		if err != nil {
+			return nil, errors.New("'apv' key is required for this key decrypter")
+		}
+		apv, ok := apvif.(buffer.Buffer)
+		if !ok {
+			return nil, errors.New("'apv' key is required for this key decrypter")
+		}
+
+		return NewEcdhesKeyWrapDecrypt(alg, pubkey, apu.Bytes(), apv.Bytes(), privkey), nil
 	}
 
 	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")

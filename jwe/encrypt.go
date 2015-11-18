@@ -16,11 +16,13 @@ func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
 func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
-	cek, err := e.KeyGenerator.KeyGenerate()
+	bk, err := e.KeyGenerator.KeyGenerate()
 	if err != nil {
 		debug.Printf("Failed to generate key: %s", err)
 		return nil, err
 	}
+	cek := bk.Bytes()
+
 	debug.Printf("Encrypt: generated cek len = %d", len(cek))
 
 	protected := NewEncodedHeader()
@@ -41,15 +43,21 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 			debug.Printf("Failed to encrypt key: %s", err)
 			return nil, err
 		}
-		r.EncryptedKey = enckey
-		debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey, len(enckey))
+		r.EncryptedKey = enckey.Bytes()
+		if hp, ok := enckey.(HeaderPopulater); ok {
+			hp.HeaderPopulate(r.Header)
+		}
+		debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
 		recipients[i] = *r
 	}
 
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		protected.Set("alg", recipients[0].Header.Algorithm)
+		protected.Header, err = protected.Header.Merge(recipients[0].Header)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	aad, err := protected.Base64Encode()

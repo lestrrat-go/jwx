@@ -1,7 +1,11 @@
 package jwe
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/internal/rsautil"
@@ -110,7 +114,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	if !assert.NoError(t, err, "Failed to encrypt key") {
 		return
 	}
-	if !assert.Equal(t, encsharedkey, enckey, "encrypted keys match") {
+	if !assert.Equal(t, encsharedkey, enckey.Bytes(), "encrypted keys match") {
 		return
 	}
 
@@ -144,7 +148,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 
 	r := NewRecipient()
 	r.Header.Set("alg", jwa.A128KW)
-	r.EncryptedKey = enckey
+	r.EncryptedKey = enckey.Bytes()
 
 	protected := NewEncodedHeader()
 	protected.Set("enc", jwa.A128CBC_HS256)
@@ -277,19 +281,19 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-	encrypted, err := Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
-	if !assert.NoError(t, err, "Encrypt is successful") {
-		return
-	}
+		encrypted, err := Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+		if !assert.NoError(t, err, "Encrypt is successful") {
+			return
+		}
 
-	decrypted, err := Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
-	if !assert.NoError(t, err, "Decrypt successful") {
-		return
-	}
+		decrypted, err := Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
+		if !assert.NoError(t, err, "Decrypt successful") {
+			return
+		}
 
-	if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
-		return
-	}
+		if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
+			return
+		}
 	}
 }
 
@@ -324,4 +328,28 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestEncode_ECDHES(t *testing.T) {
+	plaintext := []byte("Lorem ipsum")
+	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if !assert.NoError(t, err, "ecdsa key generated") {
+		return
+	}
+	encrypted, err := Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+	if !assert.NoError(t, err, "Encrypt succeeds") {
+		return
+	}
+
+	t.Logf("encrypted = %s", encrypted)
+
+	msg, _ := Parse(encrypted)
+	jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
+	t.Logf("%s", jsonbuf)
+
+	decrypted, err := Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
+	if !assert.NoError(t, err, "Decrypt succeeds") {
+		return
+	}
+	t.Logf("%s", decrypted)
 }
