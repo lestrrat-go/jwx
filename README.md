@@ -72,6 +72,44 @@ func main() {
 
 See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwk#pkg-examples
 
+Create a JWK file from RSA public key:
+
+```go
+import(
+  "crypto/rand"
+  "crypto/rsa"
+  "encoding/json"
+  "log"
+  "os"
+  
+  "github.com/lestrrat/go-jwx/jwk"
+)
+
+func main() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    log.Printf("failed to generate private key: %s", err)
+    return
+  }
+
+  key, err := jwk.NewRsaPublicKey(&privkey.PublicKey)
+  if err != nil {
+    log.Printf("failed to create JWK: %s", err)
+    return
+  }
+
+  jsonbuf, err := json.MarshalIndent(key, "", "  ")
+  if err != nil {
+    log.Printf("failed to generate JSON: %s", err)
+    return
+  }
+
+  os.Stdout.Write(jsonbuf)
+}
+```
+
+Parse and use a JWK key:
+
 ```go
 import(
   "log"
