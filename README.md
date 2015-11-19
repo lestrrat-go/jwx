@@ -78,7 +78,7 @@ import(
 )
 
 func main() {
-  set, err := jwk.Fetch("https://foobar.domain/jwk.json")
+  set, err := jwk.FetchHTTP("https://foobar.domain/jwk.json")
   if err != nil {
     log.Printf("failed to parse JWK: %s", err)
     return
@@ -131,7 +131,7 @@ func main() {
 
   // When you received a JWS message, you can verify the signature
   // and grab the payload sent in the message in one go:
-  verified, err := jws.Verify(buf, jws.RS256, &privkey.PublicKey)
+  verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
   if err != nil {
     log.Printf("failed to verify message: %s", err)
     return
