@@ -27,11 +27,11 @@ the libraries that already exist seemed sufficient, but soon I realized that
 1. To completely implement the protocols, I needed the entire JWT, JWK, JWS, JWE (and JWA, by necessity).
 2. Most of the libraries that existed only deal with a subset of the various JWx specifications that were necessary to implement their specific needs
 
-For example, a certain library looke like it had most of JWS, JWE, JWK covered, but then it lacked the ability to include private claims in its JWT responses. Another other library had support of all the private claims, but completely lacked in its flexibility to generate various different response formats.
+For example, a certain library looke like it had most of JWS, JWE, JWK covered, but then it lacked the ability to include private claims in its JWT responses. Another library had support of all the private claims, but completely lacked in its flexibility to generate various different response formats.
 
 Because I was writing the server side (and the client side for testing), I needed the entire toolsetto properly implement my server, and also they needed to be flexible.
 
-So here's go-jwx. As of this writing (Nov 2015), it's still lacking a few of the algorithms that are supposed to be supported by these formats, but in general you should be able to do pretty much everything allowed in the speficiations.
+So here's go-jwx. As of this writing (Nov 2015), it's still lacking a few of the algorithms that are described in JWA (which I believe to be less frequently used), but in general you should be able to do pretty much everything allowed in the speficiations.
 
 ## Synopsis
 
