@@ -147,18 +147,18 @@ Supported signature algorithms:
 
 | Algorithm                               | Supported? | Constant in go-jwx |
 |:----------------------------------------|:-----------|:-------------------|
-| HMAC using SHA-256                      | YES        | jwa..HS256         |
-| HMAC using SHA-384                      | YES        | jwa..HS384         |
-| HMAC using SHA-512                      | YES        | jwa..HS512         |
-| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa..RS256         |
-| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa..RS384         |
-| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa..RS512         |
-| ECDSA using P-256 and SHA-256           | YES        | jwa..ES256         |
-| ECDSA using P-384 and SHA-384           | YES        | jwa..ES384         |
-| ECDSA using P-521 and SHA-512           | YES        | jwa..ES512         |
-| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa..PS256         |
-| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa..PS384         |
-| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa..PS512         |
+| HMAC using SHA-256                      | YES        | jwa.HS256          |
+| HMAC using SHA-384                      | YES        | jwa.HS384          |
+| HMAC using SHA-512                      | YES        | jwa.HS512          |
+| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa.RS256          |
+| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa.RS384          |
+| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa.RS512          |
+| ECDSA using P-256 and SHA-256           | YES        | jwa.ES256          |
+| ECDSA using P-384 and SHA-384           | YES        | jwa.ES384          |
+| ECDSA using P-521 and SHA-512           | YES        | jwa.ES512          |
+| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256          |
+| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384          |
+| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512          |
 
 ### JWE
 
