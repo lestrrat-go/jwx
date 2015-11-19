@@ -29,9 +29,11 @@ the libraries that already exist seemed sufficient, but soon I realized that
 
 For example, a certain library looke like it had most of JWS, JWE, JWK covered, but then it lacked the ability to include private claims in its JWT responses. Another library had support of all the private claims, but completely lacked in its flexibility to generate various different response formats.
 
-Because I was writing the server side (and the client side for testing), I needed the entire toolsetto properly implement my server, and also they needed to be flexible.
+Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
-So here's go-jwx. As of this writing (Nov 2015), it's still lacking a few of the algorithms that are described in JWA (which I believe to be less frequently used), but in general you should be able to do pretty much everything allowed in the speficiations.
+So here's go-jwx. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
+
+As of this writing (Nov 2015), it's still lacking a few of the algorithms for JWE that are described in JWA (which I believe to be less frequently used), but in general you should be able to do pretty much everything allowed in the speficiations.
 
 ## Synopsis
 
@@ -141,6 +143,23 @@ func main() {
 }
 ```
 
+Supported signature algorithms:
+
+| Algorithm                               | Supported? | Constant in go-jwx |
+|:----------------------------------------|:-----------|:-------------------|
+| HMAC using SHA-256                      | YES        | jwa..HS256         |
+| HMAC using SHA-384                      | YES        | jwa..HS384         |
+| HMAC using SHA-512                      | YES        | jwa..HS512         |
+| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa..RS256         |
+| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa..RS384         |
+| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa..RS512         |
+| ECDSA using P-256 and SHA-256           | YES        | jwa..ES256         |
+| ECDSA using P-384 and SHA-384           | YES        | jwa..ES384         |
+| ECDSA using P-521 and SHA-512           | YES        | jwa..ES512         |
+| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa..PS256         |
+| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa..PS384         |
+| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa..PS512         |
+
 ### JWE
 
 See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwe#pkg-examples
@@ -182,6 +201,41 @@ func main() {
   }
 }
 ```
+
+Supported key encryption algorithm:
+
+| Algorithm                                | Supported? | Constant in go-jwx     |
+|:-----------------------------------------|:-----------|:-----------------------|
+| RSA-PKCS1v1.5                            | YES        | jwa.RSA1_5             |
+| RSA-OAEP-SHA1                            | YES        | jwa.RSA_OAEP           |
+| RSA-OAEP-SHA256                          | YES        | jwa.RSA_OAEP_256       |
+| AES key wrap (128)                       | YES        | jwa.A128KW             |
+| AES key wrap (192)                       | YES        | jwa.A192KW             |
+| AES key wrap (256)                       | YES        | jwa.A256KW             |
+| Direct encryption                        | NO         | jwa.DIRECT             |
+| ECDH-ES                                  | YES        | jwa.ECDH_ES            |
+| ECDH-ES + AES key wrap (128)             | YES        | jwa.ECDH_ES_A128KW     |
+| ECDH-ES + AES key wrap (192)             | YES        | jwa.ECDH_ES_A192KW     |
+| ECDH-ES + AES key wrap (256)             | YES        | jwa.ECDH_ES_A256KW     |
+| AES-GCM key wrap (128)                   | NO         | jwa.A128GCMKW          |
+| AES-GCM key wrap (192)                   | NO         | jwa.A192GCMKW          |
+| AES-GCM key wrap (256)                   | NO         | jwa.A256GCMKW          |
+| PBES2 + HMAC-SHA256 + AES key wrap (128) | NO         | jwa.PBES2_HS256_A128KW |
+| PBES2 + HMAC-SHA384 + AES key wrap (192) | NO         | jwa.PBES2_HS384_A192KW |
+| PBES2 + HMAC-SHA512 + AES key wrap (256) | NO         | jwa.PBES2_HS512_A256KW |
+
+Supported content encryption algorithm:
+
+| Algorithm                   | Supported? | Constant in go-jwx     |
+|:----------------------------|:-----------|:-----------------------|
+| AES-CBC + HMAC-SHA256 (128) | YES        | jwa.A128CBC_HS256      |
+| AES-CBC + HMAC-SHA384 (192) | YES        | jwa.A192CBC_HS384      |
+| AES-CBC + HMAC-SHA512 (256) | YES        | jwa.A256CBC_HS512      |
+| AES-GCM (128)               | YES        | jwa.A128GCM            |
+| AES-GCM (192)               | YES        | jwa.A192GCM            |
+| AES-GCM (256)               | YES        | jwa.A256GCM            |
+
+PRs welcome to support missing algorithms!
 
 ## Other related libraries:
 
