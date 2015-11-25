@@ -8,6 +8,7 @@ import (
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jwk"
 )
 
 func NewHeader() *Header {
@@ -73,6 +74,12 @@ func (h *Header) Set(key string, value interface{}) error {
 			return ErrInvalidHeaderValue
 		}
 		h.Critical = v
+	case "jwk":
+		v, ok := value.(jwk.Key)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.Jwk = v
 	case "jku":
 		v, ok := value.(string)
 		if !ok {
@@ -127,6 +134,10 @@ func (h1 *EssentialHeader) Merge(h2 *EssentialHeader) {
 		h1.ContentType = h2.ContentType
 	}
 
+	if h2.Jwk != nil {
+		h1.Jwk = h2.Jwk
+	}
+
 	if h2.JwkSetURL != nil {
 		h1.JwkSetURL = h2.JwkSetURL
 	}
@@ -176,6 +187,7 @@ func (h1 *Header) Copy(h2 *Header) error {
 func (h1 *EssentialHeader) Copy(h2 *EssentialHeader) {
 	h1.Algorithm = h2.Algorithm
 	h1.ContentType = h2.ContentType
+	h1.Jwk = h2.Jwk
 	h1.JwkSetURL = h2.JwkSetURL
 	h1.KeyID = h2.KeyID
 	h1.Type = h2.Type
@@ -217,6 +229,12 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	}
 	if v, err := r.GetStringSlice("x5c"); err != nil {
 		h.X509CertChain = v
+	}
+	if v, err := r.GetByteSlice("jwk"); err == nil {
+		if jwks, err := jwk.Parse(v); err == nil {
+			// we have at least 1 JWK
+			h.Jwk = jwks.Keys[0]
+		}
 	}
 	if v, err := r.GetString("jku"); err == nil {
 		u, err := url.Parse(v)
