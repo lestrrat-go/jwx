@@ -109,8 +109,8 @@ type MultiSign struct {
 }
 
 type HmacSign struct {
-	Public     *Header
-	Protected  *Header
+	Public    *Header
+	Protected *Header
 	Key       []byte
 	hash      func() hash.Hash
 }

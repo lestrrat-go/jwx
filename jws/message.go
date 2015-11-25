@@ -157,32 +157,32 @@ func (h1 *EssentialHeader) Merge(h2 *EssentialHeader) {
 }
 
 func (h1 *Header) Copy(h2 *Header) error {
-  if h1 == nil {
-    return errors.New("copy destination is nil")
-  }
-  if h2 == nil {
-    return errors.New("copy target is nil")
-  }
+	if h1 == nil {
+		return errors.New("copy destination is nil")
+	}
+	if h2 == nil {
+		return errors.New("copy target is nil")
+	}
 
-  h1.EssentialHeader.Copy(h2.EssentialHeader)
+	h1.EssentialHeader.Copy(h2.EssentialHeader)
 
-  for k, v := range h2.PrivateParams {
-    h1.PrivateParams[k] = v
-  }
+	for k, v := range h2.PrivateParams {
+		h1.PrivateParams[k] = v
+	}
 
-  return nil
+	return nil
 }
 
 func (h1 *EssentialHeader) Copy(h2 *EssentialHeader) {
-  h1.Algorithm = h2.Algorithm
-  h1.ContentType = h2.ContentType
+	h1.Algorithm = h2.Algorithm
+	h1.ContentType = h2.ContentType
 	h1.JwkSetURL = h2.JwkSetURL
-  h1.KeyID = h2.KeyID
-  h1.Type = h2.Type
-  h1.X509Url = h2.X509Url
-  h1.X509CertChain = h2.X509CertChain
-  h1.X509CertThumbprint = h2.X509CertThumbprint
-  h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+	h1.KeyID = h2.KeyID
+	h1.Type = h2.Type
+	h1.X509Url = h2.X509Url
+	h1.X509CertChain = h2.X509CertChain
+	h1.X509CertThumbprint = h2.X509CertThumbprint
+	h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 }
 
 func (h Header) MarshalJSON() ([]byte, error) {
