@@ -232,7 +232,13 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	}
 	if v, err := r.GetByteSlice("jwk"); err == nil {
 		if jwks, err := jwk.Parse(v); err == nil {
-			// we have at least 1 JWK
+			if len(jwks.Keys) != 1 {
+				// The spec says "a JWK", so I believe this should represent
+				// one JWK. check for that, and if not, return an error because
+				// the JWS is probably invalid (XXX: send in a PR if there are
+				// cases where this must work in the wild)
+				return errors.New("expected a single JWK in this field")
+			}
 			h.Jwk = jwks.Keys[0]
 		}
 	}
