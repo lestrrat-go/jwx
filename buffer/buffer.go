@@ -43,7 +43,7 @@ func FromBase64(v []byte) (Buffer, error) {
 // (I made that name up)
 func FromNData(v []byte) (Buffer, error) {
 	size := binary.BigEndian.Uint32(v)
-	buf  := make([]byte, int(size))
+	buf := make([]byte, int(size))
 	copy(buf, v[4:4+size])
 	return Buffer(buf), nil
 }
