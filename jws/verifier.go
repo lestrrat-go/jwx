@@ -12,7 +12,7 @@ import (
 )
 
 type payloadVerifier interface {
-	PayloadVerify([]byte, []byte) error
+	payloadVerify([]byte, []byte) error
 }
 
 func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) error {
@@ -41,7 +41,7 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 		siv := append(append(phbuf, '.'), payload...)
 
 		debug.Printf("siv = '%s'", siv)
-		if err := v.PayloadVerify(siv, sig.Signature.Bytes()); err != nil {
+		if err := v.payloadVerify(siv, sig.Signature.Bytes()); err != nil {
 			debug.Printf("Payload verify failed: %s", err)
 			continue
 		}
@@ -71,7 +71,7 @@ func NewRsaVerify(alg jwa.SignatureAlgorithm, key *rsa.PublicKey) (*RsaVerify, e
 	return &RsaVerify{alg: alg, hash: h, pubkey: key}, nil
 }
 
-func (v RsaVerify) PayloadVerify(payload, signature []byte) error {
+func (v RsaVerify) payloadVerify(payload, signature []byte) error {
 	pubkey := v.pubkey
 	hfunc := v.hash
 	h := hfunc.New()
@@ -122,7 +122,7 @@ func (v EcdsaVerify) Verify(m *Message) error {
 	return doMessageVerify(v.alg, v, m)
 }
 
-func (v EcdsaVerify) PayloadVerify(payload, signature []byte) error {
+func (v EcdsaVerify) payloadVerify(payload, signature []byte) error {
 	pubkey := v.pubkey
 	hfunc := v.hash
 	keysiz := hfunc.Size()
@@ -163,7 +163,7 @@ func (v HmacVerify) Verify(m *Message) error {
 	return doMessageVerify(v.signer.SignatureAlgorithm(), v, m)
 }
 
-func (v HmacVerify) PayloadVerify(payload, mac []byte) error {
+func (v HmacVerify) payloadVerify(payload, mac []byte) error {
 	expected, err := v.signer.PayloadSign(payload)
 	if err != nil {
 		return err
