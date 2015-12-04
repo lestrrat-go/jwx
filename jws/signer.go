@@ -160,7 +160,7 @@ func rsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 	return hash, nil
 }
 
-// Sign generates a sign based on the Algorithm instance variable.
+// PayloadSign generates a sign based on the Algorithm instance variable.
 // This fulfills the `Signer` interface
 func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	hash, err := rsaHashForAlg(s.SignatureAlgorithm())
@@ -241,7 +241,7 @@ func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 	return hash, nil
 }
 
-// Sign generates a sign based on the Algorithm instance variable.
+// PayloadSign generates a sign based on the Algorithm instance variable.
 // This fulfills the `PayloadSigner` interface
 func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	hash, err := ecdsaHashForAlg(sign.SignatureAlgorithm())

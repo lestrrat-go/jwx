@@ -66,7 +66,7 @@ func TestRsaSign_SignVerify(t *testing.T) {
 		return
 	}
 
-	if !assert.NoError(t, v.PayloadVerify(payload, signed), "Payload verified") {
+	if !assert.NoError(t, v.payloadVerify(payload, signed), "Payload verified") {
 		return
 	}
 }
