@@ -12,7 +12,7 @@ PR/issues welcome.
 | Package name | Notes |
 |--------------|-------|
 | jwt          | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
-| jwk          | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638)) |
+| jwk          | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
 | jwa          | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
 | jws          | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
 | jwe          | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
