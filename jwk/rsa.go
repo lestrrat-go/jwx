@@ -1,8 +1,10 @@
 package jwk
 
 import (
+	"crypto"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -54,6 +56,25 @@ func (k *RsaPublicKey) PublicKey() (*rsa.PublicKey, error) {
 		N: (&big.Int{}).SetBytes(k.N.Bytes()),
 		E: int((&big.Int{}).SetBytes(k.E.Bytes()).Int64()),
 	}, nil
+}
+
+// Thumbprint returns the JWK thumbprint using the indicated
+// hashing algorithm, according to RFC 7638
+func (k RsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	const tmpl = `{"e":"%s","kty":"RSA","n":"%s"}`
+	e64, err := k.E.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+	n64, err := k.N.Base64Encode()
+	if err != nil {
+		return nil, err
+	}
+
+	v := fmt.Sprintf(tmpl, e64, n64)
+	h := hash.New()
+	h.Write([]byte(v))
+	return h.Sum(nil), nil
 }
 
 func (k *RsaPrivateKey) Materialize() (interface{}, error) {

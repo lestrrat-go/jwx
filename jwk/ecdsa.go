@@ -1,8 +1,11 @@
 package jwk
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"encoding/base64"
+	"fmt"
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/jwa"
@@ -47,6 +50,34 @@ func (k *EcdsaPublicKey) PublicKey() (*ecdsa.PublicKey, error) {
 		Y:     (&big.Int{}).SetBytes(k.Y.Bytes()),
 	}
 	return pubkey, nil
+}
+
+// Thumbprint returns the JWK thumbprint using the indicated
+// hashing algorithm, according to RFC 7638
+func (k EcdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	const tmpl = `{"crv":"%s","kty":"EC","x":"%s","y":"%s"}`
+
+	csize := k.Curve.Size()
+
+	// We need to truncate the buffer at curve size
+	xbuf := k.X.Bytes()
+	if len(xbuf) > csize {
+		xbuf = xbuf[:csize]
+	}
+	ybuf := k.Y.Bytes()
+	if len(ybuf) > csize {
+		ybuf = ybuf[:csize]
+	}
+	enc := base64.RawURLEncoding
+	x64 := make([]byte, enc.EncodedLen(len(xbuf)))
+	enc.Encode(x64, xbuf)
+	y64 := make([]byte, enc.EncodedLen(len(ybuf)))
+	enc.Encode(y64, ybuf)
+
+	v := fmt.Sprintf(tmpl, k.Curve.String(), x64, y64)
+	h := hash.New()
+	h.Write([]byte(v))
+	return h.Sum(nil), nil
 }
 
 func (k *EcdsaPrivateKey) Materialize() (interface{}, error) {

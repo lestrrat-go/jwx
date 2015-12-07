@@ -1,9 +1,11 @@
 package jwk
 
 import (
+	"crypto"
 	"crypto/rsa"
 	"testing"
 
+	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -87,6 +89,35 @@ func TestParse_RsaPrivateKey(t *testing.T) {
 	}
 
 	if !assert.NotEmpty(t, privkey.Precomputed.Qinv, "Qinv exists") {
+		return
+	}
+}
+
+func TestThumbprint(t *testing.T) {
+	expected := []byte{55, 54, 203, 177, 120, 124, 184, 48, 156, 119, 238,
+		140, 55, 5, 197, 225, 111, 251, 158, 133, 151, 21, 144, 31, 30, 76, 89,
+		177, 17, 130, 245, 123,
+	}
+	n, err := buffer.FromBase64([]byte("0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"))
+	if !assert.NoError(t, err, "decode N succeeds") {
+		return
+	}
+	e, err := buffer.FromBase64([]byte("AQAB"))
+	if !assert.NoError(t, err, "decode E succeeds") {
+		return
+	}
+	key := RsaPublicKey{
+		EssentialHeader: &EssentialHeader{KeyType: "RSA"},
+		N:               n,
+		E:               e,
+	}
+
+	tp, err := key.Thumbprint(crypto.SHA256)
+	if !assert.NoError(t, err, "Thumbprint should succeed") {
+		return
+	}
+
+	if !assert.Equal(t, expected, tp, "Thumbprint should match") {
 		return
 	}
 }

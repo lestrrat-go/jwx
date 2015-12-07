@@ -1,6 +1,7 @@
 package jwk
 
 import (
+	"crypto"
 	"errors"
 	"net/url"
 
@@ -62,6 +63,10 @@ type Key interface {
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
 	Materialize() (interface{}, error)
+
+	// Thumbprint returns the JWK thumbprint using the indicated
+	// hashing algorithm, according to RFC 7638
+	Thumbprint(crypto.Hash) ([]byte, error)
 }
 
 // EssentialHeader defines the common data that any Key may
