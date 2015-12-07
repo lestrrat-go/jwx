@@ -20,6 +20,8 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// NewKeyWrapEncrypt creates a key-wrap encryptor using AES-CGM.
+// Althought the name suggests otherwise, this does decryption as well.
 func NewKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
 	return KeyWrapEncrypt{
 		alg:       alg,
@@ -27,14 +29,17 @@ func NewKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWra
 	}, nil
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (kw KeyWrapEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.alg
 }
 
+// Kid returns the key ID associated with this encrypter
 func (kw KeyWrapEncrypt) Kid() string {
 	return kw.KeyID
 }
 
+// KeyDecrypt decrypts the encrypted key using AES-CGM key unwrap
 func (kw KeyWrapEncrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
@@ -48,10 +53,10 @@ func (kw KeyWrapEncrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	return cek, nil
 }
 
+// KeyEncrypt encrypts the given content encryption key
 func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
-		println("newcipher failed")
 		return nil, err
 	}
 	encrypted, err := keywrap(block, cek)
@@ -61,6 +66,7 @@ func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	return ByteKey(encrypted), nil
 }
 
+// NewEcdhesKeyWrapEncrypt creates a new key encrypter based on ECDH-ES
 func NewEcdhesKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, key *ecdsa.PublicKey) (*EcdhesKeyWrapEncrypt, error) {
 	generator, err := NewEcdhesKeyGenerate(alg, key)
 	if err != nil {
@@ -72,14 +78,17 @@ func NewEcdhesKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, key *ecdsa.PublicKe
 	}, nil
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (kw EcdhesKeyWrapEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
 }
 
+// Kid returns the key ID associated with this encrypter
 func (kw EcdhesKeyWrapEncrypt) Kid() string {
 	return kw.KeyID
 }
 
+// KeyEncrypt encrypts the content encryption key using ECDH-ES
 func (kw EcdhesKeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	kg, err := kw.generator.KeyGenerate()
 	if err != nil {
@@ -106,6 +115,7 @@ func (kw EcdhesKeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	return bwpk, nil
 }
 
+// NewEcdhesKeyWrapDecrypt creates a new key decrypter using ECDH-ES
 func NewEcdhesKeyWrapDecrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey, apu, apv []byte, privkey *ecdsa.PrivateKey) *EcdhesKeyWrapDecrypt {
 	return &EcdhesKeyWrapDecrypt{
 		algorithm: alg,
@@ -116,10 +126,12 @@ func NewEcdhesKeyWrapDecrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.Publi
 	}
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (kw EcdhesKeyWrapDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
 }
 
+// KeyDecrypt decrypts the encrypted key using ECDH-ES
 func (kw EcdhesKeyWrapDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	var keysize uint32
 	switch kw.algorithm {
@@ -152,6 +164,7 @@ func (kw EcdhesKeyWrapDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	return keyunwrap(block, enckey)
 }
 
+// NewRSAOAEPKeyEncrypt creates a new key encrypter using RSA OAEP
 func NewRSAOAEPKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAOAEPKeyEncrypt, error) {
 	switch alg {
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
@@ -164,6 +177,7 @@ func NewRSAOAEPKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey)
 	}, nil
 }
 
+// NewRSAPKCSKeyEncrypt creates a new key encrypter using PKCS1v15
 func NewRSAPKCSKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAPKCSKeyEncrypt, error) {
 	switch alg {
 	case jwa.RSA1_5:
@@ -177,22 +191,27 @@ func NewRSAPKCSKeyEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey)
 	}, nil
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (e RSAPKCSKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return e.alg
 }
 
+// Kid returns the key ID associated with this encrypter
 func (e RSAPKCSKeyEncrypt) Kid() string {
 	return e.KeyID
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (e RSAOAEPKeyEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return e.alg
 }
 
+// Kid returns the key ID associated with this encrypter
 func (e RSAOAEPKeyEncrypt) Kid() string {
 	return e.KeyID
 }
 
+// KeyEncrypt encrypts the content encryption key using RSA PKCS1v15
 func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	if e.alg != jwa.RSA1_5 {
 		return nil, ErrUnsupportedAlgorithm
@@ -204,6 +223,7 @@ func (e RSAPKCSKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	return ByteKey(encrypted), nil
 }
 
+// KeyEncrypt encrypts the content encryption key using RSA OAEP
 func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	var hash hash.Hash
 	switch e.alg {
@@ -221,6 +241,7 @@ func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	return ByteKey(encrypted), nil
 }
 
+// NewRSAPKCS15KeyDecrypt creates a new decrypter using RSA PKCS1v15
 func NewRSAPKCS15KeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey, keysize int) *RSAPKCS15KeyDecrypt {
 	generator := NewRandomKeyGenerate(keysize * 2)
 	return &RSAPKCS15KeyDecrypt{
@@ -230,10 +251,12 @@ func NewRSAPKCS15KeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.Private
 	}
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (d RSAPKCS15KeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return d.alg
 }
 
+// KeyDecrypt decryptes the encrypted key using RSA PKCS1v1.5
 func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	debug.Printf("START PKCS.KeyDecrypt")
 	// Hey, these notes and workarounds were stolen from go-jose
@@ -280,11 +303,7 @@ func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	return cek, nil
 }
 
-type RSAOAEPKeyDecrypt struct {
-	alg     jwa.KeyEncryptionAlgorithm
-	privkey *rsa.PrivateKey
-}
-
+// NewRSAOAEPKeyDecrypt creates a new key decrypter using RSA OAEP
 func NewRSAOAEPKeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey) (*RSAOAEPKeyDecrypt, error) {
 	switch alg {
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
@@ -298,10 +317,12 @@ func NewRSAOAEPKeyDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKe
 	}, nil
 }
 
+// Algorithm returns the key encryption algorithm being used
 func (d RSAOAEPKeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return d.alg
 }
 
+// KeyDecrypt decryptes the encrypted key using RSA OAEP
 func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	debug.Printf("START OAEP.KeyDecrypt")
 	var hash hash.Hash
@@ -316,10 +337,8 @@ func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 	return rsa.DecryptOAEP(hash, rand.Reader, d.privkey, enckey, []byte{})
 }
 
-type DirectDecrypt struct {
-	Key []byte
-}
-
+// Decrypt for DirectDecrypt does not do anything other than
+// return a copy of the embedded key
 func (d DirectDecrypt) Decrypt() ([]byte, error) {
 	cek := make([]byte, len(d.Key))
 	copy(cek, d.Key)

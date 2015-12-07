@@ -80,8 +80,11 @@ type ByteSource interface {
 // KeyEncrypter is an interface for things that can encrypt keys
 type KeyEncrypter interface {
 	Algorithm() jwa.KeyEncryptionAlgorithm
-	Kid() string
 	KeyEncrypt([]byte) (ByteSource, error)
+	// Kid returns the key id for this KeyEncrypter. This exists so that
+	// you can pass in a KeyEncrypter to MultiEncrypt, you can rest assured
+	// that the generated key will have the proper key ID.
+	Kid() string
 }
 
 // KeyDecrypter is an interface for things that can decrypt keys
@@ -127,18 +130,22 @@ type MultiEncrypt struct {
 	KeyEncrypters    []KeyEncrypter
 }
 
+// KeyWrapEncrypt encrypts content encryption keys using AES-CGM key wrap.
+// Contrary to what the name implies, it also decrypt encrypted keys
 type KeyWrapEncrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
-	KeyID     string
 	sharedkey []byte
+	KeyID       string
 }
 
+// EcdhesKeyWrapEncrypt encrypts content encryption keys using ECDH-ES.
 type EcdhesKeyWrapEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	generator KeyGenerator
-	KeyID     string
+	KeyID       string
 }
 
+// EcdhesKeyWrapDecrypt decrypts keys using ECDH-ES.
 type EcdhesKeyWrapDecrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	apu       []byte
@@ -147,36 +154,41 @@ type EcdhesKeyWrapDecrypt struct {
 	pubkey    *ecdsa.PublicKey
 }
 
-type KeyDecoder interface {
-	KeyDecode([]byte) ([]byte, error)
-}
-
-type RsaOaepKeyDecode struct {
-	Algorithm  jwa.KeyEncryptionAlgorithm
-	PrivateKey *rsa.PrivateKey
-}
-
+// ByteKey is a generated key that only has the key's byte buffer
+// as its instance data. If a ke needs to do more, such as providing
+// values to be set in a JWE header, that key type wraps a ByteKey
 type ByteKey []byte
+
+// ByteWithECPrivateKey holds the EC-DSA private key that generated
+// the key along witht he key itself. This is required to set the
+// proper values in the JWE headers
 type ByteWithECPrivateKey struct {
 	ByteKey
 	PrivateKey *ecdsa.PrivateKey
 }
 
+// HeaderPopulater is an interface for things that may modify the
+// JWE header. e.g. ByteWithECPrivateKey
 type HeaderPopulater interface {
 	HeaderPopulate(*Header)
 }
 
+// KeyGenerator generates the raw content encryption keys
 type KeyGenerator interface {
 	KeySize() int
 	KeyGenerate() (ByteSource, error)
 }
 
+// ContentCipher knows how to encrypt/decrypt the content given a content
+// encryption key and other data
 type ContentCipher interface {
 	KeySize() int
 	encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
 	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
 }
 
+// GenericContentCrypt encrypts a message by applying all the necessary
+// modifications to the keys and the contents
 type GenericContentCrypt struct {
 	alg     jwa.ContentEncryptionAlgorithm
 	keysize int
@@ -186,19 +198,20 @@ type GenericContentCrypt struct {
 	ivgen   KeyGenerator
 }
 
+// StaticKeyGenerate uses a static byte buffer to provide keys.
 type StaticKeyGenerate []byte
 
+// RandomKeyGenerate generates random keys
 type RandomKeyGenerate struct {
 	keysize int
 }
 
+// EcdhesKeyGenerate generates keys using ECDH-ES algorithm
 type EcdhesKeyGenerate struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	keysize   int
 	pubkey    *ecdsa.PublicKey
 }
-
-type DynamicKeyGenerate struct{}
 
 // Serializer converts an encrypted message into a byte buffer
 type Serializer interface {
@@ -214,10 +227,13 @@ type JSONSerialize struct {
 	Pretty bool
 }
 
+// AeadFetcher is an interface for things that can fetch AEAD ciphers
 type AeadFetcher interface {
 	AeadFetch([]byte) (cipher.AEAD, error)
 }
 
+// AeadFetchFunc fetches a AEAD cipher from the given key, and is
+// represented by a function
 type AeadFetchFunc func([]byte) (cipher.AEAD, error)
 
 // AesContentCipher represents a cipher based on AES
@@ -233,23 +249,36 @@ type RsaContentCipher struct {
 	pubkey *rsa.PublicKey
 }
 
-// RSAPKCS15KeyEncrypt encrypts keys using RSA OAEP algorithm
+// RSAPKCS15KeyDecrypt decrypts keys using RSA PKCS1v15 algorithm
 type RSAPKCS15KeyDecrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	privkey   *rsa.PrivateKey
 	generator KeyGenerator
 }
 
+// RSAPKCSKeyEncrypt encrypts keys using RSA PKCS1v15 algorithm
+type RSAPKCSKeyEncrypt struct {
+	alg    jwa.KeyEncryptionAlgorithm
+	pubkey *rsa.PublicKey
+	KeyID    string
+}
+
 // RSAOAEPKeyEncrypt encrypts keys using RSA OAEP algorithm
 type RSAOAEPKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey
-	KeyID  string
+	KeyID    string
 }
 
-// RSAPKCSKeyEncrypt encrypts keys using RSA PKCS algorithm
-type RSAPKCSKeyEncrypt struct {
-	alg    jwa.KeyEncryptionAlgorithm
-	pubkey *rsa.PublicKey
-	KeyID  string
+// RSAOAEPKeyDecrypt decrypts keys using RSA OAEP algorithm
+type RSAOAEPKeyDecrypt struct {
+	alg     jwa.KeyEncryptionAlgorithm
+	privkey *rsa.PrivateKey
 }
+
+// DirectDecrypt does not encryption (Note: Unimplemented)
+type DirectDecrypt struct {
+	Key []byte
+}
+
+
