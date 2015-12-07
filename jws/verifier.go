@@ -52,6 +52,8 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 	return errors.New("none of the signatures could be verified")
 }
 
+// NewRsaVerify creates a new JWS verifier using the specified algorithm
+// and the public key
 func NewRsaVerify(alg jwa.SignatureAlgorithm, key *rsa.PublicKey) (*RsaVerify, error) {
 	if key == nil {
 		return nil, ErrMissingPublicKey
@@ -97,6 +99,8 @@ func (v RsaVerify) Verify(m *Message) error {
 	return doMessageVerify(v.alg, v, m)
 }
 
+// NewEcdsaVerify creates a new JWS verifier using the specified algorithm
+// and the public key
 func NewEcdsaVerify(alg jwa.SignatureAlgorithm, key *ecdsa.PublicKey) (*EcdsaVerify, error) {
 	if key == nil {
 		return nil, ErrMissingPublicKey
@@ -145,10 +149,8 @@ func (v EcdsaVerify) payloadVerify(payload, signature []byte) error {
 	return nil
 }
 
-type HmacVerify struct {
-	signer *HmacSign
-}
-
+// NewHmacVerify creates a new JWS verifier using the specified algorithm
+// and the public key
 func NewHmacVerify(alg jwa.SignatureAlgorithm, key []byte) (*HmacVerify, error) {
 	s, err := NewHmacSign(alg, key)
 	if err != nil {

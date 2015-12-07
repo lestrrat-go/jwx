@@ -124,22 +124,27 @@ func NewRsaSign(alg jwa.SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, erro
 	}, nil
 }
 
+// SignatureAlgorithm returns the algorithm being used for this signer
 func (s RsaSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
 	return s.Protected.Algorithm
 }
 
+// PublicHeaders returns the public headers for this signer
 func (s RsaSign) PublicHeaders() *Header {
 	return s.Public
 }
 
+// ProtectedHeaders returns the protected headers for this signer
 func (s RsaSign) ProtectedHeaders() *Header {
 	return s.Protected
 }
 
+// SetPublicHeaders sets the public headers for this signer
 func (s *RsaSign) SetPublicHeaders(h *Header) {
 	s.Public = h
 }
 
+// SetProtectedHeaders sets the protected headers for this signer
 func (s *RsaSign) SetProtectedHeaders(h *Header) {
 	s.Protected = h
 }
@@ -188,6 +193,7 @@ func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	}
 }
 
+// NewEcdsaSign creates a signer that signs payloads using the given private key
 func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign, error) {
 	switch alg {
 	case jwa.ES256, jwa.ES384, jwa.ES512:
@@ -205,22 +211,27 @@ func NewEcdsaSign(alg jwa.SignatureAlgorithm, key *ecdsa.PrivateKey) (*EcdsaSign
 	}, nil
 }
 
+// SignatureAlgorithm returns the algorithm being used for this signer
 func (s EcdsaSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
 	return s.Protected.Algorithm
 }
 
+// PublicHeaders returns the public headers for this signer
 func (s EcdsaSign) PublicHeaders() *Header {
 	return s.Public
 }
 
+// ProtectedHeaders returns the protected headers for this signer
 func (s EcdsaSign) ProtectedHeaders() *Header {
 	return s.Protected
 }
 
+// SetPublicHeaders sets the public headers for this signer
 func (s *EcdsaSign) SetPublicHeaders(h *Header) {
 	s.Public = h
 }
 
+// SetProtectedHeaders sets the protected headers for this signer
 func (s *EcdsaSign) SetProtectedHeaders(h *Header) {
 	s.Protected = h
 }
@@ -243,13 +254,13 @@ func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 
 // PayloadSign generates a sign based on the Algorithm instance variable.
 // This fulfills the `PayloadSigner` interface
-func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
-	hash, err := ecdsaHashForAlg(sign.SignatureAlgorithm())
+func (s EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
+	hash, err := ecdsaHashForAlg(s.SignatureAlgorithm())
 	if err != nil {
 		return nil, err
 	}
 
-	privkey := sign.PrivateKey
+	privkey := s.PrivateKey
 	if privkey == nil {
 		return nil, errors.New("cannot proceed with Sign(): no private key available")
 	}
@@ -265,13 +276,13 @@ func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	signed := h.Sum(nil)
 	debug.Printf("payload = %s, signed -> %x", payload, signed)
 
-	r, s, err := ecdsa.Sign(rand.Reader, privkey, signed)
+	r, v, err := ecdsa.Sign(rand.Reader, privkey, signed)
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]byte, keysiz*2)
-	keys := [][]byte{r.Bytes(), s.Bytes()}
+	keys := [][]byte{r.Bytes(), v.Bytes()}
 	for i, data := range keys {
 		start := i * keysiz
 		padlen := keysiz - len(data)
@@ -281,6 +292,7 @@ func (sign EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	return out, nil
 }
 
+// NewHmacSign creates a symmetric signer that signs payloads using the given private key
 func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
 	h, err := hmacHashForAlg(alg)
 	if err != nil {
@@ -314,6 +326,8 @@ func hmacHashForAlg(alg jwa.SignatureAlgorithm) (func() hash.Hash, error) {
 	return h, nil
 }
 
+// PayloadSign generates a sign based on the Algorithm instance variable.
+// This fulfills the `Signer` interface
 func (s HmacSign) PayloadSign(payload []byte) ([]byte, error) {
 	hfunc := s.hash
 	h := hmac.New(hfunc, s.Key)
@@ -322,22 +336,27 @@ func (s HmacSign) PayloadSign(payload []byte) ([]byte, error) {
 	return b, nil
 }
 
+// SignatureAlgorithm returns the algorithm being used for this signer
 func (s HmacSign) SignatureAlgorithm() jwa.SignatureAlgorithm {
 	return s.Protected.Algorithm
 }
 
+// PublicHeaders returns the public headers for this signer
 func (s HmacSign) PublicHeaders() *Header {
 	return s.Public
 }
 
+// ProtectedHeaders returns the protected headers for this signer
 func (s HmacSign) ProtectedHeaders() *Header {
 	return s.Protected
 }
 
+// SetPublicHeaders sets the public headers for this signer
 func (s *HmacSign) SetPublicHeaders(h *Header) {
 	s.Public = h
 }
 
+// SetProtectedHeaders sets the protected headers for this signer
 func (s *HmacSign) SetProtectedHeaders(h *Header) {
 	s.Protected = h
 }

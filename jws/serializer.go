@@ -7,6 +7,7 @@ import (
 	"github.com/lestrrat/go-jwx/buffer"
 )
 
+// Serialize converts the mssage into a compact JSON format
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	if len(m.Signatures) != 1 {
 		return nil, errors.New("wrong number of signatures for compact serialization")
@@ -41,7 +42,7 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	return buf, nil
 }
 
-// Serialize converts the mssage into a JWE JSON serialize format byte buffer
+// Serialize converts the mssage into a full JSON format
 func (s JSONSerialize) Serialize(m *Message) ([]byte, error) {
 	if s.Pretty {
 		return json.MarshalIndent(m, "", "  ")

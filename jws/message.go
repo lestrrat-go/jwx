@@ -11,6 +11,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+// NewHeader creates a new Header
 func NewHeader() *Header {
 	return &Header{
 		EssentialHeader: &EssentialHeader{},
@@ -18,6 +19,9 @@ func NewHeader() *Header {
 	}
 }
 
+// Set sets the value of the given key to the given value. If it's
+// one of the known keys, it will be set in EssentialHeader field.
+// Otherwise, it is set in PrivateParams field.
 func (h *Header) Set(key string, value interface{}) error {
 	switch key {
 	case "alg":
@@ -106,13 +110,14 @@ func (h *Header) Set(key string, value interface{}) error {
 	return nil
 }
 
-func (h1 *Header) Merge(h2 *Header) (*Header, error) {
+// Merge merges the current header with another.
+func (h *Header) Merge(h2 *Header) (*Header, error) {
 	if h2 == nil {
 		return nil, errors.New("merge target is nil")
 	}
 
 	h3 := NewHeader()
-	if err := h3.Copy(h1); err != nil {
+	if err := h3.Copy(h); err != nil {
 		return nil, err
 	}
 
@@ -125,82 +130,87 @@ func (h1 *Header) Merge(h2 *Header) (*Header, error) {
 	return h3, nil
 }
 
-func (h1 *EssentialHeader) Merge(h2 *EssentialHeader) {
+// Merge merges the current header with another.
+func (h *EssentialHeader) Merge(h2 *EssentialHeader) {
 	if h2.Algorithm != "" {
-		h1.Algorithm = h2.Algorithm
+		h.Algorithm = h2.Algorithm
 	}
 
 	if h2.ContentType != "" {
-		h1.ContentType = h2.ContentType
+		h.ContentType = h2.ContentType
 	}
 
 	if h2.Jwk != nil {
-		h1.Jwk = h2.Jwk
+		h.Jwk = h2.Jwk
 	}
 
 	if h2.JwkSetURL != nil {
-		h1.JwkSetURL = h2.JwkSetURL
+		h.JwkSetURL = h2.JwkSetURL
 	}
 
 	if h2.KeyID != "" {
-		h1.KeyID = h2.KeyID
+		h.KeyID = h2.KeyID
 	}
 
 	if h2.Type != "" {
-		h1.Type = h2.Type
+		h.Type = h2.Type
 	}
 
 	if h2.X509Url != nil {
-		h1.X509Url = h2.X509Url
+		h.X509Url = h2.X509Url
 	}
 
 	if h2.X509CertChain != nil {
-		h1.X509CertChain = h2.X509CertChain
+		h.X509CertChain = h2.X509CertChain
 	}
 
 	if h2.X509CertThumbprint != "" {
-		h1.X509CertThumbprint = h2.X509CertThumbprint
+		h.X509CertThumbprint = h2.X509CertThumbprint
 	}
 
 	if h2.X509CertThumbprintS256 != "" {
-		h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+		h.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 	}
 }
 
-func (h1 *Header) Copy(h2 *Header) error {
-	if h1 == nil {
+// Copy copies the other heder over this one
+func (h *Header) Copy(h2 *Header) error {
+	if h == nil {
 		return errors.New("copy destination is nil")
 	}
 	if h2 == nil {
 		return errors.New("copy target is nil")
 	}
 
-	h1.EssentialHeader.Copy(h2.EssentialHeader)
+	h.EssentialHeader.Copy(h2.EssentialHeader)
 
 	for k, v := range h2.PrivateParams {
-		h1.PrivateParams[k] = v
+		h.PrivateParams[k] = v
 	}
 
 	return nil
 }
 
-func (h1 *EssentialHeader) Copy(h2 *EssentialHeader) {
-	h1.Algorithm = h2.Algorithm
-	h1.ContentType = h2.ContentType
-	h1.Jwk = h2.Jwk
-	h1.JwkSetURL = h2.JwkSetURL
-	h1.KeyID = h2.KeyID
-	h1.Type = h2.Type
-	h1.X509Url = h2.X509Url
-	h1.X509CertChain = h2.X509CertChain
-	h1.X509CertThumbprint = h2.X509CertThumbprint
-	h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+// Copy copies the other heder over this one
+func (h *EssentialHeader) Copy(h2 *EssentialHeader) {
+	h.Algorithm = h2.Algorithm
+	h.ContentType = h2.ContentType
+	h.Jwk = h2.Jwk
+	h.JwkSetURL = h2.JwkSetURL
+	h.KeyID = h2.KeyID
+	h.Type = h2.Type
+	h.X509Url = h2.X509Url
+	h.X509CertChain = h2.X509CertChain
+	h.X509CertThumbprint = h2.X509CertThumbprint
+	h.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 }
 
+// MarshalJSON generates the JSON representation of this header
 func (h Header) MarshalJSON() ([]byte, error) {
 	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
 }
 
+// UnmarshalJSON parses the JSON buffer into a Header
 func (h *Header) UnmarshalJSON(data []byte) error {
 	if h.EssentialHeader == nil {
 		h.EssentialHeader = &EssentialHeader{}
@@ -211,6 +221,8 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	return emap.MergeUnmarshal(data, h.EssentialHeader, &h.PrivateParams)
 }
 
+// Construct walks through the map (most likely parsed from a JSON buffer)
+// and populates the necessary fields on this header
 func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	r := emap.Hmap(m)
 	if alg, err := r.GetString("alg"); err == nil {
@@ -259,6 +271,8 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	return nil
 }
 
+// Base64Encode creates the base64 encoded version of the JSON
+// representation of this header
 func (h Header) Base64Encode() ([]byte, error) {
 	b, err := json.Marshal(h)
 	if err != nil {
@@ -268,6 +282,7 @@ func (h Header) Base64Encode() ([]byte, error) {
 	return buffer.Buffer(b).Base64Encode()
 }
 
+// MarshalJSON generates the JSON representation of this header
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
@@ -282,6 +297,7 @@ func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(buf))
 }
 
+// UnmarshalJSON parses the JSON buffer into a Header
 func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	b := buffer.Buffer{}
 	// base646 json string -> json object representation of header
@@ -298,6 +314,7 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+// NewSignature creates a new Signature
 func NewSignature() *Signature {
 	h1 := NewHeader()
 	h2 := NewHeader()
@@ -307,6 +324,7 @@ func NewSignature() *Signature {
 	}
 }
 
+// MergedHeaders returns the merged header for this signature
 func (s Signature) MergedHeaders() MergedHeader {
 	return MergedHeader{
 		ProtectedHeader: s.ProtectedHeader,
@@ -314,6 +332,7 @@ func (s Signature) MergedHeaders() MergedHeader {
 	}
 }
 
+// KeyID returns the key ID (kid) for this signature
 func (h MergedHeader) KeyID() string {
 	if hp := h.ProtectedHeader; hp != nil {
 		if hp.KeyID != "" {
@@ -330,6 +349,7 @@ func (h MergedHeader) KeyID() string {
 	return ""
 }
 
+// Algorithm returns the algorithm used for this signature
 func (h MergedHeader) Algorithm() jwa.SignatureAlgorithm {
 	if hp := h.ProtectedHeader; hp != nil {
 		return hp.Algorithm
