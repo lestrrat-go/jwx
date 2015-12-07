@@ -9,13 +9,13 @@
 
 PR/issues welcome.
 
-| Package name | Notes |
-|--------------|-------|
-| jwt          | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
-| jwk          | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
-| jwa          | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
-| jws          | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
-| jwe          | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
+| Package name                                              | Notes                                           |
+|-----------------------------------------------------------|-------------------------------------------------|
+| [jwt](https://github.com/lestrrat/go-jwx/tree/master/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
+| [jwk](https://github.com/lestrrat/go-jwx/tree/master/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
+| [jwa](https://github.com/lestrrat/go-jwx/tree/master/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
+| [jws](https://github.com/lestrrat/go-jwx/tree/master/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
+| [jwe](https://github.com/lestrrat/go-jwx/tree/master/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 
 ### In progress:
 
