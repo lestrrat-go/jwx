@@ -171,7 +171,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		if !assert.NoError(t, err, "JSON serialization is successful") {
 			return
 		}
-		t.Logf("%#s", serialized)
+		t.Logf("%s", serialized)
 	}
 }
 
