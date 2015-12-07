@@ -1,15 +1,19 @@
 package jwa
 
+// KeyType represents the key type ("kty") that are supported
 type KeyType string
 
+// Supported KeyTypes
 const (
 	EC       KeyType = "EC"  // Elliptic Curve
 	RSA      KeyType = "RSA" // RSA
 	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)
 )
 
+// EllipticCurveAlgorithm represents the algorithms used for EC keys
 type EllipticCurveAlgorithm string
 
+// Supported EllipticCurveAlgorithms
 const (
 	P256 EllipticCurveAlgorithm = "P-256"
 	P384 EllipticCurveAlgorithm = "P-384"
@@ -20,6 +24,7 @@ const (
 // as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm string
 
+// Supported SignatureAlgorithms
 const (
 	NoSignature SignatureAlgorithm = "none"
 	HS256       SignatureAlgorithm = "HS256" // HMAC using SHA-256
@@ -40,6 +45,7 @@ const (
 // algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
 type KeyEncryptionAlgorithm string
 
+// Supported KeyEncryptionAlgorithms
 const (
 	RSA1_5             KeyEncryptionAlgorithm = "RSA1_5"             // RSA-PKCS1v1.5
 	RSA_OAEP           KeyEncryptionAlgorithm = "RSA-OAEP"           // RSA-OAEP-SHA1
@@ -64,6 +70,7 @@ const (
 // algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm string
 
+// Supported ContentEncryptionAlgorithms
 const (
 	A128CBC_HS256 ContentEncryptionAlgorithm = "A128CBC-HS256" // AES-CBC + HMAC-SHA256 (128)
 	A192CBC_HS384 ContentEncryptionAlgorithm = "A192CBC-HS384" // AES-CBC + HMAC-SHA384 (192)
@@ -77,6 +84,7 @@ const (
 // as described in https://tools.ietf.org/html/rfc7518#section-7.3
 type CompressionAlgorithm string
 
+// Supported CompressionAlgorithms
 const (
 	NoCompress CompressionAlgorithm = ""    // No compression
 	Deflate    CompressionAlgorithm = "DEF" // DEFLATE (RFC 1951)
