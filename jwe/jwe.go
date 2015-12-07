@@ -267,12 +267,3 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 
 	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
 }
-
-func BuildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
-	switch alg {
-	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
-		return NewAesContentCipher(alg)
-	}
-
-	return nil, ErrUnsupportedAlgorithm
-}

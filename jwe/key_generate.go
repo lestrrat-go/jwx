@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+// Bytes returns the byte from this ByteKey
 func (k ByteKey) Bytes() []byte {
 	return []byte(k)
 }
@@ -35,10 +36,12 @@ func NewRandomKeyGenerate(n int) RandomKeyGenerate {
 	return RandomKeyGenerate{keysize: n}
 }
 
+// KeySize returns the key size
 func (g RandomKeyGenerate) KeySize() int {
 	return g.keysize
 }
 
+// KeyGenerate generates a random new key
 func (g RandomKeyGenerate) KeyGenerate() (ByteSource, error) {
 	buf := make([]byte, g.keysize)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
@@ -47,6 +50,7 @@ func (g RandomKeyGenerate) KeyGenerate() (ByteSource, error) {
 	return ByteKey(buf), nil
 }
 
+// NewEcdhesKeyGenerate creates a new key generator using ECDH-ES
 func NewEcdhesKeyGenerate(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey) (*EcdhesKeyGenerate, error) {
 	var keysize int
 	switch alg {
@@ -69,10 +73,12 @@ func NewEcdhesKeyGenerate(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKe
 	}, nil
 }
 
+// KeySize returns the key size associated with this generator
 func (g EcdhesKeyGenerate) KeySize() int {
 	return g.keysize
 }
 
+// KeyGenerate generates new keys using ECDH-ES
 func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
 	priv, err := ecdsa.GenerateKey(g.pubkey.Curve, rand.Reader)
 	if err != nil {
@@ -93,6 +99,8 @@ func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
 	}, nil
 }
 
+// HeaderPopulate populates the header with the required EC-DSA public key
+// infromation ('epk' key)
 func (k ByteWithECPrivateKey) HeaderPopulate(h *Header) {
 	h.Set("epk", jwk.NewEcdsaPublicKey(&k.PrivateKey.PublicKey))
 }

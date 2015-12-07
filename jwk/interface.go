@@ -13,11 +13,11 @@ import (
 type KeyUsageType string
 
 const (
-	// Use this header in the "use" header field to signify that this
-	// key should be used for signatures
+	// ForSignature is the value used in the headers to indicate that
+	// this key should be used for signatures
 	ForSignature  KeyUsageType = "sig"
-	// Use this header in the "use" header field to signify that this
-	// key should be used for encryption
+	// ForEncryption is the value used in the headers to indicate that
+	// this key should be used for encryptiong
 	ForEncryption KeyUsageType = "enc"
 )
 
@@ -109,11 +109,13 @@ type RsaPrivateKey struct {
 	Qi buffer.Buffer `json:"qi,omitempty"`
 }
 
+// SymmetricKey is a type of JWK generated from symmetric keys
 type SymmetricKey struct {
 	*EssentialHeader
 	Key buffer.Buffer `json:"k"`
 }
 
+// EcdsaPublicKey is a type of JWK generated from ECDSA public keys
 type EcdsaPublicKey struct {
 	*EssentialHeader
 	Curve jwa.EllipticCurveAlgorithm `json:"crv"`
@@ -121,11 +123,13 @@ type EcdsaPublicKey struct {
 	Y     buffer.Buffer              `json:"y"`
 }
 
+// EcdsaPrivateKey is a type of JWK generated from ECDH-ES private keys
 type EcdsaPrivateKey struct {
 	*EcdsaPublicKey
 	D buffer.Buffer `json:"d"`
 }
 
+// EcdhesPublicKey is a type of JWK generated from ECDH-ES public keys
 type EcdhesPublicKey struct {
 	KeyEncryption     jwa.KeyEncryptionAlgorithm     `json:"alg"`
 	ContentEncryption jwa.ContentEncryptionAlgorithm `json:"enc"`

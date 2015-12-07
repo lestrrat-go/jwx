@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+// Errors used in JWE
 var (
 	ErrInvalidBlockSize         = errors.New("keywrap input must be 8 byte blocks")
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
@@ -26,14 +27,17 @@ type errUnsupportedAlgorithm struct {
 	purpose string
 }
 
+// NewErrUnsupportedAlgorithm creates a new UnsupportedAlgorithm error
 func NewErrUnsupportedAlgorithm(alg, purpose string) errUnsupportedAlgorithm {
 	return errUnsupportedAlgorithm{alg: alg, purpose: purpose}
 }
 
+// Error returns the string representation of the error
 func (e errUnsupportedAlgorithm) Error() string {
 	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
 }
 
+// EssentialHeader is a set of headers that are already defined in RFC 7516`
 type EssentialHeader struct {
 	AgreementPartyUInfo    buffer.Buffer                  `json:"apu,omitempty"`
 	AgreementPartyVInfo    buffer.Buffer                  `json:"apv,omitempty"`
@@ -54,7 +58,6 @@ type EssentialHeader struct {
 }
 
 // Header represents a jws header.
-
 type Header struct {
 	*EssentialHeader `json:"-"`
 	PrivateParams    map[string]interface{} `json:"-"`
@@ -67,26 +70,33 @@ type EncodedHeader struct {
 	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
+// ByteSource is an interface for things that return a byte sequence.
+// This is used for KeyGenerator so that the result of computations can
+// carry more than just the generate byte sequence.
 type ByteSource interface {
 	Bytes() []byte
 }
 
+// KeyEncrypter is an interface for things that can encrypt keys
 type KeyEncrypter interface {
 	Algorithm() jwa.KeyEncryptionAlgorithm
 	Kid() string
 	KeyEncrypt([]byte) (ByteSource, error)
 }
 
+// KeyDecrypter is an interface for things that can decrypt keys
 type KeyDecrypter interface {
 	Algorithm() jwa.KeyEncryptionAlgorithm
 	KeyDecrypt([]byte) ([]byte, error)
 }
 
+// Recipient holds the encrypted key and hints to decrypt the key
 type Recipient struct {
 	Header       *Header       `json:"header"`
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
+// Message contains the entire encrypted JWE message
 type Message struct {
 	AuthenticatedData    buffer.Buffer  `json:"aad,omitempty"`
 	CipherText           buffer.Buffer  `json:"ciphertext"`
@@ -103,6 +113,8 @@ type Encrypter interface {
 	Encrypt([]byte) (*Message, error)
 }
 
+// ContentEncrypter encrypts the content using the content using the
+// encrypted key
 type ContentEncrypter interface {
 	Algorithm() jwa.ContentEncryptionAlgorithm
 	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
@@ -208,6 +220,7 @@ type AeadFetcher interface {
 
 type AeadFetchFunc func([]byte) (cipher.AEAD, error)
 
+// AesContentCipher represents a cipher based on AES
 type AesContentCipher struct {
 	AeadFetcher
 	NonceGenerator KeyGenerator
@@ -215,22 +228,26 @@ type AesContentCipher struct {
 	tagsize        int
 }
 
+// RsaContentCipher represents a cipher based on RSA
 type RsaContentCipher struct {
 	pubkey *rsa.PublicKey
 }
 
+// RSAPKCS15KeyEncrypt encrypts keys using RSA OAEP algorithm
 type RSAPKCS15KeyDecrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	privkey   *rsa.PrivateKey
 	generator KeyGenerator
 }
 
+// RSAOAEPKeyEncrypt encrypts keys using RSA OAEP algorithm
 type RSAOAEPKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey
 	KeyID  string
 }
 
+// RSAPKCSKeyEncrypt encrypts keys using RSA PKCS algorithm
 type RSAPKCSKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey

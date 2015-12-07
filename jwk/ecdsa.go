@@ -11,6 +11,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// NewEcdsaPublicKey creates a new JWK from a EC-DSA public key
 func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
 	pubkey := &EcdsaPublicKey{
 		Curve: jwa.EllipticCurveAlgorithm(pk.Params().Name),
@@ -20,6 +21,7 @@ func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
 	return pubkey
 }
 
+// NewEcdsaPrivateKey creates a new JWK from a EC-DSA private key
 func NewEcdsaPrivateKey(pk *ecdsa.PrivateKey) *EcdsaPrivateKey {
 	pubkey := NewEcdsaPublicKey(&pk.PublicKey)
 	privkey := &EcdsaPrivateKey{EcdsaPublicKey: pubkey}
@@ -27,10 +29,12 @@ func NewEcdsaPrivateKey(pk *ecdsa.PrivateKey) *EcdsaPrivateKey {
 	return privkey
 }
 
+// Materialize returns the EC-DSA public key represented by this JWK
 func (k *EcdsaPublicKey) Materialize() (interface{}, error) {
 	return k.PublicKey()
 }
 
+// PublicKey returns the EC-DSA public key represented by this JWK
 func (k *EcdsaPublicKey) PublicKey() (*ecdsa.PublicKey, error) {
 	var crv elliptic.Curve
 	switch k.Curve {
@@ -80,10 +84,12 @@ func (k EcdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// Materialize returns the EC-DSA private key represented by this JWK
 func (k *EcdsaPrivateKey) Materialize() (interface{}, error) {
 	return k.PrivateKey()
 }
 
+// PrivateKey returns the EC-DSA private key represented by this JWK
 func (k *EcdsaPrivateKey) PrivateKey() (*ecdsa.PrivateKey, error) {
 	pubkey, err := k.EcdsaPublicKey.PublicKey()
 	if err != nil {

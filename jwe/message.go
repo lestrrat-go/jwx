@@ -15,12 +15,14 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+// NewRecipient creates a Recipient object
 func NewRecipient() *Recipient {
 	return &Recipient{
 		Header: NewHeader(),
 	}
 }
 
+// NewHeader creates a new Header object
 func NewHeader() *Header {
 	return &Header{
 		EssentialHeader: &EssentialHeader{},
@@ -28,12 +30,14 @@ func NewHeader() *Header {
 	}
 }
 
+// NewEncodedHeader creates a new encoded Header object
 func NewEncodedHeader() *EncodedHeader {
 	return &EncodedHeader{
 		Header: NewHeader(),
 	}
 }
 
+// Get returns the header key
 func (h *Header) Get(key string) (interface{}, error) {
 	switch key {
 	case "alg":
@@ -73,6 +77,9 @@ func (h *Header) Get(key string) (interface{}, error) {
 	}
 }
 
+// Set sets the value of the given key to the given value. If it's
+// one of the known keys, it will be set in EssentialHeader field.
+// Otherwise, it is set in PrivateParams field.
 func (h *Header) Set(key string, value interface{}) error {
 	switch key {
 	case "alg":
@@ -199,13 +206,14 @@ func (h *Header) Set(key string, value interface{}) error {
 	return nil
 }
 
-func (h1 *Header) Merge(h2 *Header) (*Header, error) {
+// Merge merges the current header with another.
+func (h *Header) Merge(h2 *Header) (*Header, error) {
 	if h2 == nil {
 		return nil, errors.New("merge target is nil")
 	}
 
 	h3 := NewHeader()
-	if err := h3.Copy(h1); err != nil {
+	if err := h3.Copy(h); err != nil {
 		return nil, err
 	}
 
@@ -218,112 +226,117 @@ func (h1 *Header) Merge(h2 *Header) (*Header, error) {
 	return h3, nil
 }
 
-func (h1 *EssentialHeader) Merge(h2 *EssentialHeader) {
+// Merge merges the current header with another.
+func (h *EssentialHeader) Merge(h2 *EssentialHeader) {
 	if h2.AgreementPartyUInfo.Len() != 0 {
-		h1.AgreementPartyUInfo = h2.AgreementPartyUInfo
+		h.AgreementPartyUInfo = h2.AgreementPartyUInfo
 	}
 
 	if h2.AgreementPartyVInfo.Len() != 0 {
-		h1.AgreementPartyVInfo = h2.AgreementPartyVInfo
+		h.AgreementPartyVInfo = h2.AgreementPartyVInfo
 	}
 
 	if h2.Algorithm != "" {
-		h1.Algorithm = h2.Algorithm
+		h.Algorithm = h2.Algorithm
 	}
 
 	if h2.ContentEncryption != "" {
-		h1.ContentEncryption = h2.ContentEncryption
+		h.ContentEncryption = h2.ContentEncryption
 	}
 
 	if h2.ContentType != "" {
-		h1.ContentType = h2.ContentType
+		h.ContentType = h2.ContentType
 	}
 
 	if h2.Compression != "" {
-		h1.Compression = h2.Compression
+		h.Compression = h2.Compression
 	}
 
 	if h2.Critical != nil {
-		h1.Critical = h2.Critical
+		h.Critical = h2.Critical
 	}
 
 	if h2.EphemeralPublicKey != nil {
-		h1.EphemeralPublicKey = h2.EphemeralPublicKey
+		h.EphemeralPublicKey = h2.EphemeralPublicKey
 	}
 
 	if h2.Jwk != nil {
-		h1.Jwk = h2.Jwk
+		h.Jwk = h2.Jwk
 	}
 
 	if h2.JwkSetURL != nil {
-		h1.JwkSetURL = h2.JwkSetURL
+		h.JwkSetURL = h2.JwkSetURL
 	}
 
 	if h2.KeyID != "" {
-		h1.KeyID = h2.KeyID
+		h.KeyID = h2.KeyID
 	}
 
 	if h2.Type != "" {
-		h1.Type = h2.Type
+		h.Type = h2.Type
 	}
 
 	if h2.X509Url != nil {
-		h1.X509Url = h2.X509Url
+		h.X509Url = h2.X509Url
 	}
 
 	if h2.X509CertChain != nil {
-		h1.X509CertChain = h2.X509CertChain
+		h.X509CertChain = h2.X509CertChain
 	}
 
 	if h2.X509CertThumbprint != "" {
-		h1.X509CertThumbprint = h2.X509CertThumbprint
+		h.X509CertThumbprint = h2.X509CertThumbprint
 	}
 
 	if h2.X509CertThumbprintS256 != "" {
-		h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+		h.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 	}
 }
 
-func (h1 *Header) Copy(h2 *Header) error {
-	if h1 == nil {
+// Copy copies the other heder over this one
+func (h *Header) Copy(h2 *Header) error {
+	if h == nil {
 		return errors.New("copy destination is nil")
 	}
 	if h2 == nil {
 		return errors.New("copy target is nil")
 	}
 
-	h1.EssentialHeader.Copy(h2.EssentialHeader)
+	h.EssentialHeader.Copy(h2.EssentialHeader)
 
 	for k, v := range h2.PrivateParams {
-		h1.PrivateParams[k] = v
+		h.PrivateParams[k] = v
 	}
 
 	return nil
 }
 
-func (h1 *EssentialHeader) Copy(h2 *EssentialHeader) {
-	h1.AgreementPartyUInfo = h2.AgreementPartyUInfo
-	h1.AgreementPartyVInfo = h2.AgreementPartyVInfo
-	h1.Algorithm = h2.Algorithm
-	h1.ContentEncryption = h2.ContentEncryption
-	h1.ContentType = h2.ContentType
-	h1.Compression = h2.Compression
-	h1.Critical = h2.Critical
-	h1.EphemeralPublicKey = h2.EphemeralPublicKey
-	h1.Jwk = h2.Jwk
-	h1.JwkSetURL = h2.JwkSetURL
-	h1.KeyID = h2.KeyID
-	h1.Type = h2.Type
-	h1.X509Url = h2.X509Url
-	h1.X509CertChain = h2.X509CertChain
-	h1.X509CertThumbprint = h2.X509CertThumbprint
-	h1.X509CertThumbprintS256 = h2.X509CertThumbprintS256
+// Copy copies the other heder over this one
+func (h *EssentialHeader) Copy(h2 *EssentialHeader) {
+	h.AgreementPartyUInfo = h2.AgreementPartyUInfo
+	h.AgreementPartyVInfo = h2.AgreementPartyVInfo
+	h.Algorithm = h2.Algorithm
+	h.ContentEncryption = h2.ContentEncryption
+	h.ContentType = h2.ContentType
+	h.Compression = h2.Compression
+	h.Critical = h2.Critical
+	h.EphemeralPublicKey = h2.EphemeralPublicKey
+	h.Jwk = h2.Jwk
+	h.JwkSetURL = h2.JwkSetURL
+	h.KeyID = h2.KeyID
+	h.Type = h2.Type
+	h.X509Url = h2.X509Url
+	h.X509CertChain = h2.X509CertChain
+	h.X509CertThumbprint = h2.X509CertThumbprint
+	h.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 }
 
+// MarshalJSON generates the JSON representation of this header
 func (h Header) MarshalJSON() ([]byte, error) {
 	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
 }
 
+// UnmarshalJSON parses the JSON buffer into a Header
 func (h *Header) UnmarshalJSON(data []byte) error {
 	if h.EssentialHeader == nil {
 		h.EssentialHeader = &EssentialHeader{}
@@ -352,6 +365,8 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Base64Encode creates the base64 encoded version of the JSON
+// representation of this header
 func (e EncodedHeader) Base64Encode() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
@@ -366,6 +381,7 @@ func (e EncodedHeader) Base64Encode() ([]byte, error) {
 	return buf, nil
 }
 
+// MarshalJSON generates the JSON representation of this header
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := e.Base64Encode()
 	if err != nil {
@@ -374,6 +390,7 @@ func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(buf))
 }
 
+// UnmarshalJSON parses the JSON buffer into a Header
 func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	b := buffer.Buffer{}
 	// base646 json string -> json object representation of header
@@ -388,6 +405,7 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
+// NewMessage creates a new message
 func NewMessage() *Message {
 	return &Message{
 		ProtectedHeader:   NewEncodedHeader(),
@@ -395,6 +413,7 @@ func NewMessage() *Message {
 	}
 }
 
+// Decrypt decrypts the message using the specified algorithm and key
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	var err error
 
@@ -422,7 +441,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	iv := m.InitializationVector.Bytes()
 	tag := m.Tag.Bytes()
 
-	cipher, err := BuildContentCipher(enc)
+	cipher, err := buildContentCipher(enc)
 	if err != nil {
 		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
 	}
@@ -491,3 +510,13 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 
 	return plaintext, nil
 }
+
+func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
+	switch alg {
+	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
+		return NewAesContentCipher(alg)
+	}
+
+	return nil, ErrUnsupportedAlgorithm
+}
+

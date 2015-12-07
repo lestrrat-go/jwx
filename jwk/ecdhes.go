@@ -6,6 +6,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// NewEcdhesPublicKey creates a new JWK from a ECDH-ES public key
 func NewEcdhesPublicKey(key *ecdsa.PublicKey, keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, agvars ...[]byte) *EcdhesPublicKey {
 
 	var apu, apv []byte
