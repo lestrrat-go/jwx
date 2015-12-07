@@ -20,7 +20,7 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
-func NewAesKeyWrap(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
+func NewKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
 	return KeyWrapEncrypt{
 		alg:       alg,
 		sharedkey: sharedkey,

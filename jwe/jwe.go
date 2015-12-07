@@ -49,7 +49,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: []byte required")
 		}
-		keyenc, err = NewAesKeyWrap(keyalg, sharedkey)
+		keyenc, err = NewKeyWrapEncrypt(keyalg, sharedkey)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +220,7 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 		if !ok {
 			return nil, errors.New("[]byte is required as the key to build this key decrypter")
 		}
-		return NewAesKeyWrap(alg, sharedkey)
+		return NewKeyWrapEncrypt(alg, sharedkey)
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		epkif, err := h.Get("epk")
 		if err != nil {
