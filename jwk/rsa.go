@@ -10,6 +10,7 @@ import (
 	"github.com/lestrrat/go-jwx/buffer"
 )
 
+// NewRsaPublicKey creates a new JWK using the given key
 func NewRsaPublicKey(pk *rsa.PublicKey) (*RsaPublicKey, error) {
 	k := &RsaPublicKey{
 		EssentialHeader: &EssentialHeader{KeyType: "RSA"},
@@ -19,6 +20,7 @@ func NewRsaPublicKey(pk *rsa.PublicKey) (*RsaPublicKey, error) {
 	return k, nil
 }
 
+// NewRsaPrivateKey creates a new JWK using the given key
 func NewRsaPrivateKey(pk *rsa.PrivateKey) (*RsaPrivateKey, error) {
 	if len(pk.Primes) < 2 {
 		return nil, errors.New("two primes required for RSA private key")
@@ -39,6 +41,7 @@ func NewRsaPrivateKey(pk *rsa.PrivateKey) (*RsaPrivateKey, error) {
 	return k, nil
 }
 
+// Materialize returns the RSA public key represented by this JWK
 func (k *RsaPublicKey) Materialize() (interface{}, error) {
 	return k.PublicKey()
 }
@@ -77,10 +80,12 @@ func (k RsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// Materialize returns the RSA private key represented by this JWK
 func (k *RsaPrivateKey) Materialize() (interface{}, error) {
 	return k.PrivateKey()
 }
 
+// PrivateKey creates a new rsa.PrivateKey from the data given in the JWK
 func (k *RsaPrivateKey) PrivateKey() (*rsa.PrivateKey, error) {
 	pubkey, err := k.PublicKey()
 	if err != nil {

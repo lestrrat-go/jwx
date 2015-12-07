@@ -5,10 +5,13 @@ import (
 	"fmt"
 )
 
+// Materialize returns the octets for this symmetric key.
+// Since this is a symmetric key, this just calls Octets
 func (s SymmetricKey) Materialize() (interface{}, error) {
 	return s.Octets(), nil
 }
 
+// Octets returns the octets in the key
 func (s SymmetricKey) Octets() []byte {
 	return s.Key
 }

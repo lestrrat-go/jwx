@@ -51,9 +51,7 @@ func FetchHTTP(jwkurl string) (*Set, error) {
 	return Parse(buf)
 }
 
-// Parse parses JWK in JSON format from the incoming `io.Reader`.
-// If you are expecting that you *might* get a KeySet, you should
-// fallback to using ParseKeySet
+// Parse parses JWK from the incoming byte buffer.
 func Parse(buf []byte) (*Set, error) {
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(buf, &m); err != nil {
@@ -74,6 +72,7 @@ func Parse(buf []byte) (*Set, error) {
 	return &Set{Keys: []Key{k}}, nil
 }
 
+// ParseString parses JWK from the incoming string.
 func ParseString(s string) (*Set, error) {
 	return Parse([]byte(s))
 }
@@ -301,18 +300,22 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 	return k, nil
 }
 
+// Alg returns the algorithm in the header
 func (e EssentialHeader) Alg() string {
 	return e.Algorithm
 }
 
+// Kid returns the key ID in the header
 func (e EssentialHeader) Kid() string {
 	return e.KeyID
 }
 
+// Kty returns the key type in the header
 func (e EssentialHeader) Kty() jwa.KeyType {
 	return e.KeyType
 }
 
+// Use returns the key use in the header
 func (e EssentialHeader) Use() string {
 	return e.KeyUsage
 }
