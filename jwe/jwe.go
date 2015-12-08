@@ -71,14 +71,18 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		fallthrough
 	default:
-		debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
+		if debug.Enabled {
+			debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
+		}
 		return nil, ErrUnsupportedAlgorithm
 	}
 
 	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(keysize), keyenc)
 	msg, err := enc.Encrypt(payload)
 	if err != nil {
-		debug.Printf("Encrypt: failed to encrypt: %s", err)
+		if debug.Enabled {
+			debug.Printf("Encrypt: failed to encrypt: %s", err)
+		}
 		return nil, err
 	}
 
@@ -139,7 +143,9 @@ func parseJSON(buf []byte) (*Message, error) {
 }
 
 func parseCompact(buf []byte) (*Message, error) {
-	debug.Printf("Parse(Compact): buf = '%s'", buf)
+	if debug.Enabled {
+		debug.Printf("Parse(Compact): buf = '%s'", buf)
+	}
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
 		return nil, ErrInvalidCompactPartsCount
@@ -149,7 +155,9 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
 		return nil, err
 	}
-	debug.Printf("hdrbuf = %s", hdrbuf)
+	if debug.Enabled {
+		debug.Printf("hdrbuf = %s", hdrbuf)
+	}
 
 	hdr := NewHeader()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
@@ -189,7 +197,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	m.CipherText = ctbuf
 	m.InitializationVector = ivbuf
 	m.Recipients = []Recipient{
-		Recipient{
+		{
 			Header:       hdr,
 			EncryptedKey: enckeybuf,
 		},

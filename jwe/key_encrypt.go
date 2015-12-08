@@ -258,7 +258,9 @@ func (d RSAPKCS15KeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // KeyDecrypt decryptes the encrypted key using RSA PKCS1v1.5
 func (d RSAPKCS15KeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
-	debug.Printf("START PKCS.KeyDecrypt")
+	if debug.Enabled {
+		debug.Printf("START PKCS.KeyDecrypt")
+	}
 	// Hey, these notes and workarounds were stolen from go-jose
 	defer func() {
 		// DecryptPKCS1v15SessionKey sometimes panics on an invalid payload
@@ -324,7 +326,9 @@ func (d RSAOAEPKeyDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // KeyDecrypt decryptes the encrypted key using RSA OAEP
 func (d RSAOAEPKeyDecrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
-	debug.Printf("START OAEP.KeyDecrypt")
+	if debug.Enabled {
+		debug.Printf("START OAEP.KeyDecrypt")
+	}
 	var hash hash.Hash
 	switch d.alg {
 	case jwa.RSA_OAEP:

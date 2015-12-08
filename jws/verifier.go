@@ -40,9 +40,13 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 		}
 		siv := append(append(phbuf, '.'), payload...)
 
-		debug.Printf("siv = '%s'", siv)
+		if debug.Enabled {
+			debug.Printf("siv = '%s'", siv)
+		}
 		if err := v.payloadVerify(siv, sig.Signature.Bytes()); err != nil {
-			debug.Printf("Payload verify failed: %s", err)
+			if debug.Enabled {
+				debug.Printf("Payload verify failed: %s", err)
+			}
 			continue
 		}
 
@@ -141,7 +145,9 @@ func (v EcdsaVerify) payloadVerify(payload, signature []byte) error {
 	h.Write(payload)
 	signed := h.Sum(nil)
 
-	debug.Printf("payload -> %s, signed -> %x", payload, signed)
+	if debug.Enabled {
+		debug.Printf("payload -> %s, signed -> %x", payload, signed)
+	}
 
 	if !ecdsa.Verify(pubkey, signed, rv, sv) {
 		return ErrInvalidSignature

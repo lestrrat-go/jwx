@@ -28,7 +28,6 @@ import (
 	"errors"
 
 	"github.com/lestrrat/go-jwx/buffer"
-	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 )
@@ -297,7 +296,6 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, err
 	}
 
-	debug.Printf("hdrbuf = %s", hdrbuf.Bytes())
 	hdr := &EncodedHeader{Header: NewHeader()}
 	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
 		return nil, err

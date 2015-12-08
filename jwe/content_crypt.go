@@ -10,12 +10,16 @@ func (c GenericContentCrypt) Algorithm() jwa.ContentEncryptionAlgorithm {
 }
 
 func (c GenericContentCrypt) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
-	debug.Printf("ContentCrypt.Encrypt: cek        = %x", cek)
-	debug.Printf("ContentCrypt.Encrypt: ciphertext = %x", plaintext)
-	debug.Printf("ContentCrypt.Encrypt: aad        = %x", aad)
+	if debug.Enabled {
+		debug.Printf("ContentCrypt.Encrypt: cek        = %x", cek)
+		debug.Printf("ContentCrypt.Encrypt: ciphertext = %x", plaintext)
+		debug.Printf("ContentCrypt.Encrypt: aad        = %x", aad)
+	}
 	iv, encrypted, tag, err := c.cipher.encrypt(cek, plaintext, aad)
 	if err != nil {
-		debug.Printf("cipher.encrypt failed")
+		if debug.Enabled {
+			debug.Printf("cipher.encrypt failed")
+		}
 		return nil, nil, nil, err
 	}
 

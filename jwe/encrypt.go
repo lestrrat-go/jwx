@@ -18,12 +18,16 @@ func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *
 func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	bk, err := e.KeyGenerator.KeyGenerate()
 	if err != nil {
-		debug.Printf("Failed to generate key: %s", err)
+		if debug.Enabled {
+			debug.Printf("Failed to generate key: %s", err)
+		}
 		return nil, err
 	}
 	cek := bk.Bytes()
 
-	debug.Printf("Encrypt: generated cek len = %d", len(cek))
+	if debug.Enabled {
+		debug.Printf("Encrypt: generated cek len = %d", len(cek))
+	}
 
 	protected := NewEncodedHeader()
 	protected.Set("enc", e.ContentEncrypter.Algorithm())
@@ -40,14 +44,18 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		}
 		enckey, err := enc.KeyEncrypt(cek)
 		if err != nil {
-			debug.Printf("Failed to encrypt key: %s", err)
+			if debug.Enabled {
+				debug.Printf("Failed to encrypt key: %s", err)
+			}
 			return nil, err
 		}
 		r.EncryptedKey = enckey.Bytes()
 		if hp, ok := enckey.(HeaderPopulater); ok {
 			hp.HeaderPopulate(r.Header)
 		}
-		debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
+		if debug.Enabled {
+			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
+		}
 		recipients[i] = *r
 	}
 
@@ -68,15 +76,19 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	// ...on the other hand, there's only one content cipher.
 	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
 	if err != nil {
-		debug.Printf("Failed to encrypt: %s", err)
+		if debug.Enabled {
+			debug.Printf("Failed to encrypt: %s", err)
+		}
 		return nil, err
 	}
 
-	debug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
-	debug.Printf("Encrypt.Encrypt: aad        = %x", aad)
-	debug.Printf("Encrypt.Encrypt: ciphertext = %x", ciphertext)
-	debug.Printf("Encrypt.Encrypt: iv         = %x", iv)
-	debug.Printf("Encrypt.Encrypt: tag        = %x", tag)
+	if debug.Enabled {
+		debug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
+		debug.Printf("Encrypt.Encrypt: aad        = %x", aad)
+		debug.Printf("Encrypt.Encrypt: ciphertext = %x", ciphertext)
+		debug.Printf("Encrypt.Encrypt: iv         = %x", iv)
+		debug.Printf("Encrypt.Encrypt: tag        = %x", tag)
+	}
 
 	msg := NewMessage()
 	msg.AuthenticatedData.Base64Decode(aad)

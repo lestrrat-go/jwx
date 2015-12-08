@@ -429,7 +429,9 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	}
 	h, err = h.Merge(m.UnprotectedHeader)
 	if err != nil {
-		debug.Printf("failed to merge unprotected header")
+		if debug.Enabled {
+			debug.Printf("failed to merge unprotected header")
+		}
 		return nil, err
 	}
 
@@ -449,32 +451,42 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 
 	var plaintext []byte
 	for _, recipient := range m.Recipients {
-		debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Header.Algorithm)
+		if debug.Enabled {
+			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Header.Algorithm)
+		}
 		if recipient.Header.Algorithm != alg {
 			continue
 		}
 
 		h2 := NewHeader()
 		if err := h2.Copy(h); err != nil {
-			debug.Printf("failed to copy header: %s", err)
+			if debug.Enabled {
+				debug.Printf("failed to copy header: %s", err)
+			}
 			continue
 		}
 
 		h2, err := h2.Merge(recipient.Header)
 		if err != nil {
-			debug.Printf("Failed to merge! %s", err)
+			if debug.Enabled {
+				debug.Printf("Failed to merge! %s", err)
+			}
 			continue
 		}
 
 		k, err := BuildKeyDecrypter(h2.Algorithm, h2, key, keysize)
 		if err != nil {
-			debug.Printf("failed to create key decrypter: %s", err)
+			if debug.Enabled {
+				debug.Printf("failed to create key decrypter: %s", err)
+			}
 			continue
 		}
 
 		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
-			debug.Printf("failed to decrypt key: %s", err)
+			if debug.Enabled {
+				debug.Printf("failed to decrypt key: %s", err)
+			}
 			continue
 		}
 
@@ -482,7 +494,9 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if err == nil {
 			break
 		}
-		debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
+		if debug.Enabled {
+			debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
+		}
 		// Keep looping because there might be another key with the same algo
 	}
 
@@ -518,4 +532,3 @@ func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, erro
 
 	return nil, ErrUnsupportedAlgorithm
 }
-

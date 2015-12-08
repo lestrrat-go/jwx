@@ -274,7 +274,9 @@ func (s EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	h := hash.New()
 	h.Write(payload)
 	signed := h.Sum(nil)
-	debug.Printf("payload = %s, signed -> %x", payload, signed)
+	if debug.Enabled {
+		debug.Printf("payload = %s, signed -> %x", payload, signed)
+	}
 
 	r, v, err := ecdsa.Sign(rand.Reader, privkey, signed)
 	if err != nil {
