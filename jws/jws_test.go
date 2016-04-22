@@ -112,7 +112,12 @@ func TestVerifyWithJWK(t *testing.T) {
 		return
 	}
 
-	verified, err := VerifyWithJWK(buf, &jwk.Set{Keys: []jwk.Key{jwkkey}})
+	verified, err := VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkkey}}, nil)
+	if !assert.NoError(t, err, "Verify is successful") {
+		return
+	}
+
+	verified, err = VerifyWithJWK(buf, jwkkey)
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
@@ -530,6 +535,28 @@ func TestSign_HeaderValues(t *testing.T) {
 		return
 	}
 	if !assert.Equal(t, verified, payload, "Payload should match") {
+		return
+	}
+}
+
+func TestPublicHeaders(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, "GenerateKey should succeed") {
+		return
+	}
+
+	signer, err := NewRsaSign(jwa.RS256, key)
+	if !assert.NoError(t, err, "NewRsaSign should succeed") {
+		return
+	}
+
+	pubkey := key.PublicKey
+	pubjwk, err := jwk.NewRsaPublicKey(&pubkey)
+	if !assert.NoError(t, err, "NewRsaPublicKey should succeed") {
+		return
+	}
+
+	if !assert.NoError(t, signer.PublicHeaders().Set("jwk", pubjwk), "Set('jwk') should succeed") {
 		return
 	}
 }
