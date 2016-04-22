@@ -181,10 +181,6 @@ func VerifyWithJWK(buf []byte, keyset *jwk.Set) ([]byte, error) {
 	}
 
 	for _, key := range keyset.Keys {
-		if u := key.Use(); u != "" && u != "enc" {
-			continue
-		}
-
 		keyval, err := key.Materialize()
 		if err != nil {
 			return nil, err
