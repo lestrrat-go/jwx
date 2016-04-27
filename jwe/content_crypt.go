@@ -21,6 +21,7 @@ func (c GenericContentCrypt) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte
 		if debug.Enabled {
 			debug.Printf("cipher.encrypt failed")
 		}
+
 		return nil, nil, nil, errors.Wrap(err, `failed to crypt content`)
 	}
 

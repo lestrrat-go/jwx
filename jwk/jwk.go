@@ -3,7 +3,6 @@ package jwk
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 )
 
 // FetchFile fetches the local JWK from file, and parses its contents
@@ -33,17 +33,17 @@ func FetchFile(jwkpath string) (*Set, error) {
 func FetchHTTP(jwkurl string) (*Set, error) {
 	res, err := http.Get(jwkurl)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch remote JWK")
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to fetch JWK from remote url")
+		return nil, errors.New("failed to fetch remote JWK (status != 200)")
 	}
 
 	// XXX Check for maximum length to read?
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to read JWK HTTP response body")
 	}
 	defer res.Body.Close()
 
@@ -54,7 +54,7 @@ func FetchHTTP(jwkurl string) (*Set, error) {
 func Parse(buf []byte) (*Set, error) {
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal JWK")
 	}
 
 	// We must change what the underlying structure that gets decoded
@@ -107,7 +107,7 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	// https://tools.ietf.org/html/rfc7517#section-4.1
 	kty, err := r.GetString("kty")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to find 'kty' key from JWK headers")
 	}
 	e.KeyType = jwa.KeyType(kty)
 
@@ -134,7 +134,7 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	if v, err := r.GetString("x5u"); err == nil {
 		u, err := url.Parse(v)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to parse 'x5u' key")
 		}
 		e.X509Url = u
 	}
@@ -159,7 +159,7 @@ func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
 
 	k, err := r.GetBuffer("k")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch 'k' field for symmetric key")
 	}
 	key.Key = k
 
@@ -169,32 +169,32 @@ func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
 func constructEcdsaPublicKey(m map[string]interface{}) (*EcdsaPublicKey, error) {
 	e, err := constructEssentialHeader(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to construct essential headers for ECDSA public key")
 	}
 	r := emap.Hmap(m)
 
 	crvstr, err := r.GetString("crv")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch 'crv' key for ECDSA public key")
 	}
 	crv := jwa.EllipticCurveAlgorithm(crvstr)
 
 	x, err := r.GetBuffer("x")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch 'x' key for ECDSA public key")
 	}
 
 	if x.Len() != crv.Size() {
-		return nil, errors.New("size of x does not match crv size")
+		return nil, errors.New("size of x does not match crv size for ECDSA public key")
 	}
 
 	y, err := r.GetBuffer("y")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch 'y' key for ECDSA public key")
 	}
 
 	if y.Len() != crv.Size() {
-		return nil, errors.New("size of y does not match crv size")
+		return nil, errors.New("size of y does not match crv size for ECDSA public key")
 	}
 
 	return &EcdsaPublicKey{
@@ -208,13 +208,13 @@ func constructEcdsaPublicKey(m map[string]interface{}) (*EcdsaPublicKey, error) 
 func constructEcdsaPrivateKey(m map[string]interface{}) (*EcdsaPrivateKey, error) {
 	pubkey, err := constructEcdsaPublicKey(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to construct essential header for ECDSA private key")
 	}
 
 	r := emap.Hmap(m)
 	d, err := r.GetBuffer("d")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch 'd' key for ECDSA private key")
 	}
 
 	return &EcdsaPrivateKey{
@@ -226,7 +226,7 @@ func constructEcdsaPrivateKey(m map[string]interface{}) (*EcdsaPrivateKey, error
 func constructRsaPublicKey(m map[string]interface{}) (*RsaPublicKey, error) {
 	e, err := constructEssentialHeader(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to construct essential header for RSA public key")
 	}
 
 	for _, name := range []string{"n", "e"} {

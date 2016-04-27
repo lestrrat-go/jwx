@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"compress/flate"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
@@ -13,6 +11,7 @@ import (
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/pkg/errors"
 )
 
 // NewRecipient creates a Recipient object
@@ -90,7 +89,7 @@ func (h *Header) Set(key string, value interface{}) error {
 		} else {
 			v, ok = value.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return ErrInvalidHeaderValue
+				return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'alg'")
 			}
 		}
 		h.Algorithm = v
@@ -104,7 +103,7 @@ func (h *Header) Set(key string, value interface{}) error {
 		case string:
 			v = buffer.Buffer(value.(string))
 		default:
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'apu'")
 		}
 		h.AgreementPartyUInfo = v
 	case "apv":
@@ -117,7 +116,7 @@ func (h *Header) Set(key string, value interface{}) error {
 		case string:
 			v = buffer.Buffer(value.(string))
 		default:
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'apv'")
 		}
 		h.AgreementPartyVInfo = v
 	case "enc":
@@ -128,76 +127,76 @@ func (h *Header) Set(key string, value interface{}) error {
 		} else {
 			v, ok = value.(jwa.ContentEncryptionAlgorithm)
 			if !ok {
-				return ErrInvalidHeaderValue
+				return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'enc'")
 			}
 		}
 		h.ContentEncryption = v
 	case "cty":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'cty'")
 		}
 		h.ContentType = v
 	case "epk":
 		v, ok := value.(*jwk.EcdsaPublicKey)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'epk'")
 		}
 		h.EphemeralPublicKey = v
 	case "kid":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'kid'")
 		}
 		h.KeyID = v
 	case "typ":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'typ'")
 		}
 		h.Type = v
 	case "x5t":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'x5t'")
 		}
 		h.X509CertThumbprint = v
 	case "x5t#256":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'x5t#256'")
 		}
 		h.X509CertThumbprintS256 = v
 	case "x5c":
 		v, ok := value.([]string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'x5c'")
 		}
 		h.X509CertChain = v
 	case "crit":
 		v, ok := value.([]string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'crit'")
 		}
 		h.Critical = v
 	case "jku":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'jku'")
 		}
 		u, err := url.Parse(v)
 		if err != nil {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(errors.Wrap(err, "failed to parse new value for 'jku' header"), "invalid header value")
 		}
 		h.JwkSetURL = u
 	case "x5u":
 		v, ok := value.(string)
 		if !ok {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'x5u'")
 		}
 		u, err := url.Parse(v)
 		if err != nil {
-			return ErrInvalidHeaderValue
+			return errors.Wrap(errors.Wrap(err, "failed to parse new value for 'x5u' header"), "invalid header value")
 		}
 		h.X509Url = u
 	default:
@@ -214,7 +213,7 @@ func (h *Header) Merge(h2 *Header) (*Header, error) {
 
 	h3 := NewHeader()
 	if err := h3.Copy(h); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to copy header values")
 	}
 
 	h3.EssentialHeader.Merge(h2.EssentialHeader)
@@ -346,12 +345,12 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, h.EssentialHeader); err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse JSON (essential) headers")
 	}
 
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse JSON headers")
 	}
 	for _, n := range []string{"alg", "apu", "apv", "enc", "cty", "zip", "crit", "epk", "jwk", "jku", "kid", "typ", "x5u", "x5c", "x5t", "x5t#S256"} {
 		delete(m, n)
@@ -359,7 +358,7 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 
 	for name, value := range m {
 		if err := h.Set(name, value); err != nil {
-			return err
+			return errors.Wrap(err, "failed to set header field '"+name+"'")
 		}
 	}
 	return nil
@@ -370,12 +369,12 @@ func (h *Header) UnmarshalJSON(data []byte) error {
 func (e EncodedHeader) Base64Encode() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal encoded header into JSON")
 	}
 
 	buf, err = buffer.Buffer(buf).Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
 	}
 
 	return buf, nil
@@ -385,7 +384,7 @@ func (e EncodedHeader) Base64Encode() ([]byte, error) {
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := e.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
 	}
 	return json.Marshal(string(buf))
 }
@@ -395,11 +394,11 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	b := buffer.Buffer{}
 	// base646 json string -> json object representation of header
 	if err := json.Unmarshal(buf, &b); err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal buffer")
 	}
 
 	if err := json.Unmarshal(b.Bytes(), &e.Header); err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal buffer")
 	}
 
 	return nil
@@ -432,12 +431,12 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if debug.Enabled {
 			debug.Printf("failed to merge unprotected header")
 		}
-		return nil, err
+		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
 	}
 
 	aad, err := m.AuthenticatedData.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
 	}
 	ciphertext := m.CipherText.Bytes()
 	iv := m.InitializationVector.Bytes()
@@ -445,7 +444,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 
 	cipher, err := buildContentCipher(enc)
 	if err != nil {
-		return nil, fmt.Errorf("unsupported content cipher algorithm '%s'", enc)
+		return nil, errors.Wrap(err, "unsupported content cipher algorithm '"+enc.String()+"'")
 	}
 	keysize := cipher.KeySize()
 
@@ -516,7 +515,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			in = in[n:]
 		}
 		if err := w.Close(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to close compression writer")
 		}
 		plaintext = output.Bytes()
 	}

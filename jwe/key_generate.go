@@ -5,12 +5,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/binary"
-	"errors"
 	"io"
 
 	"github.com/lestrrat/go-jwx/internal/concatkdf"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/pkg/errors"
 )
 
 // Bytes returns the byte from this ByteKey
@@ -45,7 +45,7 @@ func (g RandomKeyGenerate) KeySize() int {
 func (g RandomKeyGenerate) KeyGenerate() (ByteSource, error) {
 	buf := make([]byte, g.keysize)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to read from rand.Reader")
 	}
 	return ByteKey(buf), nil
 }
@@ -63,7 +63,7 @@ func NewEcdhesKeyGenerate(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKe
 	case jwa.ECDH_ES_A256KW:
 		keysize = 32
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "invalid ECDH-ES key generation algorithm")
 	}
 
 	return &EcdhesKeyGenerate{
@@ -82,7 +82,7 @@ func (g EcdhesKeyGenerate) KeySize() int {
 func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
 	priv, err := ecdsa.GenerateKey(g.pubkey.Curve, rand.Reader)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate key for ECDH-ES")
 	}
 
 	pubinfo := make([]byte, 4)
