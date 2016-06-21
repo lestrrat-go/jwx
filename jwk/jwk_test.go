@@ -1,9 +1,12 @@
 package jwk
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"math/big"
 	"strconv"
 	"testing"
 
@@ -11,6 +14,33 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestJwksSerializationPadding(t *testing.T) {
+	x := new(big.Int)
+	y := new(big.Int)
+
+	e := &EssentialHeader{}
+	e.KeyType = jwa.EC
+	x.SetString("123520477547912006148785171019615806128401248503564636913311359802381551887648525354374204836279603443398171853465", 10)
+	y.SetString("13515585925570416130130241699780319456178918334914981404162640338265336278264431930522217750520011829472589865088261", 10)
+	pubKey := &ecdsa.PublicKey{
+		Curve: elliptic.P384(),
+		X:     x,
+		Y:     y,
+	}
+	jwkPubKey := NewEcdsaPublicKey(pubKey)
+	jwkPubKey.EssentialHeader = e
+	jwkJSON, err := json.Marshal(jwkPubKey)
+	if !assert.NoError(t, err, "JWK Marshalled") {
+		return
+	}
+
+	_, err = Parse(jwkJSON)
+	if !assert.NoError(t, err, "JWK Parsed") {
+		return
+	}
+
+}
 
 func TestJwksRoundtrip(t *testing.T) {
 	ks1 := &Set{}

@@ -11,13 +11,26 @@ import (
 	"github.com/lestrrat/go-jwx/jwa"
 )
 
+// i2osp converts an integer to a fixed length octet string as per RFC 3447
+// section 4.1 where v is the integer and n is the octet string length.
+func i2osp(v *big.Int, n int) []byte {
+	b := v.Bytes()
+	if len(b) < n {
+		t := make([]byte, n)
+		copy(t[n-len(b):], b)
+		return t
+	}
+	return b
+}
+
 // NewEcdsaPublicKey creates a new JWK from a EC-DSA public key
 func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
 	pubkey := &EcdsaPublicKey{
 		Curve: jwa.EllipticCurveAlgorithm(pk.Params().Name),
 	}
-	pubkey.X.SetBytes(pk.X.Bytes())
-	pubkey.Y.SetBytes(pk.Y.Bytes())
+	n := pk.Params().BitSize / 8
+	pubkey.X.SetBytes(i2osp(pk.X, n))
+	pubkey.Y.SetBytes(i2osp(pk.Y, n))
 	return pubkey
 }
 
@@ -25,7 +38,7 @@ func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
 func NewEcdsaPrivateKey(pk *ecdsa.PrivateKey) *EcdsaPrivateKey {
 	pubkey := NewEcdsaPublicKey(&pk.PublicKey)
 	privkey := &EcdsaPrivateKey{EcdsaPublicKey: pubkey}
-	privkey.D.SetBytes(pk.D.Bytes())
+	privkey.D.SetBytes(i2osp(pk.D, pk.Params().BitSize/8))
 	return privkey
 }
 
