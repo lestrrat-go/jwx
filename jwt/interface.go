@@ -22,7 +22,7 @@ type EssentialClaims struct {
 	Expiration int64        `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	IssuedAt   int64        `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
 	Issuer     string       `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	JwtID      string       `json:"jtu,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	JwtID      string       `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
 	NotBefore  *NumericDate `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
 	Subject    string       `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
 }
