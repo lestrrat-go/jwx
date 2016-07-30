@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
@@ -141,8 +140,8 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	}
 
 	// https://tools.ietf.org/html/rfc7517#section-4.7
-	if v, err := r.Get("x5c", reflect.TypeOf(e.X509CertChain)); err == nil {
-		e.X509CertChain = v.([]string)
+	if v, err := r.GetStringSlice("x5c"); err == nil {
+		e.X509CertChain = v
 	}
 
 	return e, nil

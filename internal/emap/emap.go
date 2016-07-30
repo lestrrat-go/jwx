@@ -123,11 +123,21 @@ func (h Hmap) GetString(name string, consume ...bool) (string, error) {
 }
 
 func (h Hmap) GetStringSlice(name string, consume ...bool) ([]string, error) {
-	v, err := h.Get(name, reflect.TypeOf([]string{}), consume...)
+	v, err := h.Get(name, reflect.TypeOf([]interface{}{}), consume...)
 	if err != nil {
 		return nil, err
 	}
-	return v.([]string), nil
+
+	s := v.([]interface{})
+	out := make([]string, len(s))
+	for i, s := range s {
+		if val, ok := s.(string); ok {
+			out[i] = val
+		} else {
+			return nil, errors.New("cannot cast string '" + name + "'")
+		}
+	}
+	return out, nil
 }
 
 func (h Hmap) GetBuffer(name string, consume ...bool) (buffer.Buffer, error) {
