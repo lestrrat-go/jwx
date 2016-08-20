@@ -13,6 +13,7 @@ func TestHeader(t *testing.T) {
 	values := map[string]interface{}{
 		"kid":     "helloworld01",
 		"kty":     jwa.RSA,
+		"key_ops": []KeyOperation{KeyOpSign},
 		"use":     "sig",
 		"x5t":     "thumbprint",
 		"x5t#256": "thumbprint256",
@@ -32,6 +33,11 @@ func TestHeader(t *testing.T) {
 		}
 
 		if !assert.Equal(t, v, got, "values match '%s'", k) {
+			return
+		}
+
+		err = h.Set(k, v)
+		if !assert.NoError(t, err, "Set works for '%s'", k) {
 			return
 		}
 	}

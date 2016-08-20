@@ -14,6 +14,8 @@ func (h *EssentialHeader) Get(key string) (interface{}, error) {
 		return h.Algorithm, nil
 	case "kid":
 		return h.KeyID, nil
+	case "key_ops":
+		return h.KeyOps, nil
 	case "kty":
 		return h.KeyType, nil
 	case "use":
@@ -50,6 +52,13 @@ func (h *EssentialHeader) Set(key string, value interface{}) error {
 			return ErrInvalidHeaderValue
 		}
 		h.KeyID = v
+		return nil
+	case "key_ops":
+		v, ok := value.([]KeyOperation)
+		if !ok {
+			return ErrInvalidHeaderValue
+		}
+		h.KeyOps = v
 		return nil
 	case "kty":
 		switch value.(type) {
