@@ -26,7 +26,8 @@ func i2osp(v *big.Int, n int) []byte {
 // NewEcdsaPublicKey creates a new JWK from a EC-DSA public key
 func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
 	pubkey := &EcdsaPublicKey{
-		Curve: jwa.EllipticCurveAlgorithm(pk.Params().Name),
+		EssentialHeader: &EssentialHeader{KeyType: jwa.EC},
+		Curve:           jwa.EllipticCurveAlgorithm(pk.Params().Name),
 	}
 	n := pk.Params().BitSize / 8
 	pubkey.X.SetBytes(i2osp(pk.X, n))
