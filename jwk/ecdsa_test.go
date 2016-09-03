@@ -3,8 +3,10 @@ package jwk
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"testing"
 
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,4 +85,32 @@ func TestParse_EcdsaPrivateKey(t *testing.T) {
 	}, "NewEcdsaPublicKey does not panic") {
 		return
 	}
+}
+
+func TestParse_EcdsaInitKey(t *testing.T) {
+	// Generate an ECDSA P-256 test key.
+	ecPrk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if !assert.NoError(t, err, "Failed to generate EC P-256 key") {
+		return
+	}
+	// Test initialization of a private EC JWK.
+	prk := NewEcdsaPrivateKey(ecPrk)
+	err = prk.Set("kid", "MyKey")
+	assert.NoError(t, err, "Set private key ID success")
+	assert.Equal(t, prk.KeyType, jwa.EC, "Private key type match")
+	assert.Equal(t, prk.Curve, jwa.P256, "Private key curve match")
+	assert.Equal(t, prk.X.Bytes(), ecPrk.X.Bytes(), "Private key X match")
+	assert.Equal(t, prk.Y.Bytes(), ecPrk.Y.Bytes(), "Private key Y match")
+	assert.Equal(t, prk.D.Bytes(), ecPrk.D.Bytes(), "Private key D match")
+	assert.Equal(t, prk.KeyID, "MyKey", "Private key ID match")
+
+	// Test initialization of a public EC JWK.
+	puk := NewEcdsaPublicKey(&ecPrk.PublicKey)
+	err = puk.Set("kid", "MyKey")
+	assert.NoError(t, err, " Set public key ID success")
+	assert.Equal(t, puk.KeyType, jwa.EC, "Public key type match")
+	assert.Equal(t, puk.Curve, jwa.P256, "Public key curve match")
+	assert.Equal(t, puk.X.Bytes(), ecPrk.X.Bytes(), "Public key X match")
+	assert.Equal(t, puk.Y.Bytes(), ecPrk.Y.Bytes(), "Public key Y march")
+	assert.Equal(t, prk.KeyID, "MyKey", "Public key ID match")
 }
