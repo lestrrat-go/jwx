@@ -8,12 +8,12 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
-	"errors"
 	"hash"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 )
 
 // NewSigner creates a new MultiSign object with the given PayloadSigners.
@@ -42,7 +42,7 @@ func (m *MultiSign) SignString(payload string) (*Message, error) {
 func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 	encoded, err := buffer.Buffer(payload).Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to sign")
 	}
 
 	msg := &Message{
@@ -52,29 +52,29 @@ func (m *MultiSign) Sign(payload []byte) (*Message, error) {
 	for _, signer := range m.Signers {
 		protected, err := NewHeader().Merge(signer.PublicHeaders())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to merge protected headers (1)")
 		}
 		protected, err = protected.Merge(signer.ProtectedHeaders())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to merge protected headers (2)")
 		}
 		protected.Algorithm = signer.SignatureAlgorithm()
 
 		protbuf, err := protected.Base64Encode()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 		}
 
 		siv := append(append(protbuf, '.'), encoded...)
 
 		sigbuf, err := signer.PayloadSign(siv)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to sign payload")
 		}
 
 		hdr, err := NewHeader().Merge(signer.PublicHeaders())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to merge public headers")
 		}
 
 		/*
@@ -111,7 +111,7 @@ func NewRsaSign(alg jwa.SignatureAlgorithm, key *rsa.PrivateKey) (*RsaSign, erro
 	switch alg {
 	case jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512:
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "unsupported algorithm while trying to create RSA signer")
 	}
 
 	pubhdr := NewHeader()
@@ -170,12 +170,12 @@ func rsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 func (s RsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	hash, err := rsaHashForAlg(s.SignatureAlgorithm())
 	if err != nil {
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.Wrap(err, "unsupported algorithm to sign payload")
 	}
 
 	privkey := s.PrivateKey
 	if privkey == nil {
-		return nil, ErrMissingPrivateKey
+		return nil, errors.Wrap(ErrMissingPrivateKey, "missing private key while signing payload")
 	}
 
 	h := hash.New()
@@ -280,7 +280,7 @@ func (s EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 
 	r, v, err := ecdsa.Sign(rand.Reader, privkey, signed)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
 	}
 
 	out := make([]byte, keysiz*2)

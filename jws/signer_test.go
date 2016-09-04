@@ -11,19 +11,20 @@ import (
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRsaSign_NewRsaSignWithBadAlgorithm(t *testing.T) {
 	_, err := NewRsaSign(jwa.SignatureAlgorithm("FooBar"), nil)
-	if !assert.Equal(t, ErrUnsupportedAlgorithm, err, "Unknown algorithm should return error") {
+	if !assert.Equal(t, ErrUnsupportedAlgorithm, errors.Cause(err), "Unknown algorithm should return error") {
 		return
 	}
 }
 
 func TestRsaSign_SignWithBadAlgorithm(t *testing.T) {
 	_, err := NewRsaSign(jwa.SignatureAlgorithm("FooBar"), nil)
-	if !assert.Equal(t, ErrUnsupportedAlgorithm, err, "Creating signer with unknown algorithm should return error") {
+	if !assert.Equal(t, ErrUnsupportedAlgorithm, errors.Cause(err), "Creating signer with unknown algorithm should return error") {
 		return
 	}
 }
@@ -32,7 +33,7 @@ func TestRsaSign_SignWithNoPrivateKey(t *testing.T) {
 	s, _ := NewRsaSign(jwa.RS256, nil)
 
 	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
-	if !assert.Equal(t, ErrMissingPrivateKey, err, "Sign with no private key should return error") {
+	if !assert.Equal(t, ErrMissingPrivateKey, errors.Cause(err), "Sign with no private key should return error") {
 		return
 	}
 }
