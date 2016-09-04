@@ -10,9 +10,13 @@ import (
 
 func TestClaimSet(t *testing.T) {
 	c1 := NewClaimSet()
-	c1.Set("nonce", "AbCdEfG")
+	c1.Set("jti", "AbCdEfG")
 	c1.Set("sub", "foobar@example.com")
-	c1.Set("iat", time.Now().Unix())
+	now := time.Now()
+	c1.Set("iat", now)
+	c1.Set("nbf", now.Add(5*time.Second))
+	c1.Set("exp", now.Add(10*time.Second))
+	c1.Set("custom", "MyValue")
 
 	jsonbuf1, err := json.MarshalIndent(c1, "", "  ")
 	if !assert.NoError(t, err, "JSON marshal should succeed") {

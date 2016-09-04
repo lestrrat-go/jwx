@@ -76,7 +76,7 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 	c.IssuedAt, _ = r.GetInt64("iat")
 	c.Issuer, _ = r.GetString("iss")
 	c.JwtID, _ = r.GetString("jti")
-	if v, err := r.GetString("nbf"); err != nil {
+	if v, err := r.GetString("nbf"); err == nil {
 		if v != "" {
 			t, err := time.Parse(numericDateFmt, v)
 			if err != nil {
@@ -169,7 +169,7 @@ func (c *ClaimSet) Set(key string, value interface{}) error {
 		case *NumericDate:
 			c.NotBefore = value.(*NumericDate)
 		case time.Time:
-			c.NotBefore = &NumericDate{value.(time.Time)}
+			c.NotBefore = &NumericDate{value.(time.Time).UTC().Round(time.Second)}
 		default:
 			return ErrInvalidValue
 		}
