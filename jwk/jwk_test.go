@@ -252,3 +252,34 @@ func TestAppendix_B(t *testing.T) {
 		}
 	}
 }
+
+func TestConstructEssentialHeader(t *testing.T) {
+	var jwksrc = []byte(`{"keys":
+       [
+        {"kty":"oct",
+         "use":"sig",
+         "key_ops": ["sign","verify"],
+         "alg": "HS256",
+         "k":"test",
+         "kid":"test"}
+       ]
+     }`)
+
+	set, err := Parse(jwksrc)
+	if !assert.NoError(t, err, "Parse should succeed") {
+		return
+	}
+	{
+		key, ok := set.Keys[0].(*SymmetricKey)
+		if !assert.True(t, ok, "set.Keys[0] should be a SymmetricKey") {
+			return
+		}
+		ops, err := key.Get("key_ops")
+		if !assert.NoError(t, err, "key.Get(key_ops) should succeed") {
+			return
+		}
+		if !assert.Equal(t, ops, []KeyOperation{KeyOpSign, KeyOpVerify}, "key.KeyOps should be equal") {
+			return
+		}
+	}
+}

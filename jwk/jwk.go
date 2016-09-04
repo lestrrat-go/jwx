@@ -115,7 +115,7 @@ func constructEssentialHeader(m map[string]interface{}) (*EssentialHeader, error
 	e.KeyUsage, _ = r.GetString("use")
 
 	// https://tools.ietf.org/html/rfc7517#section-4.3
-	if v, err := r.GetStringSlice("key_ops"); err != nil {
+	if v, err := r.GetStringSlice("key_ops"); err == nil {
 		if len(v) > 0 {
 			e.KeyOps = make([]KeyOperation, len(v))
 			for i, x := range v {
