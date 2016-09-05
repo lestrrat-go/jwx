@@ -77,21 +77,21 @@ func doJWK() int {
 		var err error
 		key, err = jwk.FetchHTTP(c.JWKLocation)
 		if err != nil {
-			errors.Print(err)
+			log.Printf("%s", err)
 			return 0
 		}
 	} else {
 		var err error
 		key, err = jwk.FetchFile(c.JWKLocation)
 		if err != nil {
-			errors.Print(err)
+			log.Printf("%s", err)
 			return 0
 		}
 	}
 
 	keybuf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
-		errors.Print(err)
+		log.Printf("%s", err)
 		return 0
 	}
 	log.Printf("=== JWK ===")
@@ -102,7 +102,7 @@ func doJWK() int {
 	// TODO make it flexible
 	pubkey, err := (key.Keys[0]).(*jwk.RsaPublicKey).PublicKey()
 	if err != nil {
-		errors.Print(err)
+		log.Printf("%s", err)
 		return 0
 	}
 
@@ -112,7 +112,7 @@ func doJWK() int {
 	} else {
 		f, err := os.Open(c.Payload)
 		if err != nil {
-			errors.Print(errors.Wrap(err, "failed to open file "+c.Payload))
+			log.Printf("%s", errors.Wrap(err, "failed to open file "+c.Payload))
 			return 1
 		}
 		payload = f
@@ -121,13 +121,13 @@ func doJWK() int {
 
 	buf, err := ioutil.ReadAll(payload)
 	if err != nil {
-		errors.Print(errors.Wrap(err, "failed to read payload"))
+		log.Printf("%s", errors.Wrap(err, "failed to read payload"))
 		return 0
 	}
 
 	message, err := jws.Parse(buf)
 	if err != nil {
-		errors.Print(err)
+		log.Printf("%s", err)
 		return 0
 	}
 
@@ -137,7 +137,7 @@ func doJWK() int {
 	if err := json.Unmarshal(message.Payload, &m); err == nil {
 		payloadbuf, err := json.MarshalIndent(m, "", "  ")
 		if err != nil {
-			errors.Print(errors.Wrap(err, "failed to marshal payload"))
+			log.Printf("%s", errors.Wrap(err, "failed to marshal payload"))
 			return 0
 		}
 		for _, l := range bytes.Split(payloadbuf, []byte{'\n'}) {
@@ -151,7 +151,7 @@ func doJWK() int {
 		log.Printf("=== Signature %d ===", i)
 		sigbuf, err := json.MarshalIndent(sig, "", "  ")
 		if err != nil {
-			errors.Print(errors.Wrap(err, "failed to marshal signature as JSON"))
+			log.Printf("%s", errors.Wrap(err, "failed to marshal signature as JSON"))
 			return 0
 		}
 		for _, l := range bytes.Split(sigbuf, []byte{'\n'}) {
@@ -160,7 +160,7 @@ func doJWK() int {
 
 		v, err := jws.NewRsaVerify(sig.ProtectedHeader.Algorithm, pubkey)
 		if err != nil {
-			errors.Print(err)
+			log.Printf("%s", err)
 			continue
 		}
 		if err := v.Verify(message); err == nil {
