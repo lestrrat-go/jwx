@@ -173,7 +173,7 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	if tv := c.IssuedAt; tv > 0 {
 		t := time.Unix(tv, 0)
 		now := clock.Now().Truncate(time.Second)
-		if !now.After(t.Add(skew)) {
+		if !now.After(t.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}

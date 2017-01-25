@@ -155,7 +155,7 @@ func TestGHIssue10_exp(t *testing.T) {
 
 	// This should succeed, because we have given a time
 	// that is well enough into the past
-	if !assert.NoError(t, c.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-2*time.Hour) }))), "claimset.Verify should succeed") {
+	if !assert.NoError(t, c.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-3500*time.Second) }))), "claimset.Verify should succeed") {
 		return
 	}
 }
