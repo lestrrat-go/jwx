@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 )
@@ -112,6 +113,9 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 // control of the verification process, manually call `Parse`, generate a
 // verifier, and call `Verify` on the parsed JWS message object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	if debug.Enabled {
+		debug.Printf("jws.Verify\n")
+	}
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, err
@@ -158,6 +162,11 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 
 	if err := verifier.Verify(msg); err != nil {
 		return nil, err
+	}
+
+	// We need to verify essential claims
+	if err := verifyEssentialClaims(msg); err != nil {
+		return nil, errVerifyFailed
 	}
 	return msg.Payload.Bytes(), nil
 }
@@ -223,7 +232,17 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 		// note: this masks potential errors within Verify(), but ... hmmm
 		return errVerifyFailed
 	}
+
 	return nil
+}
+
+func verifyEssentialClaims(m *Message) error {
+
+	if debug.Enabled {
+		debug.Printf("%#v\n", m)
+	}
+	return nil
+
 }
 
 // VerifyWithJWK verifies the JWS message using the specified JWK

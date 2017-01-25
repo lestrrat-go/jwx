@@ -77,19 +77,25 @@ func TestGHIssue10(t *testing.T) {
 		return
 	}
 
-	//Verify signature and grab payload
+	// Verify signature and grab payload
 	verified, err := jws.Verify(sbuf, jwa.RS256, &rsakey.PublicKey)
-	if !assert.Error(t, err, `jws.Verify should succeed`) {
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+
+	}
+
+	// Verify claims
+	cs := jwt.NewClaimSet()
+	if err = cs.UnmarshalJSON(verified); err != nil {
+		t.Logf("failed to get claimset: %s", err)
+		return
+	}
+
+	if !assert.Error(t, cs.Verify(), "claimset.Verify should fail") {
 		t.Logf("JWS verified even expired!!!")
-		//get claimset
-		cs := jwt.NewClaimSet()
-		if err = cs.UnmarshalJSON(verified); err != nil {
-			t.Logf("failed to get claimset: %s", err)
-			return
-		}
 		// print Essential claims
 		t.Logf("IssuedAt: %v", time.Unix(cs.IssuedAt, 0))
 		t.Logf("Expiration: %v", time.Unix(cs.Expiration, 0))
 		t.Logf("NotBefore: %v", cs.NotBefore)
+		return
 	}
 }
