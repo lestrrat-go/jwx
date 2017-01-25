@@ -9,6 +9,8 @@ const (
 	acceptableSkewKey = "acceptableSkew"
 	clockKey          = "clock"
 	issuerKey         = "issuer"
+	subjectKey        = "subject"
+	audienceKey       = "audience"
 )
 
 type VerifyOption interface {
@@ -65,12 +67,34 @@ func WithIssuer(s string) VerifyOption {
 	}
 }
 
+// WithSubject specifies that expected subject value. If not specified,
+// the value of subject is not verified at all.
+func WithSubject(s string) VerifyOption {
+	return &verifyOption{
+		name:  subjectKey,
+		value: s,
+	}
+}
+
+// WithAudience specifies that expected audience value. 
+// Verify will return true if one of the values in the `aud` element
+// matches this value.  If not specified, the value of issuer is not
+// verified at all.
+func WithAudience(s string) VerifyOption {
+	return &verifyOption{
+		name:  audienceKey,
+		value: s,
+	}
+}
+
 // Verify makes sure that the essential claims stand.
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	var issuer string
+	var subject string
+	var audience string
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
 	for _, o := range options {
@@ -81,18 +105,41 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 			skew = o.Value().(time.Duration)
 		case issuerKey:
 			issuer = o.Value().(string)
+		case subjectKey:
+			subject = o.Value().(string)
+		case audienceKey:
+			audience = o.Value().(string)
 		}
 	}
 
 	// check for iss
 	if len(issuer) > 0 {
 		if c.Issuer != issuer {
-			return errors.New(`issuer not satisfied`)
+			return errors.New(`iss not satisfied`)
 		}
 	}
 
-	// sub
-	// aud
+	// check for sub
+	if len(subject) > 0 {
+		if c.Subject != subject {
+			return errors.New(`sub not satisfied`)
+		}
+	}
+
+	// check for aud
+	if len(audience) > 0 {
+		var found bool
+		for _, v := range c.Audience {
+			if v == audience {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New(`aud not satisfied`)
+		}
+	}
+
 	// check for exp
 	if tv := c.Expiration; tv > 0 {
 		t := time.Unix(tv, 0)
