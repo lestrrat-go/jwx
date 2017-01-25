@@ -45,18 +45,19 @@ func TestClaimSet(t *testing.T) {
 	}
 }
 
-func TestGHIssue10(t *testing.T) {
-	c := jwt.NewClaimSet()
-	c.Set("sub", "jwt-essential-claim-verification")
-
+/*
 	// issuedat = 1 Hr before current time
 	c.IssuedAt = time.Now().Unix() - 3600
 
 	// valid for 2 minutes only from IssuedAt
 	c.Expiration = c.IssuedAt + 120
+*/
+func TestGHIssue10_nbf(t *testing.T) {
+	c := jwt.NewClaimSet()
+	c.Set("sub", "jwt-essential-claim-verification")
 
 	// NotBefore is set to future date
-	tm := time.Now().Add(time.Duration(72) * time.Hour)
+	tm := time.Now().Add(72 * time.Hour)
 	c.NotBefore = &jwt.NumericDate{tm}
 
 	//get json
@@ -83,19 +84,31 @@ func TestGHIssue10(t *testing.T) {
 
 	}
 
-	// Verify claims
 	cs := jwt.NewClaimSet()
 	if err = cs.UnmarshalJSON(verified); err != nil {
 		t.Logf("failed to get claimset: %s", err)
 		return
 	}
 
+	// This should fail, because nbf is the future
 	if !assert.Error(t, cs.Verify(), "claimset.Verify should fail") {
 		t.Logf("JWS verified even expired!!!")
 		// print Essential claims
 		t.Logf("IssuedAt: %v", time.Unix(cs.IssuedAt, 0))
 		t.Logf("Expiration: %v", time.Unix(cs.Expiration, 0))
 		t.Logf("NotBefore: %v", cs.NotBefore)
+		return
+	}
+
+	// This should succeed, because we have given reaaaaaaly big skew
+	// that is well enough to get us accepted
+	if !assert.NoError(t, cs.Verify(jwt.WithAcceptableSkew(73*time.Hour)), "claimset.Verify should succeed") {
+		return
+	}
+
+	// This should succeed, because we have given a time
+	// that is well enough into the future
+	if !assert.NoError(t, cs.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Hour) }))), "claimset.Verify should succeed") {
 		return
 	}
 }

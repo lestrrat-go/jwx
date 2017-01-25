@@ -3,52 +3,11 @@ package jwt
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
 )
-
-const clockKey = "clock"
-
-type VerifyOption interface {
-	Name() string
-	Value() interface{}
-}
-
-type Clock interface {
-	Now() time.Time
-}
-type clockFunc func() time.Time
-
-func (f clockFunc) Now() time.Time {
-	return f()
-}
-
-// Verify makes sure that the essential claims stand
-func (c *ClaimSet) Verify(options ...VerifyOption) error {
-	var clock Clock = clockFunc(time.Now)
-	for _, o := range options {
-		switch o.Name() {
-		case clockKey:
-			clock = o.Value().(Clock)
-		}
-	}
-	// iss
-	// sub
-	// aud
-	// exp
-	// nbf
-	// iat
-	// jti
-	if t := c.NotBefore; t != nil {
-		if clock.Now().Before(t.Time) {
-			return errors.New(`nbf not satisfied`)
-		}
-	}
-	return nil
-}
 
 // MarshalJSON generates JSON representation of this instant
 func (n NumericDate) MarshalJSON() ([]byte, error) {
