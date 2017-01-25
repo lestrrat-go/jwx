@@ -164,10 +164,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 		return nil, err
 	}
 
-	// We need to verify essential claims
-	if err := verifyEssentialClaims(msg); err != nil {
-		return nil, errVerifyFailed
-	}
 	return msg.Payload.Bytes(), nil
 }
 
@@ -234,15 +230,6 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 	}
 
 	return nil
-}
-
-func verifyEssentialClaims(m *Message) error {
-
-	if debug.Enabled {
-		debug.Printf("%#v\n", m)
-	}
-	return nil
-
 }
 
 // VerifyWithJWK verifies the JWS message using the specified JWK
