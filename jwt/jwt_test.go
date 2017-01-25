@@ -41,9 +41,23 @@ func TestClaimSet(t *testing.T) {
 	}
 }
 
+func TestGHIssue10_iss(t *testing.T) {
+	c := jwt.NewClaimSet()
+	c.Issuer = "github.com/lestrrat/go-jwx"
+
+	// This should succeed, because WithIssuer is not provided in the
+	// optinal parameters
+	if !assert.NoError(t, c.Verify(), "claimset.Verify should succeed") {
+		return
+	}
+
+	if !assert.Error(t, c.Verify(jwt.WithIssuer("poop")), "claimset.Verify should fail") {
+		return
+	}
+}
+
 func TestGHIssue10_nbf(t *testing.T) {
 	c := jwt.NewClaimSet()
-	c.Set("sub", "jwt-essential-claim-verification")
 
 	// NotBefore is set to future date
 	tm := time.Now().Add(72 * time.Hour)
@@ -69,7 +83,6 @@ func TestGHIssue10_nbf(t *testing.T) {
 
 func TestGHIssue10_exp(t *testing.T) {
 	c := jwt.NewClaimSet()
-	c.Set("sub", "jwt-essential-claim-verification")
 
 	// issuedat = 1 Hr before current time
 	tm := time.Now()
