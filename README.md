@@ -67,6 +67,8 @@ func main() {
   log.Printf("sub     -> '%s'", c.Get("sub").(string))
   log.Printf("aud     -> '%v'", c.Get("aud").([]string))
   log.Printf("private -> '%s'", c.Get("https://github.com/lestrrat").(string))
+
+  // Possibly use c.Verify() to verify the claim set
 }
 ```
 
