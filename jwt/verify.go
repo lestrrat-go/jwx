@@ -11,6 +11,7 @@ const (
 	issuerKey         = "issuer"
 	subjectKey        = "subject"
 	audienceKey       = "audience"
+	jwtidKey          = "jwtid"
 )
 
 type VerifyOption interface {
@@ -76,7 +77,16 @@ func WithSubject(s string) VerifyOption {
 	}
 }
 
-// WithAudience specifies that expected audience value. 
+// WithJwtID specifies that expected jti value. If not specified,
+// the value of jti is not verified at all.
+func WithJwtID(s string) VerifyOption {
+	return &verifyOption{
+		name:  jwtidKey,
+		value: s,
+	}
+}
+
+// WithAudience specifies that expected audience value.
 // Verify will return true if one of the values in the `aud` element
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
@@ -95,6 +105,7 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	var issuer string
 	var subject string
 	var audience string
+	var jwtid string
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
 	for _, o := range options {
@@ -109,6 +120,8 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 			subject = o.Value().(string)
 		case audienceKey:
 			audience = o.Value().(string)
+		case jwtidKey:
+			jwtid = o.Value().(string)
 		}
 	}
 
@@ -116,6 +129,13 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	if len(issuer) > 0 {
 		if c.Issuer != issuer {
 			return errors.New(`iss not satisfied`)
+		}
+	}
+
+	// check for jti
+	if len(jwtid) > 0 {
+		if c.JwtID != jwtid {
+			return errors.New(`jti not satisfied`)
 		}
 	}
 
@@ -149,7 +169,15 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 		}
 	}
 
-	// iat
+	// check for iat
+	if tv := c.IssuedAt; tv > 0 {
+		t := time.Unix(tv, 0)
+		now := clock.Now().Truncate(time.Second)
+		if !now.After(t.Add(-1 * skew)) {
+			return errors.New(`iat not satisfied`)
+		}
+	}
+
 	// jti
 	// check for nbf
 	if t := c.NotBefore; t != nil {
