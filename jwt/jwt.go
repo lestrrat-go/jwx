@@ -26,8 +26,7 @@ func (f clockFunc) Now() time.Time {
 	return f()
 }
 
-// Verify takes an optional VerifyContext parameter, which specifies,
-// for example, what "time" we should use to check against among other things
+// Verify makes sure that the essential claims stand
 func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	var clock Clock = clockFunc(time.Now)
 	for _, o := range options {
