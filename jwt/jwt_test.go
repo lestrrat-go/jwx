@@ -1,15 +1,20 @@
-package jwt
+package jwt_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jws"
+	"github.com/lestrrat/go-jwx/jwt"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClaimSet(t *testing.T) {
-	c1 := NewClaimSet()
+	c1 := jwt.NewClaimSet()
 	c1.Set("jti", "AbCdEfG")
 	c1.Set("sub", "foobar@example.com")
 	now := time.Now()
@@ -24,7 +29,7 @@ func TestClaimSet(t *testing.T) {
 	}
 	t.Logf("%s", jsonbuf1)
 
-	c2 := NewClaimSet()
+	c2 := jwt.NewClaimSet()
 	if !assert.NoError(t, json.Unmarshal(jsonbuf1, c2), "JSON unmarshal should succeed") {
 		return
 	}
@@ -37,5 +42,54 @@ func TestClaimSet(t *testing.T) {
 
 	if !assert.Equal(t, c1, c2, "Claim sets match") {
 		return
+	}
+}
+
+func TestGHIssue10(t *testing.T) {
+	c := jwt.NewClaimSet()
+	c.Set("sub", "jwt-essential-claim-verification")
+
+	// issuedat = 1 Hr before current time
+	c.IssuedAt = time.Now().Unix() - 3600
+
+	// valid for 2 minutes only from IssuedAt
+	c.Expiration = c.IssuedAt + 120
+
+	// NotBefore is set to future date
+	tm := time.Now().Add(time.Duration(72) * time.Hour)
+	c.NotBefore = &jwt.NumericDate{tm}
+
+	//get json
+	buf, err := json.MarshalIndent(c, "", "  ")
+	if !assert.NoError(t, err, `generating JSON should succeed`) {
+		return
+	}
+
+	// generte rsa key
+	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, `generating private key should succeed`) {
+		return
+	}
+
+	// sign payload
+	sbuf, err := jws.Sign(buf, jwa.RS256, rsakey)
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	//Verify signature and grab payload
+	verified, err := jws.Verify(sbuf, jwa.RS256, &rsakey.PublicKey)
+	if !assert.Error(t, err, `jws.Verify should succeed`) {
+		t.Logf("JWS verified even expired!!!")
+		//get claimset
+		cs := jwt.NewClaimSet()
+		if err = cs.UnmarshalJSON(verified); err != nil {
+			t.Logf("failed to get claimset: %s", err)
+			return
+		}
+		// print Essential claims
+		t.Logf("IssuedAt: %v", time.Unix(cs.IssuedAt, 0))
+		t.Logf("Expiration: %v", time.Unix(cs.Expiration, 0))
+		t.Logf("NotBefore: %v", cs.NotBefore)
 	}
 }
