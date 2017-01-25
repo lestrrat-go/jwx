@@ -71,6 +71,14 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	// sub
 	// aud
 	// exp
+	if tv := c.Expiration; tv > 0 {
+		t := time.Unix(tv, 0)
+		now := clock.Now().Truncate(time.Second)
+		if !now.Before(t.Add(skew)) {
+			return errors.New(`exp not satisfied`)
+		}
+	}
+
 	// iat
 	// jti
 	// check for nbf
