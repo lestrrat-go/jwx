@@ -560,3 +560,30 @@ func TestPublicHeaders(t *testing.T) {
 		return
 	}
 }
+
+func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
+	incoming := "eyJhbGciOiJFUzM4NCIsInR5cCI6IkpXVCIsImtpZCI6IjE5MzFmZTQ0YmFhMWNhZTkyZWUzNzYzOTQ0MDU1OGMwODdlMTRlNjk5ZWU5NjVhM2Q1OGU1MmU2NGY4MDE0NWIifQ.eyJpc3MiOiJicmt0LWNsaS0xLjAuN3ByZTEiLCJpYXQiOjE0ODQ2OTU1MjAsImp0aSI6IjgxYjczY2Y3In0.DdFi0KmPHSv4PfIMGcWGMSRLmZsfRPQ3muLFW6Ly2HpiLFFQWZ0VEanyrFV263wjlp3udfedgw_vrBLz3XC8CkbvCo_xeHMzaTr_yfhjoheSj8gWRLwB-22rOnUX_M0A"
+	t.Logf("incoming = '%s'", incoming)
+	const jwksrc = `{
+    "kty":"EC",
+    "crv":"P-384",
+    "x":"YHVZ4gc1RDoqxKm4NzaN_Y1r7R7h3RM3JMteC478apSKUiLVb4UNytqWaLoE6ygH",
+    "y":"CRKSqP-aYTIsqJfg_wZEEYUayUR5JhZaS2m4NLk2t1DfXZgfApAJ2lBO0vWKnUMp"
+  }`
+	msg, err := ParseString(incoming)
+	if !assert.NoError(t, err, "Parsing compact serialization with bad signature should be an error") {
+		return
+	}
+	pubkey, err := ecdsautil.PublicKeyFromJSON([]byte(jwksrc))
+	if !assert.NoError(t, err, "parsing jwk should be successful") {
+		return
+	}
+	v, err := NewEcdsaVerify(jwa.ES384, pubkey)
+	if !assert.NoError(t, err, "EcdsaVerify created") {
+		return
+	}
+	if !assert.NoError(t, v.Verify(msg), "Verify succeeds") {
+		return
+	}
+}
+
