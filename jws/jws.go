@@ -353,7 +353,6 @@ func parseCompact(buf []byte) (*Message, error) {
 	if _, err := enc.Decode(signature, parts[2]); err != nil {
 		return nil, err
 	}
-	signature = bytes.TrimRight(signature, "\x00")
 
 	s := NewSignature()
 	s.Signature = signature
