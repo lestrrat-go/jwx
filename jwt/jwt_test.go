@@ -13,7 +13,11 @@ func TestClaimSet(t *testing.T) {
 	c1 := jwt.NewClaimSet()
 	c1.Set("jti", "AbCdEfG")
 	c1.Set("sub", "foobar@example.com")
-	now := time.Now()
+
+	// Silly fix to remove monotonic element from time.Time obatained
+	// from time.Now(). Without this, the equality comparison goes
+	// ga-ga for golang tip (1.9)
+	now := time.Unix(time.Now().Unix(), 0)
 	c1.Set("iat", now)
 	c1.Set("nbf", now.Add(5*time.Second))
 	c1.Set("exp", now.Add(10*time.Second))
