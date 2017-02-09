@@ -571,7 +571,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
     "y":"CRKSqP-aYTIsqJfg_wZEEYUayUR5JhZaS2m4NLk2t1DfXZgfApAJ2lBO0vWKnUMp"
   }`
 	msg, err := ParseString(incoming)
-	if !assert.NoError(t, err, "Parsing compact serialization with bad signature should be an error") {
+	if !assert.NoError(t, err, "Parsing compact serialization signature should succeed") {
 		return
 	}
 	pubkey, err := ecdsautil.PublicKeyFromJSON([]byte(jwksrc))
