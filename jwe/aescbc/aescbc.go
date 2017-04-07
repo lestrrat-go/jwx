@@ -7,12 +7,12 @@ import (
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"hash"
 
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/internal/padbuf"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -35,6 +35,7 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 	ekey := key[keysize:]
 
 	if debug.Enabled {
+		debug.Printf("New: keysize               = %d", keysize)
 		debug.Printf("New: cek (key)             = %x (%d)\n", key, len(key))
 		debug.Printf("New: ikey                  = %x (%d)\n", ikey, len(ikey))
 		debug.Printf("New: ekey                  = %x (%d)\n", ekey, len(ekey))
@@ -54,7 +55,7 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 	case 32:
 		hfunc = sha512.New
 	default:
-		return nil, errors.New("unsupported key size")
+		return nil, errors.Errorf("unsupported key size %d", keysize)
 	}
 
 	return &AesCbcHmac{

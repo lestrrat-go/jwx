@@ -15,7 +15,6 @@ import (
 
 const (
 	examplePayload = `The true sign of intelligence is not knowledge but imagination.`
-	a256kwKey      = "12345678901234567890123456789012"
 )
 
 var rsaPrivKey *rsa.PrivateKey
@@ -358,6 +357,13 @@ func TestEncode_ECDHES(t *testing.T) {
 }
 
 func Test_A256KW_A256CBC_HS512(t *testing.T) {
-	_, err := Encrypt([]byte(examplePayload), jwa.A256KW, []byte(a256kwKey), jwa.A256CBC_HS512, jwa.NoCompress)
-	assert.NoError(t, err, "failed to encrypt payload")
+	var keysize = 32
+	var key = make([]byte, keysize)
+	for i := 0; i < keysize; i++ {
+		key[i] = byte(i)
+	}
+	_, err := Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
+	if !assert.Error(t, err, "should fail to encrypt payload") {
+		return
+	}
 }

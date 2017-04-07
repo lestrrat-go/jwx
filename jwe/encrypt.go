@@ -1,6 +1,9 @@
 package jwe
 
-import "github.com/lestrrat/go-jwx/internal/debug"
+import (
+	"github.com/lestrrat/go-jwx/internal/debug"
+	"github.com/pkg/errors"
+)
 
 // NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
 // for instantiating valid inputs for ContentEncrypter, KeyGenerator,
@@ -47,7 +50,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 			if debug.Enabled {
 				debug.Printf("Failed to encrypt key: %s", err)
 			}
-			return nil, err
+			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
 		r.EncryptedKey = enckey.Bytes()
 		if hp, ok := enckey.(HeaderPopulater); ok {

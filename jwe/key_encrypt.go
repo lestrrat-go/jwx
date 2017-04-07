@@ -11,17 +11,17 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"hash"
 
 	"github.com/lestrrat/go-jwx/internal/concatkdf"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 )
 
 // NewKeyWrapEncrypt creates a key-wrap encryptor using AES-CGM.
-// Althought the name suggests otherwise, this does decryption as well.
+// Although the name suggests otherwise, this does the decryption as well.
 func NewKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
 	return KeyWrapEncrypt{
 		alg:       alg,
@@ -57,11 +57,11 @@ func (kw KeyWrapEncrypt) KeyDecrypt(enckey []byte) ([]byte, error) {
 func (kw KeyWrapEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `keywrap: failed to create cipher`)
 	}
 	encrypted, err := keywrap(block, cek)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `keywrap: failed to wrap the key`)
 	}
 	return ByteKey(encrypted), nil
 }

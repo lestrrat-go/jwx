@@ -4,12 +4,12 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rsa"
-	"errors"
 	"fmt"
 
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwe/aescbc"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -29,15 +29,22 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 		return nil, fmt.Errorf("cipher: failed to create AES cipher for GCM: %s", err)
 	}
 
-	return cipher.NewGCM(aescipher)
+	aead, err := cipher.NewGCM(aescipher)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to create GCM for cipher`)
+	}
+	return aead, nil
 })
 var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
+	if debug.Enabled {
+		debug.Printf("CbcAeadFetch: fetching key (%d)", len(key))
+	}
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
 		if debug.Enabled {
-			debug.Printf("CbcAeadFetch: failed to create aead fetcher (%v): %s", key, err)
+			debug.Printf("CbcAeadFetch: failed to create aead fetcher %v (%d): %s", key, len(key), err)
 		}
-		return nil, fmt.Errorf("cipher: failed to create AES cipher for CBC: %s", err)
+		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for CBC")
 	}
 	return aead, nil
 })
@@ -73,10 +80,7 @@ func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher,
 		keysize = 32 * 2
 		fetcher = CbcAeadFetch
 	default:
-		return nil, fmt.Errorf(
-			"failed to create AES content cipher: %s",
-			ErrUnsupportedAlgorithm,
-		)
+		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "failed to create AES content cipher")
 	}
 
 	return &AesContentCipher{
@@ -93,7 +97,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 		if debug.Enabled {
 			debug.Printf("AeadFetch failed: %s", err)
 		}
-		err = fmt.Errorf("failed to fetch AEAD: %s", err)
+		err = errors.Wrap(err, "failed to fetch AEAD for AesContentCipher.encrypt")
 		return
 	}
 
