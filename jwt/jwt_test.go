@@ -11,12 +11,10 @@ import (
 
 func TestClaimSet(t *testing.T) {
 	c1 := jwt.NewClaimSet()
-	err := c1.Set("jti", "AbCdEfG")
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("jti", "AbCdEfG"), "setting jti should work") {
 		return
 	}
-	err = c1.Set("sub", "foobar@example.com")
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("sub", "foobar@example.com"), "setting sub should work") {
 		return
 	}
 
@@ -24,20 +22,16 @@ func TestClaimSet(t *testing.T) {
 	// from time.Now(). Without this, the equality comparison goes
 	// ga-ga for golang tip (1.9)
 	now := time.Unix(time.Now().Unix(), 0)
-	err = c1.Set("iat", now)
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("iat", now.Unix()), "setting iat to now should work") {
 		return
 	}
-	err = c1.Set("nbf", now.Add(5*time.Second))
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("nbf", now.Add(5*time.Second)), "setting nbf should work") {
 		return
 	}
-	err = c1.Set("exp", now.Add(10*time.Second))
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("exp", now.Add(10*time.Second).Unix()), "setting exp should work") {
 		return
 	}
-	err = c1.Set("custom", "MyValue")
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, c1.Set("custom", "MyValue"), "setting custom should work") {
 		return
 	}
 
