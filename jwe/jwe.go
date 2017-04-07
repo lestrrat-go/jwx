@@ -57,7 +57,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		switch aesKeySize := keysize / 2; aesKeySize {
 		case 16, 24, 32:
 		default:
-			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses smaller keys", aesKeySize, contentalg)
+			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
 		}
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		pubkey, ok := key.(*ecdsa.PublicKey)
