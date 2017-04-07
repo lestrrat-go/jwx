@@ -11,17 +11,29 @@ import (
 
 func TestClaimSet(t *testing.T) {
 	c1 := jwt.NewClaimSet()
-	c1.Set("jti", "AbCdEfG")
-	c1.Set("sub", "foobar@example.com")
+	if !assert.NoError(t, c1.Set("jti", "AbCdEfG"), "setting jti should work") {
+		return
+	}
+	if !assert.NoError(t, c1.Set("sub", "foobar@example.com"), "setting sub should work") {
+		return
+	}
 
 	// Silly fix to remove monotonic element from time.Time obatained
 	// from time.Now(). Without this, the equality comparison goes
 	// ga-ga for golang tip (1.9)
 	now := time.Unix(time.Now().Unix(), 0)
-	c1.Set("iat", now)
-	c1.Set("nbf", now.Add(5*time.Second))
-	c1.Set("exp", now.Add(10*time.Second))
-	c1.Set("custom", "MyValue")
+	if !assert.NoError(t, c1.Set("iat", now.Unix()), "setting iat to now should work") {
+		return
+	}
+	if !assert.NoError(t, c1.Set("nbf", now.Add(5*time.Second)), "setting nbf should work") {
+		return
+	}
+	if !assert.NoError(t, c1.Set("exp", now.Add(10*time.Second).Unix()), "setting exp should work") {
+		return
+	}
+	if !assert.NoError(t, c1.Set("custom", "MyValue"), "setting custom should work") {
+		return
+	}
 
 	jsonbuf1, err := json.MarshalIndent(c1, "", "  ")
 	if !assert.NoError(t, err, "JSON marshal should succeed") {
@@ -105,7 +117,6 @@ func TestGHIssue10_sub(t *testing.T) {
 		return
 	}
 
-
 	if !assert.Error(t, c.Verify(jwt.WithSubject("poop")), "claimset.Verify should fail") {
 		return
 	}
@@ -159,8 +170,7 @@ func TestGHIssue10_exp(t *testing.T) {
 
 	// This should succeed, because we have given a time
 	// that is well enough into the past
-	if !assert.NoError(t, c.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-3500*time.Second) }))), "claimset.Verify should succeed") {
+	if !assert.NoError(t, c.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-3500 * time.Second) }))), "claimset.Verify should succeed") {
 		return
 	}
 }
-
