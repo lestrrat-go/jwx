@@ -13,7 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const examplePayload = `The true sign of intelligence is not knowledge but imagination.`
+const (
+	examplePayload = `The true sign of intelligence is not knowledge but imagination.`
+)
 
 var rsaPrivKey *rsa.PrivateKey
 
@@ -352,4 +354,16 @@ func TestEncode_ECDHES(t *testing.T) {
 		return
 	}
 	t.Logf("%s", decrypted)
+}
+
+func Test_A256KW_A256CBC_HS512(t *testing.T) {
+	var keysize = 32
+	var key = make([]byte, keysize)
+	for i := 0; i < keysize; i++ {
+		key[i] = byte(i)
+	}
+	_, err := Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
+	if !assert.Error(t, err, "should fail to encrypt payload") {
+		return
+	}
 }
