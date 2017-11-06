@@ -18,7 +18,7 @@ import (
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
 	contentcrypt, err := NewAesCrypt(contentalg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to create AES encryptor`)
 	}
 
 	var keyenc KeyEncrypter
@@ -161,7 +161,7 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	hdrbuf := buffer.Buffer{}
 	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse first part of compact form`)
 	}
 	if debug.Enabled {
 		debug.Printf("hdrbuf = %s", hdrbuf)

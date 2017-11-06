@@ -3,6 +3,8 @@ package jwk
 import (
 	"crypto"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 // Materialize returns the octets for this symmetric key.
@@ -22,7 +24,7 @@ func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	const tmpl = `{"k":"%s","kty":"oct"}`
 	k64, err := s.Key.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to base64 encode symmetric key`)
 	}
 
 	v := fmt.Sprintf(tmpl, k64)

@@ -236,7 +236,7 @@ func (e RSAOAEPKeyEncrypt) KeyEncrypt(cek []byte) (ByteSource, error) {
 	}
 	encrypted, err := rsa.EncryptOAEP(hash, rand.Reader, e.pubkey, cek, []byte{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to OAEP encrypt`)
 	}
 	return ByteKey(encrypted), nil
 }

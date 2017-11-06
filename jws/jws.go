@@ -81,7 +81,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 		if pubhdr := hdrs[0]; pubhdr != nil {
 			h, err := signer.PublicHeaders().Merge(pubhdr)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, `failed to merge public headers`)
 			}
 			signer.SetPublicHeaders(h)
 		}
@@ -161,7 +161,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 	}
 
 	if err := verifier.Verify(msg); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `verification failed`)
 	}
 
 	return msg.Payload.Bytes(), nil
@@ -172,7 +172,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
 	key, err := jwk.FetchHTTP(jwkurl)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
 	}
 
 	return VerifyWithJWKSet(buf, key, nil)
@@ -183,7 +183,7 @@ var errVerifyFailed = errors.New("failed to verify with key")
 func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 	keyval, err := key.Materialize()
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to materialize jwk.KEy`)
 	}
 
 	alg := jwa.SignatureAlgorithm(key.Alg())
@@ -303,7 +303,7 @@ func parseJSON(buf []byte) (*Message, error) {
 	}{}
 
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse jwk.Message`)
 	}
 
 	// if the "signature" field exist, treat it as a flattened
@@ -335,23 +335,23 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	hdrbuf, err := buffer.FromBase64(parts[0])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse first part from base64`)
 	}
 
 	hdr := &EncodedHeader{Header: NewHeader()}
 	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse header from JSON`)
 	}
 	hdr.Source = hdrbuf
 
 	payload, err := buffer.FromBase64(parts[1])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse second part from base64`)
 	}
 
 	signature := make([]byte, enc.DecodedLen(len(parts[2])))
 	if _, err := enc.Decode(signature, parts[2]); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to decode third part`)
 	}
 
 	s := NewSignature()

@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/pkg/errors"
 )
 
 type rawkey struct {
@@ -40,7 +41,7 @@ func NewRawKeyFromPrivateKey(privkey *rsa.PrivateKey) *rawkey {
 func PublicKeyFromJSON(data []byte) (*rsa.PublicKey, error) {
 	r := rawkey{}
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to unmarshal public key`)
 	}
 
 	return r.GeneratePublicKey()
@@ -49,7 +50,7 @@ func PublicKeyFromJSON(data []byte) (*rsa.PublicKey, error) {
 func PrivateKeyFromJSON(data []byte) (*rsa.PrivateKey, error) {
 	r := rawkey{}
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to unmarshal private key`)
 	}
 
 	return r.GeneratePrivateKey()
@@ -65,7 +66,7 @@ func (r rawkey) GeneratePublicKey() (*rsa.PublicKey, error) {
 func (r rawkey) GeneratePrivateKey() (*rsa.PrivateKey, error) {
 	pubkey, err := r.GeneratePublicKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to generate public key`)
 	}
 
 	privkey := &rsa.PrivateKey{

@@ -424,7 +424,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 
 	h := NewHeader()
 	if err := h.Copy(m.ProtectedHeader.Header); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to copy protected headers`)
 	}
 	h, err = h.Merge(m.UnprotectedHeader)
 	if err != nil {
@@ -510,7 +510,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		for len(in) > 0 {
 			n, err := w.Write(in)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, `failed to write to compression writer`)
 			}
 			in = in[n:]
 		}

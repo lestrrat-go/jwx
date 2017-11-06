@@ -9,6 +9,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 )
 
 // i2osp converts an integer to a fixed length octet string as per RFC 3447
@@ -107,7 +108,7 @@ func (k *EcdsaPrivateKey) Materialize() (interface{}, error) {
 func (k *EcdsaPrivateKey) PrivateKey() (*ecdsa.PrivateKey, error) {
 	pubkey, err := k.EcdsaPublicKey.PublicKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to get public key from ecdsa private key`)
 	}
 
 	privkey := &ecdsa.PrivateKey{

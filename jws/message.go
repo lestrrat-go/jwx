@@ -2,13 +2,13 @@ package jws
 
 import (
 	"encoding/json"
-	"errors"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/emap"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/pkg/errors"
 )
 
 // NewHeader creates a new Header
@@ -118,7 +118,7 @@ func (h *Header) Merge(h2 *Header) (*Header, error) {
 
 	h3 := NewHeader()
 	if err := h3.Copy(h); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to copy headers`)
 	}
 
 	h3.EssentialHeader.Merge(h2.EssentialHeader)
@@ -276,7 +276,7 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 func (h Header) Base64Encode() ([]byte, error) {
 	b, err := json.Marshal(h)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to marshal header`)
 	}
 
 	return buffer.Buffer(b).Base64Encode()
@@ -286,15 +286,19 @@ func (h Header) Base64Encode() ([]byte, error) {
 func (e EncodedHeader) MarshalJSON() ([]byte, error) {
 	buf, err := json.Marshal(e.Header)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to marshal raw header`)
 	}
 
 	buf, err = buffer.Buffer(buf).Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to base64 encode header`)
 	}
 
-	return json.Marshal(string(buf))
+	data, err := json.Marshal(string(buf))
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal encoded header value`)
+	}
+	return data, nil
 }
 
 // UnmarshalJSON parses the JSON buffer into a Header
@@ -302,11 +306,11 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	b := buffer.Buffer{}
 	// base646 json string -> json object representation of header
 	if err := json.Unmarshal(buf, &b); err != nil {
-		return err
+		return errors.Wrap(err, `failed to unmarshal encoded header`)
 	}
 
 	if err := json.Unmarshal(b.Bytes(), &e.Header); err != nil {
-		return err
+		return errors.Wrap(err, `failed to unmarshal decoded header`)
 	}
 
 	e.Source = b

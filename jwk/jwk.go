@@ -17,13 +17,13 @@ import (
 func FetchFile(jwkpath string) (*Set, error) {
 	f, err := os.Open(jwkpath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to open jwk file`)
 	}
 	defer f.Close()
 
 	buf, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed read content from jwk file`)
 	}
 
 	return Parse(buf)
@@ -66,7 +66,7 @@ func Parse(buf []byte) (*Set, error) {
 	}
 	k, err := constructKey(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to construct key from keys`)
 	}
 	return &Set{Keys: []Key{k}}, nil
 }
@@ -152,7 +152,7 @@ func constructSymmetricKey(m map[string]interface{}) (*SymmetricKey, error) {
 
 	h, err := constructEssentialHeader(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to construct essential header`)
 	}
 
 	key := &SymmetricKey{EssentialHeader: h}
@@ -266,7 +266,7 @@ func constructRsaPrivateKey(m map[string]interface{}) (*RsaPrivateKey, error) {
 
 	pubkey, err := constructRsaPublicKey(m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to construct RSA publick key`)
 	}
 
 	k := &RsaPrivateKey{RsaPublicKey: pubkey}

@@ -257,7 +257,7 @@ func ecdsaHashForAlg(alg jwa.SignatureAlgorithm) (crypto.Hash, error) {
 func (s EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 	hash, err := ecdsaHashForAlg(s.SignatureAlgorithm())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to get ecdsa hash algorithm`)
 	}
 
 	privkey := s.PrivateKey
@@ -298,7 +298,7 @@ func (s EcdsaSign) PayloadSign(payload []byte) ([]byte, error) {
 func NewHmacSign(alg jwa.SignatureAlgorithm, key []byte) (*HmacSign, error) {
 	h, err := hmacHashForAlg(alg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to get ecdsa hash algorithm`)
 	}
 
 	pubhdr := NewHeader()
