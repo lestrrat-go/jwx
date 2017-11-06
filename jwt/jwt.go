@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lestrrat/go-jwx/internal/emap"
+	"github.com/pkg/errors"
 )
 
 // MarshalJSON generates JSON representation of this instant
@@ -18,12 +19,12 @@ func (n NumericDate) MarshalJSON() ([]byte, error) {
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
-		return err
+		return errors.Wrap(err, `failed to decode jwt.NumericDate`)
 	}
 
 	t, err := time.Parse(numericDateFmt, s)
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to parse date format for jwt.NumericDate`)
 	}
 
 	*n = NumericDate{t}
@@ -80,7 +81,7 @@ func (c *EssentialClaims) Construct(m map[string]interface{}) error {
 		if v != "" {
 			t, err := time.Parse(numericDateFmt, v)
 			if err != nil {
-				return err
+				return errors.Wrap(err, `failed to parse nbf value`)
 			}
 			c.NotBefore = &NumericDate{t}
 		}

@@ -3,11 +3,11 @@ package jwk
 import (
 	"crypto"
 	"crypto/rsa"
-	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/pkg/errors"
 )
 
 // NewRsaPublicKey creates a new JWK using the given key
@@ -28,7 +28,7 @@ func NewRsaPrivateKey(pk *rsa.PrivateKey) (*RsaPrivateKey, error) {
 
 	pub, err := NewRsaPublicKey(&pk.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to construct jwk.RsaPrivateKey`)
 	}
 
 	k := &RsaPrivateKey{
@@ -67,11 +67,11 @@ func (k RsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	const tmpl = `{"e":"%s","kty":"RSA","n":"%s"}`
 	e64, err := k.E.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to base64 encode 'E' for jwk.RsaPublicKey`)
 	}
 	n64, err := k.N.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to base64 encode 'N' for jwk.RsaPublicKey`)
 	}
 
 	v := fmt.Sprintf(tmpl, e64, n64)
@@ -89,7 +89,7 @@ func (k *RsaPrivateKey) Materialize() (interface{}, error) {
 func (k *RsaPrivateKey) PrivateKey() (*rsa.PrivateKey, error) {
 	pubkey, err := k.PublicKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to get publick key`)
 	}
 
 	if k.D.Len() == 0 {
@@ -122,7 +122,7 @@ func (k *RsaPrivateKey) PrivateKey() (*rsa.PrivateKey, error) {
 	}
 
 	if err := privkey.Validate(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `validation failed for private key`)
 	}
 
 	return privkey, nil

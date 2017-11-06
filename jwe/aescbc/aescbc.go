@@ -43,7 +43,7 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 
 	bc, err := f(ekey)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to execute block cipher function`)
 	}
 
 	var hfunc func() hash.Hash
@@ -174,7 +174,7 @@ func (c AesCbcHmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 
 	plaintext, err := padbuf.PadBuffer(buf).Unpad(c.blockCipher.BlockSize())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to generate plaintext from decrypted blocks`)
 	}
 	ret := ensureSize(dst, len(plaintext))
 	out := ret[len(dst):]

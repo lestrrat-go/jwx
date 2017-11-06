@@ -24,7 +24,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		if debug.Enabled {
 			debug.Printf("Failed to generate key: %s", err)
 		}
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate key")
 	}
 	cek := bk.Bytes()
 
@@ -67,13 +67,13 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	if len(recipients) == 1 {
 		protected.Header, err = protected.Header.Merge(recipients[0].Header)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to merge protecte headers")
 		}
 	}
 
 	aad, err := protected.Base64Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 	}
 
 	// ...on the other hand, there's only one content cipher.
@@ -82,7 +82,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		if debug.Enabled {
 			debug.Printf("Failed to encrypt: %s", err)
 		}
-		return nil, err
+		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
 
 	if debug.Enabled {

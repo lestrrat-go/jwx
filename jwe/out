@@ -1,0 +1,27 @@
+=== RUN   TestEncode_A128KW_A128CBC_HS256
+|DEBUG| AES Crypt: alg = A128CBC-HS256
+|DEBUG| AES Crypt: cipher.keysize = 32
+2017/04/07 07:32:00 contentcrypt.KeySize = 64
+|DEBUG| Encrypt: keysize = 64
+|DEBUG| Encrypt: generated cek len = 64
+|DEBUG| Encrypt: encrypted_key = ce6b0d820526b80d4f8167b94aaea7a25a43ea1a7194c881babfb2aa15bf496b9536a7677d1499ed0e152240722c22e82bfb8b687bff8f24f8e1e66541869148a5bc4b76f01f077e (72)
+|DEBUG| ContentCrypt.Encrypt: cek        = 8e070931dc0fb523fffc886cb70dcf435d63a40c662851eb74b2566d197d9a90f4bf5246ba7bd684718cbc3abb586e8b0f4c8d68b54d2ee00a93c476a589b0b4 (64)
+|DEBUG| ContentCrypt.Encrypt: ciphertext = 4c697665206c6f6e6720616e642070726f737065722e (22)
+|DEBUG| ContentCrypt.Encrypt: aad        = 65794a68624763694f694a424d544934533163694c434a6c626d4d694f694a424d54493451304a444c5568544d6a5532496e30 (51)
+|DEBUG| CbcAeadFetch: fetching key (64)
+|DEBUG| New: cek (key)             = 8e070931dc0fb523fffc886cb70dcf435d63a40c662851eb74b2566d197d9a90f4bf5246ba7bd684718cbc3abb586e8b0f4c8d68b54d2ee00a93c476a589b0b4 (64)
+|DEBUG| New: ikey                  = 8e070931dc0fb523fffc886cb70dcf43 (16)
+|DEBUG| New: ekey                  = 5d63a40c662851eb74b2566d197d9a90f4bf5246ba7bd684718cbc3abb586e8b0f4c8d68b54d2ee00a93c476a589b0b4 (48)
+|DEBUG| CbcAeadFetch: failed to create aead fetcher [142 7 9 49 220 15 181 35 255 252 136 108 183 13 207 67 93 99 164 12 102 40 81 235 116 178 86 109 25 125 154 144 244 191 82 70 186 123 214 132 113 140 188 58 187 88 110 139 15 76 141 104 181 77 46 224 10 147 196 118 165 137 176 180] (64): crypto/aes: invalid key size 48
+|DEBUG| AeadFetch failed: cipher: failed to create AES cipher for CBC: crypto/aes: invalid key size 48
+|DEBUG| cipher.encrypt failed
+|DEBUG| Failed to encrypt: failed to crypt content: failed to fetch AEAD for AesContentCipher.encrypt: cipher: failed to create AES cipher for CBC: crypto/aes: invalid key size 48
+|DEBUG| Encrypt: failed to encrypt: failed to crypt content: failed to fetch AEAD for AesContentCipher.encrypt: cipher: failed to create AES cipher for CBC: crypto/aes: invalid key size 48
+--- FAIL: TestEncode_A128KW_A128CBC_HS256 (0.00s)
+	assertions.go:219:                         	Error Trace:	jwe_test.go:320
+			Error:		Received unexpected error "failed to crypt content: failed to fetch AEAD for AesContentCipher.encrypt: cipher: failed to create AES cipher for CBC: crypto/aes: invalid key size 48"
+			Messages:	Encrypt is successful
+		
+FAIL
+exit status 1
+FAIL	github.com/lestrrat/go-jwx/jwe	0.013s

@@ -26,7 +26,7 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 		if debug.Enabled {
 			debug.Printf("GcmAeadFetch: failed to create cipher")
 		}
-		return nil, fmt.Errorf("cipher: failed to create AES cipher for GCM: %s", err)
+		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for GCM")
 	}
 
 	aead, err := cipher.NewGCM(aescipher)
@@ -97,8 +97,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 		if debug.Enabled {
 			debug.Printf("AeadFetch failed: %s", err)
 		}
-		err = errors.Wrap(err, "failed to fetch AEAD for AesContentCipher.encrypt")
-		return
+		return nil, nil, nil, errors.Wrap(err, "failed to fetch AEAD")
 	}
 
 	// Seal may panic (argh!), so protect ourselves from that
@@ -112,7 +111,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 			default:
 				err = fmt.Errorf("%s", e)
 			}
-			return
+			err = errors.Wrap(err, "failed to descrypt")
 		}
 	}()
 
@@ -123,7 +122,7 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 		bs, err = c.NonceGenerator.KeyGenerate()
 	}
 	if err != nil {
-		return
+		return nil, nil, nil, errors.Wrap(err, "failed to generate nonce")
 	}
 	iv = bs.Bytes()
 
@@ -151,7 +150,7 @@ func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 		if debug.Enabled {
 			debug.Printf("AeadFetch failed for %v: %s", cek, err)
 		}
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch AEAD data")
 	}
 
 	// Open may panic (argh!), so protect ourselves from that
@@ -165,6 +164,7 @@ func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 			default:
 				err = fmt.Errorf("%s", e)
 			}
+			err = errors.Wrap(err, "failed to decrypt")
 			return
 		}
 	}()

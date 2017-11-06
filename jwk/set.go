@@ -1,6 +1,6 @@
 package jwk
 
-import "errors"
+import "github.com/pkg/errors"
 
 // LookupKeyID looks for keys matching the given key id. Note that the
 // Set *may* contain multiple keys with the same key id
@@ -34,7 +34,7 @@ func constructSet(m map[string]interface{}) (*Set, error) {
 
 		k, err := constructKey(conf)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, `failed to construct key from map`)
 		}
 		ks.Keys = append(ks.Keys, k)
 	}

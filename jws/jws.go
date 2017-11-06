@@ -25,8 +25,8 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
@@ -51,7 +51,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 
 		signer, err = NewRsaSign(alg, privkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create RSA signer")
 		}
 	case jwa.HS256, jwa.HS384, jwa.HS512:
 		sharedkey, ok := key.([]byte)
@@ -61,7 +61,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 
 		signer, err = NewHmacSign(alg, sharedkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create HMAC signer")
 		}
 	case jwa.ES256, jwa.ES384, jwa.ES512:
 		privkey, ok := key.(*ecdsa.PrivateKey)
@@ -71,17 +71,17 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 
 		signer, err = NewEcdsaSign(alg, privkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create ECDSA signer")
 		}
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "provided altorithm is unsupported for signing")
 	}
 
 	if len(hdrs) > 0 {
 		if pubhdr := hdrs[0]; pubhdr != nil {
 			h, err := signer.PublicHeaders().Merge(pubhdr)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, `failed to merge public headers`)
 			}
 			signer.SetPublicHeaders(h)
 		}
@@ -91,7 +91,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 		if protectedhdr := hdrs[0]; protectedhdr != nil {
 			h, err := signer.ProtectedHeaders().Merge(protectedhdr)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to merge protected headers")
 			}
 			signer.SetProtectedHeaders(h)
 		}
@@ -101,7 +101,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, hdrs ...*
 	multisigner.AddSigner(signer)
 	msg, err := multisigner.Sign(payload)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to sign payload")
 	}
 
 	return CompactSerialize{}.Serialize(msg)
@@ -118,7 +118,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 	}
 	msg, err := Parse(buf)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
 
 	var verifier Verifier
@@ -131,7 +131,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 
 		rsaverify, err := NewRsaVerify(alg, pubkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create RSA signer")
 		}
 		verifier = rsaverify
 	case jwa.HS256, jwa.HS384, jwa.HS512:
@@ -142,7 +142,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 
 		hmacverify, err := NewHmacVerify(alg, sharedkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create HMAC signer")
 		}
 		verifier = hmacverify
 	case jwa.ES256, jwa.ES384, jwa.ES512:
@@ -153,15 +153,15 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 
 		ecdsaverify, err := NewEcdsaVerify(alg, pubkey)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to create ECDSA signer")
 		}
 		verifier = ecdsaverify
 	default:
-		return nil, ErrUnsupportedAlgorithm
+		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "provided altorithm is unsupported for verification")
 	}
 
 	if err := verifier.Verify(msg); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `verification failed`)
 	}
 
 	return msg.Payload.Bytes(), nil
@@ -172,7 +172,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
 	key, err := jwk.FetchHTTP(jwkurl)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
 	}
 
 	return VerifyWithJWKSet(buf, key, nil)
@@ -183,7 +183,7 @@ var errVerifyFailed = errors.New("failed to verify with key")
 func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 	keyval, err := key.Materialize()
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to materialize jwk.KEy`)
 	}
 
 	alg := jwa.SignatureAlgorithm(key.Alg())
@@ -197,7 +197,7 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 		}
 		verifier, err = NewRsaVerify(alg, pubkey)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create RSA verifier")
 		}
 	case jwa.EC:
 		pubkey, ok := keyval.(*ecdsa.PublicKey)
@@ -206,7 +206,7 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 		}
 		verifier, err = NewEcdsaVerify(alg, pubkey)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create ECDSA verifier")
 		}
 	case jwa.OctetSeq:
 		sharedkey, ok := keyval.([]byte)
@@ -215,7 +215,7 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 		}
 		verifier, err = NewHmacVerify(alg, sharedkey)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create HMAC verifier")
 		}
 	default:
 		// don't know what this is...
@@ -236,11 +236,11 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 func VerifyWithJWK(buf []byte, key jwk.Key) ([]byte, error) {
 	m, err := Parse(buf)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
 
 	if err := verifyMessageWithJWK(m, key); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to verify message")
 	}
 	return m.Payload.Bytes(), nil
 }
@@ -252,7 +252,7 @@ func VerifyWithJWK(buf []byte, key jwk.Key) ([]byte, error) {
 func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
 	m, err := Parse(buf)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
 
 	if keyaccept == nil {
@@ -270,7 +270,7 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]b
 		case errVerifyFailed:
 			continue
 		default:
-			return nil, err
+			return nil, errors.Wrap(err, "unrecoverable error while verifying")
 		}
 	}
 
@@ -303,7 +303,7 @@ func parseJSON(buf []byte) (*Message, error) {
 	}{}
 
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse jwk.Message`)
 	}
 
 	// if the "signature" field exist, treat it as a flattened
@@ -335,23 +335,23 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	hdrbuf, err := buffer.FromBase64(parts[0])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse first part from base64`)
 	}
 
 	hdr := &EncodedHeader{Header: NewHeader()}
 	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse header from JSON`)
 	}
 	hdr.Source = hdrbuf
 
 	payload, err := buffer.FromBase64(parts[1])
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to parse second part from base64`)
 	}
 
 	signature := make([]byte, enc.DecodedLen(len(parts[2])))
 	if _, err := enc.Decode(signature, parts[2]); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to decode third part`)
 	}
 
 	s := NewSignature()

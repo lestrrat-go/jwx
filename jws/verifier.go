@@ -4,11 +4,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/hmac"
 	"crypto/rsa"
-	"errors"
 	"math/big"
 
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
 )
 
 type payloadVerifier interface {
@@ -19,7 +19,7 @@ func doMessageVerify(alg jwa.SignatureAlgorithm, v payloadVerifier, m *Message) 
 	var err error
 	payload, err := m.Payload.Base64Encode()
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to base64 encode payload`)
 	}
 	for _, sig := range m.Signatures {
 		if sig.ProtectedHeader.Algorithm != alg {
@@ -92,7 +92,7 @@ func (v RsaVerify) payloadVerify(payload, signature []byte) error {
 	}
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to verify payload`)
 	}
 	return nil
 }
@@ -160,7 +160,7 @@ func (v EcdsaVerify) payloadVerify(payload, signature []byte) error {
 func NewHmacVerify(alg jwa.SignatureAlgorithm, key []byte) (*HmacVerify, error) {
 	s, err := NewHmacSign(alg, key)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to generate HMAC signer`)
 	}
 	return &HmacVerify{signer: s}, nil
 }
@@ -174,7 +174,7 @@ func (v HmacVerify) Verify(m *Message) error {
 func (v HmacVerify) payloadVerify(payload, mac []byte) error {
 	expected, err := v.signer.PayloadSign(payload)
 	if err != nil {
-		return err
+		return errors.Wrap(err, `failed to generated signature`)
 	}
 
 	if !hmac.Equal(mac, expected) {

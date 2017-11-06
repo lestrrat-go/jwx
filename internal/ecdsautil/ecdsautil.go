@@ -4,11 +4,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
-	"errors"
 	"math/big"
 	"strconv"
 
 	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/pkg/errors"
 )
 
 type curve struct {
@@ -36,7 +36,7 @@ func (c curve) MarshalJSON() ([]byte, error) {
 func (c *curve) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {
-		return err
+		return errors.Wrap(err, `failed to unmarshal ecdsa curve`)
 	}
 
 	switch name {
@@ -69,7 +69,7 @@ func NewRawKeyFromPrivateKey(privkey *ecdsa.PrivateKey) *rawkey {
 func PublicKeyFromJSON(data []byte) (*ecdsa.PublicKey, error) {
 	r := rawkey{}
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to unmarshal ecdsa public key`)
 	}
 
 	return r.GeneratePublicKey()
@@ -78,7 +78,7 @@ func PublicKeyFromJSON(data []byte) (*ecdsa.PublicKey, error) {
 func PrivateKeyFromJSON(data []byte) (*ecdsa.PrivateKey, error) {
 	r := rawkey{}
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to unmarshal ecdsa private key`)
 	}
 
 	return r.GeneratePrivateKey()
@@ -95,7 +95,7 @@ func (r rawkey) GeneratePublicKey() (*ecdsa.PublicKey, error) {
 func (r rawkey) GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	pubkey, err := r.GeneratePublicKey()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `failed to generate public key`)
 	}
 
 	privkey := &ecdsa.PrivateKey{

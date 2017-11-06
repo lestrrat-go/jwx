@@ -13,6 +13,7 @@ import (
 
 	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-jwx/jws"
+	"github.com/pkg/errors"
 )
 
 func main() {
@@ -30,16 +31,21 @@ type JWEConfig struct {
 
 func _main() int {
 	var f func() int
-	switch os.Args[1] {
-	case "jwk":
-		f = doJWK
-	case "jwe":
-		f = doJWE
-	default:
-		f = doHelp
-	}
 
-	os.Args = os.Args[1:]
+	if len(os.Args) < 2 {
+		f = doHelp
+	} else {
+		switch os.Args[1] {
+		case "jwk":
+			f = doJWK
+		case "jwe":
+			f = doJWE
+		default:
+			f = doHelp
+		}
+
+		os.Args = os.Args[1:]
+	}
 	return f()
 }
 
@@ -71,21 +77,21 @@ func doJWK() int {
 		var err error
 		key, err = jwk.FetchHTTP(c.JWKLocation)
 		if err != nil {
-			log.Printf("Failed to fetch remote JWK: %s", err)
+			log.Printf("%s", err)
 			return 0
 		}
 	} else {
 		var err error
 		key, err = jwk.FetchFile(c.JWKLocation)
 		if err != nil {
-			log.Printf("Failed to fetch remote JWK: %s", err)
+			log.Printf("%s", err)
 			return 0
 		}
 	}
 
 	keybuf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
-		log.Printf("Failed to marshal JWK: %s", err)
+		log.Printf("%s", err)
 		return 0
 	}
 	log.Printf("=== JWK ===")
@@ -96,7 +102,7 @@ func doJWK() int {
 	// TODO make it flexible
 	pubkey, err := (key.Keys[0]).(*jwk.RsaPublicKey).PublicKey()
 	if err != nil {
-		log.Printf("Failed to get public key from JWK: %s", err)
+		log.Printf("%s", err)
 		return 0
 	}
 
@@ -106,7 +112,7 @@ func doJWK() int {
 	} else {
 		f, err := os.Open(c.Payload)
 		if err != nil {
-			log.Printf("Failed to open file '%s': %s", c.Payload, err)
+			log.Printf("%s", errors.Wrap(err, "failed to open file "+c.Payload))
 			return 1
 		}
 		payload = f
@@ -115,13 +121,13 @@ func doJWK() int {
 
 	buf, err := ioutil.ReadAll(payload)
 	if err != nil {
-		log.Printf("Failed to read payload: %s", err)
+		log.Printf("%s", errors.Wrap(err, "failed to read payload"))
 		return 0
 	}
 
 	message, err := jws.Parse(buf)
 	if err != nil {
-		log.Printf("Failed to parse JWS: %s", err)
+		log.Printf("%s", err)
 		return 0
 	}
 
@@ -131,7 +137,7 @@ func doJWK() int {
 	if err := json.Unmarshal(message.Payload, &m); err == nil {
 		payloadbuf, err := json.MarshalIndent(m, "", "  ")
 		if err != nil {
-			log.Printf("Failed to marshal payload: %s", err)
+			log.Printf("%s", errors.Wrap(err, "failed to marshal payload"))
 			return 0
 		}
 		for _, l := range bytes.Split(payloadbuf, []byte{'\n'}) {
@@ -145,7 +151,7 @@ func doJWK() int {
 		log.Printf("=== Signature %d ===", i)
 		sigbuf, err := json.MarshalIndent(sig, "", "  ")
 		if err != nil {
-			log.Printf("ERROR: Failed to marshal signature %d as JSON: %s", i, err)
+			log.Printf("%s", errors.Wrap(err, "failed to marshal signature as JSON"))
 			return 0
 		}
 		for _, l := range bytes.Split(sigbuf, []byte{'\n'}) {
@@ -154,7 +160,7 @@ func doJWK() int {
 
 		v, err := jws.NewRsaVerify(sig.ProtectedHeader.Algorithm, pubkey)
 		if err != nil {
-			log.Printf("ERROR: Failed to create verifier: %s", err)
+			log.Printf("%s", err)
 			continue
 		}
 		if err := v.Verify(message); err == nil {
