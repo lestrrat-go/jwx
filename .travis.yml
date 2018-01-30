@@ -1,5 +1,7 @@
 language: go
 sudo: false
+before_script:
+  - go get -u ./...
 script:
   - make generate
   - go test -v ./...
