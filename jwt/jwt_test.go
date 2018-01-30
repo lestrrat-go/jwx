@@ -246,7 +246,7 @@ func TestGet(t *testing.T) {
 		{
 			Title: `Get IssuedAt`,
 			Test: func(t *testing.T, token *jwt.Token) {
-				expected := time.Unix(aLongLongTimeAgo, 0)
+				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
 				if !assert.Equal(t, expected, token.IssuedAt(), `IssuedAt should match`) {
 					return
 				}

@@ -77,7 +77,7 @@ func ExampleToken() {
 	//   "sub": "https://github.com/lestrrat/go-jwx/jwt"
 	// }
 	// aud -> 'Golang Users'
-	// iat -> '1977-05-26T03:00:00+09:00'
+	// iat -> '1977-05-25T18:00:00Z'
 	// privateClaimKey -> 'Hello, World!'
 	// sub -> 'https://github.com/lestrrat/go-jwx/jwt'
 }
