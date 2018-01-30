@@ -41,7 +41,7 @@ As of this writing (Nov 2015), it's still lacking a few of the algorithms for JW
 
 ### JWT
 
-See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwt#pkg-examples
+See the examples here as well: [https://github.com/lestrrat/go-jwx/jwt](./jwt/README.md)
 
 ```go
 func ExampleJWT() {
