@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -119,13 +118,7 @@ func doJWK() int {
 		defer f.Close()
 	}
 
-	buf, err := ioutil.ReadAll(payload)
-	if err != nil {
-		log.Printf("%s", errors.Wrap(err, "failed to read payload"))
-		return 0
-	}
-
-	message, err := jws.Parse(buf)
+	message, err := jws.Parse(payload)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
