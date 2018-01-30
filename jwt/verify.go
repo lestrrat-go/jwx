@@ -6,12 +6,12 @@ import (
 )
 
 const (
-	acceptableSkewKey = "acceptableSkew"
-	clockKey          = "clock"
-	issuerKey         = "issuer"
-	subjectKey        = "subject"
-	audienceKey       = "audience"
-	jwtidKey          = "jwtid"
+	optkeyAcceptableSkew = "acceptableSkew"
+	optkeyClock          = "clock"
+	optkeyIssuer         = "issuer"
+	optkeySubject        = "subject"
+	optkeyAudience       = "audience"
+	optkeyJwtid          = "jwtid"
 )
 
 type VerifyOption interface {
@@ -45,7 +45,7 @@ func (f ClockFunc) Now() time.Time {
 // claims exp and nbf.
 func WithClock(c Clock) VerifyOption {
 	return &verifyOption{
-		name:  clockKey,
+		name:  optkeyClock,
 		value: c,
 	}
 }
@@ -54,7 +54,7 @@ func WithClock(c Clock) VerifyOption {
 // claims may differ by. This value should be positive
 func WithAcceptableSkew(dur time.Duration) VerifyOption {
 	return &verifyOption{
-		name:  acceptableSkewKey,
+		name:  optkeyAcceptableSkew,
 		value: dur,
 	}
 }
@@ -63,7 +63,7 @@ func WithAcceptableSkew(dur time.Duration) VerifyOption {
 // the value of issuer is not verified at all.
 func WithIssuer(s string) VerifyOption {
 	return &verifyOption{
-		name:  issuerKey,
+		name:  optkeyIssuer,
 		value: s,
 	}
 }
@@ -72,7 +72,7 @@ func WithIssuer(s string) VerifyOption {
 // the value of subject is not verified at all.
 func WithSubject(s string) VerifyOption {
 	return &verifyOption{
-		name:  subjectKey,
+		name:  optkeySubject,
 		value: s,
 	}
 }
@@ -81,7 +81,7 @@ func WithSubject(s string) VerifyOption {
 // the value of jti is not verified at all.
 func WithJwtID(s string) VerifyOption {
 	return &verifyOption{
-		name:  jwtidKey,
+		name:  optkeyJwtid,
 		value: s,
 	}
 }
@@ -92,7 +92,7 @@ func WithJwtID(s string) VerifyOption {
 // verified at all.
 func WithAudience(s string) VerifyOption {
 	return &verifyOption{
-		name:  audienceKey,
+		name:  optkeyAudience,
 		value: s,
 	}
 }
@@ -101,7 +101,7 @@ func WithAudience(s string) VerifyOption {
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
-func (c *ClaimSet) Verify(options ...VerifyOption) error {
+func (t *Token) Verify(options ...VerifyOption) error {
 	var issuer string
 	var subject string
 	var audience string
@@ -110,38 +110,38 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	var skew time.Duration
 	for _, o := range options {
 		switch o.Name() {
-		case clockKey:
+		case optkeyClock:
 			clock = o.Value().(Clock)
-		case acceptableSkewKey:
+		case optkeyAcceptableSkew:
 			skew = o.Value().(time.Duration)
-		case issuerKey:
+		case optkeyIssuer:
 			issuer = o.Value().(string)
-		case subjectKey:
+		case optkeySubject:
 			subject = o.Value().(string)
-		case audienceKey:
+		case optkeyAudience:
 			audience = o.Value().(string)
-		case jwtidKey:
+		case optkeyJwtid:
 			jwtid = o.Value().(string)
 		}
 	}
 
 	// check for iss
 	if len(issuer) > 0 {
-		if c.Issuer != issuer {
+		if v := t.issuer; v != nil && *v != issuer {
 			return errors.New(`iss not satisfied`)
 		}
 	}
 
 	// check for jti
 	if len(jwtid) > 0 {
-		if c.JwtID != jwtid {
+		if v := t.jwtID; v != nil && *v != jwtid {
 			return errors.New(`jti not satisfied`)
 		}
 	}
 
 	// check for sub
 	if len(subject) > 0 {
-		if c.Subject != subject {
+		if v := t.subject; v != nil && *v != subject {
 			return errors.New(`sub not satisfied`)
 		}
 	}
@@ -149,7 +149,7 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	// check for aud
 	if len(audience) > 0 {
 		var found bool
-		for _, v := range c.Audience {
+		for _, v := range t.audience {
 			if v == audience {
 				found = true
 				break
@@ -161,26 +161,24 @@ func (c *ClaimSet) Verify(options ...VerifyOption) error {
 	}
 
 	// check for exp
-	if tv := c.Expiration; tv > 0 {
-		t := time.Unix(tv, 0)
+	if tv := t.expiration; tv != nil {
 		now := clock.Now().Truncate(time.Second)
-		if !now.Before(t.Add(skew)) {
+		if !now.Before(tv.Add(skew)) {
 			return errors.New(`exp not satisfied`)
 		}
 	}
 
 	// check for iat
-	if tv := c.IssuedAt; tv > 0 {
-		t := time.Unix(tv, 0)
+	if tv := t.issuedAt; tv != nil {
 		now := clock.Now().Truncate(time.Second)
-		if !now.After(t.Add(-1 * skew)) {
+		if !now.After(tv.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}
 
 	// jti
 	// check for nbf
-	if t := c.NotBefore; t != nil {
+	if t := t.notBefore; t != nil {
 		now := clock.Now().Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew
 		if !now.After(t.Time.Add(-1 * skew).Truncate(time.Second)) {

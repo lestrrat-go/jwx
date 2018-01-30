@@ -1,13 +1,6 @@
 package jwt_test
 
-import (
-	"encoding/json"
-	"testing"
-	"time"
-
-	"github.com/lestrrat/go-jwx/jwt"
-	"github.com/stretchr/testify/assert"
-)
+/*
 
 func TestClaimSet(t *testing.T) {
 	c1 := jwt.NewClaimSet()
@@ -174,3 +167,68 @@ func TestGHIssue10_exp(t *testing.T) {
 		return
 	}
 }
+
+type MyCustomClaims struct {
+	Foo string `json:"foo"`
+	jwt2.StandardClaims
+}
+type MyCustomClaimsProxy struct {
+	Foo string `json:"foo"`
+	jwt2.StandardClaims
+}
+
+func (mcc *MyCustomClaims) MarshalJSON() ([]byte, error) {
+	buf, _ := json.Marshal(MyCustomClaimsProxy{
+		Foo: mcc.Foo,
+		StandardClaims: mcc.StandardClaims,
+	})
+
+	var m map[string]interface{}
+	json.Unmarshal(buf, &m)
+
+	log.Printf("mcccccccc -> %#v", m)
+
+	return json.Marshal(m)
+}
+
+func TestSign(t *testing.T) {
+	t.Run("jwt2", func(t *testing.T) {
+		mySigningKey := []byte("AllYourBase")
+
+		// Create the Claims
+		claims := MyCustomClaims{
+			"bar",
+			jwt2.StandardClaims{
+				ExpiresAt: 15000,
+				Issuer:    "test",
+			},
+		}
+
+		token := jwt2.NewWithClaims(jwt2.SigningMethodHS256, &claims)
+		ss, err := token.SignedString(mySigningKey)
+		fmt.Printf("%v %v", ss, err)
+	})
+	t.Run("jwt1", func(t *testing.T) {
+		key := []byte("AllYouBase")
+
+		token := jwt.New().WithClaims(
+			map[string]interface{}{
+				"foo": "bar",
+				"exp": 15000,
+				"iss": "test",
+			},
+		)
+		signed, err := token.Sign(jwa.HS256, key)
+		if !assert.NoError(t, err, `t.Sign should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t,
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwLCJpc3MiOiJ0ZXN0In0.QsODzZu3lUZMVdhbO76u3Jv02iYCvEHcYVUI1kOWEU0",
+			string(signed),
+			`signed value should match`) {
+			return
+		}
+	})
+}
+*/

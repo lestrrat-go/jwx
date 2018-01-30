@@ -310,6 +310,7 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	}
 
 	if err := json.Unmarshal(b.Bytes(), &e.Header); err != nil {
+
 		return errors.Wrap(err, `failed to unmarshal decoded header`)
 	}
 

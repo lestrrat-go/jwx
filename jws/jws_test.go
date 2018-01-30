@@ -20,7 +20,7 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 
 func TestParse_EmptyByteBuffer(t *testing.T) {
-	_, err := Parse([]byte{})
+	_, err := Parse(&bytes.Buffer{})
 	if !assert.Error(t, err, "Parsing an empty buffer should result in an error") {
 		return
 	}
@@ -35,7 +35,7 @@ func TestParse_CompactSerializationMissingParts(t *testing.T) {
 		".",
 	)
 	_, err := ParseString(incoming)
-	if !assert.Equal(t, ErrInvalidCompactPartsCount, err, "Parsing compact serialization with less than 3 parts should be an error") {
+	if !assert.Error(t, err, "Parsing compact serialization with less than 3 parts should be an error") {
 		return
 	}
 }
@@ -141,8 +141,8 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 		}
 
 		parsers := map[string]func([]byte) (*Message, error){
-			"Parse(byte)":   Parse,
-			"Parse(string)": func(b []byte) (*Message, error) { return ParseString(string(b)) },
+			"Parse(io.Reader)": func(b []byte) (*Message, error) { return Parse(bytes.NewReader(b)) },
+			"Parse(string)":    func(b []byte) (*Message, error) { return ParseString(string(b)) },
 		}
 		for name, f := range parsers {
 			m, err := f(buf)
@@ -216,7 +216,7 @@ func TestEncode_HS256Compact(t *testing.T) {
 		return
 	}
 
-	msg, err := Parse(encoded)
+	msg, err := Parse(bytes.NewReader(encoded))
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
 	}
@@ -298,7 +298,7 @@ func TestEncode_RS256Compact(t *testing.T) {
 		return
 	}
 
-	msg, err := Parse(encoded)
+	msg, err := Parse(bytes.NewReader(encoded))
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
 	}
@@ -376,7 +376,7 @@ func TestEncode_ES256Compact(t *testing.T) {
 	// the output against a fixed expected outcome. We'll wave doing an
 	// exact match, and just try to verify using the signature
 
-	msg, err := Parse(encoded)
+	msg, err := Parse(bytes.NewReader(encoded))
 	if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 		return
 	}
@@ -398,7 +398,7 @@ func TestEncode_ES256Compact(t *testing.T) {
 func TestParse_UnsecuredCompact(t *testing.T) {
 	s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
 
-	m, err := Parse([]byte(s))
+	m, err := Parse(strings.NewReader(s))
 	if !assert.NoError(t, err, "Parsing compact serialization") {
 		return
 	}
@@ -449,7 +449,7 @@ func TestParse_CompleteJSON(t *testing.T) {
     ]
   }`
 
-	m, err := Parse([]byte(s))
+	m, err := Parse(strings.NewReader(s))
 	if !assert.NoError(t, err, "Parsing complete json serialization") {
 		return
 	}
@@ -487,7 +487,7 @@ func TestParse_FlattenedJSON(t *testing.T) {
     "signature": "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
   }`
 
-	m, err := Parse([]byte(s))
+	m, err := Parse(strings.NewReader(s))
 	if !assert.NoError(t, err, "Parsing flattened json serialization") {
 		return
 	}
@@ -525,7 +525,11 @@ func TestSign_HeaderValues(t *testing.T) {
 
 	// Although we set KeyID to the public header, in compact serialization
 	// there's no difference
-	msg, err := Parse(encoded)
+	msg, err := Parse(bytes.NewReader(encoded))
+	if !assert.NoError(t, err, `parse should succeed`) {
+		return
+	}
+
 	if !assert.Equal(t, hdr.KeyID, msg.Signatures[0].ProtectedHeader.KeyID, "KeyID should match") {
 		return
 	}
@@ -586,4 +590,3 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 }
-

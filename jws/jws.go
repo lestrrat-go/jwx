@@ -20,17 +20,21 @@
 package jws
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"strings"
+	"unicode"
 
-	"github.com/pkg/errors"
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/internal/debug"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/pkg/errors"
 )
 
 // Sign is a short way to generate a JWS in compact serialization
@@ -116,7 +120,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 	if debug.Enabled {
 		debug.Printf("jws.Verify\n")
 	}
-	msg, err := Parse(buf)
+	msg, err := Parse(bytes.NewReader(buf))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
@@ -234,7 +238,7 @@ func verifyMessageWithJWK(m *Message, key jwk.Key) error {
 
 // VerifyWithJWK verifies the JWS message using the specified JWK
 func VerifyWithJWK(buf []byte, key jwk.Key) ([]byte, error) {
-	m, err := Parse(buf)
+	m, err := Parse(bytes.NewReader(buf))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
@@ -250,7 +254,7 @@ func VerifyWithJWK(buf []byte, key jwk.Key) ([]byte, error) {
 // set to either "sig" or "enc", but you can override it by
 // providing a keyaccept function.
 func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
-	m, err := Parse(buf)
+	m, err := Parse(bytes.NewReader(buf))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer")
 	}
@@ -277,33 +281,42 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]b
 	return nil, errors.New("failed to verify with any of the keys")
 }
 
-// Parse parses the given buffer and creates a jws.Message struct.
-// The input can be in either compact or full JSON serialization.
-func Parse(buf []byte) (*Message, error) {
-	buf = bytes.TrimSpace(buf)
-	if len(buf) == 0 {
-		return nil, errors.New("empty buffer")
+// Parse parses contents from the given source and creates a jws.Message
+// struct. The input can be in either compact or full JSON serialization.
+func Parse(src io.Reader) (*Message, error) {
+	rdr := bufio.NewReader(src)
+	var first rune
+	for {
+		r, _, err := rdr.ReadRune()
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to read rune`)
+		}
+		if !unicode.IsSpace(r) {
+			first = r
+			rdr.UnreadRune()
+			break
+		}
 	}
 
-	if buf[0] == '{' {
-		return parseJSON(buf)
+	if first == '{' {
+		return parseJSON(rdr)
 	}
-	return parseCompact(buf)
+	return parseCompact(rdr)
 }
 
 // ParseString is the same as Parse, but take in a string
 func ParseString(s string) (*Message, error) {
-	return Parse([]byte(s))
+	return Parse(strings.NewReader(s))
 }
 
-func parseJSON(buf []byte) (*Message, error) {
+func parseJSON(src io.Reader) (*Message, error) {
 	m := struct {
 		*Message
 		*Signature
 	}{}
 
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, errors.Wrap(err, `failed to parse jwk.Message`)
+	if err := json.NewDecoder(src).Decode(&m); err != nil {
+		return nil, errors.Wrap(err, `failed to parse jws message`)
 	}
 
 	// if the "signature" field exist, treat it as a flattened
@@ -324,38 +337,90 @@ func parseJSON(buf []byte) (*Message, error) {
 	return m.Message, nil
 }
 
+func scanDot(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	if i := bytes.IndexByte(data, '.'); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
 // parseCompact parses a JWS value serialized via compact serialization.
-func parseCompact(buf []byte) (*Message, error) {
-	parts := bytes.Split(buf, []byte{'.'})
-	if len(parts) != 3 {
-		return nil, ErrInvalidCompactPartsCount
+func parseCompact(rdr io.Reader) (*Message, error) {
+	var hdr = &EncodedHeader{Header: NewHeader()}
+	var payload []byte
+	var signbuf []byte
+	var periods int
+	var state int
+
+	buf := make([]byte, 4096)
+	var sofar []byte
+	for {
+		n, err := rdr.Read(buf)
+		if n == 0 && err != nil {
+			break
+		}
+		sofar = append(sofar, buf[:n]...)
+		for loop := true; loop; {
+			i := bytes.IndexByte(sofar, '.')
+			switch i {
+			case -1:
+				l := len(sofar)
+				if l <= 0 {
+					loop = false
+					continue
+				}
+				i = l
+			default:
+				periods++
+			}
+
+			switch state {
+			case 0:
+				hdrbuf, err := buffer.FromBase64(sofar[:i])
+				if err != nil {
+					return nil, errors.Wrap(err, `failed to decode headers`)
+				}
+				if err := json.Unmarshal(hdrbuf, hdr.Header); err != nil {
+					return nil, errors.Wrap(err, `failed to parse JOSE headers`)
+				}
+				hdr.Source = hdrbuf
+				state++
+			case 1:
+				payload, err = buffer.FromBase64(sofar[:i])
+				if err != nil {
+					return nil, errors.Wrap(err, `failed to decode payload`)
+				}
+				state++
+			case 2:
+				signbuf = make([]byte, base64.RawURLEncoding.DecodedLen(i))
+				if _, err := base64.RawURLEncoding.Decode(signbuf, sofar[:i]); err != nil {
+					return nil, errors.Wrap(err, `failed to decode signature`)
+				}
+			}
+			if len(sofar) <= i {
+				sofar = []byte(nil)
+			} else {
+				sofar = sofar[i+1:]
+			}
+		}
+
 	}
-
-	enc := base64.RawURLEncoding
-
-	hdrbuf, err := buffer.FromBase64(parts[0])
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse first part from base64`)
-	}
-
-	hdr := &EncodedHeader{Header: NewHeader()}
-	if err := json.Unmarshal(hdrbuf.Bytes(), hdr.Header); err != nil {
-		return nil, errors.Wrap(err, `failed to parse header from JSON`)
-	}
-	hdr.Source = hdrbuf
-
-	payload, err := buffer.FromBase64(parts[1])
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse second part from base64`)
-	}
-
-	signature := make([]byte, enc.DecodedLen(len(parts[2])))
-	if _, err := enc.Decode(signature, parts[2]); err != nil {
-		return nil, errors.Wrap(err, `failed to decode third part`)
+	if periods != 2 {
+		return nil, errors.New(`invalid number of segments`)
 	}
 
 	s := NewSignature()
-	s.Signature = signature
+	s.Signature = signbuf
 	s.ProtectedHeader = hdr
 	m := &Message{
 		Payload:    buffer.Buffer(payload),
