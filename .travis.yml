@@ -1,5 +1,11 @@
 language: go
 sudo: false
+before_script:
+  - go get -t -u ./...
+script:
+  - make generate
+  - go test -v ./...
+  - ./scripts/check-diff.sh
 go:
     - 1.9.x
     - tip

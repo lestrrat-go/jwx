@@ -41,34 +41,31 @@ As of this writing (Nov 2015), it's still lacking a few of the algorithms for JW
 
 ### JWT
 
-See the examples here as well: https://godoc.org/github.com/lestrrat/go-jwx/jwt#pkg-examples
+See the examples here as well: [https://github.com/lestrrat/go-jwx/jwt](./jwt/README.md)
 
 ```go
-import(
-  "encoding/json"
-  "log"
+func ExampleJWT() {
+  const aLongLongTimeAgo = 233431200
 
-  "github.com/lestrrat/go-jwx/jwt"
-)
+  t := jwt.New()
+  t.Set(jwt.SubjectKey, `https://github.com/lestrrat/go-jwx/jwt`)
+  t.Set(jwt.AudienceKey, `Golang Users`)
+  t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
+  t.Set(`privateClaimKey`, `Hello, World!`)
 
-func main() {
-  c := jwt.NewClaimSet()
-  c.Set("sub", "123456789")
-  c.Set("aud", "foo")
-  c.Set("https://github.com/lestrrat", "me")
-
-  buf, err := json.MarshalIndent(c, "", "  ")
+  buf, err := json.MarshalIndent(t, "", "  ")
   if err != nil {
-    log.Printf("failed to generate JSON: %s", err)
+    fmt.Printf("failed to generate JSON: %s\n", err)
     return
   }
 
-  log.Printf("%s", buf)
-  log.Printf("sub     -> '%s'", c.Get("sub").(string))
-  log.Printf("aud     -> '%v'", c.Get("aud").([]string))
-  log.Printf("private -> '%s'", c.Get("https://github.com/lestrrat").(string))
-
-  // Possibly use c.Verify() to verify the claim set
+  fmt.Printf("%s\n", buf)
+  fmt.Printf("aud -> '%s'\n", t.Audience())
+  fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
+  if v, ok := t.Get(`privateClaimKey`); ok {
+    fmt.Printf("privateClaimKey -> '%s'\n", v)
+  }
+  fmt.Printf("sub -> '%s'\n", t.Subject())
 }
 ```
 
