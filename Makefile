@@ -3,4 +3,4 @@
 generate: generate-jwt
 
 generate-jwt:
-	@pushd jwt;go generate && popd
+	@cd jwt; go generate 
