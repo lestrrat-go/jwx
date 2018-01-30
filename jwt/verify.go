@@ -163,7 +163,8 @@ func (t *Token) Verify(options ...VerifyOption) error {
 	// check for exp
 	if tv := t.expiration; tv != nil {
 		now := clock.Now().Truncate(time.Second)
-		if !now.Before(tv.Add(skew)) {
+		ttv := tv.Time.Truncate(time.Second)
+		if !now.Before(ttv.Add(skew)) {
 			return errors.New(`exp not satisfied`)
 		}
 	}
@@ -171,17 +172,18 @@ func (t *Token) Verify(options ...VerifyOption) error {
 	// check for iat
 	if tv := t.issuedAt; tv != nil {
 		now := clock.Now().Truncate(time.Second)
-		if !now.After(tv.Add(-1 * skew)) {
+		ttv := tv.Time.Truncate(time.Second)
+		if !now.After(ttv.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}
 
-	// jti
 	// check for nbf
-	if t := t.notBefore; t != nil {
+	if tv := t.notBefore; tv != nil {
 		now := clock.Now().Truncate(time.Second)
+		ttv := tv.Time.Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew
-		if !now.After(t.Time.Add(-1 * skew).Truncate(time.Second)) {
+		if !now.After(ttv.Add(-1 * skew)) {
 			return errors.New(`nbf not satisfied`)
 		}
 	}
