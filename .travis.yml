@@ -1,7 +1,9 @@
 language: go
 sudo: false
 script:
+  - make generate
   - go test -v ./...
+  - ./scripts/check-diff.sh
 go:
     - 1.9.x
     - tip
