@@ -4,26 +4,12 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"errors"
 	"hash"
 	"net/url"
 
 	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
-)
-
-type Formatter func(*Message) ([]byte, error)
-
-// Errors for JWS
-var (
-	ErrInvalidCompactPartsCount  = errors.New("compact JWS format must have three parts")
-	ErrInvalidHeaderValue        = errors.New("invalid value for header key")
-	ErrInvalidEcdsaSignatureSize = errors.New("invalid signature size of ecdsa algorithm")
-	ErrInvalidSignature          = errors.New("invalid signature")
-	ErrMissingPrivateKey         = errors.New("missing private key")
-	ErrMissingPublicKey          = errors.New("missing public key")
-	ErrUnsupportedAlgorithm      = errors.New("unspported algorithm")
 )
 
 // EssentialHeader is a set of headers that are already defined in RFC 7515
@@ -102,7 +88,7 @@ type Signature struct {
 }
 
 type StandardMessage struct {
-	payload []byte
+	payload    []byte
 	signatures []*StandardSignature
 }
 

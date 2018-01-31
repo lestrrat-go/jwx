@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var ErrInvalidHeaderValue = errors.New(`invalid header value`)
+
 // NewHeader creates a new Header
 func NewHeader() *Header {
 	return &Header{
