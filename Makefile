@@ -1,6 +1,7 @@
 .PHONY: generate
 
-generate: generate-jwt
+generate: 
+	@$(MAKE) generate-jwa generate-jwt
 
-generate-jwt:
-	@cd jwt; go generate 
+generate-%:
+	@cd $(patsubst generate-%,%,$@); go generate 
