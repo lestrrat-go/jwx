@@ -13,6 +13,8 @@ import (
 	"github.com/lestrrat/go-jwx/jwk"
 )
 
+type Formatter func(*Message) ([]byte, error)
+
 // Errors for JWS
 var (
 	ErrInvalidCompactPartsCount  = errors.New("compact JWS format must have three parts")
@@ -62,12 +64,8 @@ type EncodedHeader struct {
 
 // PayloadSigner generates signature for the given payload
 type PayloadSigner interface {
-	PayloadSign([]byte) ([]byte, error)
-	PublicHeaders() *Header
-	ProtectedHeaders() *Header
-	SetPublicHeaders(*Header)
-	SetProtectedHeaders(*Header)
-	SignatureAlgorithm() jwa.SignatureAlgorithm
+	Sign([]byte) ([]byte, error)
+	Algorithm() jwa.SignatureAlgorithm
 }
 
 // Verifier is used to verify the signature against the payload
@@ -103,10 +101,23 @@ type Signature struct {
 	Signature       buffer.Buffer  `json:"signature"`           // Base64 encoded signature
 }
 
+type StandardMessage struct {
+	payload []byte
+	signatures []*StandardSignature
+}
+
+type StandardSignature struct {
+	headers   *StandardHeaders
+	protected *StandardHeaders
+	signature []byte
+}
+
 // Message represents a full JWS encoded message. Flattened serialization
 // is not supported as a struct, but rather it's represented as a
 // Message struct with only one `signature` element
 type Message struct {
+	payload []byte `json:"payload"`
+
 	Payload    buffer.Buffer `json:"payload"`
 	Signatures []Signature   `json:"signatures"`
 }
@@ -122,19 +133,6 @@ type HmacSign struct {
 	Protected *Header
 	Key       []byte
 	hash      func() hash.Hash
-}
-
-// Serializer defines the interface for things that can serialize JWS messages
-type Serializer interface {
-	Serialize(*Message) ([]byte, error)
-}
-
-// CompactSerialize is serializer that produces compact JSON JWS representation
-type CompactSerialize struct{}
-
-// JSONSerialize is serializer that produces full JSON JWS representation
-type JSONSerialize struct {
-	Pretty bool
 }
 
 // RsaVerify is a sign verifider using RSA
@@ -181,4 +179,6 @@ var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
 	return true
 })
 
-
+type HeaderInterface interface {
+	Set(string, interface{}) error
+}

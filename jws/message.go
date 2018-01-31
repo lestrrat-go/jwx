@@ -271,12 +271,20 @@ func (h *EssentialHeader) Construct(m map[string]interface{}) error {
 	return nil
 }
 
-// Base64Encode creates the base64 encoded version of the JSON
-// representation of this header
-func (h Header) Base64Encode() ([]byte, error) {
+func (h Header) Bytes() ([]byte, error) {
 	b, err := json.Marshal(h)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to marshal header`)
+	}
+	return b, nil
+}
+
+// Base64Encode creates the base64 encoded version of the JSON
+// representation of this header
+func (h Header) Base64Encode() ([]byte, error) {
+	b, err := h.Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to get header in bytes`)
 	}
 
 	return buffer.Buffer(b).Base64Encode()

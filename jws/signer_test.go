@@ -1,76 +1,66 @@
-package jws
+package jws_test
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
-	"strings"
 	"testing"
 
-	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/pkg/errors"
+	"github.com/lestrrat/go-jwx/jws"
+	"github.com/lestrrat/go-jwx/jws/sign"
+	"github.com/lestrrat/go-jwx/jws/verify"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRsaSign_NewRsaSignWithBadAlgorithm(t *testing.T) {
-	_, err := NewRsaSign(jwa.SignatureAlgorithm("FooBar"), nil)
-	if !assert.Equal(t, ErrUnsupportedAlgorithm, errors.Cause(err), "Unknown algorithm should return error") {
-		return
-	}
+func TestSign(t *testing.T) {
+	t.Run("Bad algorithm", func(t *testing.T) {
+		_, err := jws.Sign([]byte(nil), jwa.SignatureAlgorithm("FooBar"), nil)
+		if !assert.Error(t, err, "Unknown algorithm should return error") {
+			return
+		}
+	})
+	t.Run("No private key", func(t *testing.T) {
+		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jwa.RS256, nil)
+		if !assert.Error(t, err, "Sign with no private key should return error") {
+			return
+		}
+	})
+	t.Run("RSA verify with no public key", func(t *testing.T) {
+		_, err := jws.Verify([]byte(nil), jwa.RS256, nil)
+		if !assert.Error(t, err, "Verify with no private key should return error") {
+			return
+		}
+	})
+	t.Run("RSA roundtrip", func(t *testing.T) {
+		rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
+		if !assert.NoError(t, err, "RSA key generated") {
+			return
+		}
+
+		signer, err := sign.New(jwa.RS256)
+		if !assert.NoError(t, err, `creating a signer should succeed`) {
+			return
+		}
+
+		payload := []byte("Hello, world")
+
+		signed, err := signer.Sign(payload, rsakey)
+		if !assert.NoError(t, err, "Payload signed") {
+			return
+		}
+
+		verifier, err := verify.New(jwa.RS256)
+		if !assert.NoError(t, err, "creating a verifier should succeed") {
+			return
+		}
+
+		if !assert.NoError(t, verifier.Verify(payload, signed, &rsakey.PublicKey), "Payload verified") {
+			return
+		}
+	})
 }
 
-func TestRsaSign_SignWithBadAlgorithm(t *testing.T) {
-	_, err := NewRsaSign(jwa.SignatureAlgorithm("FooBar"), nil)
-	if !assert.Equal(t, ErrUnsupportedAlgorithm, errors.Cause(err), "Creating signer with unknown algorithm should return error") {
-		return
-	}
-}
-
-func TestRsaSign_SignWithNoPrivateKey(t *testing.T) {
-	s, _ := NewRsaSign(jwa.RS256, nil)
-
-	_, err := s.PayloadSign([]byte{'a', 'b', 'c'})
-	if !assert.Equal(t, ErrMissingPrivateKey, errors.Cause(err), "Sign with no private key should return error") {
-		return
-	}
-}
-
-func TestRsaSign_VerifyWithNoPublicKey(t *testing.T) {
-	_, err := NewRsaVerify(jwa.RS256, nil)
-	if !assert.Equal(t, ErrMissingPublicKey, err, "Verify with no private key should return error") {
-		return
-	}
-}
-
-func TestRsaSign_SignVerify(t *testing.T) {
-	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if !assert.NoError(t, err, "RSA key generated") {
-		return
-	}
-
-	s, err := NewRsaSign(jwa.RS256, rsakey)
-	if !assert.NoError(t, err, "RsaSign created") {
-		return
-	}
-
-	payload := []byte("Hello, world")
-	signed, err := s.PayloadSign(payload)
-	if !assert.NoError(t, err, "Payload signed") {
-		return
-	}
-
-	v, err := NewRsaVerify(jwa.RS256, &rsakey.PublicKey)
-	if !assert.NoError(t, err, "RsaVerify created") {
-		return
-	}
-
-	if !assert.NoError(t, v.payloadVerify(payload, signed), "Payload verified") {
-		return
-	}
-}
+/*
 
 func TestMultiSigner(t *testing.T) {
 	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -107,4 +97,4 @@ func TestMultiSigner(t *testing.T) {
 
 	jsonbuf, _ := json.MarshalIndent(m, "", "  ")
 	t.Logf("%s", jsonbuf)
-}
+}*/
