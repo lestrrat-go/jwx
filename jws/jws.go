@@ -327,31 +327,6 @@ func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
 	return VerifyWithJWKSet(buf, key, nil)
 }
 
-var errVerifyFailed = errors.New("failed to verify with key")
-
-func verifyMessageWithJWK(m *Message, key jwk.Key) error {
-	keyval, err := key.Materialize()
-	if err != nil {
-		return errors.Wrap(err, `failed to materialize jwk.KEy`)
-	}
-
-	alg := jwa.SignatureAlgorithm(key.Alg())
-	verifier, err := verify.New(alg)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create verifier for %s", alg)
-	}
-
-	//TODO
-	if err := verifier.Verify(nil, nil, keyval); err != nil {
-		// we return a stock "failed to verify" error so callers
-		// can differentiate between other errors and Verify() failing
-		// note: this masks potential errors within Verify(), but ... hmmm
-		return errVerifyFailed
-	}
-
-	return nil
-}
-
 // VerifyWithJWK verifies the JWS message using the specified JWK
 func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 	if pdebug.Enabled {
