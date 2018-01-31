@@ -17,10 +17,12 @@ func WithPretty(b bool) Option {
 	return option.New(optkeyPrettyJSONFormat, b)
 }
 
-func WithSigner(signer sign.Signer, key interface{}) Option {
+func WithSigner(signer sign.Signer, key interface{}, public, protected HeaderInterface) Option {
 	return option.New(optkeyPayloadSigner, &payloadSigner{
-		signer: signer,
-		key:    key,
+		signer:    signer,
+		key:       key,
+		protected: protected,
+		public:    public,
 	})
 }
 

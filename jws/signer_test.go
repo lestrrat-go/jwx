@@ -1,8 +1,11 @@
 package jws_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"strings"
 	"testing"
 
 	"github.com/lestrrat/go-jwx/jwa"
@@ -59,10 +62,7 @@ func TestSign(t *testing.T) {
 		}
 	})
 }
-
-/*
-
-func TestMultiSigner(t *testing.T) {
+func TestSignMulti(t *testing.T) {
 	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
@@ -73,28 +73,28 @@ func TestMultiSigner(t *testing.T) {
 		return
 	}
 
-	ms := &MultiSign{}
-
-	s1, err := NewRsaSign(jwa.RS256, rsakey)
+	s1, err := sign.New(jwa.RS256)
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
-	s1.PublicHeaders().Set("kid", "2010-12-29")
-	ms.AddSigner(s1)
+	var s1hdr jws.StandardHeaders
+	s1hdr.Set(jws.KeyIDKey, "2010-12-29")
 
-	s2, err := NewEcdsaSign(jwa.ES256, dsakey)
+	s2, err := sign.New(jwa.ES256)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}
-	s2.PublicHeaders().Set("kid", "e9bc097a-ce51-4036-9562-d2ade882db0d")
-	ms.AddSigner(s2)
+	var s2hdr jws.StandardHeaders
+	s2hdr.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
-	m, err := ms.Sign(buffer.Buffer(v))
-	if !assert.NoError(t, err, "MultiSign succeeded") {
+	m, err := jws.SignMulti([]byte(v),
+		jws.WithSigner(s1, rsakey, &s1hdr, nil),
+		jws.WithSigner(s2, dsakey, &s2hdr, nil),
+	)
+	if !assert.NoError(t, err, "jws.SignMulti should succeed") {
 		return
 	}
 
-	jsonbuf, _ := json.MarshalIndent(m, "", "  ")
-	t.Logf("%s", jsonbuf)
-}*/
+	t.Logf("%s", m)
+}

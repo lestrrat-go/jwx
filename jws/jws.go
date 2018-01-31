@@ -59,8 +59,10 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 */
 
 type payloadSigner struct {
-	signer sign.Signer
-	key    interface{}
+	signer    sign.Signer
+	key       interface{}
+	protected HeaderInterface
+	public    HeaderInterface
 }
 
 func (s *payloadSigner) Sign(payload []byte) ([]byte, error) {
@@ -69,6 +71,14 @@ func (s *payloadSigner) Sign(payload []byte) ([]byte, error) {
 
 func (s *payloadSigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.signer.Algorithm()
+}
+
+func (s *payloadSigner) ProtectedHeader() HeaderInterface {
+	return s.protected
+}
+
+func (s *payloadSigner) PublicHeader() HeaderInterface {
+	return s.public
 }
 
 // Sign generates a signature for the given payload, and serializes
@@ -148,14 +158,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		return nil, errors.New(`no signers provided`)
 	}
 
-	type signPayload struct {
-		Protected []byte `json:"protected"`
-		Signature []byte `json:"signature"`
-	}
-	var result struct {
-		Payload    []byte        `json:"payload"`
-		Signatures []signPayload `json:"signatures"`
-	}
+	var result EncodedMessage
 
 	encodedPayloadLen := base64.RawURLEncoding.EncodedLen(len(payload))
 	encodedPayload := make([]byte, encodedPayloadLen)
@@ -164,16 +167,19 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	result.Payload = encodedPayload
 
 	for _, signer := range signers {
-		var hdr StandardHeaders
-		hdr.Set(AlgorithmKey, signer.Algorithm())
+		protected := signer.ProtectedHeader()
+		if protected == nil {
+			protected = &StandardHeaders{}
+		}
 
-		hdrbuf, err := json.Marshal(hdr)
+		protected.Set(AlgorithmKey, signer.Algorithm())
+
+		hdrbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to marshal headers`)
 		}
 
-		encodedHeaderLen := base64.RawURLEncoding.EncodedLen(len(hdrbuf))
-		encodedHeader := make([]byte, encodedHeaderLen)
+		encodedHeader := make([]byte, base64.RawURLEncoding.EncodedLen(len(hdrbuf)))
 		base64.RawURLEncoding.Encode(encodedHeader, hdrbuf)
 
 		var buf bytes.Buffer
@@ -184,11 +190,22 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to sign payload`)
 		}
-		encodedSignatureLen := base64.RawURLEncoding.EncodedLen(len(signature))
-		encodedSignature := make([]byte, encodedSignatureLen)
+		encodedSignature := make([]byte, base64.RawURLEncoding.EncodedLen(len(signature)))
 		base64.RawURLEncoding.Encode(encodedSignature, signature)
 
-		result.Signatures = append(result.Signatures, signPayload{
+		var encodedPublicHeader []byte
+		if pubHeader := signer.PublicHeader(); pubHeader != nil {
+			pubHeaderJSON, err := json.Marshal(pubHeader)
+			if err != nil {
+				return nil, errors.Wrap(err, `failed to marshal public headers`)
+			}
+
+			encodedPublicHeader = make([]byte, base64.RawURLEncoding.EncodedLen(len(pubHeaderJSON)))
+			base64.RawURLEncoding.Encode(encodedPublicHeader, pubHeaderJSON)
+		}
+
+		result.Signatures = append(result.Signatures, &EncodedSignature{
+			Headers:   encodedPublicHeader,
 			Protected: encodedHeader,
 			Signature: encodedSignature,
 		})
@@ -199,12 +216,12 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 
 type EncodedSignature struct {
 	Protected []byte `json:"protected,omitempty"`
-	Headers []byte `json:"header,omitempty"`
+	Headers   []byte `json:"header,omitempty"`
 	Signature []byte `json:"signature,omitempty"`
 }
 
 type EncodedMessage struct {
-	Payload []byte `json:"payload"`
+	Payload    []byte              `json:"payload"`
 	Signatures []*EncodedSignature `json:"signatures,omitempty"`
 }
 

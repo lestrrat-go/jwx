@@ -111,7 +111,7 @@ func TestRoundtrip(t *testing.T) {
 				if !assert.NoError(t, err, `sign.New should succeed`) {
 					return
 				}
-				options = append(options, jws.WithSigner(signer, sharedkey))
+				options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
 			}
 			var err error
 			signed, err = jws.SignMulti(payload, options...)

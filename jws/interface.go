@@ -52,25 +52,8 @@ type EncodedHeader struct {
 type PayloadSigner interface {
 	Sign([]byte) ([]byte, error)
 	Algorithm() jwa.SignatureAlgorithm
-}
-
-// Verifier is used to verify the signature against the payload
-type Verifier interface {
-	Verify(*Message) error
-}
-
-// RsaSign is a signer using RSA
-type RsaSign struct {
-	Public     *Header
-	Protected  *Header
-	PrivateKey *rsa.PrivateKey
-}
-
-// EcdsaSign is a signer using ECDSA
-type EcdsaSign struct {
-	Public     *Header
-	Protected  *Header
-	PrivateKey *ecdsa.PrivateKey
+	ProtectedHeader() HeaderInterface
+	PublicHeader() HeaderInterface
 }
 
 // MergedHeader is a provides an interface to query both protected
