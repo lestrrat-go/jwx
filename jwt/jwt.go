@@ -34,7 +34,7 @@ func Parse(src io.Reader) (*Token, error) {
 	}
 
 	var token Token
-	if err := json.Unmarshal(m.Payload.Bytes(), &token); err != nil {
+	if err := json.Unmarshal(m.Payload(), &token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
 	return &token, nil
@@ -56,10 +56,10 @@ func (t *Token) Sign(method jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 		return nil, errors.Wrap(err, `failed to marshal token`)
 	}
 
-	var hdr = jws.NewHeader()
+	var hdr jws.StandardHeaders
 	hdr.Set(`alg`, method.String())
 	hdr.Set(`typ`, `JWT`)
-	sign, err := jws.Sign(buf, method, key, hdr)
+	sign, err := jws.Sign(buf, method, key, jws.WithHeaders(&hdr))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
