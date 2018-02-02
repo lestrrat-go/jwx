@@ -1,9 +1,6 @@
 package jws
 
 import (
-	"net/url"
-
-	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 )
@@ -40,55 +37,12 @@ type fullEncodedMessageUnmarshalProxy struct {
 	*encodedMessageUnmarshalProxy
 }
 
-// EssentialHeader is a set of headers that are already defined in RFC 7515
-type EssentialHeader struct {
-	Algorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
-	ContentType            string                 `json:"cty,omitempty"`
-	Critical               []string               `json:"crit,omitempty"`
-	Jwk                    jwk.Key                `json:"jwk,omitempty"` // public key
-	JwkSetURL              *url.URL               `json:"jku,omitempty"`
-	KeyID                  string                 `json:"kid,omitempty"`
-	Type                   string                 `json:"typ,omitempty"` // e.g. "JWT"
-	X509Url                *url.URL               `json:"x5u,omitempty"`
-	X509CertChain          []string               `json:"x5c,omitempty"`
-	X509CertThumbprint     string                 `json:"x5t,omitempty"`
-	X509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
-}
-
-// Header represents a JWS header.
-type Header struct {
-	*EssentialHeader `json:"-"`
-	PrivateParams    map[string]interface{} `json:"-"`
-}
-
-// EncodedHeader represents a header value that is base64 encoded
-// in JSON format
-type EncodedHeader struct {
-	*Header
-	// This is a special field. It's ONLY set when parsed from a serialized form.
-	// It's used for verification purposes, because header representations (such as
-	// JSON key order) may differ from what the source encoded with and what the
-	// go json package uses
-	//
-	// If this field is populated (Len() > 0), it will be used for signature
-	// calculation.
-	// If you change the header values, make sure to clear this field, too
-	Source buffer.Buffer `json:"-"`
-}
-
 // PayloadSigner generates signature for the given payload
 type PayloadSigner interface {
 	Sign([]byte) ([]byte, error)
 	Algorithm() jwa.SignatureAlgorithm
 	ProtectedHeader() HeaderInterface
 	PublicHeader() HeaderInterface
-}
-
-// MergedHeader is a provides an interface to query both protected
-// and public headers
-type MergedHeader struct {
-	ProtectedHeader *EncodedHeader
-	PublicHeader    *Header
 }
 
 // Message represents a full JWS encoded message. Flattened serialization
