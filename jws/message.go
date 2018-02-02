@@ -369,25 +369,3 @@ func (m Message) LookupSignature(kid string) []*Signature {
 	}
 	return sigs
 }
-
-type signatureJSONMarshalProxy struct {
-	Header    HeaderInterface `json:"header"`
-	Protected HeaderInterface `json:"protected"`
-	Signature []byte          `json:"signature"`
-}
-
-type signatureJSONUnmarshalProxy struct {
-	Header    *StandardHeaders `json:"header"`
-	Protected string           `json:"protected"`
-	Signature string           `json:"signature"`
-}
-
-type messageJSONMarshalProxy struct {
-	Payload    []byte                       `json:"payload"` // should be base64
-	Signatures []*signatureJSONMarshalProxy `json:"signatures"`
-}
-
-type messageJSONUnmarshalProxy struct {
-	Payload    []byte                         `json:"payload"` // should be base64
-	Signatures []*signatureJSONUnmarshalProxy `json:"signatures"`
-}
