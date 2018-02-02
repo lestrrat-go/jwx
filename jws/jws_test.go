@@ -190,7 +190,7 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, payload, m.Payload.Bytes(), "(%s) %s: Payload is decoded", alg, name) {
+			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
 				return
 			}
 		}
@@ -263,8 +263,12 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrs := msg.Signatures[0].MergedHeaders()
-		if !assert.Equal(t, hdrs.Algorithm(), jwa.HS256, "Algorithm in header matches") {
+		signatures := msg.Signatures()
+		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
+			return
+		}
+
+		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.HS256, "Algorithm in header matches") {
 			return
 		}
 
@@ -345,8 +349,12 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrs := msg.Signatures[0].MergedHeaders()
-		if !assert.Equal(t, hdrs.Algorithm(), jwa.RS256, "Algorithm in header matches") {
+		signatures := msg.Signatures()
+		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
+			return
+		}
+
+		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.RS256, "Algorithm in header matches") {
 			return
 		}
 
@@ -422,8 +430,12 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrs := msg.Signatures[0].MergedHeaders()
-		if !assert.Equal(t, hdrs.Algorithm(), jwa.ES256, "Algorithm in header matches") {
+		signatures := msg.Signatures()
+		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
+			return
+		}
+
+		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.ES256, "Algorithm in header matches") {
 			return
 		}
 
@@ -435,47 +447,44 @@ func TestEncode(t *testing.T) {
 			return
 		}
 	})
-}
+	t.Run("UnsecuredCompact", func(t *testing.T) {
+		s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
 
-func TestParse_UnsecuredCompact(t *testing.T) {
-	s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
-
-	m, err := jws.Parse(strings.NewReader(s))
-	if !assert.NoError(t, err, "Parsing compact serialization") {
-		return
-	}
-
-	{
-		v := map[string]interface{}{}
-		if !assert.NoError(t, json.Unmarshal(m.Payload.Bytes(), &v), "Unmarshal payload") {
+		m, err := jws.Parse(strings.NewReader(s))
+		if !assert.NoError(t, err, "Parsing compact serialization") {
 			return
 		}
-		if !assert.Equal(t, v["iss"], "joe", "iss matches") {
+
+		{
+			v := map[string]interface{}{}
+			if !assert.NoError(t, json.Unmarshal(m.Payload(), &v), "Unmarshal payload") {
+				return
+			}
+			if !assert.Equal(t, v["iss"], "joe", "iss matches") {
+				return
+			}
+			if !assert.Equal(t, int(v["exp"].(float64)), 1300819380, "exp matches") {
+				return
+			}
+			if !assert.Equal(t, v["http://example.com/is_root"], true, "'http://example.com/is_root' matches") {
+				return
+			}
+		}
+
+		if !assert.Len(t, m.Signatures(), 1, "There should be 1 signature") {
 			return
 		}
-		if !assert.Equal(t, int(v["exp"].(float64)), 1300819380, "exp matches") {
+
+		signatures := m.Signatures()
+		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.NoSignature, "Algorithm = 'none'") {
 			return
 		}
-		if !assert.Equal(t, v["http://example.com/is_root"], true, "'http://example.com/is_root' matches") {
+		if !assert.Empty(t, signatures[0].Signature(), "Signature should be empty") {
 			return
 		}
-	}
-
-	if !assert.Len(t, m.Signatures, 1, "There should be 1 signature") {
-		return
-	}
-
-	sig := m.Signatures[0]
-	if !assert.Equal(t, sig.MergedHeaders().Algorithm(), jwa.NoSignature, "Algorithm = 'none'") {
-		return
-	}
-	if !assert.Empty(t, sig.Signature, "Signature should be empty") {
-		return
-	}
-}
-
-func TestParse_CompleteJSON(t *testing.T) {
-	s := `{
+	})
+	t.Run("CompleteJSON", func(t *testing.T) {
+		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "signatures":[
       {
@@ -491,36 +500,35 @@ func TestParse_CompleteJSON(t *testing.T) {
     ]
   }`
 
-	m, err := jws.Parse(strings.NewReader(s))
-	if !assert.NoError(t, err, "Parsing complete json serialization") {
-		return
-	}
+		m, err := jws.Parse(strings.NewReader(s))
+		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
+			return
+		}
 
-	if !assert.Len(t, m.Signatures, 2, "There should be 2 signatures") {
-		return
-	}
+		if !assert.Len(t, m.Signatures(), 2, "There should be 2 signatures") {
+			return
+		}
 
-	var sigs []jws.Signature
-	sigs = m.LookupSignature("2010-12-29")
-	if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
-		return
-	}
+		var sigs []*jws.Signature
+		sigs = m.LookupSignature("2010-12-29")
+		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
+			return
+		}
 
-	jsonbuf, err := json.Marshal(m)
-	if !assert.NoError(t, err, "Marshal JSON is successful") {
-		return
-	}
+		jsonbuf, err := json.Marshal(m)
+		if !assert.NoError(t, err, "Marshal JSON is successful") {
+			return
+		}
 
-	b := &bytes.Buffer{}
-	json.Compact(b, jsonbuf)
+		b := &bytes.Buffer{}
+		json.Compact(b, jsonbuf)
 
-	if !assert.Equal(t, b.Bytes(), jsonbuf, "generated json matches") {
-		return
-	}
-}
-
-func TestParse_FlattenedJSON(t *testing.T) {
-	s := `{
+		if !assert.Equal(t, b.Bytes(), jsonbuf, "generated json matches") {
+			return
+		}
+	})
+	t.Run("FlattenedJSON", func(t *testing.T) {
+		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "protected":"eyJhbGciOiJFUzI1NiJ9",
     "header": {
@@ -529,17 +537,18 @@ func TestParse_FlattenedJSON(t *testing.T) {
     "signature": "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
   }`
 
-	m, err := jws.Parse(strings.NewReader(s))
-	if !assert.NoError(t, err, "Parsing flattened json serialization") {
-		return
-	}
+		m, err := jws.Parse(strings.NewReader(s))
+		if !assert.NoError(t, err, "Parsing flattened json serialization") {
+			return
+		}
 
-	if !assert.Len(t, m.Signatures, 1, "There should be 1 signature") {
-		return
-	}
+		if !assert.Len(t, m.Signatures(), 1, "There should be 1 signature") {
+			return
+		}
 
-	jsonbuf, _ := json.MarshalIndent(m, "", "  ")
-	t.Logf("%s", jsonbuf)
+		jsonbuf, _ := json.MarshalIndent(m, "", "  ")
+		t.Logf("%s", jsonbuf)
+	})
 }
 
 /*

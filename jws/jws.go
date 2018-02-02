@@ -30,7 +30,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/lestrrat/go-jwx/buffer"
 	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwk"
 	"github.com/lestrrat/go-jwx/jws/sign"
@@ -160,11 +159,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 
 	var result EncodedMessage
 
-	encodedPayloadLen := base64.RawURLEncoding.EncodedLen(len(payload))
-	encodedPayload := make([]byte, encodedPayloadLen)
-	base64.RawURLEncoding.Encode(encodedPayload, payload)
-
-	result.Payload = encodedPayload
+	result.Payload = base64.RawURLEncoding.EncodeToString(payload)
 
 	for _, signer := range signers {
 		protected := signer.ProtectedHeader()
@@ -178,56 +173,24 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to marshal headers`)
 		}
-
-		encodedHeader := make([]byte, base64.RawURLEncoding.EncodedLen(len(hdrbuf)))
-		base64.RawURLEncoding.Encode(encodedHeader, hdrbuf)
-
+		encodedHeader := base64.RawURLEncoding.EncodeToString(hdrbuf)
 		var buf bytes.Buffer
-		buf.Write(encodedHeader)
+		buf.WriteString(encodedHeader)
 		buf.WriteByte('.')
-		buf.Write(encodedPayload)
+		buf.WriteString(result.Payload)
 		signature, err := signer.Sign(buf.Bytes())
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to sign payload`)
 		}
-		encodedSignature := make([]byte, base64.RawURLEncoding.EncodedLen(len(signature)))
-		base64.RawURLEncoding.Encode(encodedSignature, signature)
-
-		var encodedPublicHeader []byte
-		if pubHeader := signer.PublicHeader(); pubHeader != nil {
-			pubHeaderJSON, err := json.Marshal(pubHeader)
-			if err != nil {
-				return nil, errors.Wrap(err, `failed to marshal public headers`)
-			}
-
-			encodedPublicHeader = make([]byte, base64.RawURLEncoding.EncodedLen(len(pubHeaderJSON)))
-			base64.RawURLEncoding.Encode(encodedPublicHeader, pubHeaderJSON)
-		}
 
 		result.Signatures = append(result.Signatures, &EncodedSignature{
-			Headers:   encodedPublicHeader,
+			Headers:   signer.PublicHeader(),
 			Protected: encodedHeader,
-			Signature: encodedSignature,
+			Signature: base64.RawURLEncoding.EncodeToString(signature),
 		})
 	}
 
 	return json.Marshal(result)
-}
-
-type EncodedSignature struct {
-	Protected []byte `json:"protected,omitempty"`
-	Headers   []byte `json:"header,omitempty"`
-	Signature []byte `json:"signature,omitempty"`
-}
-
-type EncodedMessage struct {
-	Payload    []byte              `json:"payload"`
-	Signatures []*EncodedSignature `json:"signatures,omitempty"`
-}
-
-type FullEncodedMessage struct {
-	*EncodedSignature // embedded to pick up flattened JSON message
-	*EncodedMessage
 }
 
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
@@ -276,24 +239,23 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		var buf bytes.Buffer
 		for _, sig := range msg.Signatures {
 			buf.Reset()
-			buf.Write(sig.Protected)
+			buf.WriteString(sig.Protected)
 			buf.WriteByte('.')
-			buf.Write(msg.Payload)
+			buf.WriteString(msg.Payload)
 			if pdebug.Enabled {
 				pdebug.Printf("protected %s", sig.Protected)
 				pdebug.Printf("payload %s", msg.Payload)
 				pdebug.Printf("signature %s", sig.Signature)
 			}
-			decodedSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(sig.Signature)))
-			if _, err := base64.RawURLEncoding.Decode(decodedSignature, sig.Signature); err != nil {
+			decodedSignature, err := base64.RawURLEncoding.DecodeString(sig.Signature)
+			if err != nil {
 				continue
 			}
 
 			if err := verifier.Verify(buf.Bytes(), decodedSignature, key); err == nil {
 				// verified!
-				decodedPayloadLen := base64.RawURLEncoding.DecodedLen(len(msg.Payload))
-				decodedPayload := make([]byte, decodedPayloadLen)
-				if _, err := base64.RawURLEncoding.Decode(decodedPayload, msg.Payload); err != nil {
+				decodedPayload, err := base64.RawURLEncoding.DecodeString(msg.Payload)
+				if err != nil {
 					return nil, errors.Wrap(err, `message verified, failed to decode payload`)
 				}
 				return decodedPayload, nil
@@ -423,32 +385,69 @@ func ParseString(s string) (*Message, error) {
 	return Parse(strings.NewReader(s))
 }
 
-func parseJSON(src io.Reader) (*Message, error) {
-	m := struct {
-		*Message
-		*Signature
-	}{}
+func parseJSON(src io.Reader) (result *Message, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jws.Parse (json)").BindError(&err)
+		defer g.End()
+	}
+	var wrapper fullEncodedMessageUnmarshalProxy
 
-	if err := json.NewDecoder(src).Decode(&m); err != nil {
-		return nil, errors.Wrap(err, `failed to parse jws message`)
+	if pdebug.Enabled {
+		var buf bytes.Buffer
+		src = io.TeeReader(src, &buf)
+		defer func() {
+			pdebug.Printf("%s", (buf.Bytes())[91:])
+			pdebug.Printf("JSON payload:")
+			scanner := bufio.NewScanner(&buf)
+			for scanner.Scan() {
+				pdebug.Printf("%s", scanner.Text())
+			}
+		}()
+	}
+
+	if err := json.NewDecoder(src).Decode(&wrapper); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
 	}
 
 	// if the "signature" field exist, treat it as a flattened
-	if m.Signature != nil {
-		if len(m.Message.Signatures) != 0 {
+	if wrapper.encodedSignatureUnmarshalProxy != nil {
+		if len(wrapper.Signatures) != 0 {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		m.Message.Signatures = []Signature{*m.Signature}
+		wrapper.Signatures = append(wrapper.Signatures, wrapper.encodedSignatureUnmarshalProxy)
 	}
 
-	for _, sig := range m.Message.Signatures {
-		if sig.ProtectedHeader.Algorithm == "" {
-			sig.ProtectedHeader.Algorithm = jwa.NoSignature
+	var plain Message
+	plain.payload, err = base64.RawURLEncoding.DecodeString(wrapper.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decode payload`)
+	}
+
+	for i, sig := range wrapper.Signatures {
+		var plainSig Signature
+
+		plainSig.headers = sig.Headers
+
+		if l := len(sig.Protected); l > 0 {
+			hdrbuf, err := base64.RawURLEncoding.DecodeString(sig.Protected)
+			if err != nil {
+				return nil, errors.Wrapf(err, `failed to base64 decode protected header for signature #%d`, i+1)
+			}
+			if err := json.Unmarshal(hdrbuf, &plainSig.headers); err != nil {
+				return nil, errors.Wrapf(err, `failed to unmarshal protected header for signature #%d`, i+1)
+			}
 		}
+
+		plainSig.signature, err = base64.RawURLEncoding.DecodeString(sig.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to decode signature #%d`, i)
+		}
+
+		plain.signatures = append(plain.signatures, &plainSig)
 	}
 
-	return m.Message, nil
+	return &plain, nil
 }
 
 func scanDot(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -549,12 +548,10 @@ func parseCompact(rdr io.Reader) (m *Message, err error) {
 	if _, err := base64.RawURLEncoding.Decode(decodedHeader, protected); err != nil {
 		return nil, errors.Wrap(err, `failed to decode headers`)
 	}
-
-	var hdr = &EncodedHeader{Header: NewHeader()}
-	if err := json.Unmarshal(decodedHeader, hdr.Header); err != nil {
+	var hdr StandardHeaders
+	if err := json.Unmarshal(decodedHeader, &hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
-	hdr.Source = protected
 
 	decodedPayload := make([]byte, base64.RawURLEncoding.DecodedLen(len(payload)))
 	if _, err = base64.RawURLEncoding.Decode(decodedPayload, payload); err != nil {
@@ -566,17 +563,11 @@ func parseCompact(rdr io.Reader) (m *Message, err error) {
 		return nil, errors.Wrap(err, `failed to decode signature`)
 	}
 
-	var buf bytes.Buffer
-	buf.Write(protected)
-	buf.WriteByte('.')
-	buf.Write(payload)
-
-	s := NewSignature()
-	s.Signature = decodedSignature
-	s.ProtectedHeader = hdr
-	return &Message{
-		//	source:     buf.Bytes(),
-		Payload:    buffer.Buffer(decodedPayload),
-		Signatures: []Signature{*s},
-	}, nil
+	var msg Message
+	msg.payload = decodedPayload
+	msg.signatures = append(msg.signatures, &Signature{
+		protected: &hdr,
+		signature: decodedSignature,
+	})
+	return &msg, nil
 }

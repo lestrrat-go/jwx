@@ -16,36 +16,196 @@ const (
 	KeyIDKey                  = "kid"
 	TypeKey                   = "typ"
 	X509CertChainKey          = "x5c"
-	x509CertThumbprintKey     = "x5t"
-	x509CertThumbprintS256Key = "x5t#S256"
+	X509CertThumbprintKey     = "x5t"
+	X509CertThumbprintS256Key = "x5t#S256"
 	X509URLKey                = "x5u"
 )
 
+type HeaderInterface interface {
+	Get(string) (interface{}, bool)
+	Set(string, interface{}) error
+	Algorithm() jwa.SignatureAlgorithm
+	ContentType() string
+	Critical() []string
+	JWK() jwk.Key
+	JWKSetURL() string
+	KeyID() string
+	Type() string
+	X509CertChain() []string
+	X509CertThumbprint() string
+	X509CertThumbprintS256() string
+	X509URL() string
+}
+
 type StandardHeaders struct {
-	algorithm              jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1
-	contentType            string                 // https://tools.ietf.org/html/rfc7515#section-4.1.10
-	critical               []string               // https://tools.ietf.org/html/rfc7515#section-4.1.11
-	jwk                    jwk.Key                // https://tools.ietf.org/html/rfc7515#section-4.1.3
-	jwkSetURL              string                 // https://tools.ietf.org/html/rfc7515#section-4.1.2
-	keyID                  string                 // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	typ                    string                 // https://tools.ietf.org/html/rfc7515#section-4.1.9
-	x509CertChain          []string               // https://tools.ietf.org/html/rfc7515#section-4.1.6
-	x509CertThumbprint     string                 // https://tools.ietf.org/html/rfc7515#section-4.1.7
-	x509CertThumbprintS256 string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
-	x509URL                string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	algorithm              *jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1
+	contentType            *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.10
+	critical               []string                // https://tools.ietf.org/html/rfc7515#section-4.1.11
+	jwk                    jwk.Key                 // https://tools.ietf.org/html/rfc7515#section-4.1.3
+	jwkSetURL              *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.2
+	keyID                  *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	typ                    *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.9
+	x509CertChain          []string                // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+}
+
+func (h *StandardHeaders) Algorithm() jwa.SignatureAlgorithm {
+	if v := h.algorithm; v != nil {
+		return *v
+	}
+	return jwa.NoSignature
+}
+
+func (h *StandardHeaders) ContentType() string {
+	if v := h.contentType; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) Critical() []string {
+	return h.critical
+}
+
+func (h *StandardHeaders) JWK() jwk.Key {
+	return h.jwk
+}
+
+func (h *StandardHeaders) JWKSetURL() string {
+	if v := h.jwkSetURL; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) KeyID() string {
+	if v := h.keyID; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) Type() string {
+	if v := h.typ; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) X509CertChain() []string {
+	return h.x509CertChain
+}
+
+func (h *StandardHeaders) X509CertThumbprint() string {
+	if v := h.x509CertThumbprint; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) X509CertThumbprintS256() string {
+	if v := h.x509CertThumbprintS256; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) X509URL() string {
+	if v := h.x509URL; v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (h *StandardHeaders) Get(name string) (interface{}, bool) {
+	switch name {
+	case AlgorithmKey:
+		v := h.algorithm
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case ContentTypeKey:
+		v := h.contentType
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case CriticalKey:
+		v := h.critical
+		if v == nil {
+			return nil, false
+		}
+		return v, true
+	case JWKKey:
+		v := h.jwk
+		if v == nil {
+			return nil, false
+		}
+		return v, true
+	case JWKSetURLKey:
+		v := h.jwkSetURL
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case KeyIDKey:
+		v := h.keyID
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case TypeKey:
+		v := h.typ
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case X509CertChainKey:
+		v := h.x509CertChain
+		if v == nil {
+			return nil, false
+		}
+		return v, true
+	case X509CertThumbprintKey:
+		v := h.x509CertThumbprint
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case X509CertThumbprintS256Key:
+		v := h.x509CertThumbprintS256
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	case X509URLKey:
+		v := h.x509URL
+		if v == nil {
+			return nil, false
+		}
+		return *v, true
+	default:
+		v, ok := h.privateParams[name]
+		return v, ok
+	}
 }
 
 func (h *StandardHeaders) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
-		if err := h.algorithm.Accept(value); err != nil {
+		var acceptor jwa.SignatureAlgorithm
+		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AlgorithmKey)
 		}
+		h.algorithm = &acceptor
 		return nil
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
-			h.contentType = v
+			h.contentType = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
@@ -63,19 +223,19 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		return errors.Errorf(`invalid value for %s key: %T`, JWKKey, value)
 	case JWKSetURLKey:
 		if v, ok := value.(string); ok {
-			h.jwkSetURL = v
+			h.jwkSetURL = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
-			h.keyID = v
+			h.keyID = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
-			h.typ = v
+			h.typ = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, TypeKey, value)
@@ -85,21 +245,21 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
-	case x509CertThumbprintKey:
+	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
-			h.x509CertThumbprint = v
+			h.x509CertThumbprint = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, x509CertThumbprintKey, value)
-	case x509CertThumbprintS256Key:
+		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
+	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
-			h.x509CertThumbprintS256 = v
+			h.x509CertThumbprintS256 = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, x509CertThumbprintS256Key, value)
+		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
-			h.x509URL = v
+			h.x509URL = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
@@ -119,7 +279,7 @@ func (h StandardHeaders) MarshalJSON() ([]byte, error) {
 	}
 	m[AlgorithmKey] = h.algorithm
 
-	if h.contentType != "" {
+	if h.contentType != nil {
 		m[ContentTypeKey] = h.contentType
 	}
 
@@ -131,15 +291,15 @@ func (h StandardHeaders) MarshalJSON() ([]byte, error) {
 		m[JWKKey] = h.jwk
 	}
 
-	if h.jwkSetURL != "" {
+	if h.jwkSetURL != nil {
 		m[JWKSetURLKey] = h.jwkSetURL
 	}
 
-	if h.keyID != "" {
+	if h.keyID != nil {
 		m[KeyIDKey] = h.keyID
 	}
 
-	if h.typ != "" {
+	if h.typ != nil {
 		m[TypeKey] = h.typ
 	}
 
@@ -147,15 +307,15 @@ func (h StandardHeaders) MarshalJSON() ([]byte, error) {
 		m[X509CertChainKey] = h.x509CertChain
 	}
 
-	if h.x509CertThumbprint != "" {
-		m[x509CertThumbprintKey] = h.x509CertThumbprint
+	if h.x509CertThumbprint != nil {
+		m[X509CertThumbprintKey] = h.x509CertThumbprint
 	}
 
-	if h.x509CertThumbprintS256 != "" {
-		m[x509CertThumbprintS256Key] = h.x509CertThumbprintS256
+	if h.x509CertThumbprintS256 != nil {
+		m[X509CertThumbprintS256Key] = h.x509CertThumbprintS256
 	}
 
-	if h.x509URL != "" {
+	if h.x509URL != nil {
 		m[X509URLKey] = h.x509URL
 	}
 
@@ -168,88 +328,58 @@ func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
 		return errors.Wrap(err, `failed to unmarshal headers`)
 	}
 	if v, ok := m[AlgorithmKey]; ok {
-		if err := h.algorithm.Accept(v); err != nil {
-			return errors.Wrapf(err, `invalid value for key %s: %T`, AlgorithmKey, v)
+		if err := h.Set(AlgorithmKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, AlgorithmKey)
 		}
 	}
 	if v, ok := m[ContentTypeKey]; ok {
-		if x, ok := v.(string); ok {
-			h.contentType = x
-			delete(m, ContentTypeKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, ContentTypeKey, v)
+		if err := h.Set(ContentTypeKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, ContentTypeKey)
 		}
 	}
 	if v, ok := m[CriticalKey]; ok {
-		if x, ok := v.([]string); ok {
-			h.critical = x
-			delete(m, CriticalKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, CriticalKey, v)
+		if err := h.Set(CriticalKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, CriticalKey)
 		}
 	}
 	if v, ok := m[JWKKey]; ok {
-		if x, ok := v.(jwk.Key); ok {
-			h.jwk = x
-			delete(m, JWKKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, JWKKey, v)
+		if err := h.Set(JWKKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, JWKKey)
 		}
 	}
 	if v, ok := m[JWKSetURLKey]; ok {
-		if x, ok := v.(string); ok {
-			h.jwkSetURL = x
-			delete(m, JWKSetURLKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, JWKSetURLKey, v)
+		if err := h.Set(JWKSetURLKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, JWKSetURLKey)
 		}
 	}
 	if v, ok := m[KeyIDKey]; ok {
-		if x, ok := v.(string); ok {
-			h.keyID = x
-			delete(m, KeyIDKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, KeyIDKey, v)
+		if err := h.Set(KeyIDKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, KeyIDKey)
 		}
 	}
 	if v, ok := m[TypeKey]; ok {
-		if x, ok := v.(string); ok {
-			h.typ = x
-			delete(m, TypeKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, TypeKey, v)
+		if err := h.Set(TypeKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, TypeKey)
 		}
 	}
 	if v, ok := m[X509CertChainKey]; ok {
-		if x, ok := v.([]string); ok {
-			h.x509CertChain = x
-			delete(m, X509CertChainKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, X509CertChainKey, v)
+		if err := h.Set(X509CertChainKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, X509CertChainKey)
 		}
 	}
-	if v, ok := m[x509CertThumbprintKey]; ok {
-		if x, ok := v.(string); ok {
-			h.x509CertThumbprint = x
-			delete(m, x509CertThumbprintKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, x509CertThumbprintKey, v)
+	if v, ok := m[X509CertThumbprintKey]; ok {
+		if err := h.Set(X509CertThumbprintKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintKey)
 		}
 	}
-	if v, ok := m[x509CertThumbprintS256Key]; ok {
-		if x, ok := v.(string); ok {
-			h.x509CertThumbprintS256 = x
-			delete(m, x509CertThumbprintS256Key)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, x509CertThumbprintS256Key, v)
+	if v, ok := m[X509CertThumbprintS256Key]; ok {
+		if err := h.Set(X509CertThumbprintS256Key, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintS256Key)
 		}
 	}
 	if v, ok := m[X509URLKey]; ok {
-		if x, ok := v.(string); ok {
-			h.x509URL = x
-			delete(m, X509URLKey)
-		} else {
-			return errors.Errorf(`invalid value for key %s: %T`, X509URLKey, v)
+		if err := h.Set(X509URLKey, v); err != nil {
+			return errors.Wrapf(err, `failed to set value for key %s`, X509URLKey)
 		}
 	}
 	h.privateParams = m

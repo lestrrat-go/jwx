@@ -11,6 +11,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (s Signature) PublicHeaders() HeaderInterface {
+	return s.headers
+}
+
+func (s Signature) ProtectedHeaders() HeaderInterface {
+	return s.protected
+}
+
+func (s Signature) Signature() []byte {
+	return s.signature
+}
+
+func (m Message) Payload() []byte {
+	return m.payload
+}
+func (m Message) Signatures() []*Signature {
+	return m.signatures
+}
+
 var ErrInvalidHeaderValue = errors.New(`invalid header value`)
 
 // NewHeader creates a new Header
@@ -329,59 +348,46 @@ func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-// NewSignature creates a new Signature
-func NewSignature() *Signature {
-	h1 := NewHeader()
-	h2 := NewHeader()
-	return &Signature{
-		PublicHeader:    h1,
-		ProtectedHeader: &EncodedHeader{Header: h2},
-	}
-}
-
-// MergedHeaders returns the merged header for this signature
-func (s Signature) MergedHeaders() MergedHeader {
-	return MergedHeader{
-		ProtectedHeader: s.ProtectedHeader,
-		PublicHeader:    s.PublicHeader,
-	}
-}
-
-// KeyID returns the key ID (kid) for this signature
-func (h MergedHeader) KeyID() string {
-	if hp := h.ProtectedHeader; hp != nil {
-		if hp.KeyID != "" {
-			return hp.KeyID
-		}
-	}
-
-	if hp := h.PublicHeader; hp != nil {
-		if hp.KeyID != "" {
-			return hp.KeyID
-		}
-	}
-
-	return ""
-}
-
-// Algorithm returns the algorithm used for this signature
-func (h MergedHeader) Algorithm() jwa.SignatureAlgorithm {
-	if hp := h.ProtectedHeader; hp != nil {
-		return hp.Algorithm
-	}
-	return jwa.NoSignature
-}
-
 // LookupSignature looks up a particular signature entry using
 // the `kid` value
-func (m Message) LookupSignature(kid string) []Signature {
-	sigs := []Signature{}
-	for _, sig := range m.Signatures {
-		if sig.MergedHeaders().KeyID() != kid {
-			continue
+func (m Message) LookupSignature(kid string) []*Signature {
+	var sigs []*Signature
+	for _, sig := range m.signatures {
+		if hdr := sig.PublicHeaders(); hdr != nil {
+			if hdr.KeyID() == kid {
+				sigs = append(sigs, sig)
+				continue
+			}
 		}
-
-		sigs = append(sigs, sig)
+		
+		if hdr := sig.ProtectedHeaders(); hdr != nil {
+			if hdr.KeyID() == kid {
+				sigs = append(sigs, sig)
+			continue
+			}
+		}
 	}
 	return sigs
+}
+
+type signatureJSONMarshalProxy struct {
+	Header    HeaderInterface `json:"header"`
+	Protected HeaderInterface `json:"protected"`
+	Signature []byte          `json:"signature"`
+}
+
+type signatureJSONUnmarshalProxy struct {
+	Header    *StandardHeaders `json:"header"`
+	Protected string           `json:"protected"`
+	Signature string           `json:"signature"`
+}
+
+type messageJSONMarshalProxy struct {
+	Payload    []byte                       `json:"payload"` // should be base64
+	Signatures []*signatureJSONMarshalProxy `json:"signatures"`
+}
+
+type messageJSONUnmarshalProxy struct {
+	Payload    []byte                         `json:"payload"` // should be base64
+	Signatures []*signatureJSONUnmarshalProxy `json:"signatures"`
 }
