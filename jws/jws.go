@@ -390,7 +390,7 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 		g := pdebug.Marker("jws.Parse (json)").BindError(&err)
 		defer g.End()
 	}
-	var wrapper fullEncodedMessageUnmarshalProxy
+	var wrapper FullEncodedMessageUnmarshalProxy
 
 	if pdebug.Enabled {
 		var buf bytes.Buffer
@@ -410,12 +410,12 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 	}
 
 	// if the "signature" field exist, treat it as a flattened
-	if wrapper.encodedSignatureUnmarshalProxy != nil {
+	if wrapper.EncodedSignatureUnmarshalProxy != nil {
 		if len(wrapper.Signatures) != 0 {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		wrapper.Signatures = append(wrapper.Signatures, wrapper.encodedSignatureUnmarshalProxy)
+		wrapper.Signatures = append(wrapper.Signatures, wrapper.EncodedSignatureUnmarshalProxy)
 	}
 
 	var plain Message

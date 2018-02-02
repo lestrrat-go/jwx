@@ -11,7 +11,7 @@ type EncodedSignature struct {
 	Signature string          `json:"signature,omitempty"`
 }
 
-type encodedSignatureUnmarshalProxy struct {
+type EncodedSignatureUnmarshalProxy struct {
 	Protected string           `json:"protected,omitempty"`
 	Headers   *StandardHeaders `json:"header,omitempty"`
 	Signature string           `json:"signature,omitempty"`
@@ -22,9 +22,9 @@ type EncodedMessage struct {
 	Signatures []*EncodedSignature `json:"signatures,omitempty"`
 }
 
-type encodedMessageUnmarshalProxy struct {
+type EncodedMessageUnmarshalProxy struct {
 	Payload    string                            `json:"payload"`
-	Signatures []*encodedSignatureUnmarshalProxy `json:"signatures,omitempty"`
+	Signatures []*EncodedSignatureUnmarshalProxy `json:"signatures,omitempty"`
 }
 
 type FullEncodedMessage struct {
@@ -32,9 +32,9 @@ type FullEncodedMessage struct {
 	*EncodedMessage
 }
 
-type fullEncodedMessageUnmarshalProxy struct {
-	*encodedSignatureUnmarshalProxy // embedded to pick up flattened JSON message
-	*encodedMessageUnmarshalProxy
+type FullEncodedMessageUnmarshalProxy struct {
+	*EncodedSignatureUnmarshalProxy // embedded to pick up flattened JSON message
+	*EncodedMessageUnmarshalProxy
 }
 
 // PayloadSigner generates signature for the given payload
