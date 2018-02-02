@@ -1,4 +1,4 @@
-package jws
+package jws_test
 
 import (
 	"crypto/rand"
@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat/go-jwx/jws"
 )
 
 func ExampleSign_JWSCompact() {
@@ -15,7 +16,7 @@ func ExampleSign_JWSCompact() {
 		return
 	}
 
-	buf, err := Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
+	buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
 	if err != nil {
 		log.Printf("failed to sign payload: %s", err)
 		return
@@ -23,7 +24,7 @@ func ExampleSign_JWSCompact() {
 
 	log.Printf("%s", buf)
 
-	verified, err := Verify(buf, jwa.RS256, &privkey.PublicKey)
+	verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
 	if err != nil {
 		log.Printf("failed to verify JWS message: %s", err)
 		return
@@ -35,36 +36,22 @@ func ExampleSign_JWSCompact() {
 }
 
 func ExampleSign_JWSJSON() {
-	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to create private key: %s", err)
 		return
 	}
 
-	rsasign, err := NewRsaSign(jwa.RS256, privkey)
-	if err != nil {
-		log.Printf("failed to create RSA signer: %s", err)
-		return
-	}
-
-	ps := []PayloadSigner{rsasign}
-	s := NewMultiSign(ps...)
-
 	payload := "Lorem ipsum"
 
-	msg, err := s.Sign([]byte(payload))
+	//TODO fix formatter
+	buf, err := jws.Sign([]byte(payload), jwa.RS256, key)
 	if err != nil {
 		log.Printf("failed to sign payload: %s", err)
 		return
 	}
 
-	buf, err := JSONSerialize{}.Serialize(msg)
-	if err != nil {
-		log.Printf("failed to serialize signed message: %s", err)
-		return
-	}
-
-	verified, err := Verify(buf, jwa.RS256, &privkey.PublicKey)
+	verified, err := jws.Verify(buf, jwa.RS256, &key.PublicKey)
 	if err != nil {
 		log.Printf("failed to verify JWS message: %s", err)
 		return

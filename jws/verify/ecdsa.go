@@ -1,0 +1,69 @@
+package verify
+
+import (
+	"crypto"
+	"crypto/ecdsa"
+	"math/big"
+
+	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/pkg/errors"
+)
+
+var ecdsaVerifyFuncs = map[jwa.SignatureAlgorithm]ecdsaVerifyFunc{}
+
+func init() {
+	algs := map[jwa.SignatureAlgorithm]crypto.Hash{
+		jwa.ES256: crypto.SHA256,
+		jwa.ES384: crypto.SHA384,
+		jwa.ES512: crypto.SHA512,
+	}
+
+	for alg, h := range algs {
+		ecdsaVerifyFuncs[alg] = makeECDSAVerifyFunc(h)
+	}
+}
+
+func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
+	return ecdsaVerifyFunc(func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
+		keysiz := hash.Size()
+		if len(signature) != 2*keysiz {
+			return errors.New("signature length deos not match curve bit size")
+		}
+
+		var rv big.Int
+		var sv big.Int
+		rv.SetBytes(signature[:keysiz])
+		sv.SetBytes(signature[keysiz:])
+
+		h := hash.New()
+		h.Write(payload)
+
+		if !ecdsa.Verify(key, h.Sum(nil), &rv, &sv) {
+			return errors.New(`failed to verify signature`)
+		}
+		return nil
+	})
+}
+
+func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSAVerifier, error) {
+	verifyfn, ok := ecdsaVerifyFuncs[alg]
+	if !ok {
+		return nil, errors.Errorf(`unsupported algorithm while trying to create ECDSA verifier: %s`, alg)
+	}
+
+	return &ECDSAVerifier{
+		verify: verifyfn,
+	}, nil
+}
+
+func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
+	if key == nil {
+		return errors.New(`missing public key while verifying payload`)
+	}
+	ecdsakey, ok := key.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.Errorf(`invalid key type %T. *ecdsa.PublicKey is required`, key)
+	}
+
+	return v.verify(payload, signature, ecdsakey)
+}
