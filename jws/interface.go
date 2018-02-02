@@ -7,7 +7,7 @@ import (
 
 type EncodedSignature struct {
 	Protected string          `json:"protected,omitempty"`
-	Headers   HeaderInterface `json:"header,omitempty"`
+	Headers   Headers `json:"header,omitempty"`
 	Signature string          `json:"signature,omitempty"`
 }
 
@@ -41,8 +41,8 @@ type fullEncodedMessageUnmarshalProxy struct {
 type PayloadSigner interface {
 	Sign([]byte) ([]byte, error)
 	Algorithm() jwa.SignatureAlgorithm
-	ProtectedHeader() HeaderInterface
-	PublicHeader() HeaderInterface
+	ProtectedHeader() Headers
+	PublicHeader() Headers
 }
 
 // Message represents a full JWS encoded message. Flattened serialization
@@ -60,8 +60,8 @@ type Message struct {
 }
 
 type Signature struct {
-	headers   HeaderInterface `json:"header,omitempty"`    // Unprotected Heders
-	protected HeaderInterface `json:"protected,omitempty"` // Protected Headers
+	headers   Headers `json:"header,omitempty"`    // Unprotected Heders
+	protected Headers `json:"protected,omitempty"` // Protected Headers
 	signature []byte          `json:"signature,omitempty"` // Signature
 }
 

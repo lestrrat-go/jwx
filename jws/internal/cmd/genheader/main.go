@@ -155,13 +155,13 @@ func generateHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\n\ntype HeaderInterface interface {")
+	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.PointerElem())
 	}
-	fmt.Fprintf(&buf, "\n}") // end type HeaderInterface interface
+	fmt.Fprintf(&buf, "\n}") // end type Headers interface
 	fmt.Fprintf(&buf, "\n\ntype StandardHeaders struct {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, f.typ, f.comment)

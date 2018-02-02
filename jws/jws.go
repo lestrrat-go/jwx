@@ -60,8 +60,8 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 type payloadSigner struct {
 	signer    sign.Signer
 	key       interface{}
-	protected HeaderInterface
-	public    HeaderInterface
+	protected Headers
+	public    Headers
 }
 
 func (s *payloadSigner) Sign(payload []byte) ([]byte, error) {
@@ -72,11 +72,11 @@ func (s *payloadSigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.signer.Algorithm()
 }
 
-func (s *payloadSigner) ProtectedHeader() HeaderInterface {
+func (s *payloadSigner) ProtectedHeader() Headers {
 	return s.protected
 }
 
-func (s *payloadSigner) PublicHeader() HeaderInterface {
+func (s *payloadSigner) PublicHeader() Headers {
 	return s.public
 }
 
@@ -86,11 +86,11 @@ func (s *payloadSigner) PublicHeader() HeaderInterface {
 //
 // If you would like to pass custom headers, use the WithHeaders option.
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
-	var hdrs HeaderInterface = &StandardHeaders{}
+	var hdrs Headers = &StandardHeaders{}
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyHeaders:
-			hdrs = o.Value().(HeaderInterface)
+			hdrs = o.Value().(Headers)
 		}
 	}
 

@@ -17,7 +17,7 @@ func WithPretty(b bool) Option {
 	return option.New(optkeyPrettyJSONFormat, b)
 }
 
-func WithSigner(signer sign.Signer, key interface{}, public, protected HeaderInterface) Option {
+func WithSigner(signer sign.Signer, key interface{}, public, protected Headers) Option {
 	return option.New(optkeyPayloadSigner, &payloadSigner{
 		signer:    signer,
 		key:       key,
@@ -26,6 +26,6 @@ func WithSigner(signer sign.Signer, key interface{}, public, protected HeaderInt
 	})
 }
 
-func WithHeaders(h HeaderInterface) Option {
+func WithHeaders(h Headers) Option {
 	return option.New(optkeyHeaders, h)
 }

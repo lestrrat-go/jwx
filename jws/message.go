@@ -1,10 +1,10 @@
 package jws
 
-func (s Signature) PublicHeaders() HeaderInterface {
+func (s Signature) PublicHeaders() Headers {
 	return s.headers
 }
 
-func (s Signature) ProtectedHeaders() HeaderInterface {
+func (s Signature) ProtectedHeaders() Headers {
 	return s.protected
 }
 

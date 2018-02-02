@@ -21,7 +21,7 @@ const (
 	X509URLKey                = "x5u"
 )
 
-type HeaderInterface interface {
+type Headers interface {
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
 	Algorithm() jwa.SignatureAlgorithm
