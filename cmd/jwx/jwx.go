@@ -105,20 +105,23 @@ func doJWK() int {
 		return 0
 	}
 
-	var payload io.Reader
+	var src io.Reader
 	if c.Payload == "" {
-		payload = os.Stdin
+		src = os.Stdin
 	} else {
 		f, err := os.Open(c.Payload)
 		if err != nil {
 			log.Printf("%s", errors.Wrap(err, "failed to open file "+c.Payload))
 			return 1
 		}
-		payload = f
+		src = f
 		defer f.Close()
 	}
 
-	message, err := jws.Parse(payload)
+	var buf bytes.Buffer
+	src = io.TeeReader(src, &buf)
+
+	message, err := jws.Parse(src)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
@@ -127,7 +130,7 @@ func doJWK() int {
 	log.Printf("=== Payload ===")
 	// See if this is JSON. if it is, display it nicely
 	m := map[string]interface{}{}
-	if err := json.Unmarshal(message.Payload, &m); err == nil {
+	if err := json.Unmarshal(message.Payload(), &m); err == nil {
 		payloadbuf, err := json.MarshalIndent(m, "", "  ")
 		if err != nil {
 			log.Printf("%s", errors.Wrap(err, "failed to marshal payload"))
@@ -137,10 +140,10 @@ func doJWK() int {
 			log.Printf("%s", l)
 		}
 	} else {
-		log.Printf("%s", message.Payload)
+		log.Printf("%s", message.Payload())
 	}
 
-	for i, sig := range message.Signatures {
+	for i, sig := range message.Signatures() {
 		log.Printf("=== Signature %d ===", i)
 		sigbuf, err := json.MarshalIndent(sig, "", "  ")
 		if err != nil {
@@ -151,12 +154,7 @@ func doJWK() int {
 			log.Printf("%s", l)
 		}
 
-		v, err := jws.NewRsaVerify(sig.ProtectedHeader.Algorithm, pubkey)
-		if err != nil {
-			log.Printf("%s", err)
-			continue
-		}
-		if err := v.Verify(message); err == nil {
+		if _, err := jws.Verify(buf.Bytes(), sig.ProtectedHeaders().Algorithm(), pubkey); err == nil {
 			log.Printf("=== Verified with signature %d! ===", i)
 		}
 	}
