@@ -141,11 +141,11 @@ func TestVerifyWithJWKSet(t *testing.T) {
 		return
 	}
 
-	jwkkey, err := jwk.NewRsaPublicKey(&key.PublicKey)
+	jwkkey, err := jwk.New(&key.PublicKey)
 	if !assert.NoError(t, err, "JWK public key generated") {
 		return
 	}
-	jwkkey.Algorithm = jwa.RS256.String()
+	jwkkey.Set(jwk.AlgorithmKey, jwa.RS256)
 
 	buf, err := jws.Sign(payload, jwa.RS256, key)
 	if !assert.NoError(t, err, "Signature generated successfully") {
@@ -609,7 +609,7 @@ func TestPublicHeaders(t *testing.T) {
 	_ = signer // TODO
 
 	pubkey := key.PublicKey
-	pubjwk, err := jwk.NewRsaPublicKey(&pubkey)
+	pubjwk, err := jwk.New(&pubkey)
 	if !assert.NoError(t, err, "NewRsaPublicKey should succeed") {
 		return
 	}

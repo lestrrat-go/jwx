@@ -11,9 +11,10 @@ type KeyType string
 
 // Supported values for KeyType
 const (
-	EC       KeyType = "EC"  // Elliptic Curve
-	OctetSeq KeyType = "oct" // Octet sequence (used to represent symmetric keys)
-	RSA      KeyType = "RSA" // RSA
+	EC             KeyType = "EC"  // Elliptic Curve
+	InvalidKeyType KeyType = ""    // Invalid KeyType
+	OctetSeq       KeyType = "oct" // Octet sequence (used to represent symmetric keys)
+	RSA            KeyType = "RSA" // RSA
 )
 
 // Accept is used when conversion from values given by
