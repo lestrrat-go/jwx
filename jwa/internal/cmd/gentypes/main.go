@@ -81,6 +81,12 @@ func _main() error {
 			filename: "key_type.go",
 			elements: []element{
 				{
+					name:    `InvalidKeyType`,
+					value:   ``,
+					comment: `Invalid KeyType`,
+					invalid: true,
+				},
+				{
 					name:    `EC`,
 					value:   `EC`,
 					comment: `Elliptic Curve`,
@@ -302,10 +308,12 @@ type typ struct {
 	filename string
 	elements []element
 }
+
 type element struct {
 	name    string
 	value   string
 	comment string
+	invalid bool
 }
 
 func (t typ) Generate() error {
@@ -346,9 +354,17 @@ func (t typ) Generate() error {
 
 	fmt.Fprintf(&buf, "\nswitch tmp {")
 	fmt.Fprintf(&buf, "\ncase ")
-	for i, e := range t.elements {
+	var valids []element
+	for _, e := range t.elements {
+		if e.invalid {
+			continue
+		}
+		valids = append(valids, e)
+	}
+
+	for i, e := range valids {
 		fmt.Fprintf(&buf, "%s", e.name)
-		if i < len(t.elements)-1 {
+		if i < len(valids)-1 {
 			fmt.Fprintf(&buf, ", ")
 		}
 	}

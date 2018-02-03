@@ -1,9 +1,13 @@
-package jwk
+package jwk_test
 
-import "log"
+import (
+	"log"
+
+	"github.com/lestrrat/go-jwx/jwk"
+)
 
 func Example() {
-	set, err := FetchHTTP("https://foobar.domain/json")
+	set, err := jwk.Fetch("https://foobar.domain/json")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return

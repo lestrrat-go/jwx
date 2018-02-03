@@ -4,116 +4,304 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
+	"github.com/lestrrat/go-jwx/internal/base64"
 	"github.com/lestrrat/go-jwx/jwa"
+	pdebug "github.com/lestrrat/go-pdebug"
 	"github.com/pkg/errors"
 )
 
-// i2osp converts an integer to a fixed length octet string as per RFC 3447
-// section 4.1 where v is the integer and n is the octet string length.
-func i2osp(v *big.Int, n int) []byte {
-	b := v.Bytes()
-	if len(b) < n {
-		t := make([]byte, n)
-		copy(t[n-len(b):], b)
-		return t
+func newECDSAPublicKey(key *ecdsa.PublicKey) (*ECDSAPublicKey, error) {
+	if key == nil {
+		return nil, errors.New(`non-nil ecdsa.PublicKey required`)
 	}
-	return b
+
+	var hdr StandardHeaders
+	hdr.Set(KeyTypeKey, jwa.EC)
+	return &ECDSAPublicKey{
+		headers: &hdr,
+		key:     key,
+	}, nil
 }
 
-// NewEcdsaPublicKey creates a new JWK from a EC-DSA public key
-func NewEcdsaPublicKey(pk *ecdsa.PublicKey) *EcdsaPublicKey {
-	pubkey := &EcdsaPublicKey{
-		EssentialHeader: &EssentialHeader{KeyType: jwa.EC},
-		Curve:           jwa.EllipticCurveAlgorithm(pk.Params().Name),
+func newECDSAPrivateKey(key *ecdsa.PrivateKey) (*ECDSAPrivateKey, error) {
+	if key == nil {
+		return nil, errors.New(`non-nil ecdsa.PrivateKey required`)
 	}
-	n := pk.Params().BitSize / 8
-	pubkey.X.SetBytes(i2osp(pk.X, n))
-	pubkey.Y.SetBytes(i2osp(pk.Y, n))
-	return pubkey
+
+	var hdr StandardHeaders
+	hdr.Set(KeyTypeKey, jwa.EC)
+	return &ECDSAPrivateKey{
+		headers: &hdr,
+		key:     key,
+	}, nil
 }
 
-// NewEcdsaPrivateKey creates a new JWK from a EC-DSA private key
-func NewEcdsaPrivateKey(pk *ecdsa.PrivateKey) *EcdsaPrivateKey {
-	pubkey := NewEcdsaPublicKey(&pk.PublicKey)
-	privkey := &EcdsaPrivateKey{EcdsaPublicKey: pubkey}
-	privkey.D.SetBytes(i2osp(pk.D, pk.Params().BitSize/8))
-	return privkey
+func (k ECDSAPrivateKey) PublicKey() (*ECDSAPublicKey, error) {
+	return newECDSAPublicKey(&k.key.PublicKey)
 }
 
 // Materialize returns the EC-DSA public key represented by this JWK
-func (k *EcdsaPublicKey) Materialize() (interface{}, error) {
-	return k.PublicKey()
+func (k ECDSAPublicKey) Materialize() (interface{}, error) {
+	return k.key, nil
 }
 
-// PublicKey returns the EC-DSA public key represented by this JWK
-func (k *EcdsaPublicKey) PublicKey() (*ecdsa.PublicKey, error) {
-	var crv elliptic.Curve
-	switch k.Curve {
-	case jwa.P256:
-		crv = elliptic.P256()
-	case jwa.P384:
-		crv = elliptic.P384()
-	case jwa.P521:
-		crv = elliptic.P521()
-	default:
-		return nil, ErrUnsupportedCurve
-	}
+func (k ECDSAPublicKey) Curve() jwa.EllipticCurveAlgorithm {
+	return jwa.EllipticCurveAlgorithm(k.key.Curve.Params().Name)
+}
 
-	pubkey := &ecdsa.PublicKey{
-		Curve: crv,
-		X:     (&big.Int{}).SetBytes(k.X.Bytes()),
-		Y:     (&big.Int{}).SetBytes(k.Y.Bytes()),
-	}
-	return pubkey, nil
+func (k ECDSAPrivateKey) Curve() jwa.EllipticCurveAlgorithm {
+	return jwa.EllipticCurveAlgorithm(k.key.PublicKey.Curve.Params().Name)
+}
+
+func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
+	h := hash.New()
+	fmt.Fprintf(h, `{"crv":"`)
+	fmt.Fprintf(h, crv)
+	fmt.Fprintf(h, `","kty":"EC","x":"`)
+	fmt.Fprintf(h, x)
+	fmt.Fprintf(h, `","y":"`)
+	fmt.Fprintf(h, y)
+	fmt.Fprintf(h, `"}`)
+	return h.Sum(nil)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k EcdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
-	const tmpl = `{"crv":"%s","kty":"EC","x":"%s","y":"%s"}`
+func (k ECDSAPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	return ecdsaThumbprint(
+		hash,
+		k.key.Curve.Params().Name,
+		base64.EncodeToString(k.key.X.Bytes()),
+		base64.EncodeToString(k.key.Y.Bytes()),
+	), nil
+}
 
-	csize := k.Curve.Size()
-
-	// We need to truncate the buffer at curve size
-	xbuf := k.X.Bytes()
-	if len(xbuf) > csize {
-		xbuf = xbuf[:csize]
-	}
-	ybuf := k.Y.Bytes()
-	if len(ybuf) > csize {
-		ybuf = ybuf[:csize]
-	}
-	enc := base64.RawURLEncoding
-	x64 := make([]byte, enc.EncodedLen(len(xbuf)))
-	enc.Encode(x64, xbuf)
-	y64 := make([]byte, enc.EncodedLen(len(ybuf)))
-	enc.Encode(y64, ybuf)
-
-	v := fmt.Sprintf(tmpl, k.Curve.String(), x64, y64)
-	h := hash.New()
-	h.Write([]byte(v))
-	return h.Sum(nil), nil
+// Thumbprint returns the JWK thumbprint using the indicated
+// hashing algorithm, according to RFC 7638
+func (k ECDSAPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	return ecdsaThumbprint(
+		hash,
+		k.key.Curve.Params().Name,
+		base64.EncodeToString(k.key.X.Bytes()),
+		base64.EncodeToString(k.key.Y.Bytes()),
+	), nil
 }
 
 // Materialize returns the EC-DSA private key represented by this JWK
-func (k *EcdsaPrivateKey) Materialize() (interface{}, error) {
-	return k.PrivateKey()
+func (k ECDSAPrivateKey) Materialize() (interface{}, error) {
+	return k.key, nil
 }
 
-// PrivateKey returns the EC-DSA private key represented by this JWK
-func (k *EcdsaPrivateKey) PrivateKey() (*ecdsa.PrivateKey, error) {
-	pubkey, err := k.EcdsaPublicKey.PublicKey()
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to get public key from ecdsa private key`)
+func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPublicKey.MarshalJSON").BindError(&err)
+		defer g.End()
 	}
 
-	privkey := &ecdsa.PrivateKey{
-		PublicKey: *pubkey,
-		D:         (&big.Int{}).SetBytes(k.D.Bytes()),
+	m := make(map[string]interface{})
+	if err := k.PopulateMap(m); err != nil {
+		return nil, errors.Wrap(err, `failed to populate pulibc key values`)
 	}
-	return privkey, nil
+
+	return json.Marshal(m)
+}
+
+func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPublicKey.PopulateJSON").BindError(&err)
+		defer g.End()
+	}
+
+	if err := k.headers.PopulateMap(m); err != nil {
+		return errors.Wrap(err, `failed to populate header values`)
+	}
+
+	const (
+		xKey   = `x`
+		yKey   = `y`
+		crvKey = `crv`
+	)
+	m[xKey] = base64.EncodeToString(k.key.X.Bytes())
+	m[yKey] = base64.EncodeToString(k.key.Y.Bytes())
+	m[crvKey] = k.key.Curve.Params().Name
+
+	return nil
+}
+
+func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPrivateKey.MarshalJSON").BindError(&err)
+		defer g.End()
+	}
+
+	m := make(map[string]interface{})
+	if err := k.PopulateMap(m); err != nil {
+		return nil, errors.Wrap(err, `failed to populate pulibc key values`)
+	}
+
+	return json.Marshal(m)
+}
+
+func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPrivateKey.PopulateJSON").BindError(&err)
+		defer g.End()
+	}
+
+	if err := k.headers.PopulateMap(m); err != nil {
+		return errors.Wrap(err, `failed to populate header values`)
+	}
+
+	pubkey, err := newECDSAPublicKey(&k.key.PublicKey)
+	if err != nil {
+		return errors.Wrap(err, `failed to construct public key from private key`)
+	}
+
+	if err := pubkey.PopulateMap(m); err != nil {
+		return errors.Wrap(err, `failed to populate public key values`)
+	}
+
+	m[`d`] = base64.EncodeToString(k.key.D.Bytes())
+
+	return nil
+}
+
+func (k *ECDSAPublicKey) UnmarshalJSON(data []byte) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPublicKey.UnmarshalJSON").BindError(&err)
+		defer g.End()
+	}
+
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return errors.Wrap(err, `failed to unmarshal public key`)
+	}
+
+	if err := k.ExtractMap(m); err != nil {
+		return errors.Wrap(err, `failed to extract data from map`)
+	}
+	return nil
+}
+
+func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPublicKey.ExtractMap").BindError(&err)
+		defer g.End()
+	}
+
+	const (
+		xKey   = `x`
+		yKey   = `y`
+		crvKey = `crv`
+	)
+
+	crvname, ok := m[crvKey]
+	if !ok {
+		return errors.Errorf(`failed to get required key crv`)
+	}
+	delete(m, crvKey)
+
+	var crv jwa.EllipticCurveAlgorithm
+	if err := crv.Accept(crvname); err != nil {
+		return errors.Wrap(err, `failed to accept value for crv key`)
+	}
+
+	var curve elliptic.Curve
+	switch crv {
+	case jwa.P256:
+		curve = elliptic.P256()
+	case jwa.P384:
+		curve = elliptic.P384()
+	case jwa.P521:
+		curve = elliptic.P521()
+	default:
+		return errors.Errorf(`invalid curve name %s`, crv)
+	}
+
+	xbuf, err := getRequiredKey(m, xKey)
+	if err != nil {
+		return errors.Wrapf(err, `failed to get required key %s`, xKey)
+	}
+	delete(m, xKey)
+
+	ybuf, err := getRequiredKey(m, yKey)
+	if err != nil {
+		return errors.Wrapf(err, `failed to get required key %s`, yKey)
+	}
+	delete(m, yKey)
+
+	var x, y big.Int
+	x.SetBytes(xbuf)
+	y.SetBytes(ybuf)
+
+	var hdrs StandardHeaders
+	if err := hdrs.ExtractMap(m); err != nil {
+		return errors.Wrap(err, `failed to extract header values`)
+	}
+
+	*k = ECDSAPublicKey{
+		headers: &hdrs,
+		key: &ecdsa.PublicKey{
+			Curve: curve,
+			X:     &x,
+			Y:     &y,
+		},
+	}
+	return nil
+}
+
+func (k *ECDSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPrivateKey.UnmarshalJSON").BindError(&err)
+		defer g.End()
+	}
+
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return errors.Wrap(err, `failed to unmarshal public key`)
+	}
+
+	if err := k.ExtractMap(m); err != nil {
+		return errors.Wrap(err, `failed to extract data from map`)
+	}
+	return nil
+}
+
+func (k *ECDSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwk.ECDSAPrivateKey.ExtractMap").BindError(&err)
+		defer g.End()
+	}
+
+	const (
+		dKey = `d`
+	)
+
+	dbuf, err := getRequiredKey(m, dKey)
+	if err != nil {
+		return errors.Wrapf(err, `failed to get required key %s`, dKey)
+	}
+	delete(m, dKey)
+
+	var pubkey ECDSAPublicKey
+	if err := pubkey.ExtractMap(m); err != nil {
+		return errors.Wrap(err, `failed to extract public key values`)
+	}
+
+	var d big.Int
+	d.SetBytes(dbuf)
+
+	*k = ECDSAPrivateKey{
+		headers: pubkey.headers,
+		key: &ecdsa.PrivateKey{
+			PublicKey: *(pubkey.key),
+			D:         &d,
+		},
+	}
+	pubkey.headers = nil
+	return nil
 }

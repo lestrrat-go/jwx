@@ -93,7 +93,7 @@ func main() {
     return
   }
 
-  key, err := jwk.NewRsaPublicKey(&privkey.PublicKey)
+  key, err := jwk.New(&privkey.PublicKey)
   if err != nil {
     log.Printf("failed to create JWK: %s", err)
     return
@@ -119,7 +119,7 @@ import(
 )
 
 func main() {
-  set, err := jwk.FetchHTTP("https://foobar.domain/jwk.json")
+  set, err := jwk.Fetch("https://foobar.domain/jwk.json")
   if err != nil {
     log.Printf("failed to parse JWK: %s", err)
     return
