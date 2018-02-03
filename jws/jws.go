@@ -318,7 +318,7 @@ func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 		return nil, errors.Wrap(err, `failed to materialize jwk.Key`)
 	}
 
-	payload, err = Verify(buf, jwa.SignatureAlgorithm(key.Alg()), keyval)
+	payload, err = Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), keyval)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to verify message")
 	}

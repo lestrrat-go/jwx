@@ -84,7 +84,7 @@ func (f JWKAcceptFunc) Accept(key jwk.Key) bool {
 // DefaultJWKAcceptor is the default acceptor that is used
 // in functions like VerifyWithJWKSet
 var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
-	if u := key.Use(); u != "" && u != "enc" && u != "sig" {
+	if u := key.KeyUsage(); u != "" && u != "enc" && u != "sig" {
 		return false
 	}
 	return true
