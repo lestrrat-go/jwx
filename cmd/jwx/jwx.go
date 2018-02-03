@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
 
 	"github.com/lestrrat/go-jwx/jwk"
@@ -66,26 +65,15 @@ func doJWK() int {
 	flag.StringVar(&c.JWKLocation, "jwk", "", "JWK location, either a local file or a URL")
 	flag.Parse()
 
-	var key *jwk.Set
 	if c.JWKLocation == "" {
 		fmt.Printf("-jwk must be specified\n")
 		return 1
 	}
 
-	if u, err := url.Parse(c.JWKLocation); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
-		var err error
-		key, err = jwk.FetchHTTP(c.JWKLocation)
-		if err != nil {
-			log.Printf("%s", err)
-			return 0
-		}
-	} else {
-		var err error
-		key, err = jwk.FetchFile(c.JWKLocation)
-		if err != nil {
-			log.Printf("%s", err)
-			return 0
-		}
+	key, err := jwk.Fetch(c.JWKLocation)
+	if err != nil {
+		log.Printf("%s", err)
+		return 0
 	}
 
 	keybuf, err := json.MarshalIndent(key, "", "  ")
@@ -99,7 +87,7 @@ func doJWK() int {
 	}
 
 	// TODO make it flexible
-	pubkey, err := (key.Keys[0]).(*jwk.RsaPublicKey).PublicKey()
+	pubkey, err := (key.Keys[0]).(*jwk.RSAPublicKey).Materialize()
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
