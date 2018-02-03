@@ -138,7 +138,7 @@ func (h *Header) Set(key string, value interface{}) error {
 		}
 		h.ContentType = v
 	case "epk":
-		v, ok := value.(*jwk.EcdsaPublicKey)
+		v, ok := value.(*jwk.ECDSAPublicKey)
 		if !ok {
 			return errors.Wrap(ErrInvalidHeaderValue, "invalid header value for 'epk'")
 		}

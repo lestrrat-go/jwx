@@ -246,19 +246,19 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
 		}
 
-		epk, ok := epkif.(*jwk.EcdsaPublicKey)
+		epk, ok := epkif.(*jwk.ECDSAPublicKey)
 		if !ok {
 			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
 		}
 
-		pubkey, err := epk.PublicKey()
+		pubkey, err := epk.Materialize()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get public key")
 		}
 
 		privkey, ok := key.(*ecdsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.New("*ecdsa.PrivateKey is required as the key to build this key decrypter")
 		}
 		apuif, err := h.Get("apu")
 		if err != nil {
@@ -278,7 +278,7 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 			return nil, errors.New("'apv' key is required for this key decrypter")
 		}
 
-		return NewEcdhesKeyWrapDecrypt(alg, pubkey, apu.Bytes(), apv.Bytes(), privkey), nil
+		return NewEcdhesKeyWrapDecrypt(alg, pubkey.(*ecdsa.PublicKey), apu.Bytes(), apv.Bytes(), privkey), nil
 	}
 
 	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
