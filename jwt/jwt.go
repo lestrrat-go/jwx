@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/lestrrat/go-jwx/jwa"
@@ -15,26 +16,52 @@ import (
 )
 
 // ParseString calls Parse with the given string
-func ParseString(s string) (*Token, error) {
-	return Parse(strings.NewReader(s))
+func ParseString(s string, options ...Option) (*Token, error) {
+	return Parse(strings.NewReader(s), options...)
 }
 
 // ParseString calls Parse with the given byte sequence
-func ParseBytes(s []byte) (*Token, error) {
-	return Parse(bytes.NewReader(s))
+func ParseBytes(s []byte, options ...Option) (*Token, error) {
+	return Parse(bytes.NewReader(s), options...)
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
-// The token must be encoded in either JSON or compact format, with a valid
-// signature. If the signature is invalid, this method return an error
-func Parse(src io.Reader) (*Token, error) {
-	m, err := jws.Parse(src)
-	if err != nil {
-		return nil, errors.Wrap(err, `invalid signature`)
+// The token must be encoded in either JSON format or compact format.
+//
+// If the token is signed and you want to verify the payload, you must
+// pass the jwt.WithVerify(alg, key) option. If you do not specify these
+// parameters, no verification will be performed.
+func Parse(src io.Reader, options ...Option) (*Token, error) {
+	var params VerifyParameters
+	for _, o := range options {
+		switch o.Name() {
+		case optkeyVerify:
+			params = o.Value().(VerifyParameters)
+		}
+	}
+
+	var payload []byte
+	if params == nil {
+		m, err := jws.Parse(src)
+		if err != nil {
+			return nil, errors.Wrap(err, `invalid jws message`)
+		}
+		payload = m.Payload()
+	} else {
+		data, err := ioutil.ReadAll(src)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to read token from source`)
+		}
+
+		v, err := jws.Verify(data, params.Algorithm(), params.Key())
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to verify jws signature`)
+		}
+		payload = v
 	}
 
 	var token Token
-	if err := json.Unmarshal(m.Payload(), &token); err != nil {
+	if err := json.Unmarshal(payload, &token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
 	return &token, nil

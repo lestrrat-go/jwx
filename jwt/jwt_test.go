@@ -2,14 +2,60 @@ package jwt_test
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwt"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSignature(t *testing.T) {
+	alg := jwa.RS256
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, "RSA key generated") {
+		return
+	}
+
+	t1 := jwt.New()
+	signed, err := t1.Sign(alg, key)
+	t.Run("parse (no signature verification)", func(t *testing.T) {
+		t2, err := jwt.Parse(bytes.NewReader(signed))
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("parse (correct signature key)", func(t *testing.T) {
+		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
+		if !assert.Error(t, err, `jwt.Parse should fail`) {
+			return
+		}
+	})
+	t.Run("parse (wrong signature key)", func(t *testing.T) {
+		pubkey := key.PublicKey
+		pubkey.E = 0 // bogus value
+		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
+		if !assert.Error(t, err, `jwt.Parse should fail`) {
+			return
+		}
+	})
+}
 
 func TestToken(t *testing.T) {
 	t1 := jwt.New()
@@ -170,7 +216,7 @@ func TestGHIssue10(t *testing.T) {
 		// This should succeed, because we have given a time
 		// that is well enough into the past
 		clock := jwt.ClockFunc(func() time.Time {
-			return tm.Add(-59*time.Minute)
+			return tm.Add(-59 * time.Minute)
 		})
 		if !assert.NoError(t, t1.Verify(jwt.WithClock(clock)), "token.Verify should succeed (2)") {
 			return

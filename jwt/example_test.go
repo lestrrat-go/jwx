@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lestrrat/go-jwx/jwa"
 	"github.com/lestrrat/go-jwx/jwt"
 )
 
@@ -22,7 +23,7 @@ func ExampleSignAndParse() {
 	{ // Create signed payload
 		token := jwt.New()
 		token.Set(`foo`, `bar`)
-		payload, err = token.Sign(`RS256`, privKey)
+		payload, err = token.Sign(jwa.RS256, privKey)
 		if err != nil {
 			fmt.Printf("failed to generate signed payload: %s\n", err)
 			return
@@ -30,7 +31,7 @@ func ExampleSignAndParse() {
 	}
 
 	{ // Parse signed payload
-		token, err := jwt.Parse(bytes.NewReader(payload))
+		token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithVerify(jwa.RS256, &privKey.PublicKey))
 		if err != nil {
 			fmt.Printf("failed to parse JWT token: %s\n", err)
 			return
