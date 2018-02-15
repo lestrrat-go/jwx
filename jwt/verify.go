@@ -139,7 +139,7 @@ func (t *Token) Verify(options ...Option) error {
 	if tv := t.issuedAt; tv != nil {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Time.Truncate(time.Second)
-		if !now.After(ttv.Add(-1 * skew)) {
+		if now != ttv && !now.After(ttv.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}
