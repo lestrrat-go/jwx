@@ -374,10 +374,19 @@ func Parse(src io.Reader) (m *Message, err error) {
 		}
 	}
 
+	var parser func(io.Reader) (*Message, error)
 	if first == '{' {
-		return parseJSON(rdr)
+		parser = parseJSON
+	} else {
+		parser = parseCompact
 	}
-	return parseCompact(rdr)
+
+	m, err = parser(rdr)
+	if err != nil {
+		return nil, errors.Wrap(err, `failedt o parse jws message`)
+	}
+
+	return m, nil
 }
 
 // ParseString is the same as Parse, but take in a string
