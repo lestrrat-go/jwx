@@ -23,37 +23,71 @@ func TestSignature(t *testing.T) {
 
 	t1 := jwt.New()
 	signed, err := t1.Sign(alg, key)
-	t.Run("parse (no signature verification)", func(t *testing.T) {
-		t2, err := jwt.Parse(bytes.NewReader(signed))
-		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-			return
-		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
-			return
-		}
+
+	t.Run("jwt.Parse", func(t *testing.T) {
+		t.Run("parse (no signature verification)", func(t *testing.T) {
+			t2, err := jwt.Parse(bytes.NewReader(signed))
+			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("parse (correct signature key)", func(t *testing.T) {
+			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
+			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+			_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature key)", func(t *testing.T) {
+			pubkey := key.PublicKey
+			pubkey.E = 0 // bogus value
+			_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
 	})
-	t.Run("parse (correct signature key)", func(t *testing.T) {
-		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
-		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-			return
-		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
-			return
-		}
-	})
-	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
-		if !assert.Error(t, err, `jwt.Parse should fail`) {
-			return
-		}
-	})
-	t.Run("parse (wrong signature key)", func(t *testing.T) {
-		pubkey := key.PublicKey
-		pubkey.E = 0 // bogus value
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
-		if !assert.Error(t, err, `jwt.Parse should fail`) {
-			return
-		}
+	t.Run("jwt.ParseVerify", func(t *testing.T) {
+		t.Run("parse (no signature verification)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (correct signature key)", func(t *testing.T) {
+			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
+			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature key)", func(t *testing.T) {
+			pubkey := key.PublicKey
+			pubkey.E = 0 // bogus value
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
 	})
 }
 
