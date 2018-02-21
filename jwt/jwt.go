@@ -40,28 +40,37 @@ func Parse(src io.Reader, options ...Option) (*Token, error) {
 		}
 	}
 
-	var payload []byte
-	if params == nil {
-		m, err := jws.Parse(src)
-		if err != nil {
-			return nil, errors.Wrap(err, `invalid jws message`)
-		}
-		payload = m.Payload()
-	} else {
-		data, err := ioutil.ReadAll(src)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to read token from source`)
-		}
+	if params != nil {
+		return ParseVerify(src, params.Algorithm(), params.Key())
+	}
 
-		v, err := jws.Verify(data, params.Algorithm(), params.Key())
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to verify jws signature`)
-		}
-		payload = v
+	m, err := jws.Parse(src)
+	if err != nil {
+		return nil, errors.Wrap(err, `invalid jws message`)
 	}
 
 	var token Token
-	if err := json.Unmarshal(payload, &token); err != nil {
+	if err := json.Unmarshal(m.Payload(), &token); err != nil {
+		return nil, errors.Wrap(err, `failed to parse token`)
+	}
+	return &token, nil
+}
+
+// ParseVerify is a function that is similar to Parse(), but does not
+// allow for parsing without signature verification parameters.
+func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (*Token, error) {
+	data, err := ioutil.ReadAll(src)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to read token from source`)
+	}
+
+	v, err := jws.Verify(data, alg, key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to verify jws signature`)
+	}
+
+	var token Token
+	if err := json.Unmarshal(v, &token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
 	return &token, nil
