@@ -2,8 +2,8 @@ package jws
 
 import (
 	"encoding/json"
-	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 )
 

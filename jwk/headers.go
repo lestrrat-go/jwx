@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-pdebug"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 

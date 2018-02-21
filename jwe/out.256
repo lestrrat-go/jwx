@@ -25,4 +25,4 @@
 		
 FAIL
 exit status 1
-FAIL	github.com/lestrrat/go-jwx/jwe	0.012s
+FAIL	github.com/lestrrat-go/jwx/jwe	0.012s

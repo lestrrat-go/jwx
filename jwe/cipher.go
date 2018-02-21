@@ -6,9 +6,9 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/lestrrat/go-jwx/internal/debug"
-	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-jwx/jwe/aescbc"
+	"github.com/lestrrat-go/jwx/internal/debug"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/aescbc"
 	"github.com/pkg/errors"
 )
 

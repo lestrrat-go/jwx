@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat/go-jwx/jwa"
-	"github.com/lestrrat/go-jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -142,7 +142,7 @@ func TestToken(t *testing.T) {
 func TestGHIssue10(t *testing.T) {
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t1 := jwt.New()
-		t1.Set(jwt.IssuerKey, "github.com/lestrrat/go-jwx")
+		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
 
 		// This should succeed, because WithIssuer is not provided in the
 		// optinal parameters
@@ -185,7 +185,7 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t1 := jwt.New()
-		t1.Set(jwt.SubjectKey, "github.com/lestrrat/go-jwx")
+		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
 
 		// This should succeed, because WithSubject is not provided in the
 		// optinal parameters

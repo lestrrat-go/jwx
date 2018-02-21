@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/pkg/errors"
 )
 

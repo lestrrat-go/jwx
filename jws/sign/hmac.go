@@ -6,7 +6,7 @@ import (
 	"crypto/sha512"
 	"hash"
 
-	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 

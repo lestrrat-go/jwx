@@ -9,8 +9,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/lestrrat/go-jwx/jwk"
-	"github.com/lestrrat/go-jwx/jws"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 )
 

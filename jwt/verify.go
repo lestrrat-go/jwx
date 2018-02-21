@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/lestrrat/go-jwx/internal/option"
+	"github.com/lestrrat-go/jwx/internal/option"
 )
 
 const (

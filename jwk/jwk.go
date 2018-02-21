@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/lestrrat/go-jwx/internal/base64"
-	"github.com/lestrrat/go-jwx/jwa"
+	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 

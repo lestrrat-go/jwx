@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/lestrrat/go-jwx/buffer"
+	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/pkg/errors"
 )
 
