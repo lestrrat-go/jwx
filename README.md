@@ -3,6 +3,10 @@
 [![Build Status](https://travis-ci.org/lestrrat/go-jwx.svg?branch=master)](https://travis-ci.org/lestrrat/go-jwx)
 [![GoDoc](https://godoc.org/github.com/lestrrat/go-jwx?status.svg)](https://godoc.org/github.com/lestrrat/go-jwx)
 
+# WARNING
+
+This repository has been moved to [github.com/lestrrat-go/jwx](https://github.com/lestrrat-go/jwx). This repository exists so that libraries pointing to this URL will keep functioning, but this repository will NOT be updated in the future. Please use the new import path.
+
 ## Status
 
 ### Done
