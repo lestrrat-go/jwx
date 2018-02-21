@@ -258,6 +258,29 @@ func TestGHIssue10(t *testing.T) {
 	})
 }
 
+func TestVerifyClaims(t *testing.T) {
+	// GitHub issue #37: tokens are invalid in the second they are created (because Now() is not after IssuedAt())
+	t.Run(jwt.IssuedAtKey+"+skew", func(t *testing.T) {
+		token := jwt.New()
+		now := time.Now().UTC()
+		token.Set(jwt.IssuedAtKey, now)
+
+		const DefaultSkew = 0
+
+		args := []jwt.Option{
+			jwt.WithClock(jwt.ClockFunc(func() time.Time { return now })),
+			jwt.WithAcceptableSkew(DefaultSkew),
+		}
+
+		if !assert.NoError(t, token.Verify(args...), "token.Verify should validate tokens in the same second they are created") {
+			if now.Equal(token.IssuedAt()) {
+				t.Errorf("iat claim failed: iat == now")
+			}
+			return
+		}
+	})
+}
+
 const aLongLongTimeAgo = 233431200
 const aLongLongTimeAgoString = "233431200"
 

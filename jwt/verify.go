@@ -3,6 +3,8 @@ package jwt
 import (
 	"errors"
 	"time"
+
+	"github.com/lestrrat/go-jwx/internal/option"
 )
 
 const (
@@ -13,24 +15,6 @@ const (
 	optkeyAudience       = "audience"
 	optkeyJwtid          = "jwtid"
 )
-
-type VerifyOption interface {
-	Name() string
-	Value() interface{}
-}
-
-type verifyOption struct {
-	name  string
-	value interface{}
-}
-
-func (o *verifyOption) Name() string {
-	return o.name
-}
-
-func (o *verifyOption) Value() interface{} {
-	return o.value
-}
 
 type Clock interface {
 	Now() time.Time
@@ -43,65 +27,47 @@ func (f ClockFunc) Now() time.Time {
 
 // WithClock specifies the `Clock` to be used when verifying
 // claims exp and nbf.
-func WithClock(c Clock) VerifyOption {
-	return &verifyOption{
-		name:  optkeyClock,
-		value: c,
-	}
+func WithClock(c Clock) Option {
+	return option.New(optkeyClock, c)
 }
 
 // WithAcceptableSkew specifies the duration in which exp and nbf
 // claims may differ by. This value should be positive
-func WithAcceptableSkew(dur time.Duration) VerifyOption {
-	return &verifyOption{
-		name:  optkeyAcceptableSkew,
-		value: dur,
-	}
+func WithAcceptableSkew(dur time.Duration) Option {
+	return option.New(optkeyAcceptableSkew, dur)
 }
 
 // WithIssuer specifies that expected issuer value. If not specified,
 // the value of issuer is not verified at all.
-func WithIssuer(s string) VerifyOption {
-	return &verifyOption{
-		name:  optkeyIssuer,
-		value: s,
-	}
+func WithIssuer(s string) Option {
+	return option.New(optkeyIssuer, s)
 }
 
 // WithSubject specifies that expected subject value. If not specified,
 // the value of subject is not verified at all.
-func WithSubject(s string) VerifyOption {
-	return &verifyOption{
-		name:  optkeySubject,
-		value: s,
-	}
+func WithSubject(s string) Option {
+	return option.New(optkeySubject, s)
 }
 
 // WithJwtID specifies that expected jti value. If not specified,
 // the value of jti is not verified at all.
-func WithJwtID(s string) VerifyOption {
-	return &verifyOption{
-		name:  optkeyJwtid,
-		value: s,
-	}
+func WithJwtID(s string) Option {
+	return option.New(optkeyJwtid, s)
 }
 
 // WithAudience specifies that expected audience value.
 // Verify will return true if one of the values in the `aud` element
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
-func WithAudience(s string) VerifyOption {
-	return &verifyOption{
-		name:  optkeyAudience,
-		value: s,
-	}
+func WithAudience(s string) Option {
+	return option.New(optkeyAudience, s)
 }
 
 // Verify makes sure that the essential claims stand.
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
-func (t *Token) Verify(options ...VerifyOption) error {
+func (t *Token) Verify(options ...Option) error {
 	var issuer string
 	var subject string
 	var audience string
@@ -173,7 +139,7 @@ func (t *Token) Verify(options ...VerifyOption) error {
 	if tv := t.issuedAt; tv != nil {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Time.Truncate(time.Second)
-		if !now.After(ttv.Add(-1 * skew)) {
+		if now.Before(ttv.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}
