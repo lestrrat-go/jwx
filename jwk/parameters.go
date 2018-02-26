@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Parameters keys used to verify proper key values.
 const (
 	AlgorithmKey              = "alg"
 	KeyIDKey                  = "kid"
@@ -56,12 +55,10 @@ type StandardParameters struct {
 	privateParams          map[string]interface{}
 }
 
-// Remove deletes a parameter from the JWK.
 func (h *StandardParameters) Remove(s string) {
 	delete(h.privateParams, s)
 }
 
-// Algorithm returns the JWK's algorithm.
 func (h *StandardParameters) Algorithm() string {
 	if v := h.algorithm; v != nil {
 		return *v
@@ -181,7 +178,6 @@ func (h *StandardParameters) Get(name string) (interface{}, bool) {
 	}
 }
 
-// Set manipulates JWK values.
 func (h *StandardParameters) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
@@ -254,7 +250,6 @@ func (h *StandardParameters) Set(name string, value interface{}) error {
 	return nil
 }
 
-// MarshalJSON returns marshaled json.
 func (h StandardParameters) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{}
 	if err := h.PopulateMap(m); err != nil {
@@ -365,7 +360,7 @@ func (h *StandardParameters) ExtractMap(m map[string]interface{}) (err error) {
 func (h *StandardParameters) UnmarshalJSON(buf []byte) error {
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal paramters`)
+		return errors.Wrap(err, `failed to unmarshal parameters`)
 	}
 
 	return h.ExtractMap(m)
