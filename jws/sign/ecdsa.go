@@ -51,7 +51,7 @@ func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSASigner, error) {
 	}
 
 	return &ECDSASigner{
-		alg: alg,
+		alg:  alg,
 		sign: signfn,
 	}, nil
 }

@@ -71,7 +71,7 @@ func newRSA(alg jwa.SignatureAlgorithm) (*RSASigner, error) {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create RSA signer: %s`, alg)
 	}
 	return &RSASigner{
-		alg: alg,
+		alg:  alg,
 		sign: signfn,
 	}, nil
 }
