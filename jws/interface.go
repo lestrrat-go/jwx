@@ -6,9 +6,9 @@ import (
 )
 
 type EncodedSignature struct {
-	Protected string          `json:"protected,omitempty"`
+	Protected string  `json:"protected,omitempty"`
 	Headers   Headers `json:"header,omitempty"`
-	Signature string          `json:"signature,omitempty"`
+	Signature string  `json:"signature,omitempty"`
 }
 
 type EncodedSignatureUnmarshalProxy struct {
@@ -62,7 +62,7 @@ type Message struct {
 type Signature struct {
 	headers   Headers `json:"header,omitempty"`    // Unprotected Heders
 	protected Headers `json:"protected,omitempty"` // Protected Headers
-	signature []byte          `json:"signature,omitempty"` // Signature
+	signature []byte  `json:"signature,omitempty"` // Signature
 }
 
 // JWKAcceptor decides which keys can be accepted

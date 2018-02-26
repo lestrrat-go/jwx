@@ -105,7 +105,7 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if ! assert.NoError(t, puk.Set(jwk.KeyIDKey, "MyKey"), " Set public key ID success") {
+		if !assert.NoError(t, puk.Set(jwk.KeyIDKey, "MyKey"), " Set public key ID success") {
 			return
 		}
 

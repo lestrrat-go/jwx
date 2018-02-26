@@ -245,7 +245,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nif err := t.Set(k, v); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set key '%%s'`, k)")
 	fmt.Fprintf(&buf, "\n}") // end if err := t.Set(k, v)
-	fmt.Fprintf(&buf, "\n}") // end for k, v := range m 
+	fmt.Fprintf(&buf, "\n}") // end for k, v := range m
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end UnmarshalJSON
 

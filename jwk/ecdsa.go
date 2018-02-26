@@ -19,11 +19,11 @@ func newECDSAPublicKey(key *ecdsa.PublicKey) (*ECDSAPublicKey, error) {
 		return nil, errors.New(`non-nil ecdsa.PublicKey required`)
 	}
 
-	var hdr StandardHeaders
+	var hdr StandardParameters
 	hdr.Set(KeyTypeKey, jwa.EC)
 	return &ECDSAPublicKey{
-		headers: &hdr,
-		key:     key,
+		parameters: &hdr,
+		key:        key,
 	}, nil
 }
 
@@ -32,11 +32,11 @@ func newECDSAPrivateKey(key *ecdsa.PrivateKey) (*ECDSAPrivateKey, error) {
 		return nil, errors.New(`non-nil ecdsa.PrivateKey required`)
 	}
 
-	var hdr StandardHeaders
+	var hdr StandardParameters
 	hdr.Set(KeyTypeKey, jwa.EC)
 	return &ECDSAPrivateKey{
-		headers: &hdr,
-		key:     key,
+		parameters: &hdr,
+		key:        key,
 	}, nil
 }
 
@@ -116,7 +116,7 @@ func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 		defer g.End()
 	}
 
-	if err := k.headers.PopulateMap(m); err != nil {
+	if err := k.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 
@@ -152,7 +152,7 @@ func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 		defer g.End()
 	}
 
-	if err := k.headers.PopulateMap(m); err != nil {
+	if err := k.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 
@@ -238,13 +238,13 @@ func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 	x.SetBytes(xbuf)
 	y.SetBytes(ybuf)
 
-	var hdrs StandardHeaders
+	var hdrs StandardParameters
 	if err := hdrs.ExtractMap(m); err != nil {
 		return errors.Wrap(err, `failed to extract header values`)
 	}
 
 	*k = ECDSAPublicKey{
-		headers: &hdrs,
+		parameters: &hdrs,
 		key: &ecdsa.PublicKey{
 			Curve: curve,
 			X:     &x,
@@ -296,12 +296,12 @@ func (k *ECDSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
 	d.SetBytes(dbuf)
 
 	*k = ECDSAPrivateKey{
-		headers: pubkey.headers,
+		parameters: pubkey.parameters,
 		key: &ecdsa.PrivateKey{
 			PublicKey: *(pubkey.key),
 			D:         &d,
 		},
 	}
-	pubkey.headers = nil
+	pubkey.parameters = nil
 	return nil
 }

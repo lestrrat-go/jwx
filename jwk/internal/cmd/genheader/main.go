@@ -21,7 +21,7 @@ func main() {
 }
 
 func _main() error {
-	return generateHeaders()
+	return generateParameters()
 }
 
 type headerField struct {
@@ -61,7 +61,7 @@ func zeroval(s string) string {
 	return "nil"
 }
 
-func generateHeaders() error {
+func generateParameters() error {
 	fields := []headerField{
 		{
 			name:      `keyType`,
@@ -107,14 +107,14 @@ func generateHeaders() error {
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
 		},
 		{
-			name:      `x509CertChain`,
-			method:    `X509CertChain`,
-			typ:       `*CertificateChain`,
-			key:       `x5c`,
-			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
-			hasAccept: true,
-			hasGet: true,
-			noDeref:   true,
+			name:       `x509CertChain`,
+			method:     `X509CertChain`,
+			typ:        `*CertificateChain`,
+			key:        `x5c`,
+			comment:    `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
+			hasAccept:  true,
+			hasGet:     true,
+			noDeref:    true,
 			returnType: `[]*x509.Certificate`,
 		},
 		{
@@ -156,7 +156,8 @@ func generateHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
+	fmt.Fprintf(&buf, "\n// Parameters interface holds functions for interacting with the JWK.")
+	fmt.Fprintf(&buf, "\ntype Parameters interface {")
 	fmt.Fprintf(&buf, "\nRemove(string)")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
@@ -173,20 +174,21 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "%s", f.PointerElem())
 		}
 	}
-	fmt.Fprintf(&buf, "\n}") // end type Headers interface
-	fmt.Fprintf(&buf, "\n\ntype StandardHeaders struct {")
+	fmt.Fprintf(&buf, "\n}") // end type Parameters interface
+	fmt.Fprintf(&buf, "\n// StandardParameters holds paramters according to JWK rfc 7517.")
+	fmt.Fprintf(&buf, "\ntype StandardParameters struct {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, f.typ, f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
-	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
+	fmt.Fprintf(&buf, "\n}") // end type StandardParameters
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Remove(s string) {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardParameters) Remove(s string) {")
 	fmt.Fprintf(&buf, "\ndelete(h.privateParams, s)")
 	fmt.Fprintf(&buf, "\n}") // func Remove(s string)
 
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) %s() ", f.method)
+		fmt.Fprintf(&buf, "\n\nfunc (h *StandardParameters) %s() ", f.method)
 		if f.returnType != "" {
 			fmt.Fprintf(&buf, "%s", f.returnType)
 		} else if f.IsPointer() && f.noDeref {
@@ -210,10 +212,10 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\n}") // if h.%s != %s
 			fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.PointerElem()))
 		}
-		fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) %s() %s
+		fmt.Fprintf(&buf, "\n}") // func (h *StandardParameters) %s() %s
 	}
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Get(name string) (interface{}, bool) {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardParameters) Get(name string) (interface{}, bool) {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -237,9 +239,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
 	fmt.Fprintf(&buf, "\nreturn v, ok")
 	fmt.Fprintf(&buf, "\n}") // end switch name
-	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) Get(name string) (interface{}, bool)
+	fmt.Fprintf(&buf, "\n}") // func (h *StandardParameters) Get(name string) (interface{}, bool)
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Set(name string, value interface{}) error {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardParameters) Set(name string, value interface{}) error {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -287,21 +289,21 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nh.privateParams[name] = value")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
+	fmt.Fprintf(&buf, "\n}") // end func (h *StandardParameters) Set(name string, value interface{})
 
-	fmt.Fprintf(&buf, "\n\nfunc (h StandardHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\n\nfunc (h StandardParameters) MarshalJSON() ([]byte, error) {")
 	fmt.Fprintf(&buf, "\nm := map[string]interface{}{}")
 	fmt.Fprintf(&buf, "\nif err := h.PopulateMap(m); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to populate map for serialization`)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) MarshalJSON()
+	fmt.Fprintf(&buf, "\n}") // end func (h StandardParameters) MarshalJSON()
 
 	fmt.Fprintf(&buf, "\n\n// PopulateMap populates a map with appropriate values that represent")
-	fmt.Fprintf(&buf, "\n// the headers as a JSON object. This exists primarily because JWKs are")
+	fmt.Fprintf(&buf, "\n// the parameters as a JSON object. This exists primarily because JWKs are")
 	fmt.Fprintf(&buf, "\n// represented as flat objects instead of differentiating the different")
 	fmt.Fprintf(&buf, "\n// parts of the message in separate sub objects.")
-	fmt.Fprintf(&buf, "\nfunc (h StandardHeaders) PopulateMap(m map[string]interface{}) error {")
+	fmt.Fprintf(&buf, "\nfunc (h StandardParameters) PopulateMap(m map[string]interface{}) error {")
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
 	fmt.Fprintf(&buf, "\nm[k] = v")
 	fmt.Fprintf(&buf, "\n}") // end for k, v := range h.privateParams
@@ -311,15 +313,15 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\n}") // end if v, ok := h.Get(%sKey); ok
 	}
 	fmt.Fprintf(&buf, "\n\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // func (h StandardHeaders) PopulateMap(m map[string]interface{})
+	fmt.Fprintf(&buf, "\n}") // func (h StandardParameters) PopulateMap(m map[string]interface{})
 
 	fmt.Fprintf(&buf, "\n\n// ExtractMap populates the appropriate values from a map that represent")
-	fmt.Fprintf(&buf, "\n// the headers as a JSON object. This exists primarily because JWKs are")
+	fmt.Fprintf(&buf, "\n// the parameters as a JSON object. This exists primarily because JWKs are")
 	fmt.Fprintf(&buf, "\n// represented as flat objects instead of differentiating the different")
 	fmt.Fprintf(&buf, "\n// parts of the message in separate sub objects.")
-	fmt.Fprintf(&buf, "\nfunc (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {")
+	fmt.Fprintf(&buf, "\nfunc (h *StandardParameters) ExtractMap(m map[string]interface{}) (err error) {")
 	fmt.Fprintf(&buf, "\nif pdebug.Enabled {")
-	fmt.Fprintf(&buf, "\ng := pdebug.Marker(`jwk.StandardHeaders.ExtractMap`).BindError(&err)")
+	fmt.Fprintf(&buf, "\ng := pdebug.Marker(`jwk.StandardParameters.ExtractMap`).BindError(&err)")
 	fmt.Fprintf(&buf, "\ndefer g.End()")
 	fmt.Fprintf(&buf, "\n}") // if pdebug.Enabled
 	for _, f := range fields {
@@ -331,17 +333,17 @@ func generateHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\nh.privateParams = m")
 	fmt.Fprintf(&buf, "\n\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) ExtractMap(m map[string]interface{}) error
+	fmt.Fprintf(&buf, "\n}") // end func (h *StandardParameters) ExtractMap(m map[string]interface{}) error
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardParameters) UnmarshalJSON(buf []byte) error {")
 	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal parameters`)")
 	fmt.Fprintf(&buf, "\n}") // end if err := json.Unmarshal(buf, &m)
 	fmt.Fprintf(&buf, "\n\nreturn h.ExtractMap(m)")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) UnmarshalJSON(buf []byte) error
+	fmt.Fprintf(&buf, "\n}") // end func (h *StandardParameters) UnmarshalJSON(buf []byte) error
 
-	fmt.Fprintf(&buf, "\n\nfunc (h StandardHeaders) Walk(f func(string, interface{}) error) error {")
+	fmt.Fprintf(&buf, "\n\nfunc (h StandardParameters) Walk(f func(string, interface{}) error) error {")
 	fmt.Fprintf(&buf, "\nfor _, key := range []string{")
 	for i, field := range fields {
 		fmt.Fprintf(&buf, "%sKey", field.method)
@@ -363,7 +365,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end if err := f(key, v); err != nil
 	fmt.Fprintf(&buf, "\n}") // end for k, v := range h.privateParams
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) Walk(f func(string, interface{}) error)
+	fmt.Fprintf(&buf, "\n}") // end func (h StandardParameters) Walk(f func(string, interface{}) error)
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
@@ -371,9 +373,9 @@ func generateHeaders() error {
 		return errors.Wrap(err, `failed to format code`)
 	}
 
-	f, err := os.Create("headers.go")
+	f, err := os.Create("parameters.go")
 	if err != nil {
-		return errors.Wrap(err, `failed to open headers.go`)
+		return errors.Wrap(err, `failed to open parameters.go`)
 	}
 	defer f.Close()
 	f.Write(formatted)

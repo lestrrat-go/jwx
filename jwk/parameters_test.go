@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeader(t *testing.T) {
+func TestParameter(t *testing.T) {
 	t.Run("Rountrip", func(t *testing.T) {
 		values := map[string]interface{}{
 			jwk.KeyIDKey:                  "helloworld01",
@@ -21,7 +21,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509URLKey:                "cert1",
 		}
 
-		var h jwk.StandardHeaders
+		var h jwk.StandardParameters
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), "Set works for '%s'", k) {
 				return
@@ -36,14 +36,14 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			if !assert.NoError(t, h.Set(k, v),"Set works for '%s'", k) {
+			if !assert.NoError(t, h.Set(k, v), "Set works for '%s'", k) {
 				return
 			}
 		}
 	})
 
 	t.Run("Algorithm", func(t *testing.T) {
-		var h jwk.StandardHeaders
+		var h jwk.StandardParameters
 		for _, value := range []interface{}{jwa.RS256, jwa.RSA1_5} {
 			if !assert.NoError(t, h.Set("alg", value), "Set for alg should succeed") {
 				return
@@ -60,7 +60,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("KeyType", func(t *testing.T) {
-		var h jwk.StandardHeaders
+		var h jwk.StandardParameters
 		for _, value := range []interface{}{jwa.RSA, "RSA"} {
 			if !assert.NoError(t, h.Set(jwk.KeyTypeKey, value), "Set for kty should succeed") {
 				return
