@@ -139,7 +139,8 @@ func generateHeaders() error {
 
 	var buf bytes.Buffer
 
-	fmt.Fprintf(&buf, "\npackage jwk")
+	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
+	fmt.Fprintf(&buf, "\n\npackage jwk")
 	fmt.Fprintf(&buf, "\n\nimport (")
 	for _, pkg := range []string{"crypto/x509", "encoding/json", "fmt"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
@@ -371,9 +372,9 @@ func generateHeaders() error {
 		return errors.Wrap(err, `failed to format code`)
 	}
 
-	f, err := os.Create("headers.go")
+	f, err := os.Create("headers_gen.go")
 	if err != nil {
-		return errors.Wrap(err, `failed to open headers.go`)
+		return errors.Wrap(err, `failed to open headers_gen.go`)
 	}
 	defer f.Close()
 	f.Write(formatted)
