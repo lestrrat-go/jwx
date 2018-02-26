@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Parameters keys used to verify proper key values.
 const (
 	AlgorithmKey              = "alg"
 	KeyIDKey                  = "kid"
@@ -22,7 +23,8 @@ const (
 	X509URLKey                = "x5u"
 )
 
-type Headers interface {
+// Parameters interface holds functions for interacting with the JWK.
+type Parameters interface {
 	Remove(string)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
@@ -40,7 +42,8 @@ type Headers interface {
 	X509URL() string
 }
 
-type StandardHeaders struct {
+// StandardParameters holds paramters according to JWK rfc 7517.
+type StandardParameters struct {
 	algorithm              *string           // https://tools.ietf.org/html/rfc7517#section-4.4
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyType                *jwa.KeyType      // https://tools.ietf.org/html/rfc7517#section-4.1
@@ -53,68 +56,70 @@ type StandardHeaders struct {
 	privateParams          map[string]interface{}
 }
 
-func (h *StandardHeaders) Remove(s string) {
+// Remove deletes a parameter from the JWK.
+func (h *StandardParameters) Remove(s string) {
 	delete(h.privateParams, s)
 }
 
-func (h *StandardHeaders) Algorithm() string {
+// Algorithm returns the JWK's algorithm.
+func (h *StandardParameters) Algorithm() string {
 	if v := h.algorithm; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) KeyID() string {
+func (h *StandardParameters) KeyID() string {
 	if v := h.keyID; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) KeyType() jwa.KeyType {
+func (h *StandardParameters) KeyType() jwa.KeyType {
 	if v := h.keyType; v != nil {
 		return *v
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *StandardHeaders) KeyUsage() string {
+func (h *StandardParameters) KeyUsage() string {
 	if v := h.keyUsage; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) KeyOps() []KeyOperation {
+func (h *StandardParameters) KeyOps() []KeyOperation {
 	return h.keyops
 }
 
-func (h *StandardHeaders) X509CertChain() []*x509.Certificate {
+func (h *StandardParameters) X509CertChain() []*x509.Certificate {
 	return h.x509CertChain.Get()
 }
 
-func (h *StandardHeaders) X509CertThumbprint() string {
+func (h *StandardParameters) X509CertThumbprint() string {
 	if v := h.x509CertThumbprint; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) X509CertThumbprintS256() string {
+func (h *StandardParameters) X509CertThumbprintS256() string {
 	if v := h.x509CertThumbprintS256; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) X509URL() string {
+func (h *StandardParameters) X509URL() string {
 	if v := h.x509URL; v != nil {
 		return *v
 	}
 	return ""
 }
 
-func (h *StandardHeaders) Get(name string) (interface{}, bool) {
+func (h *StandardParameters) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		v := h.algorithm
@@ -176,7 +181,8 @@ func (h *StandardHeaders) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *StandardHeaders) Set(name string, value interface{}) error {
+// Set manipulates JWK values.
+func (h *StandardParameters) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -248,7 +254,8 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h StandardHeaders) MarshalJSON() ([]byte, error) {
+// MarshalJSON returns marshaled json.
+func (h StandardParameters) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{}
 	if err := h.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate map for serialization`)
@@ -258,10 +265,10 @@ func (h StandardHeaders) MarshalJSON() ([]byte, error) {
 }
 
 // PopulateMap populates a map with appropriate values that represent
-// the headers as a JSON object. This exists primarily because JWKs are
+// the parameters as a JSON object. This exists primarily because JWKs are
 // represented as flat objects instead of differentiating the different
 // parts of the message in separate sub objects.
-func (h StandardHeaders) PopulateMap(m map[string]interface{}) error {
+func (h StandardParameters) PopulateMap(m map[string]interface{}) error {
 	for k, v := range h.privateParams {
 		m[k] = v
 	}
@@ -297,12 +304,12 @@ func (h StandardHeaders) PopulateMap(m map[string]interface{}) error {
 }
 
 // ExtractMap populates the appropriate values from a map that represent
-// the headers as a JSON object. This exists primarily because JWKs are
+// the parameters as a JSON object. This exists primarily because JWKs are
 // represented as flat objects instead of differentiating the different
 // parts of the message in separate sub objects.
-func (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {
+func (h *StandardParameters) ExtractMap(m map[string]interface{}) (err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker(`jwk.StandardHeaders.ExtractMap`).BindError(&err)
+		g := pdebug.Marker(`jwk.StandardParameters.ExtractMap`).BindError(&err)
 		defer g.End()
 	}
 	if v, ok := m[AlgorithmKey]; ok {
@@ -355,16 +362,16 @@ func (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {
 	return nil
 }
 
-func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
+func (h *StandardParameters) UnmarshalJSON(buf []byte) error {
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal headers`)
+		return errors.Wrap(err, `failed to unmarshal paramters`)
 	}
 
 	return h.ExtractMap(m)
 }
 
-func (h StandardHeaders) Walk(f func(string, interface{}) error) error {
+func (h StandardParameters) Walk(f func(string, interface{}) error) error {
 	for _, key := range []string{AlgorithmKey, KeyIDKey, KeyTypeKey, KeyUsageKey, KeyOpsKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey} {
 		if v, ok := h.Get(key); ok {
 			if err := f(key, v); err != nil {

@@ -12,10 +12,10 @@ import (
 type KeyUsageType string
 
 const (
-	// ForSignature is the value used in the headers to indicate that
+	// ForSignature is the value used in the parameters to indicate that
 	// this key should be used for signatures
 	ForSignature KeyUsageType = "sig"
-	// ForEncryption is the value used in the headers to indicate that
+	// ForEncryption is the value used in the parameters to indicate that
 	// this key should be used for encryptiong
 	ForEncryption KeyUsageType = "enc"
 )
@@ -26,14 +26,16 @@ type CertificateChain struct {
 
 // Errors related to JWK
 var (
-	ErrInvalidHeaderName  = errors.New("invalid header name")
-	ErrInvalidHeaderValue = errors.New("invalid value for header key")
+	ErrInvalidHeaderName  = errors.New("invalid parameter name")
+	ErrInvalidHeaderValue = errors.New("invalid value for parameter key")
 	ErrUnsupportedKty     = errors.New("unsupported kty")
 	ErrUnsupportedCurve   = errors.New("unsupported curve")
 )
 
+// KeyOperation is the Key Operations according to rfc 7517 section-4.3
 type KeyOperation string
 
+// Key Operations according to rfc 7517 section-4.3
 const (
 	KeyOpSign       KeyOperation = "sign"       // (compute digital signature or MAC)
 	KeyOpVerify                  = "verify"     // (verify digital signature or MAC)
@@ -56,7 +58,7 @@ type Set struct {
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
 type Key interface {
-	Headers
+	Parameters
 
 	// Materialize creates the corresponding key. For example,
 	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
@@ -69,36 +71,36 @@ type Key interface {
 	Thumbprint(crypto.Hash) ([]byte, error)
 }
 
-type headers interface {
-	Headers
+type parameters interface {
+	Parameters
 }
 
 // RSAPublicKey is a type of JWK generated from RSA public keys
 type RSAPublicKey struct {
-	headers
+	parameters
 	key *rsa.PublicKey
 }
 
 // RSAPrivateKey is a type of JWK generated from RSA private keys
 type RSAPrivateKey struct {
-	headers
+	parameters
 	key *rsa.PrivateKey
 }
 
 // SymmetricKey is a type of JWK generated from symmetric keys
 type SymmetricKey struct {
-	headers
+	parameters
 	key []byte
 }
 
 // ECDSAPublicKey is a type of JWK generated from ECDSA public keys
 type ECDSAPublicKey struct {
-	headers
+	parameters
 	key *ecdsa.PublicKey
 }
 
 // ECDSAPrivateKey is a type of JWK generated from ECDH-ES private keys
 type ECDSAPrivateKey struct {
-	headers
+	parameters
 	key *ecdsa.PrivateKey
 }

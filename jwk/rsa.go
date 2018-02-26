@@ -18,11 +18,11 @@ func newRSAPublicKey(key *rsa.PublicKey) (*RSAPublicKey, error) {
 		return nil, errors.New(`non-nil rsa.PublicKey required`)
 	}
 
-	var hdr StandardHeaders
+	var hdr StandardParameters
 	hdr.Set(KeyTypeKey, jwa.RSA)
 	return &RSAPublicKey{
-		headers: &hdr,
-		key:     key,
+		parameters: &hdr,
+		key:        key,
 	}, nil
 }
 
@@ -35,11 +35,11 @@ func newRSAPrivateKey(key *rsa.PrivateKey) (*RSAPrivateKey, error) {
 		return nil, errors.New("two primes required for RSA private key")
 	}
 
-	var hdr StandardHeaders
+	var hdr StandardParameters
 	hdr.Set(KeyTypeKey, jwa.RSA)
 	return &RSAPrivateKey{
-		headers: &hdr,
-		key:     key,
+		parameters: &hdr,
+		key:        key,
 	}, nil
 }
 
@@ -81,7 +81,7 @@ func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 		defer g.End()
 	}
 
-	if err := k.headers.PopulateMap(m); err != nil {
+	if err := k.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 
@@ -135,14 +135,14 @@ func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 	n.SetBytes(nbuf)
 	e.SetBytes(ebuf)
 
-	var hdrs StandardHeaders
+	var hdrs StandardParameters
 	if err := hdrs.ExtractMap(m); err != nil {
 		return errors.Wrap(err, `failed to extract header values`)
 	}
 
 	*k = RSAPublicKey{
-		headers: &hdrs,
-		key:     &rsa.PublicKey{E: int(e.Int64()), N: &n},
+		parameters: &hdrs,
+		key:        &rsa.PublicKey{E: int(e.Int64()), N: &n},
 	}
 	return nil
 }
@@ -176,7 +176,7 @@ func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 		qiKey = `qi`
 	)
 
-	if err := k.headers.PopulateMap(m); err != nil {
+	if err := k.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 
@@ -185,7 +185,7 @@ func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 		return errors.Wrap(err, `failed to populate public key values`)
 	}
 
-	if err := k.headers.PopulateMap(m); err != nil {
+	if err := k.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 	m[dKey] = base64.EncodeToString(k.key.D.Bytes())
@@ -316,8 +316,8 @@ func (k *RSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
 	}
 
 	*k = RSAPrivateKey{
-		headers: pubkey.headers,
-		key:     &key,
+		parameters: pubkey.parameters,
+		key:        &key,
 	}
 	return nil
 }

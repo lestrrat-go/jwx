@@ -16,11 +16,11 @@ func newSymmetricKey(key []byte) (*SymmetricKey, error) {
 		return nil, errors.New(`non-empty []byte key required`)
 	}
 
-	var hdr StandardHeaders
+	var hdr StandardParameters
 	hdr.Set(KeyTypeKey, jwa.OctetSeq)
 	return &SymmetricKey{
-		headers: &hdr,
-		key:     key,
+		parameters: &hdr,
+		key:        key,
 	}, nil
 }
 
@@ -76,14 +76,14 @@ func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
 	}
 	delete(m, kKey)
 
-	var hdrs StandardHeaders
+	var hdrs StandardParameters
 	if err := hdrs.ExtractMap(m); err != nil {
 		return errors.Wrap(err, `failed to extract header values`)
 	}
 
 	*s = SymmetricKey{
-		headers: &hdrs,
-		key:     kbuf,
+		parameters: &hdrs,
+		key:        kbuf,
 	}
 	return nil
 }
@@ -108,7 +108,7 @@ func (s SymmetricKey) PopulateMap(m map[string]interface{}) (err error) {
 		defer g.End()
 	}
 
-	if err := s.headers.PopulateMap(m); err != nil {
+	if err := s.parameters.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
 
