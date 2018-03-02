@@ -211,7 +211,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
-		return nil, errors.New(`empty buffer`)
+		return nil, errors.New(`attempt to verify empty buffer`)
 	}
 
 	if buf[0] == '{' {
