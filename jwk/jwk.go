@@ -105,6 +105,15 @@ func FetchHTTP(jwkurl string) (*Set, error) {
 	return Parse(buf)
 }
 
+func (set *Set) UnmarshalJSON(data []byte) error {
+	v, err := Parse(data)
+	if err != nil {
+		return errors.Wrap(err, `failed to parse jwk.Set`)
+	}
+	*set = *v
+	return nil
+}
+
 // Parse parses JWK from the incoming byte buffer.
 func Parse(buf []byte) (*Set, error) {
 	m := make(map[string]interface{})

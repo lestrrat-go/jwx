@@ -16,17 +16,37 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	verify := func(src string, expected interface{}) {
-		set, err := jwk.Parse([]byte(src))
-		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-			return
-		}
-
-		for _, key := range set.Keys {
-			if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
+	verify := func(t *testing.T, src string, expected interface{}) {
+		t.Run("json.Unmarshal", func(t *testing.T) {
+			var set jwk.Set
+			if err := json.Unmarshal([]byte(src), &set); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
 				return
 			}
-		}
+
+			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greter than 0") {
+				return
+			}
+			for _, key := range set.Keys {
+				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
+					return
+				}
+			}
+		})
+		t.Run("jwk.Parse", func(t *testing.T) {
+			set, err := jwk.Parse([]byte(src))
+			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+				return
+			}
+
+			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greter than 0") {
+				return
+			}
+			for _, key := range set.Keys {
+				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
+					return
+				}
+			}
+		})
 	}
 
 	t.Run("RSA Public Key", func(t *testing.T) {
@@ -35,7 +55,7 @@ func TestParse(t *testing.T) {
 			"kty":"RSA",
       "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 		}`
-		verify(src, &jwk.RSAPublicKey{})
+		verify(t, src, &jwk.RSAPublicKey{})
 	})
 	t.Run("RSA Private Key", func(t *testing.T) {
 		const src = `{
@@ -51,7 +71,7 @@ func TestParse(t *testing.T) {
       "alg":"RS256",
       "kid":"2011-04-29"
      }`
-		verify(src, &jwk.RSAPrivateKey{})
+		verify(t, src, &jwk.RSAPrivateKey{})
 	})
 }
 
