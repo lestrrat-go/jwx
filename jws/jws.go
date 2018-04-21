@@ -383,7 +383,7 @@ func Parse(src io.Reader) (m *Message, err error) {
 
 	m, err = parser(rdr)
 	if err != nil {
-		return nil, errors.Wrap(err, `failedt o parse jws message`)
+		return nil, errors.Wrap(err, `failed to parse jws message`)
 	}
 
 	return m, nil
