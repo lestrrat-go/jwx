@@ -39,7 +39,7 @@ func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 		h.Write(payload)
 
 		if !ecdsa.Verify(key, h.Sum(nil), &rv, &sv) {
-			return errors.New(`failed to verify signature`)
+			return errors.New(`failed to verify signature using ecdsa`)
 		}
 		return nil
 	})

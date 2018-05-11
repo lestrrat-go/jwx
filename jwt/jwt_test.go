@@ -2,6 +2,8 @@ package jwt_test
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
 )
@@ -366,5 +369,30 @@ func TestGet(t *testing.T) {
 		t.Run(tc.Title, func(t *testing.T) {
 			tc.Test(t, tc.Token())
 		})
+	}
+}
+
+func TestGH52(t *testing.T) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	pub := &priv.PublicKey
+	if !assert.NoError(t, err) {
+		return
+	}
+	for i := 0; i < 1000; i++ {
+		tok := jwt.New()
+
+		s, err := tok.Sign(jwa.ES256, priv)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		t.Logf("%x", s)
+		if _, err = jws.Verify([]byte(s), jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
+			return
+		}
 	}
 }
