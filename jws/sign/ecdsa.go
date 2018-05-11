@@ -41,7 +41,7 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 		rb := r.Bytes()
 		vb := v.Bytes()
 		copy(out[keysiz-len(rb):], rb)
-		copy(out[keysiz*2-len(vb):], v.Bytes())
+		copy(out[keysiz*2-len(vb):], vb)
 		return out, nil
 	})
 }
