@@ -38,8 +38,10 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 			return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
 		}
 		out := make([]byte, keysiz*2)
-		copy(out, r.Bytes())
-		copy(out[keysiz:], v.Bytes())
+		rb := r.Bytes()
+		vb := v.Bytes()
+		copy(out[keysiz-len(rb):], rb)
+		copy(out[keysiz*2-len(vb):], v.Bytes())
 		return out, nil
 	})
 }
