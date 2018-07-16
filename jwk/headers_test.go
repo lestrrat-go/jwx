@@ -14,7 +14,7 @@ func TestHeader(t *testing.T) {
 		values := map[string]interface{}{
 			jwk.KeyIDKey:                  "helloworld01",
 			jwk.KeyTypeKey:                jwa.RSA,
-			jwk.KeyOpsKey:                 []jwk.KeyOperation{jwk.KeyOpSign},
+			jwk.KeyOpsKey:                 jwk.KeyOperationList{jwk.KeyOpSign},
 			jwk.KeyUsageKey:               "sig",
 			jwk.X509CertThumbprintKey:     "thumbprint",
 			jwk.X509CertThumbprintS256Key: "thumbprint256",

@@ -17,6 +17,7 @@ func TestECDSA(t *testing.T) {
        [
          {"kty":"EC",
           "crv":"P-256",
+          "key_ops": ["verify"],
           "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
           "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
           "d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
@@ -105,7 +106,7 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if ! assert.NoError(t, puk.Set(jwk.KeyIDKey, "MyKey"), " Set public key ID success") {
+		if !assert.NoError(t, puk.Set(jwk.KeyIDKey, "MyKey"), " Set public key ID success") {
 			return
 		}
 

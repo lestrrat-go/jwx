@@ -35,7 +35,7 @@ type Headers interface {
 	KeyID() string
 	KeyType() jwa.KeyType
 	KeyUsage() string
-	KeyOps() []KeyOperation
+	KeyOps() KeyOperationList
 	X509CertChain() []*x509.Certificate
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
@@ -47,7 +47,7 @@ type StandardHeaders struct {
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyType                *jwa.KeyType      // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 []KeyOperation    // https://tools.ietf.org/html/rfc7517#section-4.3
+	keyops                 KeyOperationList  // https://tools.ietf.org/html/rfc7517#section-4.3
 	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
@@ -87,7 +87,7 @@ func (h *StandardHeaders) KeyUsage() string {
 	return ""
 }
 
-func (h *StandardHeaders) KeyOps() []KeyOperation {
+func (h *StandardHeaders) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
@@ -144,7 +144,7 @@ func (h *StandardHeaders) Get(name string) (interface{}, bool) {
 		return *v, true
 	case KeyOpsKey:
 		v := h.keyops
-		if len(v) == 0 {
+		if v == nil {
 			return nil, false
 		}
 		return v, true
@@ -211,11 +211,10 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyUsageKey, value)
 	case KeyOpsKey:
-		if v, ok := value.([]KeyOperation); ok {
-			h.keyops = v
-			return nil
+		if err := h.keyops.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyOpsKey, value)
+		return nil
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
