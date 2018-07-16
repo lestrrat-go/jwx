@@ -33,6 +33,7 @@ var (
 )
 
 type KeyOperation string
+type KeyOperationList []KeyOperation
 
 const (
 	KeyOpSign       KeyOperation = "sign"       // (compute digital signature or MAC)
