@@ -69,7 +69,7 @@ func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
 
 	m := map[string]interface{}{}
 	if err := k.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate pulibc key values`)
+		return nil, errors.Wrap(err, `failed to populate public key values`)
 	}
 
 	return json.Marshal(m)
