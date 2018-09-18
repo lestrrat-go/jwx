@@ -104,7 +104,7 @@ func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
 
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate pulibc key values`)
+		return nil, errors.Wrap(err, `failed to populate public key values`)
 	}
 
 	return json.Marshal(m)
@@ -140,7 +140,7 @@ func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
 
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate pulibc key values`)
+		return nil, errors.Wrap(err, `failed to populate public key values`)
 	}
 
 	return json.Marshal(m)
