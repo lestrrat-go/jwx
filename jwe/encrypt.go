@@ -67,7 +67,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	if len(recipients) == 1 {
 		protected.Header, err = protected.Header.Merge(recipients[0].Header)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to merge protecte headers")
+			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}
 	}
 

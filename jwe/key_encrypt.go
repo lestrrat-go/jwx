@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewKeyWrapEncrypt creates a key-wrap encryptor using AES-CGM.
+// NewKeyWrapEncrypt creates a key-wrap encrypter using AES-CGM.
 // Although the name suggests otherwise, this does the decryption as well.
 func NewKeyWrapEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (KeyWrapEncrypt, error) {
 	return KeyWrapEncrypt{

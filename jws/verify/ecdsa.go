@@ -27,7 +27,7 @@ func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 	return ecdsaVerifyFunc(func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
 		keysiz := hash.Size()
 		if len(signature) != 2*keysiz {
-			return errors.New("signature length deos not match curve bit size")
+			return errors.New("signature length does not match curve bit size")
 		}
 
 		var rv big.Int

@@ -18,7 +18,7 @@ var (
 	ErrInvalidBlockSize         = errors.New("keywrap input must be 8 byte blocks")
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
 	ErrInvalidHeaderValue       = errors.New("invalid value for header key")
-	ErrUnsupportedAlgorithm     = errors.New("unspported algorithm")
+	ErrUnsupportedAlgorithm     = errors.New("unsupported algorithm")
 	ErrMissingPrivateKey        = errors.New("missing private key")
 )
 
@@ -135,14 +135,14 @@ type MultiEncrypt struct {
 type KeyWrapEncrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	sharedkey []byte
-	KeyID       string
+	KeyID     string
 }
 
 // EcdhesKeyWrapEncrypt encrypts content encryption keys using ECDH-ES.
 type EcdhesKeyWrapEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	generator KeyGenerator
-	KeyID       string
+	KeyID     string
 }
 
 // EcdhesKeyWrapDecrypt decrypts keys using ECDH-ES.
@@ -260,14 +260,14 @@ type RSAPKCS15KeyDecrypt struct {
 type RSAPKCSKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey
-	KeyID    string
+	KeyID  string
 }
 
 // RSAOAEPKeyEncrypt encrypts keys using RSA OAEP algorithm
 type RSAOAEPKeyEncrypt struct {
 	alg    jwa.KeyEncryptionAlgorithm
 	pubkey *rsa.PublicKey
-	KeyID    string
+	KeyID  string
 }
 
 // RSAOAEPKeyDecrypt decrypts keys using RSA OAEP algorithm
@@ -280,5 +280,3 @@ type RSAOAEPKeyDecrypt struct {
 type DirectDecrypt struct {
 	Key []byte
 }
-
-
