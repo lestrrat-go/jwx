@@ -125,7 +125,7 @@ func (h Hmap) GetString(name string, consume ...bool) (string, error) {
 func (h Hmap) GetStringSlice(name string, consume ...bool) ([]string, error) {
 	v, err := h.Get(name, reflect.TypeOf([]interface{}{}), consume...)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to get []string value for keu '%s'`, name)
+		return nil, errors.Wrapf(err, `failed to get []string value for key '%s'`, name)
 	}
 
 	s := v.([]interface{})

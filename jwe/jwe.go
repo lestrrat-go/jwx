@@ -18,7 +18,7 @@ import (
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
 	contentcrypt, err := NewAesCrypt(contentalg)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to create AES encryptor`)
+		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}
 
 	var keyenc KeyEncrypter
