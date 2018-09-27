@@ -356,6 +356,35 @@ func TestEncode_ECDHES(t *testing.T) {
 	t.Logf("%s", decrypted)
 }
 
+func TestEncode_ECDH_ES_A256KW_A192KW_A128KW(t *testing.T) {
+	plaintext := []byte("Lorem ipsum")
+	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if !assert.NoError(t, err, "ecdsa key generated") {
+		return
+	}
+
+	algorithms := []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES_A256KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A128KW}
+
+	for i := 0; i < len(algorithms); i++ {
+		encrypted, err := Encrypt(plaintext, algorithms[i], &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+		if !assert.NoError(t, err, "Encrypt succeeds") {
+			return
+		}
+
+		t.Logf("encrypted = %s", encrypted)
+
+		msg, _ := Parse(encrypted)
+		jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
+		t.Logf("%s", jsonbuf)
+
+		decrypted, err := Decrypt(encrypted, algorithms[i], privkey)
+		if !assert.NoError(t, err, "Decrypt succeeds") {
+			return
+		}
+		t.Logf("%s", decrypted)
+	}
+}
+
 func Test_A256KW_A256CBC_HS512(t *testing.T) {
 	var keysize = 32
 	var key = make([]byte, keysize)

@@ -68,7 +68,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
-		keysize = contentcrypt.KeySize()
+		keysize = contentcrypt.KeySize() / 2
 	case jwa.ECDH_ES:
 		fallthrough
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
