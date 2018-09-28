@@ -642,7 +642,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	}
 
 	protected, payload, signature, err := jws.SplitCompact(strings.NewReader(incoming))
-	if !assert.NoError(t, err, `jws.SplitCompact shoud succeed`) {
+	if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 		return
 	}
 

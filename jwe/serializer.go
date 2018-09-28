@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Serialize converts the mssage into a JWE compact serialize format byte buffer
+// Serialize converts the massage into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	if len(m.Recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
@@ -64,7 +64,7 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	return buf, nil
 }
 
-// Serialize converts the mssage into a JWE JSON serialize format byte buffer
+// Serialize converts the massage into a JWE JSON serialize format byte buffer
 func (s JSONSerialize) Serialize(m *Message) ([]byte, error) {
 	if s.Pretty {
 		return json.MarshalIndent(m, "", "  ")

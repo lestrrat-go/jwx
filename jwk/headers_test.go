@@ -10,7 +10,7 @@ import (
 )
 
 func TestHeader(t *testing.T) {
-	t.Run("Rountrip", func(t *testing.T) {
+	t.Run("Roundtrip", func(t *testing.T) {
 		values := map[string]interface{}{
 			jwk.KeyIDKey:                  "helloworld01",
 			jwk.KeyTypeKey:                jwa.RSA,

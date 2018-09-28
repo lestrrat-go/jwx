@@ -21,7 +21,7 @@ func TestRSA(t *testing.T) {
 		}
 
 		newKey, err := jwk.New(rsaKey)
-		if !assert.NoError(t, err, `jwk.New should suceed`) {
+		if !assert.NoError(t, err, `jwk.New should succeed`) {
 			return
 		}
 
@@ -30,12 +30,12 @@ func TestRSA(t *testing.T) {
 		})
 
 		jsonbuf1, err := json.Marshal(key)
-		if !assert.NoError(t, err, `json.Marshal should suceed`) {
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
 		}
 
 		jsonbuf2, err := json.Marshal(newKey)
-		if !assert.NoError(t, err, `json.Marshal should suceed`) {
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
 		}
 

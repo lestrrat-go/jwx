@@ -51,7 +51,7 @@ type PayloadSigner interface {
 //
 // Do not expect to use the Message object to verify or construct a
 // signed payloads with. You should only use this when you want to actually
-// want to programatically view the contents for the full JWS payload.
+// want to programmatically view the contents for the full JWS payload.
 //
 // To sign and verify, use the appropriate `Sign()` nad `Verify()` functions
 type Message struct {
@@ -60,7 +60,7 @@ type Message struct {
 }
 
 type Signature struct {
-	headers   Headers `json:"header,omitempty"`    // Unprotected Heders
+	headers   Headers `json:"header,omitempty"`    // Unprotected Headers
 	protected Headers `json:"protected,omitempty"` // Protected Headers
 	signature []byte          `json:"signature,omitempty"` // Signature
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type Verifier interface {
-	// Verify checks whehter the payload and signature are valid for
+	// Verify checks whether the payload and signature are valid for
 	// the given key.
 	// `key` is the key used for verifying the payload, and is usually
 	// the public key associated with the signature method. For example,
