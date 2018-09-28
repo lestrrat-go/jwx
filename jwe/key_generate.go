@@ -31,7 +31,7 @@ func (g StaticKeyGenerate) KeyGenerate() (ByteSource, error) {
 }
 
 // NewRandomKeyGenerate creates a new KeyGenerator that returns
-// randome bytes
+// random bytes
 func NewRandomKeyGenerate(n int) RandomKeyGenerate {
 	return RandomKeyGenerate{keysize: n}
 }
@@ -100,7 +100,7 @@ func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
 }
 
 // HeaderPopulate populates the header with the required EC-DSA public key
-// infromation ('epk' key)
+// information ('epk' key)
 func (k ByteWithECPrivateKey) HeaderPopulate(h *Header) {
 	key, err := jwk.New(&k.PrivateKey.PublicKey)
 	if err == nil {

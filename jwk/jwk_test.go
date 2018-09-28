@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greter than 0") {
+			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greater than 0") {
 				return
 			}
 			for _, key := range set.Keys {
@@ -38,7 +38,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greter than 0") {
+			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greater than 0") {
 				return
 			}
 			for _, key := range set.Keys {

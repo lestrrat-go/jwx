@@ -103,7 +103,7 @@ func TestToken(t *testing.T) {
 		return
 	}
 
-	// Silly fix to remove monotonic element from time.Time obatained
+	// Silly fix to remove monotonic element from time.Time obtained
 	// from time.Now(). Without this, the equality comparison goes
 	// ga-ga for golang tip (1.9)
 	now := time.Unix(time.Now().Unix(), 0)
@@ -148,7 +148,7 @@ func TestGHIssue10(t *testing.T) {
 		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
 
 		// This should succeed, because WithIssuer is not provided in the
-		// optinal parameters
+		// optional parameters
 		if !assert.NoError(t, t1.Verify(), "t1.Verify should succeed") {
 			return
 		}
@@ -171,7 +171,7 @@ func TestGHIssue10(t *testing.T) {
 		})
 
 		// This should succeed, because WithAudience is not provided in the
-		// optinal parameters
+		// optional parameters
 		if !assert.NoError(t, t1.Verify(), "token.Verify should succeed") {
 			return
 		}
@@ -191,7 +191,7 @@ func TestGHIssue10(t *testing.T) {
 		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
 
 		// This should succeed, because WithSubject is not provided in the
-		// optinal parameters
+		// optional parameters
 		if !assert.NoError(t, t1.Verify(), "token.Verify should succeed") {
 			return
 		}
@@ -328,7 +328,7 @@ func TestUnmarshal(t *testing.T) {
 			if !assert.NoError(t, json.Unmarshal([]byte(tc.JSON), &token), `json.Unmarshal should succeed`) {
 				return
 			}
-			if !assert.Equal(t, tc.Expected(), &token, `token should match expeted value`) {
+			if !assert.Equal(t, tc.Expected(), &token, `token should match expected value`) {
 				return
 			}
 
