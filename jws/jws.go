@@ -141,6 +141,52 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 	return buf.Bytes(), nil
 }
 
+// SignLiteral generates a signature for the given payload and headers, and serializes
+// it in compact serialization format. In this format you may NOT use
+// multiple signers.
+//
+func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, headers []byte) ([]byte, error) {
+
+	signer, err := sign.New(alg)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to create signer`)
+	}
+
+	var buf bytes.Buffer
+	enc := base64.NewEncoder(base64.RawURLEncoding, &buf)
+	if _, err := enc.Write(headers); err != nil {
+		return nil, errors.Wrap(err, `failed to write headers as base64`)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, errors.Wrap(err, `failed to finalize writing headers as base64`)
+	}
+
+	buf.WriteByte('.')
+	enc = base64.NewEncoder(base64.RawURLEncoding, &buf)
+	if _, err := enc.Write(payload); err != nil {
+		return nil, errors.Wrap(err, `failed to write payload as base64`)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, errors.Wrap(err, `failed to finalize writing payload as base64`)
+	}
+
+	signature, err := signer.Sign(buf.Bytes(), key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to sign payload`)
+	}
+
+	buf.WriteByte('.')
+	enc = base64.NewEncoder(base64.RawURLEncoding, &buf)
+	if _, err := enc.Write(signature); err != nil {
+		return nil, errors.Wrap(err, `failed to write signature as base64`)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, errors.Wrap(err, `failed to finalize writing signature as base64`)
+	}
+
+	return buf.Bytes(), nil
+}
+
 // SignMulti accepts multiple signers via the options parameter,
 // and creates a JWS in JSON serialization format that contains
 // signatures from applying aforementioned signers.
@@ -459,7 +505,8 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 	return &plain, nil
 }
 
-// splitCompact
+// SplitCompact splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
 func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	var protected []byte
 	var payload []byte

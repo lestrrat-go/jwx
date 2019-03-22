@@ -1,5 +1,5 @@
 // Package buffer provides a very thin wrapper around []byte buffer called
-// `Buffer`, to provide functionalitites that are often used wthin the jwx
+// `Buffer`, to provide functionalities that are often used within the jwx
 // related packages
 package buffer
 

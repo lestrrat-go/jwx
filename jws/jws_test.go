@@ -17,7 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jws/verify"
-	pdebug "github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -278,6 +278,73 @@ func TestEncode(t *testing.T) {
 		}
 
 		if !assert.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded.Bytes()), "Verify succeeds") {
+			return
+		}
+	})
+	t.Run("HS256CompactLiteral", func(t *testing.T) {
+		const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
+		const jwksrc = `{
+"kty":"oct",
+"k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+}`
+
+		hdrBytes := []byte(hdr)
+
+		hdrBuf, err := buffer.Buffer(hdr).Base64Encode()
+		if err != nil {
+			t.Fatal("Failed to base64 encode protected header")
+		}
+		standardHeaders := &jws.StandardHeaders{}
+		err = standardHeaders.UnmarshalJSON(hdrBytes)
+		if err != nil {
+			t.Fatal("Failed to parse protected header")
+		}
+		alg := standardHeaders.Algorithm()
+
+		payload, err := buffer.Buffer(examplePayload).Base64Encode()
+		if err != nil {
+			t.Fatal("Failed to base64 encode payload")
+		}
+
+		keys, _ := jwk.ParseString(jwksrc)
+		key, err := keys.Keys[0].Materialize()
+		if err != nil {
+			t.Fatal("Failed to parse key")
+		}
+		var jwsCompact []byte
+		jwsCompact, err = jws.SignLiteral([]byte(examplePayload), alg, key, hdrBytes)
+		if err != nil {
+			t.Fatal("Failed to sign message")
+		}
+
+		msg, err := jws.Parse(bytes.NewReader(jwsCompact))
+		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
+			return
+		}
+
+		signatures := msg.Signatures()
+		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
+			return
+		}
+
+		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), alg, "Algorithm in header matches") {
+			return
+		}
+
+		v, err := verify.New(alg)
+		if !assert.NoError(t, err, "HmacVerify created") {
+			return
+		}
+
+		signingInput := bytes.Join(
+			[][]byte{
+				hdrBuf,
+				payload,
+			},
+			[]byte{'.'},
+		)
+
+		if !assert.NoError(t, v.Verify(signingInput, signatures[0].Signature(), key), "Verify succeeds") {
 			return
 		}
 	})
