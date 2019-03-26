@@ -2,10 +2,13 @@ package jws_test
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -141,23 +144,26 @@ func TestVerifyWithJWKSet(t *testing.T) {
 		return
 	}
 
-	jwkkey, err := jwk.New(&key.PublicKey)
+	jwkKey, err := jwk.New(&key.PublicKey)
 	if !assert.NoError(t, err, "JWK public key generated") {
 		return
 	}
-	jwkkey.Set(jwk.AlgorithmKey, jwa.RS256)
+	err = jwkKey.Set(jwk.AlgorithmKey, jwa.RS256)
+	if !assert.NoError(t, err, "Algorithm set successfully") {
+		return
+	}
 
 	buf, err := jws.Sign(payload, jwa.RS256, key)
 	if !assert.NoError(t, err, "Signature generated successfully") {
 		return
 	}
 
-	verified, err := jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkkey}}, nil)
+	verified, err := jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey}}, nil)
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
 
-	verified, err = jws.VerifyWithJWK(buf, jwkkey)
+	verified, err = jws.VerifyWithJWK(buf, jwkKey)
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
@@ -214,7 +220,10 @@ func TestEncode(t *testing.T) {
 		const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 
 		hmacKeyDecoded := buffer.Buffer{}
-		hmacKeyDecoded.Base64Decode([]byte(hmacKey))
+		err := hmacKeyDecoded.Base64Decode([]byte(hmacKey))
+		if !assert.NoError(t, err, "HMAC base64 decoded successful") {
+			return
+		}
 
 		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
 		if !assert.NoError(t, err, "base64 encode successful") {
@@ -346,6 +355,86 @@ func TestEncode(t *testing.T) {
 
 		if !assert.NoError(t, v.Verify(signingInput, signatures[0].Signature(), key), "Verify succeeds") {
 			return
+		}
+	})
+	t.Run("ES512Compact", func(t *testing.T) {
+		// ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
+		hdr := []byte{123, 34, 97, 108, 103, 34, 58, 34, 69, 83, 53, 49, 50, 34, 125}
+		const jwksrc = `{
+"kty":"EC",
+"crv":"P-521",
+"x":"AekpBQ8ST8a8VcfVOTNl353vSrDCLLJXmPk06wTjxrrjcBpXp5EOnYG_NjFZ6OvLFV1jSfS9tsz4qUxcWceqwQGk",
+"y":"ADSmRA43Z1DSNx_RvcLI87cdL07l6jQyyBXMoxVg_l2Th-x3S1WDhjDly79ajL4Kkd0AZMaZmh9ubmf63e3kyMj2",
+"d":"AY5pb7A0UFiB3RELSD64fTLOSV_jazdF7fLYyuTw8lOfRhWg6Y6rUrPAxerEzgdRhajnu0ferB0d53vM9mE15j2C"
+}`
+
+		// "Payload"
+		jwsPayload := []byte{80, 97, 121, 108, 111, 97, 100}
+
+		standardHeaders := &jws.StandardHeaders{}
+		err := standardHeaders.UnmarshalJSON(hdr)
+		if err != nil {
+			t.Fatal("Failed to parse header")
+		}
+		alg := standardHeaders.Algorithm()
+		if err != nil {
+			t.Fatal("Failed to parse header")
+		}
+
+		keys, err := jwk.ParseString(jwksrc)
+		if err != nil {
+			t.Fatal("Failed to parse JWK")
+		}
+		key, err := keys.Keys[0].Materialize()
+		if err != nil {
+			t.Fatal("Failed to create private key")
+		}
+		var jwsCompact []byte
+		jwsCompact, err = jws.Sign(jwsPayload, alg, key)
+		if err != nil {
+			t.Fatal("Failed to sign message")
+		}
+
+		// Verify with standard ecdsa library
+		_, _, jwsSignature, err := jws.SplitCompact(bytes.NewReader(jwsCompact))
+		if err != nil {
+			t.Fatal("Failed to split compact JWT")
+		}
+		decodedJwsSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(jwsSignature)))
+		decodedLen, err := base64.RawURLEncoding.Decode(decodedJwsSignature, jwsSignature)
+		if err != nil {
+			t.Fatal("Failed to sign message")
+		}
+		r, s := &big.Int{}, &big.Int{}
+		n := decodedLen / 2
+		r.SetBytes(decodedJwsSignature[:n])
+		s.SetBytes(decodedJwsSignature[n:])
+		signingHdr, err := buffer.Buffer(hdr).Base64Encode()
+		if err != nil {
+			t.Fatal("Failed to base64 encode headers")
+		}
+		signingPayload, err := buffer.Buffer(jwsPayload).Base64Encode()
+		if err != nil {
+			t.Fatal("Failed to base64 encode payload")
+		}
+		jwsSigningInput := bytes.Join(
+			[][]byte{
+				signingHdr,
+				signingPayload,
+			},
+			[]byte{'.'},
+		)
+		hashed512 := sha512.Sum512(jwsSigningInput)
+		ecdsaPrivateKey := key.(*ecdsa.PrivateKey)
+		verified := ecdsa.Verify(&ecdsaPrivateKey.PublicKey, hashed512[:], r, s)
+		if !verified {
+			t.Fatal("Failed to verify message")
+		}
+
+		// Verify with API library
+		verifiedPayload, err := jws.Verify(jwsCompact, alg, &ecdsaPrivateKey.PublicKey)
+		if err != nil || string(verifiedPayload) != string(jwsPayload) {
+			t.Fatal("Failed to verify message")
 		}
 	})
 	t.Run("RS256Compact", func(t *testing.T) {

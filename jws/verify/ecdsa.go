@@ -25,20 +25,16 @@ func init() {
 
 func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 	return ecdsaVerifyFunc(func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
-		keysiz := hash.Size()
-		if len(signature) != 2*keysiz {
-			return errors.New("signature length does not match curve bit size")
-		}
 
-		var rv big.Int
-		var sv big.Int
-		rv.SetBytes(signature[:keysiz])
-		sv.SetBytes(signature[keysiz:])
+		r, s := &big.Int{}, &big.Int{}
+		n := len(signature) / 2
+		r.SetBytes(signature[:n])
+		s.SetBytes(signature[n:])
 
 		h := hash.New()
 		h.Write(payload)
 
-		if !ecdsa.Verify(key, h.Sum(nil), &rv, &sv) {
+		if !ecdsa.Verify(key, h.Sum(nil), r, s) {
 			return errors.New(`failed to verify signature using ecdsa`)
 		}
 		return nil
