@@ -390,7 +390,6 @@ func TestGH52(t *testing.T) {
 			return
 		}
 
-		t.Logf("%x", s)
 		if _, err = jws.Verify([]byte(s), jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
 			return
 		}
