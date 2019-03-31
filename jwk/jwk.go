@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,7 +75,6 @@ func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 	for _, option := range options {
 		switch option.Name() {
 		case optkeyHTTPClient:
-			log.Printf("setting httpclient")
 			httpcl = option.Value().(HTTPClient)
 		}
 	}
