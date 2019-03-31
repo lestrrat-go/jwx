@@ -6,6 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -435,4 +438,50 @@ func TestAppendix(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestFetch(t *testing.T) {
+	const jwksrc = `{"keys":
+	          [
+	            {"kty":"EC",
+	             "crv":"P-256",
+	             "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+	             "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+	             "use":"enc",
+	             "kid":"1"},
+
+	            {"kty":"RSA",
+	             "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+	             "e":"AQAB",
+	             "alg":"RS256",
+	             "kid":"2011-04-29"}
+	          ]
+	        }`
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			w.WriteHeader(http.StatusOK)
+			io.WriteString(w, jwksrc)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	cl := srv.Client()
+
+	set, err := jwk.Fetch(srv.URL, jwk.WithHTTPClient(cl))
+	if !assert.NoError(t, err, `failed to fetch jwk`) {
+		return
+	}
+
+	key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
+	if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
+		return
+	}
+
+	if !assert.Equal(t, jwa.P256, key.Curve(), "curve is P-256") {
+		return
+	}
 }
