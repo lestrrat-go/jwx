@@ -17,6 +17,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+// GetPublicKey returns the public key based on te private key type
+func GetPublicKey(key interface{}) (interface{}, error) {
+	if key == nil {
+		return nil, errors.New(`jwk.New requires a non-nil key`)
+	}
+
+	switch v := key.(type) {
+	case *rsa.PrivateKey:
+		return v.Public(), nil
+	case *ecdsa.PrivateKey:
+		return v.Public(), nil
+	case []byte:
+		return v, nil
+	default:
+		return nil, errors.Errorf(`invalid key type %T`, key)
+	}
+}
+
 // New creates a jwk.Key from the given key.
 func New(key interface{}) (Key, error) {
 	if key == nil {

@@ -432,7 +432,12 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with API library
-		verifiedPayload, err := jws.Verify(jwsCompact, alg, &ecdsaPrivateKey.PublicKey)
+
+		publicKey, err := jwk.GetPublicKey(key)
+		if err != nil {
+			t.Fatal("Failed to get public from private key")
+		}
+		verifiedPayload, err := jws.Verify(jwsCompact, alg, publicKey)
 		if err != nil || string(verifiedPayload) != string(jwsPayload) {
 			t.Fatal("Failed to verify message")
 		}
