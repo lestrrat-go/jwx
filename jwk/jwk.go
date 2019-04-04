@@ -17,6 +17,31 @@ import (
 	"github.com/pkg/errors"
 )
 
+// GetPublicKey returns the public key based on te private key type.
+// For rsa key types *rsa.PublicKey is returned; for ecdsa key types *ecdsa.PublicKey;
+// for byte slice (raw) keys, the key itself is returned. If the corresponding
+// public key cannot be deduced, an error is returned
+func GetPublicKey(key interface{}) (interface{}, error) {
+	if key == nil {
+		return nil, errors.New(`jwk.New requires a non-nil key`)
+	}
+
+	switch v := key.(type) {
+	// Mental note: although Public() is defined in both types,
+	// you can not coalesce the clauses for rsa.PrivateKey and
+	// ecdsa.PrivateKey, as then `v` becomes interface{}
+	// b/c the compiler cannot deduce the exact type.
+	case *rsa.PrivateKey:
+		return v.Public(), nil
+	case *ecdsa.PrivateKey:
+		return v.Public(), nil
+	case []byte:
+		return v, nil
+	default:
+		return nil, errors.Errorf(`invalid key type %T`, key)
+	}
+}
+
 // New creates a jwk.Key from the given key.
 func New(key interface{}) (Key, error) {
 	if key == nil {
