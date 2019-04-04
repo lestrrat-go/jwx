@@ -310,48 +310,60 @@ func (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {
 		if err := h.Set(AlgorithmKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, AlgorithmKey)
 		}
+		delete(m, AlgorithmKey)
 	}
 	if v, ok := m[KeyIDKey]; ok {
 		if err := h.Set(KeyIDKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, KeyIDKey)
 		}
+		delete(m, KeyIDKey)
 	}
 	if v, ok := m[KeyTypeKey]; ok {
 		if err := h.Set(KeyTypeKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, KeyTypeKey)
 		}
+		delete(m, KeyTypeKey)
 	}
 	if v, ok := m[KeyUsageKey]; ok {
 		if err := h.Set(KeyUsageKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, KeyUsageKey)
 		}
+		delete(m, KeyUsageKey)
 	}
 	if v, ok := m[KeyOpsKey]; ok {
 		if err := h.Set(KeyOpsKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, KeyOpsKey)
 		}
+		delete(m, KeyOpsKey)
 	}
 	if v, ok := m[X509CertChainKey]; ok {
 		if err := h.Set(X509CertChainKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertChainKey)
 		}
+		delete(m, X509CertChainKey)
 	}
 	if v, ok := m[X509CertThumbprintKey]; ok {
 		if err := h.Set(X509CertThumbprintKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintKey)
 		}
+		delete(m, X509CertThumbprintKey)
 	}
 	if v, ok := m[X509CertThumbprintS256Key]; ok {
 		if err := h.Set(X509CertThumbprintS256Key, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintS256Key)
 		}
+		delete(m, X509CertThumbprintS256Key)
 	}
 	if v, ok := m[X509URLKey]; ok {
 		if err := h.Set(X509URLKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509URLKey)
 		}
+		delete(m, X509URLKey)
 	}
-	h.privateParams = m
+	// Fix: A nil map is different from a empty map as far as deep.equal is concerned
+	if len(m) > 0 {
+		h.privateParams = m
+	}
 
 	return nil
 }
