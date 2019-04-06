@@ -1,3 +1,4 @@
+// This file is auto-generated. DO NOT EDIT
 package jws
 
 import (
@@ -393,6 +394,7 @@ func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
 		}
 		delete(m, X509URLKey)
 	}
+	// Fix: A nil map is different from a empty map as far as deep.equal is concerned
 	if len(m) > 0 {
 		h.privateParams = m
 	}

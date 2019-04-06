@@ -142,6 +142,7 @@ func generateHeaders() error {
 
 	var buf bytes.Buffer
 
+	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
 	for _, pkg := range []string{"encoding/json", "github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"} {
@@ -277,9 +278,13 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\nif err := h.Set(%sKey, v); err != nil {", f.method)
 		fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set value for key %%s`, %sKey)", f.method)
 		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\ndelete(m, %sKey)", f.method)
 		fmt.Fprintf(&buf, "\n}") // end if v, ok := m[%sKey]
 	}
+	fmt.Fprintf(&buf, "\n// Fix: A nil map is different from a empty map as far as deep.equal is concerned")
+	fmt.Fprintf(&buf, "\nif len(m) > 0 {")
 	fmt.Fprintf(&buf, "\nh.privateParams = m")
+	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) UnmarshalJSON(buf []byte) error
 
