@@ -688,6 +688,36 @@ func TestEncode(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Protected Header lookup", func(t *testing.T) {
+		s := `{
+    "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
+    "signatures":[
+      {
+        "header": {"cty":"example"},
+        "protected":"eyJhbGciOiJFUzI1NiIsImtpZCI6ImU5YmMwOTdhLWNlNTEtNDAzNi05NTYyLWQyYWRlODgyZGIwZCJ9",
+        "signature": "JcLb1udPAV72TayGv6eawZKlIQQ3K1NzB0fU7wwYoFypGxEczdCQU-V9jp4WwY2ueJKYeE4fF6jigB0PdSKR0Q"
+      }
+    ]
+  }`
+
+		// Protected Header is {"alg":"ES256","kid":"e9bc097a-ce51-4036-9562-d2ade882db0d"}
+		// This protected header combination forces the parser/unmarshal to go trough the code path to populate and look for protected header fields.
+		// The signature is valid.
+
+		m, err := jws.Parse(strings.NewReader(s))
+		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
+			return
+		}
+		if len(m.Signatures()) != 1 {
+			t.Fatal("There should be 1 signature")
+		}
+
+		var sigs []*jws.Signature
+		sigs = m.LookupSignature("e9bc097a-ce51-4036-9562-d2ade882db0d")
+		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
+			return
+		}
+	})
 	t.Run("FlattenedJSON", func(t *testing.T) {
 		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
@@ -777,7 +807,7 @@ func TestPublicHeaders(t *testing.T) {
 	_ = pubjwk // TODO
 
 	/*
-		if !assert.NoError(t, signer.PublicHeaders().Set("jwk", pubjwk), "Set('jwk') should succeed") {
+		if !assert.NoError(t, signer.UnprotectedHeaders().Set("jwk", pubjwk), "Set('jwk') should succeed") {
 			return
 		}
 	*/

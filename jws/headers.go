@@ -331,57 +331,70 @@ func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
 		if err := h.Set(AlgorithmKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, AlgorithmKey)
 		}
+		delete(m, AlgorithmKey)
 	}
 	if v, ok := m[ContentTypeKey]; ok {
 		if err := h.Set(ContentTypeKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, ContentTypeKey)
 		}
+		delete(m, ContentTypeKey)
 	}
 	if v, ok := m[CriticalKey]; ok {
 		if err := h.Set(CriticalKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, CriticalKey)
 		}
+		delete(m, CriticalKey)
 	}
 	if v, ok := m[JWKKey]; ok {
 		if err := h.Set(JWKKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, JWKKey)
 		}
+		delete(m, JWKKey)
 	}
 	if v, ok := m[JWKSetURLKey]; ok {
 		if err := h.Set(JWKSetURLKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, JWKSetURLKey)
 		}
+		delete(m, JWKSetURLKey)
 	}
 	if v, ok := m[KeyIDKey]; ok {
 		if err := h.Set(KeyIDKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, KeyIDKey)
 		}
+		delete(m, KeyIDKey)
 	}
 	if v, ok := m[TypeKey]; ok {
 		if err := h.Set(TypeKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, TypeKey)
 		}
+		delete(m, TypeKey)
 	}
 	if v, ok := m[X509CertChainKey]; ok {
 		if err := h.Set(X509CertChainKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertChainKey)
 		}
+		delete(m, X509CertChainKey)
 	}
 	if v, ok := m[X509CertThumbprintKey]; ok {
 		if err := h.Set(X509CertThumbprintKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintKey)
 		}
+		delete(m, X509CertThumbprintKey)
 	}
 	if v, ok := m[X509CertThumbprintS256Key]; ok {
 		if err := h.Set(X509CertThumbprintS256Key, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509CertThumbprintS256Key)
 		}
+		delete(m, X509CertThumbprintS256Key)
 	}
 	if v, ok := m[X509URLKey]; ok {
 		if err := h.Set(X509URLKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, X509URLKey)
 		}
+		delete(m, X509URLKey)
 	}
-	h.privateParams = m
+	if len(m) > 0 {
+		h.privateParams = m
+	}
 	return nil
 }
