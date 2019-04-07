@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,24 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestUnmarshalJSON(t *testing.T) {
+	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
+		var t1 jwt.Token
+		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
+			return
+		}
+		aud, ok := t1.Get(jwt.AudienceKey)
+		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
+			t.Logf("%#v", t1)
+			return
+		}
+
+		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+			return
+		}
+	})
+}
 
 func TestSignature(t *testing.T) {
 	alg := jwa.RS256
@@ -394,4 +413,24 @@ func TestGH52(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestDate(t *testing.T) {
+	// NumericDate allows assignment from various different Go types,
+	// so that it's easier for the devs, and conversion to/from JSON
+	now := time.Unix(time.Now().Unix(), 0).UTC()
+
+	t.Run("time as json.Number", func(t *testing.T) {
+		var t1 jwt.Token
+		t1.Set(jwt.IssuedAtKey, json.Number(strconv.FormatInt(now.Unix(), 10)))
+
+		v, ok := t1.Get(jwt.IssuedAtKey)
+		if !assert.True(t, ok, "jwt.Get(jwt.IssuedAtKey) should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, now, v, "IssuedAt should be %s, got %s", now, v) {
+			return
+		}
+	})
 }

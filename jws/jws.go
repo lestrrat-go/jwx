@@ -464,6 +464,10 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
 	}
 
+	if wrapper.EncodedMessageUnmarshalProxy == nil {
+		return nil, errors.New(`invalid payload (probably empty)`)
+	}
+
 	// if the "signature" field exist, treat it as a flattened
 	if wrapper.EncodedSignatureUnmarshalProxy != nil {
 		if len(wrapper.Signatures) != 0 {

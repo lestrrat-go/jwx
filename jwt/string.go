@@ -1,8 +1,6 @@
 package jwt
 
 import (
-	"encoding/json"
-
 	"github.com/pkg/errors"
 )
 
@@ -24,23 +22,6 @@ func (l *stringList) Accept(v interface{}) error {
 		*l = list
 	default:
 		return errors.Errorf(`invalid type: %T`, v)
-	}
-	return nil
-}
-
-func (l *stringList) UnmarshalJSON(data []byte) error {
-	if data[0] == '[' {
-		var s []string
-		if err := json.Unmarshal(data, &s); err != nil {
-			return errors.Wrap(err, `failed to unmarshal string list`)
-		}
-		*l = s
-	} else {
-		var s string
-		if err := json.Unmarshal(data, &s); err != nil {
-			return errors.Wrap(err, `failed to unmarshal string`)
-		}
-		*l = []string{s}
 	}
 	return nil
 }

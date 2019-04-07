@@ -40,18 +40,18 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if len(t.audience) == 0 {
 			return nil, false
 		}
-		return t.audience, true
+		return []string(t.audience), true
 	case ExpirationKey:
 		if t.expiration == nil {
 			return nil, false
 		} else {
-			return t.expiration, true
+			return t.expiration.Get(), true
 		}
 	case IssuedAtKey:
 		if t.issuedAt == nil {
 			return nil, false
 		} else {
-			return t.issuedAt, true
+			return t.issuedAt.Get(), true
 		}
 	case IssuerKey:
 		if t.issuer == nil {
@@ -69,7 +69,7 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if t.notBefore == nil {
 			return nil, false
 		} else {
-			return t.notBefore, true
+			return t.notBefore.Get(), true
 		}
 	case SubjectKey:
 		if t.subject == nil {
@@ -194,7 +194,7 @@ func (t Token) MarshalJSON() ([]byte, error) {
 
 func (t Token) Audience() string {
 	if v, ok := t.Get(AudienceKey); ok {
-		return (v.(stringList))[0]
+		return (v.([]string))[0]
 	}
 	return ""
 }
