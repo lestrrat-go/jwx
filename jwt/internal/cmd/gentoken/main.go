@@ -186,7 +186,11 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n} else {")
 			if field.noDeref {
-				fmt.Fprintf(&buf, "\nreturn t.%s, true", field.Name)
+				if field.Type == "*NumericDate" {
+					fmt.Fprintf(&buf, "\nreturn t.%s.Get(), true", field.Name)
+				} else {
+					fmt.Fprintf(&buf, "\nreturn t.%s, true", field.Name)
+				}
 			} else {
 				fmt.Fprintf(&buf, "\nreturn *(t.%s), true", field.Name)
 			}

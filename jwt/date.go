@@ -50,18 +50,3 @@ func (n *NumericDate) Accept(v interface{}) error {
 func (n NumericDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Unix())
 }
-
-// UnmarshalJSON parses the JSON representation and initializes this NumericDate
-func (n *NumericDate) UnmarshalJSON(data []byte) error {
-	var v json.Number
-	if err := json.Unmarshal(data, &v); err != nil {
-		return errors.Wrap(err, `failed to decode jwt.NumericDate`)
-	}
-
-	intval, err := v.Int64()
-	if err != nil {
-		return errors.Wrap(err, `failed to coerce value into int64`)
-	}
-	*n = NumericDate{}
-	return n.Accept(intval)
-}
