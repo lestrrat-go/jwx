@@ -8,7 +8,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
-	"github.com/lestrrat-go/jwx/internal/emap"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -330,9 +329,36 @@ func (h *EssentialHeader) Copy(h2 *EssentialHeader) {
 	h.X509CertThumbprintS256 = h2.X509CertThumbprintS256
 }
 
+func mergeMarshal(e interface{}, p map[string]interface{}) ([]byte, error) {
+	buf, err := json.Marshal(e)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal e`)
+	}
+
+	if len(p) == 0 {
+		return buf, nil
+	}
+
+	ext, err := json.Marshal(p)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal p`)
+	}
+
+	if len(buf) < 2 {
+		return nil, errors.New(`invalid json`)
+	}
+
+	if buf[0] != '{' || buf[len(buf)-1] != '}' {
+		return nil, errors.New("invalid JSON")
+	}
+	buf[len(buf)-1] = ','
+	buf = append(buf, ext[1:]...)
+	return buf, nil
+}
+
 // MarshalJSON generates the JSON representation of this header
 func (h Header) MarshalJSON() ([]byte, error) {
-	return emap.MergeMarshal(h.EssentialHeader, h.PrivateParams)
+	return mergeMarshal(h.EssentialHeader, h.PrivateParams)
 }
 
 // UnmarshalJSON parses the JSON buffer into a Header
