@@ -10,12 +10,7 @@ type Option = option.Interface
 const (
 	optkeyPayloadSigner    = `payload-signer`
 	optkeyHeaders          = `headers`
-	optkeyPrettyJSONFormat = `format-json-pretty`
 )
-
-func WithPretty(b bool) Option {
-	return option.New(optkeyPrettyJSONFormat, b)
-}
 
 func WithSigner(signer sign.Signer, key interface{}, public, protected Headers) Option {
 	return option.New(optkeyPayloadSigner, &payloadSigner{
