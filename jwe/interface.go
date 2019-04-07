@@ -67,7 +67,6 @@ type Header struct {
 // in JSON format
 type EncodedHeader struct {
 	*Header
-	encoded buffer.Buffer // sometimes our encoding and the source encoding don't match
 }
 
 // ByteSource is an interface for things that return a byte sequence.
@@ -195,7 +194,6 @@ type GenericContentCrypt struct {
 	tagsize int
 	cipher  ContentCipher
 	cekgen  KeyGenerator
-	ivgen   KeyGenerator
 }
 
 // StaticKeyGenerate uses a static byte buffer to provide keys.
