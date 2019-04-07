@@ -45,23 +45,6 @@ func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func (k *SymmetricKey) UnmarshalJSON(data []byte) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.SymmetricKey.UnmarshalJSON").BindError(&err)
-		defer g.End()
-	}
-
-	m := map[string]interface{}{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal public key`)
-	}
-
-	if err := k.ExtractMap(m); err != nil {
-		return errors.Wrap(err, `failed to extract data from map`)
-	}
-	return nil
-}
-
 func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("jwk.SymmetricKey.ExtractMap").BindError(&err)
