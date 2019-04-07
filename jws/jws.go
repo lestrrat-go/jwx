@@ -34,7 +34,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jws/verify"
-	pdebug "github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -485,11 +485,12 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 		plainSig.headers = sig.Headers
 
 		if l := len(sig.Protected); l > 0 {
+			plainSig.protected = new(StandardHeaders)
 			hdrbuf, err := base64.RawURLEncoding.DecodeString(sig.Protected)
 			if err != nil {
 				return nil, errors.Wrapf(err, `failed to base64 decode protected header for signature #%d`, i+1)
 			}
-			if err := json.Unmarshal(hdrbuf, &plainSig.headers); err != nil {
+			if err := json.Unmarshal(hdrbuf, &plainSig.protected); err != nil {
 				return nil, errors.Wrapf(err, `failed to unmarshal protected header for signature #%d`, i+1)
 			}
 		}
