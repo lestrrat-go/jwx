@@ -173,7 +173,14 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", field.Name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n}") // end if len(t.%s) == 0
-			fmt.Fprintf(&buf, "\nreturn t.%s, true", field.Name)
+			fmt.Fprintf(&buf, "\nreturn ")
+			// some types such as `aud` need explicit conversion
+			var pre, post string
+			if field.Type == "stringList" {
+				pre = "[]string("
+				post = ")"
+			}
+			fmt.Fprintf(&buf, "%st.%s%s, true", pre, field.Name, post)
 		case field.IsPointer():
 			fmt.Fprintf(&buf, "\nif t.%s == nil {", field.Name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
@@ -245,7 +252,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nif err := t.Set(k, v); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set key '%%s'`, k)")
 	fmt.Fprintf(&buf, "\n}") // end if err := t.Set(k, v)
-	fmt.Fprintf(&buf, "\n}") // end for k, v := range m 
+	fmt.Fprintf(&buf, "\n}") // end for k, v := range m
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end UnmarshalJSON
 
@@ -284,7 +291,11 @@ func generateToken() error {
 		case field.IsList():
 			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.ListElem())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
-			fmt.Fprintf(&buf, "\nreturn (v.(%s))[0]", field.Type)
+			if field.Type == "stringList" {
+				fmt.Fprintf(&buf, "\nreturn (v.([]string))[0]")
+			} else {
+				fmt.Fprintf(&buf, "\nreturn (v.(%s))[0]", field.Type)
+			}
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
 			fmt.Fprintf(&buf, "\nreturn %s", zeroval(field.ListElem()))
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s

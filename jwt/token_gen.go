@@ -40,7 +40,7 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if len(t.audience) == 0 {
 			return nil, false
 		}
-		return t.audience, true
+		return []string(t.audience), true
 	case ExpirationKey:
 		if t.expiration == nil {
 			return nil, false
@@ -194,7 +194,7 @@ func (t Token) MarshalJSON() ([]byte, error) {
 
 func (t Token) Audience() string {
 	if v, ok := t.Get(AudienceKey); ok {
-		return (v.(stringList))[0]
+		return (v.([]string))[0]
 	}
 	return ""
 }

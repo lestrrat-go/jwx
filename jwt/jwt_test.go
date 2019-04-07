@@ -17,6 +17,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestUnmarshalJSON(t *testing.T) {
+	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
+		var t1 jwt.Token
+		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
+			return
+		}
+		aud, ok := t1.Get(jwt.AudienceKey)
+		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
+			t.Logf("%#v", t1)
+			return
+		}
+
+		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+			return
+		}
+	})
+}
+
 func TestSignature(t *testing.T) {
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
