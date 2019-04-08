@@ -21,9 +21,15 @@ AwEHoUQDQgAE2mFHYH1k9QGmpzTirHWgGtRRKmFh8deqKNZVUuxEH4sIQrj2zOkP
 	t.Run("RawKeyFromPrivateKey", func(t *testing.T) {
 
 		block, _ := pem.Decode([]byte(ECPrivateKey))
-		privateKey, _ := x509.ParseECPrivateKey(block.Bytes)
+		privateKey, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			t.Fatal("Failed to parse EC Private Key")
+		}
 		rawKey := NewRawKeyFromPrivateKey(privateKey)
-		rawKeyBytes, _ := json.Marshal(rawKey)
+		rawKeyBytes, err := json.Marshal(rawKey)
+		if err != nil {
+			t.Fatal("Failed to json marshal EC Raw Key")
+		}
 		if bytes.Compare(expectedECRawKeyBytes, rawKeyBytes) != 0 {
 			t.Fatal("Keys dop not match")
 		}
