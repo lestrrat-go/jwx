@@ -4,7 +4,6 @@ package jwk
 
 import (
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -249,15 +248,6 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h StandardHeaders) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{}
-	if err := h.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate map for serialization`)
-	}
-
-	return json.Marshal(m)
-}
-
 // PopulateMap populates a map with appropriate values that represent
 // the headers as a JSON object. This exists primarily because JWKs are
 // represented as flat objects instead of differentiating the different
@@ -366,15 +356,6 @@ func (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {
 	}
 
 	return nil
-}
-
-func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal headers`)
-	}
-
-	return h.ExtractMap(m)
 }
 
 func (h StandardHeaders) Walk(f func(string, interface{}) error) error {

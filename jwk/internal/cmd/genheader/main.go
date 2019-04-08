@@ -143,7 +143,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\n\npackage jwk")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"crypto/x509", "encoding/json", "fmt"} {
+	for _, pkg := range []string{"crypto/x509", "fmt"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n\n")
@@ -291,14 +291,6 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
 
-	fmt.Fprintf(&buf, "\n\nfunc (h StandardHeaders) MarshalJSON() ([]byte, error) {")
-	fmt.Fprintf(&buf, "\nm := map[string]interface{}{}")
-	fmt.Fprintf(&buf, "\nif err := h.PopulateMap(m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to populate map for serialization`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) MarshalJSON()
-
 	fmt.Fprintf(&buf, "\n\n// PopulateMap populates a map with appropriate values that represent")
 	fmt.Fprintf(&buf, "\n// the headers as a JSON object. This exists primarily because JWKs are")
 	fmt.Fprintf(&buf, "\n// represented as flat objects instead of differentiating the different")
@@ -338,14 +330,6 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) ExtractMap(m map[string]interface{}) error
-
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) UnmarshalJSON(buf []byte) error {")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
-	fmt.Fprintf(&buf, "\n}") // end if err := json.Unmarshal(buf, &m)
-	fmt.Fprintf(&buf, "\n\nreturn h.ExtractMap(m)")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) UnmarshalJSON(buf []byte) error
 
 	fmt.Fprintf(&buf, "\n\nfunc (h StandardHeaders) Walk(f func(string, interface{}) error) error {")
 	fmt.Fprintf(&buf, "\nfor _, key := range []string{")
