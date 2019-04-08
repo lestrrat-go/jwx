@@ -4,11 +4,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
-	"math/big"
-	"strconv"
-
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/pkg/errors"
+	"math/big"
 )
 
 type curve struct {
@@ -20,17 +18,6 @@ type rawkey struct {
 	D     buffer.Buffer `json:"d"`
 	X     buffer.Buffer `json:"x"`
 	Y     buffer.Buffer `json:"y"`
-}
-
-func (c curve) MarshalJSON() ([]byte, error) {
-	p := c.Params()
-	switch p.BitSize {
-	case 256, 384, 521:
-		v := "P-" + strconv.Itoa(p.BitSize)
-		return json.Marshal(v)
-	default:
-		return nil, errors.New("Unsupported curve")
-	}
 }
 
 func (c *curve) UnmarshalJSON(data []byte) error {
