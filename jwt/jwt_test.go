@@ -47,7 +47,7 @@ func TestSignature(t *testing.T) {
 	signed, err := t1.Sign(alg, key)
 
 	t.Run("jwt.Parse", func(t *testing.T) {
-		t.Run("parse (no signature verification)", func(t *testing.T) {
+		t.Run("Parse (no signature verification)", func(t *testing.T) {
 			t2, err := jwt.Parse(bytes.NewReader(signed))
 			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 				return
@@ -56,7 +56,25 @@ func TestSignature(t *testing.T) {
 				return
 			}
 		})
-		t.Run("parse (correct signature key)", func(t *testing.T) {
+		t.Run("ParseString (no signature verification)", func(t *testing.T) {
+			t2, err := jwt.ParseString(string(signed))
+			if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
+			t2, err := jwt.ParseBytes(signed)
+			if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("Parse (correct signature key)", func(t *testing.T) {
 			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
 			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 				return
