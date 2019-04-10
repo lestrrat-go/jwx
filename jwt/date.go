@@ -14,6 +14,31 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
+func numericToTime(v interface{}, t *time.Time) bool {
+	var n int64
+	switch x := v.(type) {
+	case int64:
+		n = x
+	case int32:
+		n = int64(x)
+	case int16:
+		n = int64(x)
+	case int8:
+		n = int64(x)
+	case int:
+		n = int64(x)
+	case float32:
+		n = int64(x)
+	case float64:
+		n = int64(x)
+	default:
+		return false
+	}
+
+	*t = time.Unix(n, 0)
+	return true
+}
+
 func (n *NumericDate) Accept(v interface{}) error {
 	var t time.Time
 	switch x := v.(type) {
@@ -23,24 +48,12 @@ func (n *NumericDate) Accept(v interface{}) error {
 			return errors.Wrap(err, `failed to convert json value to int64`)
 		}
 		t = time.Unix(intval, 0)
-	case int64:
-		t = time.Unix(x, 0)
-	case int32:
-		t = time.Unix(int64(x), 0)
-	case int16:
-		t = time.Unix(int64(x), 0)
-	case int8:
-		t = time.Unix(int64(x), 0)
-	case int:
-		t = time.Unix(int64(x), 0)
-	case float32:
-		t = time.Unix(int64(x), 0)
-	case float64:
-		t = time.Unix(int64(x), 0)
 	case time.Time:
 		t = x
 	default:
-		return errors.Errorf(`invalid type %T`, v)
+		if !numericToTime(v, &t) {
+			return errors.Errorf(`invalid type %T`, v)
+		}
 	}
 	n.Time = t.UTC()
 	return nil
