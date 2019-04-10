@@ -90,8 +90,6 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 	default:
 		return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 	}
-
-	return Parse(src)
 }
 
 // FetchHTTP fetches the remote JWK and parses its contents
