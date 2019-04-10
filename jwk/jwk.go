@@ -208,7 +208,7 @@ func (s *Set) ExtractMap(m map[string]interface{}) error {
 }
 
 func constructKey(m map[string]interface{}) (Key, error) {
-	kty, ok := m["kty"].(string)
+	kty, ok := m[KeyTypeKey].(string)
 	if !ok {
 		return nil, errors.Errorf(`unsupported kty type %T`, m[KeyTypeKey])
 	}

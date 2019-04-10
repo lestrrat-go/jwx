@@ -7,8 +7,10 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -17,6 +19,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNew(t *testing.T) {
+	k, err := jwk.New(nil)
+	if !assert.Nil(t, k, "key should be nil") {
+		return
+	}
+	if !assert.Error(t, err, "nil key should cause an error") {
+		return
+	}
+}
 
 func TestParse(t *testing.T) {
 	verify := func(t *testing.T, src string, expected interface{}) {
@@ -48,6 +60,18 @@ func TestParse(t *testing.T) {
 				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
 					return
 				}
+
+				switch key := key.(type) {
+				case *jwk.RSAPrivateKey, *jwk.ECDSAPrivateKey:
+					realKey, err := key.(jwk.Key).Materialize()
+					if !assert.NoError(t, err, "failed to get underlying private key") {
+						return
+					}
+
+					if _, err := jwk.GetPublicKey(realKey); !assert.NoError(t, err, `failed to get public key from underlying private key`) {
+						return
+					}
+				}
 			}
 		})
 	}
@@ -75,6 +99,16 @@ func TestParse(t *testing.T) {
       "kid":"2011-04-29"
      }`
 		verify(t, src, &jwk.RSAPrivateKey{})
+	})
+	t.Run("ECDSA Private Key", func(t *testing.T) {
+		const src = `{
+		  "kty" : "EC",
+		  "crv" : "P-256",
+		  "x"   : "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+		}`
+		verify(t, src, &jwk.ECDSAPrivateKey{})
 	})
 }
 
@@ -487,5 +521,31 @@ func TestFetch(t *testing.T) {
 			return
 		}
 		verify(t, set)
+	})
+	t.Run("Local File", func(t *testing.T) {
+		f, err := ioutil.TempFile("", "jwk-fetch-test")
+		if !assert.NoError(t, err, `failed to generate temporary file`) {
+			return
+		}
+		defer f.Close()
+		defer os.Remove(f.Name())
+
+		io.WriteString(f, jwksrc)
+		f.Sync()
+
+		set, err := jwk.Fetch("file://" + f.Name())
+		if !assert.NoError(t, err, `failed to fetch jwk`) {
+			return
+		}
+		verify(t, set)
+	})
+	t.Run("Invalid Scheme", func(t *testing.T) {
+		set, err := jwk.Fetch("gopher://foo/bar")
+		if !assert.Nil(t, set, `set should be nil`) {
+			return
+		}
+		if !assert.Error(t, err, `invalid sche,e should be an error`) {
+			return
+		}
 	})
 }
