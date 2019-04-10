@@ -110,6 +110,18 @@ func TestParse(t *testing.T) {
 		}`
 		verify(t, src, &jwk.ECDSAPrivateKey{})
 	})
+	t.Run("Invalid ECDSA Private Key", func(t *testing.T) {
+		const src = `{
+		  "kty" : "EC",
+		  "crv" : "P-256",
+		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+		}`
+		_, err := jwk.ParseString(src)
+		if !assert.Error(t, err, `jwk.ParseString should fail`) {
+			return
+		}
+	})
 }
 
 func TestRoundtrip(t *testing.T) {
