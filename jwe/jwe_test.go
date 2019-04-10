@@ -1,4 +1,4 @@
-package jwe
+package jwe_test
 
 import (
 	"crypto/ecdsa"
@@ -6,10 +6,12 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"net/url"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/rsautil"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,127 +55,13 @@ func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 func TestParse_Compact(t *testing.T) {
 	s := `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
 
-	msg, err := Parse([]byte(s))
+	msg, err := jwe.Parse([]byte(s))
 	if !assert.NoError(t, err, "Parsing JWE is successful") {
 		return
 	}
 
 	if !assert.Len(t, msg.Recipients, 1, "There is exactly 1 recipient") {
 		return
-	}
-}
-
-// This test uses Appendix 3 to verify some low level tools for
-// KeyWrap and CBC HMAC encryption.
-// This test uses a static cek so that we can validate the results
-// against the contents in the above Appendix
-func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
-	var plaintext = []byte{
-		76, 105, 118, 101, 32, 108, 111, 110, 103, 32, 97, 110, 100, 32,
-		112, 114, 111, 115, 112, 101, 114, 46,
-	}
-	var cek = []byte{
-		4, 211, 31, 197, 84, 157, 252, 254, 11, 100, 157, 250, 63, 170, 106,
-		206, 107, 124, 212, 45, 111, 107, 9, 219, 200, 177, 0, 240, 143, 156,
-		44, 207,
-	}
-	var iv = []byte{
-		3, 22, 60, 12, 43, 67, 104, 105, 108, 108, 105, 99, 111, 116, 104,
-		101,
-	}
-	var sharedkey = []byte{
-		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
-	}
-	var encsharedkey = []byte{
-		232, 160, 123, 211, 183, 76, 245, 132, 200, 128, 123, 75, 190, 216,
-		22, 67, 201, 138, 193, 186, 9, 91, 122, 31, 246, 90, 28, 139, 57, 3,
-		76, 124, 193, 11, 98, 37, 173, 61, 104, 57,
-	}
-	var aad = []byte{
-		101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 66, 77, 84, 73, 52,
-		83, 49, 99, 105, 76, 67, 74, 108, 98, 109, 77, 105, 79, 105, 74, 66,
-		77, 84, 73, 52, 81, 48, 74, 68, 76, 85, 104, 84, 77, 106, 85, 50, 73,
-		110, 48,
-	}
-	var ciphertext = []byte{
-		40, 57, 83, 181, 119, 33, 133, 148, 198, 185, 243, 24, 152, 230, 6,
-		75, 129, 223, 127, 19, 210, 82, 183, 230, 168, 33, 215, 104, 143,
-		112, 56, 102,
-	}
-	var authtag = []byte{
-		83, 73, 191, 98, 104, 205, 211, 128, 201, 189, 199, 133, 32, 38,
-		194, 85,
-	}
-
-	const compactExpected = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ.AxY8DCtDaGlsbGljb3RoZQ.KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY.U0m_YmjN04DJvceFICbCVQ`
-
-	k, err := NewKeyWrapEncrypt(jwa.A128KW, sharedkey)
-	if !assert.NoError(t, err, "Create key wrap") {
-		return
-	}
-
-	enckey, err := k.KeyEncrypt(cek)
-	if !assert.NoError(t, err, "Failed to encrypt key") {
-		return
-	}
-	if !assert.Equal(t, encsharedkey, enckey.Bytes(), "encrypted keys match") {
-		return
-	}
-
-	cipher, err := NewAesContentCipher(jwa.A128CBC_HS256)
-	if !assert.NoError(t, err, "NewAesContentCipher is successful") {
-		return
-	}
-	cipher.NonceGenerator = StaticKeyGenerate(iv)
-
-	iv, encrypted, tag, err := cipher.encrypt(cek, plaintext, aad)
-	if !assert.NoError(t, err, "encrypt() successful") {
-		return
-	}
-
-	if !assert.Equal(t, ciphertext, encrypted, "Generated cipher text does not match") {
-		return
-	}
-
-	if !assert.Equal(t, tag, authtag, "Generated tag text does not match") {
-		return
-	}
-
-	data, err := cipher.decrypt(cek, iv, encrypted, tag, aad)
-	if !assert.NoError(t, err, "decrypt successful") {
-		return
-	}
-
-	if !assert.Equal(t, plaintext, data, "decrypt works") {
-		return
-	}
-
-	r := NewRecipient()
-	r.Header.Set("alg", jwa.A128KW)
-	r.EncryptedKey = enckey.Bytes()
-
-	protected := NewEncodedHeader()
-	protected.Set("enc", jwa.A128CBC_HS256)
-
-	msg := NewMessage()
-	msg.ProtectedHeader = protected
-	msg.AuthenticatedData = aad
-	msg.CipherText = ciphertext
-	msg.InitializationVector = iv
-	msg.Tag = tag
-	msg.Recipients = []Recipient{*r}
-
-	serialized, err := CompactSerialize{}.Serialize(msg)
-	if !assert.NoError(t, err, "compact serialization is successful") {
-		return
-	}
-
-	if !assert.Equal(t, compactExpected, string(serialized), "compact serialization matches") {
-		serialized, err = JSONSerialize{Pretty: true}.Serialize(msg)
-		if !assert.NoError(t, err, "JSON serialization is successful") {
-			return
-		}
-		t.Logf("%s", serialized)
 	}
 }
 
@@ -198,7 +86,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	msg, err := ParseString(serialized)
+	msg, err := jwe.ParseString(serialized)
 	if !assert.NoError(t, err, "parse successful") {
 		return
 	}
@@ -213,23 +101,23 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, err := CompactSerialize{}.Serialize(msg)
+	jsonbuf, err := jwe.CompactSerialize{}.Serialize(msg)
 	if !assert.NoError(t, err, "Compact serialize succeeded") {
 		return
 	}
 
 	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
-		jsonbuf, _ = JSONSerialize{Pretty: true}.Serialize(msg)
+		jsonbuf, _ = jwe.JSONSerialize{Pretty: true}.Serialize(msg)
 		t.Logf("%s", jsonbuf)
 		return
 	}
 
-	encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
 	if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
 		return
 	}
 
-	plaintext, err = Decrypt(encrypted, jwa.RSA_OAEP, privkey)
+	plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, privkey)
 	if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
 		return
 	}
@@ -255,12 +143,12 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
 		if !assert.NoError(t, err, "Encrypt should succeed") {
 			return
 		}
 
-		decrypted, err := Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
+		decrypted, err := jwe.Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
 		if !assert.NoError(t, err, "Decrypt should succeed") {
 			return
 		}
@@ -283,12 +171,12 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
 		}
 
-		decrypted, err := Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
+		decrypted, err := jwe.Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
 		if !assert.NoError(t, err, "Decrypt successful") {
 			return
 		}
@@ -316,12 +204,12 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
 		}
 
-		decrypted, err := Decrypt(encrypted, jwa.A128KW, sharedkey)
+		decrypted, err := jwe.Decrypt(encrypted, jwa.A128KW, sharedkey)
 		if !assert.NoError(t, err, "Decrypt successful") {
 			return
 		}
@@ -338,18 +226,18 @@ func TestEncode_ECDHES(t *testing.T) {
 	if !assert.NoError(t, err, "ecdsa key generated") {
 		return
 	}
-	encrypted, err := Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 	if !assert.NoError(t, err, "Encrypt succeeds") {
 		return
 	}
 
 	t.Logf("encrypted = %s", encrypted)
 
-	msg, _ := Parse(encrypted)
+	msg, _ := jwe.Parse(encrypted)
 	jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
 	t.Logf("%s", jsonbuf)
 
-	decrypted, err := Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
+	decrypted, err := jwe.Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
 	if !assert.NoError(t, err, "Decrypt succeeds") {
 		return
 	}
@@ -366,18 +254,18 @@ func TestEncode_ECDH_ES_A256KW_A192KW_A128KW(t *testing.T) {
 	algorithms := []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES_A256KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A128KW}
 
 	for i := 0; i < len(algorithms); i++ {
-		encrypted, err := Encrypt(plaintext, algorithms[i], &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, algorithms[i], &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
 		if !assert.NoError(t, err, "Encrypt succeeds") {
 			return
 		}
 
 		t.Logf("encrypted = %s", encrypted)
 
-		msg, _ := Parse(encrypted)
+		msg, _ := jwe.Parse(encrypted)
 		jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
 		t.Logf("%s", jsonbuf)
 
-		decrypted, err := Decrypt(encrypted, algorithms[i], privkey)
+		decrypted, err := jwe.Decrypt(encrypted, algorithms[i], privkey)
 		if !assert.NoError(t, err, "Decrypt succeeds") {
 			return
 		}
@@ -391,8 +279,49 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 	for i := 0; i < keysize; i++ {
 		key[i] = byte(i)
 	}
-	_, err := Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
+	_, err := jwe.Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
 	if !assert.Error(t, err, "should fail to encrypt payload") {
 		return
+	}
+}
+
+func TestHeaders(t *testing.T) {
+	h := jwe.NewHeader()
+
+	data := map[string]struct {
+		Value    interface{}
+		Expected interface{}
+	}{
+		"kid":     {Value: "kid blah"},
+		"enc":     {Value: jwa.A128GCM},
+		"cty":     {Value: "application/json"},
+		"typ":     {Value: "typ blah"},
+		"x5t":     {Value: "x5t blah"},
+		"x5t#256": {Value: "x5t#256 blah"},
+		"crit":    {Value: []string{"crit blah"}},
+		"jku": {
+			Value:    "http://github.com/lestrrat-go/jwx",
+			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
+		},
+		"x5u": {
+			Value:    "http://github.com/lestrrat-go/jwx",
+			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
+		},
+	}
+
+	for name, testcase := range data {
+		h.Set(name, testcase.Value)
+		got, err := h.Get(name)
+		if !assert.NoError(t, err, "value should exist") {
+			return
+		}
+
+		expected := testcase.Expected
+		if expected == nil {
+			expected = testcase.Value
+		}
+		if !assert.Equal(t, expected, got, "value should match") {
+			return
+		}
 	}
 }
