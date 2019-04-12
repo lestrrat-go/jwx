@@ -5,7 +5,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
-	"reflect"
 )
 
 const (
@@ -141,7 +140,7 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case JWKKey:
-		v, ok := reflect.ValueOf(value).Interface().(*jwk.Set)
+		v, ok := value.(*jwk.Set)
 		if ok {
 			h.JWSjwk = v
 			return nil
