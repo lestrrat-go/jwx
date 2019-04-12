@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
+var HMACSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]func() hash.Hash{
@@ -20,13 +20,13 @@ func init() {
 	}
 
 	for alg, h := range algs {
-		hmacSignFuncs[alg] = makeHMACSignFunc(h)
+		HMACSignFuncs[alg] = makeHMACSignFunc(h)
 
 	}
 }
 
 func newHMAC(alg jwa.SignatureAlgorithm) (*HMACSigner, error) {
-	signer, ok := hmacSignFuncs[alg]
+	signer, ok := HMACSignFuncs[alg]
 	if !ok {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create HMAC signer: %s`, alg)
 	}
