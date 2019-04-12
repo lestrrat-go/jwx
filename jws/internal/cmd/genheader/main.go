@@ -32,6 +32,7 @@ type headerField struct {
 	comment   string
 	hasAccept bool
 	noDeref   bool
+	jsonTag   string
 }
 
 func (f headerField) IsPointer() bool {
@@ -44,7 +45,8 @@ func (f headerField) PointerElem() string {
 
 var zerovals = map[string]string{
 	"string":                 `""`,
-	"jwa.SignatureAlgorithm": "jwa.NoSignature",
+	"jwa.SignatureAlgorithm": `""`,
+	"[]string":               "0",
 }
 
 func zeroval(s string) string {
@@ -57,82 +59,93 @@ func zeroval(s string) string {
 func generateHeaders() error {
 	fields := []headerField{
 		{
-			name:      `algorithm`,
+			name:      `JWSalgorithm`,
 			method:    `Algorithm`,
-			typ:       `*jwa.SignatureAlgorithm`,
+			typ:       `jwa.SignatureAlgorithm`,
 			key:       `alg`,
 			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
 			hasAccept: true,
+			jsonTag:   "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
-			name:    `jwkSetURL`,
-			method:  `JWKSetURL`,
-			typ:     `*string`,
-			key:     `jku`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.2`,
-		},
-		{
-			name:    `jwk`,
-			method:  `JWK`,
-			typ:     `jwk.Key`,
-			key:     `jwk`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-		},
-		{
-			name:    `keyID`,
-			method:  `KeyID`,
-			typ:     `*string`,
-			key:     `kid`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
-		},
-		{
-			name:    `x509URL`,
-			method:  `X509URL`,
-			typ:     `*string`,
-			key:     `x5u`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
-		},
-		{
-			name:    `x509CertChain`,
-			method:  `X509CertChain`,
-			typ:     `[]string`,
-			key:     `x5c`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
-		},
-		{
-			name:    `x509CertThumbprint`,
-			method:  `X509CertThumbprint`,
-			typ:     `*string`,
-			key:     `x5t`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
-		},
-		{
-			name:    `x509CertThumbprintS256`,
-			method:  `X509CertThumbprintS256`,
-			typ:     `*string`,
-			key:     `x5t#S256`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
-		},
-		{
-			name:    `typ`,
-			method:  `Type`,
-			typ:     `*string`,
-			key:     `typ`,
-			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
-		},
-		{
-			name:    `contentType`,
+			name:    `JWScontentType`,
 			method:  `ContentType`,
-			typ:     `*string`,
+			typ:     `string`,
 			key:     `cty`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.10`,
+			jsonTag: "`" + `json:"cty,omitempty"` + "`",
 		},
 		{
-			name:    `critical`,
+			name:    `JWScritical`,
 			method:  `Critical`,
 			typ:     `[]string`,
 			key:     `crit`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
+			jsonTag: "`" + `json:"crit,omitempty"` + "`",
+		},
+		{
+			name:    `JWSjwk`,
+			method:  `JWK`,
+			typ:     `*jwk.Set`,
+			key:     `jwk`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
+			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
+		},
+		{
+			name:    `JWSjwkSetURL`,
+			method:  `JWKSetURL`,
+			typ:     `string`,
+			key:     `jku`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.2`,
+			jsonTag: "`" + `json:"jku,omitempty"` + "`",
+		},
+		{
+			name:    `JWSkeyID`,
+			method:  `KeyID`,
+			typ:     `string`,
+			key:     `kid`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
+			jsonTag: "`" + `json:"kid,omitempty"` + "`",
+		},
+		{
+			name:    `JWStyp`,
+			method:  `Type`,
+			typ:     `string`,
+			key:     `typ`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
+			jsonTag: "`" + `json:"typ,omitempty"` + "`",
+		},
+		{
+			name:    `JWSx509CertChain`,
+			method:  `X509CertChain`,
+			typ:     `[]string`,
+			key:     `x5c`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
+			jsonTag: "`" + `json:"x5c,omitempty"` + "`",
+		},
+		{
+			name:    `JWSx509CertThumbprint`,
+			method:  `X509CertThumbprint`,
+			typ:     `string`,
+			key:     `x5t`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
+			jsonTag: "`" + `json:"x5t,omitempty"` + "`",
+		},
+		{
+			name:    `JWSx509CertThumbprintS256`,
+			method:  `X509CertThumbprintS256`,
+			typ:     `string`,
+			key:     `x5t#S256`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
+			jsonTag: "`" + `json:"x5t#S256,omitempty"` + "`",
+		},
+		{
+			name:    `JWSx509URL`,
+			method:  `X509URL`,
+			typ:     `string`,
+			key:     `x5u`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
+			jsonTag: "`" + `json:"x5u,omitempty"` + "`",
 		},
 	}
 
@@ -145,7 +158,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"encoding/json", "github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"reflect", "github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -159,33 +172,22 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
-	for _, f := range fields {
+	fmt.Fprintf(&buf, "\nAlgorithm() jwa.SignatureAlgorithm")
+
+	/*	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.PointerElem())
-	}
+	}*/
 	fmt.Fprintf(&buf, "\n}") // end type Headers interface
 	fmt.Fprintf(&buf, "\n\ntype StandardHeaders struct {")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, f.typ, f.comment)
+		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, f.typ, f.jsonTag, f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
-	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) %s() %s {", f.method, f.PointerElem())
-		if !f.IsPointer() {
-			fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
-		} else {
-			fmt.Fprintf(&buf, "\nif v := h.%s; v != %s {", f.name, zeroval(f.typ))
-			if f.IsPointer() && !f.noDeref {
-				fmt.Fprintf(&buf, "\nreturn *v")
-			} else {
-				fmt.Fprintf(&buf, "\nreturn v")
-			}
-			fmt.Fprintf(&buf, "\n}") // if h.%s != %s
-			fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.PointerElem()))
-		}
-		fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) %s() %s
-	}
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Algorithm() jwa.SignatureAlgorithm {")
+	fmt.Fprintf(&buf, "\nreturn h.JWSalgorithm")
+	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) %s() %s
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Get(name string) (interface{}, bool) {")
 	fmt.Fprintf(&buf, "\nswitch name {")
@@ -193,14 +195,15 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
 		fmt.Fprintf(&buf, "\nv := h.%s", f.name)
 
-		fmt.Fprintf(&buf, "\nif v == %s {", zeroval(f.typ))
+		if f.typ == "[]string" {
+			fmt.Fprintf(&buf, "\nif len(v) == %s {", zeroval(f.typ))
+		} else {
+			fmt.Fprintf(&buf, "\nif v == %s {", zeroval(f.typ))
+		}
 		fmt.Fprintf(&buf, "\nreturn nil, false")
 		fmt.Fprintf(&buf, "\n}") // end if h.%s == nil
-		if f.IsPointer() && !f.noDeref {
-			fmt.Fprintf(&buf, "\nreturn *v, true")
-		} else {
-			fmt.Fprintf(&buf, "\nreturn v, true")
-		}
+		fmt.Fprintf(&buf, "\nreturn v, true")
+
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
@@ -226,9 +229,10 @@ func generateHeaders() error {
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.IsPointer() {
-				fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.PointerElem())
-				fmt.Fprintf(&buf, "\nh.%s = &v", f.name)
+			if f.name == "JWSjwk" {
+				fmt.Fprintf(&buf, "\nv, ok := reflect.ValueOf(value).Interface().(%s)", f.typ)
+				fmt.Fprintf(&buf, "\nif ok {")
+				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
 			} else {
 				fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
@@ -246,47 +250,6 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
-	fmt.Fprintf(&buf, "\n\nfunc (h StandardHeaders) MarshalJSON() ([]byte, error) {")
-	fmt.Fprintf(&buf, "\nm := map[string]interface{}{}")
-	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
-	fmt.Fprintf(&buf, "\nm[k] = v")
-	fmt.Fprintf(&buf, "\n}") // end for k, v := range h.privateParams
-	for _, f := range fields {
-		switch {
-		case f.name == "algorithm":
-			fmt.Fprintf(&buf, "\nm[%sKey] = h.%s", f.method, f.name)
-		case strings.HasPrefix(f.typ, `[]`):
-			fmt.Fprintf(&buf, "\n\nif len(h.%s) > 0 {", f.name)
-			fmt.Fprintf(&buf, "\nm[%sKey] = h.%s", f.method, f.name)
-			fmt.Fprintf(&buf, "\n}") // end if h.%s == %s
-		default:
-			fmt.Fprintf(&buf, "\n\nif h.%s != %s {", f.name, zeroval(f.typ))
-			fmt.Fprintf(&buf, "\nm[%sKey] = h.%s", f.method, f.name)
-			fmt.Fprintf(&buf, "\n}") // end if h.%s == %s
-		}
-	}
-	fmt.Fprintf(&buf, "\n\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) MarshalJSON()
-
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) UnmarshalJSON(buf []byte) error {")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
-	fmt.Fprintf(&buf, "\n}") // end if err := json.Unmarshal(buf, &m)
-	for _, f := range fields {
-		fmt.Fprintf(&buf, "\nif v, ok := m[%sKey]; ok {", f.method)
-		fmt.Fprintf(&buf, "\nif err := h.Set(%sKey, v); err != nil {", f.method)
-		fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set value for key %%s`, %sKey)", f.method)
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\ndelete(m, %sKey)", f.method)
-		fmt.Fprintf(&buf, "\n}") // end if v, ok := m[%sKey]
-	}
-	fmt.Fprintf(&buf, "\n// Fix: A nil map is different from a empty map as far as deep.equal is concerned")
-	fmt.Fprintf(&buf, "\nif len(m) > 0 {")
-	fmt.Fprintf(&buf, "\nh.privateParams = m")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) UnmarshalJSON(buf []byte) error
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

@@ -277,8 +277,9 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.HS256, "Algorithm in header matches") {
-			return
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != jwa.HS256 {
+			t.Fatal("Algorithm in header does not match")
 		}
 
 		v, err := verify.New(jwa.HS256)
@@ -304,7 +305,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to base64 encode protected header")
 		}
 		standardHeaders := &jws.StandardHeaders{}
-		err = standardHeaders.UnmarshalJSON(hdrBytes)
+		err = json.Unmarshal(hdrBytes, standardHeaders)
 		if err != nil {
 			t.Fatal("Failed to parse protected header")
 		}
@@ -336,8 +337,9 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), alg, "Algorithm in header matches") {
-			return
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != alg {
+			t.Fatal("Algorithm in header does not match")
 		}
 
 		v, err := verify.New(alg)
@@ -372,14 +374,11 @@ func TestEncode(t *testing.T) {
 		jwsPayload := []byte{80, 97, 121, 108, 111, 97, 100}
 
 		standardHeaders := &jws.StandardHeaders{}
-		err := standardHeaders.UnmarshalJSON(hdr)
+		err := json.Unmarshal(hdr, standardHeaders)
 		if err != nil {
 			t.Fatal("Failed to parse header")
 		}
 		alg := standardHeaders.Algorithm()
-		if err != nil {
-			t.Fatal("Failed to parse header")
-		}
 
 		keys, err := jwk.ParseString(jwksrc)
 		if err != nil {
@@ -515,8 +514,9 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.RS256, "Algorithm in header matches") {
-			return
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != jwa.RS256 {
+			t.Fatal("Algorithm in header does not match")
 		}
 
 		v, err := verify.New(jwa.RS256)
@@ -596,8 +596,9 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.ES256, "Algorithm in header matches") {
-			return
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != jwa.ES256 {
+			t.Fatal("Algorithm in header does not match")
 		}
 
 		v, err := verify.New(jwa.ES256)
@@ -637,9 +638,11 @@ func TestEncode(t *testing.T) {
 		}
 
 		signatures := m.Signatures()
-		if !assert.Equal(t, signatures[0].ProtectedHeaders().Algorithm(), jwa.NoSignature, "Algorithm = 'none'") {
-			return
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != jwa.NoSignature {
+			t.Fatal("Algorithm in header does not match")
 		}
+
 		if !assert.Empty(t, signatures[0].Signature(), "Signature should be empty") {
 			return
 		}
