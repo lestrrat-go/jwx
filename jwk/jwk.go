@@ -4,13 +4,16 @@
 package jwk
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -71,7 +74,6 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 		return nil, errors.Wrap(err, `failed to parse url`)
 	}
 
-	var src []byte
 	switch u.Scheme {
 	case "http", "https":
 		return FetchHTTP(urlstring, options...)
@@ -86,12 +88,9 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed read content from jwk file`)
 		}
-		src = buf
-	default:
-		return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
+		return ParseBytes(buf)
 	}
-
-	return Parse(src)
+	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
 
 // FetchHTTP fetches the remote JWK and parses its contents
@@ -114,17 +113,16 @@ func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 		return nil, errors.New("failed to fetch remote JWK (status != 200)")
 	}
 
-	// XXX Check for maximum length to read?
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read JWK HTTP response body")
 	}
 
-	return Parse(buf)
+	return ParseBytes(buf)
 }
 
 func (set *Set) UnmarshalJSON(data []byte) error {
-	v, err := Parse(data)
+	v, err := ParseBytes(data)
 	if err != nil {
 		return errors.Wrap(err, `failed to parse jwk.Set`)
 	}
@@ -132,10 +130,10 @@ func (set *Set) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Parse parses JWK from the incoming byte buffer.
-func Parse(buf []byte) (*Set, error) {
+// Parse parses JWK from the incoming io.Reader.
+func Parse(in io.Reader) (*Set, error) {
 	m := make(map[string]interface{})
-	if err := json.Unmarshal(buf, &m); err != nil {
+	if err := json.NewDecoder(in).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal JWK")
 	}
 
@@ -158,9 +156,14 @@ func Parse(buf []byte) (*Set, error) {
 	return &Set{Keys: []Key{k}}, nil
 }
 
+// ParseBytes parses JWK from the incoming byte buffer.
+func ParseBytes(buf []byte) (*Set, error) {
+	return Parse(bytes.NewReader(buf))
+}
+
 // ParseString parses JWK from the incoming string.
 func ParseString(s string) (*Set, error) {
-	return Parse([]byte(s))
+	return Parse(strings.NewReader(s))
 }
 
 // LookupKeyID looks for keys matching the given key id. Note that the
@@ -205,7 +208,7 @@ func (s *Set) ExtractMap(m map[string]interface{}) error {
 }
 
 func constructKey(m map[string]interface{}) (Key, error) {
-	kty, ok := m["kty"].(string)
+	kty, ok := m[KeyTypeKey].(string)
 	if !ok {
 		return nil, errors.Errorf(`unsupported kty type %T`, m[KeyTypeKey])
 	}

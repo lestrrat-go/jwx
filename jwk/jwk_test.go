@@ -7,8 +7,10 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -17,6 +19,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNew(t *testing.T) {
+	k, err := jwk.New(nil)
+	if !assert.Nil(t, k, "key should be nil") {
+		return
+	}
+	if !assert.Error(t, err, "nil key should cause an error") {
+		return
+	}
+}
 
 func TestParse(t *testing.T) {
 	verify := func(t *testing.T, src string, expected interface{}) {
@@ -36,7 +48,7 @@ func TestParse(t *testing.T) {
 			}
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
-			set, err := jwk.Parse([]byte(src))
+			set, err := jwk.ParseBytes([]byte(src))
 			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 				return
 			}
@@ -47,6 +59,18 @@ func TestParse(t *testing.T) {
 			for _, key := range set.Keys {
 				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
 					return
+				}
+
+				switch key := key.(type) {
+				case *jwk.RSAPrivateKey, *jwk.ECDSAPrivateKey:
+					realKey, err := key.(jwk.Key).Materialize()
+					if !assert.NoError(t, err, "failed to get underlying private key") {
+						return
+					}
+
+					if _, err := jwk.GetPublicKey(realKey); !assert.NoError(t, err, `failed to get public key from underlying private key`) {
+						return
+					}
 				}
 			}
 		})
@@ -75,6 +99,28 @@ func TestParse(t *testing.T) {
       "kid":"2011-04-29"
      }`
 		verify(t, src, &jwk.RSAPrivateKey{})
+	})
+	t.Run("ECDSA Private Key", func(t *testing.T) {
+		const src = `{
+		  "kty" : "EC",
+		  "crv" : "P-256",
+		  "x"   : "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+		}`
+		verify(t, src, &jwk.ECDSAPrivateKey{})
+	})
+	t.Run("Invalid ECDSA Private Key", func(t *testing.T) {
+		const src = `{
+		  "kty" : "EC",
+		  "crv" : "P-256",
+		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+		}`
+		_, err := jwk.ParseString(src)
+		if !assert.Error(t, err, `jwk.ParseString should fail`) {
+			return
+		}
 	})
 }
 
@@ -192,7 +238,7 @@ func TestRoundtrip(t *testing.T) {
 		return
 	}
 
-	ks2, err := jwk.Parse(buf)
+	ks2, err := jwk.ParseBytes(buf)
 	if !assert.NoError(t, err, "JSON unmarshal succeeded") {
 		t.Logf("%s", buf)
 		return
@@ -306,7 +352,7 @@ func TestAppendix(t *testing.T) {
 	          ]
 	        }`)
 
-		set, err := jwk.Parse(jwksrc)
+		set, err := jwk.ParseBytes(jwksrc)
 		if !assert.NoError(t, err, "Parse should succeed") {
 			return
 		}
@@ -354,7 +400,7 @@ func TestAppendix(t *testing.T) {
           "kid":"HMAC key used in JWS spec Appendix A.1 example"}
        ]
      }`)
-		set, err := jwk.Parse(jwksrc)
+		set, err := jwk.ParseBytes(jwksrc)
 		if !assert.NoError(t, err, "Parse should succeed") {
 			return
 		}
@@ -420,7 +466,7 @@ func TestAppendix(t *testing.T) {
 	          ]
 	        }]}`)
 
-		set, err := jwk.Parse(jwksrc)
+		set, err := jwk.ParseBytes(jwksrc)
 		if !assert.NoError(t, err, "Parse should succeed") {
 			return
 		}
@@ -458,30 +504,60 @@ func TestFetch(t *testing.T) {
 	          ]
 	        }`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/":
-			w.WriteHeader(http.StatusOK)
-			io.WriteString(w, jwksrc)
-		default:
-			w.WriteHeader(http.StatusNotFound)
+	verify := func(t *testing.T, set *jwk.Set) {
+		key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
+		if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
+			return
 		}
-	}))
-	defer srv.Close()
 
-	cl := srv.Client()
-
-	set, err := jwk.Fetch(srv.URL, jwk.WithHTTPClient(cl))
-	if !assert.NoError(t, err, `failed to fetch jwk`) {
-		return
+		if !assert.Equal(t, jwa.P256, key.Curve(), "curve is P-256") {
+			return
+		}
 	}
+	t.Run("HTTP", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/":
+				w.WriteHeader(http.StatusOK)
+				io.WriteString(w, jwksrc)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}))
+		defer srv.Close()
 
-	key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
-	if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
-		return
-	}
+		cl := srv.Client()
 
-	if !assert.Equal(t, jwa.P256, key.Curve(), "curve is P-256") {
-		return
-	}
+		set, err := jwk.Fetch(srv.URL, jwk.WithHTTPClient(cl))
+		if !assert.NoError(t, err, `failed to fetch jwk`) {
+			return
+		}
+		verify(t, set)
+	})
+	t.Run("Local File", func(t *testing.T) {
+		f, err := ioutil.TempFile("", "jwk-fetch-test")
+		if !assert.NoError(t, err, `failed to generate temporary file`) {
+			return
+		}
+		defer f.Close()
+		defer os.Remove(f.Name())
+
+		io.WriteString(f, jwksrc)
+		f.Sync()
+
+		set, err := jwk.Fetch("file://" + f.Name())
+		if !assert.NoError(t, err, `failed to fetch jwk`) {
+			return
+		}
+		verify(t, set)
+	})
+	t.Run("Invalid Scheme", func(t *testing.T) {
+		set, err := jwk.Fetch("gopher://foo/bar")
+		if !assert.Nil(t, set, `set should be nil`) {
+			return
+		}
+		if !assert.Error(t, err, `invalid sche,e should be an error`) {
+			return
+		}
+	})
 }
