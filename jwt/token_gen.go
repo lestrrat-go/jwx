@@ -213,6 +213,8 @@ func (t Token) IssuedAt() time.Time {
 	return time.Time{}
 }
 
+// Issuer is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) Issuer() string {
 	if v, ok := t.Get(IssuerKey); ok {
 		return v.(string)
@@ -220,6 +222,8 @@ func (t Token) Issuer() string {
 	return ""
 }
 
+// JwtID is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) JwtID() string {
 	if v, ok := t.Get(JwtIDKey); ok {
 		return v.(string)
@@ -234,6 +238,8 @@ func (t Token) NotBefore() time.Time {
 	return time.Time{}
 }
 
+// Subject is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) Subject() string {
 	if v, ok := t.Get(SubjectKey); ok {
 		return v.(string)

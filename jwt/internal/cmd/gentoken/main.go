@@ -311,7 +311,9 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\nreturn time.Time{}")
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s()
 		case field.IsPointer():
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
+			fmt.Fprintf(&buf, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
+			fmt.Fprintf(&buf, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
+			fmt.Fprintf(&buf, "\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(%s)", field.PointerElem())
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
