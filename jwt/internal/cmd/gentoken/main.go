@@ -305,7 +305,10 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
 		case field.Type == "*NumericDate":
 			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() time.Time {", field.UpperName())
-			fmt.Fprintf(&buf, "\nreturn timeFromNumericDateClaim(&t, %sKey)", field.UpperName())
+			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
+			fmt.Fprintf(&buf, "\nreturn v.(time.Time)")
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nreturn time.Time{}")
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s()
 		case field.IsPointer():
 			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
@@ -316,21 +319,6 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
 		}
 	}
-
-	fmt.Fprintf(&buf, "\n\nfunc timeFromNumericDateClaim(t *Token, key string) time.Time {")
-	fmt.Fprintf(&buf, "\nv, ok := t.Get(key)")
-	fmt.Fprintf(&buf, "\nif !ok {")
-	fmt.Fprintf(&buf, "\nreturn time.Time{}")
-	fmt.Fprintf(&buf, "\n}") // end if !ok
-	fmt.Fprintf(&buf, "\n\nswitch x := v.(type) {")
-	fmt.Fprintf(&buf, "\ncase time.Time:")
-	fmt.Fprintf(&buf, "\nreturn x")
-	fmt.Fprintf(&buf, "\ncase *NumericDate:")
-	fmt.Fprintf(&buf, "\nreturn x.Time")
-	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nreturn time.Time{}")
-	fmt.Fprintf(&buf, "\n}") // end switch x
-	fmt.Fprintf(&buf, "\n}") // end func (t *Token) timeFromNumericDate
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
