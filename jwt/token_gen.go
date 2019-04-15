@@ -200,11 +200,17 @@ func (t Token) Audience() string {
 }
 
 func (t Token) Expiration() time.Time {
-	return timeFromNumericDateClaim(&t, ExpirationKey)
+	if v, ok := t.Get(ExpirationKey); ok {
+		return v.(time.Time)
+	}
+	return time.Time{}
 }
 
 func (t Token) IssuedAt() time.Time {
-	return timeFromNumericDateClaim(&t, IssuedAtKey)
+	if v, ok := t.Get(IssuedAtKey); ok {
+		return v.(time.Time)
+	}
+	return time.Time{}
 }
 
 func (t Token) Issuer() string {
@@ -222,7 +228,10 @@ func (t Token) JwtID() string {
 }
 
 func (t Token) NotBefore() time.Time {
-	return timeFromNumericDateClaim(&t, NotBeforeKey)
+	if v, ok := t.Get(NotBeforeKey); ok {
+		return v.(time.Time)
+	}
+	return time.Time{}
 }
 
 func (t Token) Subject() string {
@@ -230,20 +239,4 @@ func (t Token) Subject() string {
 		return v.(string)
 	}
 	return ""
-}
-
-func timeFromNumericDateClaim(t *Token, key string) time.Time {
-	v, ok := t.Get(key)
-	if !ok {
-		return time.Time{}
-	}
-
-	switch x := v.(type) {
-	case time.Time:
-		return x
-	case *NumericDate:
-		return x.Time
-	default:
-		return time.Time{}
-	}
 }
