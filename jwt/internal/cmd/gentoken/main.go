@@ -76,16 +76,16 @@ func generateToken() error {
 
 	var fields = []tokenField{
 		{
-			Name:      "audience",
+			Name:      "Audience",
 			JSONKey:   "aud",
-			Type:      "stringList",
+			Type:      "StringList",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
 			isList:    true,
 			hasAccept: true,
 			elemType:  `string`,
 		},
 		{
-			Name:      "expiration",
+			Name:      "Expiration",
 			JSONKey:   "exp",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.4`,
@@ -93,7 +93,7 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:      "issuedAt",
+			Name:      "IssuedAt",
 			JSONKey:   "iat",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.6`,
@@ -101,19 +101,19 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:    "issuer",
+			Name:    "Issuer",
 			JSONKey: "iss",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.1`,
 		},
 		{
-			Name:    "jwtID",
+			Name:    "JwtID",
 			JSONKey: "jti",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.7`,
 		},
 		{
-			Name:      "notBefore",
+			Name:      "NotBefore",
 			JSONKey:   "nbf",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.5`,
@@ -121,16 +121,17 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:    "subject",
+			Name:    "Subject",
 			JSONKey: "sub",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.2`,
 		},
 	}
 
+	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"encoding/json", "time", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"time", "github.com/pkg/errors"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -150,7 +151,7 @@ func generateToken() error {
 		case i < len(fields)-2:
 			fmt.Fprintf(&buf, ", ")
 		case i == len(fields)-2:
-			fmt.Fprintf(&buf, ", and ")
+			fmt.Fprintf(&buf, " and ")
 		}
 	}
 	fmt.Fprintf(&buf, "\n// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")
@@ -159,9 +160,11 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// by embedding the jwt.Token type in it")
 	fmt.Fprintf(&buf, "\ntype Token struct {")
 	for _, field := range fields {
-		fmt.Fprintf(&buf, "\n%s %s // %s", field.Name, field.Type, field.Comment)
+		jsonTag := "`" + `json:"` + field.JSONKey + `,omitempty"` + "`"
+		fmt.Fprintf(&buf, "\n%s %s %s // %s", field.Name, field.Type, jsonTag, field.Comment)
 	}
-	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{}")
+	jsonTag := "`" + `json:"` + `,omitempty"` + "`"
+	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} %s", jsonTag)
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
@@ -170,13 +173,13 @@ func generateToken() error {
 		fmt.Fprintf(&buf, "\ncase %sKey:", field.UpperName())
 		switch {
 		case field.IsList():
-			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", field.Name)
+			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", strings.Title(field.Name))
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n}") // end if len(t.%s) == 0
 			fmt.Fprintf(&buf, "\nreturn ")
 			// some types such as `aud` need explicit conversion
 			var pre, post string
-			if field.Type == "stringList" {
+			if field.Type == "StringList" {
 				pre = "[]string("
 				post = ")"
 			}
@@ -198,9 +201,9 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\n}") // end switch
-	fmt.Fprintf(&buf, "\nif v, ok := t.privateClaims[s]; ok {")
+	fmt.Fprintf(&buf, "\nif v, ok := t.PrivateClaims[s]; ok {")
 	fmt.Fprintf(&buf, "\nreturn v, true")
-	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.privateClaims[s]
+	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.PrivateClaims[s]
 	fmt.Fprintf(&buf, "\nreturn nil, false")
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
@@ -241,70 +244,25 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nt.privateClaims[name] = v")
-	fmt.Fprintf(&buf, "\n}") // end switch
+	fmt.Fprintf(&buf, "\nif t.PrivateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.PrivateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\n}") // end if h.privateParams == nil
+	fmt.Fprintf(&buf, "\nt.PrivateClaims[name] = v")
+	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func Set
-
-	fmt.Fprintf(&buf, "\n\nfunc (t *Token) UnmarshalJSON(data []byte) error {")
-	fmt.Fprintf(&buf, "\nm := make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(data, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal claims`)")
-	fmt.Fprintf(&buf, "\n}") // end if err := json.Unmarshal
-	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\nfor k, v := range m {")
-	fmt.Fprintf(&buf, "\nif err := t.Set(k, v); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set key '%%s'`, k)")
-	fmt.Fprintf(&buf, "\n}") // end if err := t.Set(k, v)
-	fmt.Fprintf(&buf, "\n}") // end for k, v := range m
-	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end UnmarshalJSON
-
-	fmt.Fprintf(&buf, "\n\nfunc (t Token) MarshalJSON() ([]byte, error) {")
-	fmt.Fprintf(&buf, "\nm := make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
-	fmt.Fprintf(&buf, "\nm[k] = v")
-	fmt.Fprintf(&buf, "\n}") // for k, v := range t.privateClaims
+	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
 
 	for _, field := range fields {
 		switch {
 		case field.IsList():
-			fmt.Fprintf(&buf, "\n\nif l := len(t.%s); l > 0 {", field.Name)
-			fmt.Fprintf(&buf, "\nswitch l {")
-			fmt.Fprintf(&buf, "\ncase 0:")
-			fmt.Fprintf(&buf, "\n// no op")
-			fmt.Fprintf(&buf, "\ncase 1:")
-			fmt.Fprintf(&buf, "\nm[%sKey] = t.%s[0]", field.UpperName(), field.Name)
-			fmt.Fprintf(&buf, "\ndefault:")
-			fmt.Fprintf(&buf, "\nm[%sKey] = t.%s", field.UpperName(), field.Name)
-			fmt.Fprintf(&buf, "\n}") // end switch
-			fmt.Fprintf(&buf, "\n}") // end if l := len()
-		case field.IsPointer():
-			fmt.Fprintf(&buf, "\n\nif v := t.%s; v != nil {", field.Name)
-			fmt.Fprintf(&buf, "\nm[%sKey] = *v", field.UpperName())
-			fmt.Fprintf(&buf, "\n}") // end if v := t.%s
-		default:
-			return errors.Errorf(`don't know how to handle field %+v`, field)
-		}
-	}
-	fmt.Fprintf(&buf, "\n\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end func MarshalJSON
-
-	for _, field := range fields {
-		switch {
-		case field.IsList():
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.ListElem())
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() %s {", field.UpperName(), field.Type)
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
-			if field.Type == "stringList" {
-				fmt.Fprintf(&buf, "\nreturn (v.([]string))[0]")
-			} else {
-				fmt.Fprintf(&buf, "\nreturn (v.(%s))[0]", field.Type)
-			}
+			fmt.Fprintf(&buf, "\nreturn v.([]string)")
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
-			fmt.Fprintf(&buf, "\nreturn %s", zeroval(field.ListElem()))
+			fmt.Fprintf(&buf, "\nreturn nil")
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
 		case field.Type == "*NumericDate":
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() time.Time {", field.UpperName())
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() time.Time {", field.UpperName())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(time.Time)")
 			fmt.Fprintf(&buf, "\n}")
@@ -313,7 +271,7 @@ func generateToken() error {
 		case field.IsPointer():
 			fmt.Fprintf(&buf, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
 			fmt.Fprintf(&buf, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
-			fmt.Fprintf(&buf, "\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() %s {", field.UpperName(), field.PointerElem())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(%s)", field.PointerElem())
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)

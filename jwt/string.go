@@ -4,14 +4,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (l *stringList) Accept(v interface{}) error {
+func (l *StringList) Accept(v interface{}) error {
 	switch x := v.(type) {
 	case string:
-		*l = stringList([]string{x})
+		*l = StringList([]string{x})
 	case []string:
-		*l = stringList(x)
+		*l = StringList(x)
 	case []interface{}:
-		list := make([]string, len(x))
+		list := make(StringList, len(x))
 		for i, e := range x {
 			if s, ok := e.(string); ok {
 				list[i] = s

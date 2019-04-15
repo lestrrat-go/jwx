@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -18,25 +17,72 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnmarshalJSON(t *testing.T) {
-	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
-		var t1 jwt.Token
-		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
-			return
-		}
-		aud, ok := t1.Get(jwt.AudienceKey)
-		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
-			t.Logf("%#v", t1)
-			return
-		}
+func TestJWTParse(t *testing.T) {
 
-		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+	alg := jwa.RS256
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal("Failed to generate RSA key")
+	}
+	t1 := jwt.New()
+	signed, err := t1.Sign(alg, key)
+	if err != nil {
+		t.Fatal("Failed to sign JWT")
+	}
+
+	t.Run("Parse (no signature verification)", func(t *testing.T) {
+		t2, err := jwt.Parse(bytes.NewReader(signed))
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("ParseString (no signature verification)", func(t *testing.T) {
+		t2, err := jwt.ParseString(string(signed))
+		if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
+		t2, err := jwt.ParseBytes(signed)
+		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("Parse (correct signature key)", func(t *testing.T) {
+		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			return
+		}
+	})
+	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
+		if !assert.Error(t, err, `jwt.Parse should fail`) {
+			return
+		}
+	})
+	t.Run("parse (wrong signature key)", func(t *testing.T) {
+		pubkey := key.PublicKey
+		pubkey.E = 0 // bogus value
+		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
+		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
 	})
 }
 
-func TestSignature(t *testing.T) {
+func TestJWTParseVerify(t *testing.T) {
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if !assert.NoError(t, err, "RSA key generated") {
@@ -46,253 +92,32 @@ func TestSignature(t *testing.T) {
 	t1 := jwt.New()
 	signed, err := t1.Sign(alg, key)
 
-	t.Run("jwt.Parse", func(t *testing.T) {
-		t.Run("Parse (no signature verification)", func(t *testing.T) {
-			t2, err := jwt.Parse(bytes.NewReader(signed))
-			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("ParseString (no signature verification)", func(t *testing.T) {
-			t2, err := jwt.ParseString(string(signed))
-			if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
-			t2, err := jwt.ParseBytes(signed)
-			if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("Parse (correct signature key)", func(t *testing.T) {
-			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
-			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-			_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
-			if !assert.Error(t, err, `jwt.Parse should fail`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature key)", func(t *testing.T) {
-			pubkey := key.PublicKey
-			pubkey.E = 0 // bogus value
-			_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
-			if !assert.Error(t, err, `jwt.Parse should fail`) {
-				return
-			}
-		})
-	})
-	t.Run("jwt.ParseVerify", func(t *testing.T) {
-		t.Run("parse (no signature verification)", func(t *testing.T) {
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (correct signature key)", func(t *testing.T) {
-			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
-			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature key)", func(t *testing.T) {
-			pubkey := key.PublicKey
-			pubkey.E = 0 // bogus value
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-	})
-}
-
-func TestToken(t *testing.T) {
-	t1 := jwt.New()
-	if !assert.NoError(t, t1.Set(jwt.JwtIDKey, "AbCdEfG"), "setting jti should work") {
-		return
-	}
-	if !assert.NoError(t, t1.Set(jwt.SubjectKey, "foobar@example.com"), "setting sub should work") {
-		return
-	}
-
-	// Silly fix to remove monotonic element from time.Time obtained
-	// from time.Now(). Without this, the equality comparison goes
-	// ga-ga for golang tip (1.9)
-	now := time.Unix(time.Now().Unix(), 0)
-	if !assert.NoError(t, t1.Set(jwt.IssuedAtKey, now.Unix()), "setting iat to now should work") {
-		return
-	}
-	if !assert.NoError(t, t1.Set(jwt.NotBeforeKey, now.Add(5*time.Second)), "setting nbf should work") {
-		return
-	}
-	if !assert.NoError(t, t1.Set(jwt.ExpirationKey, now.Add(10*time.Second).Unix()), "setting exp should work") {
-		return
-	}
-	if !assert.NoError(t, t1.Set("custom", "MyValue"), "setting custom should work") {
-		return
-	}
-
-	jsonbuf1, err := json.MarshalIndent(t1, "", "  ")
-	if !assert.NoError(t, err, "JSON marshal should succeed") {
-		return
-	}
-	t.Logf("%s", jsonbuf1)
-
-	var t2 jwt.Token
-	if !assert.NoError(t, json.Unmarshal(jsonbuf1, &t2), "JSON unmarshal should succeed") {
-		return
-	}
-
-	jsonbuf2, err := json.MarshalIndent(t2, "", "  ")
-	if !assert.NoError(t, err, "JSON marshal should succeed") {
-		return
-	}
-	t.Logf("%s", jsonbuf2)
-
-	if !assert.Equal(t, t1, &t2, "tokens match") {
-		return
-	}
-}
-
-func TestGHIssue10(t *testing.T) {
-	t.Run(jwt.IssuerKey, func(t *testing.T) {
-		t1 := jwt.New()
-		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
-
-		// This should succeed, because WithIssuer is not provided in the
-		// optional parameters
-		if !assert.NoError(t, t1.Verify(), "t1.Verify should succeed") {
-			return
-		}
-
-		// This should succeed, because WithIssuer is provided with same value
-		if !assert.NoError(t, t1.Verify(jwt.WithIssuer(t1.Issuer())), "t1.Verify should succeed") {
-			return
-		}
-
-		if !assert.Error(t, t1.Verify(jwt.WithIssuer("poop")), "t1.Verify should fail") {
+	t.Run("parse (no signature verification)", func(t *testing.T) {
+		_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
+		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
 			return
 		}
 	})
-	t.Run(jwt.AudienceKey, func(t *testing.T) {
-		t1 := jwt.New()
-		t1.Set(jwt.AudienceKey, []string{
-			"foo",
-			"bar",
-			"baz",
-		})
-
-		// This should succeed, because WithAudience is not provided in the
-		// optional parameters
-		if !assert.NoError(t, t1.Verify(), "token.Verify should succeed") {
+	t.Run("parse (correct signature key)", func(t *testing.T) {
+		t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
+		if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
 			return
 		}
-
-		// This should succeed, because WithAudience is provided, and its
-		// value matches one of the audience values
-		if !assert.NoError(t, t1.Verify(jwt.WithAudience("baz")), "token.Verify should succeed") {
-			return
-		}
-
-		if !assert.Error(t, t1.Verify(jwt.WithAudience("poop")), "token.Verify should fail") {
+		if !assert.Equal(t, t1, t2, `t1 == t2`) {
 			return
 		}
 	})
-	t.Run(jwt.SubjectKey, func(t *testing.T) {
-		t1 := jwt.New()
-		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
-
-		// This should succeed, because WithSubject is not provided in the
-		// optional parameters
-		if !assert.NoError(t, t1.Verify(), "token.Verify should succeed") {
-			return
-		}
-
-		// This should succeed, because WithSubject is provided with same value
-		if !assert.NoError(t, t1.Verify(jwt.WithSubject(t1.Subject())), "token.Verify should succeed") {
-			return
-		}
-
-		if !assert.Error(t, t1.Verify(jwt.WithSubject("poop")), "token.Verify should fail") {
+	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+		_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
+		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
 			return
 		}
 	})
-	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
-		t1 := jwt.New()
-
-		// NotBefore is set to future date
-		tm := time.Now().Add(72 * time.Hour)
-		t1.Set(jwt.NotBeforeKey, tm)
-
-		// This should fail, because nbf is the future
-		if !assert.Error(t, t1.Verify(), "token.Verify should fail") {
-			return
-		}
-
-		// This should succeed, because we have given reaaaaaaly big skew
-		// that is well enough to get us accepted
-		if !assert.NoError(t, t1.Verify(jwt.WithAcceptableSkew(73*time.Hour)), "token.Verify should succeed") {
-			return
-		}
-
-		// This should succeed, because we have given a time
-		// that is well enough into the future
-		if !assert.NoError(t, t1.Verify(jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Hour) }))), "token.Verify should succeed") {
-			return
-		}
-	})
-	t.Run(jwt.ExpirationKey, func(t *testing.T) {
-		t1 := jwt.New()
-
-		// issuedat = 1 Hr before current time
-		tm := time.Now()
-		t1.Set(jwt.IssuedAtKey, tm.Add(-1*time.Hour))
-
-		// valid for 2 minutes only from IssuedAt
-		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
-
-		// This should fail, because exp is set in the past
-		if !assert.Error(t, t1.Verify(), "token.Verify should fail") {
-			return
-		}
-
-		// This should succeed, because we have given big skew
-		// that is well enough to get us accepted
-		if !assert.NoError(t, t1.Verify(jwt.WithAcceptableSkew(time.Hour)), "token.Verify should succeed (1)") {
-			return
-		}
-
-		// This should succeed, because we have given a time
-		// that is well enough into the past
-		clock := jwt.ClockFunc(func() time.Time {
-			return tm.Add(-59 * time.Minute)
-		})
-		if !assert.NoError(t, t1.Verify(jwt.WithClock(clock)), "token.Verify should succeed (2)") {
+	t.Run("parse (wrong signature key)", func(t *testing.T) {
+		pubkey := key.PublicKey
+		pubkey.E = 0 // bogus value
+		_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
+		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
 			return
 		}
 	})
@@ -313,7 +138,7 @@ func TestVerifyClaims(t *testing.T) {
 		}
 
 		if !assert.NoError(t, token.Verify(args...), "token.Verify should validate tokens in the same second they are created") {
-			if now.Equal(token.IssuedAt()) {
+			if now.Equal(token.GetIssuedAt()) {
 				t.Errorf("iat claim failed: iat == now")
 			}
 			return
@@ -332,7 +157,7 @@ func TestUnmarshal(t *testing.T) {
 	}{
 		{
 			Title: "single aud",
-			JSON:  `{"aud":"foo"}`,
+			JSON:  `{"aud":["foo"]}`,
 			Expected: func() *jwt.Token {
 				t := jwt.New()
 				t.Set("aud", "foo")
@@ -380,77 +205,6 @@ func TestUnmarshal(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
-	testcases := []struct {
-		Title string
-		Test  func(*testing.T, *jwt.Token)
-		Token func() *jwt.Token
-	}{
-		{
-			Title: `Get IssuedAt`,
-			Test: func(t *testing.T, token *jwt.Token) {
-				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
-				if !assert.Equal(t, expected, token.IssuedAt(), `IssuedAt should match`) {
-					return
-				}
-			},
-			Token: func() *jwt.Token {
-				t := jwt.New()
-				t.Set(jwt.IssuedAtKey, 233431200)
-				return t
-			},
-		},
-		{
-			Title : `Get JwtID`,
-			Test: func(t *testing.T, token *jwt.Token) {
-				expected := "foo bar baz"
-				if !assert.Equal(t, expected, token.JwtID()) {
-					return
-				}
-			},
-			Token: func() *jwt.Token {
-				t := jwt.New()
-				t.Set(jwt.JwtIDKey, "foo bar baz")
-				return t
-			},
-		},
-		{
-			Title: `Get NotBefore`,
-			Test: func(t *testing.T, token *jwt.Token) {
-				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
-				if !assert.Equal(t, expected, token.NotBefore(), `NotBefore should match`) {
-					return
-				}
-			},
-			Token: func() *jwt.Token {
-				t := jwt.New()
-				t.Set(jwt.NotBeforeKey, time.Unix(aLongLongTimeAgo, 0).UTC())
-				return t
-			},
-		},
-		{
-			Title: `Get Expiration`,
-			Test: func(t *testing.T, token *jwt.Token) {
-				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
-				if !assert.Equal(t, expected, token.Expiration(), `Expiration should match`) {
-					return
-				}
-			},
-			Token: func() *jwt.Token {
-				t := jwt.New()
-				t.Set(jwt.ExpirationKey, time.Unix(aLongLongTimeAgo, 0).UTC())
-				return t
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.Title, func(t *testing.T) {
-			tc.Test(t, tc.Token())
-		})
-	}
-}
-
 func TestGH52(t *testing.T) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if !assert.NoError(t, err) {
@@ -475,24 +229,21 @@ func TestGH52(t *testing.T) {
 	}
 }
 
-func TestDate(t *testing.T) {
-	// NumericDate allows assignment from various different Go types,
-	// so that it's easier for the devs, and conversion to/from JSON
-	// use of "127" is just to allow use of int8's
-	now := time.Unix(127, 0).UTC()
-	for _, ut := range []interface{}{int64(127), int32(127), int16(127), int8(127), float32(127), float64(127), json.Number("127")} {
-		t.Run(fmt.Sprintf("%T", ut), func(t *testing.T) {
-			var t1 jwt.Token
-			t1.Set(jwt.IssuedAtKey, ut)
+func TestUnmarshalJSON(t *testing.T) {
 
-			v, ok := t1.Get(jwt.IssuedAtKey)
-			if !assert.True(t, ok, "jwt.Get(jwt.IssuedAtKey) should succeed") {
-				return
-			}
+	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
+		var t1 jwt.Token
+		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
+			return
+		}
+		aud, ok := t1.Get(jwt.AudienceKey)
+		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
+			t.Logf("%#v", t1)
+			return
+		}
 
-			if !assert.Equal(t, now, v, "IssuedAt should be %s, got %s", now, v) {
-				return
-			}
-		})
-	}
+		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+			return
+		}
+	})
 }

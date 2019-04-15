@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type stringList []string
+type StringList []string
 
 // NumericDate represents the date format used in the 'nbf' claim
 type NumericDate struct {

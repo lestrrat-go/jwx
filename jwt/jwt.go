@@ -49,11 +49,11 @@ func Parse(src io.Reader, options ...Option) (*Token, error) {
 		return nil, errors.Wrap(err, `invalid jws message`)
 	}
 
-	var token Token
-	if err := json.Unmarshal(m.Payload(), &token); err != nil {
+	token := New()
+	if err := json.Unmarshal(m.Payload(), token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
-	return &token, nil
+	return token, nil
 }
 
 // ParseVerify is a function that is similar to Parse(), but does not
@@ -78,9 +78,7 @@ func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (*T
 
 // New creates a new empty JWT token
 func New() *Token {
-	return &Token{
-		privateClaims: make(map[string]interface{}),
-	}
+	return &Token{}
 }
 
 // Sign is a convenience function to create a signed JWT token serialized in
@@ -93,8 +91,12 @@ func (t *Token) Sign(method jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 	}
 
 	var hdr jws.StandardHeaders
-	hdr.Set(`alg`, method.String())
-	hdr.Set(`typ`, `JWT`)
+	if hdr.Set(`alg`, method.String()) != nil {
+		return nil, errors.Wrap(err, `failed to sign payload`)
+	}
+	if hdr.Set(`typ`, `JWT`) != nil {
+		return nil, errors.Wrap(err, `failed to sign payload`)
+	}
 	sign, err := jws.Sign(buf, method, key, jws.WithHeaders(&hdr))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
