@@ -93,21 +93,21 @@ func (t *Token) Verify(options ...Option) error {
 
 	// check for iss
 	if len(issuer) > 0 {
-		if v := t.issuer; v != nil && *v != issuer {
+		if v := t.GetIssuer(); v != "" && v != issuer {
 			return errors.New(`iss not satisfied`)
 		}
 	}
 
 	// check for jti
 	if len(jwtid) > 0 {
-		if v := t.jwtID; v != nil && *v != jwtid {
+		if v := t.GetJwtID(); v != "" && v != jwtid {
 			return errors.New(`jti not satisfied`)
 		}
 	}
 
 	// check for sub
 	if len(subject) > 0 {
-		if v := t.subject; v != nil && *v != subject {
+		if v := t.GetSubject(); v != "" && v != subject {
 			return errors.New(`sub not satisfied`)
 		}
 	}
@@ -115,7 +115,7 @@ func (t *Token) Verify(options ...Option) error {
 	// check for aud
 	if len(audience) > 0 {
 		var found bool
-		for _, v := range t.audience {
+		for _, v := range t.GetAudience() {
 			if v == audience {
 				found = true
 				break
@@ -127,27 +127,27 @@ func (t *Token) Verify(options ...Option) error {
 	}
 
 	// check for exp
-	if tv := t.expiration; tv != nil {
+	if tv := t.GetExpiration(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Time.Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
 		if !now.Before(ttv.Add(skew)) {
 			return errors.New(`exp not satisfied`)
 		}
 	}
 
 	// check for iat
-	if tv := t.issuedAt; tv != nil {
+	if tv := t.GetIssuedAt(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Time.Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
 		if now.Before(ttv.Add(-1 * skew)) {
 			return errors.New(`iat not satisfied`)
 		}
 	}
 
 	// check for nbf
-	if tv := t.notBefore; tv != nil {
+	if tv := t.GetNotBefore(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Time.Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew
 		if !now.After(ttv.Add(-1 * skew)) {
 			return errors.New(`nbf not satisfied`)
