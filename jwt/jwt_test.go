@@ -400,6 +400,48 @@ func TestGet(t *testing.T) {
 				return t
 			},
 		},
+		{
+			Title : `Get JwtID`,
+			Test: func(t *testing.T, token *jwt.Token) {
+				expected := "foo bar baz"
+				if !assert.Equal(t, expected, token.JwtID()) {
+					return
+				}
+			},
+			Token: func() *jwt.Token {
+				t := jwt.New()
+				t.Set(jwt.JwtIDKey, "foo bar baz")
+				return t
+			},
+		},
+		{
+			Title: `Get NotBefore`,
+			Test: func(t *testing.T, token *jwt.Token) {
+				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
+				if !assert.Equal(t, expected, token.NotBefore(), `NotBefore should match`) {
+					return
+				}
+			},
+			Token: func() *jwt.Token {
+				t := jwt.New()
+				t.Set(jwt.NotBeforeKey, time.Unix(aLongLongTimeAgo, 0).UTC())
+				return t
+			},
+		},
+		{
+			Title: `Get Expiration`,
+			Test: func(t *testing.T, token *jwt.Token) {
+				expected := time.Unix(aLongLongTimeAgo, 0).UTC()
+				if !assert.Equal(t, expected, token.Expiration(), `Expiration should match`) {
+					return
+				}
+			},
+			Token: func() *jwt.Token {
+				t := jwt.New()
+				t.Set(jwt.ExpirationKey, time.Unix(aLongLongTimeAgo, 0).UTC())
+				return t
+			},
+		},
 	}
 
 	for _, tc := range testcases {
