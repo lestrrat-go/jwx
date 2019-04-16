@@ -10,14 +10,15 @@ import (
 )
 
 type rawkey struct {
-	N  buffer.Buffer `json:"n"`
-	E  buffer.Buffer `json:"e"`
-	D  buffer.Buffer `json:"d"`
-	P  buffer.Buffer `json:"p"`
-	Q  buffer.Buffer `json:"q"`
-	Dp buffer.Buffer `json:"dp"`
-	Dq buffer.Buffer `json:"dq"`
-	Qi buffer.Buffer `json:"qi"`
+	N         buffer.Buffer  `json:"n"`
+	E         buffer.Buffer  `json:"e"`
+	D         buffer.Buffer  `json:"d"`
+	P         buffer.Buffer  `json:"p"`
+	Q         buffer.Buffer  `json:"q"`
+	Dp        buffer.Buffer  `json:"dp"`
+	Dq        buffer.Buffer  `json:"dq"`
+	Qi        buffer.Buffer  `json:"qi"`
+	CRTValues []rsa.CRTValue `json:"crtvalues"`
 }
 
 func NewRawKeyFromPublicKey(pubkey *rsa.PublicKey) *rawkey {
@@ -35,6 +36,8 @@ func NewRawKeyFromPrivateKey(privkey *rsa.PrivateKey) *rawkey {
 	r.Dp = buffer.Buffer(privkey.Precomputed.Dp.Bytes())
 	r.Dq = buffer.Buffer(privkey.Precomputed.Dq.Bytes())
 	r.Qi = buffer.Buffer(privkey.Precomputed.Qinv.Bytes())
+	r.CRTValues = make([]rsa.CRTValue, len(privkey.Precomputed.CRTValues))
+	copy(r.CRTValues, privkey.Precomputed.CRTValues)
 	return r
 }
 
@@ -87,6 +90,9 @@ func (r rawkey) GeneratePrivateKey() (*rsa.PrivateKey, error) {
 	if r.Qi.Len() > 0 {
 		privkey.Precomputed.Qinv = (&big.Int{}).SetBytes(r.Qi.Bytes())
 	}
+
+	privkey.Precomputed.CRTValues = make([]rsa.CRTValue, len(r.CRTValues))
+	copy(privkey.Precomputed.CRTValues, r.CRTValues)
 
 	return privkey, nil
 }
