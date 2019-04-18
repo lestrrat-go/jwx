@@ -10,7 +10,7 @@ realclean:
 	rm cover.out
 
 cover:
-	go test -cover -coverprofile=cover.out -v ./...
+	go test -cover -coverprofile=coverage.out -v ./...
 
 viewcover:
-	go tool cover -html=cover.out
+	go tool cover -html=coverage.out
