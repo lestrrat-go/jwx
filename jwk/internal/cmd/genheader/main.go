@@ -147,7 +147,7 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n\n")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/pdebug", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/pkg/errors"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -312,10 +312,6 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// represented as flat objects instead of differentiating the different")
 	fmt.Fprintf(&buf, "\n// parts of the message in separate sub objects.")
 	fmt.Fprintf(&buf, "\nfunc (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {")
-	fmt.Fprintf(&buf, "\nif pdebug.Enabled {")
-	fmt.Fprintf(&buf, "\ng := pdebug.Marker(`jwk.StandardHeaders.ExtractMap`).BindError(&err)")
-	fmt.Fprintf(&buf, "\ndefer g.End()")
-	fmt.Fprintf(&buf, "\n}") // if pdebug.Enabled
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nif v, ok := m[%sKey]; ok {", f.method)
 		fmt.Fprintf(&buf, "\nif err := h.Set(%sKey, v); err != nil {", f.method)

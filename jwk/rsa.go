@@ -9,7 +9,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	pdebug "github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -62,10 +61,6 @@ func (k *RSAPrivateKey) Materialize() (interface{}, error) {
 }
 
 func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPublicKey.MarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := map[string]interface{}{}
 	if err := k.PopulateMap(m); err != nil {
@@ -76,10 +71,6 @@ func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPublicKey.PopulateJSON").BindError(&err)
-		defer g.End()
-	}
 
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
@@ -92,10 +83,6 @@ func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPublicKey.UnmarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -109,10 +96,6 @@ func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPublicKey.ExtractMap").BindError(&err)
-		defer g.End()
-	}
 
 	const (
 		eKey = `e`
@@ -148,10 +131,6 @@ func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPrivateKey.MarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
@@ -162,10 +141,6 @@ func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPrivateKey.PopulateMap").BindError(&err)
-		defer g.End()
-	}
 
 	const (
 		dKey  = `d`
@@ -204,12 +179,6 @@ func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPrivateKey.UnmarshalJSON").BindError(&err)
-		defer g.End()
-
-		pdebug.Printf("data --> %s", data)
-	}
 
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -226,10 +195,6 @@ func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *RSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.RSAPrivateKey.ExractMap").BindError(&err)
-		defer g.End()
-	}
 
 	const (
 		dKey  = `d`

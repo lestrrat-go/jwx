@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -292,10 +291,6 @@ func (h StandardHeaders) PopulateMap(m map[string]interface{}) error {
 // represented as flat objects instead of differentiating the different
 // parts of the message in separate sub objects.
 func (h *StandardHeaders) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker(`jwk.StandardHeaders.ExtractMap`).BindError(&err)
-		defer g.End()
-	}
 	if v, ok := m[AlgorithmKey]; ok {
 		if err := h.Set(AlgorithmKey, v); err != nil {
 			return errors.Wrapf(err, `failed to set value for key %s`, AlgorithmKey)

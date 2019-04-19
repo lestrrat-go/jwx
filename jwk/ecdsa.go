@@ -10,7 +10,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	pdebug "github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -97,10 +96,6 @@ func (k ECDSAPrivateKey) Materialize() (interface{}, error) {
 }
 
 func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPublicKey.MarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
@@ -111,10 +106,6 @@ func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPublicKey.PopulateJSON").BindError(&err)
-		defer g.End()
-	}
 
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
@@ -133,10 +124,6 @@ func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPrivateKey.MarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
@@ -147,10 +134,6 @@ func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPrivateKey.PopulateJSON").BindError(&err)
-		defer g.End()
-	}
 
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
@@ -171,10 +154,6 @@ func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *ECDSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPublicKey.UnmarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -188,10 +167,6 @@ func (k *ECDSAPublicKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPublicKey.ExtractMap").BindError(&err)
-		defer g.End()
-	}
 
 	const (
 		xKey   = `x`
@@ -255,10 +230,6 @@ func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (k *ECDSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPrivateKey.UnmarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -272,10 +243,6 @@ func (k *ECDSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *ECDSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.ECDSAPrivateKey.ExtractMap").BindError(&err)
-		defer g.End()
-	}
 
 	const (
 		dKey = `d`
