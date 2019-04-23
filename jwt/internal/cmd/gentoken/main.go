@@ -160,11 +160,9 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// by embedding the jwt.Token type in it")
 	fmt.Fprintf(&buf, "\ntype Token struct {")
 	for _, field := range fields {
-		jsonTag := "`" + `json:"` + field.JSONKey + `,omitempty"` + "`"
-		fmt.Fprintf(&buf, "\n%s %s %s // %s", field.Name, field.Type, jsonTag, field.Comment)
+		fmt.Fprintf(&buf, "\n%s %s // %s", field.Name, field.Type, field.Comment)
 	}
-	jsonTag := "`" + `json:"` + `,omitempty"` + "`"
-	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} %s", jsonTag)
+	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
@@ -201,9 +199,9 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\n}") // end switch
-	fmt.Fprintf(&buf, "\nif v, ok := t.PrivateClaims[s]; ok {")
+	fmt.Fprintf(&buf, "\nif v, ok := t.privateClaims[s]; ok {")
 	fmt.Fprintf(&buf, "\nreturn v, true")
-	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.PrivateClaims[s]
+	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.privateClaims[s]
 	fmt.Fprintf(&buf, "\nreturn nil, false")
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
@@ -244,10 +242,10 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nif t.PrivateClaims == nil {")
-	fmt.Fprintf(&buf, "\nt.PrivateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
 	fmt.Fprintf(&buf, "\n}") // end if h.privateParams == nil
-	fmt.Fprintf(&buf, "\nt.PrivateClaims[name] = v")
+	fmt.Fprintf(&buf, "\nt.privateClaims[name] = v")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
