@@ -2,8 +2,12 @@
 package jwt
 
 import (
-	"github.com/pkg/errors"
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Key names for standard claims
@@ -24,14 +28,14 @@ const (
 // claims that you must frequently access, consider wrapping the token in a wrapper
 // by embedding the jwt.Token type in it
 type Token struct {
-	Audience      StringList             `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	Expiration    *NumericDate           `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	IssuedAt      *NumericDate           `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
-	Issuer        *string                `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	JwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	NotBefore     *NumericDate           `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	Subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	PrivateClaims map[string]interface{} `json:",omitempty"`
+	Audience      StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	Expiration    *NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	IssuedAt      *NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	Issuer        *string      // https://tools.ietf.org/html/rfc7519#section-4.1.1
+	JwtID         *string      // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	NotBefore     *NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	Subject       *string      // https://tools.ietf.org/html/rfc7519#section-4.1.2
+	privateClaims map[string]interface{}
 }
 
 func (t *Token) Get(s string) (interface{}, bool) {
@@ -78,7 +82,7 @@ func (t *Token) Get(s string) (interface{}, bool) {
 			return *(t.Subject), true
 		}
 	}
-	if v, ok := t.PrivateClaims[s]; ok {
+	if v, ok := t.privateClaims[s]; ok {
 		return v, true
 	}
 	return nil, false
@@ -129,10 +133,10 @@ func (t *Token) Set(name string, v interface{}) error {
 		}
 		t.Subject = &x
 	default:
-		if t.PrivateClaims == nil {
-			t.PrivateClaims = make(map[string]interface{})
+		if t.privateClaims == nil {
+			t.privateClaims = make(map[string]interface{})
 		}
-		t.PrivateClaims[name] = v
+		t.privateClaims[name] = v
 	}
 	return nil
 }
@@ -193,4 +197,119 @@ func (t Token) GetSubject() string {
 		return v.(string)
 	}
 	return ""
+}
+
+func (x *Token) UnmarshalJSON(b []byte) error {
+	var v map[string]json.RawMessage
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+
+	var t Token
+	for key, value := range v {
+		if bytes.Equal(value, []byte("null")) {
+			continue
+		}
+		switch key {
+		case AudienceKey:
+			fmt.Printf("%s, %q", key, value)
+			if err := json.Unmarshal(value, &t.Audience); err != nil {
+				return err
+			}
+		case ExpirationKey:
+			if err := json.Unmarshal(value, &t.Expiration); err != nil {
+				return err
+			}
+		case IssuedAtKey:
+			if err := json.Unmarshal(value, &t.IssuedAt); err != nil {
+				return err
+			}
+		case IssuerKey:
+			if err := json.Unmarshal(value, &t.Issuer); err != nil {
+				return err
+			}
+		case JwtIDKey:
+			if err := json.Unmarshal(value, &t.JwtID); err != nil {
+				return err
+			}
+		case NotBeforeKey:
+			if err := json.Unmarshal(value, &t.NotBefore); err != nil {
+				return err
+			}
+		case SubjectKey:
+			if err := json.Unmarshal(value, &t.Subject); err != nil {
+				return err
+			}
+		default:
+			var v interface{}
+			if err := json.Unmarshal(value, &v); err != nil {
+				return err
+			}
+			if t.privateClaims == nil {
+				t.privateClaims = make(map[string]interface{})
+			}
+			t.privateClaims[key] = v
+		}
+	}
+	*x = t
+	return nil
+}
+
+func (t Token) MarshalJSON() ([]byte, error) {
+	v := make(map[string]json.RawMessage)
+	var err error
+
+	if t.Audience != nil {
+		v[AudienceKey], err = json.Marshal(&t.Audience)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.Expiration != nil {
+		v[ExpirationKey], err = json.Marshal(&t.Expiration)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.IssuedAt != nil {
+		v[IssuedAtKey], err = json.Marshal(&t.IssuedAt)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.Issuer != nil {
+		v[IssuerKey], err = json.Marshal(&t.Issuer)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.JwtID != nil {
+		v[JwtIDKey], err = json.Marshal(&t.JwtID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.NotBefore != nil {
+		v[NotBeforeKey], err = json.Marshal(&t.NotBefore)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.Subject != nil {
+		v[SubjectKey], err = json.Marshal(&t.Subject)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for key, value := range t.privateClaims {
+		if value != nil {
+			v[key], err = json.Marshal(&value)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return json.Marshal(v)
 }
