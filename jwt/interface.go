@@ -20,7 +20,7 @@ func (l *StringList) UnmarshalJSON(b []byte) error {
 	}
 	switch value := v.(type) {
 	case []interface{}:
-		list := make([]string,0,len(value))
+		list := make([]string, 0, len(value))
 		for _, v := range value {
 			element, ok := v.(string)
 			if ok {

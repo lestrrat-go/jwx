@@ -149,12 +149,23 @@ func TestVerifyClaims(t *testing.T) {
 const aLongLongTimeAgo = 233431200
 const aLongLongTimeAgoString = "233431200"
 
-func TestUnmarshal(t *testing.T) {
+func TestUnmarshalMarshal(t *testing.T) {
 	testcases := []struct {
-		Title    string
-		JSON     string
-		Expected func() *jwt.Token
+		Title        string
+		JSON         string
+		Expected     func() *jwt.Token
+		ExpectedJSON string
 	}{
+		{
+			Title: "single aud",
+			JSON:  `{"aud":"foo"}`,
+			Expected: func() *jwt.Token {
+				t := jwt.New()
+				t.Set("aud", "foo")
+				return t
+			},
+			ExpectedJSON: `{"aud":["foo"]}`,
+		},
 		{
 			Title: "single aud",
 			JSON:  `{"aud":["foo"]}`,
@@ -163,6 +174,7 @@ func TestUnmarshal(t *testing.T) {
 				t.Set("aud", "foo")
 				return t
 			},
+			ExpectedJSON: `{"aud":["foo"]}`,
 		},
 		{
 			Title: "multiple aud's",
@@ -172,6 +184,7 @@ func TestUnmarshal(t *testing.T) {
 				t.Set("aud", []string{"foo", "bar"})
 				return t
 			},
+			ExpectedJSON: `{"aud":["foo","bar"]}`,
 		},
 		{
 			Title: "issuedAt",
@@ -181,6 +194,7 @@ func TestUnmarshal(t *testing.T) {
 				t.Set(jwt.IssuedAtKey, aLongLongTimeAgo)
 				return t
 			},
+			ExpectedJSON: `{"` + jwt.IssuedAtKey + `":` + aLongLongTimeAgoString + `}`,
 		},
 	}
 
@@ -198,7 +212,7 @@ func TestUnmarshal(t *testing.T) {
 			if !assert.NoError(t, json.NewEncoder(&buf).Encode(token), `json.Marshal should succeed`) {
 				return
 			}
-			if !assert.Equal(t, tc.JSON, strings.TrimSpace(buf.String()), `json should match`) {
+			if !assert.Equal(t, tc.ExpectedJSON, strings.TrimSpace(buf.String()), `json should match`) {
 				return
 			}
 		})
