@@ -4,9 +4,8 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
-	"time"
-
 	"github.com/pkg/errors"
+	"time"
 )
 
 // Key names for standard claims
@@ -307,13 +306,12 @@ func (t Token) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// UnmarshalJSON deserializes data from a JSON data buffer into a Token
 func (t *Token) UnmarshalJSON(data []byte) error {
 	var m map[string]interface{}
-
 	if err := json.Unmarshal(data, &m); err != nil {
 		return errors.Wrap(err, `failed to unmarshal token`)
 	}
-
 	for name, value := range m {
 		if err := t.Set(name, value); err != nil {
 			return errors.Wrapf(err, `failed to set value for %s`, name)

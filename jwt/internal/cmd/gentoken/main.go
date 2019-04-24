@@ -160,8 +160,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// by embedding the jwt.Token type in it")
 	fmt.Fprintf(&buf, "\ntype Token struct {")
 	for _, field := range fields {
-		jsonTag := "`" + `json:"` + field.JSONKey + `,omitempty"` + "`"
-		fmt.Fprintf(&buf, "\n%s %s %s // %s", field.Name, field.Type, jsonTag, field.Comment)
+		fmt.Fprintf(&buf, "\n%s %s `json:\"%s,omitempty\"` // %s", field.Name, field.Type, field.JSONKey, field.Comment)
 	}
 	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} `json:\"-\"`")
 	fmt.Fprintf(&buf, "\n}") // end type Token
@@ -336,6 +335,20 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nbuf.Write(pcjson)")
 	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\n// UnmarshalJSON deserializes data from a JSON data buffer into a Token")
+	fmt.Fprintf(&buf, "\nfunc (t *Token) UnmarshalJSON(data []byte) error {")
+	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(data, &m); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal token`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfor name, value := range m {")
+	fmt.Fprintf(&buf, "\nif err := t.Set(name, value); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set value for %%s`, name)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
 	formatted, err := format.Source(buf.Bytes())
