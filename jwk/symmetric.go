@@ -4,10 +4,8 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	pdebug "github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -46,10 +44,6 @@ func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.SymmetricKey.ExtractMap").BindError(&err)
-		defer g.End()
-	}
 
 	const kKey = `k`
 
@@ -72,10 +66,6 @@ func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (s SymmetricKey) MarshalJSON() (buf []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.SymmetricKey.MarshalJSON").BindError(&err)
-		defer g.End()
-	}
 
 	m := make(map[string]interface{})
 	if err := s.PopulateMap(m); err != nil {
@@ -86,10 +76,6 @@ func (s SymmetricKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (s SymmetricKey) PopulateMap(m map[string]interface{}) (err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jwk.SymmetricKey.PopulateMap").BindError(&err)
-		defer g.End()
-	}
 
 	if err := s.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)

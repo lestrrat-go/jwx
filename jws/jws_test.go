@@ -20,7 +20,6 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jws/verify"
-	"github.com/lestrrat-go/pdebug"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,9 +89,6 @@ func TestRoundtrip(t *testing.T) {
 			signed, err := jws.Sign(payload, alg, sharedkey)
 			if !assert.NoError(t, err, "Sign succeeds") {
 				return
-			}
-			if pdebug.Enabled {
-				pdebug.Printf("signed string: %s", signed)
 			}
 
 			verified, err := jws.Verify(signed, alg, sharedkey)

@@ -34,7 +34,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jws/verify"
-	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -245,10 +244,6 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // control of the verification process, manually call `Parse`, generate a
 // verifier, and call `Verify` on the parsed JWS message object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.Verify").BindError(&err)
-		defer g.End()
-	}
 
 	verifier, err := verify.New(alg)
 	if err != nil {
@@ -261,9 +256,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	}
 
 	if buf[0] == '{' {
-		if pdebug.Enabled {
-			pdebug.Printf("verifying in JSON mode")
-		}
 
 		var v FullEncodedMessage
 		if err := json.Unmarshal(buf, &v); err != nil {
@@ -288,11 +280,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 			buf.WriteString(sig.Protected)
 			buf.WriteByte('.')
 			buf.WriteString(msg.Payload)
-			if pdebug.Enabled {
-				pdebug.Printf("protected %s", sig.Protected)
-				pdebug.Printf("payload %s", msg.Payload)
-				pdebug.Printf("signature %s", sig.Signature)
-			}
 			decodedSignature, err := base64.RawURLEncoding.DecodeString(sig.Signature)
 			if err != nil {
 				continue
@@ -313,12 +300,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	protected, payload, signature, err := SplitCompact(bytes.NewReader(buf))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
-	}
-
-	if pdebug.Enabled {
-		pdebug.Printf("protected = %s", protected)
-		pdebug.Printf("payload = %s", payload)
-		pdebug.Printf("signature = %s", signature)
 	}
 
 	var verifyBuf bytes.Buffer
@@ -354,10 +335,6 @@ func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
 
 // VerifyWithJWK verifies the JWS message using the specified JWK
 func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.VerifyWithJWK").BindError(&err)
-		defer g.End()
-	}
 
 	keyval, err := key.Materialize()
 	if err != nil {
@@ -376,10 +353,7 @@ func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 // set to either "sig" or "enc", but you can override it by
 // providing a keyaccept function.
 func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (payload []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.VerifyWithJWKSet").BindError(&err)
-		defer g.End()
-	}
+
 	if keyaccept == nil {
 		keyaccept = DefaultJWKAcceptor
 	}
@@ -401,10 +375,6 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (pay
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 func Parse(src io.Reader) (m *Message, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.Parse").BindError(&err)
-		defer g.End()
-	}
 
 	rdr := bufio.NewReader(src)
 	var first rune
@@ -441,24 +411,8 @@ func ParseString(s string) (*Message, error) {
 }
 
 func parseJSON(src io.Reader) (result *Message, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.Parse (json)").BindError(&err)
-		defer g.End()
-	}
-	var wrapper FullEncodedMessageUnmarshalProxy
 
-	if pdebug.Enabled {
-		var buf bytes.Buffer
-		src = io.TeeReader(src, &buf)
-		defer func() {
-			pdebug.Printf("%s", (buf.Bytes())[91:])
-			pdebug.Printf("JSON payload:")
-			scanner := bufio.NewScanner(&buf)
-			for scanner.Scan() {
-				pdebug.Printf("%s", scanner.Text())
-			}
-		}()
-	}
+	var wrapper FullEncodedMessageUnmarshalProxy
 
 	if err := json.NewDecoder(src).Decode(&wrapper); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
@@ -546,21 +500,12 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 			switch state {
 			case 0:
 				protected = sofar[:i]
-				if pdebug.Enabled {
-					pdebug.Printf("header segment = %s", protected)
-				}
 				state++
 			case 1:
 				payload = sofar[:i]
-				if pdebug.Enabled {
-					pdebug.Printf("payload segment = %s", payload)
-				}
 				state++
 			case 2:
 				signature = sofar[:i]
-				if pdebug.Enabled {
-					pdebug.Printf("signature segment = %s", signature)
-				}
 			}
 			if len(sofar) <= i {
 				sofar = []byte(nil)
@@ -578,10 +523,6 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 
 // parseCompact parses a JWS value serialized via compact serialization.
 func parseCompact(rdr io.Reader) (m *Message, err error) {
-	if pdebug.Enabled {
-		g := pdebug.Marker("jws.Parse (compact)").BindError(&err)
-		defer g.End()
-	}
 
 	protected, payload, signature, err := SplitCompact(rdr)
 	if err != nil {
