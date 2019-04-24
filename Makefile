@@ -7,10 +7,10 @@ generate-%:
 	@cd $(patsubst generate-%,%,$@); go generate 
 
 realclean:
-	rm cover.out
+	rm coverage.out
 
 cover:
-	go test -cover -coverprofile=coverage.out -v ./...
+	go test -v -coverpkg=./... -coverprofile=coverage.out ./...
 
 viewcover:
 	go tool cover -html=coverage.out
