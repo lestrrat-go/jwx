@@ -151,43 +151,47 @@ const aLongLongTimeAgoString = "233431200"
 
 func TestUnmarshal(t *testing.T) {
 	testcases := []struct {
-		Title    string
-		JSON     string
-		Expected func() *jwt.Token
+		Title        string
+		Source       string
+		Expected     func() *jwt.Token
+		ExpectedJSON string
 	}{
 		{
-			Title: "single aud",
-			JSON:  `{"aud":["foo"]}`,
+			Title:  "single aud",
+			Source: `{"aud":"foo"}`,
 			Expected: func() *jwt.Token {
 				t := jwt.New()
 				t.Set("aud", "foo")
 				return t
 			},
+			ExpectedJSON: `{"aud":["foo"]}`,
 		},
 		{
-			Title: "multiple aud's",
-			JSON:  `{"aud":["foo","bar"]}`,
+			Title:  "multiple aud's",
+			Source: `{"aud":["foo","bar"]}`,
 			Expected: func() *jwt.Token {
 				t := jwt.New()
 				t.Set("aud", []string{"foo", "bar"})
 				return t
 			},
+			ExpectedJSON: `{"aud":["foo","bar"]}`,
 		},
 		{
-			Title: "issuedAt",
-			JSON:  `{"` + jwt.IssuedAtKey + `":` + aLongLongTimeAgoString + `}`,
+			Title:  "issuedAt",
+			Source: `{"` + jwt.IssuedAtKey + `":` + aLongLongTimeAgoString + `}`,
 			Expected: func() *jwt.Token {
 				t := jwt.New()
 				t.Set(jwt.IssuedAtKey, aLongLongTimeAgo)
 				return t
 			},
+			ExpectedJSON: `{"` + jwt.IssuedAtKey + `":` + aLongLongTimeAgoString + `}`,
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.Title, func(t *testing.T) {
 			var token jwt.Token
-			if !assert.NoError(t, json.Unmarshal([]byte(tc.JSON), &token), `json.Unmarshal should succeed`) {
+			if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`) {
 				return
 			}
 			if !assert.Equal(t, tc.Expected(), &token, `token should match expected value`) {
@@ -198,7 +202,7 @@ func TestUnmarshal(t *testing.T) {
 			if !assert.NoError(t, json.NewEncoder(&buf).Encode(token), `json.Marshal should succeed`) {
 				return
 			}
-			if !assert.Equal(t, tc.JSON, strings.TrimSpace(buf.String()), `json should match`) {
+			if !assert.Equal(t, tc.ExpectedJSON, strings.TrimSpace(buf.String()), `json should match`) {
 				return
 			}
 		})
