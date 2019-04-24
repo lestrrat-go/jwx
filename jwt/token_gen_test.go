@@ -2,10 +2,12 @@ package jwt_test
 
 import (
 	"encoding/json"
-	"github.com/lestrrat-go/jwx/jwt"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHeader(t *testing.T) {
@@ -144,8 +146,8 @@ func TestTokenMarshal(t *testing.T) {
 		t.Fatalf("JSON Unmarshal error: %s", err.Error())
 	}
 
-	if !reflect.DeepEqual(t1, t2) {
-		t.Fatalf("Mismatched tokens. \n Expected: %v \nReceived: %v", t1, t2)
+	if !assert.Equal(t, t1, t2, "tokens should match") {
+		return
 	}
 
 	_, err = json.MarshalIndent(t2, "", "  ")

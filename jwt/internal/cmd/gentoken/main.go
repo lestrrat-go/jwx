@@ -131,7 +131,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"time", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -163,8 +163,7 @@ func generateToken() error {
 		jsonTag := "`" + `json:"` + field.JSONKey + `,omitempty"` + "`"
 		fmt.Fprintf(&buf, "\n%s %s %s // %s", field.Name, field.Type, jsonTag, field.Comment)
 	}
-	jsonTag := "`" + `json:"` + `,omitempty"` + "`"
-	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} %s", jsonTag)
+	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} `json:\"-\"`")
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
@@ -279,6 +278,65 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
 		}
 	}
+
+	// JSON related stuff
+	fmt.Fprintf(&buf, "\n\n// this is almost identical to json.Encoder.Encode(), but we use Marshal")
+	fmt.Fprintf(&buf, "\n// to avoid having to remove the trailing newline for each successive")
+	fmt.Fprintf(&buf, "\n// call to Encode()")
+	fmt.Fprintf(&buf, "\nfunc writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {")
+	fmt.Fprintf(&buf, "\nif enc, err := json.Marshal(v); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to encode '%%s'`, keyName)")
+	fmt.Fprintf(&buf, "\n} else {")
+	fmt.Fprintf(&buf, "\nbuf.Write(enc)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\n// MarshalJSON serializes the token in JSON format. This exists to")
+	fmt.Fprintf(&buf, "\n// allow flattening of private claims.")
+	fmt.Fprintf(&buf, "\nfunc (t Token) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('{')")
+
+	for i, field := range fields {
+		if strings.HasPrefix(field.Type, "*") {
+			fmt.Fprintf(&buf, "\nif t.%s != nil {", field.Name)
+		} else {
+			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", field.Name)
+		}
+		if i > 0 {
+			fmt.Fprintf(&buf, "\nif buf.Len() > 1 {")
+			fmt.Fprintf(&buf, "\nbuf.WriteRune(',')")
+			fmt.Fprintf(&buf, "\n}")
+		}
+		fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+		fmt.Fprintf(&buf, "\nbuf.WriteString(%sKey)", field.Name)
+		fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
+		fmt.Fprintf(&buf, "\nif err := writeJSON(&buf, t.%[1]s, %[1]sKey); err != nil {", field.Name)
+		fmt.Fprintf(&buf, "\nreturn nil, err")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+	}
+
+	fmt.Fprintf(&buf, "\nif len(t.PrivateClaims) == 0 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('}')")
+	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n// If private claims exist, they need to flattened and included in the token")
+	fmt.Fprintf(&buf, "\npcjson, err := json.Marshal(t.PrivateClaims)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal private claims`)")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n// remove '{' from the private claims")
+	fmt.Fprintf(&buf, "\npcjson = pcjson[1:]")
+	fmt.Fprintf(&buf, "\nif buf.Len() > 1 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune(',')")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.Write(pcjson)")
+	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(&buf, "\n}")
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

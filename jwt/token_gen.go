@@ -2,8 +2,11 @@
 package jwt
 
 import (
-	"github.com/pkg/errors"
+	"bytes"
+	"encoding/json"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Key names for standard claims
@@ -31,7 +34,7 @@ type Token struct {
 	JwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
 	NotBefore     *NumericDate           `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
 	Subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	PrivateClaims map[string]interface{} `json:",omitempty"`
+	PrivateClaims map[string]interface{} `json:"-"`
 }
 
 func (t *Token) Get(s string) (interface{}, bool) {
@@ -193,4 +196,128 @@ func (t Token) GetSubject() string {
 		return v.(string)
 	}
 	return ""
+}
+
+// this is almost identical to json.Encoder.Encode(), but we use Marshal
+// to avoid having to remove the trailing newline for each successive
+// call to Encode()
+func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
+	if enc, err := json.Marshal(v); err != nil {
+		return errors.Wrapf(err, `failed to encode '%s'`, keyName)
+	} else {
+		buf.Write(enc)
+	}
+	return nil
+}
+
+// MarshalJSON serializes the token in JSON format. This exists to
+// allow flattening of private claims.
+func (t Token) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteRune('{')
+	if len(t.Audience) > 0 {
+		buf.WriteRune('"')
+		buf.WriteString(AudienceKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.Audience, AudienceKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.Expiration != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(ExpirationKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.Expiration, ExpirationKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.IssuedAt != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(IssuedAtKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.IssuedAt, IssuedAtKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.Issuer != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(IssuerKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.Issuer, IssuerKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.JwtID != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(JwtIDKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.JwtID, JwtIDKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.NotBefore != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(NotBeforeKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.NotBefore, NotBeforeKey); err != nil {
+			return nil, err
+		}
+	}
+	if t.Subject != nil {
+		if buf.Len() > 1 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(SubjectKey)
+		buf.WriteString(`":`)
+		if err := writeJSON(&buf, t.Subject, SubjectKey); err != nil {
+			return nil, err
+		}
+	}
+	if len(t.PrivateClaims) == 0 {
+		buf.WriteRune('}')
+		return buf.Bytes(), nil
+	}
+	// If private claims exist, they need to flattened and included in the token
+	pcjson, err := json.Marshal(t.PrivateClaims)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal private claims`)
+	}
+	// remove '{' from the private claims
+	pcjson = pcjson[1:]
+	if buf.Len() > 1 {
+		buf.WriteRune(',')
+	}
+	buf.Write(pcjson)
+	return buf.Bytes(), nil
+}
+
+func (t *Token) UnmarshalJSON(data []byte) error {
+	var m map[string]interface{}
+
+	if err := json.Unmarshal(data, &m); err != nil {
+		return errors.Wrap(err, `failed to unmarshal token`)
+	}
+
+	for name, value := range m {
+		if err := t.Set(name, value); err != nil {
+			return errors.Wrapf(err, `failed to set value for %s`, name)
+		}
+	}
+	return nil
 }

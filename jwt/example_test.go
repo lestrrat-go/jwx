@@ -47,9 +47,7 @@ func ExampleSignAndParse() {
 	}
 	// OUTPUT:
 	// {
-	//   "PrivateClaims": {
-	//     "foo": "bar"
-	//   }
+	//   "foo": "bar"
 	// }
 }
 
@@ -81,9 +79,7 @@ func ExampleToken() {
 	//   ],
 	//   "iat": 233431200,
 	//   "sub": "https://github.com/lestrrat-go/jwx/jwt",
-	//   "PrivateClaims": {
-	//     "privateClaimKey": "Hello, World!"
-	//   }
+	//   "privateClaimKey": "Hello, World!"
 	// }
 	// aud -> '[Golang Users]'
 	// iat -> '1977-05-25T18:00:00Z'
