@@ -26,61 +26,61 @@ const (
 // claims that you must frequently access, consider wrapping the token in a wrapper
 // by embedding the jwt.Token type in it
 type Token struct {
-	Audience      StringList             `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	Expiration    *NumericDate           `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	IssuedAt      *NumericDate           `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
-	Issuer        *string                `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	JwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	NotBefore     *NumericDate           `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	Subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	PrivateClaims map[string]interface{} `json:"-"`
+	audience      StringList             `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	expiration    *NumericDate           `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	issuedAt      *NumericDate           `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	issuer        *string                `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
+	jwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	notBefore     *NumericDate           `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
+	privateClaims map[string]interface{} `json:"-"`
 }
 
 func (t *Token) Get(s string) (interface{}, bool) {
 	switch s {
 	case AudienceKey:
-		if len(t.Audience) == 0 {
+		if len(t.audience) == 0 {
 			return nil, false
 		}
-		return []string(t.Audience), true
+		return []string(t.audience), true
 	case ExpirationKey:
-		if t.Expiration == nil {
+		if t.expiration == nil {
 			return nil, false
 		} else {
-			return t.Expiration.Get(), true
+			return t.expiration.Get(), true
 		}
 	case IssuedAtKey:
-		if t.IssuedAt == nil {
+		if t.issuedAt == nil {
 			return nil, false
 		} else {
-			return t.IssuedAt.Get(), true
+			return t.issuedAt.Get(), true
 		}
 	case IssuerKey:
-		if t.Issuer == nil {
+		if t.issuer == nil {
 			return nil, false
 		} else {
-			return *(t.Issuer), true
+			return *(t.issuer), true
 		}
 	case JwtIDKey:
-		if t.JwtID == nil {
+		if t.jwtID == nil {
 			return nil, false
 		} else {
-			return *(t.JwtID), true
+			return *(t.jwtID), true
 		}
 	case NotBeforeKey:
-		if t.NotBefore == nil {
+		if t.notBefore == nil {
 			return nil, false
 		} else {
-			return t.NotBefore.Get(), true
+			return t.notBefore.Get(), true
 		}
 	case SubjectKey:
-		if t.Subject == nil {
+		if t.subject == nil {
 			return nil, false
 		} else {
-			return *(t.Subject), true
+			return *(t.subject), true
 		}
 	}
-	if v, ok := t.PrivateClaims[s]; ok {
+	if v, ok := t.privateClaims[s]; ok {
 		return v, true
 	}
 	return nil, false
@@ -91,69 +91,69 @@ func (t *Token) Set(name string, v interface{}) error {
 	case AudienceKey:
 		var x StringList
 		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'Audience' key`)
+			return errors.Wrap(err, `invalid value for 'audience' key`)
 		}
-		t.Audience = x
+		t.audience = x
 	case ExpirationKey:
 		var x NumericDate
 		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'Expiration' key`)
+			return errors.Wrap(err, `invalid value for 'expiration' key`)
 		}
-		t.Expiration = &x
+		t.expiration = &x
 	case IssuedAtKey:
 		var x NumericDate
 		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'IssuedAt' key`)
+			return errors.Wrap(err, `invalid value for 'issuedAt' key`)
 		}
-		t.IssuedAt = &x
+		t.issuedAt = &x
 	case IssuerKey:
 		x, ok := v.(string)
 		if !ok {
-			return errors.Errorf(`invalid type for 'Issuer' key: %T`, v)
+			return errors.Errorf(`invalid type for 'issuer' key: %T`, v)
 		}
-		t.Issuer = &x
+		t.issuer = &x
 	case JwtIDKey:
 		x, ok := v.(string)
 		if !ok {
-			return errors.Errorf(`invalid type for 'JwtID' key: %T`, v)
+			return errors.Errorf(`invalid type for 'jwtID' key: %T`, v)
 		}
-		t.JwtID = &x
+		t.jwtID = &x
 	case NotBeforeKey:
 		var x NumericDate
 		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'NotBefore' key`)
+			return errors.Wrap(err, `invalid value for 'notBefore' key`)
 		}
-		t.NotBefore = &x
+		t.notBefore = &x
 	case SubjectKey:
 		x, ok := v.(string)
 		if !ok {
-			return errors.Errorf(`invalid type for 'Subject' key: %T`, v)
+			return errors.Errorf(`invalid type for 'subject' key: %T`, v)
 		}
-		t.Subject = &x
+		t.subject = &x
 	default:
-		if t.PrivateClaims == nil {
-			t.PrivateClaims = make(map[string]interface{})
+		if t.privateClaims == nil {
+			t.privateClaims = make(map[string]interface{})
 		}
-		t.PrivateClaims[name] = v
+		t.privateClaims[name] = v
 	}
 	return nil
 }
 
-func (t Token) GetAudience() StringList {
+func (t Token) Audience() StringList {
 	if v, ok := t.Get(AudienceKey); ok {
 		return v.([]string)
 	}
 	return nil
 }
 
-func (t Token) GetExpiration() time.Time {
+func (t Token) Expiration() time.Time {
 	if v, ok := t.Get(ExpirationKey); ok {
 		return v.(time.Time)
 	}
 	return time.Time{}
 }
 
-func (t Token) GetIssuedAt() time.Time {
+func (t Token) IssuedAt() time.Time {
 	if v, ok := t.Get(IssuedAtKey); ok {
 		return v.(time.Time)
 	}
@@ -163,7 +163,7 @@ func (t Token) GetIssuedAt() time.Time {
 // Issuer is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 
-func (t Token) GetIssuer() string {
+func (t Token) Issuer() string {
 	if v, ok := t.Get(IssuerKey); ok {
 		return v.(string)
 	}
@@ -173,14 +173,14 @@ func (t Token) GetIssuer() string {
 // JwtID is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 
-func (t Token) GetJwtID() string {
+func (t Token) JwtID() string {
 	if v, ok := t.Get(JwtIDKey); ok {
 		return v.(string)
 	}
 	return ""
 }
 
-func (t Token) GetNotBefore() time.Time {
+func (t Token) NotBefore() time.Time {
 	if v, ok := t.Get(NotBeforeKey); ok {
 		return v.(time.Time)
 	}
@@ -190,7 +190,7 @@ func (t Token) GetNotBefore() time.Time {
 // Subject is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 
-func (t Token) GetSubject() string {
+func (t Token) Subject() string {
 	if v, ok := t.Get(SubjectKey); ok {
 		return v.(string)
 	}
@@ -214,86 +214,86 @@ func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
 func (t Token) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteRune('{')
-	if len(t.Audience) > 0 {
+	if len(t.audience) > 0 {
 		buf.WriteRune('"')
 		buf.WriteString(AudienceKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.Audience, AudienceKey); err != nil {
+		if err := writeJSON(&buf, t.audience, AudienceKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.Expiration != nil {
+	if t.expiration != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(ExpirationKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.Expiration, ExpirationKey); err != nil {
+		if err := writeJSON(&buf, t.expiration, ExpirationKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.IssuedAt != nil {
+	if t.issuedAt != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(IssuedAtKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.IssuedAt, IssuedAtKey); err != nil {
+		if err := writeJSON(&buf, t.issuedAt, IssuedAtKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.Issuer != nil {
+	if t.issuer != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(IssuerKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.Issuer, IssuerKey); err != nil {
+		if err := writeJSON(&buf, t.issuer, IssuerKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.JwtID != nil {
+	if t.jwtID != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(JwtIDKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.JwtID, JwtIDKey); err != nil {
+		if err := writeJSON(&buf, t.jwtID, JwtIDKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.NotBefore != nil {
+	if t.notBefore != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(NotBeforeKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.NotBefore, NotBeforeKey); err != nil {
+		if err := writeJSON(&buf, t.notBefore, NotBeforeKey); err != nil {
 			return nil, err
 		}
 	}
-	if t.Subject != nil {
+	if t.subject != nil {
 		if buf.Len() > 1 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(SubjectKey)
 		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.Subject, SubjectKey); err != nil {
+		if err := writeJSON(&buf, t.subject, SubjectKey); err != nil {
 			return nil, err
 		}
 	}
-	if len(t.PrivateClaims) == 0 {
+	if len(t.privateClaims) == 0 {
 		buf.WriteRune('}')
 		return buf.Bytes(), nil
 	}
 	// If private claims exist, they need to flattened and included in the token
-	pcjson, err := json.Marshal(t.PrivateClaims)
+	pcjson, err := json.Marshal(t.privateClaims)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to marshal private claims`)
 	}

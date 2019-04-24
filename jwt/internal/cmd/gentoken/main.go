@@ -76,7 +76,7 @@ func generateToken() error {
 
 	var fields = []tokenField{
 		{
-			Name:      "Audience",
+			Name:      "audience",
 			JSONKey:   "aud",
 			Type:      "StringList",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
@@ -85,7 +85,7 @@ func generateToken() error {
 			elemType:  `string`,
 		},
 		{
-			Name:      "Expiration",
+			Name:      "expiration",
 			JSONKey:   "exp",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.4`,
@@ -93,7 +93,7 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:      "IssuedAt",
+			Name:      "issuedAt",
 			JSONKey:   "iat",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.6`,
@@ -101,19 +101,19 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:    "Issuer",
+			Name:    "issuer",
 			JSONKey: "iss",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.1`,
 		},
 		{
-			Name:    "JwtID",
+			Name:    "jwtID",
 			JSONKey: "jti",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.7`,
 		},
 		{
-			Name:      "NotBefore",
+			Name:      "notBefore",
 			JSONKey:   "nbf",
 			Type:      "*NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.5`,
@@ -121,7 +121,7 @@ func generateToken() error {
 			noDeref:   true,
 		},
 		{
-			Name:    "Subject",
+			Name:    "subject",
 			JSONKey: "sub",
 			Type:    "*string",
 			Comment: `https://tools.ietf.org/html/rfc7519#section-4.1.2`,
@@ -162,7 +162,7 @@ func generateToken() error {
 	for _, field := range fields {
 		fmt.Fprintf(&buf, "\n%s %s `json:\"%s,omitempty\"` // %s", field.Name, field.Type, field.JSONKey, field.Comment)
 	}
-	fmt.Fprintf(&buf, "\nPrivateClaims map[string]interface{} `json:\"-\"`")
+	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{} `json:\"-\"`")
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
@@ -171,7 +171,7 @@ func generateToken() error {
 		fmt.Fprintf(&buf, "\ncase %sKey:", field.UpperName())
 		switch {
 		case field.IsList():
-			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", strings.Title(field.Name))
+			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", field.Name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n}") // end if len(t.%s) == 0
 			fmt.Fprintf(&buf, "\nreturn ")
@@ -199,9 +199,9 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\n}") // end switch
-	fmt.Fprintf(&buf, "\nif v, ok := t.PrivateClaims[s]; ok {")
+	fmt.Fprintf(&buf, "\nif v, ok := t.privateClaims[s]; ok {")
 	fmt.Fprintf(&buf, "\nreturn v, true")
-	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.PrivateClaims[s]
+	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.privateClaims[s]
 	fmt.Fprintf(&buf, "\nreturn nil, false")
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
@@ -242,10 +242,10 @@ func generateToken() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nif t.PrivateClaims == nil {")
-	fmt.Fprintf(&buf, "\nt.PrivateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
 	fmt.Fprintf(&buf, "\n}") // end if h.privateParams == nil
-	fmt.Fprintf(&buf, "\nt.PrivateClaims[name] = v")
+	fmt.Fprintf(&buf, "\nt.privateClaims[name] = v")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
@@ -253,14 +253,14 @@ func generateToken() error {
 	for _, field := range fields {
 		switch {
 		case field.IsList():
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() %s {", field.UpperName(), field.Type)
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.Type)
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.([]string)")
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
 			fmt.Fprintf(&buf, "\nreturn nil")
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
 		case field.Type == "*NumericDate":
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() time.Time {", field.UpperName())
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() time.Time {", field.UpperName())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(time.Time)")
 			fmt.Fprintf(&buf, "\n}")
@@ -269,7 +269,7 @@ func generateToken() error {
 		case field.IsPointer():
 			fmt.Fprintf(&buf, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
 			fmt.Fprintf(&buf, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) Get%s() %s {", field.UpperName(), field.PointerElem())
+			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(%s)", field.PointerElem())
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
@@ -309,21 +309,21 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\n}")
 		}
 		fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
-		fmt.Fprintf(&buf, "\nbuf.WriteString(%sKey)", field.Name)
+		fmt.Fprintf(&buf, "\nbuf.WriteString(%sKey)", field.UpperName())
 		fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
-		fmt.Fprintf(&buf, "\nif err := writeJSON(&buf, t.%[1]s, %[1]sKey); err != nil {", field.Name)
+		fmt.Fprintf(&buf, "\nif err := writeJSON(&buf, t.%s, %sKey); err != nil {", field.Name, field.UpperName())
 		fmt.Fprintf(&buf, "\nreturn nil, err")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n}")
 	}
 
-	fmt.Fprintf(&buf, "\nif len(t.PrivateClaims) == 0 {")
+	fmt.Fprintf(&buf, "\nif len(t.privateClaims) == 0 {")
 	fmt.Fprintf(&buf, "\nbuf.WriteRune('}')")
 	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n// If private claims exist, they need to flattened and included in the token")
-	fmt.Fprintf(&buf, "\npcjson, err := json.Marshal(t.PrivateClaims)")
+	fmt.Fprintf(&buf, "\npcjson, err := json.Marshal(t.privateClaims)")
 	fmt.Fprintf(&buf, "\nif err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal private claims`)")
 	fmt.Fprintf(&buf, "\n}")

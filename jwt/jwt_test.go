@@ -138,7 +138,7 @@ func TestVerifyClaims(t *testing.T) {
 		}
 
 		if !assert.NoError(t, token.Verify(args...), "token.Verify should validate tokens in the same second they are created") {
-			if now.Equal(token.GetIssuedAt()) {
+			if now.Equal(token.IssuedAt()) {
 				t.Errorf("iat claim failed: iat == now")
 			}
 			return

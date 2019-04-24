@@ -65,12 +65,12 @@ func ExampleToken() {
 	}
 
 	fmt.Printf("%s\n", buf)
-	fmt.Printf("aud -> '%s'\n", t.GetAudience())
-	fmt.Printf("iat -> '%s'\n", t.GetIssuedAt().Format(time.RFC3339))
+	fmt.Printf("aud -> '%s'\n", t.Audience())
+	fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
 	if v, ok := t.Get(`privateClaimKey`); ok {
 		fmt.Printf("privateClaimKey -> '%s'\n", v)
 	}
-	fmt.Printf("sub -> '%s'\n", t.GetSubject())
+	fmt.Printf("sub -> '%s'\n", t.Subject())
 
 	// OUTPUT:
 	// {
