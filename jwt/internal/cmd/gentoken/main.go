@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/pkg/errors"
 )
@@ -20,9 +24,16 @@ func main() {
 }
 
 func _main() error {
-	if err := generateToken(); err != nil {
+	if err := generateJwtToken(); err != nil {
 		return errors.Wrap(err, `failed to generate token file`)
 	}
+	if err := generateOpenID(); err != nil {
+		return errors.Wrap(err, `failed to generate openid API`)
+	}
+	if err := generateOpenIDAddress(); err != nil {
+		return errors.Wrap(err, `failed to generate openid address`)
+	}
+
 	return nil
 }
 
@@ -38,7 +49,21 @@ type tokenField struct {
 }
 
 func (t tokenField) UpperName() string {
-	return strings.Title(t.Name)
+	var buf bytes.Buffer
+	var upnext bool
+	for _, r := range strings.Title(t.Name) {
+		if r == '_' {
+			upnext = true
+			continue
+		}
+		if upnext {
+			r = unicode.ToUpper(r)
+		}
+		buf.WriteRune(r)
+		upnext = false
+	}
+
+	return buf.String()
 }
 
 func (t tokenField) IsList() bool {
@@ -61,7 +86,9 @@ func (t tokenField) PointerElem() string {
 }
 
 var zerovals = map[string]string{
-	`string`: `""`,
+	`string`:      `""`,
+	`bool`:        `false`,
+	`NumericDate`: `time.Time{}`,
 }
 
 func zeroval(s string) string {
@@ -71,10 +98,249 @@ func zeroval(s string) string {
 	return `nil`
 }
 
-func generateToken() error {
+func generateOpenIDAddress() error {
+	var fields = []*tokenField{
+		{
+			Name:    "formatted",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+		{
+			Name:    "streetAddress",
+			JSONKey: "street_address",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+		{
+			Name:    "locality",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+		{
+			Name:    "region",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+		{
+			Name:    "postalCode",
+			JSONKey: "postal_code",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+		{
+			Name:    "country",
+			Type:    "*string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim",
+		},
+	}
+
+	for _, field := range fields {
+		if field.JSONKey == "" {
+			field.JSONKey = field.Name
+		}
+	}
+
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
+	fmt.Fprintf(&buf, "\npackage openid")
+
+	fmt.Fprintf(&buf, "\n\nimport (")
+	for _, pkg := range []string{"bytes", "encoding/json", "github.com/pkg/errors"} {
+		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	}
+
+	fmt.Fprintf(&buf, "\n)") // end of import
+	fmt.Fprintf(&buf, "\nconst (")
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\nAddress%sKey = %#v", field.UpperName(), field.JSONKey)
+	}
+	fmt.Fprintf(&buf, "\n)")
+
+	fmt.Fprintf(&buf, "\n\n// AddressClaim is the address claim as described in https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim")
+	fmt.Fprintf(&buf, "\ntype AddressClaim struct {")
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\n%s %s // %s", field.Name, field.Type, field.Comment)
+	}
+	fmt.Fprintf(&buf, "\n}")
+
+	for _, field := range fields {
+		writeAccessor(&buf, "AddressClaim", field)
+	}
+
+	writeGetMethod(&buf, "AddressClaim", fields, false)
+
+	fmt.Fprintf(&buf, "\nfunc (a *AddressClaim) Set(key string, value interface{}) error {")
+	fmt.Fprintf(&buf, "\nswitch key {")
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\ncase Address%sKey:", field.UpperName())
+		fmt.Fprintf(&buf, "\nv, ok := value.(%s)", field.PointerElem())
+		fmt.Fprintf(&buf, "\nif ok {")
+		fmt.Fprintf(&buf, "\na.%s = &v", field.Name)
+		fmt.Fprintf(&buf, "\nreturn nil")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid type for key '%s': %%T`, value)", field.Name)
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid key for address claim: %%s`, key)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\n// this is almost identical to json.Encoder.Encode(), but we use Marshal")
+	fmt.Fprintf(&buf, "\n// to avoid having to remove the trailing newline for each successive")
+	fmt.Fprintf(&buf, "\n// call to Encode()")
+	fmt.Fprintf(&buf, "\nfunc writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {")
+	fmt.Fprintf(&buf, "\nif enc, err := json.Marshal(v); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to encode '%%s'`, keyName)")
+	fmt.Fprintf(&buf, "\n} else {")
+	fmt.Fprintf(&buf, "\nbuf.Write(enc)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil")
+	fmt.Fprintf(&buf, "\n}")
+	if err := writeJSONMarshaler(&buf, "AddressClaim", fields, false); err != nil {
+		return errors.Wrap(err, `failed to write JSON marshaler interface`)
+	}
+
+	return writeFormattedSource(&buf, filepath.Join("openid", "address_gen.go"), buf.Bytes())
+}
+
+func generateOpenID() error {
+	var fields = []*tokenField{
+		{
+			Name:    "name",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "given_name",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "middle_name",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "family_name",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "nickname",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "preferred_username",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "profile",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "picture",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "website",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "email",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "email_verified",
+			Type:    "bool",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "gender",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "birthdate",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "zoneinfo",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "locale",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "phone_number",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "phone_number_verified",
+			Type:    "bool",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "address",
+			Type:    "*AddressClaim",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "updated_at",
+			Type:    "*jwt.NumericDate",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+	}
+
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
+	fmt.Fprintf(&buf, "\npackage openid")
+
+	fmt.Fprintf(&buf, "\n\nimport (")
+	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwt"} {
+		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	}
+	fmt.Fprintf(&buf, "\n)") // end of import
+
+	fmt.Fprintf(&buf, "\nconst (")
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\n%sKey = %#v", field.UpperName(), field.Name)
+	}
+	fmt.Fprintf(&buf, "\n)")
+
+	fmt.Fprintf(&buf, "\ntype Token interface {")
+	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
+	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\n}")
+
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\n// %s returns the value of `%s` claim. If the claim does not exist, the zero value will be returned.", field.UpperName(), field.Name)
+		fmt.Fprintf(&buf, "\nfunc %s(t Token) %s {", field.UpperName(), field.Type)
+		fmt.Fprintf(&buf, "\nv, _ := t.Get(%sKey)", field.UpperName())
+		fmt.Fprintf(&buf, "\nif s, ok := v.(%s); ok {", field.Type)
+		fmt.Fprintf(&buf, "\nreturn s")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn %v", zeroval(field.Type))
+		fmt.Fprintf(&buf, "\n}")
+	}
+
+	return writeFormattedSource(&buf, filepath.Join("openid", "openid_gen.go"), buf.Bytes())
+}
+
+func generateJwtToken() error {
 	var buf bytes.Buffer
 
-	var fields = []tokenField{
+	var fields = []*tokenField{
 		{
 			Name:      "audience",
 			JSONKey:   "aud",
@@ -82,7 +348,6 @@ func generateToken() error {
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
 			isList:    true,
 			hasAccept: true,
-			elemType:  `string`,
 		},
 		{
 			Name:      "expiration",
@@ -128,6 +393,15 @@ func generateToken() error {
 		},
 	}
 
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Name < fields[j].Name
+	})
+	for _, field := range fields {
+		if field.JSONKey == "" {
+			field.JSONKey = field.Name
+		}
+	}
+
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
@@ -164,46 +438,7 @@ func generateToken() error {
 	}
 	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{} `json:\"-\"`")
 	fmt.Fprintf(&buf, "\n}") // end type Token
-
-	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
-	fmt.Fprintf(&buf, "\nswitch s {")
-	for _, field := range fields {
-		fmt.Fprintf(&buf, "\ncase %sKey:", field.UpperName())
-		switch {
-		case field.IsList():
-			fmt.Fprintf(&buf, "\nif len(t.%s) == 0 {", field.Name)
-			fmt.Fprintf(&buf, "\nreturn nil, false")
-			fmt.Fprintf(&buf, "\n}") // end if len(t.%s) == 0
-			fmt.Fprintf(&buf, "\nreturn ")
-			// some types such as `aud` need explicit conversion
-			var pre, post string
-			if field.Type == "StringList" {
-				pre = "[]string("
-				post = ")"
-			}
-			fmt.Fprintf(&buf, "%st.%s%s, true", pre, field.Name, post)
-		case field.IsPointer():
-			fmt.Fprintf(&buf, "\nif t.%s == nil {", field.Name)
-			fmt.Fprintf(&buf, "\nreturn nil, false")
-			fmt.Fprintf(&buf, "\n} else {")
-			if field.noDeref {
-				if field.Type == "*types.NumericDate" {
-					fmt.Fprintf(&buf, "\nreturn t.%s.Get(), true", field.Name)
-				} else {
-					fmt.Fprintf(&buf, "\nreturn t.%s, true", field.Name)
-				}
-			} else {
-				fmt.Fprintf(&buf, "\nreturn *(t.%s), true", field.Name)
-			}
-			fmt.Fprintf(&buf, "\n}") // end if t.%s != nil
-		}
-	}
-	fmt.Fprintf(&buf, "\n}") // end switch
-	fmt.Fprintf(&buf, "\nif v, ok := t.privateClaims[s]; ok {")
-	fmt.Fprintf(&buf, "\nreturn v, true")
-	fmt.Fprintf(&buf, "\n}") // end if v, ok := t.privateClaims[s]
-	fmt.Fprintf(&buf, "\nreturn nil, false")
-	fmt.Fprintf(&buf, "\n}") // end of Get
+	writeGetMethod(&buf, "Token", fields, true)
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Set(name string, v interface{}) error {")
 	fmt.Fprintf(&buf, "\nswitch name {")
@@ -251,31 +486,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
 
 	for _, field := range fields {
-		switch {
-		case field.IsList():
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.Type)
-			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
-			fmt.Fprintf(&buf, "\nreturn v.([]string)")
-			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
-			fmt.Fprintf(&buf, "\nreturn nil")
-			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
-		case field.Type == "*types.NumericDate":
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() time.Time {", field.UpperName())
-			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
-			fmt.Fprintf(&buf, "\nreturn v.(time.Time)")
-			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nreturn time.Time{}")
-			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s()
-		case field.IsPointer():
-			fmt.Fprintf(&buf, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
-			fmt.Fprintf(&buf, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
-			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() %s {", field.UpperName(), field.PointerElem())
-			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
-			fmt.Fprintf(&buf, "\nreturn v.(%s)", field.PointerElem())
-			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
-			fmt.Fprintf(&buf, "\nreturn %s", zeroval(field.PointerElem()))
-			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
-		}
+		writeAccessor(&buf, "Token", field)
 	}
 
 	// JSON related stuff
@@ -291,80 +502,193 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\n// MarshalJSON serializes the token in JSON format. This exists to")
-	fmt.Fprintf(&buf, "\n// allow flattening of private claims.")
-	fmt.Fprintf(&buf, "\nfunc (t Token) MarshalJSON() ([]byte, error) {")
-	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
-	fmt.Fprintf(&buf, "\nbuf.WriteRune('{')")
+	if err := writeJSONMarshaler(&buf, "Token", fields, true); err != nil {
+		return errors.Wrap(err, `failed to write JSON marshaler interface`)
+	}
+
+	if err := writeFormattedSource(&buf, "token_gen.go", buf.Bytes()); err != nil {
+		return errors.Wrap(err, `failed to write formatted source code`)
+	}
+	return nil
+}
+
+func writeAccessor(dst io.Writer, typ string, field *tokenField) error {
+	keyName := field.UpperName() + "Key"
+	if typ == "AddressClaim" {
+		keyName = "Address" + keyName
+	}
+
+	fmt.Fprintf(dst, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
+	fmt.Fprintf(dst, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
+	switch {
+	case field.Type == "*NumericDate" || field.Type == "*jwt.NumericDate":
+		fmt.Fprintf(dst, "\nfunc (t %s) %s() time.Time {", typ, field.UpperName())
+		fmt.Fprintf(dst, "\nif v, ok := t.Get(%s); ok {", keyName)
+		fmt.Fprintf(dst, "\nreturn v.(time.Time)")
+		fmt.Fprintf(dst, "\n}")
+		fmt.Fprintf(dst, "\nreturn time.Time{}")
+		fmt.Fprintf(dst, "\n}") // end func (t %s) %s()
+	case field.IsPointer():
+		fmt.Fprintf(dst, "\nfunc (t %s) %s() %s {", typ, field.UpperName(), field.PointerElem())
+		fmt.Fprintf(dst, "\nif v, ok := t.Get(%s); ok {", keyName)
+		fmt.Fprintf(dst, "\nreturn v.(%s)", field.PointerElem())
+		fmt.Fprintf(dst, "\n}") // end if v, ok := t.Get(%s)
+		fmt.Fprintf(dst, "\nreturn %s", zeroval(field.PointerElem()))
+		fmt.Fprintf(dst, "\n}") // end func (t %s) %s() %s
+	default:
+		fmt.Fprintf(dst, "\nfunc (t %s) %s() %s {", typ, field.UpperName(), field.Type)
+		fmt.Fprintf(dst, "\nif v, ok := t.Get(%s); ok {", keyName)
+		fmt.Fprintf(dst, "\nreturn v.([]string)")
+		fmt.Fprintf(dst, "\n}") // end if v, ok := t.Get(%s)
+		fmt.Fprintf(dst, "\nreturn %s", zeroval(field.Type))
+		fmt.Fprintf(dst, "\n}") // end func (t %s) %s() %s
+	}
+	return nil
+}
+
+func writeJSONMarshaler(dst io.Writer, typ string, fields []*tokenField, hasPrivateClaims bool) error {
+	fmt.Fprintf(dst, "\n\n// MarshalJSON serializes the token in JSON format.")
+	fmt.Fprintf(dst, "\nfunc (t %s) MarshalJSON() ([]byte, error) {", typ)
+	fmt.Fprintf(dst, "\nvar buf bytes.Buffer")
+	fmt.Fprintf(dst, "\nbuf.WriteRune('{')")
 
 	for i, field := range fields {
 		if strings.HasPrefix(field.Type, "*") {
-			fmt.Fprintf(&buf, "\nif t.%s != nil {", field.Name)
+			fmt.Fprintf(dst, "\nif t.%s != nil {", field.Name)
 		} else {
-			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", field.Name)
+			fmt.Fprintf(dst, "\nif len(t.%s) > 0 {", field.Name)
 		}
 		if i > 0 {
-			fmt.Fprintf(&buf, "\nif buf.Len() > 1 {")
-			fmt.Fprintf(&buf, "\nbuf.WriteRune(',')")
-			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(dst, "\nif buf.Len() > 1 {")
+			fmt.Fprintf(dst, "\nbuf.WriteRune(',')")
+			fmt.Fprintf(dst, "\n}")
 		}
-		fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
-		fmt.Fprintf(&buf, "\nbuf.WriteString(%sKey)", field.UpperName())
-		fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
-		fmt.Fprintf(&buf, "\nif err := writeJSON(&buf, t.%s, %sKey); err != nil {", field.Name, field.UpperName())
-		fmt.Fprintf(&buf, "\nreturn nil, err")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(dst, "\nbuf.WriteRune('\"')")
+		fmt.Fprintf(dst, "\nbuf.WriteString(")
+		if typ == "AddressClaim" {
+			fmt.Fprintf(dst, "Address")
+		}
+		fmt.Fprintf(dst, "%sKey)", field.UpperName())
+		fmt.Fprintf(dst, "\nbuf.WriteString(`\":`)")
+		fmt.Fprintf(dst, "\nif err := writeJSON(&buf, t.%s, ", field.Name)
+		if typ == "AddressClaim" {
+			fmt.Fprintf(dst, "Address")
+		}
+		fmt.Fprintf(dst, "%sKey); err != nil {", field.UpperName())
+		fmt.Fprintf(dst, "\nreturn nil, err")
+		fmt.Fprintf(dst, "\n}")
+		fmt.Fprintf(dst, "\n}")
 	}
 
-	fmt.Fprintf(&buf, "\nif len(t.privateClaims) == 0 {")
-	fmt.Fprintf(&buf, "\nbuf.WriteRune('}')")
-	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
-	fmt.Fprintf(&buf, "\n}")
+	if !hasPrivateClaims {
+		fmt.Fprintf(dst, "\nbuf.WriteRune('}')")
+	} else {
+		fmt.Fprintf(dst, "\nif len(t.privateClaims) == 0 {")
+		fmt.Fprintf(dst, "\nbuf.WriteRune('}')")
+		fmt.Fprintf(dst, "\nreturn buf.Bytes(), nil")
+		fmt.Fprintf(dst, "\n}")
 
-	fmt.Fprintf(&buf, "\n// If private claims exist, they need to flattened and included in the token")
-	fmt.Fprintf(&buf, "\npcjson, err := json.Marshal(t.privateClaims)")
-	fmt.Fprintf(&buf, "\nif err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal private claims`)")
-	fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(dst, "\n// If private claims exist, they need to flattened and included in the token")
+		fmt.Fprintf(dst, "\npcjson, err := json.Marshal(t.privateClaims)")
+		fmt.Fprintf(dst, "\nif err != nil {")
+		fmt.Fprintf(dst, "\nreturn nil, errors.Wrap(err, `failed to marshal private claims`)")
+		fmt.Fprintf(dst, "\n}")
 
-	fmt.Fprintf(&buf, "\n// remove '{' from the private claims")
-	fmt.Fprintf(&buf, "\npcjson = pcjson[1:]")
-	fmt.Fprintf(&buf, "\nif buf.Len() > 1 {")
-	fmt.Fprintf(&buf, "\nbuf.WriteRune(',')")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nbuf.Write(pcjson)")
-	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
-	fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(dst, "\n// remove '{' from the private claims")
+		fmt.Fprintf(dst, "\npcjson = pcjson[1:]")
+		fmt.Fprintf(dst, "\nif buf.Len() > 1 {")
+		fmt.Fprintf(dst, "\nbuf.WriteRune(',')")
+		fmt.Fprintf(dst, "\n}")
+		fmt.Fprintf(dst, "\nbuf.Write(pcjson)")
+	}
+	fmt.Fprintf(dst, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(dst, "\n}")
 
-	fmt.Fprintf(&buf, "\n\n// UnmarshalJSON deserializes data from a JSON data buffer into a Token")
-	fmt.Fprintf(&buf, "\nfunc (t *Token) UnmarshalJSON(data []byte) error {")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(data, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal token`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfor name, value := range m {")
-	fmt.Fprintf(&buf, "\nif err := t.Set(name, value); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to set value for %%s`, name)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(dst, "\n\n// UnmarshalJSON deserializes data from a JSON data buffer into a %s", typ)
+	fmt.Fprintf(dst, "\nfunc (t *%s) UnmarshalJSON(data []byte) error {", typ)
+	fmt.Fprintf(dst, "\nvar m map[string]interface{}")
+	fmt.Fprintf(dst, "\nif err := json.Unmarshal(data, &m); err != nil {")
+	fmt.Fprintf(dst, "\nreturn errors.Wrap(err, `failed to unmarshal token`)")
+	fmt.Fprintf(dst, "\n}")
+	fmt.Fprintf(dst, "\nfor name, value := range m {")
+	fmt.Fprintf(dst, "\nif err := t.Set(name, value); err != nil {")
+	fmt.Fprintf(dst, "\nreturn errors.Wrapf(err, `failed to set value for %%s`, name)")
+	fmt.Fprintf(dst, "\n}")
+	fmt.Fprintf(dst, "\n}")
+	fmt.Fprintf(dst, "\nreturn nil")
+	fmt.Fprintf(dst, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	return nil
+}
+
+func writeFormattedSource(dst io.Writer, filename string, data []byte) error {
+	log.Printf("Attempting to write to %s", filename)
+	formatted, err := format.Source(data)
 	if err != nil {
-		log.Printf("%s", buf.Bytes())
+		log.Printf("%s", data)
 		log.Printf("%s", err)
 		return errors.Wrap(err, `failed to format source`)
 	}
 
-	filename := "token_gen.go"
 	f, err := os.Create(filename)
 	if err != nil {
 		return errors.Wrapf(err, `failed to open file %s for writing`, filename)
 	}
 	defer f.Close()
 
-	f.Write(formatted)
+	_, err = f.Write(formatted)
+	return err
+}
+
+func writeGetMethod(dst io.Writer, typ string, fields []*tokenField, hasPrivateClaims bool) error {
+
+	fmt.Fprintf(dst, "\n\nfunc (t *%s) Get(s string) (interface{}, bool) {", typ)
+	fmt.Fprintf(dst, "\nswitch s {")
+	for _, field := range fields {
+		keyName := field.UpperName() + "Key"
+		if typ == "AddressClaim" {
+			keyName = "Address" + keyName
+		}
+		fmt.Fprintf(dst, "\ncase %s:", keyName)
+		switch {
+		case field.IsList():
+			fmt.Fprintf(dst, "\nif len(t.%s) == 0 {", field.Name)
+			fmt.Fprintf(dst, "\nreturn nil, false")
+			fmt.Fprintf(dst, "\n}") // end if len(t.%s) == 0
+			fmt.Fprintf(dst, "\nreturn ")
+			// some types such as `aud` need explicit conversion
+			var pre, post string
+			if field.Type == "StringList" {
+				pre = "[]string("
+				post = ")"
+			}
+			fmt.Fprintf(dst, "%st.%s%s, true", pre, field.Name, post)
+		case field.IsPointer():
+			fmt.Fprintf(dst, "\nif t.%s == nil {", field.Name)
+			fmt.Fprintf(dst, "\nreturn nil, false")
+			fmt.Fprintf(dst, "\n} else {")
+			if field.noDeref {
+				if field.Type == "*NumericDate" {
+					fmt.Fprintf(dst, "\nreturn t.%s.Get(), true", field.Name)
+				} else {
+					fmt.Fprintf(dst, "\nreturn t.%s, true", field.Name)
+				}
+			} else {
+				fmt.Fprintf(dst, "\nreturn *(t.%s), true", field.Name)
+			}
+			fmt.Fprintf(dst, "\n}") // end if t.%s != nil
+		default:
+			fmt.Fprintf(dst, "\nreturn t.%s, true", field.Name)
+		}
+	}
+	fmt.Fprintf(dst, "\n}") // end switch
+	if hasPrivateClaims {
+		fmt.Fprintf(dst, "\nif v, ok := t.privateClaims[s]; ok {")
+		fmt.Fprintf(dst, "\nreturn v, true")
+		fmt.Fprintf(dst, "\n}") // end if v, ok := t.privateClaims[s]
+	}
+
+	fmt.Fprintf(dst, "\nreturn nil, false")
+	fmt.Fprintf(dst, "\n}") // end of Get
 	return nil
 }

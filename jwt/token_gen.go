@@ -140,6 +140,8 @@ func (t *Token) Set(name string, v interface{}) error {
 	return nil
 }
 
+// Audience is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) Audience() StringList {
 	if v, ok := t.Get(AudienceKey); ok {
 		return v.([]string)
@@ -147,6 +149,8 @@ func (t Token) Audience() StringList {
 	return nil
 }
 
+// Expiration is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) Expiration() time.Time {
 	if v, ok := t.Get(ExpirationKey); ok {
 		return v.(time.Time)
@@ -154,6 +158,8 @@ func (t Token) Expiration() time.Time {
 	return time.Time{}
 }
 
+// IssuedAt is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) IssuedAt() time.Time {
 	if v, ok := t.Get(IssuedAtKey); ok {
 		return v.(time.Time)
@@ -163,7 +169,6 @@ func (t Token) IssuedAt() time.Time {
 
 // Issuer is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
 func (t Token) Issuer() string {
 	if v, ok := t.Get(IssuerKey); ok {
 		return v.(string)
@@ -173,7 +178,6 @@ func (t Token) Issuer() string {
 
 // JwtID is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
 func (t Token) JwtID() string {
 	if v, ok := t.Get(JwtIDKey); ok {
 		return v.(string)
@@ -181,6 +185,8 @@ func (t Token) JwtID() string {
 	return ""
 }
 
+// NotBefore is a convenience function to retrieve the corresponding value store in the token
+// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) NotBefore() time.Time {
 	if v, ok := t.Get(NotBeforeKey); ok {
 		return v.(time.Time)
@@ -190,7 +196,6 @@ func (t Token) NotBefore() time.Time {
 
 // Subject is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
 func (t Token) Subject() string {
 	if v, ok := t.Get(SubjectKey); ok {
 		return v.(string)
@@ -210,8 +215,7 @@ func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
 	return nil
 }
 
-// MarshalJSON serializes the token in JSON format. This exists to
-// allow flattening of private claims.
+// MarshalJSON serializes the token in JSON format.
 func (t Token) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteRune('{')
