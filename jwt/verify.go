@@ -93,21 +93,21 @@ func (t *Token) Verify(options ...Option) error {
 
 	// check for iss
 	if len(issuer) > 0 {
-		if v := t.GetIssuer(); v != "" && v != issuer {
+		if v := t.Issuer(); v != "" && v != issuer {
 			return errors.New(`iss not satisfied`)
 		}
 	}
 
 	// check for jti
 	if len(jwtid) > 0 {
-		if v := t.GetJwtID(); v != "" && v != jwtid {
+		if v := t.JwtID(); v != "" && v != jwtid {
 			return errors.New(`jti not satisfied`)
 		}
 	}
 
 	// check for sub
 	if len(subject) > 0 {
-		if v := t.GetSubject(); v != "" && v != subject {
+		if v := t.Subject(); v != "" && v != subject {
 			return errors.New(`sub not satisfied`)
 		}
 	}
@@ -115,7 +115,7 @@ func (t *Token) Verify(options ...Option) error {
 	// check for aud
 	if len(audience) > 0 {
 		var found bool
-		for _, v := range t.GetAudience() {
+		for _, v := range t.Audience() {
 			if v == audience {
 				found = true
 				break
@@ -127,7 +127,7 @@ func (t *Token) Verify(options ...Option) error {
 	}
 
 	// check for exp
-	if tv := t.GetExpiration(); !tv.IsZero() {
+	if tv := t.Expiration(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		if !now.Before(ttv.Add(skew)) {
@@ -136,7 +136,7 @@ func (t *Token) Verify(options ...Option) error {
 	}
 
 	// check for iat
-	if tv := t.GetIssuedAt(); !tv.IsZero() {
+	if tv := t.IssuedAt(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		if now.Before(ttv.Add(-1 * skew)) {
@@ -145,7 +145,7 @@ func (t *Token) Verify(options ...Option) error {
 	}
 
 	// check for nbf
-	if tv := t.GetNotBefore(); !tv.IsZero() {
+	if tv := t.NotBefore(); !tv.IsZero() {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew

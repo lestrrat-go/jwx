@@ -47,9 +47,7 @@ func ExampleSignAndParse() {
 	}
 	// OUTPUT:
 	// {
-	//   "PrivateClaims": {
-	//     "foo": "bar"
-	//   }
+	//   "foo": "bar"
 	// }
 }
 
@@ -67,12 +65,12 @@ func ExampleToken() {
 	}
 
 	fmt.Printf("%s\n", buf)
-	fmt.Printf("aud -> '%s'\n", t.GetAudience())
-	fmt.Printf("iat -> '%s'\n", t.GetIssuedAt().Format(time.RFC3339))
+	fmt.Printf("aud -> '%s'\n", t.Audience())
+	fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
 	if v, ok := t.Get(`privateClaimKey`); ok {
 		fmt.Printf("privateClaimKey -> '%s'\n", v)
 	}
-	fmt.Printf("sub -> '%s'\n", t.GetSubject())
+	fmt.Printf("sub -> '%s'\n", t.Subject())
 
 	// OUTPUT:
 	// {
@@ -81,9 +79,7 @@ func ExampleToken() {
 	//   ],
 	//   "iat": 233431200,
 	//   "sub": "https://github.com/lestrrat-go/jwx/jwt",
-	//   "PrivateClaims": {
-	//     "privateClaimKey": "Hello, World!"
-	//   }
+	//   "privateClaimKey": "Hello, World!"
 	// }
 	// aud -> '[Golang Users]'
 	// iat -> '1977-05-25T18:00:00Z'

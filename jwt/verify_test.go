@@ -1,10 +1,11 @@
 package jwt_test
 
 import (
-	"github.com/lestrrat-go/jwx/jwt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGHIssue10(t *testing.T) {
@@ -19,7 +20,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 
 		// This should succeed, because WithIssuer is provided with same value
-		if !assert.NoError(t, t1.Verify(jwt.WithIssuer(t1.GetIssuer())), "t1.Verify should succeed") {
+		if !assert.NoError(t, t1.Verify(jwt.WithIssuer(t1.Issuer())), "t1.Verify should succeed") {
 			return
 		}
 
@@ -62,7 +63,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 
 		// This should succeed, because WithSubject is provided with same value
-		if !assert.NoError(t, t1.Verify(jwt.WithSubject(t1.GetSubject())), "token.Verify should succeed") {
+		if !assert.NoError(t, t1.Verify(jwt.WithSubject(t1.Subject())), "token.Verify should succeed") {
 			return
 		}
 
