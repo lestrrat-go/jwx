@@ -42,7 +42,15 @@ func numericToTime(v interface{}, t *time.Time) bool {
 
 func (n *NumericDate) Accept(v interface{}) error {
 	var t time.Time
+
 	switch x := v.(type) {
+	case string:
+		i, err := strconv.ParseInt(string(x[:]), 10, 64)
+		if err != nil {
+			return errors.Errorf(`invalid epoch value`)
+		}
+		t = time.Unix(i, 0)
+
 	case json.Number:
 		intval, err := x.Int64()
 		if err != nil {
@@ -72,11 +80,5 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON translates between JSON NumericDate and internal representation
 // See https://tools.ietf.org/html/rfc7519#page-6
 func (n *NumericDate) UnmarshalJSON(b []byte) error {
-	i, err := strconv.ParseInt(string(b[:]), 10, 64)
-	if err != nil {
-		return errors.Errorf(`invalid type %T`, b)
-	}
-	tm := time.Unix(i, 0)
-	n.Time = tm.UTC()
-	return nil
+	return n.Accept(string(b[:]))
 }
