@@ -2,7 +2,8 @@
 package openid
 
 import (
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
+	"time"
 )
 
 const (
@@ -143,8 +144,9 @@ func Gender(t Token) string {
 // Birthdate returns the value of `birthdate` claim. If the claim does not exist, the zero value will be returned.
 func Birthdate(t Token) *BirthdateClaim {
 	v, _ := t.Get(BirthdateKey)
-	if s, ok := v.(*BirthdateClaim); ok {
-		return s
+	var x BirthdateClaim
+	if err := x.Accept(v); err == nil {
+		return &x
 	}
 	return nil
 }
@@ -188,17 +190,24 @@ func PhoneNumberVerified(t Token) bool {
 // Address returns the value of `address` claim. If the claim does not exist, the zero value will be returned.
 func Address(t Token) *AddressClaim {
 	v, _ := t.Get(AddressKey)
-	if s, ok := v.(*AddressClaim); ok {
-		return s
+	var x AddressClaim
+	if err := x.Accept(v); err == nil {
+		return &x
 	}
 	return nil
 }
 
 // UpdatedAt returns the value of `updated_at` claim. If the claim does not exist, the zero value will be returned.
-func UpdatedAt(t Token) *types.NumericDate {
-	v, _ := t.Get(UpdatedAtKey)
-	if s, ok := v.(*types.NumericDate); ok {
-		return s
+func UpdatedAt(t Token) time.Time {
+	if v, ok := t.Get(UpdatedAtKey); ok {
+		x, ok := v.(*types.NumericDate)
+		if !ok {
+			x = &types.NumericDate{}
+		}
+		if err := x.Accept(v); err != nil {
+			return time.Time{}
+		}
+		return x.Get()
 	}
-	return nil
+	return time.Time{}
 }

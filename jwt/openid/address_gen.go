@@ -170,6 +170,18 @@ func (a *AddressClaim) Set(key string, value interface{}) error {
 	}
 }
 
+func (a *AddressClaim) Accept(v interface{}) error {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			a.Set(key, value)
+		}
+		return nil
+	default:
+		return errors.Errorf(`invalid type for AddressClaim: %T`, v)
+	}
+}
+
 // this is almost identical to json.Encoder.Encode(), but we use Marshal
 // to avoid having to remove the trailing newline for each successive
 // call to Encode()

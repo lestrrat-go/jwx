@@ -185,6 +185,18 @@ func generateOpenIDAddress() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
+	fmt.Fprintf(&buf, "\n\nfunc (a *AddressClaim) Accept(v interface{}) error {")
+	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\ncase map[string]interface{}:")
+	fmt.Fprintf(&buf, "\nfor key, value := range v {")
+	fmt.Fprintf(&buf, "\na.Set(key, value)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid type for AddressClaim: %%T`, v)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+
 	fmt.Fprintf(&buf, "\n\n// this is almost identical to json.Encoder.Encode(), but we use Marshal")
 	fmt.Fprintf(&buf, "\n// to avoid having to remove the trailing newline for each successive")
 	fmt.Fprintf(&buf, "\n// call to Encode()")
@@ -266,9 +278,10 @@ func generateOpenID() error {
 			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
 		},
 		{
-			Name:    "birthdate",
-			Type:    "*BirthdateClaim",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+			Name:      "birthdate",
+			Type:      "*BirthdateClaim",
+			Comment:   "https://openid.net/specs/openid-connect-core-1_0.html",
+			hasAccept: true,
 		},
 		{
 			Name:    "zoneinfo",
@@ -291,9 +304,10 @@ func generateOpenID() error {
 			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
 		},
 		{
-			Name:    "address",
-			Type:    "*AddressClaim",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+			Name:      "address",
+			Type:      "*AddressClaim",
+			Comment:   "https://openid.net/specs/openid-connect-core-1_0.html",
+			hasAccept: true,
 		},
 		{
 			Name:    "updated_at",
@@ -307,7 +321,7 @@ func generateOpenID() error {
 	fmt.Fprintf(&buf, "\npackage openid")
 
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwt"} {
+	for _, pkg := range []string{"time", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -325,13 +339,45 @@ func generateOpenID() error {
 
 	for _, field := range fields {
 		fmt.Fprintf(&buf, "\n// %s returns the value of `%s` claim. If the claim does not exist, the zero value will be returned.", field.UpperName(), field.Name)
-		fmt.Fprintf(&buf, "\nfunc %s(t Token) %s {", field.UpperName(), field.Type)
-		fmt.Fprintf(&buf, "\nv, _ := t.Get(%sKey)", field.UpperName())
-		fmt.Fprintf(&buf, "\nif s, ok := v.(%s); ok {", field.Type)
-		fmt.Fprintf(&buf, "\nreturn s")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nreturn %v", zeroval(field.Type))
-		fmt.Fprintf(&buf, "\n}")
+		if field.Type == "*types.NumericDate" {
+			fmt.Fprintf(&buf, "\nfunc %s(t Token) time.Time {", field.UpperName())
+			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
+			fmt.Fprintf(&buf, "\nx, ok := v.(*types.NumericDate)")
+			fmt.Fprintf(&buf, "\nif !ok {")
+			fmt.Fprintf(&buf, "\nx = &types.NumericDate{}")
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nif err := x.Accept(v); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn time.Time{}")
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nreturn x.Get()")
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nreturn time.Time{}")
+			fmt.Fprintf(&buf, "\n}") // end func (t %s) %s()
+		} else {
+			fmt.Fprintf(&buf, "\nfunc %s(t Token) %s {", field.UpperName(), field.Type)
+			fmt.Fprintf(&buf, "\nv, _ := t.Get(%sKey)", field.UpperName())
+
+			if field.hasAccept {
+				if field.IsPointer() {
+					fmt.Fprintf(&buf, "\nvar x %s", field.PointerElem())
+				} else {
+					fmt.Fprintf(&buf, "\nvar x %s", field.Type)
+				}
+				fmt.Fprintf(&buf, "\nif err := x.Accept(v); err == nil {")
+				if field.IsPointer() {
+					fmt.Fprintf(&buf, "\nreturn &x")
+				} else {
+					fmt.Fprintf(&buf, "\nreturn x")
+				}
+				fmt.Fprintf(&buf, "\n}")
+			} else {
+				fmt.Fprintf(&buf, "\nif s, ok := v.(%s); ok {", field.Type)
+				fmt.Fprintf(&buf, "\nreturn s")
+				fmt.Fprintf(&buf, "\n}")
+			}
+			fmt.Fprintf(&buf, "\nreturn %v", zeroval(field.Type))
+			fmt.Fprintf(&buf, "\n}")
+		}
 	}
 
 	return writeFormattedSource(&buf, filepath.Join("openid", "openid_gen.go"), buf.Bytes())
@@ -405,7 +451,7 @@ func generateJwtToken() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"bytes", "encoding/json", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
+	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -521,10 +567,10 @@ func writeAccessor(dst io.Writer, typ string, field *tokenField) error {
 	fmt.Fprintf(dst, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.UpperName())
 	fmt.Fprintf(dst, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
 	switch {
-	case field.Type == "*NumericDate" || field.Type == "*jwt.NumericDate":
+	case field.Type == "*types.NumericDate":
 		fmt.Fprintf(dst, "\nfunc (t %s) %s() time.Time {", typ, field.UpperName())
 		fmt.Fprintf(dst, "\nif v, ok := t.Get(%s); ok {", keyName)
-		fmt.Fprintf(dst, "\nreturn v.(time.Time)")
+		fmt.Fprintf(dst, "\nreturn v.(*types.NumericDate).Get()")
 		fmt.Fprintf(dst, "\n}")
 		fmt.Fprintf(dst, "\nreturn time.Time{}")
 		fmt.Fprintf(dst, "\n}") // end func (t %s) %s()

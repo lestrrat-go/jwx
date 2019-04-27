@@ -3,11 +3,47 @@ package openid_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/stretchr/testify/assert"
 )
+
+const aLongLongTimeAgo = 233431200
+const aLongLongTimeAgoString = "233431200"
+
+func assertStockAddressClaim(t *testing.T, x *openid.AddressClaim) bool {
+	t.Helper()
+	if !assert.NotNil(t, x) {
+		return false
+	}
+
+	if !assert.Equal(t, "〒105-0011 東京都港区芝公園４丁目２−８", x.Formatted(), "formatted should match") {
+		return false
+	}
+
+	if !assert.Equal(t, "日本", x.Country(), "country should match") {
+		return false
+	}
+
+	if !assert.Equal(t, "東京都", x.Region(), "region should match") {
+		return false
+	}
+
+	if !assert.Equal(t, "港区", x.Locality(), "locality should match") {
+		return false
+	}
+
+	if !assert.Equal(t, "芝公園４丁目２−８", x.StreetAddress(), "street_address should match") {
+		return false
+	}
+
+	if !assert.Equal(t, "105-0011", x.PostalCode(), "postal_code should match") {
+		return false
+	}
+	return true
+}
 
 func TestAdressClaim(t *testing.T) {
 	const src = `{
@@ -35,88 +71,164 @@ func TestAdressClaim(t *testing.T) {
 	}
 
 	for _, x := range []*openid.AddressClaim{&address, &roundtrip} {
-		if !assert.Equal(t, "〒105-0011 東京都港区芝公園４丁目２−８", x.Formatted(), "formatted should match") {
-			return
-		}
-
-		if !assert.Equal(t, "日本", x.Country(), "country should match") {
-			return
-		}
-
-		if !assert.Equal(t, "東京都", x.Region(), "region should match") {
-			return
-		}
-
-		if !assert.Equal(t, "港区", x.Locality(), "locality should match") {
-			return
-		}
-
-		if !assert.Equal(t, "芝公園４丁目２−８", x.StreetAddress(), "street_address should match") {
-			return
-		}
-
-		if !assert.Equal(t, "105-0011", x.PostalCode(), "postal_code should match") {
+		if !assertStockAddressClaim(t, x) {
 			return
 		}
 	}
 }
 
 func TestOpenIDClaims(t *testing.T) {
-	const src = `{
-		"name": "jwx",
-		"given_name": "jay",
-		"middle_name": "weee",
-		"family_name": "xi",
-		"nickname": "jayweexi",
-		"preferred_username": "jwx",
-		"profile": "https://github.com/lestrrat-go/jwx",
-		"picture": "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
-		"website": "https://github.com/lestrrat-go/jwx",
-		"email": "lestrrat+github@gmail.com",
-		"email_verified": true,
-		"gender": "n/a",
-		"birthdate": "2015-11-04"
-	}`
+	var base = map[string]struct {
+		Value interface{}
+		Check func(openid.Token) bool
+	}{
+		"name": {
+			Value: "jwx",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Name(token), "jwx")
+			},
+		},
+		"given_name": {
+			Value: "jay",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.GivenName(token), "jay")
+			},
+		},
+		"middle_name": {
+			Value: "weee",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.MiddleName(token), "weee")
+			},
+		},
+		"family_name": {
+			Value: "xi",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.FamilyName(token), "xi")
+			},
+		},
+		"nickname": {
+			Value: "jayweexi",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Nickname(token), "jayweexi")
+			},
+		},
+		"preferred_username": {
+			Value: "jwx",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.PreferredUsername(token), "jwx")
+			},
+		},
+		"profile": {
+			Value: "https://github.com/lestrrat-go/jwx",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Profile(token), "https://github.com/lestrrat-go/jwx")
+			},
+		},
+		"picture": {
+			Value: "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Picture(token), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
+			},
+		},
+		"website": {
+			Value: "https://github.com/lestrrat-go/jwx",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Website(token), "https://github.com/lestrrat-go/jwx")
+			},
+		},
+		"email": {
+			Value: "lestrrat+github@gmail.com",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Email(token), "lestrrat+github@gmail.com")
+			},
+		},
+		"email_verified": {
+			Value: true,
+			Check: func(token openid.Token) bool {
+				return assert.True(t, openid.EmailVerified(token))
+			},
+		},
+		"gender": {
+			Value: "n/a",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Gender(token), "n/a")
+			},
+		},
+		"birthdate": {
+			Value: "2015-11-04",
+			Check: func(token openid.Token) bool {
+				var b openid.BirthdateClaim
+				b.Accept("2015-11-04")
+				return assert.Equal(t, openid.Birthdate(token), &b)
+			},
+		},
+		"zoneinfo": {
+			Value: "Asia/Tokyo",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Zoneinfo(token), "Asia/Tokyo")
+			},
+		},
+		"locale": {
+			Value: "ja_JP",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.Locale(token), "ja_JP")
+			},
+		},
+		"phone_number": {
+			Value: "819012345678",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, openid.PhoneNumber(token), "819012345678")
+			},
+		},
+		"phone_number_verified": {
+			Value: true,
+			Check: func(token openid.Token) bool {
+				return assert.True(t, openid.PhoneNumberVerified(token))
+			},
+		},
+		"address": {
+			Value: map[string]interface{}{
+				"formatted":      "〒105-0011 東京都港区芝公園４丁目２−８",
+				"street_address": "芝公園４丁目２−８",
+				"locality":       "港区",
+				"region":         "東京都",
+				"country":        "日本",
+				"postal_code":    "105-0011",
+			},
+			Check: func(token openid.Token) bool {
+				return assertStockAddressClaim(t, openid.Address(token))
+			},
+		},
+		"updated_at": {
+			Value: aLongLongTimeAgoString,
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), openid.UpdatedAt(token))
+			},
+		},
+	}
 
-	var token jwt.Token
-	if !assert.NoError(t, json.Unmarshal([]byte(src), &token), `json.Unmarshal should succeed`) {
+	var data = map[string]interface{}{}
+	for name, value := range base {
+		data[name] = value.Value
+	}
+
+	src, err := json.Marshal(data)
+	if !assert.NoError(t, err, `failed to marshal base map`) {
 		return
 	}
 
-	t.Logf("%#v", token)
+	t.Logf("Using source JSON: %s", src)
 
-	t.Logf("%s", openid.Birthdate(&token))
-	/*
-		{
-			Name:    "zoneinfo",
-			Type:    "string",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-		},
-		{
-			Name:    "locale",
-			Type:    "string",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-		},
-		{
-			Name:    "phone_number",
-			Type:    "string",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-		},
-		{
-			Name:    "phone_number_verified",
-			Type:    "bool",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-		},
-		{
-			Name:    "address",
-			Type:    "*AddressClaim",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-		},
-		{
-			Name:    "updated_at",
-			Type:    "*jwt.NumericDate",
-			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
-	*/
+	var token jwt.Token
+	if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
+		return
+	}
+
+	for name, value := range base {
+		t.Run(name, func(t *testing.T) {
+			value.Check(&token)
+		})
+	}
 }
 
 func TestBirthdateClaim(t *testing.T) {
