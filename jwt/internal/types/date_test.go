@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwt"
-	"github.com/lestrrat-go/jwx/jwt/internal/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDate(t *testing.T) {
@@ -37,20 +34,4 @@ func TestDate(t *testing.T) {
 			})
 		}
 	})
-
-	for _, useNumber := range []bool{true, false} {
-		t.Run(fmt.Sprintf("Decoding with json.NewDecoder() (UseNumber=%t)", useNumber), func(t *testing.T) {
-			buf := strings.NewReader("127")
-			dec := json.NewDecoder(buf)
-			if useNumber {
-				dec.UseNumber()
-			}
-
-			var nd types.NumericDate
-			if !assert.NoError(t, dec.Decode(&nd), `Decode should succeed`) {
-				return
-			}
-			t.Logf("%s", nd)
-		})
-	}
 }

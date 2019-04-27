@@ -81,9 +81,3 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(n.Unix())
 }
-
-// UnmarshalJSON translates between JSON NumericDate and internal representation
-// See https://tools.ietf.org/html/rfc7519#page-6
-func (n *NumericDate) UnmarshalJSON(b []byte) error {
-	return n.Accept(string(b[:]))
-}
