@@ -48,13 +48,13 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if t.expiration == nil {
 			return nil, false
 		} else {
-			return t.expiration, true
+			return t.expiration.Get(), true
 		}
 	case IssuedAtKey:
 		if t.issuedAt == nil {
 			return nil, false
 		} else {
-			return t.issuedAt, true
+			return t.issuedAt.Get(), true
 		}
 	case IssuerKey:
 		if t.issuer == nil {
@@ -72,7 +72,7 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if t.notBefore == nil {
 			return nil, false
 		} else {
-			return t.notBefore, true
+			return t.notBefore.Get(), true
 		}
 	case SubjectKey:
 		if t.subject == nil {
@@ -153,7 +153,7 @@ func (t Token) Audience() StringList {
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) Expiration() time.Time {
 	if v, ok := t.Get(ExpirationKey); ok {
-		return v.(*types.NumericDate).Get()
+		return v.(time.Time)
 	}
 	return time.Time{}
 }
@@ -162,7 +162,7 @@ func (t Token) Expiration() time.Time {
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) IssuedAt() time.Time {
 	if v, ok := t.Get(IssuedAtKey); ok {
-		return v.(*types.NumericDate).Get()
+		return v.(time.Time)
 	}
 	return time.Time{}
 }
@@ -189,7 +189,7 @@ func (t Token) JwtID() string {
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
 func (t Token) NotBefore() time.Time {
 	if v, ok := t.Get(NotBeforeKey); ok {
-		return v.(*types.NumericDate).Get()
+		return v.(time.Time)
 	}
 	return time.Time{}
 }

@@ -2,7 +2,6 @@ package jwt_test
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 )
 
 func TestHeader(t *testing.T) {
-
 	const (
 		tokenTime = 233431200
 	)
@@ -30,17 +28,18 @@ func TestHeader(t *testing.T) {
 	t.Run("Roundtrip", func(t *testing.T) {
 		var h jwt.Token
 		for k, v := range values {
-			err := h.Set(k, v)
-			if err != nil {
-				t.Fatalf("Set failed for %s", k)
-			}
-			got, ok := h.Get(k)
-			if !ok {
-				t.Fatalf("Set failed for %s", k)
-			}
-			if !reflect.DeepEqual(v, got) {
-				t.Fatalf("Values do not match: (%v, %v)", v, got)
-			}
+			t.Run(k, func(t *testing.T) {
+				if !assert.NoError(t, h.Set(k, v), "set should succeed") {
+					return
+				}
+				got, ok := h.Get(k)
+				if !assert.True(t, ok, "Get should succeed") {
+					return
+				}
+				if !assert.Equal(t, v, got, "values should match") {
+					return
+				}
+			})
 		}
 	})
 

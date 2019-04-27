@@ -570,7 +570,7 @@ func writeAccessor(dst io.Writer, typ string, field *tokenField) error {
 	case field.Type == "*types.NumericDate":
 		fmt.Fprintf(dst, "\nfunc (t %s) %s() time.Time {", typ, field.UpperName())
 		fmt.Fprintf(dst, "\nif v, ok := t.Get(%s); ok {", keyName)
-		fmt.Fprintf(dst, "\nreturn v.(*types.NumericDate).Get()")
+		fmt.Fprintf(dst, "\nreturn v.(time.Time)")
 		fmt.Fprintf(dst, "\n}")
 		fmt.Fprintf(dst, "\nreturn time.Time{}")
 		fmt.Fprintf(dst, "\n}") // end func (t %s) %s()
@@ -687,7 +687,6 @@ func writeFormattedSource(dst io.Writer, filename string, data []byte) error {
 }
 
 func writeGetMethod(dst io.Writer, typ string, fields []*tokenField, hasPrivateClaims bool) error {
-
 	fmt.Fprintf(dst, "\n\nfunc (t *%s) Get(s string) (interface{}, bool) {", typ)
 	fmt.Fprintf(dst, "\nswitch s {")
 	for _, field := range fields {
@@ -714,7 +713,7 @@ func writeGetMethod(dst io.Writer, typ string, fields []*tokenField, hasPrivateC
 			fmt.Fprintf(dst, "\nreturn nil, false")
 			fmt.Fprintf(dst, "\n} else {")
 			if field.noDeref {
-				if field.Type == "*NumericDate" {
+				if field.Type == "*types.NumericDate" {
 					fmt.Fprintf(dst, "\nreturn t.%s.Get(), true", field.Name)
 				} else {
 					fmt.Fprintf(dst, "\nreturn t.%s, true", field.Name)
