@@ -141,12 +141,12 @@ func Gender(t Token) string {
 }
 
 // Birthdate returns the value of `birthdate` claim. If the claim does not exist, the zero value will be returned.
-func Birthdate(t Token) string {
+func Birthdate(t Token) *BirthdateClaim {
 	v, _ := t.Get(BirthdateKey)
-	if s, ok := v.(string); ok {
+	if s, ok := v.(*BirthdateClaim); ok {
 		return s
 	}
-	return ""
+	return nil
 }
 
 // Zoneinfo returns the value of `zoneinfo` claim. If the claim does not exist, the zero value will be returned.
@@ -195,9 +195,9 @@ func Address(t Token) *AddressClaim {
 }
 
 // UpdatedAt returns the value of `updated_at` claim. If the claim does not exist, the zero value will be returned.
-func UpdatedAt(t Token) *jwt.NumericDate {
+func UpdatedAt(t Token) *types.NumericDate {
 	v, _ := t.Get(UpdatedAtKey)
-	if s, ok := v.(*jwt.NumericDate); ok {
+	if s, ok := v.(*types.NumericDate); ok {
 		return s
 	}
 	return nil

@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"log"
 	"strconv"
 	"time"
 
@@ -46,6 +47,7 @@ func numericToTime(v interface{}, t *time.Time) bool {
 }
 
 func (n *NumericDate) Accept(v interface{}) error {
+	log.Printf("Accept for numeric date: %T", v)
 	var t time.Time
 
 	switch x := v.(type) {

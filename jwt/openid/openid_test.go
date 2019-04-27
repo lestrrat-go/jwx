@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/stretchr/testify/assert"
 )
@@ -61,5 +62,87 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
-	// TODO. too tired now
+	const src = `{
+		"name": "jwx",
+		"given_name": "jay",
+		"middle_name": "weee",
+		"family_name": "xi",
+		"nickname": "jayweexi",
+		"preferred_username": "jwx",
+		"profile": "https://github.com/lestrrat-go/jwx",
+		"picture": "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
+		"website": "https://github.com/lestrrat-go/jwx",
+		"email": "lestrrat+github@gmail.com",
+		"email_verified": true,
+		"gender": "n/a",
+		"birthdate": "2015-11-04"
+	}`
+
+	var token jwt.Token
+	if !assert.NoError(t, json.Unmarshal([]byte(src), &token), `json.Unmarshal should succeed`) {
+		return
+	}
+
+	t.Logf("%#v", token)
+
+	t.Logf("%s", openid.Birthdate(&token))
+	/*
+		{
+			Name:    "zoneinfo",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "locale",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "phone_number",
+			Type:    "string",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "phone_number_verified",
+			Type:    "bool",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "address",
+			Type:    "*AddressClaim",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+		},
+		{
+			Name:    "updated_at",
+			Type:    "*jwt.NumericDate",
+			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
+	*/
+}
+
+func TestBirthdateClaim(t *testing.T) {
+	t.Run("regular date", func(t *testing.T) {
+		const src = `"2015-11-04"`
+		var b openid.BirthdateClaim
+		if !assert.NoError(t, json.Unmarshal([]byte(src), &b), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, b.Year(), 2015, "year should match") {
+			return
+		}
+		if !assert.Equal(t, b.Month(), 11, "month should match") {
+			return
+		}
+		if !assert.Equal(t, b.Day(), 4, "day should match") {
+			return
+		}
+		serialized, err := json.Marshal(b)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+		if !assert.Equal(t, string(serialized), src, `serialized format should be the same`) {
+			return
+		}
+	})
+
 }

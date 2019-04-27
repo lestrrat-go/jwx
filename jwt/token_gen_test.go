@@ -28,7 +28,6 @@ func TestHeader(t *testing.T) {
 	}
 
 	t.Run("Roundtrip", func(t *testing.T) {
-
 		var h jwt.Token
 		for k, v := range values {
 			err := h.Set(k, v)
@@ -46,7 +45,6 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("RoundtripError", func(t *testing.T) {
-
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64

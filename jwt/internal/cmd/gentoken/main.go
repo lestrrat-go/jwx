@@ -267,7 +267,7 @@ func generateOpenID() error {
 		},
 		{
 			Name:    "birthdate",
-			Type:    "string",
+			Type:    "*BirthdateClaim",
 			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
 		},
 		{
@@ -297,7 +297,7 @@ func generateOpenID() error {
 		},
 		{
 			Name:    "updated_at",
-			Type:    "*jwt.NumericDate",
+			Type:    "*types.NumericDate",
 			Comment: "https://openid.net/specs/openid-connect-core-1_0.html",
 		},
 	}
@@ -405,7 +405,7 @@ func generateJwtToken() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
+	for _, pkg := range []string{"bytes", "encoding/json", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import

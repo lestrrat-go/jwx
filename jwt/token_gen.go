@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
-	"time"
 )
 
 // Key names for standard claims
@@ -48,13 +47,13 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if t.expiration == nil {
 			return nil, false
 		} else {
-			return t.expiration.Get(), true
+			return t.expiration, true
 		}
 	case IssuedAtKey:
 		if t.issuedAt == nil {
 			return nil, false
 		} else {
-			return t.issuedAt.Get(), true
+			return t.issuedAt, true
 		}
 	case IssuerKey:
 		if t.issuer == nil {
@@ -72,7 +71,7 @@ func (t *Token) Get(s string) (interface{}, bool) {
 		if t.notBefore == nil {
 			return nil, false
 		} else {
-			return t.notBefore.Get(), true
+			return t.notBefore, true
 		}
 	case SubjectKey:
 		if t.subject == nil {
@@ -151,20 +150,20 @@ func (t Token) Audience() StringList {
 
 // Expiration is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-func (t Token) Expiration() time.Time {
+func (t Token) Expiration() types.NumericDate {
 	if v, ok := t.Get(ExpirationKey); ok {
-		return v.(time.Time)
+		return v.(types.NumericDate)
 	}
-	return time.Time{}
+	return nil
 }
 
 // IssuedAt is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-func (t Token) IssuedAt() time.Time {
+func (t Token) IssuedAt() types.NumericDate {
 	if v, ok := t.Get(IssuedAtKey); ok {
-		return v.(time.Time)
+		return v.(types.NumericDate)
 	}
-	return time.Time{}
+	return nil
 }
 
 // Issuer is a convenience function to retrieve the corresponding value store in the token
@@ -187,11 +186,11 @@ func (t Token) JwtID() string {
 
 // NotBefore is a convenience function to retrieve the corresponding value store in the token
 // if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-func (t Token) NotBefore() time.Time {
+func (t Token) NotBefore() types.NumericDate {
 	if v, ok := t.Get(NotBeforeKey); ok {
-		return v.(time.Time)
+		return v.(types.NumericDate)
 	}
-	return time.Time{}
+	return nil
 }
 
 // Subject is a convenience function to retrieve the corresponding value store in the token
