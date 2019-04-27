@@ -1,4 +1,4 @@
-package jwt
+package types
 
 import (
 	"encoding/json"
@@ -7,6 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+// NumericDate represents the date format used in the 'nbf' claim
+type NumericDate struct {
+	time.Time
+}
 
 func (n *NumericDate) Get() time.Time {
 	if n == nil {

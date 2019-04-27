@@ -1,4 +1,4 @@
-package jwt_test
+package types_test
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +46,7 @@ func TestDate(t *testing.T) {
 				dec.UseNumber()
 			}
 
-			var nd jwt.NumericDate
+			var nd types.NumericDate
 			if !assert.NoError(t, dec.Decode(&nd), `Decode should succeed`) {
 				return
 			}
