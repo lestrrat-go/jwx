@@ -1,4 +1,4 @@
-package jwt
+package types
 
 import (
 	"encoding/json"
@@ -7,6 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+// NumericDate represents the date format used in the 'nbf' claim
+type NumericDate struct {
+	time.Time
+}
 
 func (n *NumericDate) Get() time.Time {
 	if n == nil {
@@ -75,10 +80,4 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(n.Unix())
-}
-
-// UnmarshalJSON translates between JSON NumericDate and internal representation
-// See https://tools.ietf.org/html/rfc7519#page-6
-func (n *NumericDate) UnmarshalJSON(b []byte) error {
-	return n.Accept(string(b[:]))
 }

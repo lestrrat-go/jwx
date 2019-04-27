@@ -87,7 +87,7 @@ func generateToken() error {
 		{
 			Name:      "expiration",
 			JSONKey:   "exp",
-			Type:      "*NumericDate",
+			Type:      "*types.NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.4`,
 			hasAccept: true,
 			noDeref:   true,
@@ -95,7 +95,7 @@ func generateToken() error {
 		{
 			Name:      "issuedAt",
 			JSONKey:   "iat",
-			Type:      "*NumericDate",
+			Type:      "*types.NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.6`,
 			hasAccept: true,
 			noDeref:   true,
@@ -115,7 +115,7 @@ func generateToken() error {
 		{
 			Name:      "notBefore",
 			JSONKey:   "nbf",
-			Type:      "*NumericDate",
+			Type:      "*types.NumericDate",
 			Comment:   `https://tools.ietf.org/html/rfc7519#section-4.1.5`,
 			hasAccept: true,
 			noDeref:   true,
@@ -131,7 +131,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -187,7 +187,7 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n} else {")
 			if field.noDeref {
-				if field.Type == "*NumericDate" {
+				if field.Type == "*types.NumericDate" {
 					fmt.Fprintf(&buf, "\nreturn t.%s.Get(), true", field.Name)
 				} else {
 					fmt.Fprintf(&buf, "\nreturn t.%s, true", field.Name)
@@ -259,7 +259,7 @@ func generateToken() error {
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
 			fmt.Fprintf(&buf, "\nreturn nil")
 			fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
-		case field.Type == "*NumericDate":
+		case field.Type == "*types.NumericDate":
 			fmt.Fprintf(&buf, "\n\nfunc (t Token) %s() time.Time {", field.UpperName())
 			fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.UpperName())
 			fmt.Fprintf(&buf, "\nreturn v.(time.Time)")

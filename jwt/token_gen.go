@@ -4,6 +4,7 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -27,11 +28,11 @@ const (
 // by embedding the jwt.Token type in it
 type Token struct {
 	audience      StringList             `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	expiration    *NumericDate           `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	issuedAt      *NumericDate           `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	expiration    *types.NumericDate     `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	issuedAt      *types.NumericDate     `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
 	issuer        *string                `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
 	jwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	notBefore     *NumericDate           `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	notBefore     *types.NumericDate     `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
 	subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
 	privateClaims map[string]interface{} `json:"-"`
 }
@@ -95,13 +96,13 @@ func (t *Token) Set(name string, v interface{}) error {
 		}
 		t.audience = x
 	case ExpirationKey:
-		var x NumericDate
+		var x types.NumericDate
 		if err := x.Accept(v); err != nil {
 			return errors.Wrap(err, `invalid value for 'expiration' key`)
 		}
 		t.expiration = &x
 	case IssuedAtKey:
-		var x NumericDate
+		var x types.NumericDate
 		if err := x.Accept(v); err != nil {
 			return errors.Wrap(err, `invalid value for 'issuedAt' key`)
 		}
@@ -119,7 +120,7 @@ func (t *Token) Set(name string, v interface{}) error {
 		}
 		t.jwtID = &x
 	case NotBeforeKey:
-		var x NumericDate
+		var x types.NumericDate
 		if err := x.Accept(v); err != nil {
 			return errors.Wrap(err, `invalid value for 'notBefore' key`)
 		}
