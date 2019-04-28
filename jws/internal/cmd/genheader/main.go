@@ -59,7 +59,7 @@ func zeroval(s string) string {
 func generateHeaders() error {
 	fields := []headerField{
 		{
-			name:      `JWSalgorithm`,
+			name:      `Algorithm`,
 			method:    `Algorithm`,
 			typ:       `jwa.SignatureAlgorithm`,
 			key:       `alg`,
@@ -68,7 +68,7 @@ func generateHeaders() error {
 			jsonTag:   "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
-			name:    `JWScontentType`,
+			name:    `ContentType`,
 			method:  `ContentType`,
 			typ:     `string`,
 			key:     `cty`,
@@ -76,7 +76,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"cty,omitempty"` + "`",
 		},
 		{
-			name:    `JWScritical`,
+			name:    `Critical`,
 			method:  `Critical`,
 			typ:     `[]string`,
 			key:     `crit`,
@@ -84,7 +84,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"crit,omitempty"` + "`",
 		},
 		{
-			name:    `JWSjwk`,
+			name:    `JWK`,
 			method:  `JWK`,
 			typ:     `*jwk.Set`,
 			key:     `jwk`,
@@ -92,7 +92,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
 		},
 		{
-			name:    `JWSjwkSetURL`,
+			name:    `JWKSetURL`,
 			method:  `JWKSetURL`,
 			typ:     `string`,
 			key:     `jku`,
@@ -100,7 +100,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"jku,omitempty"` + "`",
 		},
 		{
-			name:    `JWSkeyID`,
+			name:    `KeyID`,
 			method:  `KeyID`,
 			typ:     `string`,
 			key:     `kid`,
@@ -108,7 +108,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"kid,omitempty"` + "`",
 		},
 		{
-			name:    `JWStyp`,
+			name:    `Type`,
 			method:  `Type`,
 			typ:     `string`,
 			key:     `typ`,
@@ -116,7 +116,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"typ,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertChain`,
+			name:    `X509CertChain`,
 			method:  `X509CertChain`,
 			typ:     `[]string`,
 			key:     `x5c`,
@@ -124,7 +124,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5c,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertThumbprint`,
+			name:    `X509CertThumbprint`,
 			method:  `X509CertThumbprint`,
 			typ:     `string`,
 			key:     `x5t`,
@@ -132,7 +132,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5t,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertThumbprintS256`,
+			name:    `X509CertThumbprintS256`,
 			method:  `X509CertThumbprintS256`,
 			typ:     `string`,
 			key:     `x5t#S256`,
@@ -140,12 +140,20 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5t#S256,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509URL`,
+			name:    `X509URL`,
 			method:  `X509URL`,
 			typ:     `string`,
 			key:     `x5u`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
 			jsonTag: "`" + `json:"x5u,omitempty"` + "`",
+		},
+		{
+			name:    `PrivateParams`,
+			method:  `PrivateParams`,
+			typ:     `map[string]interface{}`,
+			key:     `privateParams`,
+			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
+			jsonTag: "`" + `json:"privateParams,omitempty"` + "`",
 		},
 	}
 
@@ -172,7 +180,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
-	fmt.Fprintf(&buf, "\nAlgorithm() jwa.SignatureAlgorithm")
+	fmt.Fprintf(&buf, "\nGetAlgorithm() jwa.SignatureAlgorithm")
 
 	/*	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.PointerElem())
@@ -182,11 +190,10 @@ func generateHeaders() error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, f.typ, f.jsonTag, f.comment)
 	}
-	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Algorithm() jwa.SignatureAlgorithm {")
-	fmt.Fprintf(&buf, "\nreturn h.JWSalgorithm")
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) GetAlgorithm() jwa.SignatureAlgorithm {")
+	fmt.Fprintf(&buf, "\nreturn h.Algorithm")
 	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) %s() %s
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Get(name string) (interface{}, bool) {")
@@ -206,7 +213,7 @@ func generateHeaders() error {
 
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
+	fmt.Fprintf(&buf, "\nv, ok := h.PrivateParams[name]")
 	fmt.Fprintf(&buf, "\nreturn v, ok")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) Get(name string) (interface{}, bool)
@@ -214,22 +221,22 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Set(name string, value interface{}) error {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.name)
 		if f.hasAccept {
 			if f.IsPointer() {
 				fmt.Fprintf(&buf, "\nvar acceptor %s", f.PointerElem())
 				fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
-				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
+				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.name)
 				fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
 				fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
 			} else {
 				fmt.Fprintf(&buf, "\nif err := h.%s.Accept(value); err != nil {", f.name)
-				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
+				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.name)
 				fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.name == "JWSjwk" {
+			if f.name == "Jwk" {
 				fmt.Fprintf(&buf, "\nv, ok := value.(%s)", f.typ)
 				fmt.Fprintf(&buf, "\nif ok {")
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
@@ -239,14 +246,14 @@ func generateHeaders() error {
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := value.(%s)
-			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid value for %%s key: %%T`, %sKey, value)", f.method)
+			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid value for %%s key: %%T`, %sKey, value)", f.name)
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nif h.privateParams == nil {")
-	fmt.Fprintf(&buf, "\nh.privateParams = map[string]interface{}{}")
-	fmt.Fprintf(&buf, "\n}") // end if h.privateParams == nil
-	fmt.Fprintf(&buf, "\nh.privateParams[name] = value")
+	fmt.Fprintf(&buf, "\nif h.PrivateParams == nil {")
+	fmt.Fprintf(&buf, "\nh.PrivateParams = map[string]interface{}{}")
+	fmt.Fprintf(&buf, "\n}") // end if h.PrivateParams == nil
+	fmt.Fprintf(&buf, "\nh.PrivateParams[name] = value")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})

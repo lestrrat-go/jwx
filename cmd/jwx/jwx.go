@@ -142,7 +142,7 @@ func doJWK() int {
 			log.Printf("%s", l)
 		}
 
-		alg := sig.ProtectedHeaders().Algorithm()
+		alg := sig.ProtectedHeaders().GetAlgorithm()
 		if _, err := jws.Verify(buf.Bytes(), alg, pubkey); err == nil {
 			log.Printf("=== Verified with signature %d! ===", i)
 		}
