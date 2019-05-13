@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -110,7 +111,7 @@ func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to fetch remote JWK (status != 200)")
+		return nil, fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 	}
 
 	buf, err := ioutil.ReadAll(res.Body)
