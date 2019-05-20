@@ -470,33 +470,39 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	var protected []byte
 	var payload []byte
 	var signature []byte
-	var periods int
-	var state int
+	var periods int = 0
+	var state int = 0
 
 	buf := make([]byte, 4096)
 	var sofar []byte
 
 	for {
+		// read next bytes
 		n, err := rdr.Read(buf)
-		if n == 0 && err != nil {
-			break
+		// return on unexpected read error
+		if err != nil && err != io.EOF {
+			return nil, nil, nil, err
 		}
 
+		// append to current buffer
 		sofar = append(sofar, buf[:n]...)
+		// loop to capture multiple '.' in current buffer
 		for loop := true; loop; {
-			i := bytes.IndexByte(sofar, '.')
-			switch i {
-			case -1:
-				l := len(sofar)
-				if l <= 0 {
-					loop = false
-					continue
-				}
-				i = l
-			default:
+			var i = bytes.IndexByte(sofar, '.')
+			if i == -1 && err != io.EOF {
+				// no '.' found -> exit and read next bytes (outer loop)
+				loop = false
+				continue
+			} else if i == -1 && err == io.EOF {
+				// no '.' found -> process rest and exit
+				i = len(sofar)
+				loop = false
+			} else {
+				// '.' found
 				periods++
 			}
 
+			// Reaching this point means we have found a '.' or EOF and process the rest of the buffer
 			switch state {
 			case 0:
 				protected = sofar[:i]
@@ -507,11 +513,14 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 			case 2:
 				signature = sofar[:i]
 			}
-			if len(sofar) <= i {
-				sofar = []byte(nil)
-			} else {
+			// Shorten current buffer
+			if len(sofar) > i {
 				sofar = sofar[i+1:]
 			}
+		}
+		// Exit on EOF
+		if err == io.EOF {
+			break
 		}
 	}
 	if periods != 2 {
