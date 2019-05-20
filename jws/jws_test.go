@@ -739,6 +739,68 @@ func TestEncode(t *testing.T) {
 		jsonbuf, _ := json.MarshalIndent(m, "", "  ")
 		t.Logf("%s", jsonbuf)
 	})
+	t.Run("SplitCompact short", func(t *testing.T) {
+		// Create string with X.Y.Z
+		numX := 100
+		numY := 100
+		numZ := 100
+		var largeString = ""
+		for i := 0; i < numX; i++ {
+			largeString += "X"
+		}
+		largeString += "."
+		for i := 0; i < numY; i++ {
+			largeString += "Y"
+		}
+		largeString += "."
+		for i := 0; i < numZ; i++ {
+			largeString += "Z"
+		}
+		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
+		if !assert.NoError(t, err, "SplitCompactShort string split") {
+			return
+		}
+		if !assert.Len(t, x, numX, "Length of header") {
+			return
+		}
+		if !assert.Len(t, y, numY, "Length of payload") {
+			return
+		}
+		if !assert.Len(t, z, numZ, "Length of signature") {
+			return
+		}
+	})
+	t.Run("SplitCompact long", func(t *testing.T) {
+		// Create string with X.Y.Z
+		numX := 8000
+		numY := 8000
+		numZ := 8000
+		var largeString = ""
+		for i := 0; i < numX; i++ {
+			largeString += "X"
+		}
+		largeString += "."
+		for i := 0; i < numY; i++ {
+			largeString += "Y"
+		}
+		largeString += "."
+		for i := 0; i < numZ; i++ {
+			largeString += "Z"
+		}
+		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
+		if !assert.NoError(t, err, "SplitCompactShort string split") {
+			return
+		}
+		if !assert.Len(t, x, numX, "Length of header") {
+			return
+		}
+		if !assert.Len(t, y, numY, "Length of payload") {
+			return
+		}
+		if !assert.Len(t, z, numZ, "Length of signature") {
+			return
+		}
+	})
 }
 
 /*
