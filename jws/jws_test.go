@@ -850,3 +850,14 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 }
+
+func TestGHIssue126(t *testing.T) {
+	_, err := jws.Verify([]byte("{}"), jwa.ES384, nil)
+	if !assert.Error(t, err, "Verify should fail") {
+		return
+	}
+
+	if !assert.Equal(t, err.Error(), `invalid JWS message format`) {
+		return
+	}
+}
