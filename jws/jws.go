@@ -264,7 +264,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 
 		// There's something wrong if the Message part is not initialized
 		if v.EncodedMessage == nil {
-			return nil, errors.Wrap(err, `invalid JWS message format`)
+			return nil, errors.New(`invalid JWS message format`)
 		}
 
 		// if we're using the flattened serialization format, then m.Signature
