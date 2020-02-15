@@ -320,3 +320,33 @@ func (t *Token) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// //GetAllClaims returns all claims from the token
+func (t *Token) GetAllClaims() map[string]interface{} {
+	claims := map[string]interface{}{}
+	keyNames := t.GetStandardKeys()
+	for _, key := range keyNames {
+		value, ok := t.Get(key)
+		if ok {
+			claims[key] = value
+		}
+	}
+	for k, v := range t.privateClaims {
+		claims[k] = v
+	}
+	return claims
+}
+
+//GetStandardKeys returns all Key names for standard claims
+func (t *Token) GetStandardKeys() []string {
+	standardKeys := []string{
+		AudienceKey,
+		ExpirationKey,
+		IssuedAtKey,
+		IssuerKey,
+		JwtIDKey,
+		NotBeforeKey,
+		SubjectKey,
+	}
+	return standardKeys
+}

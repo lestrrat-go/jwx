@@ -351,6 +351,32 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
+	fmt.Fprintf(&buf, "\n\n// //GetAllClaims returns all claims from the token") // Start of GetAllClaims Method
+	fmt.Fprintf(&buf, "\nfunc (t *Token) GetAllClaims() map[string]interface{} {")
+	fmt.Fprintf(&buf, "\nclaims := map[string]interface{}{}")
+	fmt.Fprintf(&buf, "\nkeyNames := t.GetStandardKeys()")
+	fmt.Fprintf(&buf, "\nfor _, key := range keyNames {")
+	fmt.Fprintf(&buf, "\nvalue, ok := t.Get(key)")
+	fmt.Fprintf(&buf, "\nif ok {")
+	fmt.Fprintf(&buf, "\nclaims[key] = value")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
+	fmt.Fprintf(&buf, "\nclaims[k] = v")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn claims")
+	fmt.Fprintf(&buf, "\n}") // End of GetAllClaims Method
+
+	fmt.Fprintf(&buf, "\n\n//GetStandardKeys returns all Key names for standard claims") //Start of GetStandardKeys method
+	fmt.Fprintf(&buf, "\nfunc (t *Token) GetStandardKeys() []string {")
+	fmt.Fprintf(&buf, "\nstandardKeys := []string{")
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "\n%sKey,", field.UpperName())
+	}
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn standardKeys")
+	fmt.Fprintf(&buf, "\n}") //End of GetStandardKeys method
+
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
 		log.Printf("%s", buf.Bytes())

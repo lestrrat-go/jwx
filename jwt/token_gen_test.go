@@ -155,3 +155,38 @@ func TestTokenMarshal(t *testing.T) {
 		t.Fatalf("JSON marshal error: %s", err.Error())
 	}
 }
+
+func TestGetAllClaims(t *testing.T) {
+	const (
+		tokenTime = 233431200
+	)
+	expectedTokenTime := time.Unix(tokenTime, 0).UTC()
+
+	originalClaimValues := map[string]interface{}{
+		jwt.AudienceKey:   []string{"test-aud"},
+		jwt.ExpirationKey: expectedTokenTime,
+		jwt.IssuedAtKey:   expectedTokenTime,
+		jwt.IssuerKey:     "http://www.example.com",
+		jwt.JwtIDKey:      "e9bc097a-ce51-4036-9562-d2ade882db0d",
+		jwt.NotBeforeKey:  expectedTokenTime,
+		jwt.SubjectKey:    "test-subject",
+		"pvt-claim":       "test-private-claim",
+	}
+
+	var testToken jwt.Token
+	for k, v := range originalClaimValues {
+		err := testToken.Set(k, v)
+		if err != nil {
+			t.Fatalf("Set failed for %s", k)
+		}
+	}
+
+	claimsReturned := testToken.GetAllClaims()
+	//Not using DeepEqual over both struct for the ease of finding claim mismatch
+	for k, v := range claimsReturned {
+		originalClaim := originalClaimValues[k]
+		if !reflect.DeepEqual(originalClaim, v) {
+			t.Fatalf("test failed due to claim mismatch. claim key: %s, original claim value: %+v, returned claim value: %+v", k, originalClaim, v)
+		}
+	}
+}
