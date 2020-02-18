@@ -47,39 +47,33 @@ func (t *Token) Get(s string) (interface{}, bool) {
 	case ExpirationKey:
 		if t.expiration == nil {
 			return nil, false
-		} else {
-			return t.expiration.Get(), true
 		}
+		return t.expiration.Get(), true
 	case IssuedAtKey:
 		if t.issuedAt == nil {
 			return nil, false
-		} else {
-			return t.issuedAt.Get(), true
 		}
+		return t.issuedAt.Get(), true
 	case IssuerKey:
 		if t.issuer == nil {
 			return nil, false
-		} else {
-			return *(t.issuer), true
 		}
+		return *(t.issuer), true
 	case JwtIDKey:
 		if t.jwtID == nil {
 			return nil, false
-		} else {
-			return *(t.jwtID), true
 		}
+		return *(t.jwtID), true
 	case NotBeforeKey:
 		if t.notBefore == nil {
 			return nil, false
-		} else {
-			return t.notBefore.Get(), true
 		}
+		return t.notBefore.Get(), true
 	case SubjectKey:
 		if t.subject == nil {
 			return nil, false
-		} else {
-			return *(t.subject), true
 		}
+		return *(t.subject), true
 	}
 	if v, ok := t.privateClaims[s]; ok {
 		return v, true

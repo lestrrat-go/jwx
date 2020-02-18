@@ -185,7 +185,7 @@ func generateToken() error {
 		case field.IsPointer():
 			fmt.Fprintf(&buf, "\nif t.%s == nil {", field.Name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
-			fmt.Fprintf(&buf, "\n} else {")
+			fmt.Fprintf(&buf, "\n}")
 			if field.noDeref {
 				if field.Type == "*types.NumericDate" {
 					fmt.Fprintf(&buf, "\nreturn t.%s.Get(), true", field.Name)
@@ -195,7 +195,6 @@ func generateToken() error {
 			} else {
 				fmt.Fprintf(&buf, "\nreturn *(t.%s), true", field.Name)
 			}
-			fmt.Fprintf(&buf, "\n}") // end if t.%s != nil
 		}
 	}
 	fmt.Fprintf(&buf, "\n}") // end switch
