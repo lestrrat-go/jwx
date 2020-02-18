@@ -165,6 +165,25 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{} `json:\"-\"`")
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
+	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
+	fmt.Fprintf(&buf, "\nfunc (t *Token) Size() int {")
+	fmt.Fprintf(&buf, "\nvar count int")
+	for _, field := range fields {
+		switch {
+		case field.IsList():
+			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", field.Name)
+			fmt.Fprintf(&buf, "\ncount++")
+			fmt.Fprintf(&buf, "\n}")
+		case field.IsPointer():
+			fmt.Fprintf(&buf, "\nif t.%s != nil {", field.Name)
+			fmt.Fprintf(&buf, "\ncount++")
+			fmt.Fprintf(&buf, "\n}")
+		}
+	}
+
+	fmt.Fprintf(&buf, "\ncount += len(t.privateClaims)")
+	fmt.Fprintf(&buf, "\nreturn count")
+	fmt.Fprintf(&buf, "\n}") // end func Size()
 	fmt.Fprintf(&buf, "\n\nfunc (t *Token) Get(s string) (interface{}, bool) {")
 	fmt.Fprintf(&buf, "\nswitch s {")
 	for _, field := range fields {
