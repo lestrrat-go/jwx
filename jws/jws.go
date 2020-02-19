@@ -369,7 +369,7 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (pay
 		}
 	}
 
-	return nil, errors.New("failed to verify with any of the keys")
+	return nil, errors.Wrap(err, "failed to verify with any of the keys")
 }
 
 // Parse parses contents from the given source and creates a jws.Message
