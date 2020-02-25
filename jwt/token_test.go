@@ -1,6 +1,7 @@
 package jwt_test
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -10,12 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeader(t *testing.T) {
+const (
+	tokenTime = 233431200
+)
 
-	const (
-		tokenTime = 233431200
-	)
-	expectedTokenTime := time.Unix(tokenTime, 0).UTC()
+var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
+
+func TestHeader(t *testing.T) {
 
 	values := map[string]interface{}{
 		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
@@ -153,5 +155,39 @@ func TestTokenMarshal(t *testing.T) {
 	_, err = json.MarshalIndent(t2, "", "  ")
 	if err != nil {
 		t.Fatalf("JSON marshal error: %s", err.Error())
+	}
+}
+
+func TestToken(t *testing.T) {
+	tok := jwt.New()
+
+	claims := map[string]interface{}{
+		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
+		jwt.ExpirationKey: expectedTokenTime,
+		jwt.IssuedAtKey:   expectedTokenTime,
+		jwt.IssuerKey:     "http://www.example.com",
+		jwt.JwtIDKey:      "e9bc097a-ce51-4036-9562-d2ade882db0d",
+		jwt.NotBeforeKey:  expectedTokenTime,
+		jwt.SubjectKey:    "unit test",
+		"myClaim":         "hello, world",
+	}
+	for key, value := range claims {
+		tok.Set(key, value)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	for pair := range tok.Claims(ctx) {
+		t.Logf("%s -> %v", pair.Name, pair.Value)
+	}
+
+	m, err := tok.AsMap(ctx)
+	if !assert.NoError(t, err, `AsMap should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, m, claims, "hash should match") {
+		return
 	}
 }

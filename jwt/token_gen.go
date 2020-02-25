@@ -37,6 +37,34 @@ type Token struct {
 	privateClaims map[string]interface{} `json:"-"`
 }
 
+// Size returns the number of valid claims stored in this token
+func (t *Token) Size() int {
+	var count int
+	if len(t.audience) > 0 {
+		count++
+	}
+	if t.expiration != nil {
+		count++
+	}
+	if t.issuedAt != nil {
+		count++
+	}
+	if t.issuer != nil {
+		count++
+	}
+	if t.jwtID != nil {
+		count++
+	}
+	if t.notBefore != nil {
+		count++
+	}
+	if t.subject != nil {
+		count++
+	}
+	count += len(t.privateClaims)
+	return count
+}
+
 func (t *Token) Get(s string) (interface{}, bool) {
 	switch s {
 	case AudienceKey:
