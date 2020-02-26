@@ -1,5 +1,11 @@
 Changes
 =======
 
+v0.9.1 - 27 Feb 2020
+  * Fix error wrapping in certain cases
+	* Add Claims(), Walk(), and AsMap() to iterate claims, as well as
+    getting the entire data out as a single map
+  * Work with alternate base64 encodings when decoding
+
 v0.9.0 - 22 May 2019
   * Start tagging versions for good measure.
