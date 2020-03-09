@@ -363,7 +363,7 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (pay
 			continue
 		}
 
-		payload, err := VerifyWithJWK(buf, key)
+		payload, err = VerifyWithJWK(buf, key)
 		if err == nil {
 			return payload, nil
 		}
