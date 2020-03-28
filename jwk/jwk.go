@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -85,11 +84,7 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 		}
 		defer f.Close()
 
-		buf, err := ioutil.ReadAll(f)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed read content from jwk file`)
-		}
-		return ParseBytes(buf)
+		return Parse(f)
 	}
 	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
@@ -114,12 +109,7 @@ func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 		return nil, fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 	}
 
-	buf, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read JWK HTTP response body")
-	}
-
-	return ParseBytes(buf)
+	return Parse(res.Body)
 }
 
 func (set *Set) UnmarshalJSON(data []byte) error {
