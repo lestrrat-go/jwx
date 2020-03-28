@@ -12,10 +12,6 @@ const (
 	optkeyHTTPClient = `http-client`
 )
 
-type HTTPClient interface {
-	Get(string) (*http.Response, error)
-}
-
-func WithHTTPClient(cl HTTPClient) Option {
+func WithHTTPClient(cl *http.Client) Option {
 	return option.New(optkeyHTTPClient, cl)
 }
