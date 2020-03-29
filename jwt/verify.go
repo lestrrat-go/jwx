@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/option"
@@ -63,6 +64,11 @@ func WithAudience(s string) Option {
 	return option.New(optkeyAudience, s)
 }
 
+// WithClaimValue specifies that expected any claim value.
+func WithClaimValue(name string, v interface{}) Option {
+	return option.New(name, v)
+}
+
 // Verify makes sure that the essential claims stand.
 //
 // See the various `WithXXX` functions for optional parameters
@@ -74,6 +80,7 @@ func (t *Token) Verify(options ...Option) error {
 	var jwtid string
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
+	claimValues := make(map[string]interface{})
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyClock:
@@ -88,6 +95,8 @@ func (t *Token) Verify(options ...Option) error {
 			audience = o.Value().(string)
 		case optkeyJwtid:
 			jwtid = o.Value().(string)
+		default:
+			claimValues[o.Name()] = o.Value()
 		}
 	}
 
@@ -153,5 +162,12 @@ func (t *Token) Verify(options ...Option) error {
 			return errors.New(`nbf not satisfied`)
 		}
 	}
+
+	for name, expectedValue := range claimValues {
+		if v, ok := t.Get(name); !ok || v != expectedValue {
+			return fmt.Errorf(`%v not satisfied`, name)
+		}
+	}
+
 	return nil
 }

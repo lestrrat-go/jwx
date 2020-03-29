@@ -125,4 +125,29 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 	})
+	t.Run("any claim value", func(t *testing.T) {
+		t1 := jwt.New()
+		t1.Set("email", "email@example.com")
+
+		// This should succeed, because WithClaimValue("email", "xxx") is not provided in the
+		// optional parameters
+		if !assert.NoError(t, t1.Verify(), "t1.Verify should succeed") {
+			return
+		}
+
+		// This should succeed, because WithClaimValue is provided with same value
+		if !assert.NoError(t, t1.Verify(jwt.WithClaimValue("email", "email@example.com")), "t1.Verify should succeed") {
+			return
+		}
+
+		if !assert.Error(t, t1.Verify(jwt.WithClaimValue("email", "poop")), "t1.Verify should fail") {
+			return
+		}
+		if !assert.Error(t, t1.Verify(jwt.WithClaimValue("xxxx", "email@example.com")), "t1.Verify should fail") {
+			return
+		}
+		if !assert.Error(t, t1.Verify(jwt.WithClaimValue("xxxx", "")), "t1.Verify should fail") {
+			return
+		}
+	})
 }
