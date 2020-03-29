@@ -24,6 +24,7 @@ package jws
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -322,10 +323,15 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	return decodedPayload, nil
 }
 
-// VerifyWithJKU verifies the JWS message using a remote JWK
-// file represented in the url.
+// VerifyWithJKU wraps VerifyWithJKUAndContext using the background context.
 func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
-	key, err := jwk.FetchHTTP(jwkurl)
+	return VerifyWithJKUAndContext(context.Background(), buf, jwkurl)
+}
+
+// VerifyWithJKUAndContext verifies the JWS message using a remote JWK
+// file represented in the url.
+func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string) ([]byte, error) {
+	key, err := jwk.FetchHTTPWithContext(ctx, jwkurl)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
 	}

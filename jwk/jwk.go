@@ -90,7 +90,7 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
 
-// FetchHTTP fetches the remote JWK and parses its contents
+// FetchHTTP wraps FetchHTTPWithContext using the background context.
 func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 	return FetchHTTPWithContext(context.Background(), jwkurl, options...)
 }
@@ -123,7 +123,6 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 
 	return Parse(res.Body)
 }
-
 
 func (set *Set) UnmarshalJSON(data []byte) error {
 	v, err := ParseBytes(data)
