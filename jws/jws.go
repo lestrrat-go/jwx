@@ -352,8 +352,7 @@ func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 // By default it will only pick up keys that have the "use" key
 // set to either "sig" or "enc", but you can override it by
 // providing a keyaccept function.
-func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (payload []byte, err error) {
-
+func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
 	if keyaccept == nil {
 		keyaccept = DefaultJWKAcceptor
 	}
@@ -369,7 +368,16 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) (pay
 		}
 	}
 
-	return nil, errors.Wrap(err, "failed to verify with any of the keys")
+	// refs #140, #141
+	//
+	// We should not be Wrap()'ing the error here, because of various
+	// reasons -- but the fundamental one is that the only value we can get
+	// here is the "last error" seen in the above loop, when the symptom
+	// that we want to report is that none of the keys worked.
+	//
+	// Here, we just return that fact, and we do not rely on the value of
+	// previous errors.
+	return nil, errors.New("failed to verify with any of the keys")
 }
 
 // Parse parses contents from the given source and creates a jws.Message
