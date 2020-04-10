@@ -31,7 +31,7 @@ type StandardHeaders struct {
 	JWSalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.1
 	JWScontentType            string                 `json:"cty,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.10
 	JWScritical               []string               `json:"crit,omitempty"`     // https://tools.ietf.org/html/rfc7515#section-4.1.11
-	JWSjwk                    jwk.Key                `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
+	JWSjwk                    *jwk.Set               `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
 	JWSjwkSetURL              string                 `json:"jku,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.2
 	JWSkeyID                  string                 `json:"kid,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	JWStyp                    string                 `json:"typ,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.9
@@ -140,7 +140,7 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case JWKKey:
-		v, ok := value.(jwk.Key)
+		v, ok := value.(*jwk.Set)
 		if ok {
 			h.JWSjwk = v
 			return nil
