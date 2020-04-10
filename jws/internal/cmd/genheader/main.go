@@ -86,7 +86,7 @@ func generateHeaders() error {
 		{
 			name:    `JWSjwk`,
 			method:  `JWK`,
-			typ:     `*jwk.Set`,
+			typ:     `jwk.Key`,
 			key:     `jwk`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
 			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
