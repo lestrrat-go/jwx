@@ -167,6 +167,19 @@ func TestVerifyWithJWKSet(t *testing.T) {
 	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
 		return
 	}
+
+	key2, err := rsa.GenerateKey(rand.Reader, 2048)
+	if !assert.NoError(t, err, "RSA key generated") {
+		return
+	}
+	jwkKey2, err := jwk.New(&key2.PublicKey)
+	if !assert.NoError(t, err, "JWK Public key generated") {
+		return
+	}
+	_, err = jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey2}}, nil)
+	if !assert.Error(t, err, "Verify with wrong key should fail") {
+		return
+	}
 }
 
 func TestRoundtrip_RSACompact(t *testing.T) {
