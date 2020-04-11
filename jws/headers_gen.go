@@ -2,6 +2,7 @@
 package jws
 
 import (
+	"encoding/json"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -31,7 +32,7 @@ type StandardHeaders struct {
 	JWSalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.1
 	JWScontentType            string                 `json:"cty,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.10
 	JWScritical               []string               `json:"crit,omitempty"`     // https://tools.ietf.org/html/rfc7515#section-4.1.11
-	JWSjwk                    *jwk.Set               `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
+	JWSjwk                    jwk.Key                `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
 	JWSjwkSetURL              string                 `json:"jku,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.2
 	JWSkeyID                  string                 `json:"kid,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	JWStyp                    string                 `json:"typ,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.9
@@ -39,6 +40,21 @@ type StandardHeaders struct {
 	JWSx509CertThumbprint     string                 `json:"x5t,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	JWSx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"` // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	JWSx509URL                string                 `json:"x5u,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	privateParams             map[string]interface{}
+}
+
+type standardHeadersUnmarshalProxy struct {
+	JWSalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
+	JWScontentType            string                 `json:"cty,omitempty"`
+	JWScritical               []string               `json:"crit,omitempty"`
+	JWSjwk                    json.RawMessage        `json:"jwk,omitempty"`
+	JWSjwkSetURL              string                 `json:"jku,omitempty"`
+	JWSkeyID                  string                 `json:"kid,omitempty"`
+	JWStyp                    string                 `json:"typ,omitempty"`
+	JWSx509CertChain          []string               `json:"x5c,omitempty"`
+	JWSx509CertThumbprint     string                 `json:"x5t,omitempty"`
+	JWSx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
+	JWSx509URL                string                 `json:"x5u,omitempty"`
 	privateParams             map[string]interface{}
 }
 
@@ -140,7 +156,7 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case JWKKey:
-		v, ok := value.(*jwk.Set)
+		v, ok := value.(jwk.Key)
 		if ok {
 			h.JWSjwk = v
 			return nil
@@ -194,5 +210,37 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 		}
 		h.privateParams[name] = value
 	}
+	return nil
+}
+
+func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
+	var proxy standardHeadersUnmarshalProxy
+	if err := json.Unmarshal(buf, &proxy); err != nil {
+		return errors.Wrap(err, `failed to unmarshal headers`)
+	}
+
+	if h == nil {
+		h = &StandardHeaders{}
+	}
+
+	h.JWSjwk = nil
+	if jwkField := proxy.JWSjwk; len(jwkField) > 0 {
+		set, err := jwk.ParseBytes([]byte(proxy.JWSjwk))
+		if err != nil {
+			return errors.Wrap(err, `failed to parse jwk field`)
+		}
+		h.JWSjwk = set.Keys[0]
+	}
+	h.JWSalgorithm = proxy.JWSalgorithm
+	h.JWScontentType = proxy.JWScontentType
+	h.JWScritical = proxy.JWScritical
+	h.JWSjwkSetURL = proxy.JWSjwkSetURL
+	h.JWSkeyID = proxy.JWSkeyID
+	h.JWStyp = proxy.JWStyp
+	h.JWSx509CertChain = proxy.JWSx509CertChain
+	h.JWSx509CertThumbprint = proxy.JWSx509CertThumbprint
+	h.JWSx509CertThumbprintS256 = proxy.JWSx509CertThumbprintS256
+	h.JWSx509URL = proxy.JWSx509URL
+	h.privateParams = proxy.privateParams
 	return nil
 }

@@ -86,7 +86,7 @@ func generateHeaders() error {
 		{
 			name:    `JWSjwk`,
 			method:  `JWK`,
-			typ:     `*jwk.Set`,
+			typ:     `jwk.Key`,
 			key:     `jwk`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
 			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
@@ -158,7 +158,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"} {
+	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors", "encoding/json"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -181,6 +181,18 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n\ntype StandardHeaders struct {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, f.typ, f.jsonTag, f.comment)
+	}
+	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
+	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
+
+	// Proxy is used when unmarshaling headers
+	fmt.Fprintf(&buf, "\n\ntype standardHeadersUnmarshalProxy struct {")
+	for _, f := range fields {
+		if f.name == "JWSjwk" {
+			fmt.Fprintf(&buf, "\n%s json.RawMessage %s", f.name, f.jsonTag)
+		} else {
+			fmt.Fprintf(&buf, "\n%s %s %s", f.name, f.typ, f.jsonTag)
+		}
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
@@ -250,6 +262,36 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nvar proxy standardHeadersUnmarshalProxy")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nif h == nil {")
+	fmt.Fprintf(&buf, "\nh = &StandardHeaders{}")
+	fmt.Fprintf(&buf, "\n}")
+
+	// Copy every field except for jwk, whose type needs to be guessed
+	fmt.Fprintf(&buf, "\n\nh.JWSjwk = nil")
+	fmt.Fprintf(&buf, "\nif jwkField := proxy.JWSjwk; len(jwkField) > 0 {")
+	fmt.Fprintf(&buf, "\nset, err := jwk.ParseBytes([]byte(proxy.JWSjwk))")
+	fmt.Fprintf(&buf, "\n if err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse jwk field`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nh.JWSjwk = set.Keys[0]")
+	fmt.Fprintf(&buf, "\n}")
+
+	for _, f := range fields {
+		if f.name != "JWSjwk" {
+			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.%[1]s", f.name)
+		}
+	}
+	fmt.Fprintf(&buf, "\nh.privateParams = proxy.privateParams")
+	fmt.Fprintf(&buf, "\nreturn nil")
+	fmt.Fprintf(&buf, "\n}")
+
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

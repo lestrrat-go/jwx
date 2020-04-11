@@ -2,11 +2,13 @@ package jws_test
 
 import (
 	"encoding/json"
+	"reflect"
+	"testing"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
-	"reflect"
-	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHeader(t *testing.T) {
@@ -28,7 +30,7 @@ func TestHeader(t *testing.T) {
 		jws.AlgorithmKey:          jwa.ES256,
 		jws.ContentTypeKey:        "example",
 		jws.CriticalKey:           []string{"exp"},
-		jws.JWKKey:                jwkPublicKeySet,
+		jws.JWKKey:                jwkPublicKeySet.Keys[0],
 		jws.JWKSetURLKey:          "https://www.jwk.com/key.json",
 		jws.TypeKey:               "JWT",
 		jws.KeyIDKey:              "e9bc097a-ce51-4036-9562-d2ade882db0d",
@@ -40,13 +42,12 @@ func TestHeader(t *testing.T) {
 
 		var h jws.StandardHeaders
 		for k, v := range values {
-			err := h.Set(k, v)
-			if err != nil {
-				t.Fatalf("Set failed for %s", k)
+			if !assert.NoError(t, h.Set(k, v), "h.Set should succeed for %s", k) {
+				return
 			}
 			got, ok := h.Get(k)
-			if !ok {
-				t.Fatalf("Set failed for %s", k)
+			if !assert.True(t, ok, "h.Get should succeed for %s", k) {
+				return
 			}
 			//fmt.Println(reflect.TypeOf(got).String())
 			//fmt.Println(reflect.TypeOf(v).String())
@@ -55,8 +56,7 @@ func TestHeader(t *testing.T) {
 			}
 		}
 	})
-	t.Run("JSON Marshal Unmarshal", func(t *testing.T) {
-
+	t.Run("JSON Roundtrip", func(t *testing.T) {
 		var h jws.StandardHeaders
 		for k, v := range values {
 			err := h.Set(k, v)
@@ -76,9 +76,9 @@ func TestHeader(t *testing.T) {
 			t.Fatal("Failed to JSON marshal")
 		}
 		var hNew jws.StandardHeaders
-		err = json.Unmarshal(hByte, &hNew)
-		if err != nil {
-			t.Fatal("Failed to JSON marshal")
+
+		if !assert.NoError(t, json.Unmarshal(hByte, &hNew), "json.Unmarshal should succeed for headers") {
+			return
 		}
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
