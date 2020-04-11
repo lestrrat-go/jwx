@@ -5,6 +5,7 @@ package jwk
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
@@ -90,17 +91,28 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
 
-// FetchHTTP fetches the remote JWK and parses its contents
+// FetchHTTP wraps FetchHTTPWithContext using the background context.
 func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
-	var httpcl HTTPClient = http.DefaultClient
+	return FetchHTTPWithContext(context.Background(), jwkurl, options...)
+}
+
+// FetchHTTPWithContext fetches the remote JWK and parses its contents
+func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option) (*Set, error) {
+	httpcl := http.DefaultClient
 	for _, option := range options {
 		switch option.Name() {
 		case optkeyHTTPClient:
-			httpcl = option.Value().(HTTPClient)
+			httpcl = option.Value().(*http.Client)
 		}
 	}
 
-	res, err := httpcl.Get(jwkurl)
+	req, err := http.NewRequest(http.MethodGet, jwkurl, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to new request to remote JWK")
+	}
+	req.WithContext(ctx)
+
+	res, err := httpcl.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch remote JWK")
 	}
