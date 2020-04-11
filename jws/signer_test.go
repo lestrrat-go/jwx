@@ -77,20 +77,20 @@ func TestSignMulti(t *testing.T) {
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
-	var s1hdr jws.StandardHeaders
+	s1hdr := jws.NewHeaders()
 	s1hdr.Set(jws.KeyIDKey, "2010-12-29")
 
 	s2, err := sign.New(jwa.ES256)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}
-	var s2hdr jws.StandardHeaders
+	s2hdr := jws.NewHeaders()
 	s2hdr.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
 	m, err := jws.SignMulti([]byte(v),
-		jws.WithSigner(s1, rsakey, &s1hdr, nil),
-		jws.WithSigner(s2, dsakey, &s2hdr, nil),
+		jws.WithSigner(s1, rsakey, s1hdr, nil),
+		jws.WithSigner(s2, dsakey, s2hdr, nil),
 	)
 	if !assert.NoError(t, err, "jws.SignMulti should succeed") {
 		return

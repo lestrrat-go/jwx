@@ -38,9 +38,22 @@ func TestHeader(t *testing.T) {
 		jws.X509CertThumbprintKey: "QzY0NjREMjkyQTI4RTU2RkE4MUJBRDExNzY1MUY1N0I4QjFCODlBOQ",
 		jws.X509URLKey:            "https://www.x509.com/key.pem",
 	}
-	t.Run("Roundtrip", func(t *testing.T) {
 
-		var h jws.StandardHeaders
+	t.Run("Type", func(t *testing.T) {
+		var h jws.Headers = jws.NewHeaders()
+		_ = h
+	})
+	t.Run("Sanity", func(t *testing.T) {
+		h := jws.NewHeaders()
+		if !assert.NoError(t, json.Unmarshal([]byte(publicKey), h), "unmarshal public key should succeed") {
+			return
+		}
+		if !assert.NotEmpty(t, h.KeyID()) { // これあったっけ…
+			return
+		}
+	})
+	t.Run("Roundtrip", func(t *testing.T) {
+		h := jws.NewHeaders()
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), "h.Set should succeed for %s", k) {
 				return
@@ -57,7 +70,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("JSON Roundtrip", func(t *testing.T) {
-		var h jws.StandardHeaders
+		h := jws.NewHeaders()
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err != nil {
@@ -75,7 +88,7 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to JSON marshal")
 		}
-		var hNew jws.StandardHeaders
+		hNew := jws.NewHeaders()
 
 		if !assert.NoError(t, json.Unmarshal(hByte, &hNew), "json.Unmarshal should succeed for headers") {
 			return
@@ -103,7 +116,7 @@ func TestHeader(t *testing.T) {
 			jws.X509URLKey:                dummy,
 		}
 
-		var h jws.StandardHeaders
+		h := jws.NewHeaders()
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err == nil {

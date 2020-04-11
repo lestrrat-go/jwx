@@ -6,15 +6,20 @@ import (
 )
 
 type EncodedSignature struct {
-	Protected string          `json:"protected,omitempty"`
+	// このあたりは古いコードで、jws.Headersがひどい形だったので
+	// interfaceにして外から見えるフィールドを極力少なくしたい
+	// と思って変えていたら、さて、このHeadersはどうしようか、
+	// となってます。
+	Protected string  `json:"protected,omitempty"`
 	Headers   Headers `json:"header,omitempty"`
-	Signature string          `json:"signature,omitempty"`
+	Signature string  `json:"signature,omitempty"`
 }
 
+// XXX: KILL ME
 type EncodedSignatureUnmarshalProxy struct {
-	Protected string           `json:"protected,omitempty"`
-	Headers   *StandardHeaders `json:"header,omitempty"`
-	Signature string           `json:"signature,omitempty"`
+	Protected string  `json:"protected,omitempty"`
+	Headers   Headers `json:"header,omitempty"`
+	Signature string  `json:"signature,omitempty"`
 }
 
 type EncodedMessage struct {
@@ -22,6 +27,7 @@ type EncodedMessage struct {
 	Signatures []*EncodedSignature `json:"signatures,omitempty"`
 }
 
+// XXX: KILL ME
 type EncodedMessageUnmarshalProxy struct {
 	Payload    string                            `json:"payload"`
 	Signatures []*EncodedSignatureUnmarshalProxy `json:"signatures,omitempty"`
@@ -32,6 +38,7 @@ type FullEncodedMessage struct {
 	*EncodedMessage
 }
 
+// XXX: KILL ME
 type FullEncodedMessageUnmarshalProxy struct {
 	*EncodedSignatureUnmarshalProxy // embedded to pick up flattened JSON message
 	*EncodedMessageUnmarshalProxy
@@ -62,7 +69,7 @@ type Message struct {
 type Signature struct {
 	headers   Headers `json:"header,omitempty"`    // Unprotected Headers
 	protected Headers `json:"protected,omitempty"` // Protected Headers
-	signature []byte          `json:"signature,omitempty"` // Signature
+	signature []byte  `json:"signature,omitempty"` // Signature
 }
 
 // JWKAcceptor decides which keys can be accepted
@@ -89,3 +96,14 @@ var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
 	}
 	return true
 })
+
+type Visitor interface {
+	Visit(string, interface{}) error
+}
+
+type VisitFunc func(string, interface{}) error
+
+type HeaderPair struct {
+	Name string
+	Value interface{}
+}

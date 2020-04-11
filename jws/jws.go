@@ -86,7 +86,7 @@ func (s *payloadSigner) PublicHeader() Headers {
 //
 // If you would like to pass custom headers, use the WithHeaders option.
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
-	var hdrs Headers = &StandardHeaders{}
+	var hdrs Headers = NewHeaders()
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyHeaders:
@@ -210,7 +210,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	for _, signer := range signers {
 		protected := signer.ProtectedHeader()
 		if protected == nil {
-			protected = &StandardHeaders{}
+			protected = NewHeaders()
 		}
 
 		protected.Set(AlgorithmKey, signer.Algorithm())
@@ -257,30 +257,37 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	}
 
 	if buf[0] == '{' {
-
-		var v FullEncodedMessage
-		if err := json.Unmarshal(buf, &v); err != nil {
+		// FUuuuuuuuuuuuuuuuck // WTF am I doing here.
+		var proxy fullMessageProxy
+		if err := json.Unmarshal(buf, &proxy); err != nil {
 			return nil, errors.Wrap(err, `failed to unmarshal JWS message`)
 		}
 
 		// There's something wrong if the Message part is not initialized
-		if v.EncodedMessage == nil {
-			return nil, errors.New(`invalid JWS message format`)
+		if len(proxy.Payload) <= 0 {
+			return nil, errors.New(`invalid JWS message format (missing payload)`)
 		}
 
 		// if we're using the flattened serialization format, then m.Signature
 		// will be non-nil
-		msg := v.EncodedMessage
-		if v.EncodedSignature != nil {
-			msg.Signatures[0] = v.EncodedSignature
+		if len(proxy.Signature) > 0 {
+			if len(proxy.Signatures) > 0 {
+				return nil, errors.New(`invalid JWS message format (signature and signatures both exist)`)
+			}
+			encodedSig, err := proxy.encodedSignature()
+			if err != nil {
+				return nil, err // don't think we need to wrap this one
+			}
+
+			proxy.Signatures = append(proxy.Signatures, encodedSig)
 		}
 
 		var buf bytes.Buffer
-		for _, sig := range msg.Signatures {
+		for _, sig := range proxy.Signatures {
 			buf.Reset()
 			buf.WriteString(sig.Protected)
 			buf.WriteByte('.')
-			buf.WriteString(msg.Payload)
+			buf.WriteString(proxy.Payload)
 			decodedSignature, err := base64.RawURLEncoding.DecodeString(sig.Signature)
 			if err != nil {
 				continue
@@ -288,7 +295,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 
 			if err := verifier.Verify(buf.Bytes(), decodedSignature, key); err == nil {
 				// verified!
-				decodedPayload, err := base64.RawURLEncoding.DecodeString(msg.Payload)
+				decodedPayload, err := base64.RawURLEncoding.DecodeString(proxy.Payload)
 				if err != nil {
 					return nil, errors.Wrap(err, `message verified, failed to decode payload`)
 				}
@@ -424,40 +431,64 @@ func ParseString(s string) (*Message, error) {
 	return Parse(strings.NewReader(s))
 }
 
+type fullMessageProxy struct {
+	// encoded signature fields
+	Signature json.RawMessage `json:"signature"`
+	Headers   json.RawMessage `json:"header"` // あれ、"s"いらないんだっけ
+	Protected json.RawMessage `json:"protected"`
+
+	// encoded message fields
+	Signatures []*EncodedSignature `json:"signatures"`
+	Payload    string              `json:"payload"`
+}
+
+func (proxy *fullMessageProxy) encodedSignature() (*EncodedSignature, error) {
+	var encodedSig EncodedSignature
+	if err := json.Unmarshal(proxy.Protected, &encodedSig.Protected); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal 'protected' field`)
+	}
+	if err := json.Unmarshal(proxy.Signature, &encodedSig.Signature); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal 'signature' field`)
+	}
+	h := NewHeaders()
+	if err := json.Unmarshal(proxy.Headers, h); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal 'header' field`)
+	}
+
+	return &encodedSig, nil
+}
+
 func parseJSON(src io.Reader) (result *Message, err error) {
-
-	var wrapper FullEncodedMessageUnmarshalProxy
-
-	if err := json.NewDecoder(src).Decode(&wrapper); err != nil {
+	var proxy fullMessageProxy
+	if err := json.NewDecoder(src).Decode(&proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
 	}
 
-	if wrapper.EncodedMessageUnmarshalProxy == nil {
-		return nil, errors.New(`invalid payload (probably empty)`)
-	}
-
-	// if the "signature" field exist, treat it as a flattened
-	if wrapper.EncodedSignatureUnmarshalProxy != nil {
-		if len(wrapper.Signatures) != 0 {
+	if len(proxy.Signature) > 0 {
+		if len(proxy.Signatures) > 0 {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		wrapper.Signatures = append(wrapper.Signatures, wrapper.EncodedSignatureUnmarshalProxy)
+		encodedSig, err := proxy.encodedSignature()
+		if err != nil {
+			return nil, err // don't think we need to wrap this one
+		}
+		proxy.Signatures = append(proxy.Signatures, encodedSig)
 	}
 
 	var plain Message
-	plain.payload, err = base64.RawURLEncoding.DecodeString(wrapper.Payload)
+	plain.payload, err = base64.RawURLEncoding.DecodeString(proxy.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode payload`)
 	}
 
-	for i, sig := range wrapper.Signatures {
+	for i, sig := range proxy.Signatures {
 		var plainSig Signature
 
 		plainSig.headers = sig.Headers
 
 		if l := len(sig.Protected); l > 0 {
-			plainSig.protected = new(StandardHeaders)
+			plainSig.protected = NewHeaders()
 			hdrbuf, err := base64.RawURLEncoding.DecodeString(sig.Protected)
 			if err != nil {
 				return nil, errors.Wrapf(err, `failed to base64 decode protected header for signature #%d`, i+1)
@@ -556,7 +587,7 @@ func parseCompact(rdr io.Reader) (m *Message, err error) {
 	if _, err := base64.RawURLEncoding.Decode(decodedHeader, protected); err != nil {
 		return nil, errors.Wrap(err, `failed to decode headers`)
 	}
-	var hdr StandardHeaders
+	var hdr stdHeaders
 	if err := json.Unmarshal(decodedHeader, &hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
