@@ -257,9 +257,9 @@ func generateHeaders() error {
 		return errors.Wrap(err, `failed to format code`)
 	}
 
-	f, err := os.Create("headers.go")
+	f, err := os.Create("headers_gen.go")
 	if err != nil {
-		return errors.Wrap(err, `failed to open headers.go`)
+		return errors.Wrap(err, `failed to open headers_gen.go`)
 	}
 	defer f.Close()
 	f.Write(formatted)
