@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -258,4 +259,14 @@ func getKey(m map[string]interface{}, key string, required bool) ([]byte, error)
 		return nil, errors.Wrapf(err, `failed to base64 decode key %s`, key)
 	}
 	return buf, nil
+}
+
+// helper for x5c handling
+func marshalX509CertChain(chain []*x509.Certificate) ([]string, error) {
+	encodedCerts := make([]string, len(chain))
+	for idx, cert := range chain {
+		// XXX does this need to be StdEncoding? can it be RawURL?
+		encodedCerts[idx] = base64.EncodeToStringStd(cert.Raw)
+	}
+	return encodedCerts, nil
 }
