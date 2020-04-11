@@ -271,7 +271,15 @@ func (h StandardHeaders) PopulateMap(m map[string]interface{}) error {
 		m[KeyOpsKey] = v
 	}
 	if v, ok := h.Get(X509CertChainKey); ok {
-		m[X509CertChainKey] = v
+		var chain []*x509.Certificate
+		if chain, ok = v.([]*x509.Certificate); !ok {
+			return errors.Errorf(`X509CertChain type is invalid: %T`, v)
+		}
+		encodedChain, err := marshalX509CertChain(chain)
+		if err != nil {
+			return err
+		}
+		m[X509CertChainKey] = encodedChain
 	}
 	if v, ok := h.Get(X509CertThumbprintKey); ok {
 		m[X509CertThumbprintKey] = v

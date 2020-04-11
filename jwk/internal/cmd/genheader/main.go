@@ -301,7 +301,20 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end for k, v := range h.privateParams
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nif v, ok := h.Get(%sKey); ok {", f.method)
-		fmt.Fprintf(&buf, "\nm[%sKey] = v", f.method)
+		if f.method == "X509CertChain" {
+			// special case. note, maybe we should separete this out...
+			fmt.Fprintf(&buf, "\nvar chain []*x509.Certificate")
+			fmt.Fprintf(&buf, "\nif chain, ok = v.([]*x509.Certificate); !ok {")
+			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`%s type is invalid: %%T`, v)", f.method)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nencodedChain, err := marshalX509CertChain(chain)")
+			fmt.Fprintf(&buf, "\nif err != nil {")
+			fmt.Fprintf(&buf, "\nreturn err")
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nm[%sKey] = encodedChain", f.method)
+		} else {
+			fmt.Fprintf(&buf, "\nm[%sKey] = v", f.method)
+		}
 		fmt.Fprintf(&buf, "\n}") // end if v, ok := h.Get(%sKey); ok
 	}
 	fmt.Fprintf(&buf, "\n\nreturn nil")
