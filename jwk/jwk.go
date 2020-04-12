@@ -110,9 +110,8 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to new request to remote JWK")
 	}
-	req.WithContext(ctx)
 
-	res, err := httpcl.Do(req)
+	res, err := httpcl.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch remote JWK")
 	}
