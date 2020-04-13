@@ -383,10 +383,10 @@ func TestEncode(t *testing.T) {
 		jwsPayload := []byte{80, 97, 121, 108, 111, 97, 100}
 
 		standardHeaders := jws.NewHeaders()
-		err := json.Unmarshal(hdr, standardHeaders)
-		if err != nil {
-			t.Fatal("Failed to parse header")
+		if !assert.NoError(t, json.Unmarshal(hdr, standardHeaders), `parsing headers should succeed`) {
+			return
 		}
+
 		alg := standardHeaders.Algorithm()
 
 		keys, err := jwk.ParseString(jwksrc)

@@ -158,7 +158,17 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors", "encoding/json", "context"} {
+
+	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort"}
+	extimports := []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"}
+
+	for _, pkg := range stdimports {
+		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	}
+	if len(stdimports) > 0 && len(extimports) > 0 {
+		fmt.Fprintf(&buf, "\n")
+	}
+	for _, pkg := range extimports {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -195,7 +205,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	// Proxy is used when unmarshaling headers
-	fmt.Fprintf(&buf, "\n\ntype standardHeadersUnmarshalProxy struct {")
+	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
 		if f.name == "jwk" {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
@@ -203,7 +213,7 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
 		}
 	}
-	fmt.Fprintf(&buf, "\nPrivateParams map[string]interface{}")
+	fmt.Fprintf(&buf, "\nPrivateParams map[string]interface{} `json:\"-,omitempty\"` ")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
@@ -307,13 +317,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
-	fmt.Fprintf(&buf, "\nvar proxy standardHeadersUnmarshalProxy")
+	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
-	fmt.Fprintf(&buf, "\n}")
-
-	fmt.Fprintf(&buf, "\n\nif h == nil {")
-	fmt.Fprintf(&buf, "\nh = &stdHeaders{}")
 	fmt.Fprintf(&buf, "\n}")
 
 	// Copy every field except for jwk, whose type needs to be guessed
@@ -334,6 +340,47 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nh.privateParams = proxy.PrivateParams")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
+	fmt.Fprintf(&buf, "\nif h.jwk != nil {")
+	fmt.Fprintf(&buf, "\njwkbuf, err := json.Marshal(h.jwk)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal jwk field`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nproxy.Xjwk = jwkbuf")
+	fmt.Fprintf(&buf, "\n}")
+
+	for _, f := range fields {
+		if f.name != "jwk" {
+			fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
+		}
+	}
+
+	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
+	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(&buf)")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
+	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
+	fmt.Fprintf(&buf, "\nkeys := make([]string, l)")
+	fmt.Fprintf(&buf, "\nfor k := range h.privateParams {")
+	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
+	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
+	fmt.Fprintf(&buf, "\nif i > 0 {")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateParams[k]); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

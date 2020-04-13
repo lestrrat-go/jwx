@@ -2,8 +2,12 @@
 package jws
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"sort"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -58,7 +62,7 @@ type stdHeaders struct {
 	privateParams          map[string]interface{}
 }
 
-type standardHeadersUnmarshalProxy struct {
+type standardHeadersMarshalProxy struct {
 	Xalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
 	XcontentType            string                 `json:"cty,omitempty"`
 	Xcritical               []string               `json:"crit,omitempty"`
@@ -70,7 +74,7 @@ type standardHeadersUnmarshalProxy struct {
 	Xx509CertThumbprint     string                 `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
 	Xx509URL                string                 `json:"x5u,omitempty"`
-	PrivateParams           map[string]interface{}
+	PrivateParams           map[string]interface{} `json:"-,omitempty"`
 }
 
 func NewHeaders() Headers {
@@ -302,13 +306,9 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 }
 
 func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
-	var proxy standardHeadersUnmarshalProxy
+	var proxy standardHeadersMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal headers`)
-	}
-
-	if h == nil {
-		h = &stdHeaders{}
 	}
 
 	h.jwk = nil
@@ -331,4 +331,48 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	h.x509URL = proxy.Xx509URL
 	h.privateParams = proxy.PrivateParams
 	return nil
+}
+
+func (h stdHeaders) MarshalJSON() ([]byte, error) {
+	var proxy standardHeadersMarshalProxy
+	if h.jwk != nil {
+		jwkbuf, err := json.Marshal(h.jwk)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to marshal jwk field`)
+		}
+		proxy.Xjwk = jwkbuf
+	}
+	proxy.Xalgorithm = h.algorithm
+	proxy.XcontentType = h.contentType
+	proxy.Xcritical = h.critical
+	proxy.XjwkSetURL = h.jwkSetURL
+	proxy.XkeyID = h.keyID
+	proxy.Xtyp = h.typ
+	proxy.Xx509CertChain = h.x509CertChain
+	proxy.Xx509CertThumbprint = h.x509CertThumbprint
+	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
+	proxy.Xx509URL = h.x509URL
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(proxy); err != nil {
+		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
+	}
+	buf.Truncate(buf.Len() - 1)
+	if l := len(h.privateParams); l > 0 {
+		keys := make([]string, l)
+		for k := range h.privateParams {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for i, k := range keys {
+			if i > 0 {
+				fmt.Fprintf(&buf, `,`)
+				if err := enc.Encode(h.privateParams[k]); err != nil {
+					return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
+				}
+			}
+		}
+		fmt.Fprintf(&buf, `}`)
+	}
+	return buf.Bytes(), nil
 }
