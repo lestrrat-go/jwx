@@ -187,9 +187,9 @@ func generateHeaders() error {
 	}
 
 	// These are used to iterate through all keys in a header
-	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) <-chan *HeaderPair")
+	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) Iterator")
 	fmt.Fprintf(&buf, "\nWalk(ctx context.Context, v Visitor) error")
-	fmt.Fprintf(&buf, "\nAsMap(ctx context.Context) map[string]interface{}")
+	fmt.Fprintf(&buf, "\nAsMap(ctx context.Context) (map[string]interface{}, error)")
 
 	// These are used to access a single element by key name
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
@@ -241,11 +241,11 @@ func generateHeaders() error {
 		default:
 			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
 		}
-		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Name: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
+		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
 		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
-	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Name: k, Value: v})")
+	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
 	fmt.Fprintf(&buf, "\nselect {")

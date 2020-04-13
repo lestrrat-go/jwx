@@ -1,6 +1,8 @@
 package jws
 
 import (
+	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 )
@@ -69,13 +71,7 @@ var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
 	return true
 })
 
-type Visitor interface {
-	Visit(string, interface{}) error
-}
-
-type VisitFunc func(string, interface{}) error
-
-type HeaderPair struct {
-	Name string
-	Value interface{}
-}
+type Visitor = iter.MapVisitor
+type VisitorFunc = iter.MapVisitorFunc
+type HeaderPair = mapiter.Pair
+type Iterator = mapiter.Iterator
