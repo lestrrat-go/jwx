@@ -6,10 +6,6 @@ import (
 )
 
 type encodedSignature struct {
-	// このあたりは古いコードで、jws.Headersがひどい形だったので
-	// interfaceにして外から見えるフィールドを極力少なくしたい
-	// と思って変えていたら、さて、このHeadersはどうしようか、
-	// となってます。
 	Protected string  `json:"protected,omitempty"`
 	Headers   Headers `json:"header,omitempty"`
 	Signature string  `json:"signature,omitempty"`
