@@ -268,7 +268,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 			return nil, errors.New(`invalid JWS message format (missing payload)`)
 		}
 
-		// if we're using the flattened serialization format, then m.Signature
+		// if we're using the compact serialization format, then m.Signature
 		// will be non-nil
 		if len(proxy.Signature) > 0 {
 			if len(proxy.Signatures) > 0 {
@@ -466,7 +466,7 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 
 	if len(proxy.Signature) > 0 {
 		if len(proxy.Signatures) > 0 {
-			return nil, errors.New("invalid message: mixed flattened/full json serialization")
+			return nil, errors.New("invalid message: mixed compact/full json serialization")
 		}
 
 		encodedSig, err := proxy.encodedSignature()
