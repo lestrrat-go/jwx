@@ -324,14 +324,14 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 }
 
 // VerifyWithJKU wraps VerifyWithJKUAndContext using the background context.
-func VerifyWithJKU(buf []byte, jwkurl string) ([]byte, error) {
-	return VerifyWithJKUAndContext(context.Background(), buf, jwkurl)
+func VerifyWithJKU(buf []byte, jwkurl string, options ...Option) ([]byte, error) {
+	return VerifyWithJKUAndContext(context.Background(), buf, jwkurl, options...)
 }
 
 // VerifyWithJKUAndContext verifies the JWS message using a remote JWK
 // file represented in the url.
-func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string) ([]byte, error) {
-	key, err := jwk.FetchHTTPWithContext(ctx, jwkurl)
+func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string, options ...Option) ([]byte, error) {
+	key, err := jwk.FetchHTTPWithContext(ctx, jwkurl, options...)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
 	}
