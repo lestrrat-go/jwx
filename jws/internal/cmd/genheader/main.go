@@ -233,9 +233,16 @@ func generateHeaders() error {
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
-		// TODO: need to check if values are acutally set?
-		// meh, that means we need to struct { foo *Type } instead of struct {foo Type} 
+		switch f.name {
+		case "jwk":
+			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
+		case "critical", "x509CertChain":
+			fmt.Fprintf(&buf, "\nif len(h.critical) > 0 {")
+		default:
+			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
+		}
 		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Name: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
+		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Name: k, Value: v})")

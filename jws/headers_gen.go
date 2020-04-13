@@ -127,17 +127,39 @@ func (h *stdHeaders) X509URL() string {
 
 func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Name: "alg", Value: h.algorithm})
-	pairs = append(pairs, &HeaderPair{Name: "cty", Value: h.contentType})
-	pairs = append(pairs, &HeaderPair{Name: "crit", Value: h.critical})
-	pairs = append(pairs, &HeaderPair{Name: "jwk", Value: h.jwk})
-	pairs = append(pairs, &HeaderPair{Name: "jku", Value: h.jwkSetURL})
-	pairs = append(pairs, &HeaderPair{Name: "kid", Value: h.keyID})
-	pairs = append(pairs, &HeaderPair{Name: "typ", Value: h.typ})
-	pairs = append(pairs, &HeaderPair{Name: "x5c", Value: h.x509CertChain})
-	pairs = append(pairs, &HeaderPair{Name: "x5t", Value: h.x509CertThumbprint})
-	pairs = append(pairs, &HeaderPair{Name: "x5t#S256", Value: h.x509CertThumbprintS256})
-	pairs = append(pairs, &HeaderPair{Name: "x5u", Value: h.x509URL})
+	if h.algorithm != "" {
+		pairs = append(pairs, &HeaderPair{Name: "alg", Value: h.algorithm})
+	}
+	if h.contentType != "" {
+		pairs = append(pairs, &HeaderPair{Name: "cty", Value: h.contentType})
+	}
+	if len(h.critical) > 0 {
+		pairs = append(pairs, &HeaderPair{Name: "crit", Value: h.critical})
+	}
+	if h.jwk != nil {
+		pairs = append(pairs, &HeaderPair{Name: "jwk", Value: h.jwk})
+	}
+	if h.jwkSetURL != "" {
+		pairs = append(pairs, &HeaderPair{Name: "jku", Value: h.jwkSetURL})
+	}
+	if h.keyID != "" {
+		pairs = append(pairs, &HeaderPair{Name: "kid", Value: h.keyID})
+	}
+	if h.typ != "" {
+		pairs = append(pairs, &HeaderPair{Name: "typ", Value: h.typ})
+	}
+	if len(h.critical) > 0 {
+		pairs = append(pairs, &HeaderPair{Name: "x5c", Value: h.x509CertChain})
+	}
+	if h.x509CertThumbprint != "" {
+		pairs = append(pairs, &HeaderPair{Name: "x5t", Value: h.x509CertThumbprint})
+	}
+	if h.x509CertThumbprintS256 != "" {
+		pairs = append(pairs, &HeaderPair{Name: "x5t#S256", Value: h.x509CertThumbprintS256})
+	}
+	if h.x509URL != "" {
+		pairs = append(pairs, &HeaderPair{Name: "x5u", Value: h.x509URL})
+	}
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Name: k, Value: v})
 	}
