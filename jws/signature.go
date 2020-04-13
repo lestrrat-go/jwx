@@ -12,7 +12,7 @@ type encodedSignatureProxy struct {
 	Signature string          `json:"signature,omitempty"`
 }
 
-func (sig *EncodedSignature) UnmarshalJSON(buf []byte) error {
+func (sig *encodedSignature) UnmarshalJSON(buf []byte) error {
 	var proxy encodedSignatureProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal into temporary struct`)
@@ -24,10 +24,6 @@ func (sig *EncodedSignature) UnmarshalJSON(buf []byte) error {
 		if err := json.Unmarshal(proxy.Headers, h); err != nil {
 			return errors.Wrap(err, `failed to unmarshal headers`)
 		}
-	}
-
-	if sig == nil {
-		sig = &EncodedSignature{}
 	}
 
 	// XXX: sigh, dream of the day when we kill public fields

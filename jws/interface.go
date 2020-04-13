@@ -5,7 +5,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-type EncodedSignature struct {
+type encodedSignature struct {
 	// このあたりは古いコードで、jws.Headersがひどい形だったので
 	// interfaceにして外から見えるフィールドを極力少なくしたい
 	// と思って変えていたら、さて、このHeadersはどうしようか、
@@ -15,33 +15,9 @@ type EncodedSignature struct {
 	Signature string  `json:"signature,omitempty"`
 }
 
-// XXX: KILL ME
-type EncodedSignatureUnmarshalProxy struct {
-	Protected string  `json:"protected,omitempty"`
-	Headers   Headers `json:"header,omitempty"`
-	Signature string  `json:"signature,omitempty"`
-}
-
-type EncodedMessage struct {
+type encodedMessage struct {
 	Payload    string              `json:"payload"`
-	Signatures []*EncodedSignature `json:"signatures,omitempty"`
-}
-
-// XXX: KILL ME
-type EncodedMessageUnmarshalProxy struct {
-	Payload    string                            `json:"payload"`
-	Signatures []*EncodedSignatureUnmarshalProxy `json:"signatures,omitempty"`
-}
-
-type FullEncodedMessage struct {
-	*EncodedSignature // embedded to pick up flattened JSON message
-	*EncodedMessage
-}
-
-// XXX: KILL ME
-type FullEncodedMessageUnmarshalProxy struct {
-	*EncodedSignatureUnmarshalProxy // embedded to pick up flattened JSON message
-	*EncodedMessageUnmarshalProxy
+	Signatures []*encodedSignature `json:"signatures,omitempty"`
 }
 
 // PayloadSigner generates signature for the given payload

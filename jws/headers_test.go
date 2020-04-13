@@ -127,7 +127,7 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Setting %s value failed", "default")
 		}
-		for k, _ := range values {
+		for k := range values {
 			_, ok := h.Get(k)
 			if ok {
 				t.Fatalf("Getting %s value should have failed", k)

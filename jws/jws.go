@@ -203,7 +203,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		return nil, errors.New(`no signers provided`)
 	}
 
-	var result EncodedMessage
+	var result encodedMessage
 
 	result.Payload = base64.RawURLEncoding.EncodeToString(payload)
 
@@ -229,7 +229,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 			return nil, errors.Wrap(err, `failed to sign payload`)
 		}
 
-		result.Signatures = append(result.Signatures, &EncodedSignature{
+		result.Signatures = append(result.Signatures, &encodedSignature{
 			Headers:   signer.PublicHeader(),
 			Protected: encodedHeader,
 			Signature: base64.RawURLEncoding.EncodeToString(signature),
@@ -438,12 +438,12 @@ type fullMessageProxy struct {
 	Protected json.RawMessage `json:"protected"`
 
 	// encoded message fields
-	Signatures []*EncodedSignature `json:"signatures"`
+	Signatures []*encodedSignature `json:"signatures"`
 	Payload    string              `json:"payload"`
 }
 
-func (proxy *fullMessageProxy) encodedSignature() (*EncodedSignature, error) {
-	var encodedSig EncodedSignature
+func (proxy *fullMessageProxy) encodedSignature() (*encodedSignature, error) {
+	var encodedSig encodedSignature
 	if err := json.Unmarshal(proxy.Protected, &encodedSig.Protected); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal 'protected' field`)
 	}
