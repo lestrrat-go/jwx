@@ -213,7 +213,6 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
 		}
 	}
-	fmt.Fprintf(&buf, "\nPrivateParams map[string]interface{} `json:\"-,omitempty\"` ")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
@@ -345,7 +344,19 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 		}
 	}
-	fmt.Fprintf(&buf, "\nh.privateParams = proxy.PrivateParams")
+
+	// Now for the fun part... It's quite silly, but we need to check if we
+	// have other parameters.
+	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
+	fmt.Fprintf(&buf, "\n}")
+	// Delete all known keys
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ndelete(m, %sKey)", f.method)
+	}
+
+	fmt.Fprintf(&buf, "\nh.privateParams = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 

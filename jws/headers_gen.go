@@ -74,7 +74,6 @@ type standardHeadersMarshalProxy struct {
 	Xx509CertThumbprint     string                 `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
 	Xx509URL                string                 `json:"x5u,omitempty"`
-	PrivateParams           map[string]interface{} `json:"-,omitempty"`
 }
 
 func NewHeaders() Headers {
@@ -352,7 +351,22 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	h.x509CertThumbprint = proxy.Xx509CertThumbprint
 	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
 	h.x509URL = proxy.Xx509URL
-	h.privateParams = proxy.PrivateParams
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return errors.Wrap(err, `failed to parse privsate parameters`)
+	}
+	delete(m, AlgorithmKey)
+	delete(m, ContentTypeKey)
+	delete(m, CriticalKey)
+	delete(m, JWKKey)
+	delete(m, JWKSetURLKey)
+	delete(m, KeyIDKey)
+	delete(m, TypeKey)
+	delete(m, X509CertChainKey)
+	delete(m, X509CertThumbprintKey)
+	delete(m, X509CertThumbprintS256Key)
+	delete(m, X509URLKey)
+	h.privateParams = m
 	return nil
 }
 

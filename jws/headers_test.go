@@ -52,6 +52,29 @@ func TestHeader(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Private parameters", func(t *testing.T) {
+		const src = `{ "foo": 1, "bar": "two", "baz": true }`
+		h := jws.NewHeaders()
+		if !assert.NoError(t, json.Unmarshal([]byte(src), h), "unmarshal should succeed") {
+			return
+		}
+
+		expected := map[string]interface{}{
+			"foo": 1.0, // JSON has no such thing as integers here
+			"bar": "two",
+			"baz": true,
+		}
+
+		for key, value := range expected {
+			v, ok := h.Get(key)
+			if !assert.True(t, ok, `h.Get(%#v) should succeed`, key) {
+				return
+			}
+			if !assert.Equal(t, v, value, `h.Get(%#v) should return %#v`, key, value) {
+				return
+			}
+		}
+	})
 	t.Run("Roundtrip", func(t *testing.T) {
 		h := jws.NewHeaders()
 		for k, v := range values {
