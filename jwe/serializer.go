@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -16,26 +17,27 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 
 	// The protected header must be a merge between the message-wide
 	// protected header AND the recipient header
-	hcopy := NewHeader()
+
 	// There's something wrong if m.ProtectedHeader.Header is nil, but
 	// it could happen
-	if m.ProtectedHeader == nil || m.ProtectedHeader.Header == nil {
+	if m.ProtectedHeader == nil || m.ProtectedHeader.Headers == nil {
 		return nil, errors.New("invalid protected header")
 	}
-	err := hcopy.Copy(m.ProtectedHeader.Header)
+
+	hcopy, err := mergeHeaders(context.TODO(), nil, m.ProtectedHeader.Headers)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to copy protected header")
 	}
-	hcopy, err = hcopy.Merge(m.UnprotectedHeader)
+	hcopy, err = mergeHeaders(context.TODO(), hcopy, m.UnprotectedHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge unprotected header")
 	}
-	hcopy, err = hcopy.Merge(recipient.Header)
+	hcopy, err = mergeHeaders(context.TODO(), hcopy, recipient.Headers)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge recipient header")
 	}
 
-	protected, err := EncodedHeader{Header: hcopy}.Base64Encode()
+	protected, err := EncodedHeader{Headers: hcopy}.Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode header")
 	}

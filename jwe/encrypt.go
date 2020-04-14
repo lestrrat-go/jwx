@@ -1,6 +1,8 @@
 package jwe
 
 import (
+	"context"
+
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/pkg/errors"
 )
@@ -41,9 +43,9 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	recipients := make([]Recipient, len(e.KeyEncrypters))
 	for i, enc := range e.KeyEncrypters {
 		r := NewRecipient()
-		r.Header.Set("alg", enc.Algorithm())
+		r.Headers.Set("alg", enc.Algorithm())
 		if v := enc.Kid(); v != "" {
-			r.Header.Set("kid", v)
+			r.Headers.Set("kid", v)
 		}
 		enckey, err := enc.KeyEncrypt(cek)
 		if err != nil {
@@ -54,7 +56,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		}
 		r.EncryptedKey = enckey.Bytes()
 		if hp, ok := enckey.(HeaderPopulater); ok {
-			hp.HeaderPopulate(r.Header)
+			hp.HeaderPopulate(r.Headers)
 		}
 		if debug.Enabled {
 			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
@@ -65,10 +67,11 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		protected.Header, err = protected.Header.Merge(recipients[0].Header)
+		h, err := mergeHeaders(context.TODO(), protected.Headers, recipients[0].Headers)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}
+		protected.Headers = h
 	}
 
 	aad, err := protected.Base64Encode()

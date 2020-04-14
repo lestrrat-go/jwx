@@ -93,7 +93,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	}
 
 	r := NewRecipient()
-	r.Header.Set("alg", jwa.A128KW)
+	r.Headers.Set(AlgorithmKey, jwa.A128KW)
 	r.EncryptedKey = enckey.Bytes()
 
 	protected := NewEncodedHeader()

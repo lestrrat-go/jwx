@@ -1,3 +1,5 @@
+//go:generate go run internal/cmd/genheader/main.go
+
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe
 
@@ -167,7 +169,7 @@ func parseCompact(buf []byte) (*Message, error) {
 		debug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
-	hdr := NewHeader()
+	hdr := NewHeaders()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
 		return nil, errors.Wrap(err, "failed to parse header JSON")
 	}
@@ -175,25 +177,25 @@ func parseCompact(buf []byte) (*Message, error) {
 	// We need the protected header to contain the content encryption
 	// algorithm. XXX probably other headers need to go there too
 	protected := NewEncodedHeader()
-	protected.ContentEncryption = hdr.ContentEncryption
-	hdr.ContentEncryption = ""
+	protected.Set(ContentEncryptionKey, hdr.ContentEncryption)
+	hdr.Set(ContentEncryptionKey, "")
 
-	enckeybuf := buffer.Buffer{}
+	var enckeybuf buffer.Buffer
 	if err := enckeybuf.Base64Decode(parts[1]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode encryption key")
 	}
 
-	ivbuf := buffer.Buffer{}
+	var ivbuf buffer.Buffer
 	if err := ivbuf.Base64Decode(parts[2]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode iv")
 	}
 
-	ctbuf := buffer.Buffer{}
+	var ctbuf buffer.Buffer
 	if err := ctbuf.Base64Decode(parts[3]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode content")
 	}
 
-	tagbuf := buffer.Buffer{}
+	var tagbuf buffer.Buffer
 	if err := tagbuf.Base64Decode(parts[4]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode tag")
 	}
@@ -206,7 +208,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	m.InitializationVector = ivbuf
 	m.Recipients = []Recipient{
 		{
-			Header:       hdr,
+			Headers:      hdr,
 			EncryptedKey: enckeybuf,
 		},
 	}
@@ -217,7 +219,7 @@ func parseCompact(buf []byte) (*Message, error) {
 // parameters. It is used by the Message.Decrypt method to create
 // key decrypter(s) from the given message. `keysize` is only used by
 // some decrypters. Pass the value from ContentCipher.KeySize().
-func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{}, keysize int) (KeyDecrypter, error) {
+func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (KeyDecrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
 		privkey, ok := key.(*rsa.PrivateKey)
@@ -238,9 +240,9 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 		}
 		return NewKeyWrapEncrypt(alg, sharedkey)
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		epkif, err := h.Get("epk")
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get 'epk' field")
+		epkif, ok := h.Get(EphemeralPublicKeyKey)
+		if !ok {
+			return nil, errors.New("failed to get 'epk' field")
 		}
 		if epkif == nil {
 			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
@@ -260,8 +262,8 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 		if !ok {
 			return nil, errors.New("*ecdsa.PrivateKey is required as the key to build this key decrypter")
 		}
-		apuif, err := h.Get("apu")
-		if err != nil {
+		apuif, ok := h.Get(AgreementPartyUInfoKey)
+		if !ok {
 			return nil, errors.New("'apu' key is required for this key decrypter")
 		}
 		apu, ok := apuif.(buffer.Buffer)
@@ -269,8 +271,8 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 			return nil, errors.New("'apu' key is required for this key decrypter")
 		}
 
-		apvif, err := h.Get("apv")
-		if err != nil {
+		apvif, ok := h.Get(AgreementPartyVInfoKey)
+		if !ok {
 			return nil, errors.New("'apv' key is required for this key decrypter")
 		}
 		apv, ok := apvif.(buffer.Buffer)

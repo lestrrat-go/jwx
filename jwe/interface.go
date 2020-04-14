@@ -6,11 +6,11 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"net/url"
 
+	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
 )
 
 // Errors used in JWE
@@ -37,36 +37,11 @@ func (e errUnsupportedAlgorithm) Error() string {
 	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
 }
 
-// EssentialHeader is a set of headers that are already defined in RFC 7516`
-type EssentialHeader struct {
-	AgreementPartyUInfo    buffer.Buffer                  `json:"apu,omitempty"`
-	AgreementPartyVInfo    buffer.Buffer                  `json:"apv,omitempty"`
-	Algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
-	ContentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
-	ContentType            string                         `json:"cty,omitempty"`
-	Compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
-	Critical               []string                       `json:"crit,omitempty"`
-	EphemeralPublicKey     *jwk.ECDSAPublicKey            `json:"epk,omitempty"`
-	Jwk                    jwk.Key                        `json:"jwk,omitempty"` // public key
-	JwkSetURL              *url.URL                       `json:"jku,omitempty"`
-	KeyID                  string                         `json:"kid,omitempty"`
-	Type                   string                         `json:"typ,omitempty"` // e.g. "JWT"
-	X509Url                *url.URL                       `json:"x5u,omitempty"`
-	X509CertChain          []string                       `json:"x5c,omitempty"`
-	X509CertThumbprint     string                         `json:"x5t,omitempty"`
-	X509CertThumbprintS256 string                         `json:"x5t#S256,omitempty"`
-}
-
-// Header represents a jws header.
-type Header struct {
-	*EssentialHeader `json:"-"`
-	PrivateParams    map[string]interface{} `json:"-"`
-}
-
 // EncodedHeader represents a header value that is base64 encoded
 // in JSON format
+// XXX KILL ME
 type EncodedHeader struct {
-	*Header
+	Headers
 }
 
 // ByteSource is an interface for things that return a byte sequence.
@@ -94,7 +69,7 @@ type KeyDecrypter interface {
 
 // Recipient holds the encrypted key and hints to decrypt the key
 type Recipient struct {
-	Header       *Header       `json:"header"`
+	Headers      Headers       `json:"header"`
 	EncryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
@@ -106,7 +81,7 @@ type Message struct {
 	ProtectedHeader      *EncodedHeader `json:"protected"`
 	Recipients           []Recipient    `json:"recipients"`
 	Tag                  buffer.Buffer  `json:"tag,omitempty"`
-	UnprotectedHeader    *Header        `json:"unprotected,omitempty"`
+	UnprotectedHeader    Headers        `json:"unprotected,omitempty"`
 }
 
 // Encrypter is the top level structure that encrypts the given
@@ -169,7 +144,7 @@ type ByteWithECPrivateKey struct {
 // HeaderPopulater is an interface for things that may modify the
 // JWE header. e.g. ByteWithECPrivateKey
 type HeaderPopulater interface {
-	HeaderPopulate(*Header)
+	HeaderPopulate(Headers)
 }
 
 // KeyGenerator generates the raw content encryption keys
@@ -278,3 +253,8 @@ type RSAOAEPKeyDecrypt struct {
 type DirectDecrypt struct {
 	Key []byte
 }
+
+type Visitor = iter.MapVisitor
+type VisitorFunc = iter.MapVisitorFunc
+type HeaderPair = mapiter.Pair
+type Iterator = mapiter.Iterator

@@ -101,7 +101,7 @@ func (g EcdhesKeyGenerate) KeyGenerate() (ByteSource, error) {
 
 // HeaderPopulate populates the header with the required EC-DSA public key
 // information ('epk' key)
-func (k ByteWithECPrivateKey) HeaderPopulate(h *Header) {
+func (k ByteWithECPrivateKey) HeaderPopulate(h Headers) {
 	key, err := jwk.New(&k.PrivateKey.PublicKey)
 	if err == nil {
 		h.Set("epk", key)

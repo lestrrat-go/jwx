@@ -286,7 +286,7 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 }
 
 func TestHeaders(t *testing.T) {
-	h := jwe.NewHeader()
+	h := jwe.NewHeaders()
 
 	data := map[string]struct {
 		Value    interface{}
@@ -311,8 +311,8 @@ func TestHeaders(t *testing.T) {
 
 	for name, testcase := range data {
 		h.Set(name, testcase.Value)
-		got, err := h.Get(name)
-		if !assert.NoError(t, err, "value should exist") {
+		got, ok := h.Get(name)
+		if !assert.True(t, ok, "value should exist") {
 			return
 		}
 
