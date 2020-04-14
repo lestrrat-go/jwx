@@ -126,6 +126,7 @@ func (h *stdHeaders) X509URL() string {
 }
 
 func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
+	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != "" {
 		pairs = append(pairs, &HeaderPair{Key: "alg", Value: h.algorithm})
@@ -148,7 +149,7 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	if h.typ != "" {
 		pairs = append(pairs, &HeaderPair{Key: "typ", Value: h.typ})
 	}
-	if len(h.critical) > 0 {
+	if len(h.x509CertChain) > 0 {
 		pairs = append(pairs, &HeaderPair{Key: "x5c", Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != "" {
