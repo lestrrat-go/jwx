@@ -237,7 +237,7 @@ func generateHeaders() error {
 		case "jwk":
 			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
 		case "critical", "x509CertChain":
-			fmt.Fprintf(&buf, "\nif len(h.critical) > 0 {")
+			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
 		default:
 			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
 		}
