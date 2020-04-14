@@ -74,6 +74,14 @@ func TestHeader(t *testing.T) {
 				return
 			}
 		}
+
+		buf, err := json.Marshal(h)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+		if !assert.Equal(t, `{"bar":"two","baz":true,"foo":1}`, string(buf), `json.Marshal should succeed`) {
+			return
+		}
 	})
 	t.Run("Roundtrip", func(t *testing.T) {
 		h := jws.NewHeaders()

@@ -158,8 +158,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
-
-	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort"}
+	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort", "strconv"}
 	extimports := []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"}
 
 	for _, pkg := range stdimports {
@@ -381,9 +380,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
 	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
-	fmt.Fprintf(&buf, "\nkeys := make([]string, l)")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
+	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
 	fmt.Fprintf(&buf, "\nfor k := range h.privateParams {")
 	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
 	fmt.Fprintf(&buf, "\n}")
@@ -391,9 +390,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
 	fmt.Fprintf(&buf, "\nif i > 0 {")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateParams[k]); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
-	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")

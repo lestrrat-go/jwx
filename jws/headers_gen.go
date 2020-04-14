@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -394,9 +395,9 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	if err := enc.Encode(proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
-	buf.Truncate(buf.Len() - 1)
 	if l := len(h.privateParams); l > 0 {
-		keys := make([]string, l)
+		buf.Truncate(buf.Len() - 2)
+		keys := make([]string, 0, l)
 		for k := range h.privateParams {
 			keys = append(keys, k)
 		}
@@ -404,9 +405,10 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		for i, k := range keys {
 			if i > 0 {
 				fmt.Fprintf(&buf, `,`)
-				if err := enc.Encode(h.privateParams[k]); err != nil {
-					return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-				}
+			}
+			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
+			if err := enc.Encode(h.privateParams[k]); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
 			}
 		}
 		fmt.Fprintf(&buf, `}`)
