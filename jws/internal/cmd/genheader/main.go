@@ -229,6 +229,7 @@ func generateHeaders() error {
 	// Generate a function that iterates through all of the keys
 	// in this header.
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {")
+	fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
