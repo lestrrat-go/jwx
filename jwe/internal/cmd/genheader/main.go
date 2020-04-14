@@ -78,7 +78,7 @@ func generateHeaders() error {
 			key:    `apv`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
 			hasAccept: true,
-			jsonTag: "`" + `json:"apv,omitempty"` + "`",
+			jsonTag:   "`" + `json:"apv,omitempty"` + "`",
 		},
 		{
 			name:   `algorithm`,
@@ -203,8 +203,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwe")
 	fmt.Fprintf(&buf, "\n\nimport (")
-
-	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort"}
+	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort", "strconv"}
 	extimports := []string{"github.com/lestrrat-go/jwx/buffer", "github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"}
 
 	for _, pkg := range stdimports {
@@ -258,7 +257,6 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
 		}
 	}
-	fmt.Fprintf(&buf, "\nPrivateParams map[string]interface{} `json:\"-,omitempty\"` ")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
@@ -393,7 +391,19 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 		}
 	}
-	fmt.Fprintf(&buf, "\nh.privateParams = proxy.PrivateParams")
+
+	// Now for the fun part... It's quite silly, but we need to check if we
+	// have other parameters.
+	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
+	fmt.Fprintf(&buf, "\n}")
+	// Delete all known keys
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ndelete(m, %sKey)", f.method)
+	}
+
+	fmt.Fprintf(&buf, "\nh.privateParams = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
@@ -418,9 +428,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
 	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
-	fmt.Fprintf(&buf, "\nkeys := make([]string, l)")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
+	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
 	fmt.Fprintf(&buf, "\nfor k := range h.privateParams {")
 	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
 	fmt.Fprintf(&buf, "\n}")
@@ -428,9 +438,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
 	fmt.Fprintf(&buf, "\nif i > 0 {")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateParams[k]); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
-	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")

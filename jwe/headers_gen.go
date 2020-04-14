@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -95,7 +96,6 @@ type standardHeadersMarshalProxy struct {
 	Xx509CertThumbprint     string                         `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 string                         `json:"x5t#S256,omitempty"`
 	Xx509URL                string                         `json:"x5u,omitempty"`
-	PrivateParams           map[string]interface{}         `json:"-,omitempty"`
 }
 
 func NewHeaders() Headers {
@@ -472,7 +472,27 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	h.x509CertThumbprint = proxy.Xx509CertThumbprint
 	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
 	h.x509URL = proxy.Xx509URL
-	h.privateParams = proxy.PrivateParams
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return errors.Wrap(err, `failed to parse privsate parameters`)
+	}
+	delete(m, AgreementPartyUInfoKey)
+	delete(m, AgreementPartyVInfoKey)
+	delete(m, AlgorithmKey)
+	delete(m, CompressionKey)
+	delete(m, ContentEncryptionKey)
+	delete(m, ContentTypeKey)
+	delete(m, CriticalKey)
+	delete(m, EphemeralPublicKeyKey)
+	delete(m, JWKKey)
+	delete(m, JWKSetURLKey)
+	delete(m, KeyIDKey)
+	delete(m, TypeKey)
+	delete(m, X509CertChainKey)
+	delete(m, X509CertThumbprintKey)
+	delete(m, X509CertThumbprintS256Key)
+	delete(m, X509URLKey)
+	h.privateParams = m
 	return nil
 }
 
@@ -505,9 +525,9 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	if err := enc.Encode(proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
-	buf.Truncate(buf.Len() - 1)
 	if l := len(h.privateParams); l > 0 {
-		keys := make([]string, l)
+		buf.Truncate(buf.Len() - 2)
+		keys := make([]string, 0, l)
 		for k := range h.privateParams {
 			keys = append(keys, k)
 		}
@@ -515,9 +535,10 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		for i, k := range keys {
 			if i > 0 {
 				fmt.Fprintf(&buf, `,`)
-				if err := enc.Encode(h.privateParams[k]); err != nil {
-					return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-				}
+			}
+			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
+			if err := enc.Encode(h.privateParams[k]); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
 			}
 		}
 		fmt.Fprintf(&buf, `}`)
