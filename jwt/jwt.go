@@ -90,14 +90,14 @@ func (t *Token) Sign(method jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 		return nil, errors.Wrap(err, `failed to marshal token`)
 	}
 
-	var hdr jws.StandardHeaders
+	hdr := jws.NewHeaders()
 	if hdr.Set(`alg`, method.String()) != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
 	if hdr.Set(`typ`, `JWT`) != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
-	sign, err := jws.Sign(buf, method, key, jws.WithHeaders(&hdr))
+	sign, err := jws.Sign(buf, method, key, jws.WithHeaders(hdr))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}

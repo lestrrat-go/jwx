@@ -313,7 +313,7 @@ func TestEncode(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to base64 encode protected header")
 		}
-		standardHeaders := &jws.StandardHeaders{}
+		standardHeaders := jws.NewHeaders()
 		err = json.Unmarshal(hdrBytes, standardHeaders)
 		if err != nil {
 			t.Fatal("Failed to parse protected header")
@@ -382,11 +382,11 @@ func TestEncode(t *testing.T) {
 		// "Payload"
 		jwsPayload := []byte{80, 97, 121, 108, 111, 97, 100}
 
-		standardHeaders := &jws.StandardHeaders{}
-		err := json.Unmarshal(hdr, standardHeaders)
-		if err != nil {
-			t.Fatal("Failed to parse header")
+		standardHeaders := jws.NewHeaders()
+		if !assert.NoError(t, json.Unmarshal(hdr, standardHeaders), `parsing headers should succeed`) {
+			return
 		}
+
 		alg := standardHeaders.Algorithm()
 
 		keys, err := jwk.ParseString(jwksrc)
@@ -434,9 +434,8 @@ func TestEncode(t *testing.T) {
 		)
 		hashed512 := sha512.Sum512(jwsSigningInput)
 		ecdsaPrivateKey := key.(*ecdsa.PrivateKey)
-		verified := ecdsa.Verify(&ecdsaPrivateKey.PublicKey, hashed512[:], r, s)
-		if !verified {
-			t.Fatal("Failed to verify message")
+		if !assert.True(t, ecdsa.Verify(&ecdsaPrivateKey.PublicKey, hashed512[:], r, s), "ecdsa.Verify should succeed") {
+			return
 		}
 
 		// Verify with API library
@@ -678,6 +677,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
+		t.Logf("%#v", m)
 		if !assert.Len(t, m.Signatures(), 2, "There should be 2 signatures") {
 			return
 		}
@@ -932,7 +932,7 @@ func TestGHIssue126(t *testing.T) {
 		return
 	}
 
-	if !assert.Equal(t, err.Error(), `invalid JWS message format`) {
+	if !assert.Equal(t, err.Error(), `invalid JWS message format (missing payload)`) {
 		return
 	}
 }

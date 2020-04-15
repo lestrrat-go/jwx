@@ -59,7 +59,7 @@ func zeroval(s string) string {
 func generateHeaders() error {
 	fields := []headerField{
 		{
-			name:      `JWSalgorithm`,
+			name:      `algorithm`,
 			method:    `Algorithm`,
 			typ:       `jwa.SignatureAlgorithm`,
 			key:       `alg`,
@@ -68,7 +68,7 @@ func generateHeaders() error {
 			jsonTag:   "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
-			name:    `JWScontentType`,
+			name:    `contentType`,
 			method:  `ContentType`,
 			typ:     `string`,
 			key:     `cty`,
@@ -76,7 +76,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"cty,omitempty"` + "`",
 		},
 		{
-			name:    `JWScritical`,
+			name:    `critical`,
 			method:  `Critical`,
 			typ:     `[]string`,
 			key:     `crit`,
@@ -84,7 +84,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"crit,omitempty"` + "`",
 		},
 		{
-			name:    `JWSjwk`,
+			name:    `jwk`,
 			method:  `JWK`,
 			typ:     `jwk.Key`,
 			key:     `jwk`,
@@ -92,7 +92,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
 		},
 		{
-			name:    `JWSjwkSetURL`,
+			name:    `jwkSetURL`,
 			method:  `JWKSetURL`,
 			typ:     `string`,
 			key:     `jku`,
@@ -100,7 +100,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"jku,omitempty"` + "`",
 		},
 		{
-			name:    `JWSkeyID`,
+			name:    `keyID`,
 			method:  `KeyID`,
 			typ:     `string`,
 			key:     `kid`,
@@ -108,7 +108,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"kid,omitempty"` + "`",
 		},
 		{
-			name:    `JWStyp`,
+			name:    `typ`,
 			method:  `Type`,
 			typ:     `string`,
 			key:     `typ`,
@@ -116,7 +116,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"typ,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertChain`,
+			name:    `x509CertChain`,
 			method:  `X509CertChain`,
 			typ:     `[]string`,
 			key:     `x5c`,
@@ -124,7 +124,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5c,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertThumbprint`,
+			name:    `x509CertThumbprint`,
 			method:  `X509CertThumbprint`,
 			typ:     `string`,
 			key:     `x5t`,
@@ -132,7 +132,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5t,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509CertThumbprintS256`,
+			name:    `x509CertThumbprintS256`,
 			method:  `X509CertThumbprintS256`,
 			typ:     `string`,
 			key:     `x5t#S256`,
@@ -140,7 +140,7 @@ func generateHeaders() error {
 			jsonTag: "`" + `json:"x5t#S256,omitempty"` + "`",
 		},
 		{
-			name:    `JWSx509URL`,
+			name:    `x509URL`,
 			method:  `X509URL`,
 			typ:     `string`,
 			key:     `x5u`,
@@ -158,7 +158,16 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors", "encoding/json"} {
+	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort", "strconv"}
+	extimports := []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"}
+
+	for _, pkg := range stdimports {
+		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	}
+	if len(stdimports) > 0 && len(extimports) > 0 {
+		fmt.Fprintf(&buf, "\n")
+	}
+	for _, pkg := range extimports {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -169,16 +178,25 @@ func generateHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
+	fmt.Fprintf(&buf, "\n\n// Headers describe a standard Header set.")
+	fmt.Fprintf(&buf, "\ntype Headers interface {")
+	// These are the basic values that most jws have
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.PointerElem())
+	}
+
+	// These are used to iterate through all keys in a header
+	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) Iterator")
+	fmt.Fprintf(&buf, "\nWalk(ctx context.Context, v Visitor) error")
+	fmt.Fprintf(&buf, "\nAsMap(ctx context.Context) (map[string]interface{}, error)")
+
+	// These are used to access a single element by key name
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
-	fmt.Fprintf(&buf, "\nAlgorithm() jwa.SignatureAlgorithm")
 
-	/*	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.PointerElem())
-	}*/
-	fmt.Fprintf(&buf, "\n}") // end type Headers interface
-	fmt.Fprintf(&buf, "\n\ntype StandardHeaders struct {")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, f.typ, f.jsonTag, f.comment)
 	}
@@ -186,22 +204,63 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	// Proxy is used when unmarshaling headers
-	fmt.Fprintf(&buf, "\n\ntype standardHeadersUnmarshalProxy struct {")
+	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == "JWSjwk" {
-			fmt.Fprintf(&buf, "\n%s json.RawMessage %s", f.name, f.jsonTag)
+		if f.name == "jwk" {
+			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
-			fmt.Fprintf(&buf, "\n%s %s %s", f.name, f.typ, f.jsonTag)
+			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
 		}
 	}
-	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Algorithm() jwa.SignatureAlgorithm {")
-	fmt.Fprintf(&buf, "\nreturn h.JWSalgorithm")
-	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) %s() %s
+	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
+	fmt.Fprintf(&buf, "\nreturn &stdHeaders{}")
+	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Get(name string) (interface{}, bool) {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) %s() %s{", f.method, f.typ)
+		fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
+		fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) %s() %s
+	}
+
+	// Generate a function that iterates through all of the keys
+	// in this header.
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {")
+	fmt.Fprintf(&buf, "\ndefer close(ch)")
+
+	// NOTE: building up an array is *slow*?
+	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
+	for _, f := range fields {
+		switch f.name {
+		case "jwk":
+			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
+		case "critical", "x509CertChain":
+			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
+		default:
+			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
+		}
+		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
+		fmt.Fprintf(&buf, "\n}")
+	}
+	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
+	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: k, Value: v})")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
+	fmt.Fprintf(&buf, "\nselect {")
+	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\ncase ch<-pair:")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
+
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) PrivateParams() map[string]interface{} {")
+	fmt.Fprintf(&buf, "\nreturn h.privateParams")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Get(name string) (interface{}, bool) {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -221,9 +280,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
 	fmt.Fprintf(&buf, "\nreturn v, ok")
 	fmt.Fprintf(&buf, "\n}") // end switch name
-	fmt.Fprintf(&buf, "\n}") // func (h *StandardHeaders) Get(name string) (interface{}, bool)
+	fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) Set(name string, value interface{}) error {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Set(name string, value interface{}) error {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -241,7 +300,7 @@ func generateHeaders() error {
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.name == "JWSjwk" {
+			if f.name == "jwk" {
 				fmt.Fprintf(&buf, "\nv, ok := value.(%s)", f.typ)
 				fmt.Fprintf(&buf, "\nif ok {")
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
@@ -261,37 +320,86 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nh.privateParams[name] = value")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *StandardHeaders) Set(name string, value interface{})
+	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *StandardHeaders) UnmarshalJSON(buf []byte) error {")
-	fmt.Fprintf(&buf, "\nvar proxy standardHeadersUnmarshalProxy")
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nif h == nil {")
-	fmt.Fprintf(&buf, "\nh = &StandardHeaders{}")
-	fmt.Fprintf(&buf, "\n}")
-
 	// Copy every field except for jwk, whose type needs to be guessed
-	fmt.Fprintf(&buf, "\n\nh.JWSjwk = nil")
-	fmt.Fprintf(&buf, "\nif jwkField := proxy.JWSjwk; len(jwkField) > 0 {")
-	fmt.Fprintf(&buf, "\nset, err := jwk.ParseBytes([]byte(proxy.JWSjwk))")
+	fmt.Fprintf(&buf, "\n\nh.jwk = nil")
+	fmt.Fprintf(&buf, "\nif jwkField := proxy.Xjwk; len(jwkField) > 0 {")
+	fmt.Fprintf(&buf, "\nset, err := jwk.ParseBytes([]byte(proxy.Xjwk))")
 	fmt.Fprintf(&buf, "\n if err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse jwk field`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nh.JWSjwk = set.Keys[0]")
+	fmt.Fprintf(&buf, "\nh.jwk = set.Keys[0]")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name != "JWSjwk" {
-			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.%[1]s", f.name)
+		if f.name != "jwk" {
+			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 		}
 	}
-	fmt.Fprintf(&buf, "\nh.privateParams = proxy.privateParams")
+
+	// Now for the fun part... It's quite silly, but we need to check if we
+	// have other parameters.
+	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
+	fmt.Fprintf(&buf, "\n}")
+	// Delete all known keys
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ndelete(m, %sKey)", f.method)
+	}
+
+	fmt.Fprintf(&buf, "\nh.privateParams = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
+	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
+	fmt.Fprintf(&buf, "\nif h.jwk != nil {")
+	fmt.Fprintf(&buf, "\njwkbuf, err := json.Marshal(h.jwk)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal jwk field`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nproxy.Xjwk = jwkbuf")
+	fmt.Fprintf(&buf, "\n}")
+
+	for _, f := range fields {
+		if f.name != "jwk" {
+			fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
+		}
+	}
+
+	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
+	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(&buf)")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
+	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
+	fmt.Fprintf(&buf, "\nfor k := range h.privateParams {")
+	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
+	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
+	fmt.Fprintf(&buf, "\nif i > 0 {")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateParams[k]); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

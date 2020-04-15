@@ -178,8 +178,9 @@ func TestToken(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	for pair := range tok.Claims(ctx) {
-		t.Logf("%s -> %v", pair.Name, pair.Value)
+	for iter := tok.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		t.Logf("%s -> %v", pair.Key, pair.Value)
 	}
 
 	m, err := tok.AsMap(ctx)

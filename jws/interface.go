@@ -1,40 +1,21 @@
 package jws
 
 import (
+	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-type EncodedSignature struct {
-	Protected string          `json:"protected,omitempty"`
+type encodedSignature struct {
+	Protected string  `json:"protected,omitempty"`
 	Headers   Headers `json:"header,omitempty"`
-	Signature string          `json:"signature,omitempty"`
+	Signature string  `json:"signature,omitempty"`
 }
 
-type EncodedSignatureUnmarshalProxy struct {
-	Protected string           `json:"protected,omitempty"`
-	Headers   *StandardHeaders `json:"header,omitempty"`
-	Signature string           `json:"signature,omitempty"`
-}
-
-type EncodedMessage struct {
+type encodedMessage struct {
 	Payload    string              `json:"payload"`
-	Signatures []*EncodedSignature `json:"signatures,omitempty"`
-}
-
-type EncodedMessageUnmarshalProxy struct {
-	Payload    string                            `json:"payload"`
-	Signatures []*EncodedSignatureUnmarshalProxy `json:"signatures,omitempty"`
-}
-
-type FullEncodedMessage struct {
-	*EncodedSignature // embedded to pick up flattened JSON message
-	*EncodedMessage
-}
-
-type FullEncodedMessageUnmarshalProxy struct {
-	*EncodedSignatureUnmarshalProxy // embedded to pick up flattened JSON message
-	*EncodedMessageUnmarshalProxy
+	Signatures []*encodedSignature `json:"signatures,omitempty"`
 }
 
 // PayloadSigner generates signature for the given payload
@@ -62,7 +43,7 @@ type Message struct {
 type Signature struct {
 	headers   Headers `json:"header,omitempty"`    // Unprotected Headers
 	protected Headers `json:"protected,omitempty"` // Protected Headers
-	signature []byte          `json:"signature,omitempty"` // Signature
+	signature []byte  `json:"signature,omitempty"` // Signature
 }
 
 // JWKAcceptor decides which keys can be accepted
@@ -89,3 +70,8 @@ var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
 	}
 	return true
 })
+
+type Visitor = iter.MapVisitor
+type VisitorFunc = iter.MapVisitorFunc
+type HeaderPair = mapiter.Pair
+type Iterator = mapiter.Iterator

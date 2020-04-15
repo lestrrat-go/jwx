@@ -38,9 +38,53 @@ func TestHeader(t *testing.T) {
 		jws.X509CertThumbprintKey: "QzY0NjREMjkyQTI4RTU2RkE4MUJBRDExNzY1MUY1N0I4QjFCODlBOQ",
 		jws.X509URLKey:            "https://www.x509.com/key.pem",
 	}
-	t.Run("Roundtrip", func(t *testing.T) {
 
-		var h jws.StandardHeaders
+	t.Run("Type", func(t *testing.T) {
+		var h jws.Headers = jws.NewHeaders()
+		_ = h
+	})
+	t.Run("Sanity", func(t *testing.T) {
+		h := jws.NewHeaders()
+		if !assert.NoError(t, json.Unmarshal([]byte(publicKey), h), "unmarshal public key should succeed") {
+			return
+		}
+		if !assert.NotEmpty(t, h.KeyID()) { // これあったっけ…
+			return
+		}
+	})
+	t.Run("Private parameters", func(t *testing.T) {
+		const src = `{ "foo": 1, "bar": "two", "baz": true }`
+		h := jws.NewHeaders()
+		if !assert.NoError(t, json.Unmarshal([]byte(src), h), "unmarshal should succeed") {
+			return
+		}
+
+		expected := map[string]interface{}{
+			"foo": 1.0, // JSON has no such thing as integers here
+			"bar": "two",
+			"baz": true,
+		}
+
+		for key, value := range expected {
+			v, ok := h.Get(key)
+			if !assert.True(t, ok, `h.Get(%#v) should succeed`, key) {
+				return
+			}
+			if !assert.Equal(t, v, value, `h.Get(%#v) should return %#v`, key, value) {
+				return
+			}
+		}
+
+		buf, err := json.Marshal(h)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+		if !assert.Equal(t, `{"bar":"two","baz":true,"foo":1}`, string(buf), `json.Marshal should succeed`) {
+			return
+		}
+	})
+	t.Run("Roundtrip", func(t *testing.T) {
+		h := jws.NewHeaders()
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), "h.Set should succeed for %s", k) {
 				return
@@ -57,7 +101,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("JSON Roundtrip", func(t *testing.T) {
-		var h jws.StandardHeaders
+		h := jws.NewHeaders()
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err != nil {
@@ -75,7 +119,7 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to JSON marshal")
 		}
-		var hNew jws.StandardHeaders
+		hNew := jws.NewHeaders()
 
 		if !assert.NoError(t, json.Unmarshal(hByte, &hNew), "json.Unmarshal should succeed for headers") {
 			return
@@ -103,7 +147,7 @@ func TestHeader(t *testing.T) {
 			jws.X509URLKey:                dummy,
 		}
 
-		var h jws.StandardHeaders
+		h := jws.NewHeaders()
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err == nil {
@@ -114,7 +158,7 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Setting %s value failed", "default")
 		}
-		for k, _ := range values {
+		for k := range values {
 			_, ok := h.Get(k)
 			if ok {
 				t.Fatalf("Getting %s value should have failed", k)

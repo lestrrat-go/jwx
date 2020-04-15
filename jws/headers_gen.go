@@ -2,7 +2,13 @@
 package jws
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"sort"
+	"strconv"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -22,110 +28,219 @@ const (
 	X509URLKey                = "x5u"
 )
 
+// Headers describe a standard Header set.
 type Headers interface {
+	Algorithm() jwa.SignatureAlgorithm
+	ContentType() string
+	Critical() []string
+	JWK() jwk.Key
+	JWKSetURL() string
+	KeyID() string
+	Type() string
+	X509CertChain() []string
+	X509CertThumbprint() string
+	X509CertThumbprintS256() string
+	X509URL() string
+	Iterate(ctx context.Context) Iterator
+	Walk(ctx context.Context, v Visitor) error
+	AsMap(ctx context.Context) (map[string]interface{}, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
-	Algorithm() jwa.SignatureAlgorithm
 }
 
-type StandardHeaders struct {
-	JWSalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.1
-	JWScontentType            string                 `json:"cty,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.10
-	JWScritical               []string               `json:"crit,omitempty"`     // https://tools.ietf.org/html/rfc7515#section-4.1.11
-	JWSjwk                    jwk.Key                `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
-	JWSjwkSetURL              string                 `json:"jku,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.2
-	JWSkeyID                  string                 `json:"kid,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	JWStyp                    string                 `json:"typ,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.9
-	JWSx509CertChain          []string               `json:"x5c,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.6
-	JWSx509CertThumbprint     string                 `json:"x5t,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.7
-	JWSx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"` // https://tools.ietf.org/html/rfc7515#section-4.1.8
-	JWSx509URL                string                 `json:"x5u,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams             map[string]interface{}
+type stdHeaders struct {
+	algorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.1
+	contentType            string                 `json:"cty,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.10
+	critical               []string               `json:"crit,omitempty"`     // https://tools.ietf.org/html/rfc7515#section-4.1.11
+	jwk                    jwk.Key                `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
+	jwkSetURL              string                 `json:"jku,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.2
+	keyID                  string                 `json:"kid,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	typ                    string                 `json:"typ,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.9
+	x509CertChain          []string               `json:"x5c,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     string                 `json:"x5t,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"` // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                string                 `json:"x5u,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	privateParams          map[string]interface{}
 }
 
-type standardHeadersUnmarshalProxy struct {
-	JWSalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
-	JWScontentType            string                 `json:"cty,omitempty"`
-	JWScritical               []string               `json:"crit,omitempty"`
-	JWSjwk                    json.RawMessage        `json:"jwk,omitempty"`
-	JWSjwkSetURL              string                 `json:"jku,omitempty"`
-	JWSkeyID                  string                 `json:"kid,omitempty"`
-	JWStyp                    string                 `json:"typ,omitempty"`
-	JWSx509CertChain          []string               `json:"x5c,omitempty"`
-	JWSx509CertThumbprint     string                 `json:"x5t,omitempty"`
-	JWSx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
-	JWSx509URL                string                 `json:"x5u,omitempty"`
-	privateParams             map[string]interface{}
+type standardHeadersMarshalProxy struct {
+	Xalgorithm              jwa.SignatureAlgorithm `json:"alg,omitempty"`
+	XcontentType            string                 `json:"cty,omitempty"`
+	Xcritical               []string               `json:"crit,omitempty"`
+	Xjwk                    json.RawMessage        `json:"jwk,omitempty"`
+	XjwkSetURL              string                 `json:"jku,omitempty"`
+	XkeyID                  string                 `json:"kid,omitempty"`
+	Xtyp                    string                 `json:"typ,omitempty"`
+	Xx509CertChain          []string               `json:"x5c,omitempty"`
+	Xx509CertThumbprint     string                 `json:"x5t,omitempty"`
+	Xx509CertThumbprintS256 string                 `json:"x5t#S256,omitempty"`
+	Xx509URL                string                 `json:"x5u,omitempty"`
 }
 
-func (h *StandardHeaders) Algorithm() jwa.SignatureAlgorithm {
-	return h.JWSalgorithm
+func NewHeaders() Headers {
+	return &stdHeaders{}
 }
 
-func (h *StandardHeaders) Get(name string) (interface{}, bool) {
+func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
+	return h.algorithm
+}
+
+func (h *stdHeaders) ContentType() string {
+	return h.contentType
+}
+
+func (h *stdHeaders) Critical() []string {
+	return h.critical
+}
+
+func (h *stdHeaders) JWK() jwk.Key {
+	return h.jwk
+}
+
+func (h *stdHeaders) JWKSetURL() string {
+	return h.jwkSetURL
+}
+
+func (h *stdHeaders) KeyID() string {
+	return h.keyID
+}
+
+func (h *stdHeaders) Type() string {
+	return h.typ
+}
+
+func (h *stdHeaders) X509CertChain() []string {
+	return h.x509CertChain
+}
+
+func (h *stdHeaders) X509CertThumbprint() string {
+	return h.x509CertThumbprint
+}
+
+func (h *stdHeaders) X509CertThumbprintS256() string {
+	return h.x509CertThumbprintS256
+}
+
+func (h *stdHeaders) X509URL() string {
+	return h.x509URL
+}
+
+func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
+	defer close(ch)
+	var pairs []*HeaderPair
+	if h.algorithm != "" {
+		pairs = append(pairs, &HeaderPair{Key: "alg", Value: h.algorithm})
+	}
+	if h.contentType != "" {
+		pairs = append(pairs, &HeaderPair{Key: "cty", Value: h.contentType})
+	}
+	if len(h.critical) > 0 {
+		pairs = append(pairs, &HeaderPair{Key: "crit", Value: h.critical})
+	}
+	if h.jwk != nil {
+		pairs = append(pairs, &HeaderPair{Key: "jwk", Value: h.jwk})
+	}
+	if h.jwkSetURL != "" {
+		pairs = append(pairs, &HeaderPair{Key: "jku", Value: h.jwkSetURL})
+	}
+	if h.keyID != "" {
+		pairs = append(pairs, &HeaderPair{Key: "kid", Value: h.keyID})
+	}
+	if h.typ != "" {
+		pairs = append(pairs, &HeaderPair{Key: "typ", Value: h.typ})
+	}
+	if len(h.x509CertChain) > 0 {
+		pairs = append(pairs, &HeaderPair{Key: "x5c", Value: h.x509CertChain})
+	}
+	if h.x509CertThumbprint != "" {
+		pairs = append(pairs, &HeaderPair{Key: "x5t", Value: h.x509CertThumbprint})
+	}
+	if h.x509CertThumbprintS256 != "" {
+		pairs = append(pairs, &HeaderPair{Key: "x5t#S256", Value: h.x509CertThumbprintS256})
+	}
+	if h.x509URL != "" {
+		pairs = append(pairs, &HeaderPair{Key: "x5u", Value: h.x509URL})
+	}
+	for k, v := range h.privateParams {
+		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
+	}
+	for _, pair := range pairs {
+		select {
+		case <-ctx.Done():
+			return
+		case ch <- pair:
+		}
+	}
+}
+
+func (h *stdHeaders) PrivateParams() map[string]interface{} {
+	return h.privateParams
+}
+
+func (h *stdHeaders) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
-		v := h.JWSalgorithm
+		v := h.algorithm
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case ContentTypeKey:
-		v := h.JWScontentType
+		v := h.contentType
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case CriticalKey:
-		v := h.JWScritical
+		v := h.critical
 		if len(v) == 0 {
 			return nil, false
 		}
 		return v, true
 	case JWKKey:
-		v := h.JWSjwk
+		v := h.jwk
 		if v == nil {
 			return nil, false
 		}
 		return v, true
 	case JWKSetURLKey:
-		v := h.JWSjwkSetURL
+		v := h.jwkSetURL
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case KeyIDKey:
-		v := h.JWSkeyID
+		v := h.keyID
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case TypeKey:
-		v := h.JWStyp
+		v := h.typ
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case X509CertChainKey:
-		v := h.JWSx509CertChain
+		v := h.x509CertChain
 		if len(v) == 0 {
 			return nil, false
 		}
 		return v, true
 	case X509CertThumbprintKey:
-		v := h.JWSx509CertThumbprint
+		v := h.x509CertThumbprint
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case X509CertThumbprintS256Key:
-		v := h.JWSx509CertThumbprintS256
+		v := h.x509CertThumbprintS256
 		if v == "" {
 			return nil, false
 		}
 		return v, true
 	case X509URLKey:
-		v := h.JWSx509URL
+		v := h.x509URL
 		if v == "" {
 			return nil, false
 		}
@@ -136,71 +251,71 @@ func (h *StandardHeaders) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *StandardHeaders) Set(name string, value interface{}) error {
+func (h *stdHeaders) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
-		if err := h.JWSalgorithm.Accept(value); err != nil {
+		if err := h.algorithm.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AlgorithmKey)
 		}
 		return nil
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
-			h.JWScontentType = v
+			h.contentType = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
 	case CriticalKey:
 		if v, ok := value.([]string); ok {
-			h.JWScritical = v
+			h.critical = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case JWKKey:
 		v, ok := value.(jwk.Key)
 		if ok {
-			h.JWSjwk = v
+			h.jwk = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JWKKey, value)
 	case JWKSetURLKey:
 		if v, ok := value.(string); ok {
-			h.JWSjwkSetURL = v
+			h.jwkSetURL = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
-			h.JWSkeyID = v
+			h.keyID = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
-			h.JWStyp = v
+			h.typ = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, TypeKey, value)
 	case X509CertChainKey:
 		if v, ok := value.([]string); ok {
-			h.JWSx509CertChain = v
+			h.x509CertChain = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
-			h.JWSx509CertThumbprint = v
+			h.x509CertThumbprint = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
-			h.JWSx509CertThumbprintS256 = v
+			h.x509CertThumbprintS256 = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
-			h.JWSx509URL = v
+			h.x509URL = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
@@ -213,34 +328,90 @@ func (h *StandardHeaders) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *StandardHeaders) UnmarshalJSON(buf []byte) error {
-	var proxy standardHeadersUnmarshalProxy
+func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
+	var proxy standardHeadersMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal headers`)
 	}
 
-	if h == nil {
-		h = &StandardHeaders{}
-	}
-
-	h.JWSjwk = nil
-	if jwkField := proxy.JWSjwk; len(jwkField) > 0 {
-		set, err := jwk.ParseBytes([]byte(proxy.JWSjwk))
+	h.jwk = nil
+	if jwkField := proxy.Xjwk; len(jwkField) > 0 {
+		set, err := jwk.ParseBytes([]byte(proxy.Xjwk))
 		if err != nil {
 			return errors.Wrap(err, `failed to parse jwk field`)
 		}
-		h.JWSjwk = set.Keys[0]
+		h.jwk = set.Keys[0]
 	}
-	h.JWSalgorithm = proxy.JWSalgorithm
-	h.JWScontentType = proxy.JWScontentType
-	h.JWScritical = proxy.JWScritical
-	h.JWSjwkSetURL = proxy.JWSjwkSetURL
-	h.JWSkeyID = proxy.JWSkeyID
-	h.JWStyp = proxy.JWStyp
-	h.JWSx509CertChain = proxy.JWSx509CertChain
-	h.JWSx509CertThumbprint = proxy.JWSx509CertThumbprint
-	h.JWSx509CertThumbprintS256 = proxy.JWSx509CertThumbprintS256
-	h.JWSx509URL = proxy.JWSx509URL
-	h.privateParams = proxy.privateParams
+	h.algorithm = proxy.Xalgorithm
+	h.contentType = proxy.XcontentType
+	h.critical = proxy.Xcritical
+	h.jwkSetURL = proxy.XjwkSetURL
+	h.keyID = proxy.XkeyID
+	h.typ = proxy.Xtyp
+	h.x509CertChain = proxy.Xx509CertChain
+	h.x509CertThumbprint = proxy.Xx509CertThumbprint
+	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
+	h.x509URL = proxy.Xx509URL
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return errors.Wrap(err, `failed to parse privsate parameters`)
+	}
+	delete(m, AlgorithmKey)
+	delete(m, ContentTypeKey)
+	delete(m, CriticalKey)
+	delete(m, JWKKey)
+	delete(m, JWKSetURLKey)
+	delete(m, KeyIDKey)
+	delete(m, TypeKey)
+	delete(m, X509CertChainKey)
+	delete(m, X509CertThumbprintKey)
+	delete(m, X509CertThumbprintS256Key)
+	delete(m, X509URLKey)
+	h.privateParams = m
 	return nil
+}
+
+func (h stdHeaders) MarshalJSON() ([]byte, error) {
+	var proxy standardHeadersMarshalProxy
+	if h.jwk != nil {
+		jwkbuf, err := json.Marshal(h.jwk)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to marshal jwk field`)
+		}
+		proxy.Xjwk = jwkbuf
+	}
+	proxy.Xalgorithm = h.algorithm
+	proxy.XcontentType = h.contentType
+	proxy.Xcritical = h.critical
+	proxy.XjwkSetURL = h.jwkSetURL
+	proxy.XkeyID = h.keyID
+	proxy.Xtyp = h.typ
+	proxy.Xx509CertChain = h.x509CertChain
+	proxy.Xx509CertThumbprint = h.x509CertThumbprint
+	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
+	proxy.Xx509URL = h.x509URL
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(proxy); err != nil {
+		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
+	}
+	if l := len(h.privateParams); l > 0 {
+		buf.Truncate(buf.Len() - 2)
+		keys := make([]string, 0, l)
+		for k := range h.privateParams {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for i, k := range keys {
+			if i > 0 {
+				fmt.Fprintf(&buf, `,`)
+			}
+			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
+			if err := enc.Encode(h.privateParams[k]); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
+			}
+		}
+		fmt.Fprintf(&buf, `}`)
+	}
+	return buf.Bytes(), nil
 }
