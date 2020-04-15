@@ -257,6 +257,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	keysize := cipher.KeySize()
 
 	var plaintext []byte
+	var lastError error
 	for _, recipient := range m.recipients {
 		if debug.Enabled {
 			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers.Algorithm())
@@ -270,6 +271,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if debug.Enabled {
 				debug.Printf("failed to copy header: %s", err)
 			}
+			lastError = errors.Wrap(err, `failed to copy headers (1)`)
 			continue
 		}
 
@@ -278,6 +280,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if debug.Enabled {
 				debug.Printf("Failed to merge! %s", err)
 			}
+			lastError = errors.Wrap(err, `failed to copy headers (2)`)
 			continue
 		}
 
@@ -286,6 +289,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if debug.Enabled {
 				debug.Printf("failed to create key decrypter: %s", err)
 			}
+			lastError = errors.Wrap(err, `failed to build key decrypter`)
 			continue
 		}
 
@@ -294,6 +298,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if debug.Enabled {
 				debug.Printf("failed to decrypt key: %s", err)
 			}
+			lastError = errors.Wrap(err, `failed to decrypt key`)
 			continue
 		}
 
@@ -304,10 +309,14 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if debug.Enabled {
 			debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm(), err)
 		}
+		lastError = errors.Wrap(err, `failed to decrypt ciphertext`)
 		// Keep looping because there might be another key with the same algo
 	}
 
 	if plaintext == nil {
+		if lastError != nil {
+			return nil, errors.Errorf(`failed to find matching recipient to decrypt key (last error = %s)`, lastError)
+		}
 		return nil, errors.New("failed to find matching recipient to decrypt key")
 	}
 

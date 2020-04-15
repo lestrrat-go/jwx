@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/rsautil"
@@ -242,36 +243,50 @@ func TestEncode_ECDHES(t *testing.T) {
 	t.Logf("%s", decrypted)
 }
 
-func TestEncode_ECDH_ES_A256KW_A192KW_A128KW(t *testing.T) {
+func TestEncode_ECDH(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
 	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if !assert.NoError(t, err, "ecdsa key generated") {
 		return
 	}
 
-	algorithms := []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES_A256KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A128KW}
+	algorithms := []jwa.KeyEncryptionAlgorithm{
+		jwa.ECDH_ES_A256KW,
+		jwa.ECDH_ES_A192KW,
+		jwa.ECDH_ES_A128KW,
+	}
 
-	for i := 0; i < len(algorithms); i++ {
-		encrypted, err := jwe.Encrypt(plaintext, algorithms[i], &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-		if !assert.NoError(t, err, "Encrypt succeeds") {
-			return
-		}
+	for _, alg := range algorithms {
+		t.Run(fmt.Sprintf("%s", alg), func(t *testing.T) {
+			t.Parallel()
 
-		t.Logf("encrypted = %s", encrypted)
+			encrypted, err := jwe.Encrypt(plaintext, alg, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+			if !assert.NoError(t, err, "Encrypt succeeds") {
+				return
+			}
 
-		msg, err := jwe.Parse(encrypted)
-		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-			return
-		}
+			t.Logf("encrypted = %s", encrypted)
 
-		jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
-		t.Logf("%s", jsonbuf)
+			msg, err := jwe.Parse(encrypted)
+			if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+				return
+			}
 
-		decrypted, err := jwe.Decrypt(encrypted, algorithms[i], privkey)
-		if !assert.NoError(t, err, "Decrypt succeeds") {
-			return
-		}
-		t.Logf("%s", decrypted)
+			{
+				buf, _ := json.MarshalIndent(msg, "", "  ")
+				t.Logf("%s", buf)
+			}
+			{
+				buf, _ := json.MarshalIndent(msg.ProtectedHeaders(), "", "  ")
+				t.Logf("%s", buf)
+			}
+
+			decrypted, err := jwe.Decrypt(encrypted, alg, privkey)
+			if !assert.NoError(t, err, "Decrypt succeeds") {
+				return
+			}
+			t.Logf("%s", decrypted)
+		})
 	}
 }
 

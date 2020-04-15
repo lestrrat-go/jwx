@@ -224,19 +224,19 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 	case jwa.RSA1_5:
 		privkey, ok := key.(*rsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
 		return NewRSAPKCS15KeyDecrypt(alg, privkey, keysize/2), nil
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		privkey, ok := key.(*rsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
 		return NewRSAOAEPKeyDecrypt(alg, privkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
-			return nil, errors.New("[]byte is required as the key to build this key decrypter")
+			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
 		return NewKeyWrapEncrypt(alg, sharedkey)
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
@@ -245,12 +245,12 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 			return nil, errors.New("failed to get 'epk' field")
 		}
 		if epkif == nil {
-			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
 		epk, ok := epkif.(*jwk.ECDSAPublicKey)
 		if !ok {
-			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
 		pubkey, err := epk.Materialize()
@@ -260,27 +260,20 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 
 		privkey, ok := key.(*ecdsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*ecdsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
-		apuif, ok := h.Get(AgreementPartyUInfoKey)
-		if !ok {
-			return nil, errors.New("'apu' key is required for this key decrypter")
-		}
-		apu, ok := apuif.(buffer.Buffer)
-		if !ok {
-			return nil, errors.New("'apu' key is required for this key decrypter")
+		var apuData, apvData []byte
+		apu := h.AgreementPartyUInfo()
+		if apu.Len() > 0 {
+			apuData = apu.Bytes()
 		}
 
-		apvif, ok := h.Get(AgreementPartyVInfoKey)
-		if !ok {
-			return nil, errors.New("'apv' key is required for this key decrypter")
-		}
-		apv, ok := apvif.(buffer.Buffer)
-		if !ok {
-			return nil, errors.New("'apv' key is required for this key decrypter")
+		apv := h.AgreementPartyVInfo()
+		if apv.Len() > 0 {
+			apuData = apu.Bytes()
 		}
 
-		return NewEcdhesKeyWrapDecrypt(alg, pubkey.(*ecdsa.PublicKey), apu.Bytes(), apv.Bytes(), privkey), nil
+		return NewEcdhesKeyWrapDecrypt(alg, pubkey.(*ecdsa.PublicKey), apuData, apvData, privkey), nil
 	}
 
 	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
