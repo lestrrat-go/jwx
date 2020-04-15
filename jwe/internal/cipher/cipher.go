@@ -8,7 +8,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/aescbc"
+	"github.com/lestrrat-go/jwx/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
