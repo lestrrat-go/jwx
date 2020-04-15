@@ -4,18 +4,19 @@ import (
 	"context"
 
 	"github.com/lestrrat-go/jwx/internal/debug"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
 
 // NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
 // for instantiating valid inputs for ContentEncrypter, KeyGenerator,
-// and KeyEncrypters.
-func NewMultiEncrypt(cc ContentEncrypter, kg keygen.Generator, ke ...KeyEncrypter) *MultiEncrypt {
+// and keyenc.Encrypters.
+func NewMultiEncrypt(cc ContentEncrypter, kg keygen.Generator, ke ...keyenc.Encrypter) *MultiEncrypt {
 	e := &MultiEncrypt{
 		ContentEncrypter: cc,
 		generator:        kg,
-		KeyEncrypters:    ke,
+		encrypters:       ke,
 	}
 	return e
 }
@@ -41,14 +42,14 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	// In JWE, multiple recipients may exist -- they receive an
 	// encrypted version of the CEK, using their key encryption
 	// algorithm of choice.
-	recipients := make([]Recipient, len(e.KeyEncrypters))
-	for i, enc := range e.KeyEncrypters {
+	recipients := make([]Recipient, len(e.encrypters))
+	for i, enc := range e.encrypters {
 		r := NewRecipient()
 		r.Headers.Set("alg", enc.Algorithm())
-		if v := enc.Kid(); v != "" {
+		if v := enc.KeyID(); v != "" {
 			r.Headers.Set("kid", v)
 		}
-		enckey, err := enc.KeyEncrypt(cek)
+		enckey, err := enc.Encrypt(cek)
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("Failed to encrypt key: %s", err)

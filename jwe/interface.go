@@ -1,8 +1,6 @@
 package jwe
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"errors"
 	"fmt"
 
@@ -11,6 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
 
@@ -36,22 +35,6 @@ func NewErrUnsupportedAlgorithm(alg, purpose string) errUnsupportedAlgorithm {
 // Error returns the string representation of the error
 func (e errUnsupportedAlgorithm) Error() string {
 	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
-}
-
-// KeyEncrypter is an interface for things that can encrypt keys
-type KeyEncrypter interface {
-	Algorithm() jwa.KeyEncryptionAlgorithm
-	KeyEncrypt([]byte) (keygen.ByteSource, error)
-	// Kid returns the key id for this KeyEncrypter. This exists so that
-	// you can pass in a KeyEncrypter to MultiEncrypt, you can rest assured
-	// that the generated key will have the proper key ID.
-	Kid() string
-}
-
-// KeyDecrypter is an interface for things that can decrypt keys
-type KeyDecrypter interface {
-	Algorithm() jwa.KeyEncryptionAlgorithm
-	KeyDecrypt([]byte) ([]byte, error)
 }
 
 // Recipient holds the encrypted key and hints to decrypt the key
@@ -88,31 +71,7 @@ type ContentEncrypter interface {
 type MultiEncrypt struct {
 	ContentEncrypter ContentEncrypter
 	generator        keygen.Generator
-	KeyEncrypters    []KeyEncrypter
-}
-
-// KeyWrapEncrypt encrypts content encryption keys using AES-CGM key wrap.
-// Contrary to what the name implies, it also decrypt encrypted keys
-type KeyWrapEncrypt struct {
-	alg       jwa.KeyEncryptionAlgorithm
-	sharedkey []byte
-	KeyID     string
-}
-
-// EcdhesKeyWrapEncrypt encrypts content encryption keys using ECDH-ES.
-type EcdhesKeyWrapEncrypt struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	generator keygen.Generator
-	KeyID     string
-}
-
-// EcdhesKeyWrapDecrypt decrypts keys using ECDH-ES.
-type EcdhesKeyWrapDecrypt struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	apu       []byte
-	apv       []byte
-	privkey   *ecdsa.PrivateKey
-	pubkey    *ecdsa.PublicKey
+	encrypters       []keyenc.Encrypter
 }
 
 // populater is an interface for things that may modify the
@@ -143,38 +102,6 @@ type CompactSerialize struct{}
 // set `Pretty` to true, `json.MarshalIndent` is used instead of `json.Marshal`
 type JSONSerialize struct {
 	Pretty bool
-}
-
-// RSAPKCS15KeyDecrypt decrypts keys using RSA PKCS1v15 algorithm
-type RSAPKCS15KeyDecrypt struct {
-	alg       jwa.KeyEncryptionAlgorithm
-	privkey   *rsa.PrivateKey
-	generator keygen.Generator
-}
-
-// RSAPKCSKeyEncrypt encrypts keys using RSA PKCS1v15 algorithm
-type RSAPKCSKeyEncrypt struct {
-	alg    jwa.KeyEncryptionAlgorithm
-	pubkey *rsa.PublicKey
-	KeyID  string
-}
-
-// RSAOAEPKeyEncrypt encrypts keys using RSA OAEP algorithm
-type RSAOAEPKeyEncrypt struct {
-	alg    jwa.KeyEncryptionAlgorithm
-	pubkey *rsa.PublicKey
-	KeyID  string
-}
-
-// RSAOAEPKeyDecrypt decrypts keys using RSA OAEP algorithm
-type RSAOAEPKeyDecrypt struct {
-	alg     jwa.KeyEncryptionAlgorithm
-	privkey *rsa.PrivateKey
-}
-
-// DirectDecrypt does not encryption (Note: Unimplemented)
-type DirectDecrypt struct {
-	Key []byte
 }
 
 type Visitor = iter.MapVisitor

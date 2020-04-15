@@ -1,4 +1,4 @@
-package jwe
+package keyenc_test
 
 import (
 	"crypto/aes"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 )
 
 func mustHexDecode(s string) []byte {
@@ -54,7 +55,7 @@ func TestRFC3394_Wrap(t *testing.T) {
 		if !assert.NoError(t, err, "NewCipher is successful") {
 			return
 		}
-		out, err := keywrap(block, data)
+		out, err := keyenc.Wrap(block, data)
 		if !assert.NoError(t, err, "Wrap is successful") {
 			return
 		}
@@ -63,7 +64,7 @@ func TestRFC3394_Wrap(t *testing.T) {
 			return
 		}
 
-		unwrapped, err := keyunwrap(block, out)
+		unwrapped, err := keyenc.Unwrap(block, out)
 		if !assert.NoError(t, err, "Unwrap is successful") {
 			return
 		}

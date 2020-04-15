@@ -294,7 +294,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		cek, err := k.KeyDecrypt(recipient.EncryptedKey.Bytes())
+		cek, err := k.Decrypt(recipient.EncryptedKey.Bytes())
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("failed to decrypt key: %s", err)

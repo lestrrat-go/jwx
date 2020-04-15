@@ -5,6 +5,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,12 +54,12 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 
 	const compactExpected = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ.AxY8DCtDaGlsbGljb3RoZQ.KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY.U0m_YmjN04DJvceFICbCVQ`
 
-	k, err := NewKeyWrapEncrypt(jwa.A128KW, sharedkey)
+	k, err := keyenc.NewAESCGM(jwa.A128KW, sharedkey)
 	if !assert.NoError(t, err, "Create key wrap") {
 		return
 	}
 
-	enckey, err := k.KeyEncrypt(cek)
+	enckey, err := k.Encrypt(cek)
 	if !assert.NoError(t, err, "Failed to encrypt key") {
 		return
 	}
