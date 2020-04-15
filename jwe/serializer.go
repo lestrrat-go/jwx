@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -62,8 +63,19 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tag")
 	}
 
-	buf := append(append(append(append(append(append(append(append(protected, '.'), encryptedKey...), '.'), iv...), '.'), cipher...), '.'), tag...)
-	return buf, nil
+	var buf bytes.Buffer
+	buf.Grow(len(protected)+len(encryptedKey)+len(iv)+len(cipher)+len(tag)+4)
+	buf.Write(protected)
+	buf.WriteByte('.')
+	buf.Write(encryptedKey)
+	buf.WriteByte('.')
+	buf.Write(iv)
+	buf.WriteByte('.')
+	buf.Write(cipher)
+	buf.WriteByte('.')
+	buf.Write(tag)
+
+	return buf.Bytes(), nil
 }
 
 // Serialize converts the message into a JWE JSON serialize format byte buffer
