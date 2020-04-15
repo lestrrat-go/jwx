@@ -4,9 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/pkg/errors"
 )
+
+var compactSerializationBufferPool = sync.Pool{
+	New: func() interface{} {
+		var b bytes.Buffer
+		return &b
+	},
+}
+
+func getCompactSerializationBuffer() *bytes.Buffer {
+	return compactSerializationBufferPool.Get().(*bytes.Buffer)
+}
+
+func releaseCompactSerializationBuffer(b *bytes.Buffer) {
+	b.Reset()
+	compactSerializationBufferPool.Put(b)
+}
 
 // Serialize converts the message into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
@@ -63,8 +80,10 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tag")
 	}
 
-	var buf bytes.Buffer
-	buf.Grow(len(protected)+len(encryptedKey)+len(iv)+len(cipher)+len(tag)+4)
+	buf := getCompactSerializationBuffer()
+	defer releaseCompactSerializationBuffer(buf)
+
+	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
 	buf.Write(protected)
 	buf.WriteByte('.')
 	buf.Write(encryptedKey)
