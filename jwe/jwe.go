@@ -98,7 +98,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
 
-	return CompactSerialize{}.Serialize(msg)
+	return Compact(msg)
 }
 
 // Decrypt takes the key encryption algorithm and the corresponding

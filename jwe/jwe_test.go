@@ -100,13 +100,13 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, err := jwe.CompactSerialize{}.Serialize(msg)
+	jsonbuf, err := jwe.Compact(msg)
 	if !assert.NoError(t, err, "Compact serialize succeeded") {
 		return
 	}
 
 	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
-		jsonbuf, _ = jwe.JSONSerialize{Pretty: true}.Serialize(msg)
+		jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
 		t.Logf("%s", jsonbuf)
 		return
 	}

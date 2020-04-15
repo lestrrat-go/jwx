@@ -25,8 +25,8 @@ func releaseCompactSerializationBuffer(b *bytes.Buffer) {
 	compactSerializationBufferPool.Put(b)
 }
 
-// Serialize converts the message into a JWE compact serialize format byte buffer
-func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
+// Compact encodes the given message into a JWE compact serialization format.
+func Compact(m *Message, _ ...Option) ([]byte, error) {
 	if len(m.recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
@@ -97,10 +97,20 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Serialize converts the message into a JWE JSON serialize format byte buffer
-func (s JSONSerialize) Serialize(m *Message) ([]byte, error) {
-	if s.Pretty {
+// JSON encodes the message into a JWE JSON serialization format.
+func JSON(m *Message, options ...Option) ([]byte, error) {
+	var pretty bool
+	for _, option := range options {
+		switch option.Name() {
+		case optkeyPrettyJSONFormat:
+			pretty = option.Value().(bool)
+		}
+	}
+
+	if pretty {
 		return json.MarshalIndent(m, "", "  ")
 	}
 	return json.Marshal(m)
 }
+
+

@@ -7,10 +7,15 @@ import (
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+)
+
+const (
+	optkeyPrettyJSONFormat = "optkeyPrettyJSONFormat"
 )
 
 // Errors used in JWE
@@ -108,3 +113,4 @@ type Visitor = iter.MapVisitor
 type VisitorFunc = iter.MapVisitorFunc
 type HeaderPair = mapiter.Pair
 type Iterator = mapiter.Iterator
+type Option = option.Interface

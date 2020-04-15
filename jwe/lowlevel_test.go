@@ -110,13 +110,13 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	msg.tag = tag
 	msg.recipients = []Recipient{*r}
 
-	serialized, err := CompactSerialize{}.Serialize(msg)
+	serialized, err := Compact(msg)
 	if !assert.NoError(t, err, "compact serialization is successful") {
 		return
 	}
 
 	if !assert.Equal(t, compactExpected, string(serialized), "compact serialization matches") {
-		serialized, err = JSONSerialize{Pretty: true}.Serialize(msg)
+		serialized, err = JSON(msg, WithPrettyJSONFormat(true))
 		if !assert.NoError(t, err, "JSON serialization is successful") {
 			return
 		}
