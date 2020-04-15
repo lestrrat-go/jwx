@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 )
@@ -87,7 +88,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	if debug.Enabled {
 		debug.Printf("Encrypt: keysize = %d", keysize)
 	}
-	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(keysize), keyenc)
+	enc := NewMultiEncrypt(contentcrypt, keygen.NewRandom(keysize), keyenc)
 	msg, err := enc.Encrypt(payload)
 	if err != nil {
 		if debug.Enabled {

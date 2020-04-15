@@ -1,4 +1,4 @@
-package jwe
+package cipher
 
 import (
 	"crypto/aes"
@@ -9,22 +9,26 @@ import (
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/aescbc"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
 
-const (
-	TagSize = 16
-)
+var gcm = &gcmFetcher{}
+var cbc = &cbcFetcher{}
 
-func (f AeadFetchFunc) AeadFetch(key []byte) (cipher.AEAD, error) {
-	return f(key)
+func GCMFetcher() Fetcher {
+	return gcm
 }
 
-var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
+func CBCFetcher() Fetcher {
+	return cbc
+}
+
+func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
 		if debug.Enabled {
-			debug.Printf("GcmAeadFetch: failed to create cipher")
+			debug.Printf("gcmFetcher: failed to create cipher")
 		}
 		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for GCM")
 	}
@@ -34,8 +38,9 @@ var GcmAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 		return nil, errors.Wrap(err, `failed to create GCM for cipher`)
 	}
 	return aead, nil
-})
-var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
+}
+
+func (f cbcFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	if debug.Enabled {
 		debug.Printf("CbcAeadFetch: fetching key (%d)", len(key))
 	}
@@ -47,7 +52,7 @@ var CbcAeadFetch = AeadFetchFunc(func(key []byte) (cipher.AEAD, error) {
 		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for CBC")
 	}
 	return aead, nil
-})
+}
 
 func (c AesContentCipher) KeySize() int {
 	return c.keysize
@@ -57,42 +62,42 @@ func (c AesContentCipher) TagSize() int {
 	return c.tagsize
 }
 
-func NewAesContentCipher(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
+func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	var keysize int
-	var fetcher AeadFetcher
+	var fetcher Fetcher
 	switch alg {
 	case jwa.A128GCM:
 		keysize = 16
-		fetcher = GcmAeadFetch
+		fetcher = gcm
 	case jwa.A192GCM:
 		keysize = 24
-		fetcher = GcmAeadFetch
+		fetcher = gcm
 	case jwa.A256GCM:
 		keysize = 32
-		fetcher = GcmAeadFetch
+		fetcher = gcm
 	case jwa.A128CBC_HS256:
 		keysize = 16 * 2
-		fetcher = CbcAeadFetch
+		fetcher = cbc
 	case jwa.A192CBC_HS384:
 		keysize = 24 * 2
-		fetcher = CbcAeadFetch
+		fetcher = cbc
 	case jwa.A256CBC_HS512:
 		keysize = 32 * 2
-		fetcher = CbcAeadFetch
+		fetcher = cbc
 	default:
-		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "failed to create AES content cipher")
+		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
 	}
 
 	return &AesContentCipher{
-		keysize:     keysize,
-		tagsize:     TagSize,
-		AeadFetcher: fetcher,
+		keysize: keysize,
+		tagsize: TagSize,
+		fetch:   fetcher,
 	}, nil
 }
 
-func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, tag []byte, err error) {
+func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, tag []byte, err error) {
 	var aead cipher.AEAD
-	aead, err = c.AeadFetch(cek)
+	aead, err = c.fetch.Fetch(cek)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("AeadFetch failed: %s", err)
@@ -115,11 +120,11 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 		}
 	}()
 
-	var bs ByteSource
+	var bs keygen.ByteSource
 	if c.NonceGenerator == nil {
-		bs, err = NewRandomKeyGenerate(aead.NonceSize()).KeyGenerate()
+		bs, err = keygen.NewRandom(aead.NonceSize()).Generate()
 	} else {
-		bs, err = c.NonceGenerator.KeyGenerate()
+		bs, err = c.NonceGenerator.Generate()
 	}
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to generate nonce")
@@ -144,8 +149,8 @@ func (c AesContentCipher) encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 	return
 }
 
-func (c AesContentCipher) decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
-	aead, err := c.AeadFetch(cek)
+func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
+	aead, err := c.fetch.Fetch(cek)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("AeadFetch failed for %v: %s", cek, err)

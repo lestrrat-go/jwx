@@ -10,6 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/pkg/errors"
 )
 
@@ -302,7 +303,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		plaintext, err = cipher.decrypt(cek, iv, ciphertext, tag, aad)
+		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, aad)
 		if err == nil {
 			break
 		}
@@ -340,10 +341,10 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	return plaintext, nil
 }
 
-func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (ContentCipher, error) {
+func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (cipher.ContentCipher, error) {
 	switch alg {
 	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
-		return NewAesContentCipher(alg)
+		return cipher.NewAES(alg)
 	}
 
 	return nil, ErrUnsupportedAlgorithm

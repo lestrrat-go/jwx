@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,13 +66,13 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	cipher, err := NewAesContentCipher(jwa.A128CBC_HS256)
+	cipher, err := cipher.NewAES(jwa.A128CBC_HS256)
 	if !assert.NoError(t, err, "NewAesContentCipher is successful") {
 		return
 	}
-	cipher.NonceGenerator = StaticKeyGenerate(iv)
+	cipher.NonceGenerator = keygen.Static(iv)
 
-	iv, encrypted, tag, err := cipher.encrypt(cek, plaintext, aad)
+	iv, encrypted, tag, err := cipher.Encrypt(cek, plaintext, aad)
 	if !assert.NoError(t, err, "encrypt() successful") {
 		return
 	}
@@ -83,7 +85,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	data, err := cipher.decrypt(cek, iv, encrypted, tag, aad)
+	data, err := cipher.Decrypt(cek, iv, encrypted, tag, aad)
 	if !assert.NoError(t, err, "decrypt successful") {
 		return
 	}

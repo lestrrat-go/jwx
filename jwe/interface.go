@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
@@ -11,6 +10,8 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
 
 // Errors used in JWE
@@ -37,17 +38,10 @@ func (e errUnsupportedAlgorithm) Error() string {
 	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
 }
 
-// ByteSource is an interface for things that return a byte sequence.
-// This is used for KeyGenerator so that the result of computations can
-// carry more than just the generate byte sequence.
-type ByteSource interface {
-	Bytes() []byte
-}
-
 // KeyEncrypter is an interface for things that can encrypt keys
 type KeyEncrypter interface {
 	Algorithm() jwa.KeyEncryptionAlgorithm
-	KeyEncrypt([]byte) (ByteSource, error)
+	KeyEncrypt([]byte) (keygen.ByteSource, error)
 	// Kid returns the key id for this KeyEncrypter. This exists so that
 	// you can pass in a KeyEncrypter to MultiEncrypt, you can rest assured
 	// that the generated key will have the proper key ID.
@@ -93,7 +87,7 @@ type ContentEncrypter interface {
 // MultiEncrypt is the default Encrypter implementation.
 type MultiEncrypt struct {
 	ContentEncrypter ContentEncrypter
-	KeyGenerator     KeyGenerator // KeyGenerator creates the random CEK.
+	generator        keygen.Generator
 	KeyEncrypters    []KeyEncrypter
 }
 
@@ -108,7 +102,7 @@ type KeyWrapEncrypt struct {
 // EcdhesKeyWrapEncrypt encrypts content encryption keys using ECDH-ES.
 type EcdhesKeyWrapEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
-	generator KeyGenerator
+	generator keygen.Generator
 	KeyID     string
 }
 
@@ -121,37 +115,10 @@ type EcdhesKeyWrapDecrypt struct {
 	pubkey    *ecdsa.PublicKey
 }
 
-// ByteKey is a generated key that only has the key's byte buffer
-// as its instance data. If a ke needs to do more, such as providing
-// values to be set in a JWE header, that key type wraps a ByteKey
-type ByteKey []byte
-
-// ByteWithECPrivateKey holds the EC-DSA private key that generated
-// the key along witht he key itself. This is required to set the
-// proper values in the JWE headers
-type ByteWithECPrivateKey struct {
-	ByteKey
-	PrivateKey *ecdsa.PrivateKey
-}
-
-// HeaderPopulater is an interface for things that may modify the
+// populater is an interface for things that may modify the
 // JWE header. e.g. ByteWithECPrivateKey
-type HeaderPopulater interface {
-	HeaderPopulate(Headers)
-}
-
-// KeyGenerator generates the raw content encryption keys
-type KeyGenerator interface {
-	KeySize() int
-	KeyGenerate() (ByteSource, error)
-}
-
-// ContentCipher knows how to encrypt/decrypt the content given a content
-// encryption key and other data
-type ContentCipher interface {
-	KeySize() int
-	encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
-	decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
+type populater interface {
+	Populate(keygen.Setter)
 }
 
 // GenericContentCrypt encrypts a message by applying all the necessary
@@ -160,23 +127,8 @@ type GenericContentCrypt struct {
 	alg     jwa.ContentEncryptionAlgorithm
 	keysize int
 	tagsize int
-	cipher  ContentCipher
-	cekgen  KeyGenerator
-}
-
-// StaticKeyGenerate uses a static byte buffer to provide keys.
-type StaticKeyGenerate []byte
-
-// RandomKeyGenerate generates random keys
-type RandomKeyGenerate struct {
-	keysize int
-}
-
-// EcdhesKeyGenerate generates keys using ECDH-ES algorithm
-type EcdhesKeyGenerate struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	keysize   int
-	pubkey    *ecdsa.PublicKey
+	cipher  cipher.ContentCipher
+	cekgen  keygen.Generator
 }
 
 // Serializer converts an encrypted message into a byte buffer
@@ -193,33 +145,11 @@ type JSONSerialize struct {
 	Pretty bool
 }
 
-// AeadFetcher is an interface for things that can fetch AEAD ciphers
-type AeadFetcher interface {
-	AeadFetch([]byte) (cipher.AEAD, error)
-}
-
-// AeadFetchFunc fetches a AEAD cipher from the given key, and is
-// represented by a function
-type AeadFetchFunc func([]byte) (cipher.AEAD, error)
-
-// AesContentCipher represents a cipher based on AES
-type AesContentCipher struct {
-	AeadFetcher
-	NonceGenerator KeyGenerator
-	keysize        int
-	tagsize        int
-}
-
-// RsaContentCipher represents a cipher based on RSA
-type RsaContentCipher struct {
-	pubkey *rsa.PublicKey
-}
-
 // RSAPKCS15KeyDecrypt decrypts keys using RSA PKCS1v15 algorithm
 type RSAPKCS15KeyDecrypt struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	privkey   *rsa.PrivateKey
-	generator KeyGenerator
+	generator keygen.Generator
 }
 
 // RSAPKCSKeyEncrypt encrypts keys using RSA PKCS1v15 algorithm

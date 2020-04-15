@@ -4,16 +4,17 @@ import (
 	"context"
 
 	"github.com/lestrrat-go/jwx/internal/debug"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
 
 // NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
 // for instantiating valid inputs for ContentEncrypter, KeyGenerator,
 // and KeyEncrypters.
-func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *MultiEncrypt {
+func NewMultiEncrypt(cc ContentEncrypter, kg keygen.Generator, ke ...KeyEncrypter) *MultiEncrypt {
 	e := &MultiEncrypt{
 		ContentEncrypter: cc,
-		KeyGenerator:     kg,
+		generator:        kg,
 		KeyEncrypters:    ke,
 	}
 	return e
@@ -21,7 +22,7 @@ func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
 func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
-	bk, err := e.KeyGenerator.KeyGenerate()
+	bk, err := e.generator.Generate()
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Failed to generate key: %s", err)
@@ -55,8 +56,8 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
 		r.EncryptedKey = enckey.Bytes()
-		if hp, ok := enckey.(HeaderPopulater); ok {
-			hp.HeaderPopulate(r.Headers)
+		if hp, ok := enckey.(populater); ok {
+			hp.Populate(r.Headers)
 		}
 		if debug.Enabled {
 			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
