@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/rsautil"
@@ -257,7 +256,7 @@ func TestEncode_ECDH(t *testing.T) {
 	}
 
 	for _, alg := range algorithms {
-		t.Run(fmt.Sprintf("%s", alg), func(t *testing.T) {
+		t.Run(alg.String(), func(t *testing.T) {
 			t.Parallel()
 
 			encrypted, err := jwe.Encrypt(plaintext, alg, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)

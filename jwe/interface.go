@@ -19,11 +19,8 @@ const (
 
 // Errors used in JWE
 var (
-	ErrInvalidBlockSize         = errors.New("keywrap input must be 8 byte blocks")
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
-	ErrInvalidHeaderValue       = errors.New("invalid value for header key")
 	ErrUnsupportedAlgorithm     = errors.New("unsupported algorithm")
-	ErrMissingPrivateKey        = errors.New("missing private key")
 )
 
 type errUnsupportedAlgorithm struct {
@@ -58,12 +55,6 @@ type Message struct {
 	unprotectedHeaders   Headers       `json:"unprotected,omitempty"`
 }
 
-// Encrypter is the top level structure that encrypts the given
-// payload to a JWE message
-type Encrypter interface {
-	Encrypt([]byte) (*Message, error)
-}
-
 // ContentEncrypter encrypts the content using the content using the
 // encrypted key
 type ContentEncrypter interface {
@@ -82,20 +73,6 @@ type MultiEncrypt struct {
 // JWE header. e.g. ByteWithECPrivateKey
 type populater interface {
 	Populate(keygen.Setter)
-}
-
-// Serializer converts an encrypted message into a byte buffer
-type Serializer interface {
-	Serialize(*Message) ([]byte, error)
-}
-
-// CompactSerialize serializes the message into JWE compact serialized format
-type CompactSerialize struct{}
-
-// JSONSerialize serializes the message into JWE JSON serialized format. If you
-// set `Pretty` to true, `json.MarshalIndent` is used instead of `json.Marshal`
-type JSONSerialize struct {
-	Pretty bool
 }
 
 type Visitor = iter.MapVisitor

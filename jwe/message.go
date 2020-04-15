@@ -41,33 +41,6 @@ func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
 	return h3, nil
 }
 
-func mergeMarshal(e interface{}, p map[string]interface{}) ([]byte, error) {
-	buf, err := json.Marshal(e)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal e`)
-	}
-
-	if len(p) == 0 {
-		return buf, nil
-	}
-
-	ext, err := json.Marshal(p)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal p`)
-	}
-
-	if len(buf) < 2 {
-		return nil, errors.New(`invalid json`)
-	}
-
-	if buf[0] != '{' || buf[len(buf)-1] != '}' {
-		return nil, errors.New("invalid JSON")
-	}
-	buf[len(buf)-1] = ','
-	buf = append(buf, ext[1:]...)
-	return buf, nil
-}
-
 // NewMessage creates a new message
 func NewMessage() *Message {
 	return &Message{}
