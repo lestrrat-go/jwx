@@ -1,4 +1,4 @@
-package jwe
+package content_crypt
 
 import (
 	"github.com/lestrrat-go/jwx/internal/debug"
@@ -8,11 +8,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c GenericContentCrypt) Algorithm() jwa.ContentEncryptionAlgorithm {
+func (c Generic) Algorithm() jwa.ContentEncryptionAlgorithm {
 	return c.alg
 }
 
-func (c GenericContentCrypt) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
+func (c Generic) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
 	if debug.Enabled {
 		debug.Printf("ContentCrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
 		debug.Printf("ContentCrypt.Encrypt: ciphertext = %x (%d)", plaintext, len(plaintext))
@@ -30,11 +30,11 @@ func (c GenericContentCrypt) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte
 	return iv, encrypted, tag, nil
 }
 
-func (c GenericContentCrypt) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
+func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 	return c.cipher.Decrypt(cek, iv, ciphertext, tag, aad)
 }
 
-func NewAesCrypt(alg jwa.ContentEncryptionAlgorithm) (*GenericContentCrypt, error) {
+func NewAES(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 	if debug.Enabled {
 		debug.Printf("AES Crypt: alg = %s", alg)
 	}
@@ -47,7 +47,7 @@ func NewAesCrypt(alg jwa.ContentEncryptionAlgorithm) (*GenericContentCrypt, erro
 		debug.Printf("AES Crypt: cipher.keysize = %d", c.KeySize())
 	}
 
-	return &GenericContentCrypt{
+	return &Generic{
 		alg:     alg,
 		cipher:  c,
 		cekgen:  keygen.NewRandom(c.KeySize() * 2),
@@ -56,6 +56,6 @@ func NewAesCrypt(alg jwa.ContentEncryptionAlgorithm) (*GenericContentCrypt, erro
 	}, nil
 }
 
-func (c GenericContentCrypt) KeySize() int {
+func (c Generic) KeySize() int {
 	return c.keysize
 }

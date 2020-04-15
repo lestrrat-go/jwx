@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -20,7 +21,7 @@ import (
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
-	contentcrypt, err := NewAesCrypt(contentalg)
+	contentcrypt, err := content_crypt.NewAES(contentalg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}

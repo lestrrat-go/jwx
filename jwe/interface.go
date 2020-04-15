@@ -9,7 +9,6 @@ import (
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
@@ -83,16 +82,6 @@ type MultiEncrypt struct {
 // JWE header. e.g. ByteWithECPrivateKey
 type populater interface {
 	Populate(keygen.Setter)
-}
-
-// GenericContentCrypt encrypts a message by applying all the necessary
-// modifications to the keys and the contents
-type GenericContentCrypt struct {
-	alg     jwa.ContentEncryptionAlgorithm
-	keysize int
-	tagsize int
-	cipher  cipher.ContentCipher
-	cekgen  keygen.Generator
 }
 
 // Serializer converts an encrypted message into a byte buffer
