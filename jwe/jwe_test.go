@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"net/url"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/rsautil"
@@ -60,7 +59,7 @@ func TestParse_Compact(t *testing.T) {
 		return
 	}
 
-	if !assert.Len(t, msg.Recipients, 1, "There is exactly 1 recipient") {
+	if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
 		return
 	}
 }
@@ -90,7 +89,6 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	if !assert.NoError(t, err, "parse successful") {
 		return
 	}
-	t.Logf("------ ParseString done")
 
 	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
@@ -261,7 +259,11 @@ func TestEncode_ECDH_ES_A256KW_A192KW_A128KW(t *testing.T) {
 
 		t.Logf("encrypted = %s", encrypted)
 
-		msg, _ := jwe.Parse(encrypted)
+		msg, err := jwe.Parse(encrypted)
+		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+			return
+		}
+
 		jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
 		t.Logf("%s", jsonbuf)
 
@@ -299,14 +301,8 @@ func TestHeaders(t *testing.T) {
 		"x5t":     {Value: "x5t blah"},
 		"x5t#256": {Value: "x5t#256 blah"},
 		"crit":    {Value: []string{"crit blah"}},
-		"jku": {
-			Value:    "http://github.com/lestrrat-go/jwx",
-			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
-		},
-		"x5u": {
-			Value:    "http://github.com/lestrrat-go/jwx",
-			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
-		},
+		"jku":     {Value: "http://github.com/lestrrat-go/jwx"},
+		"x5u":     {Value: "http://github.com/lestrrat-go/jwx"},
 	}
 
 	for name, testcase := range data {

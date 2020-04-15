@@ -37,13 +37,6 @@ func (e errUnsupportedAlgorithm) Error() string {
 	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
 }
 
-// EncodedHeader represents a header value that is base64 encoded
-// in JSON format
-// XXX KILL ME
-type EncodedHeader struct {
-	Headers
-}
-
 // ByteSource is an interface for things that return a byte sequence.
 // This is used for KeyGenerator so that the result of computations can
 // carry more than just the generate byte sequence.
@@ -75,13 +68,13 @@ type Recipient struct {
 
 // Message contains the entire encrypted JWE message
 type Message struct {
-	AuthenticatedData    buffer.Buffer  `json:"aad,omitempty"`
-	CipherText           buffer.Buffer  `json:"ciphertext"`
-	InitializationVector buffer.Buffer  `json:"iv,omitempty"`
-	ProtectedHeader      *EncodedHeader `json:"protected"`
-	Recipients           []Recipient    `json:"recipients"`
-	Tag                  buffer.Buffer  `json:"tag,omitempty"`
-	UnprotectedHeader    Headers        `json:"unprotected,omitempty"`
+	authenticatedData    buffer.Buffer `json:"aad,omitempty"`
+	cipherText           buffer.Buffer `json:"ciphertext"`
+	initializationVector buffer.Buffer `json:"iv,omitempty"`
+	protectedHeaders     Headers       `json:"protected"`
+	recipients           []Recipient   `json:"recipients"`
+	tag                  buffer.Buffer `json:"tag,omitempty"`
+	unprotectedHeaders   Headers       `json:"unprotected,omitempty"`
 }
 
 // Encrypter is the top level structure that encrypts the given

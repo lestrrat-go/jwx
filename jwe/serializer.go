@@ -9,26 +9,26 @@ import (
 
 // Serialize converts the message into a JWE compact serialize format byte buffer
 func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
-	if len(m.Recipients) != 1 {
+	if len(m.recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
 
-	recipient := m.Recipients[0]
+	recipient := m.recipients[0]
 
 	// The protected header must be a merge between the message-wide
 	// protected header AND the recipient header
 
-	// There's something wrong if m.ProtectedHeader.Header is nil, but
+	// There's something wrong if m.protectedHeaders is nil, but
 	// it could happen
-	if m.ProtectedHeader == nil || m.ProtectedHeader.Headers == nil {
+	if m.protectedHeaders == nil {
 		return nil, errors.New("invalid protected header")
 	}
 
-	hcopy, err := mergeHeaders(context.TODO(), nil, m.ProtectedHeader.Headers)
+	hcopy, err := mergeHeaders(context.TODO(), nil, m.protectedHeaders)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to copy protected header")
 	}
-	hcopy, err = mergeHeaders(context.TODO(), hcopy, m.UnprotectedHeader)
+	hcopy, err = mergeHeaders(context.TODO(), hcopy, m.unprotectedHeaders)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge unprotected header")
 	}
@@ -37,7 +37,7 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to merge recipient header")
 	}
 
-	protected, err := EncodedHeader{Headers: hcopy}.Base64Encode()
+	protected, err := hcopy.Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode header")
 	}
@@ -47,17 +47,17 @@ func (s CompactSerialize) Serialize(m *Message) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode encryption key")
 	}
 
-	iv, err := m.InitializationVector.Base64Encode()
+	iv, err := m.initializationVector.Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode iv")
 	}
 
-	cipher, err := m.CipherText.Base64Encode()
+	cipher, err := m.cipherText.Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode cipher text")
 	}
 
-	tag, err := m.Tag.Base64Encode()
+	tag, err := m.tag.Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode tag")
 	}

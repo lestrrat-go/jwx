@@ -2,9 +2,12 @@ package jwe
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/pkg/errors"
 )
 
 // Iterate returns a channel that successively returns all the
@@ -21,4 +24,31 @@ func (h *stdHeaders) Walk(ctx context.Context, visitor Visitor) error {
 
 func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
+}
+
+func (h *stdHeaders) Encode() ([]byte, error) {
+	buf, err := json.Marshal(h)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal headers to JSON prior to encoding`)
+	}
+
+	buf, err = buffer.Buffer(buf).Base64Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
+	}
+	return buf, nil
+}
+
+func (h *stdHeaders) Decode(buf []byte) error {
+	// base64 json string -> json object representation of header
+	b, err := buffer.FromBase64(buf)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal base64 encoded buffer")
+	}
+
+	if err := json.Unmarshal(b.Bytes(), h); err != nil {
+		return errors.Wrap(err, "failed to unmarshal buffer")
+	}
+
+	return nil
 }

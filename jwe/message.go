@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
@@ -15,13 +16,6 @@ import (
 // NewRecipient creates a Recipient object
 func NewRecipient() *Recipient {
 	return &Recipient{
-		Headers: NewHeaders(),
-	}
-}
-
-// NewEncodedHeader creates a new encoded Header object
-func NewEncodedHeader() *EncodedHeader {
-	return &EncodedHeader{
 		Headers: NewHeaders(),
 	}
 }
@@ -73,69 +67,174 @@ func mergeMarshal(e interface{}, p map[string]interface{}) ([]byte, error) {
 	return buf, nil
 }
 
-// Base64Encode creates the base64 encoded version of the JSON
-// representation of this header
-func (e EncodedHeader) Base64Encode() ([]byte, error) {
-	buf, err := json.Marshal(e.Headers)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal encoded header into JSON")
-	}
-
-	buf, err = buffer.Buffer(buf).Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
-	}
-
-	return buf, nil
-}
-
-// MarshalJSON generates the JSON representation of this header
-func (e EncodedHeader) MarshalJSON() ([]byte, error) {
-	buf, err := e.Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
-	}
-	return json.Marshal(string(buf))
-}
-
-// UnmarshalJSON parses the JSON buffer into a Header
-func (e *EncodedHeader) UnmarshalJSON(buf []byte) error {
-	b := buffer.Buffer{}
-	// base646 json string -> json object representation of header
-	if err := json.Unmarshal(buf, &b); err != nil {
-		return errors.Wrap(err, "failed to unmarshal buffer")
-	}
-
-	if err := json.Unmarshal(b.Bytes(), e.Headers); err != nil {
-		return errors.Wrap(err, "failed to unmarshal buffer")
-	}
-
-	return nil
-}
-
 // NewMessage creates a new message
 func NewMessage() *Message {
-	return &Message{
-		ProtectedHeader:   NewEncodedHeader(),
-		UnprotectedHeader: NewHeaders(),
+	return &Message{}
+}
+
+func (m *Message) AuthenticatedData() buffer.Buffer {
+	return m.authenticatedData
+}
+
+func (m *Message) CipherText() buffer.Buffer {
+	return m.cipherText
+}
+
+func (m *Message) InitializationVector() buffer.Buffer {
+	return m.initializationVector
+}
+
+func (m *Message) ProtectedHeaders() Headers {
+	return m.protectedHeaders
+}
+
+func (m *Message) Recipients() []Recipient {
+	return m.recipients
+}
+
+func (m *Message) UnprotectedHeaders() Headers {
+	return m.unprotectedHeaders
+}
+
+const (
+	AuthenticatedDataKey    = "aad"
+	CipherTextKey           = "ciphertext"
+	InitializationVectorKey = "iv"
+	ProtectedHeadersKey     = "protected"
+	RecipientsKey           = "recipients"
+	TagKey                  = "tag"
+	UnprotectedHeadersKey   = "unprotected"
+)
+
+type messageMarshalProxy struct {
+	AuthenticatedData    buffer.Buffer   `json:"aad,omitempty"`
+	CipherText           buffer.Buffer   `json:"ciphertext"`
+	InitializationVector buffer.Buffer   `json:"iv,omitempty"`
+	ProtectedHeaders     json.RawMessage `json:"protected"`
+	Recipients           []Recipient     `json:"recipients"`
+	Tag                  buffer.Buffer   `json:"tag,omitempty"`
+	UnprotectedHeaders   Headers         `json:"unprotected,omitempty"`
+}
+
+func (m *Message) MarshalJSON() ([]byte, error) {
+	// This is slightly convoluted, but we need to encode the
+	// protected headers, so we do it by hand
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	fmt.Fprintf(&buf, `{`)
+
+	var wrote bool
+	if m.authenticatedData.Len() > 0 {
+		wrote = true
+		fmt.Fprintf(&buf, `%#v:`, AuthenticatedDataKey)
+		if err := enc.Encode(m.authenticatedData); err != nil {
+			return nil, errors.Wrapf(err, `failed to encode %s field`, AuthenticatedDataKey)
+		}
 	}
+	if m.cipherText.Len() > 0 {
+		if wrote {
+			fmt.Fprintf(&buf, `,`)
+		}
+		wrote = true
+		fmt.Fprintf(&buf, `%#v:`, CipherTextKey)
+		if err := enc.Encode(m.cipherText); err != nil {
+			return nil, errors.Wrapf(err, `failed to encode %s field`, CipherTextKey)
+		}
+	}
+
+	if m.initializationVector.Len() > 0 {
+		if wrote {
+			fmt.Fprintf(&buf, `,`)
+		}
+		wrote = true
+		fmt.Fprintf(&buf, `%#v:`, InitializationVectorKey)
+		if err := enc.Encode(m.initializationVector); err != nil {
+			return nil, errors.Wrapf(err, `failed to encode %s field`, InitializationVectorKey)
+		}
+	}
+
+	if m.protectedHeaders != nil {
+		encodedHeaders, err := m.protectedHeaders.Encode()
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to encode protected headers`)
+		}
+
+		if len(encodedHeaders) > 2 {
+			if wrote {
+				fmt.Fprintf(&buf, `,`)
+			}
+			wrote = true
+			fmt.Fprintf(&buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
+		}
+	}
+
+	if wrote {
+		fmt.Fprintf(&buf, `,`)
+	}
+	fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
+	if err := enc.Encode(m.recipients); err != nil {
+		return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
+	}
+
+	if m.tag.Len() > 0 {
+		fmt.Fprintf(&buf, `,%#v:`, TagKey)
+		if err := enc.Encode(m.tag); err != nil {
+			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
+		}
+	}
+
+	if m.unprotectedHeaders != nil {
+		unprotected, err := json.Marshal(m.unprotectedHeaders)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to encode unprotected headers`)
+		}
+
+		if len(unprotected) > 2 {
+			fmt.Fprintf(&buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
+		}
+	}
+	fmt.Fprintf(&buf, `}`)
+
+	return buf.Bytes(), nil
+}
+
+func (m *Message) UnmarshalJSON(buf []byte) error {
+	var proxy messageMarshalProxy
+	proxy.UnprotectedHeaders = NewHeaders()
+	if err := json.Unmarshal(buf, &proxy); err != nil {
+		return errors.Wrap(err, `failed to unmashal JSON into message`)
+	}
+
+	h := NewHeaders()
+	if err := h.Decode(proxy.ProtectedHeaders); err != nil {
+		return errors.Wrap(err, `failed to decode protected headers`)
+	}
+
+	m.authenticatedData = proxy.AuthenticatedData
+	m.cipherText = proxy.CipherText
+	m.initializationVector = proxy.InitializationVector
+	m.protectedHeaders = h
+	m.recipients = proxy.Recipients
+	m.tag = proxy.Tag
+	m.unprotectedHeaders = proxy.UnprotectedHeaders
+	return nil
 }
 
 // Decrypt decrypts the message using the specified algorithm and key
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	var err error
 
-	if len(m.Recipients) == 0 {
+	if len(m.recipients) == 0 {
 		return nil, errors.New("no recipients, can not proceed with decrypt")
 	}
 
-	enc := m.ProtectedHeader.ContentEncryption()
+	enc := m.protectedHeaders.ContentEncryption()
 
-	h, err := mergeHeaders(context.TODO(), nil, m.ProtectedHeader.Headers)
+	h, err := mergeHeaders(context.TODO(), nil, m.protectedHeaders)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to copy protected headers`)
 	}
-	h, err = mergeHeaders(context.TODO(), h, m.UnprotectedHeader)
+	h, err = mergeHeaders(context.TODO(), h, m.unprotectedHeaders)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("failed to merge unprotected header")
@@ -143,24 +242,24 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
 	}
 
-	aad, err := m.AuthenticatedData.Base64Encode()
+	aad, err := m.authenticatedData.Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
 	}
-	ciphertext := m.CipherText.Bytes()
-	iv := m.InitializationVector.Bytes()
-	tag := m.Tag.Bytes()
+	ciphertext := m.cipherText.Bytes()
+	iv := m.initializationVector.Bytes()
+	tag := m.tag.Bytes()
 
 	cipher, err := buildContentCipher(enc)
 	if err != nil {
-		return nil, errors.Wrap(err, "unsupported content cipher algorithm '"+enc.String()+"'")
+		return nil, errors.Wrapf(err, "unsupported content cipher algorithm '%s'", enc)
 	}
 	keysize := cipher.KeySize()
 
 	var plaintext []byte
-	for _, recipient := range m.Recipients {
+	for _, recipient := range m.recipients {
 		if debug.Enabled {
-			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers.Algorithm)
+			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers.Algorithm())
 		}
 		if recipient.Headers.Algorithm() != alg {
 			continue
@@ -203,7 +302,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			break
 		}
 		if debug.Enabled {
-			debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm, err)
+			debug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm(), err)
 		}
 		// Keep looping because there might be another key with the same algo
 	}

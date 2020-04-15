@@ -142,11 +142,11 @@ func parseJSON(buf []byte) (*Message, error) {
 
 	// if the "signature" field exist, treat it as a flattened
 	if m.Recipient != nil {
-		if len(m.Message.Recipients) != 0 {
+		if len(m.Message.recipients) != 0 {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		m.Message.Recipients = []Recipient{*m.Recipient}
+		m.Message.recipients = []Recipient{*m.Recipient}
 	}
 
 	return m.Message, nil
@@ -176,8 +176,8 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	// We need the protected header to contain the content encryption
 	// algorithm. XXX probably other headers need to go there too
-	protected := NewEncodedHeader()
-	protected.Set(ContentEncryptionKey, hdr.ContentEncryption)
+	protected := NewHeaders()
+	protected.Set(ContentEncryptionKey, hdr.ContentEncryption())
 	hdr.Set(ContentEncryptionKey, "")
 
 	var enckeybuf buffer.Buffer
@@ -201,12 +201,12 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	m.AuthenticatedData.SetBytes(hdrbuf.Bytes())
-	m.ProtectedHeader = protected
-	m.Tag = tagbuf
-	m.CipherText = ctbuf
-	m.InitializationVector = ivbuf
-	m.Recipients = []Recipient{
+	m.authenticatedData.SetBytes(hdrbuf.Bytes())
+	m.protectedHeaders = protected
+	m.tag = tagbuf
+	m.cipherText = ctbuf
+	m.initializationVector = ivbuf
+	m.recipients = []Recipient{
 		{
 			Headers:      hdr,
 			EncryptedKey: enckeybuf,
