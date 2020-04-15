@@ -255,7 +255,6 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
-
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) PrivateParams() map[string]interface{} {")
 	fmt.Fprintf(&buf, "\nreturn h.privateParams")
 	fmt.Fprintf(&buf, "\n}")
@@ -380,6 +379,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nhasContent := buf.Len() > 3 // encoding/json always adds a newline, so \"{}\\n\" is the empty hash")
 	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
 	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
 	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
@@ -388,7 +388,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
 	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
-	fmt.Fprintf(&buf, "\nif i > 0 {")
+	fmt.Fprintf(&buf, "\nif hasContent || i > 0 {")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")

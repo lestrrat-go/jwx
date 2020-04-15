@@ -395,6 +395,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	if err := enc.Encode(proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
+	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
 	if l := len(h.privateParams); l > 0 {
 		buf.Truncate(buf.Len() - 2)
 		keys := make([]string, 0, l)
@@ -403,7 +404,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		}
 		sort.Strings(keys)
 		for i, k := range keys {
-			if i > 0 {
+			if hasContent || i > 0 {
 				fmt.Fprintf(&buf, `,`)
 			}
 			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
