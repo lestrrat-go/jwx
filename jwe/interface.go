@@ -2,7 +2,6 @@ package jwe
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/buffer"
@@ -22,21 +21,6 @@ var (
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
 	ErrUnsupportedAlgorithm     = errors.New("unsupported algorithm")
 )
-
-type errUnsupportedAlgorithm struct {
-	alg     string
-	purpose string
-}
-
-// NewErrUnsupportedAlgorithm creates a new UnsupportedAlgorithm error
-func NewErrUnsupportedAlgorithm(alg, purpose string) errUnsupportedAlgorithm {
-	return errUnsupportedAlgorithm{alg: alg, purpose: purpose}
-}
-
-// Error returns the string representation of the error
-func (e errUnsupportedAlgorithm) Error() string {
-	return fmt.Sprintf("unsupported algorithm '%s' for %s", e.alg, e.purpose)
-}
 
 // Recipient holds the encrypted key and hints to decrypt the key
 type Recipient struct {

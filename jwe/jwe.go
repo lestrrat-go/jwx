@@ -91,6 +91,8 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		debug.Printf("Encrypt: keysize = %d", keysize)
 	}
 	encctx := getEncryptCtx()
+	defer releaseEncryptCtx(encctx)
+
 	encctx.contentEncrypter = contentcrypt
 	encctx.generator = keygen.NewRandom(keysize)
 	encctx.keyEncrypters = []keyenc.Encrypter{enc}
@@ -282,5 +284,5 @@ func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 		return keyenc.NewECDHESDecrypt(alg, pubkey.(*ecdsa.PublicKey), apuData, apvData, privkey), nil
 	}
 
-	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
+	return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 }
