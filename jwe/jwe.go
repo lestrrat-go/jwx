@@ -84,7 +84,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if debug.Enabled {
 			debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
 		}
-		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "failed to create encrypter")
+		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
 	if debug.Enabled {

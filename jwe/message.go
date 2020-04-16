@@ -320,5 +320,5 @@ func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (cipher.ContentCiphe
 		return cipher.NewAES(alg)
 	}
 
-	return nil, ErrUnsupportedAlgorithm
+	return nil, errors.Errorf(`invalid content cipher algorith (%s)`, alg)
 }

@@ -19,7 +19,6 @@ const (
 // Errors used in JWE
 var (
 	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
-	ErrUnsupportedAlgorithm     = errors.New("unsupported algorithm")
 )
 
 // Recipient holds the encrypted key and hints to decrypt the key
