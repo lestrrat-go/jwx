@@ -17,8 +17,16 @@ import (
 // NewRecipient creates a Recipient object
 func NewRecipient() *Recipient {
 	return &Recipient{
-		Headers: NewHeaders(),
+		headers: NewHeaders(),
 	}
+}
+
+func (r *Recipient) Headers() Headers {
+	return r.headers
+}
+
+func (r *Recipient) EncryptedKey() buffer.Buffer {
+	return r.encryptedKey
 }
 
 func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
@@ -234,9 +242,9 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	var lastError error
 	for _, recipient := range m.recipients {
 		if debug.Enabled {
-			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers.Algorithm())
+			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.headers.Algorithm())
 		}
-		if recipient.Headers.Algorithm() != alg {
+		if recipient.headers.Algorithm() != alg {
 			continue
 		}
 
@@ -249,7 +257,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		h2, err = mergeHeaders(context.TODO(), h2, recipient.Headers)
+		h2, err = mergeHeaders(context.TODO(), h2, recipient.headers)
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("Failed to merge! %s", err)
@@ -267,7 +275,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		cek, err := k.Decrypt(recipient.EncryptedKey.Bytes())
+		cek, err := k.Decrypt(recipient.encryptedKey.Bytes())
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("failed to decrypt key: %s", err)

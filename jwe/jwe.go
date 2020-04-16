@@ -216,8 +216,8 @@ func parseCompact(buf []byte) (*Message, error) {
 	m.initializationVector = ivbuf
 	m.recipients = []Recipient{
 		{
-			Headers:      hdr,
-			EncryptedKey: enckeybuf,
+			headers:      hdr,
+			encryptedKey: enckeybuf,
 		},
 	}
 	return m, nil
