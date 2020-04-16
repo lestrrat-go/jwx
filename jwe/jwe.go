@@ -90,8 +90,11 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	if debug.Enabled {
 		debug.Printf("Encrypt: keysize = %d", keysize)
 	}
-	multienc := NewMultiEncrypt(contentcrypt, keygen.NewRandom(keysize), enc)
-	msg, err := multienc.Encrypt(payload)
+	encctx := getEncryptCtx()
+	encctx.contentEncrypter = contentcrypt
+	encctx.generator = keygen.NewRandom(keysize)
+	encctx.keyEncrypters = []keyenc.Encrypter{enc}
+	msg, err := encctx.Encrypt(payload)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Encrypt: failed to encrypt: %s", err)

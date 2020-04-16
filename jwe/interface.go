@@ -55,18 +55,17 @@ type Message struct {
 	unprotectedHeaders   Headers       `json:"unprotected,omitempty"`
 }
 
-// ContentEncrypter encrypts the content using the content using the
+// contentEncrypter encrypts the content using the content using the
 // encrypted key
-type ContentEncrypter interface {
+type contentEncrypter interface {
 	Algorithm() jwa.ContentEncryptionAlgorithm
 	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
 }
 
-// MultiEncrypt is the default Encrypter implementation.
-type MultiEncrypt struct {
-	ContentEncrypter ContentEncrypter
+type encryptCtx struct {
+	contentEncrypter contentEncrypter
 	generator        keygen.Generator
-	encrypters       []keyenc.Encrypter
+	keyEncrypters    []keyenc.Encrypter
 }
 
 // populater is an interface for things that may modify the

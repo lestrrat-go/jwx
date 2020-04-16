@@ -2,27 +2,31 @@ package jwe
 
 import (
 	"context"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/internal/debug"
-	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
-	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
 
-// NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
-// for instantiating valid inputs for ContentEncrypter, KeyGenerator,
-// and keyenc.Encrypters.
-func NewMultiEncrypt(cc ContentEncrypter, kg keygen.Generator, ke ...keyenc.Encrypter) *MultiEncrypt {
-	e := &MultiEncrypt{
-		ContentEncrypter: cc,
-		generator:        kg,
-		encrypters:       ke,
-	}
-	return e
+var encryptCtxPool = sync.Pool{
+	New: func() interface{} {
+		return &encryptCtx{}
+	},
+}
+
+func getEncryptCtx() *encryptCtx {
+	return encryptCtxPool.Get().(*encryptCtx)
+}
+
+func releaseEncryptCtx(ctx *encryptCtx) {
+	ctx.contentEncrypter = nil
+	ctx.generator = nil
+	ctx.keyEncrypters = nil
+	encryptCtxPool.Put(ctx)
 }
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
-func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
+func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	bk, err := e.generator.Generate()
 	if err != nil {
 		if debug.Enabled {
@@ -37,13 +41,13 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	protected := NewHeaders()
-	protected.Set(ContentEncryptionKey, e.ContentEncrypter.Algorithm())
+	protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm())
 
 	// In JWE, multiple recipients may exist -- they receive an
 	// encrypted version of the CEK, using their key encryption
 	// algorithm of choice.
-	recipients := make([]Recipient, len(e.encrypters))
-	for i, enc := range e.encrypters {
+	recipients := make([]Recipient, len(e.keyEncrypters))
+	for i, enc := range e.keyEncrypters {
 		r := NewRecipient()
 		r.Headers.Set("alg", enc.Algorithm())
 		if v := enc.KeyID(); v != "" {
@@ -82,7 +86,7 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	// ...on the other hand, there's only one content cipher.
-	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
+	iv, ciphertext, tag, err := e.contentEncrypter.Encrypt(cek, plaintext, aad)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Failed to encrypt: %s", err)
