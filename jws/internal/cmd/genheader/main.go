@@ -241,7 +241,7 @@ func generateHeaders() error {
 		default:
 			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
 		}
-		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
+		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.method, f.name)
 		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
