@@ -166,7 +166,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
-		return nil, ErrInvalidCompactPartsCount
+		return nil, errors.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
 	}
 
 	hdrbuf := buffer.Buffer{}

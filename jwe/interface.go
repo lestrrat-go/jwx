@@ -1,8 +1,6 @@
 package jwe
 
 import (
-	"errors"
-
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
@@ -14,11 +12,6 @@ import (
 
 const (
 	optkeyPrettyJSONFormat = "optkeyPrettyJSONFormat"
-)
-
-// Errors used in JWE
-var (
-	ErrInvalidCompactPartsCount = errors.New("compact JWE format must have five parts")
 )
 
 // Recipient holds the encrypted key and hints to decrypt the key
