@@ -221,11 +221,11 @@ func parseCompact(buf []byte) (*Message, error) {
 	return m, nil
 }
 
-// BuildKeyDecrypter creates a new KeyDecrypter instance from the given
+// buildKeyDecrypter creates a new KeyDecrypter instance from the given
 // parameters. It is used by the Message.Decrypt method to create
 // key decrypter(s) from the given message. `keysize` is only used by
 // some decrypters. Pass the value from ContentCipher.KeySize().
-func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
+func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
 		privkey, ok := key.(*rsa.PrivateKey)

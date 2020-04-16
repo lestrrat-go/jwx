@@ -258,7 +258,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		k, err := BuildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
+		k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("failed to create key decrypter: %s", err)
