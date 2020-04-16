@@ -1,3 +1,5 @@
+//go:generate go run internal/cmd/genheader/main.go
+
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe
 
@@ -10,18 +12,21 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 )
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
-	contentcrypt, err := NewAesCrypt(contentalg)
+	contentcrypt, err := content_crypt.NewAES(contentalg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}
 
-	var keyenc KeyEncrypter
+	var enc keyenc.Encrypter
 	var keysize int
 	switch keyalg {
 	case jwa.RSA1_5:
@@ -29,7 +34,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: *rsa.PublicKey required")
 		}
-		keyenc, err = NewRSAPKCSKeyEncrypt(keyalg, pubkey)
+		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
@@ -39,7 +44,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: *rsa.PublicKey required")
 		}
-		keyenc, err = NewRSAOAEPKeyEncrypt(keyalg, pubkey)
+		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
@@ -49,7 +54,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: []byte required")
 		}
-		keyenc, err = NewKeyWrapEncrypt(keyalg, sharedkey)
+		enc, err = keyenc.NewAESCGM(keyalg, sharedkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}
@@ -64,7 +69,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: *ecdsa.PublicKey required")
 		}
-		keyenc, err = NewEcdhesKeyWrapEncrypt(keyalg, pubkey)
+		enc, err = keyenc.NewECDHESEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
@@ -79,14 +84,19 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if debug.Enabled {
 			debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
 		}
-		return nil, errors.Wrap(ErrUnsupportedAlgorithm, "failed to create encrypter")
+		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
 	if debug.Enabled {
 		debug.Printf("Encrypt: keysize = %d", keysize)
 	}
-	enc := NewMultiEncrypt(contentcrypt, NewRandomKeyGenerate(keysize), keyenc)
-	msg, err := enc.Encrypt(payload)
+	encctx := getEncryptCtx()
+	defer releaseEncryptCtx(encctx)
+
+	encctx.contentEncrypter = contentcrypt
+	encctx.generator = keygen.NewRandom(keysize)
+	encctx.keyEncrypters = []keyenc.Encrypter{enc}
+	msg, err := encctx.Encrypt(payload)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Encrypt: failed to encrypt: %s", err)
@@ -94,7 +104,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
 
-	return CompactSerialize{}.Serialize(msg)
+	return Compact(msg)
 }
 
 // Decrypt takes the key encryption algorithm and the corresponding
@@ -140,11 +150,11 @@ func parseJSON(buf []byte) (*Message, error) {
 
 	// if the "signature" field exist, treat it as a flattened
 	if m.Recipient != nil {
-		if len(m.Message.Recipients) != 0 {
+		if len(m.Message.recipients) != 0 {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		m.Message.Recipients = []Recipient{*m.Recipient}
+		m.Message.recipients = []Recipient{*m.Recipient}
 	}
 
 	return m.Message, nil
@@ -156,7 +166,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
-		return nil, ErrInvalidCompactPartsCount
+		return nil, errors.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
 	}
 
 	hdrbuf := buffer.Buffer{}
@@ -167,88 +177,88 @@ func parseCompact(buf []byte) (*Message, error) {
 		debug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
-	hdr := NewHeader()
+	hdr := NewHeaders()
 	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
 		return nil, errors.Wrap(err, "failed to parse header JSON")
 	}
 
 	// We need the protected header to contain the content encryption
 	// algorithm. XXX probably other headers need to go there too
-	protected := NewEncodedHeader()
-	protected.ContentEncryption = hdr.ContentEncryption
-	hdr.ContentEncryption = ""
+	protected := NewHeaders()
+	protected.Set(ContentEncryptionKey, hdr.ContentEncryption())
+	hdr.Set(ContentEncryptionKey, "")
 
-	enckeybuf := buffer.Buffer{}
+	var enckeybuf buffer.Buffer
 	if err := enckeybuf.Base64Decode(parts[1]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode encryption key")
 	}
 
-	ivbuf := buffer.Buffer{}
+	var ivbuf buffer.Buffer
 	if err := ivbuf.Base64Decode(parts[2]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode iv")
 	}
 
-	ctbuf := buffer.Buffer{}
+	var ctbuf buffer.Buffer
 	if err := ctbuf.Base64Decode(parts[3]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode content")
 	}
 
-	tagbuf := buffer.Buffer{}
+	var tagbuf buffer.Buffer
 	if err := tagbuf.Base64Decode(parts[4]); err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode tag")
 	}
 
 	m := NewMessage()
-	m.AuthenticatedData.SetBytes(hdrbuf.Bytes())
-	m.ProtectedHeader = protected
-	m.Tag = tagbuf
-	m.CipherText = ctbuf
-	m.InitializationVector = ivbuf
-	m.Recipients = []Recipient{
+	m.authenticatedData.SetBytes(hdrbuf.Bytes())
+	m.protectedHeaders = protected
+	m.tag = tagbuf
+	m.cipherText = ctbuf
+	m.initializationVector = ivbuf
+	m.recipients = []Recipient{
 		{
-			Header:       hdr,
-			EncryptedKey: enckeybuf,
+			headers:      hdr,
+			encryptedKey: enckeybuf,
 		},
 	}
 	return m, nil
 }
 
-// BuildKeyDecrypter creates a new KeyDecrypter instance from the given
+// buildKeyDecrypter creates a new KeyDecrypter instance from the given
 // parameters. It is used by the Message.Decrypt method to create
 // key decrypter(s) from the given message. `keysize` is only used by
 // some decrypters. Pass the value from ContentCipher.KeySize().
-func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{}, keysize int) (KeyDecrypter, error) {
+func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
 		privkey, ok := key.(*rsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
-		return NewRSAPKCS15KeyDecrypt(alg, privkey, keysize/2), nil
+		return keyenc.NewRSAPKCS15Decrypt(alg, privkey, keysize/2), nil
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		privkey, ok := key.(*rsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*rsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
-		return NewRSAOAEPKeyDecrypt(alg, privkey)
+		return keyenc.NewRSAOAEPDecrypt(alg, privkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
-			return nil, errors.New("[]byte is required as the key to build this key decrypter")
+			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
-		return NewKeyWrapEncrypt(alg, sharedkey)
+		return keyenc.NewAESCGM(alg, sharedkey)
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		epkif, err := h.Get("epk")
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get 'epk' field")
+		epkif, ok := h.Get(EphemeralPublicKeyKey)
+		if !ok {
+			return nil, errors.New("failed to get 'epk' field")
 		}
 		if epkif == nil {
-			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
 		epk, ok := epkif.(*jwk.ECDSAPublicKey)
 		if !ok {
-			return nil, errors.New("'epk' header is required as the key to build this key decrypter")
+			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
 		pubkey, err := epk.Materialize()
@@ -258,28 +268,21 @@ func BuildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h *Header, key interface{
 
 		privkey, ok := key.(*ecdsa.PrivateKey)
 		if !ok {
-			return nil, errors.New("*ecdsa.PrivateKey is required as the key to build this key decrypter")
+			return nil, errors.Errorf("*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
-		apuif, err := h.Get("apu")
-		if err != nil {
-			return nil, errors.New("'apu' key is required for this key decrypter")
-		}
-		apu, ok := apuif.(buffer.Buffer)
-		if !ok {
-			return nil, errors.New("'apu' key is required for this key decrypter")
+		var apuData, apvData []byte
+		apu := h.AgreementPartyUInfo()
+		if apu.Len() > 0 {
+			apuData = apu.Bytes()
 		}
 
-		apvif, err := h.Get("apv")
-		if err != nil {
-			return nil, errors.New("'apv' key is required for this key decrypter")
-		}
-		apv, ok := apvif.(buffer.Buffer)
-		if !ok {
-			return nil, errors.New("'apv' key is required for this key decrypter")
+		apv := h.AgreementPartyVInfo()
+		if apv.Len() > 0 {
+			apuData = apu.Bytes()
 		}
 
-		return NewEcdhesKeyWrapDecrypt(alg, pubkey.(*ecdsa.PublicKey), apu.Bytes(), apv.Bytes(), privkey), nil
+		return keyenc.NewECDHESDecrypt(alg, pubkey.(*ecdsa.PublicKey), apuData, apvData, privkey), nil
 	}
 
-	return nil, NewErrUnsupportedAlgorithm(string(alg), "key decryption")
+	return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 }

@@ -1,25 +1,33 @@
 package jwe
 
 import (
+	"context"
+	"sync"
+
 	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/pkg/errors"
 )
 
-// NewMultiEncrypt creates a new Encrypt struct. The caller is responsible
-// for instantiating valid inputs for ContentEncrypter, KeyGenerator,
-// and KeyEncrypters.
-func NewMultiEncrypt(cc ContentEncrypter, kg KeyGenerator, ke ...KeyEncrypter) *MultiEncrypt {
-	e := &MultiEncrypt{
-		ContentEncrypter: cc,
-		KeyGenerator:     kg,
-		KeyEncrypters:    ke,
-	}
-	return e
+var encryptCtxPool = sync.Pool{
+	New: func() interface{} {
+		return &encryptCtx{}
+	},
+}
+
+func getEncryptCtx() *encryptCtx {
+	return encryptCtxPool.Get().(*encryptCtx)
+}
+
+func releaseEncryptCtx(ctx *encryptCtx) {
+	ctx.contentEncrypter = nil
+	ctx.generator = nil
+	ctx.keyEncrypters = nil
+	encryptCtxPool.Put(ctx)
 }
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
-func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
-	bk, err := e.KeyGenerator.KeyGenerate()
+func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
+	bk, err := e.generator.Generate()
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Failed to generate key: %s", err)
@@ -32,29 +40,29 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 		debug.Printf("Encrypt: generated cek len = %d", len(cek))
 	}
 
-	protected := NewEncodedHeader()
-	protected.Set("enc", e.ContentEncrypter.Algorithm())
+	protected := NewHeaders()
+	protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm())
 
 	// In JWE, multiple recipients may exist -- they receive an
 	// encrypted version of the CEK, using their key encryption
 	// algorithm of choice.
-	recipients := make([]Recipient, len(e.KeyEncrypters))
-	for i, enc := range e.KeyEncrypters {
+	recipients := make([]Recipient, len(e.keyEncrypters))
+	for i, enc := range e.keyEncrypters {
 		r := NewRecipient()
-		r.Header.Set("alg", enc.Algorithm())
-		if v := enc.Kid(); v != "" {
-			r.Header.Set("kid", v)
+		r.headers.Set("alg", enc.Algorithm())
+		if v := enc.KeyID(); v != "" {
+			r.headers.Set("kid", v)
 		}
-		enckey, err := enc.KeyEncrypt(cek)
+		enckey, err := enc.Encrypt(cek)
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("Failed to encrypt key: %s", err)
 			}
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
-		r.EncryptedKey = enckey.Bytes()
-		if hp, ok := enckey.(HeaderPopulater); ok {
-			hp.HeaderPopulate(r.Header)
+		r.encryptedKey = enckey.Bytes()
+		if hp, ok := enckey.(populater); ok {
+			hp.Populate(r.headers)
 		}
 		if debug.Enabled {
 			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
@@ -65,19 +73,20 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		protected.Header, err = protected.Header.Merge(recipients[0].Header)
+		h, err := mergeHeaders(context.TODO(), protected, recipients[0].headers)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}
+		protected = h
 	}
 
-	aad, err := protected.Base64Encode()
+	aad, err := protected.Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 	}
 
 	// ...on the other hand, there's only one content cipher.
-	iv, ciphertext, tag, err := e.ContentEncrypter.Encrypt(cek, plaintext, aad)
+	iv, ciphertext, tag, err := e.contentEncrypter.Encrypt(cek, plaintext, aad)
 	if err != nil {
 		if debug.Enabled {
 			debug.Printf("Failed to encrypt: %s", err)
@@ -94,12 +103,12 @@ func (e MultiEncrypt) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	msg := NewMessage()
-	msg.AuthenticatedData.Base64Decode(aad)
-	msg.CipherText = ciphertext
-	msg.InitializationVector = iv
-	msg.ProtectedHeader = protected
-	msg.Recipients = recipients
-	msg.Tag = tag
+	msg.authenticatedData.Base64Decode(aad)
+	msg.cipherText = ciphertext
+	msg.initializationVector = iv
+	msg.protectedHeaders = protected
+	msg.recipients = recipients
+	msg.tag = tag
 
 	return msg, nil
 }

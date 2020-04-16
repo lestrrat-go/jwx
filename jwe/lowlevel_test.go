@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,12 +54,12 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 
 	const compactExpected = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ.AxY8DCtDaGlsbGljb3RoZQ.KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY.U0m_YmjN04DJvceFICbCVQ`
 
-	k, err := NewKeyWrapEncrypt(jwa.A128KW, sharedkey)
+	k, err := keyenc.NewAESCGM(jwa.A128KW, sharedkey)
 	if !assert.NoError(t, err, "Create key wrap") {
 		return
 	}
 
-	enckey, err := k.KeyEncrypt(cek)
+	enckey, err := k.Encrypt(cek)
 	if !assert.NoError(t, err, "Failed to encrypt key") {
 		return
 	}
@@ -64,13 +67,13 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	cipher, err := NewAesContentCipher(jwa.A128CBC_HS256)
+	cipher, err := cipher.NewAES(jwa.A128CBC_HS256)
 	if !assert.NoError(t, err, "NewAesContentCipher is successful") {
 		return
 	}
-	cipher.NonceGenerator = StaticKeyGenerate(iv)
+	cipher.NonceGenerator = keygen.Static(iv)
 
-	iv, encrypted, tag, err := cipher.encrypt(cek, plaintext, aad)
+	iv, encrypted, tag, err := cipher.Encrypt(cek, plaintext, aad)
 	if !assert.NoError(t, err, "encrypt() successful") {
 		return
 	}
@@ -83,7 +86,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 		return
 	}
 
-	data, err := cipher.decrypt(cek, iv, encrypted, tag, aad)
+	data, err := cipher.Decrypt(cek, iv, encrypted, tag, aad)
 	if !assert.NoError(t, err, "decrypt successful") {
 		return
 	}
@@ -93,27 +96,27 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	}
 
 	r := NewRecipient()
-	r.Header.Set("alg", jwa.A128KW)
-	r.EncryptedKey = enckey.Bytes()
+	r.headers.Set(AlgorithmKey, jwa.A128KW)
+	r.encryptedKey = enckey.Bytes()
 
-	protected := NewEncodedHeader()
-	protected.Set("enc", jwa.A128CBC_HS256)
+	protected := NewHeaders()
+	protected.Set(ContentEncryptionKey, jwa.A128CBC_HS256)
 
 	msg := NewMessage()
-	msg.ProtectedHeader = protected
-	msg.AuthenticatedData = aad
-	msg.CipherText = ciphertext
-	msg.InitializationVector = iv
-	msg.Tag = tag
-	msg.Recipients = []Recipient{*r}
+	msg.protectedHeaders = protected
+	msg.authenticatedData = aad
+	msg.cipherText = ciphertext
+	msg.initializationVector = iv
+	msg.tag = tag
+	msg.recipients = []Recipient{*r}
 
-	serialized, err := CompactSerialize{}.Serialize(msg)
+	serialized, err := Compact(msg)
 	if !assert.NoError(t, err, "compact serialization is successful") {
 		return
 	}
 
 	if !assert.Equal(t, compactExpected, string(serialized), "compact serialization matches") {
-		serialized, err = JSONSerialize{Pretty: true}.Serialize(msg)
+		serialized, err = JSON(msg, WithPrettyJSONFormat(true))
 		if !assert.NoError(t, err, "JSON serialization is successful") {
 			return
 		}

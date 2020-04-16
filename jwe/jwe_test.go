@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"net/url"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/rsautil"
@@ -60,7 +59,7 @@ func TestParse_Compact(t *testing.T) {
 		return
 	}
 
-	if !assert.Len(t, msg.Recipients, 1, "There is exactly 1 recipient") {
+	if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
 		return
 	}
 }
@@ -90,7 +89,6 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	if !assert.NoError(t, err, "parse successful") {
 		return
 	}
-	t.Logf("------ ParseString done")
 
 	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, privkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
@@ -101,13 +99,13 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, err := jwe.CompactSerialize{}.Serialize(msg)
+	jsonbuf, err := jwe.Compact(msg)
 	if !assert.NoError(t, err, "Compact serialize succeeded") {
 		return
 	}
 
 	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
-		jsonbuf, _ = jwe.JSONSerialize{Pretty: true}.Serialize(msg)
+		jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
 		t.Logf("%s", jsonbuf)
 		return
 	}
@@ -244,32 +242,50 @@ func TestEncode_ECDHES(t *testing.T) {
 	t.Logf("%s", decrypted)
 }
 
-func TestEncode_ECDH_ES_A256KW_A192KW_A128KW(t *testing.T) {
+func TestEncode_ECDH(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
 	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if !assert.NoError(t, err, "ecdsa key generated") {
 		return
 	}
 
-	algorithms := []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES_A256KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A128KW}
+	algorithms := []jwa.KeyEncryptionAlgorithm{
+		jwa.ECDH_ES_A256KW,
+		jwa.ECDH_ES_A192KW,
+		jwa.ECDH_ES_A128KW,
+	}
 
-	for i := 0; i < len(algorithms); i++ {
-		encrypted, err := jwe.Encrypt(plaintext, algorithms[i], &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-		if !assert.NoError(t, err, "Encrypt succeeds") {
-			return
-		}
+	for _, alg := range algorithms {
+		t.Run(alg.String(), func(t *testing.T) {
+			t.Parallel()
 
-		t.Logf("encrypted = %s", encrypted)
+			encrypted, err := jwe.Encrypt(plaintext, alg, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+			if !assert.NoError(t, err, "Encrypt succeeds") {
+				return
+			}
 
-		msg, _ := jwe.Parse(encrypted)
-		jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
-		t.Logf("%s", jsonbuf)
+			t.Logf("encrypted = %s", encrypted)
 
-		decrypted, err := jwe.Decrypt(encrypted, algorithms[i], privkey)
-		if !assert.NoError(t, err, "Decrypt succeeds") {
-			return
-		}
-		t.Logf("%s", decrypted)
+			msg, err := jwe.Parse(encrypted)
+			if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+				return
+			}
+
+			{
+				buf, _ := json.MarshalIndent(msg, "", "  ")
+				t.Logf("%s", buf)
+			}
+			{
+				buf, _ := json.MarshalIndent(msg.ProtectedHeaders(), "", "  ")
+				t.Logf("%s", buf)
+			}
+
+			decrypted, err := jwe.Decrypt(encrypted, alg, privkey)
+			if !assert.NoError(t, err, "Decrypt succeeds") {
+				return
+			}
+			t.Logf("%s", decrypted)
+		})
 	}
 }
 
@@ -286,7 +302,7 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 }
 
 func TestHeaders(t *testing.T) {
-	h := jwe.NewHeader()
+	h := jwe.NewHeaders()
 
 	data := map[string]struct {
 		Value    interface{}
@@ -299,20 +315,14 @@ func TestHeaders(t *testing.T) {
 		"x5t":     {Value: "x5t blah"},
 		"x5t#256": {Value: "x5t#256 blah"},
 		"crit":    {Value: []string{"crit blah"}},
-		"jku": {
-			Value:    "http://github.com/lestrrat-go/jwx",
-			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
-		},
-		"x5u": {
-			Value:    "http://github.com/lestrrat-go/jwx",
-			Expected: &url.URL{Scheme: "http", Host: "github.com", Path: "/lestrrat-go/jwx"},
-		},
+		"jku":     {Value: "http://github.com/lestrrat-go/jwx"},
+		"x5u":     {Value: "http://github.com/lestrrat-go/jwx"},
 	}
 
 	for name, testcase := range data {
 		h.Set(name, testcase.Value)
-		got, err := h.Get(name)
-		if !assert.NoError(t, err, "value should exist") {
+		got, ok := h.Get(name)
+		if !assert.True(t, ok, "value should exist") {
 			return
 		}
 

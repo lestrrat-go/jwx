@@ -1,13 +1,14 @@
-package jwe
+package cipher_test
 
 import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAesContentCipher(t *testing.T) {
+func TestAES(t *testing.T) {
 	algs := []jwa.ContentEncryptionAlgorithm{
 		jwa.A128GCM,
 		jwa.A192GCM,
@@ -17,7 +18,7 @@ func TestAesContentCipher(t *testing.T) {
 		jwa.A256CBC_HS512,
 	}
 	for _, alg := range algs {
-		c, err := NewAesContentCipher(alg)
+		c, err := cipher.NewAES(alg)
 		if !assert.NoError(t, err, "BuildCipher for %s succeeds", alg) {
 			return
 		}
