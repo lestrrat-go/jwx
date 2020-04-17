@@ -86,6 +86,7 @@ func TestRoundtrip(t *testing.T) {
 
 	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
 	for _, alg := range hmacAlgorithms {
+		alg := alg
 		t.Run("HMAC "+alg.String(), func(t *testing.T) {
 			signed, err := jws.Sign(payload, alg, sharedkey)
 			if !assert.NoError(t, err, "Sign succeeds") {
@@ -120,6 +121,7 @@ func TestRoundtrip(t *testing.T) {
 			}
 		})
 		for _, alg := range hmacAlgorithms {
+			alg := alg
 			t.Run("Verify "+alg.String(), func(t *testing.T) {
 				verified, err := jws.Verify(signed, alg, sharedkey)
 				if !assert.NoError(t, err, "Verify succeeded") {

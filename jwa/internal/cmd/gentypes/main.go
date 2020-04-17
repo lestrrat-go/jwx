@@ -292,6 +292,7 @@ func _main() error {
 	})
 
 	for _, t := range typs {
+		t := t
 		sort.Slice(t.elements, func(i, j int) bool {
 			return t.elements[i].name < t.elements[j].name
 		})

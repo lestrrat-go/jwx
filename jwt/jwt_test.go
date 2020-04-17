@@ -191,6 +191,7 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.Title, func(t *testing.T) {
 			var token jwt.Token
 			if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`) {
@@ -236,7 +237,6 @@ func TestGH52(t *testing.T) {
 }
 
 func TestUnmarshalJSON(t *testing.T) {
-
 	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
 		var t1 jwt.Token
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {

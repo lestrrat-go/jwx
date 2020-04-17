@@ -440,6 +440,8 @@ func TestAppendix(t *testing.T) {
 			}
 
 			for k, expected := range data.headers {
+				k := k
+				expected := expected
 				t.Run(k, func(t *testing.T) {
 					if v, ok := key.Get(k); assert.True(t, ok, "getting %s from jwk.Key should succeed", k) {
 						if !assert.Equal(t, expected, v, "value for %s should match", k) {

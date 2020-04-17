@@ -17,6 +17,7 @@ func TestDate(t *testing.T) {
 		// use of "127" is just to allow use of int8's
 		now := time.Unix(127, 0).UTC()
 		for _, ut := range []interface{}{int64(127), int32(127), int16(127), int8(127), float32(127), float64(127), json.Number("127")} {
+			ut := ut
 			t.Run(fmt.Sprintf("%T", ut), func(t *testing.T) {
 				var t1 jwt.Token
 				err := t1.Set(jwt.IssuedAtKey, ut)
