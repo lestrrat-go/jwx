@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -131,12 +131,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"bytes", "encoding/json", "time", "", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
-		if pkg == "" {
-			fmt.Fprint(&buf, "\n")
-			continue
-		}
-
+	for _, pkg := range []string{"bytes", "encoding/json", "time", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
@@ -374,7 +369,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		log.Printf("%s", buf.Bytes())
 		log.Printf("%s", err)

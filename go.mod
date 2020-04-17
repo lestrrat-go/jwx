@@ -6,4 +6,5 @@ require (
 	github.com/lestrrat-go/iter v0.0.0-20200413114256-97a426f98b36
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1
+	golang.org/x/tools v0.0.0-20200417140056-c07e33ef3290
 )
