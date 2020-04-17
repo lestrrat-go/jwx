@@ -96,8 +96,8 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	}
 
 	r := NewRecipient()
-	r.headers.Set(AlgorithmKey, jwa.A128KW)
-	r.encryptedKey = enckey.Bytes()
+	r.Headers().Set(AlgorithmKey, jwa.A128KW)
+	r.SetEncryptedKey(enckey.Bytes())
 
 	protected := NewHeaders()
 	protected.Set(ContentEncryptionKey, jwa.A128CBC_HS256)
@@ -108,7 +108,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	msg.cipherText = ciphertext
 	msg.initializationVector = iv
 	msg.tag = tag
-	msg.recipients = []Recipient{*r}
+	msg.recipients = []Recipient{r}
 
 	serialized, err := Compact(msg)
 	if !assert.NoError(t, err, "compact serialization is successful") {

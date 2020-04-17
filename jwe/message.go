@@ -15,18 +15,52 @@ import (
 )
 
 // NewRecipient creates a Recipient object
-func NewRecipient() *Recipient {
-	return &Recipient{
+func NewRecipient() Recipient {
+	return &stdRecipient{
 		headers: NewHeaders(),
 	}
 }
 
-func (r *Recipient) Headers() Headers {
+func (r *stdRecipient) SetHeaders(h Headers) error {
+	r.headers = h
+	return nil
+}
+
+func (r *stdRecipient) SetEncryptedKey(v interface{}) error {
+	return r.encryptedKey.Accept(v)
+}
+
+func (r *stdRecipient) Headers() Headers {
 	return r.headers
 }
 
-func (r *Recipient) EncryptedKey() buffer.Buffer {
+func (r *stdRecipient) EncryptedKey() buffer.Buffer {
 	return r.encryptedKey
+}
+
+type recipientMarshalProxy struct {
+	Headers      Headers       `json:"header"`
+	EncryptedKey buffer.Buffer `json:"encrypted_key"`
+}
+
+func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
+	var proxy recipientMarshalProxy
+	proxy.Headers = NewHeaders()
+	if err := json.Unmarshal(buf, &proxy); err != nil {
+		return errors.Wrap(err, `failed to unmarshal json into recipient`)
+	}
+
+	r.headers = proxy.Headers
+	r.encryptedKey = proxy.EncryptedKey
+	return nil
+}
+
+func (r *stdRecipient) MarshalJSON() ([]byte, error) {
+	var proxy recipientMarshalProxy
+	proxy.Headers = r.headers
+	proxy.EncryptedKey = r.encryptedKey
+
+	return json.Marshal(proxy)
 }
 
 func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
@@ -242,9 +276,9 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	var lastError error
 	for _, recipient := range m.recipients {
 		if debug.Enabled {
-			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.headers.Algorithm())
+			debug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers().Algorithm())
 		}
-		if recipient.headers.Algorithm() != alg {
+		if recipient.Headers().Algorithm() != alg {
 			continue
 		}
 
@@ -257,7 +291,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		h2, err = mergeHeaders(context.TODO(), h2, recipient.headers)
+		h2, err = mergeHeaders(context.TODO(), h2, recipient.Headers())
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("Failed to merge! %s", err)
@@ -275,7 +309,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		cek, err := k.Decrypt(recipient.encryptedKey.Bytes())
+		cek, err := k.Decrypt(recipient.EncryptedKey().Bytes())
 		if err != nil {
 			if debug.Enabled {
 				debug.Printf("failed to decrypt key: %s", err)
