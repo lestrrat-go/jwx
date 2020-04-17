@@ -132,6 +132,10 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\npackage jwt")
 	fmt.Fprintf(&buf, "\n\nimport (")
 	for _, pkg := range []string{"bytes", "encoding/json", "time", "", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
+		if pkg == "" {
+			fmt.Fprint(&buf, "\n")
+		}
+
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)") // end of import
