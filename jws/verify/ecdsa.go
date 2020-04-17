@@ -24,8 +24,7 @@ func init() {
 }
 
 func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
-	return ecdsaVerifyFunc(func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
-
+	return func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
 		r, s := &big.Int{}, &big.Int{}
 		n := len(signature) / 2
 		r.SetBytes(signature[:n])
@@ -38,7 +37,7 @@ func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 			return errors.New(`failed to verify signature using ecdsa`)
 		}
 		return nil
-	})
+	}
 }
 
 func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSAVerifier, error) {

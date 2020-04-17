@@ -230,7 +230,6 @@ func TestRoundtrip(t *testing.T) {
 			return
 		}
 		ks1.Keys = append(ks1.Keys, key)
-
 	}
 
 	buf, err := json.MarshalIndent(ks1, "", "  ")

@@ -163,7 +163,6 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
-
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64

@@ -6,7 +6,6 @@ import (
 )
 
 func TestStringList_Accept(t *testing.T) {
-
 	var x jwt.StringList
 	interfaceList := make([]interface{}, 0)
 	interfaceList = append(interfaceList, "first")

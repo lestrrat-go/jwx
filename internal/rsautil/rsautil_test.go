@@ -13,9 +13,7 @@ import (
 )
 
 func TestRSAUtil(t *testing.T) {
-
 	t.Run("RoundTripNewRawKeyFromPrivateKey", func(t *testing.T) {
-
 		privateKey, err := rsa.GenerateKey(rand.Reader, 512)
 		if err != nil {
 			t.Fatalf("Error generating private key: %s", err.Error())
@@ -63,5 +61,4 @@ D08qNLyrdkt+bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ+G/xBniIqbw
 			t.Fatal("Mismatched public keys")
 		}
 	})
-
 }

@@ -26,6 +26,5 @@ func TestHMACVerify(t *testing.T) {
 		if err == nil {
 			t.Fatal("HMAC Verification should fail")
 		}
-
 	})
 }

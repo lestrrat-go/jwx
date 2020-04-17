@@ -27,7 +27,6 @@ func TestBuffer_Convert(t *testing.T) {
 	if !assert.Equal(t, []byte(v2), b.Bytes()) {
 		return
 	}
-
 }
 
 func TestBuffer_Base64Encode(t *testing.T) {

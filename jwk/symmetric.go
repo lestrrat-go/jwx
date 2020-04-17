@@ -45,7 +45,6 @@ func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
-
 	const kKey = `k`
 
 	kbuf, err := getRequiredKey(m, kKey)
@@ -67,7 +66,6 @@ func (s *SymmetricKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (s SymmetricKey) MarshalJSON() (buf []byte, err error) {
-
 	m := make(map[string]interface{})
 	if err := s.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate symmetric key values`)
@@ -77,7 +75,6 @@ func (s SymmetricKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (s SymmetricKey) PopulateMap(m map[string]interface{}) (err error) {
-
 	if err := s.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}

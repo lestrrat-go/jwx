@@ -18,7 +18,6 @@ import (
 )
 
 func TestJWTParse(t *testing.T) {
-
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

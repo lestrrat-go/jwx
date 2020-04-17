@@ -150,7 +150,6 @@ func TestECDSA(t *testing.T) {
 		ellipticCurveAlgorithm := eCDSAPrivateKey.Curve()
 		if ellipticCurveAlgorithm.String() != "P-256" {
 			t.Fatal("ellipticCurveAlgorithm does not match")
-
 		}
 		pubKey, err := set.Keys[0].(*jwk.ECDSAPrivateKey).PublicKey()
 		if !assert.NoError(t, err, `should PublicKey succeed`) {

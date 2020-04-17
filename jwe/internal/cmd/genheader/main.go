@@ -327,7 +327,6 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\nreturn nil, false")
 		fmt.Fprintf(&buf, "\n}") // end if h.%s == nil
 		fmt.Fprintf(&buf, "\nreturn v, true")
-
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")

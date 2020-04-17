@@ -145,7 +145,6 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 // multiple signers.
 //
 func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, headers []byte) ([]byte, error) {
-
 	signer, err := sign.New(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create signer`)
@@ -249,7 +248,6 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // control of the verification process, manually call `Parse`, generate a
 // verifier, and call `Verify` on the parsed JWS message object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
-
 	verifier, err := verify.New(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
@@ -355,7 +353,6 @@ func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string, opt
 
 // VerifyWithJWK verifies the JWS message using the specified JWK
 func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
-
 	keyval, err := key.Materialize()
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to materialize jwk.Key`)
@@ -403,7 +400,6 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]b
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 func Parse(src io.Reader) (m *Message, err error) {
-
 	rdr := bufio.NewReader(src)
 	var first rune
 	for {
@@ -584,7 +580,6 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 
 // parseCompact parses a JWS value serialized via compact serialization.
 func parseCompact(rdr io.Reader) (m *Message, err error) {
-
 	protected, payload, signature, err := SplitCompact(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
