@@ -19,7 +19,7 @@ const (
 	NonceSize = 16
 )
 
-type AesCbcHmac struct {
+type Hmac struct {
 	blockCipher  cipher.Block
 	hash         func() hash.Hash
 	keysize      int
@@ -29,7 +29,7 @@ type AesCbcHmac struct {
 
 type BlockCipherFunc func([]byte) (cipher.Block, error)
 
-func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
+func New(key []byte, f BlockCipherFunc) (*Hmac, error) {
 	keysize := len(key) / 2
 	ikey := key[:keysize]
 	ekey := key[keysize:]
@@ -58,7 +58,7 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 		return nil, errors.Errorf("unsupported key size %d", keysize)
 	}
 
-	return &AesCbcHmac{
+	return &Hmac{
 		blockCipher:  bc,
 		hash:         hfunc,
 		integrityKey: ikey,
@@ -68,16 +68,16 @@ func New(key []byte, f BlockCipherFunc) (*AesCbcHmac, error) {
 }
 
 // NonceSize fulfills the crypto.AEAD interface
-func (c AesCbcHmac) NonceSize() int {
+func (c Hmac) NonceSize() int {
 	return NonceSize
 }
 
 // Overhead fulfills the crypto.AEAD interface
-func (c AesCbcHmac) Overhead() int {
+func (c Hmac) Overhead() int {
 	return c.blockCipher.BlockSize() + c.tagsize
 }
 
-func (c AesCbcHmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
+func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
 	if debug.Enabled {
 		debug.Printf("ComputeAuthTag: aad        = %x (%d)\n", aad, len(aad))
 		debug.Printf("ComputeAuthTag: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
@@ -116,7 +116,7 @@ func ensureSize(dst []byte, n int) []byte {
 }
 
 // Seal fulfills the crypto.AEAD interface
-func (c AesCbcHmac) Seal(dst, nonce, plaintext, data []byte) []byte {
+func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ctlen := len(plaintext)
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)
@@ -143,7 +143,7 @@ func (c AesCbcHmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 }
 
 // Open fulfills the crypto.AEAD interface
-func (c AesCbcHmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
+func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	if len(ciphertext) < c.keysize {
 		return nil, errors.New("invalid ciphertext (too short)")
 	}

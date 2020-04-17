@@ -29,7 +29,7 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 		keyBytes := curveBits / 8
 		// Curve bits do not need to be a multiple of 8.
 		if curveBits%8 > 0 {
-			keyBytes += 1
+			keyBytes++
 		}
 		h := hash.New()
 		h.Write(payload)
