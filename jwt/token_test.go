@@ -95,8 +95,8 @@ func TestHeader(t *testing.T) {
 		if issuer != "" {
 			t.Fatalf("Get Issuer should return empty string")
 		}
-		jwtId := h.JwtID()
-		if jwtId != "" {
+		jwtID := h.JwtID()
+		if jwtID != "" {
 			t.Fatalf("Get JWT Id should return empty string")
 		}
 	})

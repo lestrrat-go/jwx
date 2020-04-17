@@ -26,16 +26,16 @@ func (m Message) LookupSignature(kid string) []*Signature {
 	var sigs []*Signature
 	for _, sig := range m.signatures {
 		if hdr := sig.PublicHeaders(); hdr != nil {
-			hdrKeyId := hdr.KeyID()
-			if hdrKeyId == kid {
+			hdrKeyID := hdr.KeyID()
+			if hdrKeyID == kid {
 				sigs = append(sigs, sig)
 				continue
 			}
 		}
 
 		if hdr := sig.ProtectedHeaders(); hdr != nil {
-			hdrKeyId := hdr.KeyID()
-			if hdrKeyId == kid {
+			hdrKeyID := hdr.KeyID()
+			if hdrKeyID == kid {
 				sigs = append(sigs, sig)
 				continue
 			}
