@@ -107,7 +107,7 @@ func TestHeader(t *testing.T) {
 		}
 
 		var h jwk.StandardHeaders
-		for k, _ := range values {
+		for k := range values {
 			err := h.ExtractMap(values)
 			if err == nil {
 				t.Fatalf("Extracting %s value should have failed", k)
