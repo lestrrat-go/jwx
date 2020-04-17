@@ -158,6 +158,9 @@ func TestVerifyWithJWKSet(t *testing.T) {
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
+	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
+		return
+	}
 
 	verified, err = jws.VerifyWithJWK(buf, jwkKey)
 	if !assert.NoError(t, err, "Verify is successful") {
