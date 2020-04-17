@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRecipient(t *testing.T) {
@@ -16,7 +16,7 @@ func TestRecipient(t *testing.T) {
 		if !assert.NoError(t, json.Unmarshal([]byte(src), r1), `json.Unmarshal should succeed`) {
 			return
 		}
-		
+
 		buf, err := json.Marshal(r1)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return

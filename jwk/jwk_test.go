@@ -561,7 +561,7 @@ func TestFetch(t *testing.T) {
 	})
 }
 
-func TestGitHubIssue136(t*testing.T) {
+func TestGitHubIssue136(t *testing.T) {
 	// JWK key from https://cognito-identity.amazonaws.com/.well-known/jwks_uri
 	// as of Feb 25 2020
 	const src = `{"keys":[
@@ -577,7 +577,7 @@ func TestGitHubIssue136(t*testing.T) {
 {"kty":"RSA","alg":"RS512","use":"sig","kid":"us-east-11","n":"AIvLE/h4h9XdAVyy0C7fn1ZXZ3Gt6YT2LPsHsoCUGgPAVJnLJjPRj3dSI2UmlWaLacSoHYeFABfxj8YROnE9fpiGto5LcdyfuRKET9Nv5UaZp0kMSSoF7wXinp07ACUbn+ZE3ImQR16r1/Q/j3AD4CmN7gVjk5+EZzVCTQtAzJZJ8/EgCPFE4YA0Q2UgFtBjZnt4SI8TljikBqUmNDVKyjh2yI+m4fQO/LZOEaI/aGOWYen4RrO+/3hTYk73b+oFCPnIp1sLNUmdAHzjIgWYCC2qBwC+tRWi7065ea2KYj+kNNFevXFYMrph3U1mxqDZSzIOvEXIlZqlhOoOc5NmWMc=","e":"AQAB"},
 {"kty":"RSA","alg":"RS512","use":"sig","kid":"us-east-21","n":"AIrl+VgezCW0WK81WBUNl6CIuuP+nI7TnKgKvNKMdpuHmUhdwDJwxLr+Qe4G6jQSpHNzuwRoQ8zPxkkyeHP5722tmtjUFBtx6GJ6YCIGAIGNuFRIr3uWWLUVF8IVbLswq/XbuvN8oJNl0039AlUOgTI0SdHAGenQjOHTA2Mx274JDrK85UNC1euAzcEEdYmBHWE/llRLmjy5JexKS/i+B23S+18FA+W5s2+kDCnaIn3iHbMUzsoRdn616C738KxiCHIGYP9JSwYy/2IqqSeRE/0qLAxZ1cYU3UkihTSkzsCNnvhqOf3Hn5mR4onfh4iWEghV8lCS6wywFoxAuPMG6Uc=","e":"AQAB"},
 {"kty":"RSA","alg":"RS512","use":"sig","kid":"us-west-21","n":"AJM4O/eTg8U00rbo/xXwECyAmpF8EUvbBj+nMvebhExjWyNhaEB27QvESbdM3FS+k8opxC5TKVqNCY8GGVAvHkTh5+BsaIeFrJLj22rXXs6E3bse5MBlmUHCIy8PQaZ/BpJWvlSz7IoprdfhgfOGvT96GgXouSytanvkU4A8a3jcmy2ZmdHSdeGLuAYQtdz+xP8zt2s2v2evFY/bEGQpd0EBlWsQKZvtZ0DJ1CtA/SJixbdhCj7bGh322QqgA8im+s3AAnD4I/UgfvZEAbkH6zqYgWTq5QnMsoizESf+6EmSDaJA4Bbkv1ffmcHuTEUwKnKZ+d7G5YXWwWndXu4tleM=","e":"AQAB"}]}`
-  set, err := jwk.ParseString(src)
+	set, err := jwk.ParseString(src)
 	if !assert.NoError(t, err, `parse should have succeeded`) {
 		return
 	}

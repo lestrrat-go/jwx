@@ -14,3 +14,6 @@ cover:
 
 viewcover:
 	go tool cover -html=coverage.out
+
+imports:
+	goimports -w ./

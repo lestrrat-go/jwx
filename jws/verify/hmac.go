@@ -2,6 +2,7 @@ package verify
 
 import (
 	"crypto/hmac"
+
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/pkg/errors"

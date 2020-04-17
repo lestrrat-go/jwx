@@ -4,9 +4,10 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
+	"time"
+
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
-	"time"
 )
 
 // Key names for standard claims
