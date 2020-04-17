@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
+	"github.com/stretchr/testify/assert"
 )
 
 func mustHexDecode(s string) []byte {
