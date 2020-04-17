@@ -124,12 +124,12 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	return Parse(res.Body)
 }
 
-func (set *Set) UnmarshalJSON(data []byte) error {
+func (s *Set) UnmarshalJSON(data []byte) error {
 	v, err := ParseBytes(data)
 	if err != nil {
 		return errors.Wrap(err, `failed to parse jwk.Set`)
 	}
-	*set = *v
+	*s = *v
 	return nil
 }
 
