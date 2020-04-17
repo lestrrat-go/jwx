@@ -57,5 +57,5 @@ func (pb PadBuffer) Unpad(n int) (PadBuffer, error) {
 		return pb, errors.New("invalid padding")
 	}
 
-	return PadBuffer(pb[:pb.Len()-int(last)]), nil
+	return pb[:pb.Len()-int(last)], nil
 }
