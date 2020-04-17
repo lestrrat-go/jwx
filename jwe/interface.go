@@ -15,9 +15,16 @@ const (
 )
 
 // Recipient holds the encrypted key and hints to decrypt the key
-type Recipient struct {
-	headers      Headers
-	encryptedKey buffer.Buffer
+type Recipient interface {
+	Headers() Headers
+	EncryptedKey() buffer.Buffer
+	SetHeaders(Headers) error
+	SetEncryptedKey(interface{}) error
+}
+
+type stdRecipient struct {
+	headers      Headers       `json:"header"`
+	encryptedKey buffer.Buffer `json:"encrypted_key"`
 }
 
 // Message contains the entire encrypted JWE message

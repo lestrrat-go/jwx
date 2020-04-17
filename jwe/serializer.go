@@ -50,7 +50,7 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge unprotected header")
 	}
-	hcopy, err = mergeHeaders(context.TODO(), hcopy, recipient.headers)
+	hcopy, err = mergeHeaders(context.TODO(), hcopy, recipient.Headers())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge recipient header")
 	}
@@ -60,7 +60,7 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode header")
 	}
 
-	encryptedKey, err := recipient.encryptedKey.Base64Encode()
+	encryptedKey, err := recipient.EncryptedKey().Base64Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode encryption key")
 	}

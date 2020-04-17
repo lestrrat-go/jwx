@@ -49,9 +49,9 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	recipients := make([]Recipient, len(e.keyEncrypters))
 	for i, enc := range e.keyEncrypters {
 		r := NewRecipient()
-		r.headers.Set("alg", enc.Algorithm())
+		r.Headers().Set(AlgorithmKey, enc.Algorithm())
 		if v := enc.KeyID(); v != "" {
-			r.headers.Set("kid", v)
+			r.Headers().Set(KeyIDKey, v)
 		}
 		enckey, err := enc.Encrypt(cek)
 		if err != nil {
@@ -60,20 +60,20 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 			}
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
-		r.encryptedKey = enckey.Bytes()
+		r.SetEncryptedKey(enckey.Bytes())
 		if hp, ok := enckey.(populater); ok {
-			hp.Populate(r.headers)
+			hp.Populate(r.Headers())
 		}
 		if debug.Enabled {
 			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
 		}
-		recipients[i] = *r
+		recipients[i] = r
 	}
 
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := mergeHeaders(context.TODO(), protected, recipients[0].headers)
+		h, err := mergeHeaders(context.TODO(), protected, recipients[0].Headers())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}

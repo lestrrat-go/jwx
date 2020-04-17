@@ -141,8 +141,10 @@ func ParseString(s string) (*Message, error) {
 func parseJSON(buf []byte) (*Message, error) {
 	m := struct {
 		*Message
-		*Recipient
-	}{}
+		Recipient
+	}{
+		Recipient: NewRecipient(),
+	}
 
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse JSON")
@@ -154,7 +156,7 @@ func parseJSON(buf []byte) (*Message, error) {
 			return nil, errors.New("invalid message: mixed flattened/full json serialization")
 		}
 
-		m.Message.recipients = []Recipient{*m.Recipient}
+		m.Message.recipients = []Recipient{m.Recipient}
 	}
 
 	return m.Message, nil
@@ -215,7 +217,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	m.cipherText = ctbuf
 	m.initializationVector = ivbuf
 	m.recipients = []Recipient{
-		{
+		&stdRecipient{
 			headers:      hdr,
 			encryptedKey: enckeybuf,
 		},
