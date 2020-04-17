@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
-func ExampleSignAndParse() {
+func ExampleToken_Sign_jwt_parse() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)
