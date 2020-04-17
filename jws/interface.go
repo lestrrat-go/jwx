@@ -36,14 +36,14 @@ type PayloadSigner interface {
 //
 // To sign and verify, use the appropriate `Sign()` nad `Verify()` functions
 type Message struct {
-	payload    []byte       `json:"payload"`
-	signatures []*Signature `json:"signatures,omitempty"`
+	payload    []byte
+	signatures []*Signature
 }
 
 type Signature struct {
-	headers   Headers `json:"header,omitempty"`    // Unprotected Headers
-	protected Headers `json:"protected,omitempty"` // Protected Headers
-	signature []byte  `json:"signature,omitempty"` // Signature
+	headers   Headers // Unprotected Headers
+	protected Headers // Protected Headers
+	signature []byte  // Signature
 }
 
 // JWKAcceptor decides which keys can be accepted
