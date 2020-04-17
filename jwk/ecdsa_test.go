@@ -153,6 +153,10 @@ func TestECDSA(t *testing.T) {
 
 		}
 		pubKey, err := set.Keys[0].(*jwk.ECDSAPrivateKey).PublicKey()
+		if !assert.NoError(t, err, `should PublicKey succeed`) {
+			return
+		}
+
 		rawPubKey, err := pubKey.Materialize()
 		if err != nil {
 			t.Fatal("Failed to create raw ECDSAPublicKey")
