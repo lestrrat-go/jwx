@@ -355,7 +355,7 @@ func (t typ) Generate() error {
 
 	fmt.Fprintf(&buf, "\nswitch tmp {")
 	fmt.Fprintf(&buf, "\ncase ")
-	var valids []element
+	valids := make([]element, 0, len(t.elements))
 	for _, e := range t.elements {
 		if e.invalid {
 			continue
