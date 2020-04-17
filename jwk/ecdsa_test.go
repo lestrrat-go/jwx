@@ -153,6 +153,10 @@ func TestECDSA(t *testing.T) {
 
 		}
 		pubKey, err := set.Keys[0].(*jwk.ECDSAPrivateKey).PublicKey()
+		if !assert.NoError(t, err, `should PublicKey succeed`) {
+			return
+		}
+
 		rawPubKey, err := pubKey.Materialize()
 		if err != nil {
 			t.Fatal("Failed to create raw ECDSAPublicKey")
@@ -168,7 +172,7 @@ func TestECDSA(t *testing.T) {
 			t.Fatal("Failed to marshal ECDSAPublicKey")
 		}
 
-		if bytes.Compare(pubKeyBytes, expectedPublicKeyBytes) != 0 {
+		if !bytes.Equal(pubKeyBytes, expectedPublicKeyBytes) {
 			t.Fatal("Expected and created ECDSA Public Keys do not match")
 		}
 
@@ -209,7 +213,7 @@ func TestECDSA(t *testing.T) {
 		}
 		// verify marshal
 
-		if bytes.Compare(privKeyBytes, expectedPrivKey) != 0 {
+		if !bytes.Equal(privKeyBytes, expectedPrivKey) {
 			t.Fatal("ECDSAPrivate in bytes do not match")
 		}
 

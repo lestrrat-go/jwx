@@ -16,19 +16,19 @@ const (
 
 // Recipient holds the encrypted key and hints to decrypt the key
 type Recipient struct {
-	headers      Headers       `json:"header"`
-	encryptedKey buffer.Buffer `json:"encrypted_key"`
+	headers      Headers
+	encryptedKey buffer.Buffer
 }
 
 // Message contains the entire encrypted JWE message
 type Message struct {
-	authenticatedData    buffer.Buffer `json:"aad,omitempty"`
-	cipherText           buffer.Buffer `json:"ciphertext"`
-	initializationVector buffer.Buffer `json:"iv,omitempty"`
-	protectedHeaders     Headers       `json:"protected"`
-	recipients           []Recipient   `json:"recipients"`
-	tag                  buffer.Buffer `json:"tag,omitempty"`
-	unprotectedHeaders   Headers       `json:"unprotected,omitempty"`
+	authenticatedData    buffer.Buffer
+	cipherText           buffer.Buffer
+	initializationVector buffer.Buffer
+	protectedHeaders     Headers
+	recipients           []Recipient
+	tag                  buffer.Buffer
+	unprotectedHeaders   Headers
 }
 
 // contentEncrypter encrypts the content using the content using the

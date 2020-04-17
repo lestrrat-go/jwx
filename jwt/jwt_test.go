@@ -91,6 +91,9 @@ func TestJWTParseVerify(t *testing.T) {
 
 	t1 := jwt.New()
 	signed, err := t1.Sign(alg, key)
+	if !assert.NoError(t, err, "token.Sign should succeed") {
+		return
+	}
 
 	t.Run("parse (no signature verification)", func(t *testing.T) {
 		_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)

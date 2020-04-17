@@ -30,7 +30,7 @@ AwEHoUQDQgAE2mFHYH1k9QGmpzTirHWgGtRRKmFh8deqKNZVUuxEH4sIQrj2zOkP
 		if err != nil {
 			t.Fatal("Failed to json marshal EC Raw Key")
 		}
-		if bytes.Compare(expectedECRawKeyBytes, rawKeyBytes) != 0 {
+		if !bytes.Equal(expectedECRawKeyBytes, rawKeyBytes) {
 			t.Fatal("Keys do not match")
 		}
 	})

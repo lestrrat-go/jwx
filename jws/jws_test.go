@@ -158,6 +158,9 @@ func TestVerifyWithJWKSet(t *testing.T) {
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
+	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
+		return
+	}
 
 	verified, err = jws.VerifyWithJWK(buf, jwkKey)
 	if !assert.NoError(t, err, "Verify is successful") {
@@ -682,21 +685,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		var sigs []*jws.Signature
-		sigs = m.LookupSignature("2010-12-29")
+		sigs := m.LookupSignature("2010-12-29")
 		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
-			return
-		}
-
-		jsonbuf, err := json.Marshal(m)
-		if !assert.NoError(t, err, "Marshal JSON is successful") {
-			return
-		}
-
-		b := &bytes.Buffer{}
-		json.Compact(b, jsonbuf)
-
-		if !assert.Equal(t, b.Bytes(), jsonbuf, "generated json matches") {
 			return
 		}
 	})
@@ -724,8 +714,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("There should be 1 signature")
 		}
 
-		var sigs []*jws.Signature
-		sigs = m.LookupSignature("e9bc097a-ce51-4036-9562-d2ade882db0d")
+		sigs := m.LookupSignature("e9bc097a-ce51-4036-9562-d2ade882db0d")
 		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
 			return
 		}

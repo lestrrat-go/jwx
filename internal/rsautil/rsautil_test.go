@@ -8,6 +8,8 @@ import (
 	"encoding/pem"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRSAUtil(t *testing.T) {
@@ -20,7 +22,13 @@ func TestRSAUtil(t *testing.T) {
 		}
 		rawKey := NewRawKeyFromPrivateKey(privateKey)
 		keyBytes, err := json.Marshal(rawKey)
+		if !assert.NoError(t, err, "Marshal json should be successful") {
+			return
+		}
 		realizedPrivateKey, err := PrivateKeyFromJSON(keyBytes)
+		if !assert.NoError(t, err, "Parsing private key is successful") {
+			return
+		}
 		if !reflect.DeepEqual(realizedPrivateKey, privateKey) {
 			t.Fatalf("Mismatched private keys")
 		}
