@@ -16,7 +16,7 @@ import (
 
 func TestECDSA(t *testing.T) {
 	t.Run("Parse Private Key", func(t *testing.T) {
-		s := `{"keys":
+		const s = `{"keys":
        [
          {"kty":"EC",
           "crv":"P-256",
