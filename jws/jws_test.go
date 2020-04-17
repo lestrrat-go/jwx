@@ -689,18 +689,6 @@ func TestEncode(t *testing.T) {
 		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
 			return
 		}
-
-		jsonbuf, err := json.Marshal(m)
-		if !assert.NoError(t, err, "Marshal JSON is successful") {
-			return
-		}
-
-		b := &bytes.Buffer{}
-		json.Compact(b, jsonbuf)
-
-		if !assert.Equal(t, b.Bytes(), jsonbuf, "generated json matches") {
-			return
-		}
 	})
 	t.Run("Protected Header lookup", func(t *testing.T) {
 		s := `{
