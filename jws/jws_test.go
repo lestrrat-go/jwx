@@ -682,8 +682,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		var sigs []*jws.Signature
-		sigs = m.LookupSignature("2010-12-29")
+		sigs := m.LookupSignature("2010-12-29")
 		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
 			return
 		}
@@ -724,8 +723,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("There should be 1 signature")
 		}
 
-		var sigs []*jws.Signature
-		sigs = m.LookupSignature("e9bc097a-ce51-4036-9562-d2ade882db0d")
+		sigs := m.LookupSignature("e9bc097a-ce51-4036-9562-d2ade882db0d")
 		if !assert.Len(t, sigs, 1, "There should be 1 signature with kid = '2010-12-29'") {
 			return
 		}
