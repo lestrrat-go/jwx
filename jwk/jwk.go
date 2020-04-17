@@ -273,11 +273,11 @@ func getKey(m map[string]interface{}, key string, required bool) ([]byte, error)
 }
 
 // helper for x5c handling
-func marshalX509CertChain(chain []*x509.Certificate) ([]string, error) {
+func marshalX509CertChain(chain []*x509.Certificate) []string {
 	encodedCerts := make([]string, len(chain))
 	for idx, cert := range chain {
 		// XXX does this need to be StdEncoding? can it be RawURL?
 		encodedCerts[idx] = base64.EncodeToStringStd(cert.Raw)
 	}
-	return encodedCerts, nil
+	return encodedCerts
 }
