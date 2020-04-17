@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
@@ -11,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/lestrrat-go/jwx/jws"
-
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -401,7 +400,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		buf.WriteTo(os.Stdout)
 		return errors.Wrap(err, `failed to format code`)

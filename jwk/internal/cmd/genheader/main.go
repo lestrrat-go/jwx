@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/imports"
 
 	"github.com/pkg/errors"
 )
@@ -360,7 +361,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) Walk(f func(string, interface{}) error)
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		buf.WriteTo(os.Stdout)
 		return errors.Wrap(err, `failed to format code`)
