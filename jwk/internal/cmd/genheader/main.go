@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/tools/imports"
-
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
