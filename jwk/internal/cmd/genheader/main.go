@@ -307,11 +307,7 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nif chain, ok = v.([]*x509.Certificate); !ok {")
 			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`%s type is invalid: %%T`, v)", f.method)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nencodedChain, err := marshalX509CertChain(chain)")
-			fmt.Fprintf(&buf, "\nif err != nil {")
-			fmt.Fprintf(&buf, "\nreturn err")
-			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nm[%sKey] = encodedChain", f.method)
+			fmt.Fprintf(&buf, "\nm[%sKey] = marshalX509CertChain(chain)", f.method)
 		} else {
 			fmt.Fprintf(&buf, "\nm[%sKey] = v", f.method)
 		}
