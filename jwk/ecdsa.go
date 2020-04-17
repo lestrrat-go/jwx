@@ -58,13 +58,13 @@ func (k ECDSAPrivateKey) Curve() jwa.EllipticCurveAlgorithm {
 
 func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 	h := hash.New()
-	fmt.Fprintf(h, `{"crv":"`)
-	fmt.Fprintf(h, crv)
-	fmt.Fprintf(h, `","kty":"EC","x":"`)
-	fmt.Fprintf(h, x)
-	fmt.Fprintf(h, `","y":"`)
-	fmt.Fprintf(h, y)
-	fmt.Fprintf(h, `"}`)
+	fmt.Fprint(h, `{"crv":"`)
+	fmt.Fprint(h, crv)
+	fmt.Fprint(h, `","kty":"EC","x":"`)
+	fmt.Fprint(h, x)
+	fmt.Fprint(h, `","y":"`)
+	fmt.Fprint(h, y)
+	fmt.Fprint(h, `"}`)
 	return h.Sum(nil)
 }
 

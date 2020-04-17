@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
@@ -37,9 +38,9 @@ func (s SymmetricKey) Octets() []byte {
 // hashing algorithm, according to RFC 7638
 func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	h := hash.New()
-	fmt.Fprintf(h, `{"k":"`)
-	fmt.Fprintf(h, base64.EncodeToString(s.key))
-	fmt.Fprintf(h, `","kty":"oct"}`)
+	fmt.Fprint(h, `{"k":"`)
+	fmt.Fprint(h, base64.EncodeToString(s.key))
+	fmt.Fprint(h, `","kty":"oct"}`)
 	return h.Sum(nil), nil
 }
 

@@ -31,7 +31,6 @@ type headerField struct {
 	key       string
 	comment   string
 	hasAccept bool
-	noDeref   bool
 	jsonTag   string
 }
 
