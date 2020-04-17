@@ -108,11 +108,11 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 	// Seal may panic (argh!), so protect ourselves from that
 	defer func() {
 		if e := recover(); e != nil {
-			switch e.(type) {
+			switch e := e.(type) {
 			case error:
-				err = e.(error)
+				err = e
 			case string:
-				err = errors.New(e.(string))
+				err = errors.New(e)
 			default:
 				err = fmt.Errorf("%s", e)
 			}
@@ -161,11 +161,11 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 	// Open may panic (argh!), so protect ourselves from that
 	defer func() {
 		if e := recover(); e != nil {
-			switch e.(type) {
+			switch e := e.(type) {
 			case error:
-				err = e.(error)
+				err = e
 			case string:
-				err = errors.New(e.(string))
+				err = errors.New(e)
 			default:
 				err = fmt.Errorf("%s", e)
 			}

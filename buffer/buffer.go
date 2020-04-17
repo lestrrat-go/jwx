@@ -118,18 +118,18 @@ func (b *Buffer) UnmarshalJSON(data []byte) error {
 }
 
 func (b *Buffer) Accept(value interface{}) error {
-	var v Buffer
-	switch value.(type) {
+	var buf Buffer
+	switch v := value.(type) {
 	case Buffer:
-		v = value.(Buffer)
+		buf = v
 	case []byte:
-		v = Buffer(value.([]byte))
+		buf = v
 	case string:
-		v = Buffer(value.(string))
+		buf = Buffer(v)
 	default:
 		return errors.Errorf("cannot assign %T to buffer.Buffer", value)
 	}
 
-	*b = v
+	*b = buf
 	return nil
 }

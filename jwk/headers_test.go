@@ -146,11 +146,11 @@ func TestHeader(t *testing.T) {
 			}
 
 			var s string
-			switch value.(type) {
+			switch v := value.(type) {
 			case jwa.KeyType:
-				s = value.(jwa.KeyType).String()
+				s = v.String()
 			case string:
-				s = value.(string)
+				s = v
 			}
 
 			if !assert.Equal(t, jwa.KeyType(s), got, "values match") {
