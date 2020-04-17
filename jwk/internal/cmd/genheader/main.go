@@ -302,7 +302,7 @@ func generateHeaders() error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nif v, ok := h.Get(%sKey); ok {", f.method)
 		if f.method == "X509CertChain" {
-			// special case. note, maybe we should separete this out...
+			// special case. note, maybe we should separate this out...
 			fmt.Fprintf(&buf, "\nvar chain []*x509.Certificate")
 			fmt.Fprintf(&buf, "\nif chain, ok = v.([]*x509.Certificate); !ok {")
 			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`%s type is invalid: %%T`, v)", f.method)
