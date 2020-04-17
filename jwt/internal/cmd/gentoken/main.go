@@ -134,6 +134,7 @@ func generateToken() error {
 	for _, pkg := range []string{"bytes", "encoding/json", "time", "", "github.com/pkg/errors", "github.com/lestrrat-go/jwx/jwt/internal/types"} {
 		if pkg == "" {
 			fmt.Fprint(&buf, "\n")
+			continue
 		}
 
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
