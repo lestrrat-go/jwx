@@ -46,6 +46,7 @@ var zerovals = map[string]string{
 	"string":                 `""`,
 	"jwa.SignatureAlgorithm": `""`,
 	"[]string":               "0",
+	"buffer.Buffer":          `buffer.Buffer{}`,
 }
 
 func zeroval(s string) string {
@@ -57,6 +58,17 @@ func zeroval(s string) string {
 		return v
 	}
 	return "nil"
+}
+
+func fieldStorageType(s string) string {
+	if fieldStorageTypeIsIndirect(s) {
+		return `*` + s
+	}
+	return s
+}
+
+func fieldStorageTypeIsIndirect(s string) bool {
+	return !(s == "jwk.Key" || strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`))
 }
 
 func generateHeaders() error {
@@ -248,7 +260,7 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, f.typ, f.jsonTag, f.comment)
+		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, fieldStorageType(f.typ), f.jsonTag, f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
@@ -259,7 +271,11 @@ func generateHeaders() error {
 		if f.name == jwkKey {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
-			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
+			if fieldStorageTypeIsIndirect(f.typ) {
+				fmt.Fprintf(&buf, "\nX%s *%s %s", f.name, f.typ, f.jsonTag)
+			} else {
+				fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
+			}
 		}
 	}
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
@@ -270,7 +286,14 @@ func generateHeaders() error {
 
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) %s() %s{", f.method, f.typ)
-		fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
+		if !fieldStorageTypeIsIndirect(f.typ) {
+			fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
+		} else {
+			fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.typ))
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nreturn *(h.%s)", f.name)
+		}
 		fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) %s() %s
 	}
 
@@ -282,19 +305,12 @@ func generateHeaders() error {
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
-		switch f.name {
-		case jwkKey:
-			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
-		case "critical", "x509CertChain":
-			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
-		case "agreementPartyUInfo", "agreementPartyVInfo":
-			fmt.Fprintf(&buf, "\nif h.%s.Len() > 0 {", f.name)
-		case "ephemeralPublicKey":
-			fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
-		default:
-			fmt.Fprintf(&buf, "\nif h.%s != \"\" {", f.name)
+		fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
+		if fieldStorageTypeIsIndirect(f.typ) {
+			fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.method, f.name)
+		} else {
+			fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.method, f.name)
 		}
-		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", strconv.Quote(f.key), f.name)
 		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
@@ -317,16 +333,14 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
-		fmt.Fprintf(&buf, "\nv := h.%s", f.name)
-
-		if f.typ == "[]string" {
-			fmt.Fprintf(&buf, "\nif len(v) == %s {", zeroval(f.typ))
-		} else {
-			fmt.Fprintf(&buf, "\nif v == %s {", zeroval(f.typ))
-		}
+		fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
 		fmt.Fprintf(&buf, "\nreturn nil, false")
-		fmt.Fprintf(&buf, "\n}") // end if h.%s == nil
-		fmt.Fprintf(&buf, "\nreturn v, true")
+		fmt.Fprintf(&buf, "\n}")
+		if fieldStorageTypeIsIndirect(f.typ) {
+			fmt.Fprintf(&buf, "\nreturn *(h.%s), true", f.name)
+		} else {
+			fmt.Fprintf(&buf, "\nreturn h.%s, true", f.name)
+		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
@@ -339,25 +353,17 @@ func generateHeaders() error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
 		if f.hasAccept {
-			if f.IsPointer() {
-				fmt.Fprintf(&buf, "\nvar acceptor %s", f.PointerElem())
-				fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
-				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
-				fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
-				fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
-			} else {
-				fmt.Fprintf(&buf, "\nif err := h.%s.Accept(value); err != nil {", f.name)
-				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
-				fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
-			}
+			fmt.Fprintf(&buf, "\nvar acceptor %s", f.PointerElem())
+			fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
+			fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
+			fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.name == jwkKey {
-				fmt.Fprintf(&buf, "\nv, ok := value.(%s)", f.typ)
-				fmt.Fprintf(&buf, "\nif ok {")
-				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
+			fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)
+			if fieldStorageTypeIsIndirect(f.typ) {
+				fmt.Fprintf(&buf, "\nh.%s = &v", f.name)
 			} else {
-				fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
@@ -391,9 +397,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name != "jwk" {
-			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
+		if f.name == "jwk" {
+			continue
 		}
+		fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 	}
 
 	// Now for the fun part... It's quite silly, but we need to check if we

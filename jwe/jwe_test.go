@@ -272,6 +272,8 @@ func TestEncode_ECDH(t *testing.T) {
 				return
 			}
 
+			t.Logf("%#v", msg)
+
 			{
 				buf, _ := json.MarshalIndent(msg, "", "  ")
 				t.Logf("%s", buf)

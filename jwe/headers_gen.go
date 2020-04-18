@@ -62,42 +62,42 @@ type Headers interface {
 }
 
 type stdHeaders struct {
-	agreementPartyUInfo    buffer.Buffer                  `json:"apu,omitempty"`      //
-	agreementPartyVInfo    buffer.Buffer                  `json:"apv,omitempty"`      //
-	algorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`      //
-	compression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`      //
-	contentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`      //
-	contentType            string                         `json:"cty,omitempty"`      //
-	critical               []string                       `json:"crit,omitempty"`     //
-	ephemeralPublicKey     *jwk.ECDSAPublicKey            `json:"epk,omitempty"`      //
-	jwk                    jwk.Key                        `json:"jwk,omitempty"`      //
-	jwkSetURL              string                         `json:"jku,omitempty"`      //
-	keyID                  string                         `json:"kid,omitempty"`      //
-	typ                    string                         `json:"typ,omitempty"`      //
-	x509CertChain          []string                       `json:"x5c,omitempty"`      //
-	x509CertThumbprint     string                         `json:"x5t,omitempty"`      //
-	x509CertThumbprintS256 string                         `json:"x5t#S256,omitempty"` //
-	x509URL                string                         `json:"x5u,omitempty"`      //
+	agreementPartyUInfo    *buffer.Buffer                  `json:"apu,omitempty"`      //
+	agreementPartyVInfo    *buffer.Buffer                  `json:"apv,omitempty"`      //
+	algorithm              *jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`      //
+	compression            *jwa.CompressionAlgorithm       `json:"zip,omitempty"`      //
+	contentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`      //
+	contentType            *string                         `json:"cty,omitempty"`      //
+	critical               []string                        `json:"crit,omitempty"`     //
+	ephemeralPublicKey     *jwk.ECDSAPublicKey             `json:"epk,omitempty"`      //
+	jwk                    jwk.Key                         `json:"jwk,omitempty"`      //
+	jwkSetURL              *string                         `json:"jku,omitempty"`      //
+	keyID                  *string                         `json:"kid,omitempty"`      //
+	typ                    *string                         `json:"typ,omitempty"`      //
+	x509CertChain          []string                        `json:"x5c,omitempty"`      //
+	x509CertThumbprint     *string                         `json:"x5t,omitempty"`      //
+	x509CertThumbprintS256 *string                         `json:"x5t#S256,omitempty"` //
+	x509URL                *string                         `json:"x5u,omitempty"`      //
 	privateParams          map[string]interface{}
 }
 
 type standardHeadersMarshalProxy struct {
-	XagreementPartyUInfo    buffer.Buffer                  `json:"apu,omitempty"`
-	XagreementPartyVInfo    buffer.Buffer                  `json:"apv,omitempty"`
-	Xalgorithm              jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
-	Xcompression            jwa.CompressionAlgorithm       `json:"zip,omitempty"`
-	XcontentEncryption      jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
-	XcontentType            string                         `json:"cty,omitempty"`
-	Xcritical               []string                       `json:"crit,omitempty"`
-	XephemeralPublicKey     *jwk.ECDSAPublicKey            `json:"epk,omitempty"`
-	Xjwk                    json.RawMessage                `json:"jwk,omitempty"`
-	XjwkSetURL              string                         `json:"jku,omitempty"`
-	XkeyID                  string                         `json:"kid,omitempty"`
-	Xtyp                    string                         `json:"typ,omitempty"`
-	Xx509CertChain          []string                       `json:"x5c,omitempty"`
-	Xx509CertThumbprint     string                         `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 string                         `json:"x5t#S256,omitempty"`
-	Xx509URL                string                         `json:"x5u,omitempty"`
+	XagreementPartyUInfo    *buffer.Buffer                  `json:"apu,omitempty"`
+	XagreementPartyVInfo    *buffer.Buffer                  `json:"apv,omitempty"`
+	Xalgorithm              *jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
+	Xcompression            *jwa.CompressionAlgorithm       `json:"zip,omitempty"`
+	XcontentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
+	XcontentType            *string                         `json:"cty,omitempty"`
+	Xcritical               []string                        `json:"crit,omitempty"`
+	XephemeralPublicKey     *jwk.ECDSAPublicKey             `json:"epk,omitempty"`
+	Xjwk                    json.RawMessage                 `json:"jwk,omitempty"`
+	XjwkSetURL              *string                         `json:"jku,omitempty"`
+	XkeyID                  *string                         `json:"kid,omitempty"`
+	Xtyp                    *string                         `json:"typ,omitempty"`
+	Xx509CertChain          []string                        `json:"x5c,omitempty"`
+	Xx509CertThumbprint     *string                         `json:"x5t,omitempty"`
+	Xx509CertThumbprintS256 *string                         `json:"x5t#S256,omitempty"`
+	Xx509URL                *string                         `json:"x5u,omitempty"`
 }
 
 func NewHeaders() Headers {
@@ -105,27 +105,45 @@ func NewHeaders() Headers {
 }
 
 func (h *stdHeaders) AgreementPartyUInfo() buffer.Buffer {
-	return h.agreementPartyUInfo
+	if h.agreementPartyUInfo == nil {
+		return buffer.Buffer{}
+	}
+	return *(h.agreementPartyUInfo)
 }
 
 func (h *stdHeaders) AgreementPartyVInfo() buffer.Buffer {
-	return h.agreementPartyVInfo
+	if h.agreementPartyVInfo == nil {
+		return buffer.Buffer{}
+	}
+	return *(h.agreementPartyVInfo)
 }
 
 func (h *stdHeaders) Algorithm() jwa.KeyEncryptionAlgorithm {
-	return h.algorithm
+	if h.algorithm == nil {
+		return ""
+	}
+	return *(h.algorithm)
 }
 
 func (h *stdHeaders) Compression() jwa.CompressionAlgorithm {
-	return h.compression
+	if h.compression == nil {
+		return ""
+	}
+	return *(h.compression)
 }
 
 func (h *stdHeaders) ContentEncryption() jwa.ContentEncryptionAlgorithm {
-	return h.contentEncryption
+	if h.contentEncryption == nil {
+		return ""
+	}
+	return *(h.contentEncryption)
 }
 
 func (h *stdHeaders) ContentType() string {
-	return h.contentType
+	if h.contentType == nil {
+		return ""
+	}
+	return *(h.contentType)
 }
 
 func (h *stdHeaders) Critical() []string {
@@ -141,15 +159,24 @@ func (h *stdHeaders) JWK() jwk.Key {
 }
 
 func (h *stdHeaders) JWKSetURL() string {
-	return h.jwkSetURL
+	if h.jwkSetURL == nil {
+		return ""
+	}
+	return *(h.jwkSetURL)
 }
 
 func (h *stdHeaders) KeyID() string {
-	return h.keyID
+	if h.keyID == nil {
+		return ""
+	}
+	return *(h.keyID)
 }
 
 func (h *stdHeaders) Type() string {
-	return h.typ
+	if h.typ == nil {
+		return ""
+	}
+	return *(h.typ)
 }
 
 func (h *stdHeaders) X509CertChain() []string {
@@ -157,67 +184,76 @@ func (h *stdHeaders) X509CertChain() []string {
 }
 
 func (h *stdHeaders) X509CertThumbprint() string {
-	return h.x509CertThumbprint
+	if h.x509CertThumbprint == nil {
+		return ""
+	}
+	return *(h.x509CertThumbprint)
 }
 
 func (h *stdHeaders) X509CertThumbprintS256() string {
-	return h.x509CertThumbprintS256
+	if h.x509CertThumbprintS256 == nil {
+		return ""
+	}
+	return *(h.x509CertThumbprintS256)
 }
 
 func (h *stdHeaders) X509URL() string {
-	return h.x509URL
+	if h.x509URL == nil {
+		return ""
+	}
+	return *(h.x509URL)
 }
 
 func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
-	if h.agreementPartyUInfo.Len() > 0 {
-		pairs = append(pairs, &HeaderPair{Key: "apu", Value: h.agreementPartyUInfo})
+	if h.agreementPartyUInfo != nil {
+		pairs = append(pairs, &HeaderPair{Key: AgreementPartyUInfoKey, Value: *(h.agreementPartyUInfo)})
 	}
-	if h.agreementPartyVInfo.Len() > 0 {
-		pairs = append(pairs, &HeaderPair{Key: "apv", Value: h.agreementPartyVInfo})
+	if h.agreementPartyVInfo != nil {
+		pairs = append(pairs, &HeaderPair{Key: AgreementPartyVInfoKey, Value: *(h.agreementPartyVInfo)})
 	}
-	if h.algorithm != "" {
-		pairs = append(pairs, &HeaderPair{Key: "alg", Value: h.algorithm})
+	if h.algorithm != nil {
+		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
-	if h.compression != "" {
-		pairs = append(pairs, &HeaderPair{Key: "zip", Value: h.compression})
+	if h.compression != nil {
+		pairs = append(pairs, &HeaderPair{Key: CompressionKey, Value: *(h.compression)})
 	}
-	if h.contentEncryption != "" {
-		pairs = append(pairs, &HeaderPair{Key: "enc", Value: h.contentEncryption})
+	if h.contentEncryption != nil {
+		pairs = append(pairs, &HeaderPair{Key: ContentEncryptionKey, Value: *(h.contentEncryption)})
 	}
-	if h.contentType != "" {
-		pairs = append(pairs, &HeaderPair{Key: "cty", Value: h.contentType})
+	if h.contentType != nil {
+		pairs = append(pairs, &HeaderPair{Key: ContentTypeKey, Value: *(h.contentType)})
 	}
-	if len(h.critical) > 0 {
-		pairs = append(pairs, &HeaderPair{Key: "crit", Value: h.critical})
+	if h.critical != nil {
+		pairs = append(pairs, &HeaderPair{Key: CriticalKey, Value: h.critical})
 	}
 	if h.ephemeralPublicKey != nil {
-		pairs = append(pairs, &HeaderPair{Key: "epk", Value: h.ephemeralPublicKey})
+		pairs = append(pairs, &HeaderPair{Key: EphemeralPublicKeyKey, Value: h.ephemeralPublicKey})
 	}
 	if h.jwk != nil {
-		pairs = append(pairs, &HeaderPair{Key: "jwk", Value: h.jwk})
+		pairs = append(pairs, &HeaderPair{Key: JWKKey, Value: h.jwk})
 	}
-	if h.jwkSetURL != "" {
-		pairs = append(pairs, &HeaderPair{Key: "jku", Value: h.jwkSetURL})
+	if h.jwkSetURL != nil {
+		pairs = append(pairs, &HeaderPair{Key: JWKSetURLKey, Value: *(h.jwkSetURL)})
 	}
-	if h.keyID != "" {
-		pairs = append(pairs, &HeaderPair{Key: "kid", Value: h.keyID})
+	if h.keyID != nil {
+		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
 	}
-	if h.typ != "" {
-		pairs = append(pairs, &HeaderPair{Key: "typ", Value: h.typ})
+	if h.typ != nil {
+		pairs = append(pairs, &HeaderPair{Key: TypeKey, Value: *(h.typ)})
 	}
-	if len(h.x509CertChain) > 0 {
-		pairs = append(pairs, &HeaderPair{Key: "x5c", Value: h.x509CertChain})
+	if h.x509CertChain != nil {
+		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
 	}
-	if h.x509CertThumbprint != "" {
-		pairs = append(pairs, &HeaderPair{Key: "x5t", Value: h.x509CertThumbprint})
+	if h.x509CertThumbprint != nil {
+		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
-	if h.x509CertThumbprintS256 != "" {
-		pairs = append(pairs, &HeaderPair{Key: "x5t#S256", Value: h.x509CertThumbprintS256})
+	if h.x509CertThumbprintS256 != nil {
+		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
-	if h.x509URL != "" {
-		pairs = append(pairs, &HeaderPair{Key: "x5u", Value: h.x509URL})
+	if h.x509URL != nil {
+		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
 	}
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
@@ -238,101 +274,85 @@ func (h *stdHeaders) PrivateParams() map[string]interface{} {
 func (h *stdHeaders) Get(name string) (interface{}, bool) {
 	switch name {
 	case AgreementPartyUInfoKey:
-		v := h.agreementPartyUInfo
-		if v == nil {
+		if h.agreementPartyUInfo == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.agreementPartyUInfo), true
 	case AgreementPartyVInfoKey:
-		v := h.agreementPartyVInfo
-		if v == nil {
+		if h.agreementPartyVInfo == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.agreementPartyVInfo), true
 	case AlgorithmKey:
-		v := h.algorithm
-		if v == "" {
+		if h.algorithm == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.algorithm), true
 	case CompressionKey:
-		v := h.compression
-		if v == "" {
+		if h.compression == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.compression), true
 	case ContentEncryptionKey:
-		v := h.contentEncryption
-		if v == "" {
+		if h.contentEncryption == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.contentEncryption), true
 	case ContentTypeKey:
-		v := h.contentType
-		if v == "" {
+		if h.contentType == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.contentType), true
 	case CriticalKey:
-		v := h.critical
-		if len(v) == 0 {
+		if h.critical == nil {
 			return nil, false
 		}
-		return v, true
+		return h.critical, true
 	case EphemeralPublicKeyKey:
-		v := h.ephemeralPublicKey
-		if v == nil {
+		if h.ephemeralPublicKey == nil {
 			return nil, false
 		}
-		return v, true
+		return h.ephemeralPublicKey, true
 	case JWKKey:
-		v := h.jwk
-		if v == nil {
+		if h.jwk == nil {
 			return nil, false
 		}
-		return v, true
+		return h.jwk, true
 	case JWKSetURLKey:
-		v := h.jwkSetURL
-		if v == "" {
+		if h.jwkSetURL == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.jwkSetURL), true
 	case KeyIDKey:
-		v := h.keyID
-		if v == "" {
+		if h.keyID == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.keyID), true
 	case TypeKey:
-		v := h.typ
-		if v == "" {
+		if h.typ == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.typ), true
 	case X509CertChainKey:
-		v := h.x509CertChain
-		if len(v) == 0 {
+		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return v, true
+		return h.x509CertChain, true
 	case X509CertThumbprintKey:
-		v := h.x509CertThumbprint
-		if v == "" {
+		if h.x509CertThumbprint == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.x509CertThumbprint), true
 	case X509CertThumbprintS256Key:
-		v := h.x509CertThumbprintS256
-		if v == "" {
+		if h.x509CertThumbprintS256 == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.x509CertThumbprintS256), true
 	case X509URLKey:
-		v := h.x509URL
-		if v == "" {
+		if h.x509URL == nil {
 			return nil, false
 		}
-		return v, true
+		return *(h.x509URL), true
 	default:
 		v, ok := h.privateParams[name]
 		return v, ok
@@ -342,36 +362,40 @@ func (h *stdHeaders) Get(name string) (interface{}, bool) {
 func (h *stdHeaders) Set(name string, value interface{}) error {
 	switch name {
 	case AgreementPartyUInfoKey:
-		if err := h.agreementPartyUInfo.Accept(value); err != nil {
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AgreementPartyUInfoKey)
 		}
+		h.agreementPartyUInfo = &acceptor
 		return nil
 	case AgreementPartyVInfoKey:
-		if err := h.agreementPartyVInfo.Accept(value); err != nil {
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AgreementPartyVInfoKey)
 		}
+		h.agreementPartyVInfo = &acceptor
 		return nil
 	case AlgorithmKey:
 		if v, ok := value.(jwa.KeyEncryptionAlgorithm); ok {
-			h.algorithm = v
+			h.algorithm = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, AlgorithmKey, value)
 	case CompressionKey:
 		if v, ok := value.(jwa.CompressionAlgorithm); ok {
-			h.compression = v
+			h.compression = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CompressionKey, value)
 	case ContentEncryptionKey:
 		if v, ok := value.(jwa.ContentEncryptionAlgorithm); ok {
-			h.contentEncryption = v
+			h.contentEncryption = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ContentEncryptionKey, value)
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
-			h.contentType = v
+			h.contentType = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
@@ -388,27 +412,26 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, EphemeralPublicKeyKey, value)
 	case JWKKey:
-		v, ok := value.(jwk.Key)
-		if ok {
+		if v, ok := value.(jwk.Key); ok {
 			h.jwk = v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JWKKey, value)
 	case JWKSetURLKey:
 		if v, ok := value.(string); ok {
-			h.jwkSetURL = v
+			h.jwkSetURL = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
-			h.keyID = v
+			h.keyID = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
-			h.typ = v
+			h.typ = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, TypeKey, value)
@@ -420,19 +443,19 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
-			h.x509CertThumbprint = v
+			h.x509CertThumbprint = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
-			h.x509CertThumbprintS256 = v
+			h.x509CertThumbprintS256 = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
-			h.x509URL = v
+			h.x509URL = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)

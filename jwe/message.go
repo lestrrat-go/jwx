@@ -221,11 +221,13 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 func (m *Message) UnmarshalJSON(buf []byte) error {
 	var proxy messageMarshalProxy
 	proxy.UnprotectedHeaders = NewHeaders()
+
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmashal JSON into message`)
 	}
 
 	h := NewHeaders()
+	fmt.Printf("protected headers ---> %s", proxy.ProtectedHeaders)
 	if err := h.Decode(proxy.ProtectedHeaders); err != nil {
 		return errors.Wrap(err, `failed to decode protected headers`)
 	}

@@ -252,7 +252,11 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
-		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.method, f.name)
+		if fieldStorageTypeIsIndirect(f.typ) {
+			fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.method, f.name)
+		} else {
+			fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.method, f.name)
+		}
 		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
@@ -345,7 +349,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name != jwkKey {
+		if f.name == jwkKey {
 			continue
 		}
 
