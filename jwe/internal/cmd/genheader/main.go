@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/pkg/errors"
 	"golang.org/x/tools/imports"
 )
@@ -61,6 +60,8 @@ func zeroval(s string) string {
 }
 
 func generateHeaders() error {
+	const jwkKey = "jwk"
+
 	fields := []headerField{
 		{
 			name:   `agreementPartyUInfo`,
@@ -255,7 +256,7 @@ func generateHeaders() error {
 	// Proxy is used when unmarshaling headers
 	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == jwe.JWKKey {
+		if f.name == jwkKey {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
 			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
@@ -282,7 +283,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
 		switch f.name {
-		case jwe.JWKKey:
+		case jwkKey:
 			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
 		case "critical", "x509CertChain":
 			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
@@ -351,7 +352,7 @@ func generateHeaders() error {
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.name == jwe.JWKKey {
+			if f.name == jwkKey {
 				fmt.Fprintf(&buf, "\nv, ok := value.(%s)", f.typ)
 				fmt.Fprintf(&buf, "\nif ok {")
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
