@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -31,7 +31,6 @@ type headerField struct {
 	key       string
 	comment   string
 	hasAccept bool
-	noDeref   bool
 	jsonTag   string
 }
 
@@ -61,6 +60,8 @@ func zeroval(s string) string {
 }
 
 func generateHeaders() error {
+	const jwkKey = "jwk"
+
 	fields := []headerField{
 		{
 			name:   `agreementPartyUInfo`,
@@ -255,7 +256,7 @@ func generateHeaders() error {
 	// Proxy is used when unmarshaling headers
 	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == "jwk" {
+		if f.name == jwkKey {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
 			fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
@@ -282,7 +283,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
 		switch f.name {
-		case "jwk":
+		case jwkKey:
 			fmt.Fprintf(&buf, "\nif h.jwk != nil {")
 		case "critical", "x509CertChain":
 			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
@@ -326,7 +327,6 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\nreturn nil, false")
 		fmt.Fprintf(&buf, "\n}") // end if h.%s == nil
 		fmt.Fprintf(&buf, "\nreturn v, true")
-
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nv, ok := h.privateParams[name]")
@@ -352,7 +352,7 @@ func generateHeaders() error {
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
-			if f.name == "jwk" {
+			if f.name == jwkKey {
 				fmt.Fprintf(&buf, "\nv, ok := value.(%s)", f.typ)
 				fmt.Fprintf(&buf, "\nif ok {")
 				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
@@ -454,7 +454,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		buf.WriteTo(os.Stdout)
 		return errors.Wrap(err, `failed to format code`)

@@ -15,7 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
-func ExampleJWT() {
+func Example_jwt() {
 	const aLongLongTimeAgo = 233431200
 
 	t := jwt.New()
@@ -39,7 +39,7 @@ func ExampleJWT() {
 	fmt.Printf("sub -> '%s'\n", t.Subject())
 }
 
-func ExampleJWK() {
+func Example_jwk() {
 	set, err := jwk.FetchHTTP("https://foobar.domain/jwk.json")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
@@ -64,7 +64,7 @@ func ExampleJWK() {
 	_ = key
 }
 
-func ExampleJWS() {
+func Example_jws() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to generate private key: %s", err)
@@ -88,7 +88,7 @@ func ExampleJWS() {
 	log.Printf("signed message verified! -> %s", verified)
 }
 
-func ExampleJWE() {
+func Example_jwe() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to generate private key: %s", err)

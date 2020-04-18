@@ -25,6 +25,7 @@ import (
 
 const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" + ` "http://example.com/is_root":true}`
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
+const badValue = "%badvalue%"
 
 func TestParse(t *testing.T) {
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
@@ -48,7 +49,7 @@ func TestParse(t *testing.T) {
 	})
 	t.Run("Compact bad header", func(t *testing.T) {
 		parts := strings.Split(exampleCompactSerialization, ".")
-		parts[0] = "%badvalue%"
+		parts[0] = badValue
 		incoming := strings.Join(parts, ".")
 
 		_, err := jws.ParseString(incoming)
@@ -58,7 +59,7 @@ func TestParse(t *testing.T) {
 	})
 	t.Run("Compact bad payload", func(t *testing.T) {
 		parts := strings.Split(exampleCompactSerialization, ".")
-		parts[1] = "%badvalue%"
+		parts[1] = badValue
 		incoming := strings.Join(parts, ".")
 
 		_, err := jws.ParseString(incoming)
@@ -68,7 +69,7 @@ func TestParse(t *testing.T) {
 	})
 	t.Run("Compact bad signature", func(t *testing.T) {
 		parts := strings.Split(exampleCompactSerialization, ".")
-		parts[2] = "%badvalue%"
+		parts[2] = badValue
 		incoming := strings.Join(parts, ".")
 
 		t.Logf("incoming = '%s'", incoming)
@@ -85,6 +86,7 @@ func TestRoundtrip(t *testing.T) {
 
 	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
 	for _, alg := range hmacAlgorithms {
+		alg := alg
 		t.Run("HMAC "+alg.String(), func(t *testing.T) {
 			signed, err := jws.Sign(payload, alg, sharedkey)
 			if !assert.NoError(t, err, "Sign succeeds") {
@@ -119,6 +121,7 @@ func TestRoundtrip(t *testing.T) {
 			}
 		})
 		for _, alg := range hmacAlgorithms {
+			alg := alg
 			t.Run("Verify "+alg.String(), func(t *testing.T) {
 				verified, err := jws.Verify(signed, alg, sharedkey)
 				if !assert.NoError(t, err, "Verify succeeded") {

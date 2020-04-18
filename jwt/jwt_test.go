@@ -18,7 +18,6 @@ import (
 )
 
 func TestJWTParse(t *testing.T) {
-
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -192,6 +191,7 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.Title, func(t *testing.T) {
 			var token jwt.Token
 			if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`) {
@@ -230,14 +230,13 @@ func TestGH52(t *testing.T) {
 			return
 		}
 
-		if _, err = jws.Verify([]byte(s), jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
+		if _, err = jws.Verify(s, jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
 			return
 		}
 	}
 }
 
 func TestUnmarshalJSON(t *testing.T) {
-
 	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
 		var t1 jwt.Token
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {

@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
 	"strconv"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -292,6 +292,7 @@ func _main() error {
 	})
 
 	for _, t := range typs {
+		t := t
 		sort.Slice(t.elements, func(i, j int) bool {
 			return t.elements[i].name < t.elements[j].name
 		})
@@ -354,7 +355,7 @@ func (t typ) Generate() error {
 
 	fmt.Fprintf(&buf, "\nswitch tmp {")
 	fmt.Fprintf(&buf, "\ncase ")
-	var valids []element
+	valids := make([]element, 0, len(t.elements))
 	for _, e := range t.elements {
 		if e.invalid {
 			continue
@@ -382,7 +383,7 @@ func (t typ) Generate() error {
 	fmt.Fprintf(&buf, "\nreturn string(v)")
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		os.Stdout.Write(buf.Bytes())
 		return errors.Wrap(err, `failed to format source`)

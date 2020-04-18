@@ -1,8 +1,9 @@
 package verify
 
 import (
-	"github.com/lestrrat-go/jwx/jwa"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/jwa"
 )
 
 func TestECDSAVerify(t *testing.T) {

@@ -112,5 +112,3 @@ func JSON(m *Message, options ...Option) ([]byte, error) {
 	}
 	return json.Marshal(m)
 }
-
-

@@ -69,14 +69,18 @@ func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
 	if h1 != nil {
 		for iter := h1.Iterate(ctx); iter.Next(ctx); {
 			pair := iter.Pair()
-			h3.Set(pair.Key.(string), pair.Value)
+			if err := h3.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set header`)
+			}
 		}
 	}
 
 	if h2 != nil {
 		for iter := h2.Iterate(ctx); iter.Next(ctx); {
 			pair := iter.Pair()
-			h3.Set(pair.Key.(string), pair.Value)
+			if err := h3.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set header`)
+			}
 		}
 	}
 

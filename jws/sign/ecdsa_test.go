@@ -1,8 +1,9 @@
 package sign
 
 import (
-	"github.com/lestrrat-go/jwx/jwa"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/jwa"
 )
 
 func TestECDSASign(t *testing.T) {

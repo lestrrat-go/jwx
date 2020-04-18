@@ -18,7 +18,6 @@ const (
 var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
 func TestHeader(t *testing.T) {
-
 	values := map[string]interface{}{
 		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
 		jwt.ExpirationKey: expectedTokenTime,
@@ -30,7 +29,6 @@ func TestHeader(t *testing.T) {
 	}
 
 	t.Run("Roundtrip", func(t *testing.T) {
-
 		var h jwt.Token
 		for k, v := range values {
 			err := h.Set(k, v)
@@ -48,7 +46,6 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("RoundtripError", func(t *testing.T) {
-
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64
@@ -89,14 +86,13 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("GetError", func(t *testing.T) {
-
 		var h jwt.Token
 		issuer := h.Issuer()
 		if issuer != "" {
 			t.Fatalf("Get Issuer should return empty string")
 		}
-		jwtId := h.JwtID()
-		if jwtId != "" {
+		jwtID := h.JwtID()
+		if jwtID != "" {
 			t.Fatalf("Get JWT Id should return empty string")
 		}
 	})

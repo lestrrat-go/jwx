@@ -61,7 +61,6 @@ func (k *RSAPrivateKey) Materialize() (interface{}, error) {
 }
 
 func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
-
 	m := map[string]interface{}{}
 	if err := k.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate public key values`)
@@ -71,7 +70,6 @@ func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
-
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
@@ -83,7 +81,6 @@ func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return errors.Wrap(err, `failed to unmarshal public key`)
@@ -96,7 +93,6 @@ func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
-
 	const (
 		eKey = `e`
 		nKey = `n`
@@ -131,7 +127,6 @@ func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate private key values`)
@@ -141,7 +136,6 @@ func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
-
 	const (
 		dKey  = `d`
 		pKey  = `p`
@@ -179,7 +173,6 @@ func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return errors.Wrap(err, `failed to unmarshal public key`)
@@ -195,7 +188,6 @@ func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *RSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
-
 	const (
 		dKey  = `d`
 		pKey  = `p`

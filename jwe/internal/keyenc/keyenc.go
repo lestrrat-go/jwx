@@ -297,7 +297,7 @@ func (d RSAPKCS15Decrypt) Decrypt(enckey []byte) ([]byte, error) {
 	// When decrypting an RSA-PKCS1v1.5 payload, we must take precautions to
 	// prevent chosen-ciphertext attacks as described in RFC 3218, "Preventing
 	// the Million Message Attack on Cryptographic Message Syntax". We are
-	// therefore deliberatly ignoring errors here.
+	// therefore deliberately ignoring errors here.
 	err = rsa.DecryptPKCS1v15SessionKey(rand.Reader, d.privkey, enckey, cek)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decrypt via PKCS1v15")

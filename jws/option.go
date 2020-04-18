@@ -8,8 +8,8 @@ import (
 type Option = option.Interface
 
 const (
-	optkeyPayloadSigner    = `payload-signer`
-	optkeyHeaders          = `headers`
+	optkeyPayloadSigner = `payload-signer`
+	optkeyHeaders       = `headers`
 )
 
 func WithSigner(signer sign.Signer, key interface{}, public, protected Headers) Option {

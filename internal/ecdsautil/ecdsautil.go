@@ -4,9 +4,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/json"
+	"math/big"
+
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 type curve struct {

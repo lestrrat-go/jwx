@@ -1,8 +1,9 @@
 package verify
 
 import (
-	"github.com/lestrrat-go/jwx/jwa"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/jwa"
 )
 
 func TestHMACVerify(t *testing.T) {
@@ -26,6 +27,5 @@ func TestHMACVerify(t *testing.T) {
 		if err == nil {
 			t.Fatal("HMAC Verification should fail")
 		}
-
 	})
 }

@@ -256,6 +256,7 @@ func TestEncode_ECDH(t *testing.T) {
 	}
 
 	for _, alg := range algorithms {
+		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
 			t.Parallel()
 

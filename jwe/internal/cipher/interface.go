@@ -14,9 +14,9 @@ const (
 // ContentCipher knows how to encrypt/decrypt the content given a content
 // encryption key and other data
 type ContentCipher interface {
-  KeySize() int
-  Encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
-  Decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
+	KeySize() int
+	Encrypt(cek, aad, plaintext []byte) ([]byte, []byte, []byte, error)
+	Decrypt(cek, iv, aad, ciphertext, tag []byte) ([]byte, error)
 }
 
 type Fetcher interface {

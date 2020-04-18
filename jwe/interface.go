@@ -23,8 +23,8 @@ type Recipient interface {
 }
 
 type stdRecipient struct {
-	headers      Headers       `json:"header"`
-	encryptedKey buffer.Buffer `json:"encrypted_key"`
+	headers      Headers
+	encryptedKey buffer.Buffer
 }
 
 // Message contains the entire encrypted JWE message

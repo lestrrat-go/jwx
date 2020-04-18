@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -302,16 +302,12 @@ func generateHeaders() error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nif v, ok := h.Get(%sKey); ok {", f.method)
 		if f.method == "X509CertChain" {
-			// special case. note, maybe we should separete this out...
+			// special case. note, maybe we should separate this out...
 			fmt.Fprintf(&buf, "\nvar chain []*x509.Certificate")
 			fmt.Fprintf(&buf, "\nif chain, ok = v.([]*x509.Certificate); !ok {")
 			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`%s type is invalid: %%T`, v)", f.method)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nencodedChain, err := marshalX509CertChain(chain)")
-			fmt.Fprintf(&buf, "\nif err != nil {")
-			fmt.Fprintf(&buf, "\nreturn err")
-			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nm[%sKey] = encodedChain", f.method)
+			fmt.Fprintf(&buf, "\nm[%sKey] = marshalX509CertChain(chain)", f.method)
 		} else {
 			fmt.Fprintf(&buf, "\nm[%sKey] = v", f.method)
 		}
@@ -364,7 +360,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h StandardHeaders) Walk(f func(string, interface{}) error)
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		buf.WriteTo(os.Stdout)
 		return errors.Wrap(err, `failed to format code`)

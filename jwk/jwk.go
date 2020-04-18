@@ -124,12 +124,12 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	return Parse(res.Body)
 }
 
-func (set *Set) UnmarshalJSON(data []byte) error {
+func (s *Set) UnmarshalJSON(data []byte) error {
 	v, err := ParseBytes(data)
 	if err != nil {
 		return errors.Wrap(err, `failed to parse jwk.Set`)
 	}
-	*set = *v
+	*s = *v
 	return nil
 }
 
@@ -273,11 +273,11 @@ func getKey(m map[string]interface{}, key string, required bool) ([]byte, error)
 }
 
 // helper for x5c handling
-func marshalX509CertChain(chain []*x509.Certificate) ([]string, error) {
+func marshalX509CertChain(chain []*x509.Certificate) []string {
 	encodedCerts := make([]string, len(chain))
 	for idx, cert := range chain {
 		// XXX does this need to be StdEncoding? can it be RawURL?
 		encodedCerts[idx] = base64.EncodeToStringStd(cert.Raw)
 	}
-	return encodedCerts, nil
+	return encodedCerts
 }

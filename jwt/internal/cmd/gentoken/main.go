@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -369,7 +369,7 @@ func generateToken() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		log.Printf("%s", buf.Bytes())
 		log.Printf("%s", err)

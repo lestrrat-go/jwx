@@ -50,7 +50,7 @@ func (n *NumericDate) Accept(v interface{}) error {
 
 	switch x := v.(type) {
 	case string:
-		i, err := strconv.ParseInt(string(x[:]), 10, 64)
+		i, err := strconv.ParseInt(x[:], 10, 64)
 		if err != nil {
 			return errors.Errorf(`invalid epoch value`)
 		}

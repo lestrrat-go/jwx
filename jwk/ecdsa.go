@@ -58,13 +58,13 @@ func (k ECDSAPrivateKey) Curve() jwa.EllipticCurveAlgorithm {
 
 func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 	h := hash.New()
-	fmt.Fprintf(h, `{"crv":"`)
-	fmt.Fprintf(h, crv)
-	fmt.Fprintf(h, `","kty":"EC","x":"`)
-	fmt.Fprintf(h, x)
-	fmt.Fprintf(h, `","y":"`)
-	fmt.Fprintf(h, y)
-	fmt.Fprintf(h, `"}`)
+	fmt.Fprint(h, `{"crv":"`)
+	fmt.Fprint(h, crv)
+	fmt.Fprint(h, `","kty":"EC","x":"`)
+	fmt.Fprint(h, x)
+	fmt.Fprint(h, `","y":"`)
+	fmt.Fprint(h, y)
+	fmt.Fprint(h, `"}`)
 	return h.Sum(nil)
 }
 
@@ -96,7 +96,6 @@ func (k ECDSAPrivateKey) Materialize() (interface{}, error) {
 }
 
 func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
-
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate public key values`)
@@ -106,7 +105,6 @@ func (k ECDSAPublicKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
-
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
@@ -124,7 +122,6 @@ func (k ECDSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-
 	m := make(map[string]interface{})
 	if err := k.PopulateMap(m); err != nil {
 		return nil, errors.Wrap(err, `failed to populate public key values`)
@@ -134,7 +131,6 @@ func (k ECDSAPrivateKey) MarshalJSON() (buf []byte, err error) {
 }
 
 func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
-
 	if err := k.headers.PopulateMap(m); err != nil {
 		return errors.Wrap(err, `failed to populate header values`)
 	}
@@ -154,7 +150,6 @@ func (k ECDSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
 }
 
 func (k *ECDSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return errors.Wrap(err, `failed to unmarshal public key`)
@@ -167,7 +162,6 @@ func (k *ECDSAPublicKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
-
 	const (
 		xKey   = `x`
 		yKey   = `y`
@@ -230,7 +224,6 @@ func (k *ECDSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
 }
 
 func (k *ECDSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return errors.Wrap(err, `failed to unmarshal public key`)
@@ -243,7 +236,6 @@ func (k *ECDSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (k *ECDSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
-
 	const (
 		dKey = `d`
 	)
