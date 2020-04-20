@@ -3,6 +3,8 @@
 package jwa
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -21,13 +23,19 @@ const (
 // outside sources (such as JSON payloads) is required
 func (v *KeyType) Accept(value interface{}) error {
 	var tmp KeyType
-	switch x := value.(type) {
-	case string:
-		tmp = KeyType(x)
-	case KeyType:
+	if x, ok := value.(KeyType); ok {
 		tmp = x
-	default:
-		return errors.Errorf(`invalid type for jwa.KeyType: %T`, value)
+	} else {
+		var s string
+		switch x := value.(type) {
+		case fmt.Stringer:
+			s = x.String()
+		case string:
+			s = x
+		default:
+			return errors.Errorf(`invalid type for jwa.KeyType: %T`, value)
+		}
+		tmp = KeyType(s)
 	}
 	switch tmp {
 	case EC, OctetSeq, RSA:

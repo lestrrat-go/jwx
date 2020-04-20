@@ -3,6 +3,8 @@
 package jwa
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -20,13 +22,19 @@ const (
 // outside sources (such as JSON payloads) is required
 func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
 	var tmp EllipticCurveAlgorithm
-	switch x := value.(type) {
-	case string:
-		tmp = EllipticCurveAlgorithm(x)
-	case EllipticCurveAlgorithm:
+	if x, ok := value.(EllipticCurveAlgorithm); ok {
 		tmp = x
-	default:
-		return errors.Errorf(`invalid type for jwa.EllipticCurveAlgorithm: %T`, value)
+	} else {
+		var s string
+		switch x := value.(type) {
+		case fmt.Stringer:
+			s = x.String()
+		case string:
+			s = x
+		default:
+			return errors.Errorf(`invalid type for jwa.EllipticCurveAlgorithm: %T`, value)
+		}
+		tmp = EllipticCurveAlgorithm(s)
 	}
 	switch tmp {
 	case P256, P384, P521:

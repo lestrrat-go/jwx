@@ -1,6 +1,7 @@
 .PHONY: generate realclean cover viewcover
 
 generate: 
+	go get ./...
 	@$(MAKE) generate-jwa generate-jwk generate-jws generate-jwt
 
 generate-%:

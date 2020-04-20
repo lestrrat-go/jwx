@@ -3,6 +3,8 @@
 package jwa
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -30,13 +32,19 @@ const (
 // outside sources (such as JSON payloads) is required
 func (v *SignatureAlgorithm) Accept(value interface{}) error {
 	var tmp SignatureAlgorithm
-	switch x := value.(type) {
-	case string:
-		tmp = SignatureAlgorithm(x)
-	case SignatureAlgorithm:
+	if x, ok := value.(SignatureAlgorithm); ok {
 		tmp = x
-	default:
-		return errors.Errorf(`invalid type for jwa.SignatureAlgorithm: %T`, value)
+	} else {
+		var s string
+		switch x := value.(type) {
+		case fmt.Stringer:
+			s = x.String()
+		case string:
+			s = x
+		default:
+			return errors.Errorf(`invalid type for jwa.SignatureAlgorithm: %T`, value)
+		}
+		tmp = SignatureAlgorithm(s)
 	}
 	switch tmp {
 	case ES256, ES384, ES512, HS256, HS384, HS512, NoSignature, PS256, PS384, PS512, RS256, RS384, RS512:
