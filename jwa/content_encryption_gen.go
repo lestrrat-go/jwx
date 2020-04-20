@@ -3,6 +3,8 @@
 package jwa
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -23,13 +25,19 @@ const (
 // outside sources (such as JSON payloads) is required
 func (v *ContentEncryptionAlgorithm) Accept(value interface{}) error {
 	var tmp ContentEncryptionAlgorithm
-	switch x := value.(type) {
-	case string:
-		tmp = ContentEncryptionAlgorithm(x)
-	case ContentEncryptionAlgorithm:
+	if x, ok := value.(ContentEncryptionAlgorithm); ok {
 		tmp = x
-	default:
-		return errors.Errorf(`invalid type for jwa.ContentEncryptionAlgorithm: %T`, value)
+	} else {
+		var s string
+		switch x := value.(type) {
+		case fmt.Stringer:
+			s = x.String()
+		case string:
+			s = x
+		default:
+			return errors.Errorf(`invalid type for jwa.ContentEncryptionAlgorithm: %T`, value)
+		}
+		tmp = ContentEncryptionAlgorithm(s)
 	}
 	switch tmp {
 	case A128CBC_HS256, A128GCM, A192CBC_HS384, A192GCM, A256CBC_HS512, A256GCM:

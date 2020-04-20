@@ -3,6 +3,8 @@
 package jwa
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -34,13 +36,19 @@ const (
 // outside sources (such as JSON payloads) is required
 func (v *KeyEncryptionAlgorithm) Accept(value interface{}) error {
 	var tmp KeyEncryptionAlgorithm
-	switch x := value.(type) {
-	case string:
-		tmp = KeyEncryptionAlgorithm(x)
-	case KeyEncryptionAlgorithm:
+	if x, ok := value.(KeyEncryptionAlgorithm); ok {
 		tmp = x
-	default:
-		return errors.Errorf(`invalid type for jwa.KeyEncryptionAlgorithm: %T`, value)
+	} else {
+		var s string
+		switch x := value.(type) {
+		case fmt.Stringer:
+			s = x.String()
+		case string:
+			s = x
+		default:
+			return errors.Errorf(`invalid type for jwa.KeyEncryptionAlgorithm: %T`, value)
+		}
+		tmp = KeyEncryptionAlgorithm(s)
 	}
 	switch tmp {
 	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT, ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW, PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW, RSA1_5, RSA_OAEP, RSA_OAEP_256:
