@@ -24,7 +24,7 @@ func _main() error {
 		{
 			name:     `CompressionAlgorithm`,
 			comment:  `CompressionAlgorithm represents the compression algorithms as described in https://tools.ietf.org/html/rfc7518#section-7.3`,
-			filename: `compression.go`,
+			filename: `compression_gen.go`,
 			elements: []element{
 				{
 					name:    `NoCompress`,
@@ -41,7 +41,7 @@ func _main() error {
 		{
 			name:     `ContentEncryptionAlgorithm`,
 			comment:  `ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5`,
-			filename: `content_encryption.go`,
+			filename: `content_encryption_gen.go`,
 			elements: []element{
 				{
 					name:    `A128CBC_HS256`,
@@ -78,7 +78,7 @@ func _main() error {
 		{
 			name:     `KeyType`,
 			comment:  `KeyType represents the key type ("kty") that are supported`,
-			filename: "key_type.go",
+			filename: "key_type_gen.go",
 			elements: []element{
 				{
 					name:    `InvalidKeyType`,
@@ -106,7 +106,7 @@ func _main() error {
 		{
 			name:     `EllipticCurveAlgorithm`,
 			comment:  ` EllipticCurveAlgorithm represents the algorithms used for EC keys`,
-			filename: `elliptic.go`,
+			filename: `elliptic_gen.go`,
 			elements: []element{
 				{
 					name:  `P256`,
@@ -125,7 +125,7 @@ func _main() error {
 		{
 			name:     `SignatureAlgorithm`,
 			comment:  `SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1`,
-			filename: `signature.go`,
+			filename: `signature_gen.go`,
 			elements: []element{
 				{
 					name:  `NoSignature`,
@@ -196,7 +196,7 @@ func _main() error {
 		{
 			name:     `KeyEncryptionAlgorithm`,
 			comment:  `KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1`,
-			filename: `key_encryption.go`,
+			filename: `key_encryption_gen.go`,
 			elements: []element{
 				{
 					name:    `RSA1_5`,
