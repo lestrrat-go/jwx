@@ -472,7 +472,6 @@ func (t typ) GenerateTest() error {
 		fmt.Fprintf(&buf, "\nreturn")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n})")
-
 	}
 
 	for _, e := range invalids {
