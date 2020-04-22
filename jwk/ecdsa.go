@@ -12,10 +12,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+func NewECDSAPublicKey() ECDSAPublicKey {
+	return newECDSAPublicKey()
+}
+
 func newECDSAPublicKey() *ecdsaPublicKey {
 	return &ecdsaPublicKey{
 		privateParams: make(map[string]interface{}),
 	}
+}
+
+func NewECDSAPrivateKey() ECDSAPrivateKey {
+	return newECDSAPrivateKey()
 }
 
 func newECDSAPrivateKey() *ecdsaPrivateKey {
@@ -26,7 +34,6 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 
 func newECDSAPublicKeyFromRaw(rawKey *ecdsa.PublicKey) (ECDSAPublicKey, error) {
 	key := newECDSAPublicKey()
-	key.Set(KeyTypeKey, jwa.EC)
 	key.x = rawKey.X.Bytes()
 	key.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {
@@ -46,7 +53,6 @@ func newECDSAPublicKeyFromRaw(rawKey *ecdsa.PublicKey) (ECDSAPublicKey, error) {
 func newECDSAPrivateKeyFromRaw(rawKey *ecdsa.PrivateKey) (ECDSAPrivateKey, error) {
 	key := newECDSAPrivateKey()
 	key.privateParams = make(map[string]interface{})
-	key.Set(KeyTypeKey, jwa.EC)
 	key.x = rawKey.X.Bytes()
 	key.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {

@@ -49,7 +49,6 @@ type rsaPrivateKey struct {
 	dq                     []byte
 	e                      []byte
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
 	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
@@ -64,13 +63,13 @@ type rsaPrivateKey struct {
 }
 
 type rsaPrivateKeyMarshalProxy struct {
+	XkeyType                jwa.KeyType       `json:"kty"`
 	Xalgorithm              *string           `json:"alg,omitempty"`
 	Xd                      *string           `json:"d,omitempty"`
 	Xdp                     *string           `json:"dp,omitempty"`
 	Xdq                     *string           `json:"dq,omitempty"`
 	Xe                      *string           `json:"e,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyType                *jwa.KeyType      `json:"kty,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
 	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
 	Xn                      *string           `json:"n,omitempty"`
@@ -81,6 +80,10 @@ type rsaPrivateKeyMarshalProxy struct {
 	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
 	Xx509URL                *string           `json:"x5u,omitempty"`
+}
+
+func (h rsaPrivateKey) KeyType() jwa.KeyType {
+	return jwa.RSA
 }
 
 func (h *rsaPrivateKey) Algorithm() string {
@@ -111,13 +114,6 @@ func (h *rsaPrivateKey) KeyID() string {
 		return *(h.keyID)
 	}
 	return ""
-}
-
-func (h *rsaPrivateKey) KeyType() jwa.KeyType {
-	if h.keyType != nil {
-		return *(h.keyType)
-	}
-	return jwa.InvalidKeyType
 }
 
 func (h *rsaPrivateKey) KeyUsage() string {
@@ -195,9 +191,6 @@ func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyType != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyTypeKey, Value: *(h.keyType)})
 	}
 	if h.keyUsage != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
@@ -277,11 +270,6 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
-	case KeyTypeKey:
-		if h.keyType == nil {
-			return nil, false
-		}
-		return *(h.keyType), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
 			return nil, false
@@ -340,6 +328,8 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 
 func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
+	case "kty":
+		return errors.New(`kty cannot be set`)
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -381,13 +371,6 @@ func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
-	case KeyTypeKey:
-		var acceptor jwa.KeyType
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyTypeKey)
-		}
-		h.keyType = &acceptor
-		return nil
 	case KeyUsageKey:
 		if v, ok := value.(string); ok {
 			h.keyUsage = &v
@@ -464,6 +447,9 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal rsaPrivateKey`)
 	}
+	if proxy.XkeyType != jwa.RSA {
+		return errors.Errorf(`invalid kty value for RSAPrivateKey (%s)`, proxy.XkeyType)
+	}
 	h.algorithm = proxy.Xalgorithm
 	if proxy.Xd == nil {
 		return errors.New(`required field d is missing`)
@@ -500,7 +486,6 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 		h.e = decoded
 	}
 	h.keyID = proxy.XkeyID
-	h.keyType = proxy.XkeyType
 	h.keyUsage = proxy.XkeyUsage
 	h.keyops = proxy.Xkeyops
 	if proxy.Xn == nil {
@@ -548,13 +533,13 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
 	}
+	delete(m, `kty`)
 	delete(m, AlgorithmKey)
 	delete(m, rsaDKey)
 	delete(m, rsaDPKey)
 	delete(m, rsaDQKey)
 	delete(m, rsaEKey)
 	delete(m, KeyIDKey)
-	delete(m, KeyTypeKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
 	delete(m, rsaNKey)
@@ -571,6 +556,7 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	var proxy rsaPrivateKeyMarshalProxy
+	proxy.XkeyType = jwa.RSA
 	proxy.Xalgorithm = h.algorithm
 	if len(h.d) > 0 {
 		v := base64.EncodeToStringStd(h.d)
@@ -589,11 +575,6 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 		proxy.Xe = &v
 	}
 	proxy.XkeyID = h.keyID
-	proxy.XkeyType = h.keyType
-	if proxy.XkeyType == nil {
-		v := jwa.RSA
-		proxy.XkeyType = &v
-	}
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.n) > 0 {
@@ -667,7 +648,6 @@ type rsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	e                      []byte
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
 	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
@@ -679,10 +659,10 @@ type rsaPublicKey struct {
 }
 
 type rsaPublicKeyMarshalProxy struct {
+	XkeyType                jwa.KeyType       `json:"kty"`
 	Xalgorithm              *string           `json:"alg,omitempty"`
 	Xe                      *string           `json:"e,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyType                *jwa.KeyType      `json:"kty,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
 	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
 	Xn                      *string           `json:"n,omitempty"`
@@ -690,6 +670,10 @@ type rsaPublicKeyMarshalProxy struct {
 	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
 	Xx509URL                *string           `json:"x5u,omitempty"`
+}
+
+func (h rsaPublicKey) KeyType() jwa.KeyType {
+	return jwa.RSA
 }
 
 func (h *rsaPublicKey) Algorithm() string {
@@ -708,13 +692,6 @@ func (h *rsaPublicKey) KeyID() string {
 		return *(h.keyID)
 	}
 	return ""
-}
-
-func (h *rsaPublicKey) KeyType() jwa.KeyType {
-	if h.keyType != nil {
-		return *(h.keyType)
-	}
-	return jwa.InvalidKeyType
 }
 
 func (h *rsaPublicKey) KeyUsage() string {
@@ -772,9 +749,6 @@ func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
 	}
-	if h.keyType != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyTypeKey, Value: *(h.keyType)})
-	}
 	if h.keyUsage != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
@@ -829,11 +803,6 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
-	case KeyTypeKey:
-		if h.keyType == nil {
-			return nil, false
-		}
-		return *(h.keyType), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
 			return nil, false
@@ -877,6 +846,8 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 
 func (h *rsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
+	case "kty":
+		return errors.New(`kty cannot be set`)
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -900,13 +871,6 @@ func (h *rsaPublicKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
-	case KeyTypeKey:
-		var acceptor jwa.KeyType
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyTypeKey)
-		}
-		h.keyType = &acceptor
-		return nil
 	case KeyUsageKey:
 		if v, ok := value.(string); ok {
 			h.keyUsage = &v
@@ -965,6 +929,9 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal rsaPublicKey`)
 	}
+	if proxy.XkeyType != jwa.RSA {
+		return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, proxy.XkeyType)
+	}
 	h.algorithm = proxy.Xalgorithm
 	if proxy.Xe == nil {
 		return errors.New(`required field e is missing`)
@@ -977,7 +944,6 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 		h.e = decoded
 	}
 	h.keyID = proxy.XkeyID
-	h.keyType = proxy.XkeyType
 	h.keyUsage = proxy.XkeyUsage
 	h.keyops = proxy.Xkeyops
 	if proxy.Xn == nil {
@@ -998,10 +964,10 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
 	}
+	delete(m, `kty`)
 	delete(m, AlgorithmKey)
 	delete(m, rsaEKey)
 	delete(m, KeyIDKey)
-	delete(m, KeyTypeKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
 	delete(m, rsaNKey)
@@ -1015,17 +981,13 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	var proxy rsaPublicKeyMarshalProxy
+	proxy.XkeyType = jwa.RSA
 	proxy.Xalgorithm = h.algorithm
 	if len(h.e) > 0 {
 		v := base64.EncodeToStringStd(h.e)
 		proxy.Xe = &v
 	}
 	proxy.XkeyID = h.keyID
-	proxy.XkeyType = h.keyType
-	if proxy.XkeyType == nil {
-		v := jwa.RSA
-		proxy.XkeyType = &v
-	}
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.n) > 0 {

@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	KeyTypeKey                = "kty"
 	KeyUsageKey               = "use"
 	KeyOpsKey                 = "key_ops"
 	AlgorithmKey              = "alg"
@@ -22,13 +21,13 @@ const (
 )
 
 type Headers interface {
+	KeyType() jwa.KeyType
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
 	Iterate(ctx context.Context) HeaderIterator
 	Walk(context.Context, HeaderVisitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
 	PrivateParams() map[string]interface{}
-	KeyType() jwa.KeyType
 	KeyUsage() string
 	KeyOps() KeyOperationList
 	Algorithm() string

@@ -5,9 +5,12 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
+
+func NewSymmetricKey() SymmetricKey {
+	return newSymmetricKey()
+}
 
 func newSymmetricKey() *symmetricKey {
 	return &symmetricKey{
@@ -21,9 +24,6 @@ func newSymmetricKeyFromRaw(octets []byte) (SymmetricKey, error) {
 	}
 
 	key := newSymmetricKey()
-	if err := key.Set(KeyTypeKey, jwa.OctetSeq); err != nil {
-		return nil, errors.Wrapf(err, `faild set %s for symmetric key`, KeyTypeKey)
-	}
 	key.octets = octets
 
 	return key, nil

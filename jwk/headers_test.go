@@ -13,7 +13,6 @@ func TestHeader(t *testing.T) {
 	t.Run("Roundtrip", func(t *testing.T) {
 		values := map[string]interface{}{
 			jwk.KeyIDKey:                  "helloworld01",
-			jwk.KeyTypeKey:                jwa.RSA,
 			jwk.KeyOpsKey:                 jwk.KeyOperationList{jwk.KeyOpSign},
 			jwk.KeyUsageKey:               "sig",
 			jwk.X509CertThumbprintKey:     "thumbprint",
@@ -54,7 +53,6 @@ func TestHeader(t *testing.T) {
 		values := map[string]interface{}{
 			jwk.AlgorithmKey:              dummy,
 			jwk.KeyIDKey:                  dummy,
-			jwk.KeyTypeKey:                dummy,
 			jwk.KeyUsageKey:               dummy,
 			jwk.KeyOpsKey:                 dummy,
 			jwk.X509CertChainKey:          dummy,
@@ -106,35 +104,6 @@ func TestHeader(t *testing.T) {
 			}
 
 			if !assert.Equal(t, value.(fmt.Stringer).String(), got, "values match") {
-				return
-			}
-		}
-	})
-	t.Run("KeyType", func(t *testing.T) {
-		h, err := jwk.New([]byte("dummy"))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
-			return
-		}
-
-		for _, value := range []interface{}{jwa.RSA, "RSA"} {
-			if !assert.NoError(t, h.Set(jwk.KeyTypeKey, value), "Set for kty should succeed") {
-				return
-			}
-
-			got, ok := h.Get(jwk.KeyTypeKey)
-			if !assert.True(t, ok, "Get for kty should succeed") {
-				return
-			}
-
-			var s string
-			switch v := value.(type) {
-			case jwa.KeyType:
-				s = v.String()
-			case string:
-				s = v
-			}
-
-			if !assert.Equal(t, jwa.KeyType(s), got, "values match") {
 				return
 			}
 		}

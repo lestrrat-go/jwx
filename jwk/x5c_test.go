@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,10 +18,6 @@ func Test_X5CHeader(t *testing.T) {
 
 		key, err := jwk.New([]byte("dummy"))
 		if !assert.NoError(t, err, `jwk.New should succeed`) {
-			return
-		}
-
-		if !assert.NoError(t, key.Set("kty", jwa.OctetSeq), "Set for 'k' should succeed") {
 			return
 		}
 

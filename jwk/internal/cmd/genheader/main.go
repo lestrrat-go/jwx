@@ -111,14 +111,6 @@ var standardHeaders []headerField
 func init() {
 	standardHeaders = []headerField{
 		{
-			name:      `keyType`,
-			method:    `KeyType`,
-			typ:       `jwa.KeyType`,
-			key:       `kty`,
-			comment:   `https://tools.ietf.org/html/rfc7517#section-4.1`,
-			hasAccept: true,
-		},
-		{
 			name:    `keyUsage`,
 			method:  `KeyUsage`,
 			key:     `use`,
@@ -190,7 +182,7 @@ type keyType struct {
 	filename    string
 	prefix      string
 	headerTypes []headerType
-	defaultKty  string
+	keyType     string
 }
 
 type headerType struct {
@@ -204,9 +196,9 @@ type headerType struct {
 
 var keyTypes = []keyType{
 	{
-		filename:   `rsa_gen.go`,
-		prefix:     `rsa`, // todo: really use this?
-		defaultKty: `jwa.RSA`,
+		filename: `rsa_gen.go`,
+		prefix:   `rsa`, // todo: really use this?
+		keyType:  `jwa.RSA`,
 		headerTypes: []headerType{
 			{
 				name: `PublicKey`,
@@ -287,9 +279,9 @@ var keyTypes = []keyType{
 		},
 	},
 	{
-		filename:   `ecdsa_gen.go`,
-		prefix:     `ecdsa`,
-		defaultKty: `jwa.EC`,
+		filename: `ecdsa_gen.go`,
+		prefix:   `ecdsa`,
+		keyType:  `jwa.EC`,
 		headerTypes: []headerType{
 			{
 				name: `PublicKey`,
@@ -349,9 +341,9 @@ var keyTypes = []keyType{
 		},
 	},
 	{
-		filename:   `symmetric_gen.go`,
-		prefix:     `symmetric`,
-		defaultKty: `jwa.OctetSeq`,
+		filename: `symmetric_gen.go`,
+		prefix:   `symmetric`,
+		keyType:  `jwa.OctetSeq`,
 		headerTypes: []headerType{
 			{
 				name:       "SymmetricKey",
@@ -392,6 +384,7 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n)") // end const
 
 	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
+	fmt.Fprintf(&buf, "\nKeyType() jwa.KeyType")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) HeaderIterator")
@@ -506,6 +499,7 @@ func generateHeader(kt keyType) error {
 
 		// Proxy is used when unmarshaling headers
 		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", kt.prefix, ht.name)
+		fmt.Fprintf(&buf, "\nXkeyType jwa.KeyType `json:\"kty\"`")
 		for _, f := range ht.allHeaders {
 			switch f.typ {
 			case byteSliceType:
@@ -518,6 +512,10 @@ func generateHeader(kt keyType) error {
 				fmt.Fprintf(&buf, "\nX%s %s %s", f.name, fieldStorageType(f.typ), f.Tag())
 			}
 		}
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\n\nfunc (h %s) KeyType() jwa.KeyType {", structName)
+		fmt.Fprintf(&buf, "\nreturn %s", kt.keyType)
 		fmt.Fprintf(&buf, "\n}")
 
 		for _, f := range ht.allHeaders {
@@ -612,6 +610,8 @@ func generateHeader(kt keyType) error {
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", structName)
 		fmt.Fprintf(&buf, "\nswitch name {")
+		fmt.Fprintf(&buf, "\ncase \"kty\":")
+		fmt.Fprintf(&buf, "\nreturn errors.New(`kty cannot be set`)")
 		for _, f := range ht.allHeaders {
 			var keyName string
 			if f.isStd {
@@ -669,6 +669,10 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", structName)
 		fmt.Fprintf(&buf, "\n}")
 
+		fmt.Fprintf(&buf, "\nif proxy.XkeyType != %s {", kt.keyType)
+		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid kty value for %s (%%s)`, proxy.XkeyType)", ifName)
+		fmt.Fprintf(&buf, "\n}")
+
 		for _, f := range ht.allHeaders {
 			switch f.typ {
 			case byteSliceType:
@@ -700,6 +704,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
 		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
 		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\ndelete(m, `kty`)")
 		// Delete all known keys
 		for _, f := range ht.allHeaders {
 			var keyName string
@@ -717,6 +722,7 @@ func generateHeader(kt keyType) error {
 
 		fmt.Fprintf(&buf, "\n\nfunc (h %s) MarshalJSON() ([]byte, error) {", structName)
 		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", kt.prefix, ht.name)
+		fmt.Fprintf(&buf, "\nproxy.XkeyType = %s", kt.keyType)
 		for _, f := range ht.allHeaders {
 			switch f.typ {
 			case byteSliceType:
@@ -731,7 +737,7 @@ func generateHeader(kt keyType) error {
 				fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
 				if f.key == "kty" {
 					fmt.Fprintf(&buf, "\nif proxy.X%s == nil {", f.name)
-					fmt.Fprintf(&buf, "\nv := %s", kt.defaultKty)
+					fmt.Fprintf(&buf, "\nv := %s", kt.keyType)
 					fmt.Fprintf(&buf, "\nproxy.X%s = &v", f.name)
 					fmt.Fprintf(&buf, "\n}")
 				}

@@ -8,14 +8,21 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
+
+func NewRSAPublicKey() RSAPublicKey {
+	return newRSAPublicKey()
+}
 
 func newRSAPublicKey() *rsaPublicKey {
 	return &rsaPublicKey{
 		privateParams: make(map[string]interface{}),
 	}
+}
+
+func NewRSAPrivateKey() RSAPrivateKey {
+	return newRSAPrivateKey()
 }
 
 func newRSAPrivateKey() *rsaPrivateKey {
@@ -26,9 +33,6 @@ func newRSAPrivateKey() *rsaPrivateKey {
 
 func newRSAPrivateKeyFromRaw(rawKey *rsa.PrivateKey) (RSAPrivateKey, error) {
 	key := newRSAPrivateKey()
-
-	key.Set(KeyTypeKey, jwa.RSA)
-
 	key.d = rawKey.D.Bytes()
 	if len(rawKey.Primes) < 2 {
 		return nil, errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
@@ -63,8 +67,6 @@ func newRSAPrivateKeyFromRaw(rawKey *rsa.PrivateKey) (RSAPrivateKey, error) {
 
 func newRSAPublicKeyFromRaw(rawKey *rsa.PublicKey) (RSAPublicKey, error) {
 	key := newRSAPublicKey()
-	key.Set(KeyTypeKey, jwa.RSA)
-
 	key.n = rawKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))

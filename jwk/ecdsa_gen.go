@@ -39,7 +39,6 @@ type ecdsaPrivateKey struct {
 	crv                    *jwa.EllipticCurveAlgorithm
 	d                      []byte
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
 	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	x                      []byte
@@ -52,11 +51,11 @@ type ecdsaPrivateKey struct {
 }
 
 type ecdsaPrivateKeyMarshalProxy struct {
+	XkeyType                jwa.KeyType                 `json:"kty"`
 	Xalgorithm              *string                     `json:"alg,omitempty"`
 	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
 	Xd                      *string                     `json:"d,omitempty"`
 	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyType                *jwa.KeyType                `json:"kty,omitempty"`
 	XkeyUsage               *string                     `json:"use,omitempty"`
 	Xkeyops                 KeyOperationList            `json:"key_ops,omitempty"`
 	Xx                      *string                     `json:"x,omitempty"`
@@ -65,6 +64,10 @@ type ecdsaPrivateKeyMarshalProxy struct {
 	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
 	Xx509URL                *string                     `json:"x5u,omitempty"`
 	Xy                      *string                     `json:"y,omitempty"`
+}
+
+func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
+	return jwa.EC
 }
 
 func (h *ecdsaPrivateKey) Algorithm() string {
@@ -90,13 +93,6 @@ func (h *ecdsaPrivateKey) KeyID() string {
 		return *(h.keyID)
 	}
 	return ""
-}
-
-func (h *ecdsaPrivateKey) KeyType() jwa.KeyType {
-	if h.keyType != nil {
-		return *(h.keyType)
-	}
-	return jwa.InvalidKeyType
 }
 
 func (h *ecdsaPrivateKey) KeyUsage() string {
@@ -161,9 +157,6 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
 	}
-	if h.keyType != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyTypeKey, Value: *(h.keyType)})
-	}
 	if h.keyUsage != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
@@ -226,11 +219,6 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
-	case KeyTypeKey:
-		if h.keyType == nil {
-			return nil, false
-		}
-		return *(h.keyType), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
 			return nil, false
@@ -279,6 +267,8 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 
 func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
+	case "kty":
+		return errors.New(`kty cannot be set`)
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -308,13 +298,6 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
-	case KeyTypeKey:
-		var acceptor jwa.KeyType
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyTypeKey)
-		}
-		h.keyType = &acceptor
-		return nil
 	case KeyUsageKey:
 		if v, ok := value.(string); ok {
 			h.keyUsage = &v
@@ -379,6 +362,9 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal ecdsaPrivateKey`)
 	}
+	if proxy.XkeyType != jwa.EC {
+		return errors.Errorf(`invalid kty value for ECDSAPrivateKey (%s)`, proxy.XkeyType)
+	}
 	h.algorithm = proxy.Xalgorithm
 	h.crv = proxy.Xcrv
 	if proxy.Xd == nil {
@@ -392,7 +378,6 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 		h.d = decoded
 	}
 	h.keyID = proxy.XkeyID
-	h.keyType = proxy.XkeyType
 	h.keyUsage = proxy.XkeyUsage
 	h.keyops = proxy.Xkeyops
 	if proxy.Xx == nil {
@@ -423,11 +408,11 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
 	}
+	delete(m, `kty`)
 	delete(m, AlgorithmKey)
 	delete(m, ecdsaCrvKey)
 	delete(m, ecdsaDKey)
 	delete(m, KeyIDKey)
-	delete(m, KeyTypeKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
 	delete(m, ecdsaXKey)
@@ -442,6 +427,7 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	var proxy ecdsaPrivateKeyMarshalProxy
+	proxy.XkeyType = jwa.EC
 	proxy.Xalgorithm = h.algorithm
 	proxy.Xcrv = h.crv
 	if len(h.d) > 0 {
@@ -449,11 +435,6 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		proxy.Xd = &v
 	}
 	proxy.XkeyID = h.keyID
-	proxy.XkeyType = h.keyType
-	if proxy.XkeyType == nil {
-		v := jwa.EC
-		proxy.XkeyType = &v
-	}
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.x) > 0 {
@@ -520,7 +501,6 @@ type ecdsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
 	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	x                      []byte
@@ -533,10 +513,10 @@ type ecdsaPublicKey struct {
 }
 
 type ecdsaPublicKeyMarshalProxy struct {
+	XkeyType                jwa.KeyType                 `json:"kty"`
 	Xalgorithm              *string                     `json:"alg,omitempty"`
 	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
 	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyType                *jwa.KeyType                `json:"kty,omitempty"`
 	XkeyUsage               *string                     `json:"use,omitempty"`
 	Xkeyops                 KeyOperationList            `json:"key_ops,omitempty"`
 	Xx                      *string                     `json:"x,omitempty"`
@@ -545,6 +525,10 @@ type ecdsaPublicKeyMarshalProxy struct {
 	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
 	Xx509URL                *string                     `json:"x5u,omitempty"`
 	Xy                      *string                     `json:"y,omitempty"`
+}
+
+func (h ecdsaPublicKey) KeyType() jwa.KeyType {
+	return jwa.EC
 }
 
 func (h *ecdsaPublicKey) Algorithm() string {
@@ -566,13 +550,6 @@ func (h *ecdsaPublicKey) KeyID() string {
 		return *(h.keyID)
 	}
 	return ""
-}
-
-func (h *ecdsaPublicKey) KeyType() jwa.KeyType {
-	if h.keyType != nil {
-		return *(h.keyType)
-	}
-	return jwa.InvalidKeyType
 }
 
 func (h *ecdsaPublicKey) KeyUsage() string {
@@ -634,9 +611,6 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
 	}
-	if h.keyType != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyTypeKey, Value: *(h.keyType)})
-	}
 	if h.keyUsage != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
@@ -694,11 +668,6 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
-	case KeyTypeKey:
-		if h.keyType == nil {
-			return nil, false
-		}
-		return *(h.keyType), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
 			return nil, false
@@ -747,6 +716,8 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 
 func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
+	case "kty":
+		return errors.New(`kty cannot be set`)
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -770,13 +741,6 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
-	case KeyTypeKey:
-		var acceptor jwa.KeyType
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyTypeKey)
-		}
-		h.keyType = &acceptor
-		return nil
 	case KeyUsageKey:
 		if v, ok := value.(string); ok {
 			h.keyUsage = &v
@@ -841,10 +805,12 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal ecdsaPublicKey`)
 	}
+	if proxy.XkeyType != jwa.EC {
+		return errors.Errorf(`invalid kty value for ECDSAPublicKey (%s)`, proxy.XkeyType)
+	}
 	h.algorithm = proxy.Xalgorithm
 	h.crv = proxy.Xcrv
 	h.keyID = proxy.XkeyID
-	h.keyType = proxy.XkeyType
 	h.keyUsage = proxy.XkeyUsage
 	h.keyops = proxy.Xkeyops
 	if proxy.Xx == nil {
@@ -875,10 +841,10 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
 	}
+	delete(m, `kty`)
 	delete(m, AlgorithmKey)
 	delete(m, ecdsaCrvKey)
 	delete(m, KeyIDKey)
-	delete(m, KeyTypeKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
 	delete(m, ecdsaXKey)
@@ -893,14 +859,10 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	var proxy ecdsaPublicKeyMarshalProxy
+	proxy.XkeyType = jwa.EC
 	proxy.Xalgorithm = h.algorithm
 	proxy.Xcrv = h.crv
 	proxy.XkeyID = h.keyID
-	proxy.XkeyType = h.keyType
-	if proxy.XkeyType == nil {
-		v := jwa.EC
-		proxy.XkeyType = &v
-	}
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.x) > 0 {

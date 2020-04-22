@@ -30,7 +30,6 @@ type SymmetricKey interface {
 type symmetricKey struct {
 	algorithm              *string          // https://tools.ietf.org/html/rfc7517#section-4.4
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
 	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
 	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	octets                 []byte
@@ -42,9 +41,9 @@ type symmetricKey struct {
 }
 
 type symmetricSymmetricKeyMarshalProxy struct {
+	XkeyType                jwa.KeyType       `json:"kty"`
 	Xalgorithm              *string           `json:"alg,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyType                *jwa.KeyType      `json:"kty,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
 	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
 	Xoctets                 *string           `json:"k,omitempty"`
@@ -52,6 +51,10 @@ type symmetricSymmetricKeyMarshalProxy struct {
 	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
 	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
 	Xx509URL                *string           `json:"x5u,omitempty"`
+}
+
+func (h symmetricKey) KeyType() jwa.KeyType {
+	return jwa.OctetSeq
 }
 
 func (h *symmetricKey) Algorithm() string {
@@ -66,13 +69,6 @@ func (h *symmetricKey) KeyID() string {
 		return *(h.keyID)
 	}
 	return ""
-}
-
-func (h *symmetricKey) KeyType() jwa.KeyType {
-	if h.keyType != nil {
-		return *(h.keyType)
-	}
-	return jwa.InvalidKeyType
 }
 
 func (h *symmetricKey) KeyUsage() string {
@@ -127,9 +123,6 @@ func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
 	}
-	if h.keyType != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyTypeKey, Value: *(h.keyType)})
-	}
 	if h.keyUsage != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
@@ -179,11 +172,6 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
-	case KeyTypeKey:
-		if h.keyType == nil {
-			return nil, false
-		}
-		return *(h.keyType), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
 			return nil, false
@@ -227,6 +215,8 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 
 func (h *symmetricKey) Set(name string, value interface{}) error {
 	switch name {
+	case "kty":
+		return errors.New(`kty cannot be set`)
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -244,13 +234,6 @@ func (h *symmetricKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
-	case KeyTypeKey:
-		var acceptor jwa.KeyType
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyTypeKey)
-		}
-		h.keyType = &acceptor
-		return nil
 	case KeyUsageKey:
 		if v, ok := value.(string); ok {
 			h.keyUsage = &v
@@ -309,9 +292,11 @@ func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal symmetricKey`)
 	}
+	if proxy.XkeyType != jwa.OctetSeq {
+		return errors.Errorf(`invalid kty value for SymmetricKey (%s)`, proxy.XkeyType)
+	}
 	h.algorithm = proxy.Xalgorithm
 	h.keyID = proxy.XkeyID
-	h.keyType = proxy.XkeyType
 	h.keyUsage = proxy.XkeyUsage
 	h.keyops = proxy.Xkeyops
 	if proxy.Xoctets == nil {
@@ -332,9 +317,9 @@ func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
 	}
+	delete(m, `kty`)
 	delete(m, AlgorithmKey)
 	delete(m, KeyIDKey)
-	delete(m, KeyTypeKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
 	delete(m, symmetricOctetsKey)
@@ -348,13 +333,9 @@ func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	var proxy symmetricSymmetricKeyMarshalProxy
+	proxy.XkeyType = jwa.OctetSeq
 	proxy.Xalgorithm = h.algorithm
 	proxy.XkeyID = h.keyID
-	proxy.XkeyType = h.keyType
-	if proxy.XkeyType == nil {
-		v := jwa.OctetSeq
-		proxy.XkeyType = &v
-	}
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.octets) > 0 {
