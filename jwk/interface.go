@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"crypto"
 	"crypto/x509"
 
 	"github.com/lestrrat-go/iter/arrayiter"
