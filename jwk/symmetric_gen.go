@@ -23,16 +23,16 @@ const (
 )
 
 type SymmetricKey struct {
-	algorithm              *string
-	keyID                  *string
-	keyType                *jwa.KeyType
-	keyUsage               *string
-	keyops                 KeyOperationList
+	algorithm              *string          // https://tools.ietf.org/html/rfc7517#section-4.4
+	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
+	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	octets                 []byte
-	x509CertChain          *CertificateChain
-	x509CertThumbprint     *string
-	x509CertThumbprintS256 *string
-	x509URL                *string
+	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 }
 

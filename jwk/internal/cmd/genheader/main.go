@@ -472,6 +472,9 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n\ntype %s struct {", structName)
 		for _, header := range ht.allHeaders {
 			fmt.Fprintf(&buf, "\n%s %s", header.name, fieldStorageType(header.typ))
+			if len(header.comment) > 0 {
+				fmt.Fprintf(&buf, " // %s", header.comment)
+			}
 		}
 		fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 		fmt.Fprintf(&buf, "\n}")

@@ -30,23 +30,23 @@ const (
 )
 
 type RSAPrivateKey struct {
-	algorithm              *string
+	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	d                      []byte
 	dp                     []byte
 	dq                     []byte
 	e                      []byte
-	keyID                  *string
-	keyType                *jwa.KeyType
-	keyUsage               *string
-	keyops                 KeyOperationList
+	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
+	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
 	p                      []byte
 	q                      []byte
 	qi                     []byte
-	x509CertChain          *CertificateChain
-	x509CertThumbprint     *string
-	x509CertThumbprintS256 *string
-	x509URL                *string
+	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 }
 
@@ -645,17 +645,17 @@ func (h *RSAPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, erro
 }
 
 type RSAPublicKey struct {
-	algorithm              *string
+	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	e                      []byte
-	keyID                  *string
-	keyType                *jwa.KeyType
-	keyUsage               *string
-	keyops                 KeyOperationList
+	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
+	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
-	x509CertChain          *CertificateChain
-	x509CertThumbprint     *string
-	x509CertThumbprintS256 *string
-	x509URL                *string
+	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 }
 
