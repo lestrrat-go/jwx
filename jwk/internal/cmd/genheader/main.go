@@ -613,7 +613,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", structName)
 		fmt.Fprintf(&buf, "\nswitch name {")
 		fmt.Fprintf(&buf, "\ncase \"kty\":")
-		fmt.Fprintf(&buf, "\nreturn errors.New(`kty cannot be set`)")
+		fmt.Fprintf(&buf, "\nreturn nil") // This is not great, but we just ignore it
 		for _, f := range ht.allHeaders {
 			var keyName string
 			if f.isStd {

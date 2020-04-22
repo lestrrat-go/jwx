@@ -331,7 +331,7 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
 	case "kty":
-		return errors.New(`kty cannot be set`)
+		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -851,7 +851,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 func (h *rsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
 	case "kty":
-		return errors.New(`kty cannot be set`)
+		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:

@@ -270,7 +270,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
 	case "kty":
-		return errors.New(`kty cannot be set`)
+		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
@@ -721,7 +721,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
 	case "kty":
-		return errors.New(`kty cannot be set`)
+		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string:
