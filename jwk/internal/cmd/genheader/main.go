@@ -388,6 +388,7 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) HeaderIterator")
 	fmt.Fprintf(&buf, "\nWalk(context.Context, HeaderVisitor) error")
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
+	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
 	for _, f := range standardHeaders {
 		fmt.Fprintf(&buf, "\n%s() ", f.method)
 		if f.returnType != "" {
