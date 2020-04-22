@@ -6,61 +6,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-/*
-func (h *stdHeaders) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
-	return mapiter.New(ch)
-}
-
-func (h *stdHeaders) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
-}
-
-*/
-
-func getRequiredKey(h Headers, s string) ([]byte, error) {
-	return getKey(h, s, true)
-}
-
-func getOptionalKey(h Headers, s string) ([]byte, error) {
-	return getKey(h, s, false)
-}
-
-func getKey(h Headers, s string, required bool) ([]byte, error) {
-	v, ok := h.Get(s)
-	if !ok {
-		if required {
-			return nil, errors.Errorf(`required key %#v was not found`, s)
-		}
-		return nil, errors.Errorf(`key %#v was not found`, s)
-	}
-
-	switch v := v.(type) {
-	case string:
-		return []byte(v), nil
-	case []byte:
-		return v, nil
-		/*
-			switch v := v.(type) {
-			case string:
-				buf, err := base64.DecodeString(v)
-				if err != nil {
-					return nil, errors.Wrapf(err, `failed to base64 decode key %#v: %#v`, s, v)
-				}
-				return buf, nil
-			case []byte:
-				return v, nil
-		*/
-	default:
-		return nil, errors.Errorf(`invalid type for key %#v: %T`, s, v)
-	}
-}
-
 func assignMaterializeResult(v, t interface{}) error {
 	result := reflect.ValueOf(t)
 

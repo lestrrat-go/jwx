@@ -414,7 +414,7 @@ func TestAppendix(t *testing.T) {
 		}{
 			{
 				headers: map[string]interface{}{
-					jwk.KeyTypeKey: jwa.OctetSeq,
+					jwk.KeyTypeKey:   jwa.OctetSeq,
 					jwk.AlgorithmKey: jwa.A128KW.String(),
 				},
 				key: buf1,

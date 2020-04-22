@@ -216,8 +216,8 @@ func TestECDSA(t *testing.T) {
 		// verify marshal
 
 		if !assert.Equal(t, privKeyBytes, expectedPrivKey, `should match`) {
-t.Logf("%s", privKeyBytes)
-t.Logf("%s", expectedPrivKey)
+			t.Logf("%s", privKeyBytes)
+			t.Logf("%s", expectedPrivKey)
 			return
 		}
 

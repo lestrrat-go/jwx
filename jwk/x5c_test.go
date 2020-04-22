@@ -1,8 +1,10 @@
 package jwk_test
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +17,15 @@ func Test_X5CHeader(t *testing.T) {
 			"MIIC5zCCAlACAQEwDQYJKoZIhvcNAQEFBQAwgbsxJDAiBgNVBAcTG1ZhbGlDZXJ0IFZhbGlkYXRpb24gTmV0d29yazEXMBUGA1UEChMOVmFsaUNlcnQsIEluYy4xNTAzBgNVBAsTLFZhbGlDZXJ0IENsYXNzIDIgUG9saWN5IFZhbGlkYXRpb24gQXV0aG9yaXR5MSEwHwYDVQQDExhodHRwOi8vd3d3LnZhbGljZXJ0LmNvbS8xIDAeBgkqhkiG9w0BCQEWEWluZm9AdmFsaWNlcnQuY29tMB4XDTk5MDYyNjAwMTk1NFoXDTE5MDYyNjAwMTk1NFowgbsxJDAiBgNVBAcTG1ZhbGlDZXJ0IFZhbGlkYXRpb24gTmV0d29yazEXMBUGA1UEChMOVmFsaUNlcnQsIEluYy4xNTAzBgNVBAsTLFZhbGlDZXJ0IENsYXNzIDIgUG9saWN5IFZhbGlkYXRpb24gQXV0aG9yaXR5MSEwHwYDVQQDExhodHRwOi8vd3d3LnZhbGljZXJ0LmNvbS8xIDAeBgkqhkiG9w0BCQEWEWluZm9AdmFsaWNlcnQuY29tMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDOOnHK5avIWZJV16vYdA757tn2VUdZZUcOBVXc65g2PFxTXdMwzzjsvUGJ7SVCCSRrCl6zfN1SLUzm1NZ9WlmpZdRJEy0kTRxQb7XBhVQ7/nHk01xC+YDgkRoKWzk2Z/M/VXwbP7RfZHM047QSv4dk+NoS/zcnwbNDu+97bi5p9wIDAQABMA0GCSqGSIb3DQEBBQUAA4GBADt/UG9vUJSZSWI4OB9L+KXIPqeCgfYrx+jFzug6EILLGACOTb2oWH+heQC1u+mNr0HZDzTuIYEZoDJJKPTEjlbVUjP9UNV+mWwD5MlM/Mtsq2azSiGM5bUMMj4QssxsodyamEwCW/POuZ6lcg5Ktz885hZo+L7tdEy8W9ViH0Pd",
 		}
 
-		var key jwk.RSAPrivateKey
+		var key jwk.SymmetricKey
+		if !assert.NoError(t, key.Set("kty", jwa.OctetSeq), "Set for 'k' should succeed") {
+			return
+		}
+
+		if !assert.NoError(t, key.Set("k", []byte("dummy")), "Set for 'k' should succeed") {
+			return
+		}
+
 		if !assert.NoError(t, key.Set(jwk.X509CertChainKey, certs), "Set for x5c should succeed") {
 			return
 		}
@@ -24,5 +34,39 @@ func Test_X5CHeader(t *testing.T) {
 		if !assert.True(t, ok, "Get for x5c should succeed") {
 			return
 		}
+
+		buf, err := json.Marshal(key)
+		if !assert.NoError(t, err, `json.Marshal on jwk.SymmetricKey should succeed`) {
+			return
+		}
+
+		t.Logf("%s", buf)
+
+		var key2 jwk.SymmetricKey
+		if !assert.NoError(t, json.Unmarshal(buf, &key2), `json.Unmarshal on jwk.SymmetricKey should succeed`) {
+			return
+		}
+
+		// TODO: remove json comparison once we disallow instantion of
+		// uninitialized keys
+		buf2, err := json.Marshal(key)
+		if !assert.NoError(t, err, `json.Marshal on jwk.SymmetricKey should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, buf, buf2, `json buffers should match`) {
+			return
+		}
+
+/*
+		TODO: enable this test when we disallow instantiation of
+		uninitialized keys i.e.
+			NOK:  var key jwk.SymmetricKey
+			OK :  key := jwk.NewSymmetricKey() // type: interface SymmetricKey
+		if !assert.Equal(t, key, key2, `keys should match`) {
+			return
+		}
+*/
+
 	})
 }

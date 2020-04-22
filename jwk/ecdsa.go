@@ -114,9 +114,9 @@ func (k *ECDSAPrivateKey) Materialize(v interface{}) error {
 	return assignMaterializeResult(v, &key)
 }
 
-func (key *ECDSAPrivateKey) PublicKey() (*ECDSAPublicKey, error) {
+func (k *ECDSAPrivateKey) PublicKey() (*ECDSAPublicKey, error) {
 	var privk ecdsa.PrivateKey
-	if err := key.Materialize(&privk); err != nil {
+	if err := k.Materialize(&privk); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ECDSA private key`)
 	}
 

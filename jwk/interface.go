@@ -54,12 +54,6 @@ type Set struct {
 	Keys []Key `json:"keys"`
 }
 
-// this allows us to hide Headers from outside access while
-// delegating the methods provided Header to its container
-type headers interface {
-	Headers
-}
-
 // Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
 // between each key types, so you should use type assertions

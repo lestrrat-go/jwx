@@ -22,6 +22,10 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+const (
+	byteSliceType = "[]byte"
+)
+
 func main() {
 	if err := _main(); err != nil {
 		log.Printf("%s", err)
@@ -47,12 +51,12 @@ type headerField struct {
 	typ        string
 	returnType string
 	key        string
-	comment    string
+	jsonTag    string
+	// comment    string
 	hasAccept  bool
 	hasGet     bool
 	noDeref    bool
 	isList     bool
-	jsonTag    string
 	isStd      bool
 	optional   bool
 }
@@ -476,7 +480,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", kt.prefix, ht.name)
 		for _, f := range ht.allHeaders {
 			switch f.typ {
-			case "[]byte":
+			case byteSliceType:
 				// XXX encoding/json uses base64.StdEncoding, which require padding
 				// but we may or may not be dealing with padded base64's.
 				// In order to let the proxy handle this correctly, we need to
@@ -639,7 +643,7 @@ func generateHeader(kt keyType) error {
 
 		for _, f := range ht.allHeaders {
 			switch f.typ {
-			case "[]byte":
+			case byteSliceType:
 				// XXX encoding/json uses base64.StdEncoding, which require padding
 				// but we may or may not be dealing with padded base64's.
 				// The unmarshal proxy takes this into account, and grabs the value
@@ -687,7 +691,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", kt.prefix, ht.name)
 		for _, f := range ht.allHeaders {
 			switch f.typ {
-			case "[]byte":
+			case byteSliceType:
 				// XXX encoding/json uses base64.StdEncoding, which require padding
 				// but we may or may not be dealing with padded base64's.
 				// Before marshaling this value to JSON, we must first encode it

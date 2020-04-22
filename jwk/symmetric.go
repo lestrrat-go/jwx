@@ -9,10 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	symmetricKKey = `k`
-)
-
 func newSymmetricKey(octets []byte) (*SymmetricKey, error) {
 	if len(octets) == 0 {
 		return nil, errors.New(`non-empty []byte key required`)
@@ -48,9 +44,3 @@ func (s SymmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	fmt.Fprint(h, `","kty":"oct"}`)
 	return h.Sum(nil), nil
 }
-
-/*
-func (s SymmetricKey) MarshalJSON() (buf []byte, err error) {
-	return json.Marshal(s.headers)
-}
-*/

@@ -90,8 +90,6 @@ func PublicKeyOf(v interface{}) (interface{}, error) {
 	default:
 		return nil, errors.Errorf(`invalid key type passed to PublicKeyOf (%T)`, v)
 	}
-
-	return nil, errors.New(`never reached`)
 }
 
 // Fetch fetches a JWK resource specified by a URL
@@ -256,16 +254,6 @@ func (s Set) LookupKeyID(kid string) []Key {
 
 func (s *Set) Len() int {
 	return len(s.Keys)
-}
-
-// helper for x5c handling
-func marshalX509CertChain(chain []*x509.Certificate) []string {
-	encodedCerts := make([]string, len(chain))
-	for idx, cert := range chain {
-		// XXX does this need to be StdEncoding? can it be RawURL?
-		encodedCerts[idx] = base64.EncodeToStringStd(cert.Raw)
-	}
-	return encodedCerts
 }
 
 func (s *Set) Iterate(ctx context.Context) KeyIterator {
