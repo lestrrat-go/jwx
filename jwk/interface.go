@@ -45,24 +45,6 @@ type Set struct {
 	Keys []Key `json:"keys"`
 }
 
-// Key defines the minimal interface for each of the
-// key types. Their use and implementation differ significantly
-// between each key types, so you should use type assertions
-// to perform more specific tasks with each key
-type Key interface {
-	Headers
-
-	// Materialize creates the corresponding key. For example,
-	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
-	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
-	// and OctetSeq types create a []byte key.
-	Materialize(interface{}) error
-
-	// Thumbprint returns the JWK thumbprint using the indicated
-	// hashing algorithm, according to RFC 7638
-	Thumbprint(crypto.Hash) ([]byte, error)
-}
-
 type HeaderVisitor = iter.MapVisitor
 type HeaderVisitorFunc = iter.MapVisitorFunc
 type HeaderPair = mapiter.Pair

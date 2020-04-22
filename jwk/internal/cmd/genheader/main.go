@@ -383,15 +383,37 @@ func generateGenericHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
-	fmt.Fprintf(&buf, "\nKeyType() jwa.KeyType")
-	fmt.Fprintf(&buf, "\nFromRaw(interface{}) error")
+	fmt.Fprintf(&buf, "\n\n// Key defines the minimal interface for each of the")
+	fmt.Fprintf(&buf, "\n// key types. Their use and implementation differ significantly")
+	fmt.Fprintf(&buf, "\n// between each key types, so you should use type assertions")
+	fmt.Fprintf(&buf, "\n// to perform more specific tasks with each key")
+	fmt.Fprintf(&buf, "\ntype Key interface {")
+	fmt.Fprintf(&buf, "\n// Get returns the value of a single field. The second boolean argument")
+	fmt.Fprintf(&buf, "\n// will be false if the field is not stored in the source")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
+	fmt.Fprintf(&buf, "\n\n// Set sets the value of a single field. Note that certain fields,")
+	fmt.Fprintf(&buf, "\n// notable \"kty\" cannot be altered, but will not return an error")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\n\n// Materialize creates the corresponding key. For example,")
+	fmt.Fprintf(&buf, "\n// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,")
+	fmt.Fprintf(&buf, "\n// and OctetSeq types create a []byte key.")
+	fmt.Fprintf(&buf, "\nMaterialize(interface{}) error")
+	fmt.Fprintf(&buf, "\n\n// Thumbprint returns the JWK thumbprint using the indicated")
+	fmt.Fprintf(&buf, "\n// hashing algorithm, according to RFC 7638")
+	fmt.Fprintf(&buf, "\nThumbprint(crypto.Hash) ([]byte, error)")
+	fmt.Fprintf(&buf, "\n\n// FromRaw is used to initialize a key from its corresponding \"raw\"")
+	fmt.Fprintf(&buf, "\n// key: e.g. RSAPublicKey can be initialized using *rsa.PublicKey,")
+	fmt.Fprintf(&buf, "\n// ECDSAPrivateKey can be initialized using *ecdsa.PrivateKey, etc.")
+	fmt.Fprintf(&buf, "\nFromRaw(interface{}) error")
+	fmt.Fprintf(&buf, "\n\n// Iterate returns an iterator that returns all keys and values")
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) HeaderIterator")
+	fmt.Fprintf(&buf, "\n\n// Walk is a utility tool that allows a visitor to iterate all keys and values")
 	fmt.Fprintf(&buf, "\nWalk(context.Context, HeaderVisitor) error")
+	fmt.Fprintf(&buf, "\n\n// AsMap is a utility tool returns a map that contains the same fields as the source")
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
+	fmt.Fprintf(&buf, "\n\n// PrivateParams returns the non-standard elements in the source structure")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
+	fmt.Fprintf(&buf, "\n\nKeyType() jwa.KeyType")
 	for _, f := range standardHeaders {
 		fmt.Fprintf(&buf, "\n%s() ", f.method)
 		if f.returnType != "" {
@@ -404,7 +426,7 @@ func generateGenericHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n}")
 
-	return writeFormattedCodeToFile("headers_gen.go", &buf)
+	return writeFormattedCodeToFile("interface_gen.go", &buf)
 }
 
 func generateHeaders() error {
