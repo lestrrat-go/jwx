@@ -13,6 +13,10 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+const (
+	ephemeralPublicKey = "ephemeralPublicKey"
+)
+
 func main() {
 	if err := _main(); err != nil {
 		log.Printf("%s", err)
@@ -268,7 +272,7 @@ func generateHeaders() error {
 	// Proxy is used when unmarshaling headers
 	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == jwkKey || f.name == "ephemeralPublicKey" {
+		if f.name == jwkKey || f.name == ephemeralPublicKey {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
 			if fieldStorageTypeIsIndirect(f.typ) {
@@ -410,7 +414,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name == "jwk" || f.name == "ephemeralPublicKey" {
+		if f.name == "jwk" || f.name == ephemeralPublicKey {
 			continue
 		}
 		fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
@@ -450,7 +454,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name == "jwk" || f.name == "ephemeralPublicKey" {
+		if f.name == "jwk" || f.name == ephemeralPublicKey {
 			continue
 		}
 		fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
