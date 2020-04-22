@@ -42,7 +42,7 @@ func (k *ecdsaPublicKey) FromRaw(v interface{}) error {
 	if !ok {
 		return errors.Errorf(`(jwk.ECDSAPublicKey).FromRaw requires ecdsa.PublicKey as the argument (%T)`, v)
 	}
-	
+
 	k.x = rawKey.X.Bytes()
 	k.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {
@@ -69,7 +69,7 @@ func (k *ecdsaPrivateKey) FromRaw(v interface{}) error {
 	if !ok {
 		return errors.Errorf(`(jwk.ECDSAPrivateKey).FromRaw requires ecdsa.PrivateKey as the argument (%T)`, v)
 	}
-	
+
 	k.privateParams = make(map[string]interface{})
 	k.x = rawKey.X.Bytes()
 	k.y = rawKey.Y.Bytes()
