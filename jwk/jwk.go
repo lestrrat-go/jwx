@@ -53,6 +53,47 @@ func New(key interface{}) (Key, error) {
 	}
 }
 
+// PublicKeyOf returns the corresponding public key of the given
+// value `v`. For example, if v is a `*rsa.PrivateKey`, then
+// `*rsa.PublicKey` is returned.
+// If given a public key, then the same public key will be returned.
+// For example, if v is a `*rsa.PublicKey`, then the same value
+// is returned.
+// If v is of a type that we don't support, an error is returned.
+func PublicKeyOf(v interface{}) (interface{}, error) {
+	// may be a silly idea, but if the user gave us a non-pointer value...
+	var ptr interface{}
+	switch v := v.(type) {
+	case rsa.PrivateKey:
+		ptr = &v
+	case rsa.PublicKey:
+		ptr = &v
+	case ecdsa.PrivateKey:
+		ptr = &v
+	case ecdsa.PublicKey:
+		ptr = &v
+	default:
+		ptr = v
+	}
+
+	switch x := ptr.(type) {
+	case *rsa.PrivateKey:
+		return &x.PublicKey, nil
+	case *rsa.PublicKey:
+		return x, nil
+	case *ecdsa.PrivateKey:
+		return &x.PublicKey, nil
+	case *ecdsa.PublicKey:
+		return x, nil
+	case []byte:
+		return x, nil
+	default:
+		return nil, errors.Errorf(`invalid key type passed to PublicKeyOf (%T)`, v)
+	}
+
+	return nil, errors.New(`never reached`)
+}
+
 // Fetch fetches a JWK resource specified by a URL
 func Fetch(urlstring string, options ...Option) (*Set, error) {
 	u, err := url.Parse(urlstring)
