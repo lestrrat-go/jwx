@@ -3,7 +3,6 @@ package jwk
 import (
 	"crypto"
 	"crypto/x509"
-	"errors"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
@@ -25,14 +24,6 @@ const (
 type CertificateChain struct {
 	certs []*x509.Certificate
 }
-
-// Errors related to JWK
-var (
-	ErrInvalidHeaderName  = errors.New("invalid header name")
-	ErrInvalidHeaderValue = errors.New("invalid value for header key")
-	ErrUnsupportedKty     = errors.New("unsupported kty")
-	ErrUnsupportedCurve   = errors.New("unsupported curve")
-)
 
 type KeyOperation string
 type KeyOperationList []KeyOperation
