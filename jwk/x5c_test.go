@@ -57,14 +57,8 @@ func Test_X5CHeader(t *testing.T) {
 			return
 		}
 
-		/*
-			TODO: enable this test when we disallow instantiation of
-			uninitialized keys i.e.
-				NOK:  var key jwk.SymmetricKey
-				OK :  key := jwk.NewSymmetricKey() // type: interface SymmetricKey
-			if !assert.Equal(t, key, key2, `keys should match`) {
-				return
-			}
-		*/
+		if !assert.Equal(t, key, key2, `keys should match`) {
+			return
+		}
 	})
 }
