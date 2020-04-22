@@ -253,7 +253,9 @@ func ParseString(s string) (*Set, error) {
 // Set *may* contain multiple keys with the same key id
 func (s Set) LookupKeyID(kid string) []Key {
 	var keys []Key
-	for _, key := range s.Keys {
+	for iter := s.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		key := pair.Value.(Key)
 		if key.KeyID() == kid {
 			keys = append(keys, key)
 		}
