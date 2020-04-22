@@ -35,15 +35,15 @@ func (k *symmetricKey) FromRaw(v interface{}) error {
 
 // Materialize returns the octets for this symmetric key.
 // Since this is a symmetric key, this just calls Octets
-func (s symmetricKey) Materialize(v interface{}) error {
-	return assignMaterializeResult(v, s.octets)
+func (k symmetricKey) Materialize(v interface{}) error {
+	return assignMaterializeResult(v, k.octets)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
-// hashing algorithm, according to RFC 7638
-func (s symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+// hakhing algorithm, according to RFC 7638
+func (k symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var octets []byte
-	if err := s.Materialize(&octets); err != nil {
+	if err := k.Materialize(&octets); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize symmetric key`)
 	}
 
