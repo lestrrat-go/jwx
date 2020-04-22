@@ -52,7 +52,7 @@ type headerField struct {
 	returnType string
 	key        string
 	jsonTag    string
-	// comment    string
+	comment    string
 	hasAccept  bool
 	hasGet     bool
 	noDeref    bool
