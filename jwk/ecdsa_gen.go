@@ -144,7 +144,9 @@ func (h *ecdsaPrivateKey) Y() []byte {
 
 func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+
 	var pairs []*HeaderPair
+	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
@@ -601,7 +603,9 @@ func (h *ecdsaPublicKey) Y() []byte {
 
 func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+
 	var pairs []*HeaderPair
+	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}

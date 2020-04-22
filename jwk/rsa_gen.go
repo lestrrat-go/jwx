@@ -173,7 +173,9 @@ func (h *rsaPrivateKey) X509URL() string {
 
 func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+
 	var pairs []*HeaderPair
+	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
@@ -739,7 +741,9 @@ func (h *rsaPublicKey) X509URL() string {
 
 func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+
 	var pairs []*HeaderPair
+	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}

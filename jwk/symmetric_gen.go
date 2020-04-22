@@ -116,7 +116,9 @@ func (h *symmetricKey) X509URL() string {
 
 func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+
 	var pairs []*HeaderPair
+	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OctetSeq})
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}

@@ -554,7 +554,8 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 		// NOTE: building up an array is *slow*?
-		fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
+		fmt.Fprintf(&buf, "\n\nvar pairs []*HeaderPair")
+		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: \"kty\", Value: %s})", kt.keyType)
 		for _, f := range ht.allHeaders {
 			var keyName string
 			if f.isStd {
