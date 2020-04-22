@@ -21,7 +21,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509URLKey:                "cert1",
 		}
 
-		var h jwk.StandardHeaders
+		var h jwk.RSAPrivateKey
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), "Set works for '%s'", k) {
 				return
@@ -59,7 +59,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509URLKey:                dummy,
 		}
 
-		var h jwk.StandardHeaders
+		var h jwk.RSAPrivateKey
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err == nil {
@@ -86,38 +86,11 @@ func TestHeader(t *testing.T) {
 			t.Fatalf("KeyOps should be empty string")
 		}
 	})
-	t.Run("ExtractMapError", func(t *testing.T) {
-		type dummyStruct struct {
-			dummy1 int
-			dummy2 float64
-		}
-		dummy := &dummyStruct{1, 3.4}
-		values := map[string]interface{}{
-			jwk.AlgorithmKey:              dummy,
-			jwk.KeyIDKey:                  dummy,
-			jwk.KeyTypeKey:                dummy,
-			jwk.KeyUsageKey:               dummy,
-			jwk.KeyOpsKey:                 dummy,
-			jwk.X509CertChainKey:          dummy,
-			jwk.X509CertThumbprintKey:     dummy,
-			jwk.X509CertThumbprintS256Key: dummy,
-			jwk.X509URLKey:                dummy,
-		}
-
-		var h jwk.StandardHeaders
-		for k := range values {
-			err := h.ExtractMap(values)
-			if err == nil {
-				t.Fatalf("Extracting %s value should have failed", k)
-			}
-			delete(values, k)
-		}
-	})
 
 	t.Run("Algorithm", func(t *testing.T) {
-		var h jwk.StandardHeaders
+		var h jwk.RSAPrivateKey
 		for _, value := range []interface{}{jwa.RS256, jwa.RSA1_5} {
-			if !assert.NoError(t, h.Set("alg", value), "Set for alg should succeed") {
+			if !assert.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed") {
 				return
 			}
 
@@ -132,7 +105,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("KeyType", func(t *testing.T) {
-		var h jwk.StandardHeaders
+		var h jwk.RSAPrivateKey
 		for _, value := range []interface{}{jwa.RSA, "RSA"} {
 			if !assert.NoError(t, h.Set(jwk.KeyTypeKey, value), "Set for kty should succeed") {
 				return

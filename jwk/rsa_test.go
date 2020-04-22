@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/json"
@@ -15,8 +16,8 @@ func TestRSA(t *testing.T) {
 	verify := func(t *testing.T, key jwk.Key) {
 		t.Helper()
 
-		rsaKey, err := key.Materialize()
-		if !assert.NoError(t, err, `Materialize() should succeed`) {
+		var rsaKey interface{}
+		if !assert.NoError(t, key.Materialize(&rsaKey), `Materialize() should succeed`) {
 			return
 		}
 
@@ -25,9 +26,9 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		key.Walk(func(k string, v interface{}) error {
+		key.Walk(context.TODO(), jwk.HeaderVisitorFunc(func(k string, v interface{}) error {
 			return newKey.Set(k, v)
-		})
+		}))
 
 		jsonbuf1, err := json.Marshal(key)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
@@ -104,8 +105,8 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		var privkey *rsa.PrivateKey
-		var pubkey *rsa.PublicKey
+		var privkey rsa.PrivateKey
+		var pubkey rsa.PublicKey
 
 		{
 			pkey, err := rsakey.PublicKey()
@@ -113,13 +114,7 @@ func TestRSA(t *testing.T) {
 				return
 			}
 
-			mkey, err := pkey.Materialize()
-			if !assert.NoError(t, err, "RSAPublickKey.Materialize is successful") {
-				return
-			}
-			var ok bool
-			pubkey, ok = mkey.(*rsa.PublicKey)
-			if !assert.True(t, ok, "Materialized key is a *rsa.PublicKey") {
+			if !assert.NoError(t, pkey.Materialize(&pubkey), "RSAPublickKey.Materialize is successful") {
 				return
 			}
 		}
@@ -132,16 +127,8 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		{
-			mkey, err := rsakey.Materialize()
-			if !assert.NoError(t, err, "RSAPrivateKey.Materialize is successful") {
-				return
-			}
-			var ok bool
-			privkey, ok = mkey.(*rsa.PrivateKey)
-			if !assert.True(t, ok, "Materialized key is a *rsa.PrivateKey") {
-				return
-			}
+		if !assert.NoError(t, rsakey.Materialize(&privkey), "materialise should be successful") {
+			return
 		}
 
 		if !assert.NotEmpty(t, privkey.Precomputed.Dp, "Dp exists") {

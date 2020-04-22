@@ -2,10 +2,12 @@ package jwk
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+
+	"github.com/lestrrat-go/iter/arrayiter"
+	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/internal/iter"
 )
 
 // KeyUsageType is used to denote what this key should be used for
@@ -52,6 +54,12 @@ type Set struct {
 	Keys []Key `json:"keys"`
 }
 
+// this allows us to hide Headers from outside access while
+// delegating the methods provided Header to its container
+type headers interface {
+	Headers
+}
+
 // Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
 // between each key types, so you should use type assertions
@@ -63,43 +71,16 @@ type Key interface {
 	// RSA types would create *rsa.PublicKey or *rsa.PrivateKey,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
-	Materialize() (interface{}, error)
+	Materialize(interface{}) error
 
 	// Thumbprint returns the JWK thumbprint using the indicated
 	// hashing algorithm, according to RFC 7638
 	Thumbprint(crypto.Hash) ([]byte, error)
 }
 
-type headers interface {
-	Headers
-}
-
-// RSAPublicKey is a type of JWK generated from RSA public keys
-type RSAPublicKey struct {
-	headers
-	key *rsa.PublicKey
-}
-
-// RSAPrivateKey is a type of JWK generated from RSA private keys
-type RSAPrivateKey struct {
-	headers
-	key *rsa.PrivateKey
-}
-
-// SymmetricKey is a type of JWK generated from symmetric keys
-type SymmetricKey struct {
-	headers
-	key []byte
-}
-
-// ECDSAPublicKey is a type of JWK generated from ECDSA public keys
-type ECDSAPublicKey struct {
-	headers
-	key *ecdsa.PublicKey
-}
-
-// ECDSAPrivateKey is a type of JWK generated from ECDH-ES private keys
-type ECDSAPrivateKey struct {
-	headers
-	key *ecdsa.PrivateKey
-}
+type HeaderVisitor = iter.MapVisitor
+type HeaderVisitorFunc = iter.MapVisitorFunc
+type HeaderPair = mapiter.Pair
+type HeaderIterator = mapiter.Iterator
+type KeyPair = arrayiter.Pair
+type KeyIterator = arrayiter.Iterator

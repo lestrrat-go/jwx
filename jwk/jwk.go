@@ -17,55 +17,39 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 
-// GetPublicKey returns the public key based on te private key type.
-// For rsa key types *rsa.PublicKey is returned; for ecdsa key types *ecdsa.PublicKey;
-// for byte slice (raw) keys, the key itself is returned. If the corresponding
-// public key cannot be deduced, an error is returned
-func GetPublicKey(key interface{}) (interface{}, error) {
-	if key == nil {
-		return nil, errors.New(`jwk.New requires a non-nil key`)
-	}
-
-	switch v := key.(type) {
-	// Mental note: although Public() is defined in both types,
-	// you can not coalesce the clauses for rsa.PrivateKey and
-	// ecdsa.PrivateKey, as then `v` becomes interface{}
-	// b/c the compiler cannot deduce the exact type.
-	case *rsa.PrivateKey:
-		return v.Public(), nil
-	case *ecdsa.PrivateKey:
-		return v.Public(), nil
-	case []byte:
-		return v, nil
-	default:
-		return nil, errors.Errorf(`invalid key type %T`, key)
-	}
-}
-
-// New creates a jwk.Key from the given key.
+// New creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 func New(key interface{}) (Key, error) {
 	if key == nil {
 		return nil, errors.New(`jwk.New requires a non-nil key`)
 	}
 
 	switch v := key.(type) {
+	case rsa.PrivateKey:
+		return newRSAPrivateKey(&v) // force pointer
 	case *rsa.PrivateKey:
 		return newRSAPrivateKey(v)
+	case rsa.PublicKey:
+		return newRSAPublicKey(&v) // force pointer
 	case *rsa.PublicKey:
 		return newRSAPublicKey(v)
+	case ecdsa.PrivateKey:
+		return newECDSAPrivateKey(&v) // force pointer
 	case *ecdsa.PrivateKey:
 		return newECDSAPrivateKey(v)
+	case ecdsa.PublicKey:
+		return newECDSAPublicKey(&v) // force pointer
 	case *ecdsa.PublicKey:
 		return newECDSAPublicKey(v)
 	case []byte:
 		return newSymmetricKey(v)
 	default:
-		return nil, errors.Errorf(`invalid key type %T`, key)
+		return nil, errors.Errorf(`invalid key type '%T' for jwk.New`, key)
 	}
 }
 
@@ -124,47 +108,95 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	return Parse(res.Body)
 }
 
-func (s *Set) UnmarshalJSON(data []byte) error {
-	v, err := ParseBytes(data)
-	if err != nil {
-		return errors.Wrap(err, `failed to parse jwk.Set`)
+func unmarshalKey(data []byte) (Key, error) {
+	var hint struct {
+		Kty string          `json:"kty"`
+		D   json.RawMessage `json:"d"`
 	}
-	*s = *v
+
+	if err := json.Unmarshal(data, &hint); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal JSON into key hint`)
+	}
+
+	var key Key
+	switch jwa.KeyType(hint.Kty) {
+	case jwa.RSA:
+		if len(hint.D) > 0 {
+			key = &RSAPrivateKey{}
+		} else {
+			key = &RSAPublicKey{}
+		}
+	case jwa.EC:
+		if len(hint.D) > 0 {
+			key = &ECDSAPrivateKey{}
+		} else {
+			key = &ECDSAPublicKey{}
+		}
+	case jwa.OctetSeq:
+		key = &SymmetricKey{}
+	default:
+		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
+	}
+
+	if err := json.Unmarshal(data, key); err != nil {
+		return nil, errors.Wrapf(err, `failed to unmarshal JSON into key (%T)`, key)
+	}
+
+	return key, nil
+}
+
+func (s *Set) UnmarshalJSON(data []byte) error {
+	var proxy struct {
+		Keys []json.RawMessage `json:"keys"`
+	}
+
+	if err := json.Unmarshal(data, &proxy); err != nil {
+		return errors.Wrap(err, `failed to unmarshal into Key (proxy)`)
+	}
+
+	if len(proxy.Keys) == 0 {
+		k, err := unmarshalKey(data)
+		if err != nil {
+			return errors.Wrap(err, `failed to unmarshal key from JSON headers`)
+		}
+		s.Keys = append(s.Keys, k)
+	} else {
+		for i, buf := range proxy.Keys {
+			data = []byte(buf)
+			k, err := unmarshalKey(data)
+			if err != nil {
+				return errors.Wrapf(err, `failed to unmarshal key #%d (total %d) from multi-key JWK set`, i+1, len(proxy.Keys))
+			}
+			s.Keys = append(s.Keys, k)
+		}
+	}
 	return nil
 }
 
-// Parse parses JWK from the incoming io.Reader.
+// Parse parses JWK from the incoming io.Reader. This function can handle
+// both single-key and multi-key formats. If you know before hand which
+// format the incoming data is in, you might want to consider using
+// "encoding/json" directly
+//
+// Note that a successful parsing does NOT guarantee a valid key
 func Parse(in io.Reader) (*Set, error) {
-	m := make(map[string]interface{})
-	if err := json.NewDecoder(in).Decode(&m); err != nil {
+	var s Set
+	if err := json.NewDecoder(in).Decode(&s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal JWK")
 	}
-
-	// We must change what the underlying structure that gets decoded
-	// out of this JSON is based on parameters within the already parsed
-	// JSON (m). In order to do this, we have to go through the tedious
-	// task of parsing the contents of this map :/
-	if _, ok := m["keys"]; ok {
-		var set Set
-		if err := set.ExtractMap(m); err != nil {
-			return nil, errors.Wrap(err, `failed to extract from map`)
-		}
-		return &set, nil
-	}
-
-	k, err := constructKey(m)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to construct key from keys`)
-	}
-	return &Set{Keys: []Key{k}}, nil
+	return &s, nil
 }
 
 // ParseBytes parses JWK from the incoming byte buffer.
+//
+// Note that a successful parsing does NOT guarantee a valid key
 func ParseBytes(buf []byte) (*Set, error) {
 	return Parse(bytes.NewReader(buf))
 }
 
 // ParseString parses JWK from the incoming string.
+//
+// Note that a successful parsing does NOT guarantee a valid key
 func ParseString(s string) (*Set, error) {
 	return Parse(strings.NewReader(s))
 }
@@ -181,95 +213,8 @@ func (s Set) LookupKeyID(kid string) []Key {
 	return keys
 }
 
-func (s *Set) ExtractMap(m map[string]interface{}) error {
-	raw, ok := m["keys"]
-	if !ok {
-		return errors.New("missing 'keys' parameter")
-	}
-
-	v, ok := raw.([]interface{})
-	if !ok {
-		return errors.New("invalid 'keys' parameter")
-	}
-
-	var ks Set
-	for _, c := range v {
-		conf, ok := c.(map[string]interface{})
-		if !ok {
-			return errors.New("invalid element in 'keys'")
-		}
-
-		k, err := constructKey(conf)
-		if err != nil {
-			return errors.Wrap(err, `failed to construct key from map`)
-		}
-		ks.Keys = append(ks.Keys, k)
-	}
-
-	*s = ks
-	return nil
-}
-
-func constructKey(m map[string]interface{}) (Key, error) {
-	kty, ok := m[KeyTypeKey].(string)
-	if !ok {
-		return nil, errors.Errorf(`unsupported kty type %T`, m[KeyTypeKey])
-	}
-
-	var key Key
-	switch jwa.KeyType(kty) {
-	case jwa.RSA:
-		if _, ok := m["d"]; ok {
-			key = &RSAPrivateKey{}
-		} else {
-			key = &RSAPublicKey{}
-		}
-	case jwa.EC:
-		if _, ok := m["d"]; ok {
-			key = &ECDSAPrivateKey{}
-		} else {
-			key = &ECDSAPublicKey{}
-		}
-	case jwa.OctetSeq:
-		key = &SymmetricKey{}
-	default:
-		return nil, errors.Errorf(`invalid kty %s`, kty)
-	}
-
-	if err := key.ExtractMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to extract key from map`)
-	}
-
-	return key, nil
-}
-
-func getRequiredKey(m map[string]interface{}, key string) ([]byte, error) {
-	return getKey(m, key, true)
-}
-
-func getOptionalKey(m map[string]interface{}, key string) ([]byte, error) {
-	return getKey(m, key, false)
-}
-
-func getKey(m map[string]interface{}, key string, required bool) ([]byte, error) {
-	v, ok := m[key]
-	if !ok {
-		if !required {
-			return nil, errors.Errorf(`missing parameter '%s'`, key)
-		}
-		return nil, errors.Errorf(`missing required parameter '%s'`, key)
-	}
-
-	vs, ok := v.(string)
-	if !ok {
-		return nil, errors.Errorf(`invalid type for parameter '%s': %T`, key, v)
-	}
-
-	buf, err := base64.DecodeString(vs)
-	if err != nil {
-		return nil, errors.Wrapf(err, `failed to base64 decode key %s`, key)
-	}
-	return buf, nil
+func (s *Set) Len() int {
+	return len(s.Keys)
 }
 
 // helper for x5c handling
@@ -280,4 +225,23 @@ func marshalX509CertChain(chain []*x509.Certificate) []string {
 		encodedCerts[idx] = base64.EncodeToStringStd(cert.Raw)
 	}
 	return encodedCerts
+}
+
+func (s *Set) Iterate(ctx context.Context) KeyIterator {
+	ch := make(chan *KeyPair, s.Len())
+	go iterate(ctx, s.Keys, ch)
+	return arrayiter.New(ch)
+}
+
+func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
+	defer close(ch)
+
+	for i, key := range keys {
+		pair := &KeyPair{Index: i, Value: key}
+		select {
+		case <-ctx.Done():
+			return
+		case ch <- pair:
+		}
+	}
 }

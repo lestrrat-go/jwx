@@ -100,4 +100,11 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`do not accept invalid constant InvalidEllipticCurve`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.Error(t, dst.Accept(jwa.InvalidEllipticCurve), `accept should fail`) {
+			return
+		}
+	})
 }

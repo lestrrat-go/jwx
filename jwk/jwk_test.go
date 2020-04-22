@@ -1,11 +1,13 @@
 package jwk_test
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,6 +34,7 @@ func TestNew(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	verify := func(t *testing.T, src string, expected interface{}) {
+		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
 			var set jwk.Set
 			if err := json.Unmarshal([]byte(src), &set); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
@@ -48,29 +51,24 @@ func TestParse(t *testing.T) {
 			}
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
+			t.Helper()
 			set, err := jwk.ParseBytes([]byte(`{"keys":[` + src + `]}`))
 			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 				return
 			}
 
-			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greater than 0") {
+			if !assert.True(t, set.Len() > 0, "set.Len should be greater than 0") {
 				return
 			}
-			for _, key := range set.Keys {
-				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
-					return
-				}
+
+			for iter := set.Iterate(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				key := pair.Value.(jwk.Key)
 
 				switch key := key.(type) {
-				case *jwk.RSAPrivateKey, *jwk.ECDSAPrivateKey:
-					realKey, err := key.(jwk.Key).Materialize()
-					if !assert.NoError(t, err, "failed to get underlying private key") {
-						return
-					}
-
-					if _, err := jwk.GetPublicKey(realKey); !assert.NoError(t, err, `failed to get public key from underlying private key`) {
-						return
-					}
+				case *jwk.RSAPrivateKey, *jwk.ECDSAPrivateKey, *jwk.RSAPublicKey, *jwk.ECDSAPublicKey, *jwk.SymmetricKey:
+				default:
+					assert.Fail(t, fmt.Sprintf("invalid type: %T", key))
 				}
 			}
 		})
@@ -356,13 +354,18 @@ func TestAppendix(t *testing.T) {
 			return
 		}
 
-		if !assert.Len(t, set.Keys, 2, "There should be 2 keys") {
+		if !assert.Equal(t, set.Len(), 2, "There should be 2 keys") {
 			return
 		}
 
 		{
 			key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
 			if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
+				return
+			}
+
+			var rawkey ecdsa.PublicKey
+			if !assert.NoError(t, key.Materialize(&rawkey), `materialize should succeed`) {
 				return
 			}
 
@@ -399,8 +402,9 @@ func TestAppendix(t *testing.T) {
           "kid":"HMAC key used in JWS spec Appendix A.1 example"}
        ]
      }`)
-		set, err := jwk.ParseBytes(jwksrc)
-		if !assert.NoError(t, err, "Parse should succeed") {
+
+		var set jwk.Set
+		if !assert.NoError(t, json.Unmarshal(jwksrc, &set), "jwk.Set unmarshal should succeed") {
 			return
 		}
 
@@ -410,7 +414,7 @@ func TestAppendix(t *testing.T) {
 		}{
 			{
 				headers: map[string]interface{}{
-					jwk.KeyTypeKey:   jwa.OctetSeq,
+					jwk.KeyTypeKey: jwa.OctetSeq,
 					jwk.AlgorithmKey: jwa.A128KW.String(),
 				},
 				key: buf1,
@@ -430,8 +434,8 @@ func TestAppendix(t *testing.T) {
 				return
 			}
 
-			ckey, err := key.Materialize()
-			if !assert.NoError(t, err, "materialized key") {
+			var ckey []byte
+			if !assert.NoError(t, key.Materialize(&ckey), "materialized key") {
 				return
 			}
 
@@ -443,7 +447,7 @@ func TestAppendix(t *testing.T) {
 				k := k
 				expected := expected
 				t.Run(k, func(t *testing.T) {
-					if v, ok := key.Get(k); assert.True(t, ok, "getting %s from jwk.Key should succeed", k) {
+					if v, ok := key.Get(k); assert.True(t, ok, "getting %s from %T should succeed", k, key) {
 						if !assert.Equal(t, expected, v, "value for %s should match", k) {
 							return
 						}
@@ -508,6 +512,11 @@ func TestFetch(t *testing.T) {
 	verify := func(t *testing.T, set *jwk.Set) {
 		key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
 		if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
+			return
+		}
+
+		var rawkey ecdsa.PublicKey
+		if !assert.NoError(t, key.Materialize(&rawkey), "materialize should succeed") {
 			return
 		}
 
