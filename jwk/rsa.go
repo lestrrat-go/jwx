@@ -31,27 +31,36 @@ func newRSAPrivateKey() *rsaPrivateKey {
 	}
 }
 
-func newRSAPrivateKeyFromRaw(rawKey *rsa.PrivateKey) (RSAPrivateKey, error) {
-	key := newRSAPrivateKey()
-	key.d = rawKey.D.Bytes()
-	if len(rawKey.Primes) < 2 {
-		return nil, errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
+func (k *rsaPrivateKey) FromRaw(v interface{}) error {
+	switch x := v.(type) {
+	case rsa.PrivateKey:
+		v = &x
 	}
 
-	key.p = rawKey.Primes[0].Bytes()
-	key.q = rawKey.Primes[1].Bytes()
+	rawKey, ok := v.(*rsa.PrivateKey)
+	if !ok {
+		return errors.Errorf(`(jwk.RSAPrivateKey).FromRaw requires rsa.PrivateKey as the argument (%T)`, v)
+	}
+
+	k.d = rawKey.D.Bytes()
+	if len(rawKey.Primes) < 2 {
+		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
+	}
+
+	k.p = rawKey.Primes[0].Bytes()
+	k.q = rawKey.Primes[1].Bytes()
 
 	if v := rawKey.Precomputed.Dp; v != nil {
-		key.dp = v.Bytes()
+		k.dp = v.Bytes()
 	}
 	if v := rawKey.Precomputed.Dq; v != nil {
-		key.dq = v.Bytes()
+		k.dq = v.Bytes()
 	}
 	if v := rawKey.Precomputed.Qinv; v != nil {
-		key.qi = v.Bytes()
+		k.qi = v.Bytes()
 	}
 
-	key.n = rawKey.PublicKey.N.Bytes()
+	k.n = rawKey.PublicKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.PublicKey.E))
 	i := 0
@@ -60,14 +69,23 @@ func newRSAPrivateKeyFromRaw(rawKey *rsa.PrivateKey) (RSAPrivateKey, error) {
 			break
 		}
 	}
-	key.e = data[i:]
+	k.e = data[i:]
 
-	return key, nil
+	return nil
 }
 
-func newRSAPublicKeyFromRaw(rawKey *rsa.PublicKey) (RSAPublicKey, error) {
-	key := newRSAPublicKey()
-	key.n = rawKey.N.Bytes()
+func (k *rsaPublicKey) FromRaw(v interface{}) error {
+	switch x := v.(type) {
+	case rsa.PublicKey:
+		v = &x
+	}
+
+	rawKey, ok := v.(*rsa.PublicKey)
+	if !ok {
+		return errors.Errorf(`(jwk.RSAPublicKey).FromRaw requires rsa.PublicKey as the argument (%T)`, v)
+	}
+
+	k.n = rawKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))
 	i := 0
@@ -76,9 +94,9 @@ func newRSAPublicKeyFromRaw(rawKey *rsa.PublicKey) (RSAPublicKey, error) {
 			break
 		}
 	}
-	key.e = data[i:]
+	k.e = data[i:]
 
-	return key, nil
+	return nil
 }
 
 func (k *rsaPrivateKey) Materialize(v interface{}) error {
@@ -149,7 +167,12 @@ func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
 	if err := k.Materialize(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize key to generate public key`)
 	}
-	return newRSAPublicKeyFromRaw(&key.PublicKey)
+
+	newKey := NewRSAPublicKey()
+	if err := newKey.FromRaw(&key.PublicKey); err != nil {
+		return nil, errors.Wrap(err, `failed to initialize RSAPublicKey`)
+	}
+	return newKey, nil
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated

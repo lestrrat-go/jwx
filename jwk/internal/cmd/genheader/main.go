@@ -385,6 +385,7 @@ func generateGenericHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\ntype Headers interface {")
 	fmt.Fprintf(&buf, "\nKeyType() jwa.KeyType")
+	fmt.Fprintf(&buf, "\nFromRaw(interface{}) error")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) HeaderIterator")

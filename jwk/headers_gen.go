@@ -22,6 +22,7 @@ const (
 
 type Headers interface {
 	KeyType() jwa.KeyType
+	FromRaw(interface{}) error
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
 	Iterate(ctx context.Context) HeaderIterator

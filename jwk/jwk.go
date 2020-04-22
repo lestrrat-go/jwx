@@ -27,28 +27,40 @@ func New(key interface{}) (Key, error) {
 		return nil, errors.New(`jwk.New requires a non-nil key`)
 	}
 
+	var ptr interface{}
 	switch v := key.(type) {
 	case rsa.PrivateKey:
-		return newRSAPrivateKeyFromRaw(&v) // force pointer
-	case *rsa.PrivateKey:
-		return newRSAPrivateKeyFromRaw(v)
+		ptr = &v
 	case rsa.PublicKey:
-		return newRSAPublicKeyFromRaw(&v) // force pointer
-	case *rsa.PublicKey:
-		return newRSAPublicKeyFromRaw(v)
+		ptr = &v
 	case ecdsa.PrivateKey:
-		return newECDSAPrivateKeyFromRaw(&v) // force pointer
-	case *ecdsa.PrivateKey:
-		return newECDSAPrivateKeyFromRaw(v)
+		ptr = &v
 	case ecdsa.PublicKey:
-		return newECDSAPublicKeyFromRaw(&v) // force pointer
+		ptr = &v
+	default:
+		ptr = v
+	}
+
+	var k Key
+	switch ptr.(type) {
+	case *rsa.PrivateKey:
+		k = NewRSAPrivateKey()
+	case *rsa.PublicKey:
+		k = NewRSAPublicKey()
+	case *ecdsa.PrivateKey:
+		k = NewECDSAPrivateKey()
 	case *ecdsa.PublicKey:
-		return newECDSAPublicKeyFromRaw(v)
+		k = NewECDSAPublicKey()
 	case []byte:
-		return newSymmetricKeyFromRaw(v)
+		k = NewSymmetricKey()
 	default:
 		return nil, errors.Errorf(`invalid key type '%T' for jwk.New`, key)
 	}
+
+	if err := k.FromRaw(ptr); err != nil {
+		return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, key)
+	}
+	return k, nil
 }
 
 // PublicKeyOf returns the corresponding public key of the given

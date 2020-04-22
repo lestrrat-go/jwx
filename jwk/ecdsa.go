@@ -32,43 +32,61 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 	}
 }
 
-func newECDSAPublicKeyFromRaw(rawKey *ecdsa.PublicKey) (ECDSAPublicKey, error) {
-	key := newECDSAPublicKey()
-	key.x = rawKey.X.Bytes()
-	key.y = rawKey.Y.Bytes()
-	switch rawKey.Curve {
-	case elliptic.P256():
-		key.Set(ecdsaCrvKey, jwa.P256)
-	case elliptic.P384():
-		key.Set(ecdsaCrvKey, jwa.P384)
-	case elliptic.P521():
-		key.Set(ecdsaCrvKey, jwa.P521)
-	default:
-		return nil, errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+func (k *ecdsaPublicKey) FromRaw(v interface{}) error {
+	switch x := v.(type) {
+	case ecdsa.PublicKey:
+		v = &x
 	}
 
-	return key, nil
+	rawKey, ok := v.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.Errorf(`(jwk.ECDSAPublicKey).FromRaw requires ecdsa.PublicKey as the argument (%T)`, v)
+	}
+	
+	k.x = rawKey.X.Bytes()
+	k.y = rawKey.Y.Bytes()
+	switch rawKey.Curve {
+	case elliptic.P256():
+		k.Set(ecdsaCrvKey, jwa.P256)
+	case elliptic.P384():
+		k.Set(ecdsaCrvKey, jwa.P384)
+	case elliptic.P521():
+		k.Set(ecdsaCrvKey, jwa.P521)
+	default:
+		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+	}
+
+	return nil
 }
 
-func newECDSAPrivateKeyFromRaw(rawKey *ecdsa.PrivateKey) (ECDSAPrivateKey, error) {
-	key := newECDSAPrivateKey()
-	key.privateParams = make(map[string]interface{})
-	key.x = rawKey.X.Bytes()
-	key.y = rawKey.Y.Bytes()
-	switch rawKey.Curve {
-	case elliptic.P256():
-		key.Set(ecdsaCrvKey, jwa.P256)
-	case elliptic.P384():
-		key.Set(ecdsaCrvKey, jwa.P384)
-	case elliptic.P521():
-		key.Set(ecdsaCrvKey, jwa.P521)
-	default:
-		return nil, errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+func (k *ecdsaPrivateKey) FromRaw(v interface{}) error {
+	switch x := v.(type) {
+	case ecdsa.PrivateKey:
+		v = &x
 	}
 
-	key.d = rawKey.D.Bytes()
+	rawKey, ok := v.(*ecdsa.PrivateKey)
+	if !ok {
+		return errors.Errorf(`(jwk.ECDSAPrivateKey).FromRaw requires ecdsa.PrivateKey as the argument (%T)`, v)
+	}
+	
+	k.privateParams = make(map[string]interface{})
+	k.x = rawKey.X.Bytes()
+	k.y = rawKey.Y.Bytes()
+	switch rawKey.Curve {
+	case elliptic.P256():
+		k.Set(ecdsaCrvKey, jwa.P256)
+	case elliptic.P384():
+		k.Set(ecdsaCrvKey, jwa.P384)
+	case elliptic.P521():
+		k.Set(ecdsaCrvKey, jwa.P521)
+	default:
+		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+	}
 
-	return key, nil
+	k.d = rawKey.D.Bytes()
+
+	return nil
 }
 
 func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecdsa.PublicKey, error) {
@@ -122,7 +140,11 @@ func (k *ecdsaPrivateKey) PublicKey() (ECDSAPublicKey, error) {
 		return nil, errors.Wrap(err, `failed to materialize ECDSA private key`)
 	}
 
-	return newECDSAPublicKeyFromRaw(&privk.PublicKey)
+	newKey := NewECDSAPublicKey()
+	if err := newKey.FromRaw(&privk.PublicKey); err != nil {
+		return nil, errors.Wrap(err, `failed to initialize ECDSAPublicKey`)
+	}
+	return newKey, nil
 }
 
 func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {

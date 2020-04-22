@@ -18,15 +18,19 @@ func newSymmetricKey() *symmetricKey {
 	}
 }
 
-func newSymmetricKeyFromRaw(octets []byte) (SymmetricKey, error) {
-	if len(octets) == 0 {
-		return nil, errors.New(`non-empty []byte key required`)
+func (k *symmetricKey) FromRaw(v interface{}) error {
+	octets, ok := v.([]byte)
+	if !ok {
+		return errors.Errorf(`(jwk.SymmetricKey).FromRaw requires []byte as the argument (%T)`, v)
 	}
 
-	key := newSymmetricKey()
-	key.octets = octets
+	if len(octets) == 0 {
+		return errors.New(`non-empty []byte key required`)
+	}
 
-	return key, nil
+	k.octets = octets
+
+	return nil
 }
 
 // Materialize returns the octets for this symmetric key.
