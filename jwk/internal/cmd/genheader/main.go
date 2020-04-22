@@ -454,7 +454,8 @@ func generateHeader(kt keyType) error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	for _, ht := range kt.headerTypes {
+	for i := 0 ; i < len(kt.headerTypes); i++ {
+		ht := kt.headerTypes[i]
 		ht.allHeaders = append(standardHeaders, ht.headers...)
 		sort.Slice(ht.headers, func(i, j int) bool {
 			return ht.headers[i].name < ht.headers[j].name
