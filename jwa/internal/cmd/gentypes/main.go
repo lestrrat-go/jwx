@@ -110,8 +110,8 @@ func _main() error {
 			filename: `elliptic_gen.go`,
 			elements: []element{
 				{
-					name:  `InvalidEllipticCurve`,
-					value: `P-invalid`,
+					name:    `InvalidEllipticCurve`,
+					value:   `P-invalid`,
 					invalid: true,
 				},
 				{
