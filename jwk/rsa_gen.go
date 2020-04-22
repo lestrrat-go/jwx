@@ -29,7 +29,20 @@ const (
 	rsaQIKey = "qi"
 )
 
-type RSAPrivateKey struct {
+type RSAPrivateKey interface {
+	Key
+	D() []byte
+	DP() []byte
+	DQ() []byte
+	E() []byte
+	N() []byte
+	P() []byte
+	Q() []byte
+	QI() []byte
+	PublicKey() (RSAPublicKey, error)
+}
+
+type rsaPrivateKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	d                      []byte
 	dp                     []byte
@@ -70,99 +83,99 @@ type rsaPrivateKeyMarshalProxy struct {
 	Xx509URL                *string           `json:"x5u,omitempty"`
 }
 
-func (h *RSAPrivateKey) Algorithm() string {
+func (h *rsaPrivateKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) D() []byte {
+func (h *rsaPrivateKey) D() []byte {
 	return h.d
 }
 
-func (h *RSAPrivateKey) DP() []byte {
+func (h *rsaPrivateKey) DP() []byte {
 	return h.dp
 }
 
-func (h *RSAPrivateKey) DQ() []byte {
+func (h *rsaPrivateKey) DQ() []byte {
 	return h.dq
 }
 
-func (h *RSAPrivateKey) E() []byte {
+func (h *rsaPrivateKey) E() []byte {
 	return h.e
 }
 
-func (h *RSAPrivateKey) KeyID() string {
+func (h *rsaPrivateKey) KeyID() string {
 	if h.keyID != nil {
 		return *(h.keyID)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) KeyType() jwa.KeyType {
+func (h *rsaPrivateKey) KeyType() jwa.KeyType {
 	if h.keyType != nil {
 		return *(h.keyType)
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *RSAPrivateKey) KeyUsage() string {
+func (h *rsaPrivateKey) KeyUsage() string {
 	if h.keyUsage != nil {
 		return *(h.keyUsage)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) KeyOps() KeyOperationList {
+func (h *rsaPrivateKey) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
-func (h *RSAPrivateKey) N() []byte {
+func (h *rsaPrivateKey) N() []byte {
 	return h.n
 }
 
-func (h *RSAPrivateKey) P() []byte {
+func (h *rsaPrivateKey) P() []byte {
 	return h.p
 }
 
-func (h *RSAPrivateKey) Q() []byte {
+func (h *rsaPrivateKey) Q() []byte {
 	return h.q
 }
 
-func (h *RSAPrivateKey) QI() []byte {
+func (h *rsaPrivateKey) QI() []byte {
 	return h.qi
 }
 
-func (h *RSAPrivateKey) X509CertChain() []*x509.Certificate {
+func (h *rsaPrivateKey) X509CertChain() []*x509.Certificate {
 	if h.x509CertChain != nil {
 		return h.x509CertChain.Get()
 	}
 	return nil
 }
 
-func (h *RSAPrivateKey) X509CertThumbprint() string {
+func (h *rsaPrivateKey) X509CertThumbprint() string {
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) X509CertThumbprintS256() string {
+func (h *rsaPrivateKey) X509CertThumbprintS256() string {
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) X509URL() string {
+func (h *rsaPrivateKey) X509URL() string {
 	if h.x509URL != nil {
 		return *(h.x509URL)
 	}
 	return ""
 }
 
-func (h *RSAPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
+func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
@@ -228,11 +241,11 @@ func (h *RSAPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 }
 
-func (h *RSAPrivateKey) PrivateParams() map[string]interface{} {
+func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
 	return h.privateParams
 }
 
-func (h *RSAPrivateKey) Get(name string) (interface{}, bool) {
+func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -325,7 +338,7 @@ func (h *RSAPrivateKey) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *RSAPrivateKey) Set(name string, value interface{}) error {
+func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -446,10 +459,10 @@ func (h *RSAPrivateKey) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *RSAPrivateKey) UnmarshalJSON(buf []byte) error {
+func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	var proxy rsaPrivateKeyMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal RSAPrivateKey`)
+		return errors.Wrap(err, `failed to unmarshal rsaPrivateKey`)
 	}
 	h.algorithm = proxy.Xalgorithm
 	if proxy.Xd == nil {
@@ -556,7 +569,7 @@ func (h *RSAPrivateKey) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h RSAPrivateKey) MarshalJSON() ([]byte, error) {
+func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	var proxy rsaPrivateKeyMarshalProxy
 	proxy.Xalgorithm = h.algorithm
 	if len(h.d) > 0 {
@@ -630,21 +643,27 @@ func (h RSAPrivateKey) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *RSAPrivateKey) Iterate(ctx context.Context) HeaderIterator {
+func (h *rsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
 	ch := make(chan *HeaderPair)
 	go h.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *RSAPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
+func (h *rsaPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
 	return iter.WalkMap(ctx, h, visitor)
 }
 
-func (h *RSAPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
+func (h *rsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
 }
 
-type RSAPublicKey struct {
+type RSAPublicKey interface {
+	Key
+	E() []byte
+	N() []byte
+}
+
+type rsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	e                      []byte
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
@@ -673,75 +692,75 @@ type rsaPublicKeyMarshalProxy struct {
 	Xx509URL                *string           `json:"x5u,omitempty"`
 }
 
-func (h *RSAPublicKey) Algorithm() string {
+func (h *rsaPublicKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) E() []byte {
+func (h *rsaPublicKey) E() []byte {
 	return h.e
 }
 
-func (h *RSAPublicKey) KeyID() string {
+func (h *rsaPublicKey) KeyID() string {
 	if h.keyID != nil {
 		return *(h.keyID)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) KeyType() jwa.KeyType {
+func (h *rsaPublicKey) KeyType() jwa.KeyType {
 	if h.keyType != nil {
 		return *(h.keyType)
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *RSAPublicKey) KeyUsage() string {
+func (h *rsaPublicKey) KeyUsage() string {
 	if h.keyUsage != nil {
 		return *(h.keyUsage)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) KeyOps() KeyOperationList {
+func (h *rsaPublicKey) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
-func (h *RSAPublicKey) N() []byte {
+func (h *rsaPublicKey) N() []byte {
 	return h.n
 }
 
-func (h *RSAPublicKey) X509CertChain() []*x509.Certificate {
+func (h *rsaPublicKey) X509CertChain() []*x509.Certificate {
 	if h.x509CertChain != nil {
 		return h.x509CertChain.Get()
 	}
 	return nil
 }
 
-func (h *RSAPublicKey) X509CertThumbprint() string {
+func (h *rsaPublicKey) X509CertThumbprint() string {
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) X509CertThumbprintS256() string {
+func (h *rsaPublicKey) X509CertThumbprintS256() string {
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) X509URL() string {
+func (h *rsaPublicKey) X509URL() string {
 	if h.x509URL != nil {
 		return *(h.x509URL)
 	}
 	return ""
 }
 
-func (h *RSAPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
+func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
@@ -789,11 +808,11 @@ func (h *RSAPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 }
 
-func (h *RSAPublicKey) PrivateParams() map[string]interface{} {
+func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
 	return h.privateParams
 }
 
-func (h *RSAPublicKey) Get(name string) (interface{}, bool) {
+func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -856,7 +875,7 @@ func (h *RSAPublicKey) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *RSAPublicKey) Set(name string, value interface{}) error {
+func (h *rsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -941,10 +960,10 @@ func (h *RSAPublicKey) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *RSAPublicKey) UnmarshalJSON(buf []byte) error {
+func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 	var proxy rsaPublicKeyMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal RSAPublicKey`)
+		return errors.Wrap(err, `failed to unmarshal rsaPublicKey`)
 	}
 	h.algorithm = proxy.Xalgorithm
 	if proxy.Xe == nil {
@@ -994,7 +1013,7 @@ func (h *RSAPublicKey) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h RSAPublicKey) MarshalJSON() ([]byte, error) {
+func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	var proxy rsaPublicKeyMarshalProxy
 	proxy.Xalgorithm = h.algorithm
 	if len(h.e) > 0 {
@@ -1044,16 +1063,16 @@ func (h RSAPublicKey) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *RSAPublicKey) Iterate(ctx context.Context) HeaderIterator {
+func (h *rsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
 	ch := make(chan *HeaderPair)
 	go h.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *RSAPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
+func (h *rsaPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
 	return iter.WalkMap(ctx, h, visitor)
 }
 
-func (h *RSAPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
+func (h *rsaPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
 }

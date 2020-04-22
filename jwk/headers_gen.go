@@ -27,6 +27,7 @@ type Headers interface {
 	Iterate(ctx context.Context) HeaderIterator
 	Walk(context.Context, HeaderVisitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
+	PrivateParams() map[string]interface{}
 	KeyType() jwa.KeyType
 	KeyUsage() string
 	KeyOps() KeyOperationList

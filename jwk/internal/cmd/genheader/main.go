@@ -196,8 +196,10 @@ type keyType struct {
 type headerType struct {
 	allHeaders []headerField
 	headers    []headerField
+	ifMethods  []string
 	name       string
 	structName string
+	ifName     string
 }
 
 var keyTypes = []keyType{
@@ -225,6 +227,9 @@ var keyTypes = []keyType{
 			},
 			{
 				name: `PrivateKey`,
+				ifMethods: []string{
+					`PublicKey() (RSAPublicKey, error)`,
+				},
 				headers: []headerField{
 					{
 						name:   `d`,
@@ -311,6 +316,9 @@ var keyTypes = []keyType{
 			},
 			{
 				name: `PrivateKey`,
+				ifMethods: []string{
+					`PublicKey() (ECDSAPublicKey, error)`,
+				},
 				headers: []headerField{
 					{
 						name:   `d`,
@@ -347,7 +355,8 @@ var keyTypes = []keyType{
 		headerTypes: []headerType{
 			{
 				name:       "SymmetricKey",
-				structName: `SymmetricKey`,
+				structName: `symmetricKey`,
+				ifName: `SymmetricKey`,
 				headers: []headerField{
 					{
 						name:   `octets`,
@@ -468,8 +477,22 @@ func generateHeader(kt keyType) error {
 
 		structName := ht.structName
 		if len(structName) == 0 {
-			structName = strings.ToUpper(kt.prefix) + ht.name
+			structName = kt.prefix + ht.name
 		}
+		ifName := ht.ifName
+		if len(ifName) == 0 {
+			ifName = strings.ToUpper(kt.prefix) + ht.name
+		}
+
+		fmt.Fprintf(&buf, "\n\ntype %s interface {", ifName)
+		fmt.Fprintf(&buf, "\nKey")
+		for _, header := range ht.headers {
+			fmt.Fprintf(&buf, "\n%s() %s", header.method, header.typ)
+		}
+		for _, method := range ht.ifMethods {
+			fmt.Fprintf(&buf, "\n%s", method)
+		}
+		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\ntype %s struct {", structName)
 		for _, header := range ht.allHeaders {

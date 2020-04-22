@@ -12,8 +12,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newRSAPrivateKey(rawKey *rsa.PrivateKey) (*RSAPrivateKey, error) {
-	var key RSAPrivateKey
+func newRSAPublicKey() *rsaPublicKey {
+	return &rsaPublicKey{
+		privateParams: make(map[string]interface{}),
+	}
+}
+
+func newRSAPrivateKey() *rsaPrivateKey {
+	return &rsaPrivateKey{
+		privateParams: make(map[string]interface{}),
+	}
+}
+
+func newRSAPrivateKeyFromRaw(rawKey *rsa.PrivateKey) (RSAPrivateKey, error) {
+	key := newRSAPrivateKey()
 
 	key.Set(KeyTypeKey, jwa.RSA)
 
@@ -46,12 +58,11 @@ func newRSAPrivateKey(rawKey *rsa.PrivateKey) (*RSAPrivateKey, error) {
 	}
 	key.e = data[i:]
 
-	return &key, nil
+	return key, nil
 }
 
-func newRSAPublicKey(rawKey *rsa.PublicKey) (*RSAPublicKey, error) {
-	var key RSAPublicKey
-
+func newRSAPublicKeyFromRaw(rawKey *rsa.PublicKey) (RSAPublicKey, error) {
+	key := newRSAPublicKey()
 	key.Set(KeyTypeKey, jwa.RSA)
 
 	key.n = rawKey.N.Bytes()
@@ -65,10 +76,10 @@ func newRSAPublicKey(rawKey *rsa.PublicKey) (*RSAPublicKey, error) {
 	}
 	key.e = data[i:]
 
-	return &key, nil
+	return key, nil
 }
 
-func (k *RSAPrivateKey) Materialize(v interface{}) error {
+func (k *rsaPrivateKey) Materialize(v interface{}) error {
 	var d, q, p big.Int
 	d.SetBytes(k.d)
 	q.SetBytes(k.q)
@@ -93,10 +104,9 @@ func (k *RSAPrivateKey) Materialize(v interface{}) error {
 
 	var key rsa.PrivateKey
 
-	pubk := &RSAPublicKey{
-		n: k.n,
-		e: k.e,
-	}
+	pubk := newRSAPublicKey()
+	pubk.n = k.n
+	pubk.e = k.e
 	if err := pubk.Materialize(&key.PublicKey); err != nil {
 		return errors.Wrap(err, `failed to materialize RSA public key`)
 	}
@@ -119,7 +129,7 @@ func (k *RSAPrivateKey) Materialize(v interface{}) error {
 
 // Materialize takes the values stored in the Key object, and creates the
 // corresponding *rsa.PublicKey object.
-func (k *RSAPublicKey) Materialize(v interface{}) error {
+func (k *rsaPublicKey) Materialize(v interface{}) error {
 	var key rsa.PublicKey
 
 	var n, e big.Int
@@ -132,110 +142,17 @@ func (k *RSAPublicKey) Materialize(v interface{}) error {
 	return assignMaterializeResult(v, &key)
 }
 
-func (k RSAPrivateKey) PublicKey() (*RSAPublicKey, error) {
+func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
 	var key rsa.PrivateKey
 	if err := k.Materialize(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize key to generate public key`)
 	}
-	return newRSAPublicKey(&key.PublicKey)
+	return newRSAPublicKeyFromRaw(&key.PublicKey)
 }
-
-/*
-func populateRSAHeaders(h Headers, key interface{}) {
-	h.Set(KeyTypeKey, jwa.RSA)
-
-	var pubk *rsa.PublicKey
-	if privk, ok := key.(*rsa.PrivateKey); ok {
-		pubk = &privk.PublicKey
-
-		h.Set(rsaDKey, privk.D.Bytes())
-		h.Set(rsaPKey, privk.Primes[0].Bytes())
-		h.Set(rsaQKey, privk.Primes[1].Bytes())
-		if v := privk.Precomputed.Dp; v != nil {
-			h.Set(rsaDpKey, v.Bytes())
-		}
-		if v := privk.Precomputed.Dq; v != nil {
-			h.Set(rsaDqKey, v.Bytes())
-		}
-		if v := privk.Precomputed.Qinv; v != nil {
-			h.Set(rsaQiKey, v.Bytes())
-		}
-	}
-
-	if pubk == nil {
-		if v, ok := key.(*rsa.PublicKey); ok {
-			pubk = v
-		}
-	}
-	if pubk == nil {
-		return
-	}
-
-	h.Set(rsaNKey, pubk.N.Bytes())
-	h.Set(rsaEKey, base64.EncodeUint64ToString(uint64(pubk.E)))
-}
-
-func newRSAPublicKey(key *rsa.PublicKey) (*RSAPublicKey, error) {
-	if key == nil {
-		return nil, errors.New(`non-nil rsa.PublicKey required`)
-	}
-
-	hdr := NewHeaders()
-	populateRSAHeaders(hdr, key)
-
-	return &RSAPublicKey{
-		headers: hdr,
-	}, nil
-}
-
-func newRSAPrivateKey(key *rsa.PrivateKey) (*RSAPrivateKey, error) {
-	if key == nil {
-		return nil, errors.New(`non-nil rsa.PrivateKey required`)
-	}
-
-	if len(key.Primes) < 2 {
-		return nil, errors.New("two primes required for RSA private key")
-	}
-
-	hdr := NewHeaders()
-	populateRSAHeaders(hdr, key)
-	return &RSAPrivateKey{
-		headers: hdr,
-	}, nil
-}
-
-func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
-	return json.Marshal(k.headers)
-}
-
-func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-	h := NewHeaders()
-	if err := json.Unmarshal(data, h); err != nil {
-		return errors.Wrap(err, `failed to unmarshal public key`)
-	}
-
-	k.headers = h
-	return nil
-}
-
-func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-	return json.Marshal(k.headers)
-}
-
-func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-	h := NewHeaders()
-	if err := json.Unmarshal(data, h); err != nil {
-		return errors.Wrap(err, `failed to unmarshal public key`)
-	}
-
-	k.headers = h
-	return nil
-}
-*/
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k RSAPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key rsa.PrivateKey
 	if err := k.Materialize(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA private key`)
@@ -243,7 +160,7 @@ func (k RSAPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return rsaThumbprint(hash, &key.PublicKey)
 }
 
-func (k RSAPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key rsa.PublicKey
 	if err := k.Materialize(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA public key`)

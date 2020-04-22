@@ -25,7 +25,16 @@ const (
 	ecdsaYKey   = "y"
 )
 
-type ECDSAPrivateKey struct {
+type ECDSAPrivateKey interface {
+	Key
+	Crv() jwa.EllipticCurveAlgorithm
+	D() []byte
+	X() []byte
+	Y() []byte
+	PublicKey() (ECDSAPublicKey, error)
+}
+
+type ecdsaPrivateKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	d                      []byte
@@ -58,86 +67,86 @@ type ecdsaPrivateKeyMarshalProxy struct {
 	Xy                      *string                     `json:"y,omitempty"`
 }
 
-func (h *ECDSAPrivateKey) Algorithm() string {
+func (h *ecdsaPrivateKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *ecdsaPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
 	return jwa.InvalidEllipticCurve
 }
 
-func (h *ECDSAPrivateKey) D() []byte {
+func (h *ecdsaPrivateKey) D() []byte {
 	return h.d
 }
 
-func (h *ECDSAPrivateKey) KeyID() string {
+func (h *ecdsaPrivateKey) KeyID() string {
 	if h.keyID != nil {
 		return *(h.keyID)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) KeyType() jwa.KeyType {
+func (h *ecdsaPrivateKey) KeyType() jwa.KeyType {
 	if h.keyType != nil {
 		return *(h.keyType)
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *ECDSAPrivateKey) KeyUsage() string {
+func (h *ecdsaPrivateKey) KeyUsage() string {
 	if h.keyUsage != nil {
 		return *(h.keyUsage)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) KeyOps() KeyOperationList {
+func (h *ecdsaPrivateKey) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
-func (h *ECDSAPrivateKey) X() []byte {
+func (h *ecdsaPrivateKey) X() []byte {
 	return h.x
 }
 
-func (h *ECDSAPrivateKey) X509CertChain() []*x509.Certificate {
+func (h *ecdsaPrivateKey) X509CertChain() []*x509.Certificate {
 	if h.x509CertChain != nil {
 		return h.x509CertChain.Get()
 	}
 	return nil
 }
 
-func (h *ECDSAPrivateKey) X509CertThumbprint() string {
+func (h *ecdsaPrivateKey) X509CertThumbprint() string {
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) X509CertThumbprintS256() string {
+func (h *ecdsaPrivateKey) X509CertThumbprintS256() string {
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) X509URL() string {
+func (h *ecdsaPrivateKey) X509URL() string {
 	if h.x509URL != nil {
 		return *(h.x509URL)
 	}
 	return ""
 }
 
-func (h *ECDSAPrivateKey) Y() []byte {
+func (h *ecdsaPrivateKey) Y() []byte {
 	return h.y
 }
 
-func (h *ECDSAPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
+func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
@@ -191,11 +200,11 @@ func (h *ECDSAPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 }
 
-func (h *ECDSAPrivateKey) PrivateParams() map[string]interface{} {
+func (h *ecdsaPrivateKey) PrivateParams() map[string]interface{} {
 	return h.privateParams
 }
 
-func (h *ECDSAPrivateKey) Get(name string) (interface{}, bool) {
+func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -268,7 +277,7 @@ func (h *ECDSAPrivateKey) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *ECDSAPrivateKey) Set(name string, value interface{}) error {
+func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -365,10 +374,10 @@ func (h *ECDSAPrivateKey) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *ECDSAPrivateKey) UnmarshalJSON(buf []byte) error {
+func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	var proxy ecdsaPrivateKeyMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal ECDSAPrivateKey`)
+		return errors.Wrap(err, `failed to unmarshal ecdsaPrivateKey`)
 	}
 	h.algorithm = proxy.Xalgorithm
 	h.crv = proxy.Xcrv
@@ -431,7 +440,7 @@ func (h *ECDSAPrivateKey) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h ECDSAPrivateKey) MarshalJSON() ([]byte, error) {
+func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	var proxy ecdsaPrivateKeyMarshalProxy
 	proxy.Xalgorithm = h.algorithm
 	proxy.Xcrv = h.crv
@@ -486,21 +495,28 @@ func (h ECDSAPrivateKey) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *ECDSAPrivateKey) Iterate(ctx context.Context) HeaderIterator {
+func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
 	ch := make(chan *HeaderPair)
 	go h.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *ECDSAPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
+func (h *ecdsaPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
 	return iter.WalkMap(ctx, h, visitor)
 }
 
-func (h *ECDSAPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
+func (h *ecdsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
 }
 
-type ECDSAPublicKey struct {
+type ECDSAPublicKey interface {
+	Key
+	Crv() jwa.EllipticCurveAlgorithm
+	X() []byte
+	Y() []byte
+}
+
+type ecdsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
@@ -531,82 +547,82 @@ type ecdsaPublicKeyMarshalProxy struct {
 	Xy                      *string                     `json:"y,omitempty"`
 }
 
-func (h *ECDSAPublicKey) Algorithm() string {
+func (h *ecdsaPublicKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *ecdsaPublicKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
 	return jwa.InvalidEllipticCurve
 }
 
-func (h *ECDSAPublicKey) KeyID() string {
+func (h *ecdsaPublicKey) KeyID() string {
 	if h.keyID != nil {
 		return *(h.keyID)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) KeyType() jwa.KeyType {
+func (h *ecdsaPublicKey) KeyType() jwa.KeyType {
 	if h.keyType != nil {
 		return *(h.keyType)
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *ECDSAPublicKey) KeyUsage() string {
+func (h *ecdsaPublicKey) KeyUsage() string {
 	if h.keyUsage != nil {
 		return *(h.keyUsage)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) KeyOps() KeyOperationList {
+func (h *ecdsaPublicKey) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
-func (h *ECDSAPublicKey) X() []byte {
+func (h *ecdsaPublicKey) X() []byte {
 	return h.x
 }
 
-func (h *ECDSAPublicKey) X509CertChain() []*x509.Certificate {
+func (h *ecdsaPublicKey) X509CertChain() []*x509.Certificate {
 	if h.x509CertChain != nil {
 		return h.x509CertChain.Get()
 	}
 	return nil
 }
 
-func (h *ECDSAPublicKey) X509CertThumbprint() string {
+func (h *ecdsaPublicKey) X509CertThumbprint() string {
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) X509CertThumbprintS256() string {
+func (h *ecdsaPublicKey) X509CertThumbprintS256() string {
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) X509URL() string {
+func (h *ecdsaPublicKey) X509URL() string {
 	if h.x509URL != nil {
 		return *(h.x509URL)
 	}
 	return ""
 }
 
-func (h *ECDSAPublicKey) Y() []byte {
+func (h *ecdsaPublicKey) Y() []byte {
 	return h.y
 }
 
-func (h *ECDSAPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
+func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
@@ -657,11 +673,11 @@ func (h *ECDSAPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 }
 
-func (h *ECDSAPublicKey) PrivateParams() map[string]interface{} {
+func (h *ecdsaPublicKey) PrivateParams() map[string]interface{} {
 	return h.privateParams
 }
 
-func (h *ECDSAPublicKey) Get(name string) (interface{}, bool) {
+func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -729,7 +745,7 @@ func (h *ECDSAPublicKey) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *ECDSAPublicKey) Set(name string, value interface{}) error {
+func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -820,10 +836,10 @@ func (h *ECDSAPublicKey) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *ECDSAPublicKey) UnmarshalJSON(buf []byte) error {
+func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 	var proxy ecdsaPublicKeyMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal ECDSAPublicKey`)
+		return errors.Wrap(err, `failed to unmarshal ecdsaPublicKey`)
 	}
 	h.algorithm = proxy.Xalgorithm
 	h.crv = proxy.Xcrv
@@ -875,7 +891,7 @@ func (h *ECDSAPublicKey) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h ECDSAPublicKey) MarshalJSON() ([]byte, error) {
+func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	var proxy ecdsaPublicKeyMarshalProxy
 	proxy.Xalgorithm = h.algorithm
 	proxy.Xcrv = h.crv
@@ -926,16 +942,16 @@ func (h ECDSAPublicKey) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *ECDSAPublicKey) Iterate(ctx context.Context) HeaderIterator {
+func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
 	ch := make(chan *HeaderPair)
 	go h.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *ECDSAPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
+func (h *ecdsaPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
 	return iter.WalkMap(ctx, h, visitor)
 }
 
-func (h *ECDSAPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
+func (h *ecdsaPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
 }

@@ -29,23 +29,23 @@ func New(key interface{}) (Key, error) {
 
 	switch v := key.(type) {
 	case rsa.PrivateKey:
-		return newRSAPrivateKey(&v) // force pointer
+		return newRSAPrivateKeyFromRaw(&v) // force pointer
 	case *rsa.PrivateKey:
-		return newRSAPrivateKey(v)
+		return newRSAPrivateKeyFromRaw(v)
 	case rsa.PublicKey:
-		return newRSAPublicKey(&v) // force pointer
+		return newRSAPublicKeyFromRaw(&v) // force pointer
 	case *rsa.PublicKey:
-		return newRSAPublicKey(v)
+		return newRSAPublicKeyFromRaw(v)
 	case ecdsa.PrivateKey:
-		return newECDSAPrivateKey(&v) // force pointer
+		return newECDSAPrivateKeyFromRaw(&v) // force pointer
 	case *ecdsa.PrivateKey:
-		return newECDSAPrivateKey(v)
+		return newECDSAPrivateKeyFromRaw(v)
 	case ecdsa.PublicKey:
-		return newECDSAPublicKey(&v) // force pointer
+		return newECDSAPublicKeyFromRaw(&v) // force pointer
 	case *ecdsa.PublicKey:
-		return newECDSAPublicKey(v)
+		return newECDSAPublicKeyFromRaw(v)
 	case []byte:
-		return newSymmetricKey(v)
+		return newSymmetricKeyFromRaw(v)
 	default:
 		return nil, errors.Errorf(`invalid key type '%T' for jwk.New`, key)
 	}
@@ -145,7 +145,7 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	return Parse(res.Body)
 }
 
-func unmarshalKey(data []byte) (Key, error) {
+func ParseKey(data []byte) (Key, error) {
 	var hint struct {
 		Kty string          `json:"kty"`
 		D   json.RawMessage `json:"d"`
@@ -159,18 +159,18 @@ func unmarshalKey(data []byte) (Key, error) {
 	switch jwa.KeyType(hint.Kty) {
 	case jwa.RSA:
 		if len(hint.D) > 0 {
-			key = &RSAPrivateKey{}
+			key = newRSAPrivateKey()
 		} else {
-			key = &RSAPublicKey{}
+			key = newRSAPublicKey()
 		}
 	case jwa.EC:
 		if len(hint.D) > 0 {
-			key = &ECDSAPrivateKey{}
+			key = newECDSAPrivateKey()
 		} else {
-			key = &ECDSAPublicKey{}
+			key = newECDSAPublicKey()
 		}
 	case jwa.OctetSeq:
-		key = &SymmetricKey{}
+		key = newSymmetricKey()
 	default:
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
@@ -192,15 +192,14 @@ func (s *Set) UnmarshalJSON(data []byte) error {
 	}
 
 	if len(proxy.Keys) == 0 {
-		k, err := unmarshalKey(data)
+		k, err := ParseKey(data)
 		if err != nil {
 			return errors.Wrap(err, `failed to unmarshal key from JSON headers`)
 		}
 		s.Keys = append(s.Keys, k)
 	} else {
 		for i, buf := range proxy.Keys {
-			data = []byte(buf)
-			k, err := unmarshalKey(data)
+			k, err := ParseKey([]byte(buf))
 			if err != nil {
 				return errors.Wrapf(err, `failed to unmarshal key #%d (total %d) from multi-key JWK set`, i+1, len(proxy.Keys))
 			}

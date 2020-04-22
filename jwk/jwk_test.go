@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -33,7 +34,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	verify := func(t *testing.T, src string, expected interface{}) {
+	verify := func(t *testing.T, src string, expected reflect.Type) {
 		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
 			var set jwk.Set
@@ -45,7 +46,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 			for _, key := range set.Keys {
-				if !assert.IsType(t, expected, key, "key should be a jwk.RSAPublicKey") {
+				if !assert.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected) {
 					return
 				}
 			}
@@ -66,7 +67,7 @@ func TestParse(t *testing.T) {
 				key := pair.Value.(jwk.Key)
 
 				switch key := key.(type) {
-				case *jwk.RSAPrivateKey, *jwk.ECDSAPrivateKey, *jwk.RSAPublicKey, *jwk.ECDSAPublicKey, *jwk.SymmetricKey:
+				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.SymmetricKey:
 				default:
 					assert.Fail(t, fmt.Sprintf("invalid type: %T", key))
 				}
@@ -80,7 +81,7 @@ func TestParse(t *testing.T) {
 			"kty":"RSA",
       "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 		}`
-		verify(t, src, &jwk.RSAPublicKey{})
+		verify(t, src, reflect.TypeOf((*jwk.RSAPublicKey)(nil)).Elem())
 	})
 	t.Run("RSA Private Key", func(t *testing.T) {
 		const src = `{
@@ -96,7 +97,7 @@ func TestParse(t *testing.T) {
       "alg":"RS256",
       "kid":"2011-04-29"
      }`
-		verify(t, src, &jwk.RSAPrivateKey{})
+		verify(t, src, reflect.TypeOf((*jwk.RSAPrivateKey)(nil)).Elem())
 	})
 	t.Run("ECDSA Private Key", func(t *testing.T) {
 		const src = `{
@@ -106,7 +107,7 @@ func TestParse(t *testing.T) {
 		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
 		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
 		}`
-		verify(t, src, &jwk.ECDSAPrivateKey{})
+		verify(t, src, reflect.TypeOf((*jwk.ECDSAPrivateKey)(nil)).Elem())
 	})
 	t.Run("Invalid ECDSA Private Key", func(t *testing.T) {
 		const src = `{
@@ -359,7 +360,7 @@ func TestAppendix(t *testing.T) {
 		}
 
 		{
-			key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
+			key, ok := set.Keys[0].(jwk.ECDSAPublicKey)
 			if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
 				return
 			}
@@ -369,7 +370,7 @@ func TestAppendix(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, jwa.P256, key.Curve(), "curve is P-256") {
+			if !assert.Equal(t, jwa.P256, key.Crv(), "curve is P-256") {
 				return
 			}
 		}
@@ -429,7 +430,7 @@ func TestAppendix(t *testing.T) {
 		}
 
 		for i, data := range tests {
-			key, ok := set.Keys[i].(*jwk.SymmetricKey)
+			key, ok := set.Keys[i].(jwk.SymmetricKey)
 			if !assert.True(t, ok, "set.Keys[%d] should be a SymmetricKey", i) {
 				return
 			}
@@ -480,7 +481,7 @@ func TestAppendix(t *testing.T) {
 		}
 
 		{
-			key, ok := set.Keys[0].(*jwk.RSAPublicKey)
+			key, ok := set.Keys[0].(jwk.RSAPublicKey)
 			if !assert.True(t, ok, "set.Keys[0] should be a jwk.RSAPublicKey") {
 				return
 			}
@@ -510,7 +511,7 @@ func TestFetch(t *testing.T) {
 	        }`
 
 	verify := func(t *testing.T, set *jwk.Set) {
-		key, ok := set.Keys[0].(*jwk.ECDSAPublicKey)
+		key, ok := set.Keys[0].(jwk.ECDSAPublicKey)
 		if !assert.True(t, ok, "set.Keys[0] should be a EcdsaPublicKey") {
 			return
 		}
@@ -520,7 +521,7 @@ func TestFetch(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, jwa.P256, key.Curve(), "curve is P-256") {
+		if !assert.Equal(t, jwa.P256, key.Crv(), "curve is P-256") {
 			return
 		}
 	}

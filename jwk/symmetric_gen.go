@@ -22,7 +22,12 @@ const (
 	symmetricOctetsKey = "k"
 )
 
-type SymmetricKey struct {
+type SymmetricKey interface {
+	Key
+	Octets() []byte
+}
+
+type symmetricKey struct {
 	algorithm              *string          // https://tools.ietf.org/html/rfc7517#section-4.4
 	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyType                *jwa.KeyType     // https://tools.ietf.org/html/rfc7517#section-4.1
@@ -49,71 +54,71 @@ type symmetricSymmetricKeyMarshalProxy struct {
 	Xx509URL                *string           `json:"x5u,omitempty"`
 }
 
-func (h *SymmetricKey) Algorithm() string {
+func (h *symmetricKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) KeyID() string {
+func (h *symmetricKey) KeyID() string {
 	if h.keyID != nil {
 		return *(h.keyID)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) KeyType() jwa.KeyType {
+func (h *symmetricKey) KeyType() jwa.KeyType {
 	if h.keyType != nil {
 		return *(h.keyType)
 	}
 	return jwa.InvalidKeyType
 }
 
-func (h *SymmetricKey) KeyUsage() string {
+func (h *symmetricKey) KeyUsage() string {
 	if h.keyUsage != nil {
 		return *(h.keyUsage)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) KeyOps() KeyOperationList {
+func (h *symmetricKey) KeyOps() KeyOperationList {
 	return h.keyops
 }
 
-func (h *SymmetricKey) Octets() []byte {
+func (h *symmetricKey) Octets() []byte {
 	return h.octets
 }
 
-func (h *SymmetricKey) X509CertChain() []*x509.Certificate {
+func (h *symmetricKey) X509CertChain() []*x509.Certificate {
 	if h.x509CertChain != nil {
 		return h.x509CertChain.Get()
 	}
 	return nil
 }
 
-func (h *SymmetricKey) X509CertThumbprint() string {
+func (h *symmetricKey) X509CertThumbprint() string {
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) X509CertThumbprintS256() string {
+func (h *symmetricKey) X509CertThumbprintS256() string {
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) X509URL() string {
+func (h *symmetricKey) X509URL() string {
 	if h.x509URL != nil {
 		return *(h.x509URL)
 	}
 	return ""
 }
 
-func (h *SymmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
+func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
@@ -158,11 +163,11 @@ func (h *SymmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	}
 }
 
-func (h *SymmetricKey) PrivateParams() map[string]interface{} {
+func (h *symmetricKey) PrivateParams() map[string]interface{} {
 	return h.privateParams
 }
 
-func (h *SymmetricKey) Get(name string) (interface{}, bool) {
+func (h *symmetricKey) Get(name string) (interface{}, bool) {
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -220,7 +225,7 @@ func (h *SymmetricKey) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *SymmetricKey) Set(name string, value interface{}) error {
+func (h *symmetricKey) Set(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
 		switch v := value.(type) {
@@ -299,10 +304,10 @@ func (h *SymmetricKey) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *SymmetricKey) UnmarshalJSON(buf []byte) error {
+func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 	var proxy symmetricSymmetricKeyMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal SymmetricKey`)
+		return errors.Wrap(err, `failed to unmarshal symmetricKey`)
 	}
 	h.algorithm = proxy.Xalgorithm
 	h.keyID = proxy.XkeyID
@@ -341,7 +346,7 @@ func (h *SymmetricKey) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h SymmetricKey) MarshalJSON() ([]byte, error) {
+func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	var proxy symmetricSymmetricKeyMarshalProxy
 	proxy.Xalgorithm = h.algorithm
 	proxy.XkeyID = h.keyID
@@ -387,16 +392,16 @@ func (h SymmetricKey) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *SymmetricKey) Iterate(ctx context.Context) HeaderIterator {
+func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {
 	ch := make(chan *HeaderPair)
 	go h.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *SymmetricKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
+func (h *symmetricKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
 	return iter.WalkMap(ctx, h, visitor)
 }
 
-func (h *SymmetricKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
+func (h *symmetricKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
 	return iter.AsMap(ctx, h)
 }

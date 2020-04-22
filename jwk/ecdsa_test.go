@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
-	"reflect"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -35,12 +34,12 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if !assert.IsType(t, &jwk.ECDSAPrivateKey{}, set.Keys[0], `should be *jwk.ECDSAPrivateKey`) {
+		if _, ok := set.Keys[0].(jwk.ECDSAPrivateKey); !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
 			return
 		}
 
 		var rawPrivKey ecdsa.PrivateKey
-		privKey := set.Keys[0].(*jwk.ECDSAPrivateKey)
+		privKey := set.Keys[0].(jwk.ECDSAPrivateKey)
 		if !assert.NoError(t, privKey.Materialize(&rawPrivKey), "Materialize should succeed") {
 			return
 		}
@@ -140,17 +139,17 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if !assert.IsType(t, &jwk.ECDSAPrivateKey{}, set.Keys[0], "first key should be ECDSAPrivateKey") {
+		if _, ok := set.Keys[0].(jwk.ECDSAPrivateKey); !assert.True(t, ok, "first key should be ECDSAPrivateKey") {
 			return
 		}
-		key := set.Keys[0].(*jwk.ECDSAPrivateKey)
+		key := set.Keys[0].(jwk.ECDSAPrivateKey)
 
 		var rawKey ecdsa.PrivateKey
 		if !assert.NoError(t, key.Materialize(&rawKey), `materialize should succeed`) {
 			return
 		}
 
-		if !assert.Equal(t, jwa.P256, key.Curve(), `curve name should match`) {
+		if !assert.Equal(t, jwa.P256, key.Crv(), `curve name should match`) {
 			return
 		}
 
@@ -180,11 +179,11 @@ func TestECDSA(t *testing.T) {
 		}
 
 		// verify unmarshal
-		ECDSAPublicKey2 := &jwk.ECDSAPublicKey{}
-		if !assert.NoError(t, json.Unmarshal(expectedPublicKeyBytes, ECDSAPublicKey2), `json.Unmarshal should succeed for ECDSA public key`) {
+		ECDSAPublicKey2, err := jwk.ParseKey(expectedPublicKeyBytes)
+		if !assert.NoError(t, err, `json.Unmarshal should succeed for ECDSA public key`) {
 			return
 		}
-		pECDSAPublicKey := ECDSAPublicKey.(*jwk.ECDSAPublicKey)
+		pECDSAPublicKey := ECDSAPublicKey.(jwk.ECDSAPublicKey)
 		if !assert.Equal(t, pECDSAPublicKey, ECDSAPublicKey2, "public keys should match") {
 			return
 		}
@@ -207,7 +206,7 @@ func TestECDSA(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to parse JWK ECDSA")
 		}
-		ECDSAPrivateKey := set.Keys[0].(*jwk.ECDSAPrivateKey)
+		ECDSAPrivateKey := set.Keys[0].(jwk.ECDSAPrivateKey)
 
 		privKeyBytes, err := json.Marshal(ECDSAPrivateKey)
 		if err != nil {
@@ -223,14 +222,13 @@ func TestECDSA(t *testing.T) {
 
 		// verify unmarshal
 
-		expECDSAPrivateKey := &jwk.ECDSAPrivateKey{}
-		err = json.Unmarshal(expectedPrivKey, expECDSAPrivateKey)
-		if err != nil {
-			t.Fatal("Failed to unmarshal ECDSAPublicKey")
+		expECDSAPrivateKey, err := jwk.ParseKey(expectedPrivKey)
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+			return
 		}
 
-		if !reflect.DeepEqual(expECDSAPrivateKey, ECDSAPrivateKey) {
-			t.Fatal("ECDSAPrivate Keys do not match")
+		if !assert.Equal(t, expECDSAPrivateKey, ECDSAPrivateKey, "ECDSAPrivate keys should match") {
+			return
 		}
 	})
 }
