@@ -67,6 +67,5 @@ func Test_X5CHeader(t *testing.T) {
 				return
 			}
 		*/
-
 	})
 }
