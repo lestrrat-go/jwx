@@ -356,7 +356,7 @@ var keyTypes = []keyType{
 			{
 				name:       "SymmetricKey",
 				structName: `symmetricKey`,
-				ifName: `SymmetricKey`,
+				ifName:     `SymmetricKey`,
 				headers: []headerField{
 					{
 						name:   `octets`,
