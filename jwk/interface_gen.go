@@ -30,7 +30,7 @@ type Key interface {
 	// will be false if the field is not stored in the source
 	//
 	// This method, which returns an `interface{}`, exists because
-	// these objects can contain extra _aribtrary_ fields that users can
+	// these objects can contain extra _arbitrary_ fields that users can
 	// specify, and there is no way of knowing what type they could be
 	Get(string) (interface{}, bool)
 
@@ -38,7 +38,7 @@ type Key interface {
 	// notably "kty" cannot be altered, but will not return an error
 	//
 	// This method, which takes an `interface{}`, exists because
-	// these objects can contain extra _aribtrary_ fields that users can
+	// these objects can contain extra _arbitrary_ fields that users can
 	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
