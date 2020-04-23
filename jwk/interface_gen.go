@@ -26,17 +26,33 @@ const (
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
 type Key interface {
-	// Get returns the value of a single field. The second boolean argument
+	// Get returns the value of a single field. The second boolean return value
 	// will be false if the field is not stored in the source
+	//
+	// This method, which returns an `interface{}`, exists because
+	// these objects can contain extra _aribtrary_ fields that users can
+	// specify, and there is no way of knowing what type they could be
 	Get(string) (interface{}, bool)
 
 	// Set sets the value of a single field. Note that certain fields,
-	// notable "kty" cannot be altered, but will not return an error
+	// notably "kty" cannot be altered, but will not return an error
+	//
+	// This method, which takes an `interface{}`, exists because
+	// these objects can contain extra _aribtrary_ fields that users can
+	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
 	// Materialize creates the corresponding key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
+	//
+	// If you do not know the exact type of a jwk.Key before attempting
+	// to obtain the raw key, you can simply pass a pointer to an
+	// empty interface as the first argument.
+	//
+	// If you already know the exact type, it is recommended that you
+	// pass a pointer to the actual key type (e.g. *rsa.PrivateKey, *ecdsa.PublicKey
+	// for efficiency
 	Materialize(interface{}) error
 
 	// Thumbprint returns the JWK thumbprint using the indicated
