@@ -31,17 +31,7 @@ func newRSAPrivateKey() *rsaPrivateKey {
 	}
 }
 
-func (k *rsaPrivateKey) FromRaw(v interface{}) error {
-	switch x := v.(type) {
-	case rsa.PrivateKey:
-		v = &x
-	}
-
-	rawKey, ok := v.(*rsa.PrivateKey)
-	if !ok {
-		return errors.Errorf(`(jwk.RSAPrivateKey).FromRaw requires rsa.PrivateKey as the argument (%T)`, v)
-	}
-
+func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	k.d = rawKey.D.Bytes()
 	if len(rawKey.Primes) < 2 {
 		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
@@ -74,17 +64,7 @@ func (k *rsaPrivateKey) FromRaw(v interface{}) error {
 	return nil
 }
 
-func (k *rsaPublicKey) FromRaw(v interface{}) error {
-	switch x := v.(type) {
-	case rsa.PublicKey:
-		v = &x
-	}
-
-	rawKey, ok := v.(*rsa.PublicKey)
-	if !ok {
-		return errors.Errorf(`(jwk.RSAPublicKey).FromRaw requires rsa.PublicKey as the argument (%T)`, v)
-	}
-
+func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 	k.n = rawKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))

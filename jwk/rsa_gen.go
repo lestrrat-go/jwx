@@ -5,6 +5,7 @@ package jwk
 import (
 	"bytes"
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -31,6 +32,7 @@ const (
 
 type RSAPrivateKey interface {
 	Key
+	FromRaw(*rsa.PrivateKey) error
 	D() []byte
 	DP() []byte
 	DQ() []byte
@@ -642,6 +644,7 @@ func (h *rsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, erro
 
 type RSAPublicKey interface {
 	Key
+	FromRaw(*rsa.PublicKey) error
 	E() []byte
 	N() []byte
 }

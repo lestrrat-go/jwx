@@ -59,11 +59,6 @@ type Key interface {
 	// hashing algorithm, according to RFC 7638
 	Thumbprint(crypto.Hash) ([]byte, error)
 
-	// FromRaw is used to initialize a key from its corresponding "raw"
-	// key: e.g. RSAPublicKey can be initialized using *rsa.PublicKey,
-	// ECDSAPrivateKey can be initialized using *ecdsa.PrivateKey, etc.
-	FromRaw(interface{}) error
-
 	// Iterate returns an iterator that returns all keys and values
 	Iterate(ctx context.Context) HeaderIterator
 

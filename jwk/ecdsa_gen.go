@@ -5,6 +5,7 @@ package jwk
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -27,6 +28,7 @@ const (
 
 type ECDSAPrivateKey interface {
 	Key
+	FromRaw(*ecdsa.PrivateKey) error
 	Crv() jwa.EllipticCurveAlgorithm
 	D() []byte
 	X() []byte
@@ -494,6 +496,7 @@ func (h *ecdsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, er
 
 type ECDSAPublicKey interface {
 	Key
+	FromRaw(*ecdsa.PublicKey) error
 	Crv() jwa.EllipticCurveAlgorithm
 	X() []byte
 	Y() []byte

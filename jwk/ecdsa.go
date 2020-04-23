@@ -32,17 +32,7 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 	}
 }
 
-func (k *ecdsaPublicKey) FromRaw(v interface{}) error {
-	switch x := v.(type) {
-	case ecdsa.PublicKey:
-		v = &x
-	}
-
-	rawKey, ok := v.(*ecdsa.PublicKey)
-	if !ok {
-		return errors.Errorf(`(jwk.ECDSAPublicKey).FromRaw requires ecdsa.PublicKey as the argument (%T)`, v)
-	}
-
+func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	k.x = rawKey.X.Bytes()
 	k.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {
@@ -59,18 +49,7 @@ func (k *ecdsaPublicKey) FromRaw(v interface{}) error {
 	return nil
 }
 
-func (k *ecdsaPrivateKey) FromRaw(v interface{}) error {
-	switch x := v.(type) {
-	case ecdsa.PrivateKey:
-		v = &x
-	}
-
-	rawKey, ok := v.(*ecdsa.PrivateKey)
-	if !ok {
-		return errors.Errorf(`(jwk.ECDSAPrivateKey).FromRaw requires ecdsa.PrivateKey as the argument (%T)`, v)
-	}
-
-	k.privateParams = make(map[string]interface{})
+func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	k.x = rawKey.X.Bytes()
 	k.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {

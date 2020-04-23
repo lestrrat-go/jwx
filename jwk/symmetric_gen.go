@@ -24,6 +24,7 @@ const (
 
 type SymmetricKey interface {
 	Key
+	FromRaw([]byte) error
 	Octets() []byte
 }
 

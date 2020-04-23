@@ -189,6 +189,7 @@ type headerType struct {
 	allHeaders []headerField
 	headers    []headerField
 	ifMethods  []string
+	rawKeyType string
 	name       string
 	structName string
 	ifName     string
@@ -201,7 +202,8 @@ var keyTypes = []keyType{
 		keyType:  `jwa.RSA`,
 		headerTypes: []headerType{
 			{
-				name: `PublicKey`,
+				name:       `PublicKey`,
+				rawKeyType: `*rsa.PublicKey`,
 				headers: []headerField{
 					{
 						name:   `n`,
@@ -218,7 +220,8 @@ var keyTypes = []keyType{
 				},
 			},
 			{
-				name: `PrivateKey`,
+				name:       `PrivateKey`,
+				rawKeyType: `*rsa.PrivateKey`,
 				ifMethods: []string{
 					`PublicKey() (RSAPublicKey, error)`,
 				},
@@ -284,7 +287,8 @@ var keyTypes = []keyType{
 		keyType:  `jwa.EC`,
 		headerTypes: []headerType{
 			{
-				name: `PublicKey`,
+				name:       `PublicKey`,
+				rawKeyType: `*ecdsa.PublicKey`,
 				headers: []headerField{
 					{
 						name:   `x`,
@@ -307,7 +311,8 @@ var keyTypes = []keyType{
 				},
 			},
 			{
-				name: `PrivateKey`,
+				name:       `PrivateKey`,
+				rawKeyType: `*ecdsa.PrivateKey`,
 				ifMethods: []string{
 					`PublicKey() (ECDSAPublicKey, error)`,
 				},
@@ -349,6 +354,7 @@ var keyTypes = []keyType{
 				name:       "SymmetricKey",
 				structName: `symmetricKey`,
 				ifName:     `SymmetricKey`,
+				rawKeyType: `[]byte`,
 				headers: []headerField{
 					{
 						name:   `octets`,
@@ -413,10 +419,6 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n\n// Thumbprint returns the JWK thumbprint using the indicated")
 	fmt.Fprintf(&buf, "\n// hashing algorithm, according to RFC 7638")
 	fmt.Fprintf(&buf, "\nThumbprint(crypto.Hash) ([]byte, error)")
-	fmt.Fprintf(&buf, "\n\n// FromRaw is used to initialize a key from its corresponding \"raw\"")
-	fmt.Fprintf(&buf, "\n// key: e.g. RSAPublicKey can be initialized using *rsa.PublicKey,")
-	fmt.Fprintf(&buf, "\n// ECDSAPrivateKey can be initialized using *ecdsa.PrivateKey, etc.")
-	fmt.Fprintf(&buf, "\nFromRaw(interface{}) error")
 	fmt.Fprintf(&buf, "\n\n// Iterate returns an iterator that returns all keys and values")
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) HeaderIterator")
 	fmt.Fprintf(&buf, "\n\n// Walk is a utility tool that allows a visitor to iterate all keys and values")
@@ -514,6 +516,7 @@ func generateHeader(kt keyType) error {
 
 		fmt.Fprintf(&buf, "\n\ntype %s interface {", ifName)
 		fmt.Fprintf(&buf, "\nKey")
+		fmt.Fprintf(&buf, "\nFromRaw(%s) error", ht.rawKeyType)
 		for _, header := range ht.headers {
 			fmt.Fprintf(&buf, "\n%s() %s", header.method, header.typ)
 		}

@@ -42,26 +42,40 @@ func New(key interface{}) (Key, error) {
 		ptr = v
 	}
 
-	var k Key
-	switch ptr.(type) {
+	switch rawKey := ptr.(type) {
 	case *rsa.PrivateKey:
-		k = NewRSAPrivateKey()
+		k := NewRSAPrivateKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	case *rsa.PublicKey:
-		k = NewRSAPublicKey()
+		k := NewRSAPublicKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	case *ecdsa.PrivateKey:
-		k = NewECDSAPrivateKey()
+		k := NewECDSAPrivateKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	case *ecdsa.PublicKey:
-		k = NewECDSAPublicKey()
+		k := NewECDSAPublicKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	case []byte:
-		k = NewSymmetricKey()
+		k := NewSymmetricKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	default:
 		return nil, errors.Errorf(`invalid key type '%T' for jwk.New`, key)
 	}
-
-	if err := k.FromRaw(ptr); err != nil {
-		return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, key)
-	}
-	return k, nil
 }
 
 // PublicKeyOf returns the corresponding public key of the given

@@ -18,17 +18,12 @@ func newSymmetricKey() *symmetricKey {
 	}
 }
 
-func (k *symmetricKey) FromRaw(v interface{}) error {
-	octets, ok := v.([]byte)
-	if !ok {
-		return errors.Errorf(`(jwk.SymmetricKey).FromRaw requires []byte as the argument (%T)`, v)
-	}
-
-	if len(octets) == 0 {
+func (k *symmetricKey) FromRaw(rawKey []byte) error {
+	if len(rawKey) == 0 {
 		return errors.New(`non-empty []byte key required`)
 	}
 
-	k.octets = octets
+	k.octets = rawKey
 
 	return nil
 }
