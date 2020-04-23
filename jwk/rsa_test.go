@@ -16,7 +16,7 @@ func TestRSA(t *testing.T) {
 		t.Helper()
 
 		var rsaKey interface{}
-		if !assert.NoError(t, key.Materialize(&rsaKey), `Materialize() should succeed`) {
+		if !assert.NoError(t, key.Raw(&rsaKey), `Raw() should succeed`) {
 			return
 		}
 
@@ -113,7 +113,7 @@ func TestRSA(t *testing.T) {
 				return
 			}
 
-			if !assert.NoError(t, pkey.Materialize(&pubkey), "RSAPublickKey.Materialize is successful") {
+			if !assert.NoError(t, pkey.Raw(&pubkey), "RSAPublickKey.Raw is successful") {
 				return
 			}
 		}
@@ -126,7 +126,7 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		if !assert.NoError(t, rsakey.Materialize(&privkey), "materialise should be successful") {
+		if !assert.NoError(t, rsakey.Raw(&privkey), "materialise should be successful") {
 			return
 		}
 

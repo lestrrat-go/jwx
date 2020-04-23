@@ -88,17 +88,17 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	return &ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}, nil
 }
 
-// Materialize returns the EC-DSA public key represented by this JWK
-func (k *ecdsaPublicKey) Materialize(v interface{}) error {
+// Raw returns the EC-DSA public key represented by this JWK
+func (k *ecdsaPublicKey) Raw(v interface{}) error {
 	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
 	if err != nil {
 		return errors.Wrap(err, `failed to build public key`)
 	}
 
-	return assignMaterializeResult(v, pubk)
+	return assignRawResult(v, pubk)
 }
 
-func (k *ecdsaPrivateKey) Materialize(v interface{}) error {
+func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
 	if err != nil {
 		return errors.Wrap(err, `failed to build public key`)
@@ -110,12 +110,12 @@ func (k *ecdsaPrivateKey) Materialize(v interface{}) error {
 	key.D = &d
 	key.PublicKey = *pubk
 
-	return assignMaterializeResult(v, &key)
+	return assignRawResult(v, &key)
 }
 
 func (k *ecdsaPrivateKey) PublicKey() (ECDSAPublicKey, error) {
 	var privk ecdsa.PrivateKey
-	if err := k.Materialize(&privk); err != nil {
+	if err := k.Raw(&privk); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ECDSA private key`)
 	}
 
@@ -142,7 +142,7 @@ func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 // hashing algorithm, according to RFC 7638
 func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key ecdsa.PublicKey
-	if err := k.Materialize(&key); err != nil {
+	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PublicKey for thumbprint generation`)
 	}
 	return ecdsaThumbprint(
@@ -157,7 +157,7 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 // hashing algorithm, according to RFC 7638
 func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key ecdsa.PrivateKey
-	if err := k.Materialize(&key); err != nil {
+	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PrivateKey for thumbprint generation`)
 	}
 	return ecdsaThumbprint(

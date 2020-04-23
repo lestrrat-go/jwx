@@ -28,17 +28,17 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	return nil
 }
 
-// Materialize returns the octets for this symmetric key.
+// Raw returns the octets for this symmetric key.
 // Since this is a symmetric key, this just calls Octets
-func (k symmetricKey) Materialize(v interface{}) error {
-	return assignMaterializeResult(v, k.octets)
+func (k symmetricKey) Raw(v interface{}) error {
+	return assignRawResult(v, k.octets)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hakhing algorithm, according to RFC 7638
 func (k symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var octets []byte
-	if err := k.Materialize(&octets); err != nil {
+	if err := k.Raw(&octets); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize symmetric key`)
 	}
 

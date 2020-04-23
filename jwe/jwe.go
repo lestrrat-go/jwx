@@ -264,7 +264,7 @@ func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 		}
 
 		var pubkey interface{}
-		if err := epk.Materialize(&pubkey); err != nil {
+		if err := epk.Raw(&pubkey); err != nil {
 			return nil, errors.Wrap(err, "failed to get public key")
 		}
 

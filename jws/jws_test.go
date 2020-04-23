@@ -333,7 +333,7 @@ func TestEncode(t *testing.T) {
 
 		keys, _ := jwk.ParseString(jwksrc)
 		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Materialize(&key), `jwk.Materialize should succeed`) {
+		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte
@@ -400,7 +400,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to parse JWK")
 		}
 		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Materialize(&key), `jwk.Materialize should succeed`) {
+		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte

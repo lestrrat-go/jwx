@@ -22,7 +22,7 @@ func Example() {
 	}
 
 	var key interface{}
-	if err := keys[0].Materialize(&key); err != nil {
+	if err := keys[0].Raw(&key); err != nil {
 		log.Printf("failed to generate public key: %s", err)
 		return
 	}

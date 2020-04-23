@@ -42,7 +42,7 @@ type Key interface {
 	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
-	// Materialize creates the corresponding key. For example,
+	// Raw creates the corresponding key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
 	//
@@ -53,7 +53,7 @@ type Key interface {
 	// If you already know the exact type, it is recommended that you
 	// pass a pointer to the actual key type (e.g. *rsa.PrivateKey, *ecdsa.PublicKey
 	// for efficiency
-	Materialize(interface{}) error
+	Raw(interface{}) error
 
 	// Thumbprint returns the JWK thumbprint using the indicated
 	// hashing algorithm, according to RFC 7638

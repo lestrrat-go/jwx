@@ -354,7 +354,7 @@ func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string, opt
 // VerifyWithJWK verifies the JWS message using the specified JWK
 func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 	var rawkey interface{}
-	if err := key.Materialize(&rawkey); err != nil {
+	if err := key.Raw(&rawkey); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize jwk.Key`)
 	}
 

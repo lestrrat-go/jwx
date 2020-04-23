@@ -301,9 +301,9 @@ func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
 	}
 }
 
-// assignMaterializeResult is a convenience function to safely
-// assign arbitrary values from Materialize
-func assignMaterializeResult(v, t interface{}) error {
+// assignRawResult is a convenience function to safely
+// assign arbitrary values from Raw
+func assignRawResult(v, t interface{}) error {
 	result := reflect.ValueOf(t)
 
 	// t can be a pointer or a slice, and the code will slightly change
@@ -315,12 +315,12 @@ func assignMaterializeResult(v, t interface{}) error {
 	case reflect.Slice:
 		isSlice = true
 	default:
-		return errors.Errorf("argument t to assignMaterializeResult must be a pointer or a slice: %T", t)
+		return errors.Errorf("argument t to assignRawResult must be a pointer or a slice: %T", t)
 	}
 
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Ptr {
-		return errors.Errorf(`argument to Materialize() must be a pointer: %T`, v)
+		return errors.Errorf(`argument to Raw() must be a pointer: %T`, v)
 	}
 
 	dst := rv.Elem()
@@ -335,11 +335,11 @@ func assignMaterializeResult(v, t interface{}) error {
 		}
 	}
 	if !result.Type().AssignableTo(dst.Type()) {
-		return errors.Errorf(`argument to Materialize() must be compatible with %T (was %T)`, result.Interface(), t)
+		return errors.Errorf(`argument to Raw() must be compatible with %T (was %T)`, result.Interface(), t)
 	}
 
 	if !dst.CanSet() {
-		return errors.Errorf(`argument to Materialize() must be settable`)
+		return errors.Errorf(`argument to Raw() must be settable`)
 	}
 	dst.Set(result)
 

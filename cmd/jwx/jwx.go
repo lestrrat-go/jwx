@@ -88,7 +88,7 @@ func doJWK() int {
 
 	// TODO make it flexible
 	var pubkey interface{}
-	if err := key.Keys[0].Materialize(&pubkey); err != nil {
+	if err := key.Keys[0].Raw(&pubkey); err != nil {
 		log.Printf("%s", err)
 		return 0
 	}

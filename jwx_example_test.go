@@ -55,7 +55,7 @@ func Example_jwk() {
 	}
 
 	var key interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-	if err := keys[0].Materialize(&key); err != nil {
+	if err := keys[0].Raw(&key); err != nil {
 		log.Printf("failed to create public key: %s", err)
 		return
 	}

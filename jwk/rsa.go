@@ -79,7 +79,7 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 	return nil
 }
 
-func (k *rsaPrivateKey) Materialize(v interface{}) error {
+func (k *rsaPrivateKey) Raw(v interface{}) error {
 	var d, q, p big.Int
 	d.SetBytes(k.d)
 	q.SetBytes(k.q)
@@ -107,7 +107,7 @@ func (k *rsaPrivateKey) Materialize(v interface{}) error {
 	pubk := newRSAPublicKey()
 	pubk.n = k.n
 	pubk.e = k.e
-	if err := pubk.Materialize(&key.PublicKey); err != nil {
+	if err := pubk.Raw(&key.PublicKey); err != nil {
 		return errors.Wrap(err, `failed to materialize RSA public key`)
 	}
 
@@ -124,12 +124,12 @@ func (k *rsaPrivateKey) Materialize(v interface{}) error {
 		key.Precomputed.Qinv = qi
 	}
 
-	return assignMaterializeResult(v, &key)
+	return assignRawResult(v, &key)
 }
 
-// Materialize takes the values stored in the Key object, and creates the
+// Raw takes the values stored in the Key object, and creates the
 // corresponding *rsa.PublicKey object.
-func (k *rsaPublicKey) Materialize(v interface{}) error {
+func (k *rsaPublicKey) Raw(v interface{}) error {
 	var key rsa.PublicKey
 
 	var n, e big.Int
@@ -139,12 +139,12 @@ func (k *rsaPublicKey) Materialize(v interface{}) error {
 	key.N = &n
 	key.E = int(e.Int64())
 
-	return assignMaterializeResult(v, &key)
+	return assignRawResult(v, &key)
 }
 
 func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
 	var key rsa.PrivateKey
-	if err := k.Materialize(&key); err != nil {
+	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize key to generate public key`)
 	}
 
@@ -159,7 +159,7 @@ func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
 // hashing algorithm, according to RFC 7638
 func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key rsa.PrivateKey
-	if err := k.Materialize(&key); err != nil {
+	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA private key`)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
@@ -167,7 +167,7 @@ func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var key rsa.PublicKey
-	if err := k.Materialize(&key); err != nil {
+	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA public key`)
 	}
 	return rsaThumbprint(hash, &key)

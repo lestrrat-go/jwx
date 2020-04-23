@@ -40,7 +40,7 @@ func TestECDSA(t *testing.T) {
 
 		var rawPrivKey ecdsa.PrivateKey
 		privKey := set.Keys[0].(jwk.ECDSAPrivateKey)
-		if !assert.NoError(t, privKey.Materialize(&rawPrivKey), "Materialize should succeed") {
+		if !assert.NoError(t, privKey.Raw(&rawPrivKey), "Raw should succeed") {
 			return
 		}
 
@@ -54,7 +54,7 @@ func TestECDSA(t *testing.T) {
 		}
 
 		var rawPubKey ecdsa.PublicKey
-		if !assert.NoError(t, pubkey.Materialize(&rawPubKey), "Materialize should succeed") {
+		if !assert.NoError(t, pubkey.Raw(&rawPubKey), "Raw should succeed") {
 			return
 		}
 
@@ -145,7 +145,7 @@ func TestECDSA(t *testing.T) {
 		key := set.Keys[0].(jwk.ECDSAPrivateKey)
 
 		var rawKey ecdsa.PrivateKey
-		if !assert.NoError(t, key.Materialize(&rawKey), `materialize should succeed`) {
+		if !assert.NoError(t, key.Raw(&rawKey), `materialize should succeed`) {
 			return
 		}
 
@@ -159,7 +159,7 @@ func TestECDSA(t *testing.T) {
 		}
 
 		var rawPubKey ecdsa.PublicKey
-		if !assert.NoError(t, pubKey.Materialize(&rawPubKey), `public key should succeed`) {
+		if !assert.NoError(t, pubKey.Raw(&rawPubKey), `public key should succeed`) {
 			return
 		}
 
