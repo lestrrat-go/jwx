@@ -3,14 +3,19 @@ package jwt
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
+	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
 )
 
-// Key names for standard claims
 const (
 	AudienceKey   = "aud"
 	ExpirationKey = "exp"
@@ -21,204 +26,275 @@ const (
 	SubjectKey    = "sub"
 )
 
-// Token represents a JWT token. The object has convenience accessors
-// to 7 standard claims including "aud", "exp", "iat", "iss", "jti", "nbf" and "sub"
+// Token represents a generic JWT token.
 // which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`
 // methods but their types are not taken into consideration at all. If you have non-standard
-// claims that you must frequently access, consider wrapping the token in a wrapper
-// by embedding the jwt.Token type in it
-type Token struct {
-	audience      StringList             `json:"aud,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	expiration    *types.NumericDate     `json:"exp,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	issuedAt      *types.NumericDate     `json:"iat,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.6
-	issuer        *string                `json:"iss,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	jwtID         *string                `json:"jti,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	notBefore     *types.NumericDate     `json:"nbf,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	subject       *string                `json:"sub,omitempty"` // https://tools.ietf.org/html/rfc7519#section-4.1.2
+// claims that you must frequently access, consider creating accessors functions
+// like the following
+//
+// func SetFoo(tok jwt.Token) error
+// func GetFoo(tok jwt.Token) (*Customtyp, error)
+//
+// Embedding jwt.Token into another struct is not recommended, becase
+// jwt.Token needs to handle private claims, and this really does not
+// work well when it is embedded in other structure
+type Token interface {
+	Audience() []string
+	Expiration() time.Time
+	IssuedAt() time.Time
+	Issuer() string
+	JwtID() string
+	NotBefore() time.Time
+	Subject() string
+	PrivateClaims() map[string]interface{}
+	Get(string) (interface{}, bool)
+	Set(string, interface{}) error
+	Iterate(context.Context) Iterator
+	Walk(context.Context, Visitor) error
+	AsMap(context.Context) (map[string]interface{}, error)
+}
+type stdToken struct {
+	audience      StringList             // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	expiration    *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	issuedAt      *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	issuer        *string                // https://tools.ietf.org/html/rfc7519#section-4.1.1
+	jwtID         *string                // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	notBefore     *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	subject       *string                // https://tools.ietf.org/html/rfc7519#section-4.1.2
 	privateClaims map[string]interface{} `json:"-"`
 }
 
+type stdTokenMarshalProxy struct {
+	Xaudience   StringList         `json:"aud,omitempty"`
+	Xexpiration *types.NumericDate `json:"exp,omitempty"`
+	XissuedAt   *types.NumericDate `json:"iat,omitempty"`
+	Xissuer     *string            `json:"iss,omitempty"`
+	XjwtID      *string            `json:"jti,omitempty"`
+	XnotBefore  *types.NumericDate `json:"nbf,omitempty"`
+	Xsubject    *string            `json:"sub,omitempty"`
+}
+
+// New creates a standard token, with minimal knowledge of
+// possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf" and "sub".
+// Convenience accessors are provided for these standard claims
+func New() Token {
+	return &stdToken{
+		privateClaims: make(map[string]interface{}),
+	}
+}
+
 // Size returns the number of valid claims stored in this token
-func (t *Token) Size() int {
+func (t *stdToken) Size() int {
 	var count int
 	if len(t.audience) > 0 {
-		count++
-	}
-	if t.expiration != nil {
-		count++
-	}
-	if t.issuedAt != nil {
-		count++
-	}
-	if t.issuer != nil {
-		count++
-	}
-	if t.jwtID != nil {
-		count++
-	}
-	if t.notBefore != nil {
-		count++
-	}
-	if t.subject != nil {
 		count++
 	}
 	count += len(t.privateClaims)
 	return count
 }
 
-func (t *Token) Get(s string) (interface{}, bool) {
-	switch s {
+func (t *stdToken) Get(name string) (interface{}, bool) {
+	switch name {
 	case AudienceKey:
-		if len(t.audience) == 0 {
+		if t.audience == nil {
 			return nil, false
 		}
-		return []string(t.audience), true
+		v := t.audience.Get()
+		return v, true
 	case ExpirationKey:
 		if t.expiration == nil {
 			return nil, false
 		}
-		return t.expiration.Get(), true
+		v := t.expiration.Get()
+		return v, true
 	case IssuedAtKey:
 		if t.issuedAt == nil {
 			return nil, false
 		}
-		return t.issuedAt.Get(), true
+		v := t.issuedAt.Get()
+		return v, true
 	case IssuerKey:
 		if t.issuer == nil {
 			return nil, false
 		}
-		return *(t.issuer), true
+		v := *(t.issuer)
+		return v, true
 	case JwtIDKey:
 		if t.jwtID == nil {
 			return nil, false
 		}
-		return *(t.jwtID), true
+		v := *(t.jwtID)
+		return v, true
 	case NotBeforeKey:
 		if t.notBefore == nil {
 			return nil, false
 		}
-		return t.notBefore.Get(), true
+		v := t.notBefore.Get()
+		return v, true
 	case SubjectKey:
 		if t.subject == nil {
 			return nil, false
 		}
-		return *(t.subject), true
-	}
-	if v, ok := t.privateClaims[s]; ok {
+		v := *(t.subject)
 		return v, true
+	default:
+		v, ok := t.privateClaims[name]
+		return v, ok
 	}
-	return nil, false
 }
 
-func (t *Token) Set(name string, v interface{}) error {
+func (h *stdToken) Set(name string, value interface{}) error {
 	switch name {
 	case AudienceKey:
-		var x StringList
-		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'audience' key`)
+		var acceptor StringList
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, AudienceKey)
 		}
-		t.audience = x
+		h.audience = acceptor
+		return nil
 	case ExpirationKey:
-		var x types.NumericDate
-		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'expiration' key`)
+		var acceptor types.NumericDate
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, ExpirationKey)
 		}
-		t.expiration = &x
+		h.expiration = &acceptor
+		return nil
 	case IssuedAtKey:
-		var x types.NumericDate
-		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'issuedAt' key`)
+		var acceptor types.NumericDate
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, IssuedAtKey)
 		}
-		t.issuedAt = &x
+		h.issuedAt = &acceptor
+		return nil
 	case IssuerKey:
-		x, ok := v.(string)
-		if !ok {
-			return errors.Errorf(`invalid type for 'issuer' key: %T`, v)
+		if v, ok := value.(string); ok {
+			h.issuer = &v
+			return nil
 		}
-		t.issuer = &x
+		return errors.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
-		x, ok := v.(string)
-		if !ok {
-			return errors.Errorf(`invalid type for 'jwtID' key: %T`, v)
+		if v, ok := value.(string); ok {
+			h.jwtID = &v
+			return nil
 		}
-		t.jwtID = &x
+		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
 	case NotBeforeKey:
-		var x types.NumericDate
-		if err := x.Accept(v); err != nil {
-			return errors.Wrap(err, `invalid value for 'notBefore' key`)
+		var acceptor types.NumericDate
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, NotBeforeKey)
 		}
-		t.notBefore = &x
+		h.notBefore = &acceptor
+		return nil
 	case SubjectKey:
-		x, ok := v.(string)
-		if !ok {
-			return errors.Errorf(`invalid type for 'subject' key: %T`, v)
+		if v, ok := value.(string); ok {
+			h.subject = &v
+			return nil
 		}
-		t.subject = &x
+		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	default:
-		if t.privateClaims == nil {
-			t.privateClaims = make(map[string]interface{})
+		if h.privateClaims == nil {
+			h.privateClaims = map[string]interface{}{}
 		}
-		t.privateClaims[name] = v
+		h.privateClaims[name] = value
 	}
 	return nil
 }
 
-func (t Token) Audience() StringList {
-	if v, ok := t.Get(AudienceKey); ok {
-		return v.([]string)
+func (h *stdToken) Audience() []string {
+	if h.audience != nil {
+		return h.audience.Get()
 	}
 	return nil
 }
 
-func (t Token) Expiration() time.Time {
-	if v, ok := t.Get(ExpirationKey); ok {
-		return v.(time.Time)
+func (h *stdToken) Expiration() time.Time {
+	if h.expiration != nil {
+		return h.expiration.Get()
 	}
 	return time.Time{}
 }
 
-func (t Token) IssuedAt() time.Time {
-	if v, ok := t.Get(IssuedAtKey); ok {
-		return v.(time.Time)
+func (h *stdToken) IssuedAt() time.Time {
+	if h.issuedAt != nil {
+		return h.issuedAt.Get()
 	}
 	return time.Time{}
 }
 
-// Issuer is a convenience function to retrieve the corresponding value store in the token
-// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
-func (t Token) Issuer() string {
-	if v, ok := t.Get(IssuerKey); ok {
-		return v.(string)
+func (h *stdToken) Issuer() string {
+	if h.issuer != nil {
+		return *(h.issuer)
 	}
 	return ""
 }
 
-// JwtID is a convenience function to retrieve the corresponding value store in the token
-// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
-func (t Token) JwtID() string {
-	if v, ok := t.Get(JwtIDKey); ok {
-		return v.(string)
+func (h *stdToken) JwtID() string {
+	if h.jwtID != nil {
+		return *(h.jwtID)
 	}
 	return ""
 }
 
-func (t Token) NotBefore() time.Time {
-	if v, ok := t.Get(NotBeforeKey); ok {
-		return v.(time.Time)
+func (h *stdToken) NotBefore() time.Time {
+	if h.notBefore != nil {
+		return h.notBefore.Get()
 	}
 	return time.Time{}
 }
 
-// Subject is a convenience function to retrieve the corresponding value store in the token
-// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead
-
-func (t Token) Subject() string {
-	if v, ok := t.Get(SubjectKey); ok {
-		return v.(string)
+func (h *stdToken) Subject() string {
+	if h.subject != nil {
+		return *(h.subject)
 	}
 	return ""
+}
+
+func (t *stdToken) PrivateClaims() map[string]interface{} {
+	return t.privateClaims
+}
+
+func (h *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+	defer close(ch)
+
+	var pairs []*ClaimPair
+	if h.audience != nil {
+		v := h.audience.Get()
+		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
+	}
+	if h.expiration != nil {
+		v := h.expiration.Get()
+		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
+	}
+	if h.issuedAt != nil {
+		v := h.issuedAt.Get()
+		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
+	}
+	if h.issuer != nil {
+		v := *(h.issuer)
+		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
+	}
+	if h.jwtID != nil {
+		v := *(h.jwtID)
+		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
+	}
+	if h.notBefore != nil {
+		v := h.notBefore.Get()
+		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
+	}
+	if h.subject != nil {
+		v := *(h.subject)
+		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
+	}
+	for k, v := range h.privateClaims {
+		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
+	}
+	for _, pair := range pairs {
+		select {
+		case <-ctx.Done():
+			return
+		case ch <- pair:
+		}
+	}
 }
 
 // this is almost identical to json.Encoder.Encode(), but we use Marshal
@@ -233,113 +309,79 @@ func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
 	return nil
 }
 
-// MarshalJSON serializes the token in JSON format. This exists to
-// allow flattening of private claims.
-func (t Token) MarshalJSON() ([]byte, error) {
+func (h *stdToken) UnmarshalJSON(buf []byte) error {
+	var proxy stdTokenMarshalProxy
+	if err := json.Unmarshal(buf, &proxy); err != nil {
+		return errors.Wrap(err, `failed to unmarshal stdToken`)
+	}
+	h.audience = proxy.Xaudience
+	h.expiration = proxy.Xexpiration
+	h.issuedAt = proxy.XissuedAt
+	h.issuer = proxy.Xissuer
+	h.jwtID = proxy.XjwtID
+	h.notBefore = proxy.XnotBefore
+	h.subject = proxy.Xsubject
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return errors.Wrap(err, `failed to parse privsate parameters`)
+	}
+	delete(m, AudienceKey)
+	delete(m, ExpirationKey)
+	delete(m, IssuedAtKey)
+	delete(m, IssuerKey)
+	delete(m, JwtIDKey)
+	delete(m, NotBeforeKey)
+	delete(m, SubjectKey)
+	h.privateClaims = m
+	return nil
+}
+
+func (h stdToken) MarshalJSON() ([]byte, error) {
+	var proxy stdTokenMarshalProxy
+	proxy.Xaudience = h.audience
+	proxy.Xexpiration = h.expiration
+	proxy.XissuedAt = h.issuedAt
+	proxy.Xissuer = h.issuer
+	proxy.XjwtID = h.jwtID
+	proxy.XnotBefore = h.notBefore
+	proxy.Xsubject = h.subject
 	var buf bytes.Buffer
-	buf.WriteRune('{')
-	if len(t.audience) > 0 {
-		buf.WriteRune('"')
-		buf.WriteString(AudienceKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.audience, AudienceKey); err != nil {
-			return nil, err
-		}
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(proxy); err != nil {
+		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
-	if t.expiration != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
+	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
+	if l := len(h.privateClaims); l > 0 {
+		buf.Truncate(buf.Len() - 2)
+		keys := make([]string, 0, l)
+		for k := range h.privateClaims {
+			keys = append(keys, k)
 		}
-		buf.WriteRune('"')
-		buf.WriteString(ExpirationKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.expiration, ExpirationKey); err != nil {
-			return nil, err
+		sort.Strings(keys)
+		for i, k := range keys {
+			if hasContent || i > 0 {
+				fmt.Fprintf(&buf, `,`)
+			}
+			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
+			if err := enc.Encode(h.privateClaims[k]); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
+			}
 		}
+		fmt.Fprintf(&buf, `}`)
 	}
-	if t.issuedAt != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
-		}
-		buf.WriteRune('"')
-		buf.WriteString(IssuedAtKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.issuedAt, IssuedAtKey); err != nil {
-			return nil, err
-		}
-	}
-	if t.issuer != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
-		}
-		buf.WriteRune('"')
-		buf.WriteString(IssuerKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.issuer, IssuerKey); err != nil {
-			return nil, err
-		}
-	}
-	if t.jwtID != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
-		}
-		buf.WriteRune('"')
-		buf.WriteString(JwtIDKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.jwtID, JwtIDKey); err != nil {
-			return nil, err
-		}
-	}
-	if t.notBefore != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
-		}
-		buf.WriteRune('"')
-		buf.WriteString(NotBeforeKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.notBefore, NotBeforeKey); err != nil {
-			return nil, err
-		}
-	}
-	if t.subject != nil {
-		if buf.Len() > 1 {
-			buf.WriteRune(',')
-		}
-		buf.WriteRune('"')
-		buf.WriteString(SubjectKey)
-		buf.WriteString(`":`)
-		if err := writeJSON(&buf, t.subject, SubjectKey); err != nil {
-			return nil, err
-		}
-	}
-	if len(t.privateClaims) == 0 {
-		buf.WriteRune('}')
-		return buf.Bytes(), nil
-	}
-	// If private claims exist, they need to flattened and included in the token
-	pcjson, err := json.Marshal(t.privateClaims)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal private claims`)
-	}
-	// remove '{' from the private claims
-	pcjson = pcjson[1:]
-	if buf.Len() > 1 {
-		buf.WriteRune(',')
-	}
-	buf.Write(pcjson)
 	return buf.Bytes(), nil
 }
 
-// UnmarshalJSON deserializes data from a JSON data buffer into a Token
-func (t *Token) UnmarshalJSON(data []byte) error {
-	var m map[string]interface{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal token`)
-	}
-	for name, value := range m {
-		if err := t.Set(name, value); err != nil {
-			return errors.Wrapf(err, `failed to set value for %s`, name)
-		}
-	}
-	return nil
+func (h *stdToken) Iterate(ctx context.Context) Iterator {
+	ch := make(chan *ClaimPair)
+	go h.iterate(ctx, ch)
+	return mapiter.New(ch)
+}
+
+func (h *stdToken) Walk(ctx context.Context, visitor Visitor) error {
+	return iter.WalkMap(ctx, h, visitor)
+}
+
+func (h *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
+	return iter.AsMap(ctx, h)
 }

@@ -7,19 +7,16 @@ package main
 // header fields
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/lestrrat-go/jwx/internal/codegen"
 	"github.com/pkg/errors"
-	"golang.org/x/tools/imports"
 )
 
 const (
@@ -443,7 +440,7 @@ func generateGenericHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n}")
 
-	return writeFormattedCodeToFile("interface_gen.go", &buf)
+	return codegen.WriteFormattedCodeToFile("interface_gen.go", &buf)
 }
 
 func generateHeaders() error {
@@ -832,33 +829,5 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 	}
 
-	return writeFormattedCodeToFile(kt.filename, &buf)
-}
-
-func writeFormattedCodeToFile(filename string, src io.Reader) error {
-	buf, err := ioutil.ReadAll(src)
-	if err != nil {
-		return errors.Wrap(err, `failed to read from source`)
-	}
-
-	formatted, err := imports.Process("", buf, nil)
-	if err != nil {
-		scanner := bufio.NewScanner(bytes.NewReader(buf))
-		lineno := 1
-		for scanner.Scan() {
-			txt := scanner.Text()
-			fmt.Fprintf(os.Stdout, "%03d: %s\n", lineno, txt)
-			lineno++
-		}
-		return errors.Wrap(err, `failed to format code`)
-	}
-
-	f, err := os.Create(filename)
-	if err != nil {
-		return errors.Wrapf(err, `failed to open %s.go`, filename)
-	}
-	defer f.Close()
-	f.Write(formatted)
-
-	return nil
+	return codegen.WriteFormattedCodeToFile(kt.filename, &buf)
 }

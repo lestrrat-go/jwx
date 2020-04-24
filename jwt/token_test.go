@@ -29,15 +29,14 @@ func TestHeader(t *testing.T) {
 	}
 
 	t.Run("Roundtrip", func(t *testing.T) {
-		var h jwt.Token
+		h := jwt.New()
 		for k, v := range values {
-			err := h.Set(k, v)
-			if err != nil {
-				t.Fatalf("Set failed for %s", k)
+			if !assert.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k) {
+				return
 			}
 			got, ok := h.Get(k)
-			if !ok {
-				t.Fatalf("Set failed for %s", k)
+			if !assert.True(t, ok, `h.Get should succeed for key %#v`, k) {
+				return
 			}
 			if !reflect.DeepEqual(v, got) {
 				t.Fatalf("Values do not match: (%v, %v)", v, got)
@@ -62,7 +61,7 @@ func TestHeader(t *testing.T) {
 			jwt.SubjectKey:    dummy,
 		}
 
-		var h jwt.Token
+		h := jwt.New()
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err == nil {
@@ -86,7 +85,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("GetError", func(t *testing.T) {
-		var h jwt.Token
+		h := jwt.New()
 		issuer := h.Issuer()
 		if issuer != "" {
 			t.Fatalf("Get Issuer should return empty string")
@@ -139,9 +138,8 @@ func TestTokenMarshal(t *testing.T) {
 	}
 
 	t2 := jwt.New()
-	err = json.Unmarshal(jsonbuf1, t2)
-	if err != nil {
-		t.Fatalf("JSON Unmarshal error: %s", err.Error())
+	if !assert.NoError(t, json.Unmarshal(jsonbuf1, t2), `json.Unmarshal should succeed`) {
+		return
 	}
 
 	if !assert.Equal(t, t1, t2, "tokens should match") {

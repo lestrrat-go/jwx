@@ -6,6 +6,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (l StringList) Get() []string {
+	return []string(l)
+}
+
 func (l *StringList) Accept(v interface{}) error {
 	switch x := v.(type) {
 	case string:
