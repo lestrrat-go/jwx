@@ -1,4 +1,4 @@
-.PHONY: generate realclean cover viewcover
+.PHONY: generate realclean cover viewcover test lint check_diffs imports
 
 generate: 
 	go get ./...
@@ -16,5 +16,15 @@ cover:
 viewcover:
 	go tool cover -html=coverage.out
 
+test:
+	go test -v
+
+lint:
+	golangci-lint run
+
+check_diffs:
+	./scripts/check-diff.sh
+
 imports:
 	goimports -w ./
+
