@@ -42,7 +42,7 @@ type Key interface {
 	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
-	// Raw creates the corresponding key. For example,
+	// Raw creates the corresponding raw key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
 	//
