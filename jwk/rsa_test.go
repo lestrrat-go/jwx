@@ -1,10 +1,10 @@
 package jwk_test
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwk"
@@ -15,8 +15,8 @@ func TestRSA(t *testing.T) {
 	verify := func(t *testing.T, key jwk.Key) {
 		t.Helper()
 
-		rsaKey, err := key.Materialize()
-		if !assert.NoError(t, err, `Materialize() should succeed`) {
+		var rsaKey interface{}
+		if !assert.NoError(t, key.Raw(&rsaKey), `Raw() should succeed`) {
 			return
 		}
 
@@ -25,9 +25,9 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		key.Walk(func(k string, v interface{}) error {
+		key.Walk(context.TODO(), jwk.HeaderVisitorFunc(func(k string, v interface{}) error {
 			return newKey.Set(k, v)
-		})
+		}))
 
 		jsonbuf1, err := json.Marshal(key)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
@@ -52,11 +52,11 @@ func TestRSA(t *testing.T) {
       "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 		}`
 
-		var key jwk.RSAPublicKey
-		if !assert.NoError(t, json.Unmarshal([]byte(src), &key), `json.Unmarshal should succeed`) {
+		key, err := jwk.ParseKey([]byte(src))
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
 		}
-		verify(t, &key)
+		verify(t, key)
 	})
 	t.Run("Private Key", func(t *testing.T) {
 		const src = `{
@@ -72,11 +72,11 @@ func TestRSA(t *testing.T) {
       "alg":"RS256",
       "kid":"2011-04-29"
      }`
-		var key jwk.RSAPrivateKey
-		if !assert.NoError(t, json.Unmarshal([]byte(src), &key), `json.Unmarshal should succeed`) {
+		key, err := jwk.ParseKey([]byte(src))
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
 		}
-		verify(t, &key)
+		verify(t, key)
 	})
 	t.Run("Private Key", func(t *testing.T) {
 		s := `{"keys":
@@ -99,13 +99,13 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		rsakey, ok := set.Keys[0].(*jwk.RSAPrivateKey)
+		rsakey, ok := set.Keys[0].(jwk.RSAPrivateKey)
 		if !assert.True(t, ok, "Type assertion for RSAPrivateKey is successful") {
 			return
 		}
 
-		var privkey *rsa.PrivateKey
-		var pubkey *rsa.PublicKey
+		var privkey rsa.PrivateKey
+		var pubkey rsa.PublicKey
 
 		{
 			pkey, err := rsakey.PublicKey()
@@ -113,13 +113,7 @@ func TestRSA(t *testing.T) {
 				return
 			}
 
-			mkey, err := pkey.Materialize()
-			if !assert.NoError(t, err, "RSAPublickKey.Materialize is successful") {
-				return
-			}
-			var ok bool
-			pubkey, ok = mkey.(*rsa.PublicKey)
-			if !assert.True(t, ok, "Materialized key is a *rsa.PublicKey") {
+			if !assert.NoError(t, pkey.Raw(&pubkey), "RSAPublickKey.Raw is successful") {
 				return
 			}
 		}
@@ -132,16 +126,8 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		{
-			mkey, err := rsakey.Materialize()
-			if !assert.NoError(t, err, "RSAPrivateKey.Materialize is successful") {
-				return
-			}
-			var ok bool
-			privkey, ok = mkey.(*rsa.PrivateKey)
-			if !assert.True(t, ok, "Materialized key is a *rsa.PrivateKey") {
-				return
-			}
+		if !assert.NoError(t, rsakey.Raw(&privkey), "materialise should be successful") {
+			return
 		}
 
 		if !assert.NotEmpty(t, privkey.Precomputed.Dp, "Dp exists") {
@@ -167,8 +153,8 @@ func TestRSA(t *testing.T) {
 			"n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 		}`
 
-		var key jwk.RSAPublicKey
-		if err := json.NewDecoder(strings.NewReader(src)).Decode(&key); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
+		key, err := jwk.ParseKey([]byte(src))
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
 		}
 

@@ -258,13 +258,13 @@ func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
-		epk, ok := epkif.(*jwk.ECDSAPublicKey)
+		epk, ok := epkif.(jwk.ECDSAPublicKey)
 		if !ok {
 			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 		}
 
-		pubkey, err := epk.Materialize()
-		if err != nil {
+		var pubkey interface{}
+		if err := epk.Raw(&pubkey); err != nil {
 			return nil, errors.Wrap(err, "failed to get public key")
 		}
 

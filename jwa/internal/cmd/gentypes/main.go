@@ -110,6 +110,11 @@ func _main() error {
 			filename: `elliptic_gen.go`,
 			elements: []element{
 				{
+					name:    `InvalidEllipticCurve`,
+					value:   `P-invalid`,
+					invalid: true,
+				},
+				{
 					name:  `P256`,
 					value: `P-256`,
 				},

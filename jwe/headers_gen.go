@@ -43,7 +43,7 @@ type Headers interface {
 	ContentEncryption() jwa.ContentEncryptionAlgorithm
 	ContentType() string
 	Critical() []string
-	EphemeralPublicKey() *jwk.ECDSAPublicKey
+	EphemeralPublicKey() jwk.ECDSAPublicKey
 	JWK() jwk.Key
 	JWKSetURL() string
 	KeyID() string
@@ -69,7 +69,7 @@ type stdHeaders struct {
 	contentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`      //
 	contentType            *string                         `json:"cty,omitempty"`      //
 	critical               []string                        `json:"crit,omitempty"`     //
-	ephemeralPublicKey     *jwk.ECDSAPublicKey             `json:"epk,omitempty"`      //
+	ephemeralPublicKey     jwk.ECDSAPublicKey              `json:"epk,omitempty"`      //
 	jwk                    jwk.Key                         `json:"jwk,omitempty"`      //
 	jwkSetURL              *string                         `json:"jku,omitempty"`      //
 	keyID                  *string                         `json:"kid,omitempty"`      //
@@ -89,7 +89,7 @@ type standardHeadersMarshalProxy struct {
 	XcontentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
 	XcontentType            *string                         `json:"cty,omitempty"`
 	Xcritical               []string                        `json:"crit,omitempty"`
-	XephemeralPublicKey     *jwk.ECDSAPublicKey             `json:"epk,omitempty"`
+	XephemeralPublicKey     json.RawMessage                 `json:"epk,omitempty"`
 	Xjwk                    json.RawMessage                 `json:"jwk,omitempty"`
 	XjwkSetURL              *string                         `json:"jku,omitempty"`
 	XkeyID                  *string                         `json:"kid,omitempty"`
@@ -150,7 +150,7 @@ func (h *stdHeaders) Critical() []string {
 	return h.critical
 }
 
-func (h *stdHeaders) EphemeralPublicKey() *jwk.ECDSAPublicKey {
+func (h *stdHeaders) EphemeralPublicKey() jwk.ECDSAPublicKey {
 	return h.ephemeralPublicKey
 }
 
@@ -406,7 +406,7 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case EphemeralPublicKeyKey:
-		if v, ok := value.(*jwk.ECDSAPublicKey); ok {
+		if v, ok := value.(jwk.ECDSAPublicKey); ok {
 			h.ephemeralPublicKey = v
 			return nil
 		}
@@ -476,11 +476,24 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 
 	h.jwk = nil
 	if jwkField := proxy.Xjwk; len(jwkField) > 0 {
-		set, err := jwk.ParseBytes([]byte(proxy.Xjwk))
+		jwkKey, err := jwk.ParseKey([]byte(proxy.Xjwk))
 		if err != nil {
 			return errors.Wrap(err, `failed to parse jwk field`)
 		}
-		h.jwk = set.Keys[0]
+		h.jwk = jwkKey
+	}
+
+	h.ephemeralPublicKey = nil
+	if epkField := proxy.XephemeralPublicKey; len(epkField) > 0 {
+		epk, err := jwk.ParseKey([]byte(proxy.XephemeralPublicKey))
+		if err != nil {
+			return errors.Wrap(err, `failed to parse epk field`)
+		}
+		if ecEpk, ok := epk.(jwk.ECDSAPublicKey); ok {
+			h.ephemeralPublicKey = ecEpk
+		} else {
+			return errors.Errorf(`invalid type for epk field %T`, epk)
+		}
 	}
 	h.agreementPartyUInfo = proxy.XagreementPartyUInfo
 	h.agreementPartyVInfo = proxy.XagreementPartyVInfo
@@ -489,7 +502,6 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	h.contentEncryption = proxy.XcontentEncryption
 	h.contentType = proxy.XcontentType
 	h.critical = proxy.Xcritical
-	h.ephemeralPublicKey = proxy.XephemeralPublicKey
 	h.jwkSetURL = proxy.XjwkSetURL
 	h.keyID = proxy.XkeyID
 	h.typ = proxy.Xtyp
@@ -530,6 +542,13 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		}
 		proxy.Xjwk = jwkbuf
 	}
+	if h.ephemeralPublicKey != nil {
+		epkbuf, err := json.Marshal(h.ephemeralPublicKey)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to marshal epk field`)
+		}
+		proxy.XephemeralPublicKey = epkbuf
+	}
 	proxy.XagreementPartyUInfo = h.agreementPartyUInfo
 	proxy.XagreementPartyVInfo = h.agreementPartyVInfo
 	proxy.Xalgorithm = h.algorithm
@@ -537,7 +556,6 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	proxy.XcontentEncryption = h.contentEncryption
 	proxy.XcontentType = h.contentType
 	proxy.Xcritical = h.critical
-	proxy.XephemeralPublicKey = h.ephemeralPublicKey
 	proxy.XjwkSetURL = h.jwkSetURL
 	proxy.XkeyID = h.keyID
 	proxy.Xtyp = h.typ

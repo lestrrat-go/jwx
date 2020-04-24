@@ -299,17 +299,11 @@ func generateHeaders() error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
 		if f.hasAccept {
-			//			if f.IsPointer() {
 			fmt.Fprintf(&buf, "\nvar acceptor %s", f.PointerElem())
 			fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
 			fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
 			fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
-			//			} else {
-			//				fmt.Fprintf(&buf, "\nif err := h.%s.Accept(value); err != nil {", f.name)
-			//				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
-			//				fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
-			//			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
 			fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)

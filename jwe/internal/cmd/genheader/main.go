@@ -13,6 +13,10 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+const (
+	ephemeralPublicKey = "ephemeralPublicKey"
+)
+
 func main() {
 	if err := _main(); err != nil {
 		log.Printf("%s", err)
@@ -68,7 +72,7 @@ func fieldStorageType(s string) string {
 }
 
 func fieldStorageTypeIsIndirect(s string) bool {
-	return !(s == "jwk.Key" || strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`))
+	return !(s == "jwk.Key" || s == "jwk.ECDSAPublicKey" || strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`))
 }
 
 func generateHeaders() error {
@@ -136,7 +140,7 @@ func generateHeaders() error {
 		{
 			name:   `ephemeralPublicKey`,
 			method: `EphemeralPublicKey`,
-			typ:    `*jwk.ECDSAPublicKey`,
+			typ:    `jwk.ECDSAPublicKey`,
 			key:    `epk`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
 			jsonTag: "`" + `json:"epk,omitempty"` + "`",
@@ -268,7 +272,7 @@ func generateHeaders() error {
 	// Proxy is used when unmarshaling headers
 	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == jwkKey {
+		if f.name == jwkKey || f.name == ephemeralPublicKey {
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
 		} else {
 			if fieldStorageTypeIsIndirect(f.typ) {
@@ -386,18 +390,31 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
 	fmt.Fprintf(&buf, "\n}")
 
-	// Copy every field except for jwk, whose type needs to be guessed
+	// Copy every field except for jwk and ephemeralPublicKey, whose type needs to be guessed
 	fmt.Fprintf(&buf, "\n\nh.jwk = nil")
 	fmt.Fprintf(&buf, "\nif jwkField := proxy.Xjwk; len(jwkField) > 0 {")
-	fmt.Fprintf(&buf, "\nset, err := jwk.ParseBytes([]byte(proxy.Xjwk))")
+	fmt.Fprintf(&buf, "\njwkKey, err := jwk.ParseKey([]byte(proxy.Xjwk))")
 	fmt.Fprintf(&buf, "\n if err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse jwk field`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nh.jwk = set.Keys[0]")
+	fmt.Fprintf(&buf, "\nh.jwk = jwkKey")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nh.ephemeralPublicKey = nil")
+	fmt.Fprintf(&buf, "\nif epkField := proxy.XephemeralPublicKey; len(epkField) > 0 {")
+	fmt.Fprintf(&buf, "\nepk, err := jwk.ParseKey([]byte(proxy.XephemeralPublicKey))")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse epk field`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nif ecEpk, ok := epk.(jwk.ECDSAPublicKey); ok {")
+	fmt.Fprintf(&buf, "\nh.ephemeralPublicKey = ecEpk")
+	fmt.Fprintf(&buf, "\n} else {")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid type for epk field %%T`, epk)")
+	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
-		if f.name == "jwk" {
+		if f.name == "jwk" || f.name == ephemeralPublicKey {
 			continue
 		}
 		fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
@@ -428,10 +445,19 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nproxy.Xjwk = jwkbuf")
 	fmt.Fprintf(&buf, "\n}")
 
+	fmt.Fprintf(&buf, "\nif h.ephemeralPublicKey != nil {")
+	fmt.Fprintf(&buf, "\nepkbuf, err := json.Marshal(h.ephemeralPublicKey)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal epk field`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nproxy.XephemeralPublicKey = epkbuf")
+	fmt.Fprintf(&buf, "\n}")
+
 	for _, f := range fields {
-		if f.name != "jwk" {
-			fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
+		if f.name == "jwk" || f.name == ephemeralPublicKey {
+			continue
 		}
+		fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
 	}
 
 	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")

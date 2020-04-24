@@ -21,8 +21,8 @@ func Example() {
 		return
 	}
 
-	key, err := keys[0].Materialize()
-	if err != nil {
+	var key interface{}
+	if err := keys[0].Raw(&key); err != nil {
 		log.Printf("failed to generate public key: %s", err)
 		return
 	}

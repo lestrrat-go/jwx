@@ -4,261 +4,113 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rsa"
-	"encoding/json"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 
-func newRSAPublicKey(key *rsa.PublicKey) (*RSAPublicKey, error) {
-	if key == nil {
-		return nil, errors.New(`non-nil rsa.PublicKey required`)
-	}
-
-	var hdr StandardHeaders
-	hdr.Set(KeyTypeKey, jwa.RSA)
-	return &RSAPublicKey{
-		headers: &hdr,
-		key:     key,
-	}, nil
+func NewRSAPublicKey() RSAPublicKey {
+	return newRSAPublicKey()
 }
 
-func newRSAPrivateKey(key *rsa.PrivateKey) (*RSAPrivateKey, error) {
-	if key == nil {
-		return nil, errors.New(`non-nil rsa.PrivateKey required`)
+func newRSAPublicKey() *rsaPublicKey {
+	return &rsaPublicKey{
+		privateParams: make(map[string]interface{}),
 	}
-
-	if len(key.Primes) < 2 {
-		return nil, errors.New("two primes required for RSA private key")
-	}
-
-	var hdr StandardHeaders
-	hdr.Set(KeyTypeKey, jwa.RSA)
-	return &RSAPrivateKey{
-		headers: &hdr,
-		key:     key,
-	}, nil
 }
 
-func (k RSAPrivateKey) PublicKey() (*RSAPublicKey, error) {
-	return newRSAPublicKey(&k.key.PublicKey)
+func NewRSAPrivateKey() RSAPrivateKey {
+	return newRSAPrivateKey()
 }
 
-func (k *RSAPublicKey) Materialize() (interface{}, error) {
-	if k.key == nil {
-		return nil, errors.New(`key has no rsa.PublicKey associated with it`)
+func newRSAPrivateKey() *rsaPrivateKey {
+	return &rsaPrivateKey{
+		privateParams: make(map[string]interface{}),
 	}
-	return k.key, nil
 }
 
-func (k *RSAPrivateKey) Materialize() (interface{}, error) {
-	if k.key == nil {
-		return nil, errors.New(`key has no rsa.PrivateKey associated with it`)
-	}
-	return k.key, nil
-}
-
-func (k RSAPublicKey) MarshalJSON() (buf []byte, err error) {
-	m := map[string]interface{}{}
-	if err := k.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate public key values`)
+func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
+	k.d = rawKey.D.Bytes()
+	if len(rawKey.Primes) < 2 {
+		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
 	}
 
-	return json.Marshal(m)
-}
+	k.p = rawKey.Primes[0].Bytes()
+	k.q = rawKey.Primes[1].Bytes()
 
-func (k RSAPublicKey) PopulateMap(m map[string]interface{}) (err error) {
-	if err := k.headers.PopulateMap(m); err != nil {
-		return errors.Wrap(err, `failed to populate header values`)
+	if v := rawKey.Precomputed.Dp; v != nil {
+		k.dp = v.Bytes()
+	}
+	if v := rawKey.Precomputed.Dq; v != nil {
+		k.dq = v.Bytes()
+	}
+	if v := rawKey.Precomputed.Qinv; v != nil {
+		k.qi = v.Bytes()
 	}
 
-	m[`n`] = base64.EncodeToString(k.key.N.Bytes())
-	m[`e`] = base64.EncodeUint64ToString(uint64(k.key.E))
+	k.n = rawKey.PublicKey.N.Bytes()
+	data := make([]byte, 8)
+	binary.BigEndian.PutUint64(data, uint64(rawKey.PublicKey.E))
+	i := 0
+	for ; i < len(data); i++ {
+		if data[i] != 0x0 {
+			break
+		}
+	}
+	k.e = data[i:]
 
 	return nil
 }
 
-func (k *RSAPublicKey) UnmarshalJSON(data []byte) (err error) {
-	m := map[string]interface{}{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal public key`)
+func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
+	k.n = rawKey.N.Bytes()
+	data := make([]byte, 8)
+	binary.BigEndian.PutUint64(data, uint64(rawKey.E))
+	i := 0
+	for ; i < len(data); i++ {
+		if data[i] != 0x0 {
+			break
+		}
 	}
-
-	if err := k.ExtractMap(m); err != nil {
-		return errors.Wrap(err, `failed to extract data from map`)
-	}
-	return nil
-}
-
-func (k *RSAPublicKey) ExtractMap(m map[string]interface{}) (err error) {
-	const (
-		eKey = `e`
-		nKey = `n`
-	)
-
-	nbuf, err := getRequiredKey(m, nKey)
-	if err != nil {
-		return errors.Wrapf(err, `failed to get required key %s`, nKey)
-	}
-	delete(m, nKey)
-
-	ebuf, err := getRequiredKey(m, eKey)
-	if err != nil {
-		return errors.Wrapf(err, `failed to get required key %s`, eKey)
-	}
-	delete(m, eKey)
-
-	var n, e big.Int
-	n.SetBytes(nbuf)
-	e.SetBytes(ebuf)
-
-	var hdrs StandardHeaders
-	if err := hdrs.ExtractMap(m); err != nil {
-		return errors.Wrap(err, `failed to extract header values`)
-	}
-
-	*k = RSAPublicKey{
-		headers: &hdrs,
-		key:     &rsa.PublicKey{E: int(e.Int64()), N: &n},
-	}
-	return nil
-}
-
-func (k RSAPrivateKey) MarshalJSON() (buf []byte, err error) {
-	m := make(map[string]interface{})
-	if err := k.PopulateMap(m); err != nil {
-		return nil, errors.Wrap(err, `failed to populate private key values`)
-	}
-
-	return json.Marshal(m)
-}
-
-func (k RSAPrivateKey) PopulateMap(m map[string]interface{}) (err error) {
-	const (
-		dKey  = `d`
-		pKey  = `p`
-		qKey  = `q`
-		dpKey = `dp`
-		dqKey = `dq`
-		qiKey = `qi`
-	)
-
-	if err := k.headers.PopulateMap(m); err != nil {
-		return errors.Wrap(err, `failed to populate header values`)
-	}
-
-	pubkey, _ := newRSAPublicKey(&k.key.PublicKey)
-	if err := pubkey.PopulateMap(m); err != nil {
-		return errors.Wrap(err, `failed to populate public key values`)
-	}
-
-	if err := k.headers.PopulateMap(m); err != nil {
-		return errors.Wrap(err, `failed to populate header values`)
-	}
-	m[dKey] = base64.EncodeToString(k.key.D.Bytes())
-	m[pKey] = base64.EncodeToString(k.key.Primes[0].Bytes())
-	m[qKey] = base64.EncodeToString(k.key.Primes[1].Bytes())
-	if v := k.key.Precomputed.Dp; v != nil {
-		m[dpKey] = base64.EncodeToString(v.Bytes())
-	}
-	if v := k.key.Precomputed.Dq; v != nil {
-		m[dqKey] = base64.EncodeToString(v.Bytes())
-	}
-	if v := k.key.Precomputed.Qinv; v != nil {
-		m[qiKey] = base64.EncodeToString(v.Bytes())
-	}
-	return nil
-}
-
-func (k *RSAPrivateKey) UnmarshalJSON(data []byte) (err error) {
-	m := map[string]interface{}{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return errors.Wrap(err, `failed to unmarshal public key`)
-	}
-
-	var key RSAPrivateKey
-	if err := key.ExtractMap(m); err != nil {
-		return errors.Wrap(err, `failed to extract data from map`)
-	}
-	*k = key
+	k.e = data[i:]
 
 	return nil
 }
 
-func (k *RSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
-	const (
-		dKey  = `d`
-		pKey  = `p`
-		qKey  = `q`
-		dpKey = `dp`
-		dqKey = `dq`
-		qiKey = `qi`
-	)
-
-	dbuf, err := getRequiredKey(m, dKey)
-	if err != nil {
-		return errors.Wrap(err, `failed to get required key`)
-	}
-	delete(m, dKey)
-
-	pbuf, err := getRequiredKey(m, pKey)
-	if err != nil {
-		return errors.Wrap(err, `failed to get required key`)
-	}
-	delete(m, pKey)
-
-	qbuf, err := getRequiredKey(m, qKey)
-	if err != nil {
-		return errors.Wrap(err, `failed to get required key`)
-	}
-	delete(m, qKey)
-
+func (k *rsaPrivateKey) Raw(v interface{}) error {
 	var d, q, p big.Int
-	d.SetBytes(dbuf)
-	q.SetBytes(qbuf)
-	p.SetBytes(pbuf)
+	d.SetBytes(k.d)
+	q.SetBytes(k.q)
+	p.SetBytes(k.p)
 
+	// optional fields
 	var dp, dq, qi *big.Int
-
-	dpbuf, err := getOptionalKey(m, dpKey)
-	if err == nil {
-		delete(m, dpKey)
-
+	if len(k.dp) > 0 {
 		dp = &big.Int{}
-		dp.SetBytes(dpbuf)
+		dp.SetBytes(k.dp)
 	}
 
-	dqbuf, err := getOptionalKey(m, dqKey)
-	if err == nil {
-		delete(m, dqKey)
-
+	if len(k.dq) > 0 {
 		dq = &big.Int{}
-		dq.SetBytes(dqbuf)
+		dq.SetBytes(k.dq)
 	}
 
-	qibuf, err := getOptionalKey(m, qiKey)
-	if err == nil {
-		delete(m, qiKey)
-
+	if len(k.qi) > 0 {
 		qi = &big.Int{}
-		qi.SetBytes(qibuf)
+		qi.SetBytes(k.qi)
 	}
-
-	var pubkey RSAPublicKey
-	if err := pubkey.ExtractMap(m); err != nil {
-		return errors.Wrap(err, `failed to extract fields for public key`)
-	}
-
-	materialized, err := pubkey.Materialize()
-	if err != nil {
-		return errors.Wrap(err, `failed to materialize RSA public key`)
-	}
-	rsaPubkey := materialized.(*rsa.PublicKey)
 
 	var key rsa.PrivateKey
-	key.PublicKey = *rsaPubkey
+
+	pubk := newRSAPublicKey()
+	pubk.n = k.n
+	pubk.e = k.e
+	if err := pubk.Raw(&key.PublicKey); err != nil {
+		return errors.Wrap(err, `failed to materialize RSA public key`)
+	}
+
 	key.D = &d
 	key.Primes = []*big.Int{&p, &q}
 
@@ -272,21 +124,53 @@ func (k *RSAPrivateKey) ExtractMap(m map[string]interface{}) (err error) {
 		key.Precomputed.Qinv = qi
 	}
 
-	*k = RSAPrivateKey{
-		headers: pubkey.headers,
-		key:     &key,
+	return assignRawResult(v, &key)
+}
+
+// Raw takes the values stored in the Key object, and creates the
+// corresponding *rsa.PublicKey object.
+func (k *rsaPublicKey) Raw(v interface{}) error {
+	var key rsa.PublicKey
+
+	var n, e big.Int
+	n.SetBytes(k.n)
+	e.SetBytes(k.e)
+
+	key.N = &n
+	key.E = int(e.Int64())
+
+	return assignRawResult(v, &key)
+}
+
+func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
+	var key rsa.PrivateKey
+	if err := k.Raw(&key); err != nil {
+		return nil, errors.Wrap(err, `failed to materialize key to generate public key`)
 	}
-	return nil
+
+	newKey := NewRSAPublicKey()
+	if err := newKey.FromRaw(&key.PublicKey); err != nil {
+		return nil, errors.Wrap(err, `failed to initialize RSAPublicKey`)
+	}
+	return newKey, nil
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k RSAPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
-	return rsaThumbprint(hash, &k.key.PublicKey)
+func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	var key rsa.PrivateKey
+	if err := k.Raw(&key); err != nil {
+		return nil, errors.Wrap(err, `failed to materialize RSA private key`)
+	}
+	return rsaThumbprint(hash, &key.PublicKey)
 }
 
-func (k RSAPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
-	return rsaThumbprint(hash, k.key)
+func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	var key rsa.PublicKey
+	if err := k.Raw(&key); err != nil {
+		return nil, errors.Wrap(err, `failed to materialize RSA public key`)
+	}
+	return rsaThumbprint(hash, &key)
 }
 
 func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {

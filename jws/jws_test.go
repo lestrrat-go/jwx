@@ -332,9 +332,9 @@ func TestEncode(t *testing.T) {
 		}
 
 		keys, _ := jwk.ParseString(jwksrc)
-		key, err := keys.Keys[0].Materialize()
-		if err != nil {
-			t.Fatal("Failed to parse key")
+		var key interface{}
+		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
+			return
 		}
 		var jwsCompact []byte
 		jwsCompact, err = jws.SignLiteral([]byte(examplePayload), alg, key, hdrBytes)
@@ -399,9 +399,9 @@ func TestEncode(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to parse JWK")
 		}
-		key, err := keys.Keys[0].Materialize()
-		if err != nil {
-			t.Fatal("Failed to create private key")
+		var key interface{}
+		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
+			return
 		}
 		var jwsCompact []byte
 		jwsCompact, err = jws.Sign(jwsPayload, alg, key)
@@ -445,10 +445,9 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with API library
-
-		publicKey, err := jwk.GetPublicKey(key)
-		if err != nil {
-			t.Fatal("Failed to get public from private key")
+		publicKey, err := jwk.PublicKeyOf(key)
+		if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+			return
 		}
 		verifiedPayload, err := jws.Verify(jwsCompact, alg, publicKey)
 		if err != nil || string(verifiedPayload) != string(jwsPayload) {
