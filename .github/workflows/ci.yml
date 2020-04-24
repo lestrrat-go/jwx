@@ -20,5 +20,5 @@ jobs:
       - run: make test
       - run: make lint
       - name: Check difference between generation code and commit code
-          run: make check_diffs
+        run: make check_diffs
 
