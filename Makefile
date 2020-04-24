@@ -17,10 +17,10 @@ viewcover:
 	go tool cover -html=coverage.out
 
 test:
-	go test -v
+	go test -v ./...
 
 lint:
-	golangci-lint run
+	golangci-lint run ./...
 
 check_diffs:
 	./scripts/check-diff.sh
