@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -402,7 +402,7 @@ func (t typ) Generate() error {
 	fmt.Fprintf(&buf, "\nreturn string(v)")
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		os.Stdout.Write(buf.Bytes())
 		return errors.Wrap(err, `failed to format source`)
@@ -491,7 +491,7 @@ func (t typ) GenerateTest() error {
 
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := format.Source(buf.Bytes())
+	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
 		os.Stdout.Write(buf.Bytes())
 		return errors.Wrap(err, `failed to format source`)
