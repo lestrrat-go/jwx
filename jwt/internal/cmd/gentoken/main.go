@@ -104,7 +104,6 @@ var stdFields []tokenField
 
 type tokenType struct {
 	filename   string
-	ifName     string
 	structName string
 	prefix     string
 	claims     []tokenField
@@ -194,7 +193,6 @@ func init() {
 		{
 			prefix:     "std",
 			filename:   "token_gen.go",
-			ifName:     "Token",
 			structName: "stdToken",
 			claims:     stdFields,
 		},
@@ -202,7 +200,6 @@ func init() {
 			{
 			prefix: "openid",
 				filename:   "openid/token_gen.go",
-				ifName:     "Token",
 				structName: "stdToken",
 				claims:     stdFields, // append other fields
 			},
