@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Install Go ${{ matrix.go }}
+      - name: Install Go stable version
         if: matrix.go != 'tip'
         uses: actions/setup-go@v2
         with:
@@ -23,7 +23,7 @@ jobs:
           cd $HOME/gotip/src
           ./make.bash
           export GOROOT=$HOME/gotip
-          export PATH=$HOME/gotip/bin:$PATH
+          export PATH=$(go env GOPATH)/bin:$HOME/gotip/bin:$PATH
       - name: Install GolangCI-Lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.25.0
       - run: make generate
