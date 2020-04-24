@@ -24,6 +24,7 @@ jobs:
           ./make.bash
           echo "::set-env name=GOROOT::$HOME/gotip"
           echo "::add-path::$HOME/gotip/bin"
+          echo "::add-path::$GOPATH/bin"
           export GOROOT=$HOME/gotip
           go env GOPATH
           echo $PATH
