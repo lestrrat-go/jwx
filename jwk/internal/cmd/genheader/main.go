@@ -373,12 +373,15 @@ func generateGenericHeaders() error {
 
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\n\npackage jwk")
+
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"crypto/x509", "fmt"} {
-		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	pkgs := []string{
+		"crypto/x509",
+		"fmt",
+		"github.com/lestrrat-go/jwx/jwa",
+		"github.com/pkg/errors",
 	}
-	fmt.Fprintf(&buf, "\n\n")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/jwa", "github.com/pkg/errors"} {
+	for _, pkg := range pkgs {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
@@ -461,12 +464,16 @@ func generateHeader(kt keyType) error {
 
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\n\npackage jwk")
+
 	fmt.Fprintf(&buf, "\n\nimport (")
-	for _, pkg := range []string{"crypto/x509", "fmt"} {
-		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	pkgs := []string{
+		"crypto/x509",
+		"fmt",
+		"github.com/lestrrat-go/jwx/internal/base64",
+		"github.com/lestrrat-go/jwx/jwa",
+		"github.com/pkg/errors",
 	}
-	fmt.Fprintf(&buf, "\n\n")
-	for _, pkg := range []string{"github.com/lestrrat-go/jwx/internal/base64", "github.com/lestrrat-go/jwx/jwa", "github.com/pkg/errors"} {
+	for _, pkg := range pkgs {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
