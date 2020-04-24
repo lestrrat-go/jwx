@@ -169,17 +169,20 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
 	fmt.Fprintf(&buf, "\npackage jws")
-	fmt.Fprintf(&buf, "\n\nimport (")
-	stdimports := []string{"bytes", "context", "encoding/json", "fmt", "sort", "strconv"}
-	extimports := []string{"github.com/lestrrat-go/jwx/jwa", "github.com/lestrrat-go/jwx/jwk", "github.com/pkg/errors"}
 
-	for _, pkg := range stdimports {
-		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
+	fmt.Fprintf(&buf, "\n\nimport (")
+	pkgs := []string{
+		"bytes",
+		"context",
+		"encoding/json",
+		"fmt",
+		"sort",
+		"strconv",
+		"github.com/lestrrat-go/jwx/jwa",
+		"github.com/lestrrat-go/jwx/jwk",
+		"github.com/pkg/errors",
 	}
-	if len(stdimports) > 0 && len(extimports) > 0 {
-		fmt.Fprintf(&buf, "\n")
-	}
-	for _, pkg := range extimports {
+	for _, pkg := range pkgs {
 		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
 	}
 	fmt.Fprintf(&buf, "\n)")
