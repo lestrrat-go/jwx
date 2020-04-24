@@ -2,28 +2,7 @@ run:
 
 linters-settings:
   govet:
-    check-shadowing: false
-    enable:
-      - assign
-      - atomic
-      - bools
-      - buildtag
-      - cgocall
-      - composites
-      - copylocks
-      - httpresponse
-      - loopclosure
-      - lostcancel
-      - nilfunc
-      - printf
-      - shift
-      - stdmethods
-      - structtag
-      - tests
-      - unmarshal
-      - unreachable
-      - unsafeptr
-      - unusedresult
+    enable-all: true
     disable:
       - shadow
 
@@ -43,6 +22,9 @@ linters:
     - gocyclo
     - dupl
     - gosec
+    - testpackage
+    - godot
+    - nestif
 
 issues:
   exclude-rules:
