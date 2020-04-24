@@ -19,7 +19,7 @@ func TestDate(t *testing.T) {
 		for _, ut := range []interface{}{int64(127), int32(127), int16(127), int8(127), float32(127), float64(127), json.Number("127")} {
 			ut := ut
 			t.Run(fmt.Sprintf("%T", ut), func(t *testing.T) {
-				var t1 jwt.Token
+				t1 := jwt.New()
 				err := t1.Set(jwt.IssuedAtKey, ut)
 				if err != nil {
 					t.Fatalf("Failed to set IssuedAt value: %v", ut)
