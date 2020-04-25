@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/types"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
 )
 
 func TestStringList_Accept(t *testing.T) {
