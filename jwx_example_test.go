@@ -65,6 +65,10 @@ func Example_openid() {
 	fmt.Printf("%s\n", buf)
 
 	t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
+	if err != nil {
+		fmt.Printf("failed to parse JSON: %s\n", err)
+		return
+	}
 	if _, ok := t2.(openid.Token); !ok {
 		fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
 		return

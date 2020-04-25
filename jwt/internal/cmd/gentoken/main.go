@@ -44,7 +44,6 @@ type tokenField struct {
 	elemtyp    string
 	tag        string
 	isList     bool
-	isStd      bool
 	hasAccept  bool
 	hasGet     bool
 	noDeref    bool

@@ -97,84 +97,79 @@ func (t *AddressClaim) Get(s string) (interface{}, bool) {
 	case AddressFormattedKey:
 		if t.formatted == nil {
 			return nil, false
-		} else {
-			return *(t.formatted), true
 		}
+		return *(t.formatted), true
 	case AddressStreetAddressKey:
 		if t.streetAddress == nil {
 			return nil, false
-		} else {
-			return *(t.streetAddress), true
 		}
+
+		return *(t.streetAddress), true
 	case AddressLocalityKey:
 		if t.locality == nil {
 			return nil, false
-		} else {
-			return *(t.locality), true
 		}
+		return *(t.locality), true
 	case AddressRegionKey:
 		if t.region == nil {
 			return nil, false
-		} else {
-			return *(t.region), true
 		}
+		return *(t.region), true
 	case AddressPostalCodeKey:
 		if t.postalCode == nil {
 			return nil, false
-		} else {
-			return *(t.postalCode), true
 		}
+		return *(t.postalCode), true
 	case AddressCountryKey:
 		if t.country == nil {
 			return nil, false
-		} else {
-			return *(t.country), true
 		}
+		return *(t.country), true
 	}
 	return nil, false
 }
 
-func (a *AddressClaim) Set(key string, value interface{}) error {
+func (t *AddressClaim) Set(key string, value interface{}) error {
 	switch key {
 	case AddressFormattedKey:
 		v, ok := value.(string)
 		if ok {
-			a.formatted = &v
+			t.formatted = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'formatted': %T`, value)
 	case AddressStreetAddressKey:
 		v, ok := value.(string)
 		if ok {
-			a.streetAddress = &v
+			t.streetAddress = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'streetAddress': %T`, value)
 	case AddressLocalityKey:
 		v, ok := value.(string)
 		if ok {
-			a.locality = &v
+			t.locality = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'locality': %T`, value)
 	case AddressRegionKey:
 		v, ok := value.(string)
 		if ok {
-			a.region = &v
+			t.region = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'region': %T`, value)
 	case AddressPostalCodeKey:
 		v, ok := value.(string)
 		if ok {
-			a.postalCode = &v
+			t.postalCode = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'postalCode': %T`, value)
 	case AddressCountryKey:
 		v, ok := value.(string)
 		if ok {
-			a.country = &v
+			t.country = &v
 			return nil
 		}
 		return errors.Errorf(`invalid type for key 'country': %T`, value)
@@ -183,11 +178,11 @@ func (a *AddressClaim) Set(key string, value interface{}) error {
 	}
 }
 
-func (a *AddressClaim) Accept(v interface{}) error {
+func (t *AddressClaim) Accept(v interface{}) error {
 	switch v := v.(type) {
 	case map[string]interface{}:
 		for key, value := range v {
-			a.Set(key, value)
+			t.Set(key, value)
 		}
 		return nil
 	default:

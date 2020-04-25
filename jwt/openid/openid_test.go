@@ -224,6 +224,7 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	for name, value := range base {
+		value := value
 		t.Run(name, func(t *testing.T) {
 			value.Check(token)
 		})
@@ -255,5 +256,4 @@ func TestBirthdateClaim(t *testing.T) {
 			return
 		}
 	})
-
 }
