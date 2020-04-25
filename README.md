@@ -78,7 +78,7 @@ For OpenID claims, use the token created by `openid.New()`, or
 use the `jwt.WithOpenIDClaims()`. If you need to use other specialized
 claims, use `jwt.WithToken()` to specify the exact token type
 
-```
+```go
 func Example_openid() {
 	const aLongLongTimeAgo = 233431200
 
