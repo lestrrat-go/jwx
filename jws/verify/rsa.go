@@ -47,19 +47,24 @@ func init() {
 }
 
 func makeVerifyPKCS1v15(hash crypto.Hash) rsaVerifyFunc {
-	return rsaVerifyFunc(func(payload, signature []byte, key *rsa.PublicKey) error {
+	return func(payload, signature []byte, key *rsa.PublicKey) error {
 		h := hash.New()
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return errors.Wrap(err, "failed to write payload using PKCS1v15")
+		}
+
 		return rsa.VerifyPKCS1v15(key, hash, h.Sum(nil), signature)
-	})
+	}
 }
 
 func makeVerifyPSS(hash crypto.Hash) rsaVerifyFunc {
-	return rsaVerifyFunc(func(payload, signature []byte, key *rsa.PublicKey) error {
+	return func(payload, signature []byte, key *rsa.PublicKey) error {
 		h := hash.New()
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return errors.Wrap(err, "failed to write payload using PSS")
+		}
 		return rsa.VerifyPSS(key, hash, h.Sum(nil), signature, nil)
-	})
+	}
 }
 
 func newRSA(alg jwa.SignatureAlgorithm) (*RSAVerifier, error) {

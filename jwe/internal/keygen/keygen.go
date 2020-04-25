@@ -91,7 +91,9 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
 	kdf := concatkdf.New(crypto.SHA256, []byte(g.algorithm.String()), z.Bytes(), []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
-	kdf.Read(kek)
+	if _, err := kdf.Read(kek); err != nil {
+		return nil, errors.Wrap(err, "failed to read kdf")
+	}
 
 	return ByteWithECPrivateKey{
 		PrivateKey: priv,
@@ -104,6 +106,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 func (k ByteWithECPrivateKey) Populate(h Setter) {
 	key, err := jwk.New(&k.PrivateKey.PublicKey)
 	if err == nil {
+		// TODO: can't return err
 		h.Set("epk", key)
 	}
 }

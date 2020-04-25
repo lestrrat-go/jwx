@@ -182,6 +182,8 @@ func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
 	buf.WriteString(`"}`)
 
 	h := hash.New()
-	buf.WriteTo(h)
+	if _, err := buf.WriteTo(h); err != nil {
+		return nil, errors.Wrap(err, "failed to write rsaThumbprint")
+	}
 	return h.Sum(nil), nil
 }

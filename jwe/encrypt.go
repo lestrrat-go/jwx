@@ -41,7 +41,9 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	protected := NewHeaders()
-	protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm())
+	if err := protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
+		return nil, errors.Wrap(err, "failed to set header")
+	}
 
 	// In JWE, multiple recipients may exist -- they receive an
 	// encrypted version of the CEK, using their key encryption
@@ -49,9 +51,13 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	recipients := make([]Recipient, len(e.keyEncrypters))
 	for i, enc := range e.keyEncrypters {
 		r := NewRecipient()
-		r.Headers().Set(AlgorithmKey, enc.Algorithm())
+		if err := r.Headers().Set(AlgorithmKey, enc.Algorithm()); err != nil {
+			return nil, errors.Wrap(err, "failed to set header")
+		}
 		if v := enc.KeyID(); v != "" {
-			r.Headers().Set(KeyIDKey, v)
+			if err := r.Headers().Set(KeyIDKey, v); err != nil {
+				return nil, errors.Wrap(err, "failed to set header")
+			}
 		}
 		enckey, err := enc.Encrypt(cek)
 		if err != nil {
@@ -60,7 +66,9 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 			}
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
-		r.SetEncryptedKey(enckey.Bytes())
+		if err := r.SetEncryptedKey(enckey.Bytes()); err != nil {
+			return nil, errors.Wrap(err, "failed to set encrypted key")
+		}
 		if hp, ok := enckey.(populater); ok {
 			hp.Populate(r.Headers())
 		}
@@ -103,7 +111,9 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	msg := NewMessage()
-	msg.authenticatedData.Base64Decode(aad)
+	if err := msg.authenticatedData.Base64Decode(aad); err != nil {
+		return nil, errors.Wrap(err, "failed to decode base64")
+	}
 	msg.cipherText = ciphertext
 	msg.initializationVector = iv
 	msg.protectedHeaders = protected

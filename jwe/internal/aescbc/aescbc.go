@@ -93,6 +93,7 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
 	binary.BigEndian.PutUint64(buf[n:], uint64(len(aad)*8))
 
 	h := hmac.New(c.hash, c.integrityKey)
+	// TODO: can't return err
 	h.Write(buf)
 	s := h.Sum(nil)
 	if debug.Enabled {

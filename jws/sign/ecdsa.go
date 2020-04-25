@@ -24,7 +24,7 @@ func init() {
 }
 
 func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
-	return ecdsaSignFunc(func(payload []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+	return func(payload []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 		curveBits := key.Curve.Params().BitSize
 		keyBytes := curveBits / 8
 		// Curve bits do not need to be a multiple of 8.
@@ -32,7 +32,9 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 			keyBytes++
 		}
 		h := hash.New()
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return nil, errors.Wrap(err, "failed to write payload using ecdsa")
+		}
 		r, s, err := ecdsa.Sign(rand.Reader, key, h.Sum(nil))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
@@ -48,7 +50,7 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 
 		out := append(rBytesPadded, sBytesPadded...)
 		return out, nil
-	})
+	}
 }
 
 func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSASigner, error) {
