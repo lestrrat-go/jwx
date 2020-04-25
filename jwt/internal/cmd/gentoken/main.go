@@ -120,7 +120,6 @@ func init() {
 			key:        "aud",
 			typ:        "types.StringList",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
-			isStd:      true,
 			isList:     true,
 			hasAccept:  true,
 			hasGet:     true,
@@ -133,7 +132,6 @@ func init() {
 			key:        "exp",
 			typ:        "types.NumericDate",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.4`,
-			isStd:      true,
 			hasAccept:  true,
 			hasGet:     true,
 			noDeref:    true,
@@ -148,7 +146,6 @@ func init() {
 			hasAccept:  true,
 			hasGet:     true,
 			noDeref:    true,
-			isStd:      true,
 		},
 		{
 			name:       "issuer",
@@ -157,7 +154,6 @@ func init() {
 			key:        "iss",
 			typ:        "string",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.1`,
-			isStd:      true,
 		},
 		{
 			name:       "jwtID",
@@ -166,7 +162,6 @@ func init() {
 			key:        "jti",
 			typ:        "string",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.7`,
-			isStd:      true,
 		},
 		{
 			name:       "notBefore",
@@ -175,7 +170,6 @@ func init() {
 			key:        "nbf",
 			typ:        "types.NumericDate",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.5`,
-			isStd:      true,
 			hasAccept:  true,
 			hasGet:     true,
 			noDeref:    true,
@@ -186,7 +180,6 @@ func init() {
 			returnType: "string",
 			key:        "sub",
 			typ:        "string",
-			isStd:      true,
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.2`,
 		},
 	}
