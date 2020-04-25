@@ -3,12 +3,14 @@ package jwt
 import (
 	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwt/openid"
 )
 
 type Option = option.Interface
 
 const (
 	optkeyVerify = `verify`
+	optkeyToken  = `token`
 )
 
 type VerifyParameters interface {
@@ -34,4 +36,12 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) Option {
 		alg: alg,
 		key: key,
 	})
+}
+
+func WithToken(t Token) Option {
+	return option.New(optkeyToken, t)
+}
+
+func WithOpenIDClaims() Option {
+	return WithToken(openid.New())
 }

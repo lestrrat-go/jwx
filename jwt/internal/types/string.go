@@ -1,10 +1,12 @@
-package jwt
+package types
 
 import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
 )
+
+type StringList []string
 
 func (l StringList) Get() []string {
 	return []string(l)

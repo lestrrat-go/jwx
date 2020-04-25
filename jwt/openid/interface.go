@@ -1,4 +1,4 @@
-package jwt
+package openid
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
@@ -9,3 +9,4 @@ type ClaimPair = mapiter.Pair
 type Iterator = mapiter.Iterator
 type Visitor = iter.MapVisitor
 type VisitorFunc iter.MapVisitorFunc
+

@@ -80,6 +80,7 @@ func (t tokenField) PointerElem() string {
 var zerovals = map[string]string{
 	`string`:    `""`,
 	`time.Time`: `time.Time{}`,
+	`bool`:      `false`,
 }
 
 func zeroval(s string) string {
@@ -105,6 +106,8 @@ var stdFields []tokenField
 type tokenType struct {
 	filename   string
 	structName string
+	ifName     string
+	pkg        string
 	prefix     string
 	claims     []tokenField
 }
@@ -116,7 +119,7 @@ func init() {
 			method:     "Audience",
 			returnType: "[]string",
 			key:        "aud",
-			typ:        "StringList",
+			typ:        "types.StringList",
 			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
 			isStd:      true,
 			isList:     true,
@@ -192,18 +195,157 @@ func init() {
 	tokens = []tokenType{
 		{
 			prefix:     "std",
+			pkg:        "jwt",
 			filename:   "token_gen.go",
+			ifName:     "Token",
 			structName: "stdToken",
 			claims:     stdFields,
 		},
-		/*
-			{
-			prefix: "openid",
-				filename:   "openid/token_gen.go",
-				structName: "stdToken",
-				claims:     stdFields, // append other fields
-			},
-		*/
+		{
+			prefix:     "openid",
+			pkg:        "openid",
+			filename:   "openid/token_gen.go",
+			ifName:     "Token",
+			structName: "stdToken",
+			claims: append(stdFields, []tokenField{
+				{
+					name:       "name",
+					method:     "Name",
+					returnType: "string",
+					typ:        "string",
+					key:        "name",
+				},
+				{
+					name:       "givenName",
+					method:     "GivenName",
+					returnType: "string",
+					typ:        "string",
+					key:        "given_name",
+				},
+				{
+					name:       "middleName",
+					method:     "MiddleName",
+					returnType: "string",
+					typ:        "string",
+					key:        "middle_name",
+				},
+				{
+					name:       "familyName",
+					method:     "FamilyName",
+					returnType: "string",
+					typ:        "string",
+					key:        "family_name",
+				},
+				{
+					name:       "nickname",
+					method:     "Nickname",
+					returnType: "string",
+					typ:        "string",
+					key:        "nickname",
+				},
+				{
+					name:       "preferredUsername",
+					method:     "PreferredUsername",
+					returnType: "string",
+					typ:        "string",
+					key:        "preferred_username",
+				},
+				{
+					name:       "profile",
+					method:     "Profile",
+					returnType: "string",
+					typ:        "string",
+					key:        "profile",
+				},
+				{
+					name:       "picture",
+					method:     "Picture",
+					returnType: "string",
+					typ:        "string",
+					key:        "picture",
+				},
+				{
+					name:       "website",
+					method:     "Website",
+					returnType: "string",
+					typ:        "string",
+					key:        "website",
+				},
+				{
+					name:       "email",
+					method:     "Email",
+					returnType: "string",
+					typ:        "string",
+					key:        "email",
+				},
+				{
+					name:       "emailVerified",
+					method:     "EmailVerified",
+					returnType: "bool",
+					typ:        "bool",
+					key:        "email_verified",
+				},
+				{
+					name:       "gender",
+					method:     "Gender",
+					returnType: "string",
+					typ:        "string",
+					key:        "gender",
+				},
+				{
+					name:       "birthdate",
+					method:     "Birthdate",
+					returnType: "*BirthdateClaim",
+					typ:        "*BirthdateClaim",
+					key:        "birthdate",
+				},
+				{
+					name:       "zoneinfo",
+					method:     "Zoneinfo",
+					returnType: "string",
+					typ:        "string",
+					key:        "zoneinfo",
+				},
+				{
+					name:       "locale",
+					method:     "Locale",
+					returnType: "string",
+					typ:        "string",
+					key:        "locale",
+				},
+				{
+					name:       "phoneNumber",
+					method:     "PhoneNumber",
+					returnType: "string",
+					typ:        "string",
+					key:        "phone_number",
+				},
+				{
+					name:       "phoneNumberVerified",
+					method:     "PhoneNumberVerified",
+					returnType: "bool",
+					typ:        "bool",
+					key:        "phone_number_verified",
+				},
+				{
+					name:       "address",
+					method:     "Address",
+					returnType: "*AddressClaim",
+					typ:        "*AddressClaim",
+					key:        "address",
+					hasAccept:  true,
+				},
+				{
+					name:       "updatedAt",
+					method:     "UpdatedAt",
+					returnType: "time.Time",
+					typ:        "types.NumericDate",
+					key:        "updated_at",
+					hasGet:     true,
+					hasAccept:  true,
+				},
+			}...),
+		},
 	}
 }
 
@@ -212,43 +354,28 @@ func generateToken(tt tokenType) error {
 
 	var fields = tt.claims
 
-	fmt.Fprintf(&buf, "\n// This file is auto-generated. DO NOT EDIT")
-	fmt.Fprintf(&buf, "\npackage jwt")
-
-	fmt.Fprintf(&buf, "\n\nimport (")
-	pkgs := []string{
-		"bytes",
-		"encoding/json",
-		"time",
-		"github.com/pkg/errors",
-		"github.com/lestrrat-go/jwx/jwt/internal/types",
-	}
-	for _, pkg := range pkgs {
-		fmt.Fprintf(&buf, "\n%s", strconv.Quote(pkg))
-	}
-	fmt.Fprintf(&buf, "\n)") // end of import
+	fmt.Fprintf(&buf, "\n// This file is auto-generated by jwt/internal/cmd/gentoken/main.go. DO NOT EDIT")
+	fmt.Fprintf(&buf, "\npackage %s", tt.pkg)
 
 	fmt.Fprintf(&buf, "\n\nconst (")
 	for _, f := range fields {
-		if f.isStd {
-			fmt.Fprintf(&buf, "\n%sKey = %s", f.method, strconv.Quote(f.key))
-		} else {
-			fmt.Fprintf(&buf, "\n%s%sKey = %s", tt.prefix, f.method, strconv.Quote(f.key))
-		}
+		fmt.Fprintf(&buf, "\n%sKey = %s", f.method, strconv.Quote(f.key))
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\n\n// Token represents a generic JWT token.")
-	fmt.Fprintf(&buf, "\n// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")
-	fmt.Fprintf(&buf, "\n// methods but their types are not taken into consideration at all. If you have non-standard")
-	fmt.Fprintf(&buf, "\n// claims that you must frequently access, consider creating accessors functions")
-	fmt.Fprintf(&buf, "\n// like the following")
-	fmt.Fprintf(&buf, "\n//\n// func SetFoo(tok jwt.Token) error")
-	fmt.Fprintf(&buf, "\n// func GetFoo(tok jwt.Token) (*Customtyp, error)")
-	fmt.Fprintf(&buf, "\n//\n// Embedding jwt.Token into another struct is not recommended, becase")
-	fmt.Fprintf(&buf, "\n// jwt.Token needs to handle private claims, and this really does not")
-	fmt.Fprintf(&buf, "\n// work well when it is embedded in other structure")
-	fmt.Fprintf(&buf, "\ntype Token interface {")
+	if tt.pkg == "jwt" && tt.structName == "stdToken" {
+		fmt.Fprintf(&buf, "\n\n// Token represents a generic JWT token.")
+		fmt.Fprintf(&buf, "\n// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")
+		fmt.Fprintf(&buf, "\n// methods but their types are not taken into consideration at all. If you have non-standard")
+		fmt.Fprintf(&buf, "\n// claims that you must frequently access, consider creating accessors functions")
+		fmt.Fprintf(&buf, "\n// like the following")
+		fmt.Fprintf(&buf, "\n//\n// func SetFoo(tok jwt.Token) error")
+		fmt.Fprintf(&buf, "\n// func GetFoo(tok jwt.Token) (*Customtyp, error)")
+		fmt.Fprintf(&buf, "\n//\n// Embedding jwt.Token into another struct is not recommended, becase")
+		fmt.Fprintf(&buf, "\n// jwt.Token needs to handle private claims, and this really does not")
+		fmt.Fprintf(&buf, "\n// work well when it is embedded in other structure")
+	}
+	fmt.Fprintf(&buf, "\ntype %s interface {", tt.ifName)
 	for _, field := range fields {
 		fmt.Fprintf(&buf, "\n%s() %s", field.method, field.returnType)
 	}
@@ -260,7 +387,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\ntype stdToken struct {")
+	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
@@ -268,7 +395,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	// Proxy is used when unmarshaling headers
-	fmt.Fprintf(&buf, "\n\ntype stdTokenMarshalProxy struct {")
+	fmt.Fprintf(&buf, "\n\ntype %sTokenMarshalProxy struct {", tt.prefix)
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nX%s %s `%s`", f.name, fieldStorageType(f.typ), f.Tag())
 	}
@@ -286,14 +413,14 @@ func generateToken(tt tokenType) error {
 		}
 	}
 	fmt.Fprintf(&buf, ".\n// Convenience accessors are provided for these standard claims")
-	fmt.Fprintf(&buf, "\nfunc New() Token {")
-	fmt.Fprintf(&buf, "\nreturn &stdToken{")
+	fmt.Fprintf(&buf, "\nfunc New() %s {", tt.ifName)
+	fmt.Fprintf(&buf, "\nreturn &%s{", tt.structName)
 	fmt.Fprintf(&buf, "\nprivateClaims: make(map[string]interface{}),")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
-	fmt.Fprintf(&buf, "\nfunc (t *stdToken) Size() int {")
+	fmt.Fprintf(&buf, "\nfunc (t *%s) Size() int {", tt.structName)
 	fmt.Fprintf(&buf, "\nvar count int")
 	for _, field := range fields {
 		switch {
@@ -311,14 +438,10 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\ncount += len(t.privateClaims)")
 	fmt.Fprintf(&buf, "\nreturn count")
 	fmt.Fprintf(&buf, "\n}") // end func Size()
-	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) Get(name string) (interface{}, bool) {")
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
-		if f.isStd {
-			fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
-		} else {
-			fmt.Fprintf(&buf, "\ncase %s%sKey:", tt.prefix, f.method)
-		}
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
 		fmt.Fprintf(&buf, "\nif t.%s == nil {", f.name)
 		fmt.Fprintf(&buf, "\nreturn nil, false")
 		fmt.Fprintf(&buf, "\n}")
@@ -342,12 +465,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
-		var keyName string
-		if f.isStd {
-			keyName = f.method + "Key"
-		} else {
-			keyName = tt.prefix + f.method + "Key"
-		}
+		keyName := f.method + "Key"
 		fmt.Fprintf(&buf, "\ncase %s:", keyName)
 		if f.name == `algorithm` {
 			fmt.Fprintf(&buf, "\nswitch v := value.(type) {")
@@ -417,6 +535,8 @@ func generateToken(tt tokenType) error {
 			} else {
 				fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
 			}
+		} else {
+			fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
 		}
 		fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) %s() %s
 	}
@@ -433,13 +553,7 @@ func generateToken(tt tokenType) error {
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\n\nvar pairs []*ClaimPair")
 	for _, f := range fields {
-		var keyName string
-		if f.isStd {
-			keyName = f.method + "Key"
-		} else {
-			keyName = tt.prefix + f.method + "Key"
-		}
-
+		keyName := f.method + "Key"
 		fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
 		if f.hasGet {
 			fmt.Fprintf(&buf, "\nv := h.%s.Get()", f.name)
@@ -541,12 +655,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	// Delete all known keys
 	for _, f := range fields {
-		var keyName string
-		if f.isStd {
-			keyName = f.method + "Key"
-		} else {
-			keyName = tt.prefix + f.method + "Key"
-		}
+		keyName := f.method + "Key"
 		fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
 	}
 
