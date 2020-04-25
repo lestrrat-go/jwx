@@ -50,10 +50,6 @@ issues:
       text: "returns unexported type" # exported func XXX returns unexported type xxx which can be annoying to use
       linters:
         - golint
-    - path: /*.go
-      text: "don't use leading" # don't use leading k in Go names; const kKey should be key
-      linters:
-        - golint
     # fix it
     - path: /*.go
       linters:
