@@ -1,6 +1,28 @@
 Changes
 =======
 
+v1.0.0 -
+  * All packages (`jws`, `jwe`, `jwk`, `jwt`) have all been reworked from
+	  the ground-up.
+  * These packages now hide the actual implementation of the main structs behind an interface.
+	  * These structs must now be instantiated using proper constructors
+		  (most notably, json.Unmarshal will miserably fail if you just pass
+			 and empty interface via `xxx.Token` or similar)
+		* Fields are no longer directly accessible: You must use accessors
+  * Many helper functions and structs have been unexported. They were never
+    meant to be anything useful for end-users, and hopefully it does not
+	  cause any problems.
+  * All main structs now have a common, uniform `Iterate`, `Walk`, and `AsMap` methods
+  * `jwt` package can now work with different token types, such as OpenID tokens.
+	* `jwk` API have been reworked:
+		* `jwk.ParseKey` has been added
+		* `jwk.Materialize` has been renamed to `Raw()`. A new corresponding
+		  method to initialize the key from a raw key (RSA/ECDSA/byte keys)
+	    has also been added
+
+v0.9.2 - 15 Apr 2020 
+  * Maintenance release to protect users from upcoming breaking changes
+
 v0.9.1 - 27 Feb 2020
   * Fix error wrapping in certain cases
 	* Add Claims(), Walk(), and AsMap() to iterate claims, as well as
