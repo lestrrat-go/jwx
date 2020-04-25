@@ -81,3 +81,17 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(n.Unix())
 }
+
+func (n *NumericDate) UnmarshalJSON(data []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return errors.Wrap(err, `failed to unmarshal date`)
+	}
+
+	var n2 NumericDate
+	if err := n2.Accept(v); err != nil {
+		return errors.Wrap(err, `invalid value for NumericDate`)
+	}
+	*n = n2
+	return nil
+}

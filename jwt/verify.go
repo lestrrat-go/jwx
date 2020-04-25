@@ -73,7 +73,7 @@ func WithClaimValue(name string, v interface{}) Option {
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
-func (t *Token) Verify(options ...Option) error {
+func Verify(t Token, options ...Option) error {
 	var issuer string
 	var subject string
 	var audience string

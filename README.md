@@ -71,6 +71,50 @@ func ExampleJWT() {
 }
 ```
 
+### JWT (with OpenID claims)
+
+`jwt` package can work with token types other than the default one.
+For OpenID claims, use the token created by `openid.New()`, or
+use the `jwt.WithOpenIDClaims()`. If you need to use other specialized
+claims, use `jwt.WithToken()` to specify the exact token type
+
+```go
+func Example_openid() {
+	const aLongLongTimeAgo = 233431200
+
+	t := openid.New()
+	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
+	t.Set(jwt.AudienceKey, `Golang Users`)
+	t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
+	t.Set(`privateClaimKey`, `Hello, World!`)
+
+	addr := openid.NewAddress()
+	addr.Set(openid.AddressPostalCodeKey, `105-0011`)
+	addr.Set(openid.AddressCountryKey, `日本`)
+	addr.Set(openid.AddressRegionKey, `東京都`)
+	addr.Set(openid.AddressLocalityKey, `港区`)
+	addr.Set(openid.AddressStreetAddressKey, `芝公園 4-2-8`)
+	t.Set(openid.AddressKey, addr)
+
+	buf, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		fmt.Printf("failed to generate JSON: %s\n", err)
+		return
+	}
+	fmt.Printf("%s\n", buf)
+
+	t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
+	if err != nil {
+		fmt.Printf("failed to parse JSON: %s\n", err)
+		return
+	}
+	if _, ok := t2.(openid.Token); !ok {
+		fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
+		return
+	}
+}
+```
+
 ### JWK
 
 See the examples here as well: https://godoc.org/github.com/lestrrat-go/jwx/jwk#pkg-examples

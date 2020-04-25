@@ -24,7 +24,7 @@ func TestJWTParse(t *testing.T) {
 		t.Fatal("Failed to generate RSA key")
 	}
 	t1 := jwt.New()
-	signed, err := t1.Sign(alg, key)
+	signed, err := jwt.Sign(t1, alg, key)
 	if err != nil {
 		t.Fatal("Failed to sign JWT")
 	}
@@ -89,7 +89,7 @@ func TestJWTParseVerify(t *testing.T) {
 	}
 
 	t1 := jwt.New()
-	signed, err := t1.Sign(alg, key)
+	signed, err := jwt.Sign(t1, alg, key)
 	if !assert.NoError(t, err, "token.Sign should succeed") {
 		return
 	}
@@ -139,7 +139,7 @@ func TestVerifyClaims(t *testing.T) {
 			jwt.WithAcceptableSkew(DefaultSkew),
 		}
 
-		if !assert.NoError(t, token.Verify(args...), "token.Verify should validate tokens in the same second they are created") {
+		if !assert.NoError(t, jwt.Verify(token, args...), "token.Verify should validate tokens in the same second they are created") {
 			if now.Equal(token.IssuedAt()) {
 				t.Errorf("iat claim failed: iat == now")
 			}
@@ -155,13 +155,13 @@ func TestUnmarshal(t *testing.T) {
 	testcases := []struct {
 		Title        string
 		Source       string
-		Expected     func() *jwt.Token
+		Expected     func() jwt.Token
 		ExpectedJSON string
 	}{
 		{
 			Title:  "single aud",
 			Source: `{"aud":"foo"}`,
-			Expected: func() *jwt.Token {
+			Expected: func() jwt.Token {
 				t := jwt.New()
 				t.Set("aud", "foo")
 				return t
@@ -171,7 +171,7 @@ func TestUnmarshal(t *testing.T) {
 		{
 			Title:  "multiple aud's",
 			Source: `{"aud":["foo","bar"]}`,
-			Expected: func() *jwt.Token {
+			Expected: func() jwt.Token {
 				t := jwt.New()
 				t.Set("aud", []string{"foo", "bar"})
 				return t
@@ -181,7 +181,7 @@ func TestUnmarshal(t *testing.T) {
 		{
 			Title:  "issuedAt",
 			Source: `{"` + jwt.IssuedAtKey + `":` + aLongLongTimeAgoString + `}`,
-			Expected: func() *jwt.Token {
+			Expected: func() jwt.Token {
 				t := jwt.New()
 				t.Set(jwt.IssuedAtKey, aLongLongTimeAgo)
 				return t
@@ -193,11 +193,11 @@ func TestUnmarshal(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Title, func(t *testing.T) {
-			var token jwt.Token
+			token := jwt.New()
 			if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`) {
 				return
 			}
-			if !assert.Equal(t, tc.Expected(), &token, `token should match expected value`) {
+			if !assert.Equal(t, tc.Expected(), token, `token should match expected value`) {
 				return
 			}
 
@@ -225,7 +225,7 @@ func TestGH52(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		tok := jwt.New()
 
-		s, err := tok.Sign(jwa.ES256, priv)
+		s, err := jwt.Sign(tok, jwa.ES256, priv)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -238,7 +238,7 @@ func TestGH52(t *testing.T) {
 
 func TestUnmarshalJSON(t *testing.T) {
 	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
-		var t1 jwt.Token
+		t1 := jwt.New()
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
 			return
 		}

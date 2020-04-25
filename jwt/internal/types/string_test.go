@@ -1,13 +1,13 @@
-package jwt_test
+package types_test
 
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
 )
 
 func TestStringList_Accept(t *testing.T) {
-	var x jwt.StringList
+	var x types.StringList
 	interfaceList := make([]interface{}, 0)
 	interfaceList = append(interfaceList, "first")
 	interfaceList = append(interfaceList, "second")

@@ -1,4 +1,4 @@
-package jwt
+package openid
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
