@@ -39,7 +39,7 @@ func TestVectorsAESCBC128(t *testing.T) {
 	if !assert.NoError(t, err, "aescbc.New") {
 		return
 	}
-	out, err := enc.Seal(nil, nonce, plaintext, aad)
+	out := enc.Seal(nil, nonce, plaintext, aad)
 	if !assert.NoError(t, err, "enc.Seal") {
 		return
 	}

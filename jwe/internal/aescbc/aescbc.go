@@ -118,7 +118,7 @@ func ensureSize(dst []byte, n int) []byte {
 }
 
 // Seal fulfills the crypto.AEAD interface
-func (c Hmac) Seal(dst, nonce, plaintext, data []byte) ([]byte, error) {
+func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ctlen := len(plaintext)
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)
@@ -129,7 +129,9 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) ([]byte, error) {
 
 	authtag, err := c.ComputeAuthTag(data, nonce, ciphertext)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to compute auth tag")
+		// Hmac implement cipher.AEAD interface. Seal can't return error
+		// TODO: How to fix it? print log?
+		return nil
 	}
 
 	retlen := len(dst) + len(ciphertext) + len(authtag)
@@ -144,7 +146,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) ([]byte, error) {
 		debug.Printf("Seal: authtag    = %x (%d)\n", authtag, len(authtag))
 		debug.Printf("Seal: ret        = %x (%d)\n", ret, len(ret))
 	}
-	return ret, nil
+	return ret
 }
 
 // Open fulfills the crypto.AEAD interface
