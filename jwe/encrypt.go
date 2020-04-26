@@ -70,7 +70,9 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 			return nil, errors.Wrap(err, "failed to set encrypted key")
 		}
 		if hp, ok := enckey.(populater); ok {
-			hp.Populate(r.Headers())
+			if err := hp.Populate(r.Headers()); err != nil {
+				return nil, errors.Wrap(err, "failed to populate")
+			}
 		}
 		if debug.Enabled {
 			debug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))

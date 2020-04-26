@@ -103,10 +103,14 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 
 // HeaderPopulate populates the header with the required EC-DSA public key
 // information ('epk' key)
-func (k ByteWithECPrivateKey) Populate(h Setter) {
+func (k ByteWithECPrivateKey) Populate(h Setter) error {
 	key, err := jwk.New(&k.PrivateKey.PublicKey)
-	if err == nil {
-		// TODO: can't return err
-		h.Set("epk", key)
+	if err != nil {
+		return errors.Wrap(err, "failed to create JWK")
 	}
+
+	if err := h.Set("epk", key); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+	return nil
 }
