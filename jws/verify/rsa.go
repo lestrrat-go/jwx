@@ -77,10 +77,16 @@ func (v RSAVerifier) Verify(payload, signature []byte, key interface{}) error {
 	if key == nil {
 		return errors.New(`missing public key while verifying payload`)
 	}
-	rsakey, ok := key.(*rsa.PublicKey)
-	if !ok {
+
+	var pubkey *rsa.PublicKey
+	switch v := key.(type) {
+	case rsa.PublicKey:
+		pubkey = &v
+	case *rsa.PublicKey:
+		pubkey = v
+	default:
 		return errors.Errorf(`invalid key type %T. *rsa.PublicKey is required`, key)
 	}
 
-	return v.verify(payload, signature, rsakey)
+	return v.verify(payload, signature, pubkey)
 }

@@ -13,8 +13,6 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/buffer"
-	"github.com/lestrrat-go/jwx/internal/ecdsautil"
-	"github.com/lestrrat-go/jwx/internal/rsautil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -470,8 +468,13 @@ func TestEncode(t *testing.T) {
     "qi":"IYd7DHOhrWvxkwPQsRM2tOgrjbcrfvtQJipd-DlcxyVuuM9sQLdgjVk2oy26F0EmpScGLq2MowX7fhd_QJQ3ydy5cY7YIBi87w93IKLEdfnbJtoOPLUW0ITrJReOgo1cq9SbsxYawBgfp_gh6A5603k2-ZQwVK0JKSHuLFkuQ3U"
   }`
 
-		privkey, err := rsautil.PrivateKeyFromJSON([]byte(jwksrc))
-		if !assert.NoError(t, err, "parsing jwk should be successful") {
+		privkey := jwk.NewRSAPrivateKey()
+		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should be successful`) {
+			return
+		}
+
+		var rawkey rsa.PrivateKey
+		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
 			return
 		}
 
@@ -496,7 +499,7 @@ func TestEncode(t *testing.T) {
 			},
 			[]byte{'.'},
 		)
-		signature, err := sign.Sign(signingInput, privkey)
+		signature, err := sign.Sign(signingInput, rawkey)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
@@ -537,7 +540,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.NoError(t, v.Verify(signingInput, signature, &privkey.PublicKey), "Verify succeeds") {
+		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds") {
 			return
 		}
 	})
@@ -551,9 +554,13 @@ func TestEncode(t *testing.T) {
     "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
     "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
   }`
+		privkey := jwk.NewECDSAPrivateKey()
+		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should succeed`) {
+			return
+		}
 
-		privkey, err := ecdsautil.PrivateKeyFromJSON([]byte(jwksrc))
-		if !assert.NoError(t, err, "parsing jwk should be successful") {
+		var rawkey ecdsa.PrivateKey
+		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
 			return
 		}
 
@@ -578,7 +585,7 @@ func TestEncode(t *testing.T) {
 			},
 			[]byte{'.'},
 		)
-		signature, err := signer.Sign(signingInput, privkey)
+		signature, err := signer.Sign(signingInput, &rawkey)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
@@ -618,7 +625,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, "EcdsaVerify created") {
 			return
 		}
-		if !assert.NoError(t, v.Verify(signingInput, signature, &privkey.PublicKey), "Verify succeeds") {
+		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds") {
 			return
 		}
 	})
@@ -888,10 +895,16 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
     "y":"CRKSqP-aYTIsqJfg_wZEEYUayUR5JhZaS2m4NLk2t1DfXZgfApAJ2lBO0vWKnUMp"
   }`
 
-	pubkey, err := ecdsautil.PublicKeyFromJSON([]byte(jwksrc))
-	if !assert.NoError(t, err, "parsing jwk should be successful") {
+	pubkey := jwk.NewECDSAPublicKey()
+	if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), pubkey), `parsing jwk should be successful`) {
 		return
 	}
+
+	var rawkey ecdsa.PublicKey
+	if !assert.NoError(t, pubkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+		return
+	}
+
 	v, err := verify.New(jwa.ES384)
 	if !assert.NoError(t, err, "EcdsaVerify created") {
 		return
@@ -912,7 +925,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 
-	if !assert.NoError(t, v.Verify(buf.Bytes(), decodedSignature, pubkey), "Verify succeeds") {
+	if !assert.NoError(t, v.Verify(buf.Bytes(), decodedSignature, rawkey), "Verify succeeds") {
 		return
 	}
 }

@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/rsautil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +18,7 @@ const (
 	examplePayload = `The true sign of intelligence is not knowledge but imagination.`
 )
 
-var rsaPrivKey *rsa.PrivateKey
+var rsaPrivKey rsa.PrivateKey
 
 func init() {
 	var jwkstr = []byte(`
@@ -33,9 +33,12 @@ func init() {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	var err error
-	rsaPrivKey, err = rsautil.PrivateKeyFromJSON(jwkstr)
-	if err != nil {
+	privkey := jwk.NewRSAPrivateKey()
+	if err := json.Unmarshal(jwkstr, privkey); err != nil {
+		panic(err)
+	}
+
+	if err := privkey.Raw(&rsaPrivKey); err != nil {
 		panic(err)
 	}
 }
@@ -80,8 +83,14 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
       "dq":"Dq0gfgJ1DdFGXiLvQEZnuKEN0UUmsJBxkjydc3j4ZYdBiMRAy86x0vHCjywcMlYYg4yoC4YZa9hNVcsjqA3FeiL19rk8g6Qn29Tt0cj8qqyFpz9vNDBUfCAiJVeESOjJDZPYHdHY8v1b-o-Z2X5tvLx-TCekf7oxyeKDUqKWjis",
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
-	privkey, err := rsautil.PrivateKeyFromJSON(jwkstr)
-	if !assert.NoError(t, err, "PrivateKey created") {
+
+	privkey := jwk.NewRSAPrivateKey()
+	if !assert.NoError(t, json.Unmarshal(jwkstr, privkey), `parsing jwk should succeed`) {
+		return
+	}
+
+	var rawkey rsa.PrivateKey
+	if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
 		return
 	}
 
@@ -90,7 +99,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, privkey)
+	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, rawkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return
 	}
@@ -110,12 +119,12 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
 	if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
 		return
 	}
 
-	plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, privkey)
+	plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
 	if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
 		return
 	}

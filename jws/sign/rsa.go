@@ -86,10 +86,16 @@ func (s RSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
-	rsakey, ok := key.(*rsa.PrivateKey)
-	if !ok {
+
+	var privkey *rsa.PrivateKey
+	switch v := key.(type) {
+	case rsa.PrivateKey:
+		privkey = &v
+	case *rsa.PrivateKey:
+		privkey = v
+	default:
 		return nil, errors.Errorf(`invalid key type %T. *rsa.PrivateKey is required`, key)
 	}
 
-	return s.sign(payload, rsakey)
+	return s.sign(payload, privkey)
 }

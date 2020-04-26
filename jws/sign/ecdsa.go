@@ -72,10 +72,15 @@ func (s ECDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	ecdsakey, ok := key.(*ecdsa.PrivateKey)
-	if !ok {
+	var pubkey *ecdsa.PrivateKey
+	switch v := key.(type) {
+	case ecdsa.PrivateKey:
+		pubkey = &v
+	case *ecdsa.PrivateKey:
+		pubkey = v
+	default:
 		return nil, errors.Errorf(`invalid key type %T. *ecdsa.PrivateKey is required`, key)
 	}
 
-	return s.sign(payload, ecdsakey)
+	return s.sign(payload, pubkey)
 }

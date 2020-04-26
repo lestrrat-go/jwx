@@ -30,20 +30,32 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	var keysize int
 	switch keyalg {
 	case jwa.RSA1_5:
-		pubkey, ok := key.(*rsa.PublicKey)
-		if !ok {
-			return nil, errors.New("invalid key: *rsa.PublicKey required")
+		var pubkey *rsa.PublicKey
+		switch v := key.(type) {
+		case rsa.PublicKey:
+			pubkey = &v
+		case *rsa.PublicKey:
+			pubkey = v
+		default:
+			return nil, errors.Errorf("*rsa.PublicKey is required as the key to build %s key encrypter", keyalg)
 		}
+
 		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
 		keysize = contentcrypt.KeySize() / 2
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-		pubkey, ok := key.(*rsa.PublicKey)
-		if !ok {
-			return nil, errors.New("invalid key: *rsa.PublicKey required")
+		var pubkey *rsa.PublicKey
+		switch v := key.(type) {
+		case rsa.PublicKey:
+			pubkey = &v
+		case *rsa.PublicKey:
+			pubkey = v
+		default:
+			return nil, errors.Errorf("*rsa.PublicKey is required as the key to build %s key encrypter", keyalg)
 		}
+
 		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
@@ -232,16 +244,28 @@ func parseCompact(buf []byte) (*Message, error) {
 func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
 	switch alg {
 	case jwa.RSA1_5:
-		privkey, ok := key.(*rsa.PrivateKey)
-		if !ok {
+		var privkey *rsa.PrivateKey
+		switch v := key.(type) {
+		case rsa.PrivateKey:
+			privkey = &v
+		case *rsa.PrivateKey:
+			privkey = v
+		default:
 			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
+
 		return keyenc.NewRSAPKCS15Decrypt(alg, privkey, keysize/2), nil
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-		privkey, ok := key.(*rsa.PrivateKey)
-		if !ok {
+		var privkey *rsa.PrivateKey
+		switch v := key.(type) {
+		case rsa.PrivateKey:
+			privkey = &v
+		case *rsa.PrivateKey:
+			privkey = v
+		default:
 			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
 		}
+
 		return keyenc.NewRSAOAEPDecrypt(alg, privkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := key.([]byte)

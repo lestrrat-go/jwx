@@ -304,7 +304,8 @@ func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
 // assignRawResult is a convenience function to safely
 // assign arbitrary values from Raw
 func assignRawResult(v, t interface{}) error {
-	result := reflect.ValueOf(t)
+	orv := reflect.ValueOf(t) // save this value for error reporting
+	result := orv
 
 	// t can be a pointer or a slice, and the code will slightly change
 	// depending on this
@@ -335,7 +336,7 @@ func assignRawResult(v, t interface{}) error {
 		}
 	}
 	if !result.Type().AssignableTo(dst.Type()) {
-		return errors.Errorf(`argument to Raw() must be compatible with %T (was %T)`, result.Interface(), t)
+		return errors.Errorf(`argument to Raw() must be compatible with %T (was %T)`, orv.Interface(), v)
 	}
 
 	if !dst.CanSet() {
