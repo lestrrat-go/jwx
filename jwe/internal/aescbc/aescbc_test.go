@@ -36,7 +36,10 @@ func TestVectorsAESCBC128(t *testing.T) {
 		3, 22, 60, 12, 43, 67, 104, 105, 108, 108, 105, 99, 111, 116, 104, 101}
 
 	enc, err := New(key, aes.NewCipher)
-	out := enc.Seal(nil, nonce, plaintext, aad)
+	if !assert.NoError(t, err, "aescbc.New") {
+		return
+	}
+	out, err := enc.Seal(nil, nonce, plaintext, aad)
 	if !assert.NoError(t, err, "enc.Seal") {
 		return
 	}
