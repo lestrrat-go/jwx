@@ -55,10 +55,16 @@ func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{})
 	if key == nil {
 		return errors.New(`missing public key while verifying payload`)
 	}
-	ecdsakey, ok := key.(*ecdsa.PublicKey)
-	if !ok {
+
+	var pubkey *ecdsa.PublicKey
+	switch v := key.(type) {
+	case ecdsa.PublicKey:
+		pubkey = &v
+	case *ecdsa.PublicKey:
+		pubkey = v
+	default:
 		return errors.Errorf(`invalid key type %T. *ecdsa.PublicKey is required`, key)
 	}
 
-	return v.verify(payload, signature, ecdsakey)
+	return v.verify(payload, signature, pubkey)
 }
