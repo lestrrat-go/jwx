@@ -190,7 +190,7 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := protected.Set(ContentEncryptionKey, hdr.ContentEncryption()); err != nil {
 		return nil, errors.Wrap(err, "failed to set header")
 	}
-	if err := hdr.Set(ContentEncryptionKey, hdr.ContentEncryption()); err != nil {
+	if err := hdr.Set(ContentEncryptionKey, jwa.ContentEncryptionAlgorithm("")); err != nil {
 		return nil, errors.Wrap(err, "failed to set header")
 	}
 
