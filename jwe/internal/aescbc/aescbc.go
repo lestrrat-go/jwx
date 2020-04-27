@@ -166,7 +166,11 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	tag := ciphertext[tagOffset:]
 	ciphertext = ciphertext[:tagOffset]
 
-	expectedTag, _ := c.ComputeAuthTag(data, nonce, ciphertext)
+	expectedTag, err := c.ComputeAuthTag(data, nonce, ciphertext)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to compute auth tag`)
+	}
+
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
 		if debug.Enabled {
 			debug.Printf("provided tag = %x\n", tag)
