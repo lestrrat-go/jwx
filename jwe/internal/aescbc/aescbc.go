@@ -129,9 +129,9 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 
 	authtag, err := c.ComputeAuthTag(data, nonce, ciphertext)
 	if err != nil {
-		// Hmac implement cipher.AEAD interface. Seal can't return error
-		// TODO: How to fix it? print log?
-		return nil
+		// Hmac implements cipher.AEAD interface. Seal can't return error.
+		// But currently it never reach here because of Hmac.ComputeAuthTag doesn't return error.
+		panic(fmt.Errorf("failed to seal on hmac: %v", err))
 	}
 
 	retlen := len(dst) + len(ciphertext) + len(authtag)
