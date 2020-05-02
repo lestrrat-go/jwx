@@ -57,6 +57,7 @@ type Headers interface {
 	AsMap(ctx context.Context) (map[string]interface{}, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+	Remove(string) error
 	Encode() ([]byte, error)
 	Decode([]byte) error
 }
@@ -389,6 +390,9 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 		return errors.Errorf(`invalid value for %s key: %T`, CompressionKey, value)
 	case ContentEncryptionKey:
 		if v, ok := value.(jwa.ContentEncryptionAlgorithm); ok {
+			if v == "" {
+				return errors.New(`"enc" field cannot be an empty string`)
+			}
 			h.contentEncryption = &v
 			return nil
 		}
@@ -464,6 +468,46 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 			h.privateParams = map[string]interface{}{}
 		}
 		h.privateParams[name] = value
+	}
+	return nil
+}
+
+func (h *stdHeaders) Remove(key string) error {
+	switch key {
+	case AgreementPartyUInfoKey:
+		h.agreementPartyUInfo = nil
+	case AgreementPartyVInfoKey:
+		h.agreementPartyVInfo = nil
+	case AlgorithmKey:
+		h.algorithm = nil
+	case CompressionKey:
+		h.compression = nil
+	case ContentEncryptionKey:
+		h.contentEncryption = nil
+	case ContentTypeKey:
+		h.contentType = nil
+	case CriticalKey:
+		h.critical = nil
+	case EphemeralPublicKeyKey:
+		h.ephemeralPublicKey = nil
+	case JWKKey:
+		h.jwk = nil
+	case JWKSetURLKey:
+		h.jwkSetURL = nil
+	case KeyIDKey:
+		h.keyID = nil
+	case TypeKey:
+		h.typ = nil
+	case X509CertChainKey:
+		h.x509CertChain = nil
+	case X509CertThumbprintKey:
+		h.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		h.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		h.x509URL = nil
+	default:
+		delete(h.privateParams, key)
 	}
 	return nil
 }

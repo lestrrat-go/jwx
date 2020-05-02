@@ -42,7 +42,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	protected := NewHeaders()
 	if err := protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
-		return nil, errors.Wrap(err, "failed to set header")
+		return nil, errors.Wrap(err, "failed to set enc in protected header")
 	}
 
 	// In JWE, multiple recipients may exist -- they receive an
