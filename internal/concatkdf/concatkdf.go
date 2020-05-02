@@ -6,6 +6,7 @@ import (
 	"hash"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/pkg/errors"
 )
 
 type KDF struct {
@@ -41,9 +42,15 @@ func (k *KDF) Read(buf []byte) (int, error) {
 	for len(buf) > len(k.buf) {
 		h.Reset()
 
-		binary.Write(h, binary.BigEndian, k.round)
-		h.Write(k.z)
-		h.Write(k.otherinfo)
+		if err := binary.Write(h, binary.BigEndian, k.round); err != nil {
+			return 0, errors.Wrap(err, "failed to write round using kdf")
+		}
+		if _, err := h.Write(k.z); err != nil {
+			return 0, errors.Wrap(err, "failed to write z using kdf")
+		}
+		if _, err := h.Write(k.otherinfo); err != nil {
+			return 0, errors.Wrap(err, "failed to write other info using kdf")
+		}
 
 		k.buf = append(k.buf, h.Sum(nil)...)
 		k.round++
