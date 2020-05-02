@@ -39,6 +39,10 @@ So here's go-jwx. This library is extensible, customizable, and hopefully well o
 
 As of this writing (Nov 2015), it's still lacking a few of the algorithms for JWE that are described in JWA (which I believe to be less frequently used), but in general you should be able to do pretty much everything allowed in the specifications.
 
+## Notes for users of pre-1.0.0 release
+
+The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
+
 ## Synopsis
 
 ### JWT
