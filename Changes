@@ -8,17 +8,41 @@ v1.0.0 -
 	  * These structs must now be instantiated using proper constructors
 		  (most notably, json.Unmarshal will miserably fail if you just pass
 			 and empty interface via `xxx.Token` or similar)
-		* Fields are no longer directly accessible: You must use accessors
-  * Many helper functions and structs have been unexported. They were never
-    meant to be anything useful for end-users, and hopefully it does not
-	  cause any problems.
-  * All main structs now have a common, uniform `Iterate`, `Walk`, and `AsMap` methods
+    * Token/Header interfaces are now more or less standardized.
+      The following API should be consistent between all relevant packages:
+			* New()
+			* Get()
+			* Set()
+			* Remove()
+			* Iterate()
+			* Walk()
+		  * AsMap()
+		* Oft-used fields are no longer directly accessible: 
+			e.g. `token.KeyID = v` is no longer valid. You must set using `Set`
+      (and `Remove`, if you are removing it), and use either `Get` or
+		  one of the utility methods such as `token.KeyID()`
+    * Many helper functions and structs have been unexported. They were never
+      meant to be anything useful for end-users, and hopefully it does not
+  	  cause any problems.
   * `jwt` package can now work with different token types, such as OpenID tokens.
-	* `jwk` API have been reworked:
+		* `token.Sign` and `token.Verify` have been changed from methods to
+		  package functions `jwt.Sign` and `jwt.Verify`, to allow different
+			types of tokens to be passed to the same logic.
+    * Added a custom token type in `openid` sub-package to make it easier to
+		  work with OpenID claims
+	* `jwe` API has been reworked:
+		* Serializer structs have been removed. Now you just need to call
+	    `jwe.Compact` or `jwe.JSON`
+	* `jwk` API has been reworked:
+		* `jwk` keys cannot be instantiated via zero value structs. You must
+			use a constructor
 		* `jwk.ParseKey` has been added
 		* `jwk.Materialize` has been renamed to `Raw()`. A new corresponding
 		  method to initialize the key from a raw key (RSA/ECDSA/byte keys)
-	    has also been added
+			called `FromRaw()` has also been added, which makes a nice pair.
+  * `jws` API has been reworked
+  * CI has been changed from Travis CI to Github Actions, and tests now
+    include linting via `golangci-lint`
 
 v0.9.2 - 15 Apr 2020 
   * Maintenance release to protect users from upcoming breaking changes
