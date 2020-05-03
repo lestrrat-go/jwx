@@ -63,7 +63,6 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tag")
 	}
 
-
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
