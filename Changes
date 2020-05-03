@@ -4,8 +4,8 @@ Changes
 v1.0.0 -
   * All packages (`jws`, `jwe`, `jwk`, `jwt`) have all been reworked from
     the ground-up.
-  * These packages now hide the actual implementation of the main structs behind an interface.
-    * These structs must now be instantiated using proper constructors
+    * These packages now hide the actual implementation of the main structs behind an interface.
+    * Header/Token structs must now be instantiated using proper constructors
       (most notably, json.Unmarshal will miserably fail if you just pass
        and empty interface via `xxx.Token` or similar)
     * Token/Header interfaces are now more or less standardized.
@@ -24,18 +24,19 @@ v1.0.0 -
     * Many helper functions and structs have been unexported. They were never
       meant to be anything useful for end-users, and hopefully it does not
       cause any problems.
+    * Most errors type/instances have been removed from the public API
   * `jwt` package can now work with different token types, such as OpenID tokens.
     * `token.Sign` and `token.Verify` have been changed from methods to
       package functions `jwt.Sign` and `jwt.Verify`, to allow different
       types of tokens to be passed to the same logic.
     * Added a custom token type in `openid` sub-package to make it easier to
       work with OpenID claims
+    * `jwt.Parse` (and its siblings) now accept `jwt.WithOpenIDClaims()`
   * `jwe` API has been reworked:
+    * `MultiEncrypt` has been removed.
     * Serializer structs have been removed. Now you just need to call
       `jwe.Compact` or `jwe.JSON`
   * `jwk` API has been reworked:
-    * `jwk` keys cannot be instantiated via zero value structs. You must
-      use a constructor
     * `jwk.ParseKey` has been added
     * `jwk.Materialize` has been renamed to `Raw()`. A new corresponding
       method to initialize the key from a raw key (RSA/ECDSA/byte keys)
