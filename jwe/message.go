@@ -127,13 +127,13 @@ const (
 )
 
 type messageMarshalProxy struct {
-	AuthenticatedData    buffer.Buffer   `json:"aad,omitempty"`
-	CipherText           buffer.Buffer   `json:"ciphertext"`
-	InitializationVector buffer.Buffer   `json:"iv,omitempty"`
-	ProtectedHeaders     json.RawMessage `json:"protected"`
-	Recipients           []Recipient     `json:"recipients"`
-	Tag                  buffer.Buffer   `json:"tag,omitempty"`
-	UnprotectedHeaders   Headers         `json:"unprotected,omitempty"`
+	AuthenticatedData    buffer.Buffer     `json:"aad,omitempty"`
+	CipherText           buffer.Buffer     `json:"ciphertext"`
+	InitializationVector buffer.Buffer     `json:"iv,omitempty"`
+	ProtectedHeaders     json.RawMessage   `json:"protected"`
+	Recipients           []json.RawMessage `json:"recipients"`
+	Tag                  buffer.Buffer     `json:"tag,omitempty"`
+	UnprotectedHeaders   Headers           `json:"unprotected,omitempty"`
 }
 
 func (m *Message) MarshalJSON() ([]byte, error) {
@@ -226,18 +226,33 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return errors.Wrap(err, `failed to unmashal JSON into message`)
 	}
 
+	var phstr string
+	if err := json.Unmarshal(proxy.ProtectedHeaders, &phstr); err != nil {
+		return errors.Wrap(err, `failed to unmarshal protected headers into string`)
+	}
+
 	h := NewHeaders()
-	if err := h.Decode(proxy.ProtectedHeaders); err != nil {
+	if err := h.Decode([]byte(phstr)); err != nil {
 		return errors.Wrap(err, `failed to decode protected headers`)
+	}
+
+	for i, recipientbuf := range proxy.Recipients {
+		recipient := NewRecipient()
+		if err := json.Unmarshal(recipientbuf, recipient); err != nil {
+			return errors.Wrapf(err, `failed to decode recipient at index %d`, i)
+		}
+
+		m.recipients = append(m.recipients, recipient)
 	}
 
 	m.authenticatedData = proxy.AuthenticatedData
 	m.cipherText = proxy.CipherText
 	m.initializationVector = proxy.InitializationVector
 	m.protectedHeaders = h
-	m.recipients = proxy.Recipients
 	m.tag = proxy.Tag
-	m.unprotectedHeaders = proxy.UnprotectedHeaders
+	if !proxy.UnprotectedHeaders.(isZeroer).isZero() {
+		m.unprotectedHeaders = proxy.UnprotectedHeaders
+	}
 	return nil
 }
 

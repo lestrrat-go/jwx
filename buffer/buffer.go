@@ -90,7 +90,7 @@ func (b *Buffer) Base64Decode(v []byte) error {
 	out := make([]byte, enc.DecodedLen(len(v)))
 	n, err := enc.Decode(out, v)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode from base64")
+		return errors.Wrapf(err, "failed to decode from base64 (%s)", v)
 	}
 	out = out[:n]
 	*b = Buffer(out)

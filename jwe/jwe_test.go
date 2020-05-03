@@ -182,6 +182,24 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 			}
 		})
 	}
+
+	// Test direct marshaling and unmarshaling
+	t.Run("Marshal/Unmarshal", func(t *testing.T) {
+		buf, err := json.Marshal(msg)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		m2 := jwe.NewMessage()
+		if !assert.NoError(t, json.Unmarshal(buf, m2), `json.Unmarshal should succeed`) {
+			t.Logf("%s", buf)
+			return
+		}
+
+		if !assert.Equal(t, msg, m2, `messages should be the same after roundtrip`) {
+			return
+		}
+	})
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.1.
