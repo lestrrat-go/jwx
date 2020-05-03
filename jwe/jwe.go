@@ -10,12 +10,12 @@ import (
 	"encoding/json"
 
 	"github.com/lestrrat-go/jwx/buffer"
-	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -93,14 +93,14 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		fallthrough
 	default:
-		if debug.Enabled {
-			debug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
+		if pdebug.Enabled {
+			pdebug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
 		}
 		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
-	if debug.Enabled {
-		debug.Printf("Encrypt: keysize = %d", keysize)
+	if pdebug.Enabled {
+		pdebug.Printf("Encrypt: keysize = %d", keysize)
 	}
 	encctx := getEncryptCtx()
 	defer releaseEncryptCtx(encctx)
@@ -110,8 +110,8 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	encctx.keyEncrypters = []keyenc.Encrypter{enc}
 	msg, err := encctx.Encrypt(payload)
 	if err != nil {
-		if debug.Enabled {
-			debug.Printf("Encrypt: failed to encrypt: %s", err)
+		if pdebug.Enabled {
+			pdebug.Printf("Encrypt: failed to encrypt: %s", err)
 		}
 		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
@@ -175,8 +175,8 @@ func parseJSON(buf []byte) (*Message, error) {
 }
 
 func parseCompact(buf []byte) (*Message, error) {
-	if debug.Enabled {
-		debug.Printf("Parse(Compact): buf = '%s'", buf)
+	if pdebug.Enabled {
+		pdebug.Printf("Parse(Compact): buf = '%s'", buf)
 	}
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
@@ -187,8 +187,8 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
 		return nil, errors.Wrap(err, `failed to parse first part of compact form`)
 	}
-	if debug.Enabled {
-		debug.Printf("hdrbuf = %s", hdrbuf)
+	if pdebug.Enabled {
+		pdebug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
 	hdr := NewHeaders()
