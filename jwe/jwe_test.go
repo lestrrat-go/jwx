@@ -117,29 +117,70 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, err := jwe.Compact(msg)
-	if !assert.NoError(t, err, "Compact serialize succeeded") {
-		return
+	serializers := []struct {
+		Name     string
+		Func     func(*jwe.Message) ([]byte, error)
+		Expected string
+	}{
+		{
+			Name:     "Compact",
+			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.Compact(m) },
+			Expected: serialized,
+		},
+		{
+			Name:     "JSON",
+			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
+			Expected: `{"aad":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJlbmMiOiJBMjU2R0NNIn0","recipients":[{"header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"}],"tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
+		},
+		{
+			Name: "JSON (Pretty)",
+			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyJSONFormat(true)) },
+			Expected: `{
+  "aad": "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ",
+  "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
+  "iv": "48V1_ALb6US04U3b",
+  "protected": "eyJlbmMiOiJBMjU2R0NNIn0",
+  "recipients": [
+    {
+      "header": {
+        "alg": "RSA-OAEP"
+      },
+      "encrypted_key": "OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"
+    }
+  ],
+  "tag": "XFBoMYUZodetZdvTiFvSkQ"
+}`,
+		},
 	}
 
-	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
-		jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
-		t.Logf("%s", jsonbuf)
-		return
-	}
+	for _, serializer := range serializers {
+		serializer := serializer
+		t.Run(serializer.Name, func(t *testing.T) {
+			jsonbuf, err := serializer.Func(msg)
+			if !assert.NoError(t, err, "serialize succeeded") {
+				return
+			}
 
-	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-	if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-		return
-	}
+			if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
+				jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
+				t.Logf("%s", jsonbuf)
+				return
+			}
 
-	plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
-	if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-		return
-	}
+			encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+				return
+			}
 
-	if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-		return
+			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+				return
+			}
+		})
 	}
 }
 
@@ -242,19 +283,22 @@ func TestEncode_ECDHES(t *testing.T) {
 	if !assert.NoError(t, err, "ecdsa key generated") {
 		return
 	}
+
 	encrypted, err := jwe.Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 	if !assert.NoError(t, err, "Encrypt succeeds") {
 		return
 	}
 
-	t.Logf("encrypted = %s", encrypted)
-
-	msg, _ := jwe.Parse(encrypted)
-	jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
-	t.Logf("%s", jsonbuf)
+	msg, err := jwe.Parse(encrypted)
+	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+		t.Logf("%s", encrypted)
+		return
+	}
 
 	decrypted, err := jwe.Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
 	if !assert.NoError(t, err, "Decrypt succeeds") {
+		jsonbuf, _ := json.Marshal(msg)
+		t.Logf("%s", jsonbuf)
 		return
 	}
 	t.Logf("%s", decrypted)
