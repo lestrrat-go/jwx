@@ -16,6 +16,7 @@ func TestIterator(t *testing.T) {
 		jwk.KeyIDKey:     "dummy-kid",
 		jwk.KeyUsageKey:  "dummy-usage",
 		jwk.KeyOpsKey:    jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey, jwk.KeyOpDeriveKey, jwk.KeyOpDeriveBits},
+		"private":        "dummy-private",
 	}
 
 	verifyIterators := func(t *testing.T, v jwk.Key, expected map[string]interface{}) {
@@ -25,6 +26,14 @@ func TestIterator(t *testing.T) {
 			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
+
+				getV, ok := v.Get(pair.Key.(string))
+				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
+					return
+				}
+				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
+					return
+				}
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
 				return

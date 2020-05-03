@@ -203,6 +203,8 @@ func (h *ecdsaPrivateKey) PrivateParams() map[string]interface{} {
 
 func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false
@@ -660,6 +662,8 @@ func (h *ecdsaPublicKey) PrivateParams() map[string]interface{} {
 
 func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false

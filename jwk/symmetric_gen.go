@@ -165,6 +165,8 @@ func (h *symmetricKey) PrivateParams() map[string]interface{} {
 
 func (h *symmetricKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false

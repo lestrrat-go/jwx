@@ -244,6 +244,8 @@ func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
 
 func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false
@@ -795,6 +797,8 @@ func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
 
 func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false

@@ -631,6 +631,8 @@ func generateHeader(kt keyType) error {
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Get(name string) (interface{}, bool) {", structName)
 		fmt.Fprintf(&buf, "\nswitch name {")
+		fmt.Fprintf(&buf, "\ncase KeyTypeKey:")
+		fmt.Fprintf(&buf, "\nreturn h.KeyType(), true")
 		for _, f := range ht.allHeaders {
 			if f.isStd {
 				fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
