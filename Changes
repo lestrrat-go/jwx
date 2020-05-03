@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.0.0 -
+v1.0.0 - 03 May 2020
   * All packages (`jws`, `jwe`, `jwk`, `jwt`) have all been reworked from
     the ground-up.
     * These packages now hide the actual implementation of the main structs behind an interface.
