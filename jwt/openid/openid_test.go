@@ -236,27 +236,45 @@ func TestOpenIDClaims(t *testing.T) {
 		data[name] = value.Value
 	}
 
-	src, err := json.Marshal(data)
-	if !assert.NoError(t, err, `failed to marshal base map`) {
-		return
+	var tokens []openid.Token
+
+	{ // one with Set()
+		token := openid.New()
+		for name, value := range data {
+			if !assert.NoError(t, token.Set(name, value), `token.Set should succeed`) {
+				return
+			}
+		}
+		tokens = append(tokens, token)
 	}
 
-	t.Logf("Using source JSON: %s", src)
+	{ // one with json.Marshal / json.Unmarshal
+		src, err := json.Marshal(data)
+		if !assert.NoError(t, err, `failed to marshal base map`) {
+			return
+		}
 
-	token := openid.New()
-	if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
-		return
+		t.Logf("Using source JSON: %s", src)
+
+		token := openid.New()
+		if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
+			return
+		}
+		tokens = append(tokens, token)
 	}
 
-	for name, value := range base {
-		value := value
-		t.Run(name, func(t *testing.T) {
-			value.Check(token)
-		})
-		if value.Key != "" {
-			t.Run(name+" via Get()", func(t *testing.T) {
-				getVerify(token, value.Key, value.Value)
+	for _, token := range tokens {
+		token := token
+		for name, value := range base {
+			value := value
+			t.Run(name, func(t *testing.T) {
+				value.Check(token)
 			})
+			if value.Key != "" {
+				t.Run(name+" via Get()", func(t *testing.T) {
+					getVerify(token, value.Key, value.Value)
+				})
+			}
 		}
 	}
 }
