@@ -3,8 +3,8 @@ package verify
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"math/big"
 
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -25,7 +25,11 @@ func init() {
 
 func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 	return func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
-		r, s := &big.Int{}, &big.Int{}
+		r := pool.GetBigInt()
+		s := pool.GetBigInt()
+		defer pool.ReleaseBigInt(r)
+		defer pool.ReleaseBigInt(s)
+
 		n := len(signature) / 2
 		r.SetBytes(signature[:n])
 		s.SetBytes(signature[n:])

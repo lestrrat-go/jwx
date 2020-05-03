@@ -29,31 +29,15 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
-	"sync"
 	"unicode"
 
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jws/verify"
 	"github.com/pkg/errors"
 )
-
-var signBufferPool = sync.Pool{
-	New: func() interface{} {
-		var b bytes.Buffer
-		return &b
-	},
-}
-
-func getSignBuffer() *bytes.Buffer {
-	return signBufferPool.Get().(*bytes.Buffer)
-}
-
-func releaseSignBuffer(b *bytes.Buffer) {
-	b.Reset()
-	signBufferPool.Put(b)
-}
 
 type payloadSigner struct {
 	signer    sign.Signer
@@ -106,8 +90,8 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		return nil, errors.Wrap(err, `failed to marshal headers`)
 	}
 
-	buf := getSignBuffer()
-	defer releaseSignBuffer(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 	enc := base64.NewEncoder(base64.RawURLEncoding, buf)
 	if _, err := enc.Write(hdrbuf); err != nil {
 		return nil, errors.Wrap(err, `failed to write headers as base64`)
@@ -139,7 +123,9 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		return nil, errors.Wrap(err, `failed to finalize writing signature as base64`)
 	}
 
-	return buf.Bytes(), nil
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }
 
 // SignLiteral generates a signature for the given payload and headers, and serializes
@@ -152,8 +138,8 @@ func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, he
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
 
-	buf := getSignBuffer()
-	defer releaseSignBuffer(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	enc := base64.NewEncoder(base64.RawURLEncoding, buf)
 	if _, err := enc.Write(headers); err != nil {
@@ -186,7 +172,9 @@ func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, he
 		return nil, errors.Wrap(err, `failed to finalize writing signature as base64`)
 	}
 
-	return buf.Bytes(), nil
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }
 
 // SignMulti accepts multiple signers via the options parameter,
@@ -209,8 +197,8 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 
 	result.Payload = base64.RawURLEncoding.EncodeToString(payload)
 
-	buf := getSignBuffer()
-	defer releaseSignBuffer(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 	for _, signer := range signers {
 		protected := signer.ProtectedHeader()
 		if protected == nil {
@@ -288,8 +276,8 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 			proxy.Signatures = append(proxy.Signatures, encodedSig)
 		}
 
-		buf := getSignBuffer()
-		defer releaseSignBuffer(buf)
+		buf := pool.GetBytesBuffer()
+		defer pool.ReleaseBytesBuffer(buf)
 		for _, sig := range proxy.Signatures {
 			buf.Reset()
 			buf.WriteString(sig.Protected)
@@ -317,8 +305,8 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
 	}
 
-	verifyBuf := getSignBuffer()
-	defer releaseSignBuffer(verifyBuf)
+	verifyBuf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(verifyBuf)
 
 	verifyBuf.Write(protected)
 	verifyBuf.WriteByte('.')

@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
 
@@ -80,7 +81,8 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 }
 
 func (k *rsaPrivateKey) Raw(v interface{}) error {
-	var d, q, p big.Int
+	var d, q, p big.Int // note: do not use from sync.Pool
+
 	d.SetBytes(k.d)
 	q.SetBytes(k.q)
 	p.SetBytes(k.p)
@@ -88,17 +90,17 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 	// optional fields
 	var dp, dq, qi *big.Int
 	if len(k.dp) > 0 {
-		dp = &big.Int{}
+		dp = &big.Int{} // note: do not use from sync.Pool
 		dp.SetBytes(k.dp)
 	}
 
 	if len(k.dq) > 0 {
-		dq = &big.Int{}
+		dq = &big.Int{} // note: do not use from sync.Pool
 		dq.SetBytes(k.dq)
 	}
 
 	if len(k.qi) > 0 {
-		qi = &big.Int{}
+		qi = &big.Int{} // note: do not use from sync.Pool
 		qi.SetBytes(k.qi)
 	}
 
@@ -132,11 +134,14 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 func (k *rsaPublicKey) Raw(v interface{}) error {
 	var key rsa.PublicKey
 
-	var n, e big.Int
+	n := pool.GetBigInt()
+	e := pool.GetBigInt()
+	defer pool.ReleaseBigInt(e)
+
 	n.SetBytes(k.n)
 	e.SetBytes(k.e)
 
-	key.N = &n
+	key.N = n
 	key.E = int(e.Int64())
 
 	return assignRawResult(v, &key)
