@@ -227,7 +227,6 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	}
 
 	h := NewHeaders()
-	fmt.Printf("protected headers ---> %s", proxy.ProtectedHeaders)
 	if err := h.Decode(proxy.ProtectedHeaders); err != nil {
 		return errors.Wrap(err, `failed to decode protected headers`)
 	}
