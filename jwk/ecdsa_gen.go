@@ -435,14 +435,14 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	proxy.Xalgorithm = h.algorithm
 	proxy.Xcrv = h.crv
 	if len(h.d) > 0 {
-		v := base64.EncodeToStringStd(h.d)
+		v := base64.EncodeToString(h.d)
 		proxy.Xd = &v
 	}
 	proxy.XkeyID = h.keyID
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.x) > 0 {
-		v := base64.EncodeToStringStd(h.x)
+		v := base64.EncodeToString(h.x)
 		proxy.Xx = &v
 	}
 	proxy.Xx509CertChain = h.x509CertChain
@@ -450,7 +450,7 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
 	proxy.Xx509URL = h.x509URL
 	if len(h.y) > 0 {
-		v := base64.EncodeToStringStd(h.y)
+		v := base64.EncodeToString(h.y)
 		proxy.Xy = &v
 	}
 	var buf bytes.Buffer
@@ -873,7 +873,7 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.x) > 0 {
-		v := base64.EncodeToStringStd(h.x)
+		v := base64.EncodeToString(h.x)
 		proxy.Xx = &v
 	}
 	proxy.Xx509CertChain = h.x509CertChain
@@ -881,7 +881,7 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
 	proxy.Xx509URL = h.x509URL
 	if len(h.y) > 0 {
-		v := base64.EncodeToStringStd(h.y)
+		v := base64.EncodeToString(h.y)
 		proxy.Xy = &v
 	}
 	var buf bytes.Buffer

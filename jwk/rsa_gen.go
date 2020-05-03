@@ -563,38 +563,38 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	proxy.XkeyType = jwa.RSA
 	proxy.Xalgorithm = h.algorithm
 	if len(h.d) > 0 {
-		v := base64.EncodeToStringStd(h.d)
+		v := base64.EncodeToString(h.d)
 		proxy.Xd = &v
 	}
 	if len(h.dp) > 0 {
-		v := base64.EncodeToStringStd(h.dp)
+		v := base64.EncodeToString(h.dp)
 		proxy.Xdp = &v
 	}
 	if len(h.dq) > 0 {
-		v := base64.EncodeToStringStd(h.dq)
+		v := base64.EncodeToString(h.dq)
 		proxy.Xdq = &v
 	}
 	if len(h.e) > 0 {
-		v := base64.EncodeToStringStd(h.e)
+		v := base64.EncodeToString(h.e)
 		proxy.Xe = &v
 	}
 	proxy.XkeyID = h.keyID
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.n) > 0 {
-		v := base64.EncodeToStringStd(h.n)
+		v := base64.EncodeToString(h.n)
 		proxy.Xn = &v
 	}
 	if len(h.p) > 0 {
-		v := base64.EncodeToStringStd(h.p)
+		v := base64.EncodeToString(h.p)
 		proxy.Xp = &v
 	}
 	if len(h.q) > 0 {
-		v := base64.EncodeToStringStd(h.q)
+		v := base64.EncodeToString(h.q)
 		proxy.Xq = &v
 	}
 	if len(h.qi) > 0 {
-		v := base64.EncodeToStringStd(h.qi)
+		v := base64.EncodeToString(h.qi)
 		proxy.Xqi = &v
 	}
 	proxy.Xx509CertChain = h.x509CertChain
@@ -991,14 +991,14 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	proxy.XkeyType = jwa.RSA
 	proxy.Xalgorithm = h.algorithm
 	if len(h.e) > 0 {
-		v := base64.EncodeToStringStd(h.e)
+		v := base64.EncodeToString(h.e)
 		proxy.Xe = &v
 	}
 	proxy.XkeyID = h.keyID
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.n) > 0 {
-		v := base64.EncodeToStringStd(h.n)
+		v := base64.EncodeToString(h.n)
 		proxy.Xn = &v
 	}
 	proxy.Xx509CertChain = h.x509CertChain

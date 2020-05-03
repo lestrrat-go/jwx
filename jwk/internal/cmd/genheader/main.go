@@ -773,7 +773,7 @@ func generateHeader(kt keyType) error {
 				// but we may or may not be dealing with padded base64's.
 				// Before marshaling this value to JSON, we must first encode it
 				fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
-				fmt.Fprintf(&buf, "\nv := base64.EncodeToStringStd(h.%s)", f.name)
+				fmt.Fprintf(&buf, "\nv := base64.EncodeToString(h.%s)", f.name)
 				fmt.Fprintf(&buf, "\nproxy.X%s = &v", f.name)
 				fmt.Fprintf(&buf, "\n}")
 			default:

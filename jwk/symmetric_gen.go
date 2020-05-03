@@ -342,7 +342,7 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	proxy.XkeyUsage = h.keyUsage
 	proxy.Xkeyops = h.keyops
 	if len(h.octets) > 0 {
-		v := base64.EncodeToStringStd(h.octets)
+		v := base64.EncodeToString(h.octets)
 		proxy.Xoctets = &v
 	}
 	proxy.Xx509CertChain = h.x509CertChain
