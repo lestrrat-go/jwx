@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	symmetricOctetsKey = "k"
+	SymmetricOctetsKey = "k"
 )
 
 type SymmetricKey interface {
@@ -133,7 +133,7 @@ func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
 	}
 	if h.octets != nil {
-		pairs = append(pairs, &HeaderPair{Key: symmetricOctetsKey, Value: h.octets})
+		pairs = append(pairs, &HeaderPair{Key: SymmetricOctetsKey, Value: h.octets})
 	}
 	if h.x509CertChain != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
@@ -185,7 +185,7 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return h.keyops, true
-	case symmetricOctetsKey:
+	case SymmetricOctetsKey:
 		if h.octets == nil {
 			return nil, false
 		}
@@ -250,12 +250,12 @@ func (h *symmetricKey) Set(name string, value interface{}) error {
 		}
 		h.keyops = acceptor
 		return nil
-	case symmetricOctetsKey:
+	case SymmetricOctetsKey:
 		if v, ok := value.([]byte); ok {
 			h.octets = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, symmetricOctetsKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, SymmetricOctetsKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
@@ -325,7 +325,7 @@ func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 	delete(m, KeyIDKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
-	delete(m, symmetricOctetsKey)
+	delete(m, SymmetricOctetsKey)
 	delete(m, X509CertChainKey)
 	delete(m, X509CertThumbprintKey)
 	delete(m, X509CertThumbprintS256Key)

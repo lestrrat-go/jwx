@@ -195,7 +195,7 @@ type headerType struct {
 var keyTypes = []keyType{
 	{
 		filename: `rsa_gen.go`,
-		prefix:   `rsa`, // todo: really use this?
+		prefix:   `RSA`,
 		keyType:  `jwa.RSA`,
 		headerTypes: []headerType{
 			{
@@ -280,7 +280,7 @@ var keyTypes = []keyType{
 	},
 	{
 		filename: `ecdsa_gen.go`,
-		prefix:   `ecdsa`,
+		prefix:   `ECDSA`,
 		keyType:  `jwa.EC`,
 		headerTypes: []headerType{
 			{
@@ -344,7 +344,7 @@ var keyTypes = []keyType{
 	},
 	{
 		filename: `symmetric_gen.go`,
-		prefix:   `symmetric`,
+		prefix:   `Symmetric`,
 		keyType:  `jwa.OctetSeq`,
 		headerTypes: []headerType{
 			{
@@ -511,11 +511,11 @@ func generateHeader(kt keyType) error {
 
 		structName := ht.structName
 		if len(structName) == 0 {
-			structName = kt.prefix + ht.name
+			structName = strings.ToLower(kt.prefix) + ht.name
 		}
 		ifName := ht.ifName
 		if len(ifName) == 0 {
-			ifName = strings.ToUpper(kt.prefix) + ht.name
+			ifName = kt.prefix + ht.name
 		}
 
 		fmt.Fprintf(&buf, "\n\ntype %s interface {", ifName)
@@ -540,7 +540,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 
 		// Proxy is used when unmarshaling headers
-		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", kt.prefix, ht.name)
+		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", strings.ToLower(kt.prefix), ht.name)
 		fmt.Fprintf(&buf, "\nXkeyType jwa.KeyType `json:\"kty\"`")
 		for _, f := range ht.allHeaders {
 			switch f.typ {
@@ -707,7 +707,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}") // end func (h *%s) Set(name string, value interface{})
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", structName)
-		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", kt.prefix, ht.name)
+		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", strings.ToLower(kt.prefix), ht.name)
 		fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
 		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", structName)
 		fmt.Fprintf(&buf, "\n}")
@@ -764,7 +764,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h %s) MarshalJSON() ([]byte, error) {", structName)
-		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", kt.prefix, ht.name)
+		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", strings.ToLower(kt.prefix), ht.name)
 		fmt.Fprintf(&buf, "\nproxy.XkeyType = %s", kt.keyType)
 		for _, f := range ht.allHeaders {
 			switch f.typ {

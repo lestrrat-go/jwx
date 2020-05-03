@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	ecdsaCrvKey = "crv"
-	ecdsaDKey   = "d"
-	ecdsaXKey   = "x"
-	ecdsaYKey   = "y"
+	ECDSACrvKey = "crv"
+	ECDSADKey   = "d"
+	ECDSAXKey   = "x"
+	ECDSAYKey   = "y"
 )
 
 type ECDSAPrivateKey interface {
@@ -153,10 +153,10 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaCrvKey, Value: *(h.crv)})
+		pairs = append(pairs, &HeaderPair{Key: ECDSACrvKey, Value: *(h.crv)})
 	}
 	if h.d != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaDKey, Value: h.d})
+		pairs = append(pairs, &HeaderPair{Key: ECDSADKey, Value: h.d})
 	}
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
@@ -168,7 +168,7 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
 	}
 	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaXKey, Value: h.x})
+		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
 	}
 	if h.x509CertChain != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
@@ -183,7 +183,7 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
 	}
 	if h.y != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaYKey, Value: h.y})
+		pairs = append(pairs, &HeaderPair{Key: ECDSAYKey, Value: h.y})
 	}
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
@@ -208,12 +208,12 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.algorithm), true
-	case ecdsaCrvKey:
+	case ECDSACrvKey:
 		if h.crv == nil {
 			return nil, false
 		}
 		return *(h.crv), true
-	case ecdsaDKey:
+	case ECDSADKey:
 		if h.d == nil {
 			return nil, false
 		}
@@ -233,7 +233,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return h.keyops, true
-	case ecdsaXKey:
+	case ECDSAXKey:
 		if h.x == nil {
 			return nil, false
 		}
@@ -258,7 +258,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.x509URL), true
-	case ecdsaYKey:
+	case ECDSAYKey:
 		if h.y == nil {
 			return nil, false
 		}
@@ -284,18 +284,18 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
-	case ecdsaCrvKey:
+	case ECDSACrvKey:
 		if v, ok := value.(jwa.EllipticCurveAlgorithm); ok {
 			h.crv = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaCrvKey, value)
-	case ecdsaDKey:
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSACrvKey, value)
+	case ECDSADKey:
 		if v, ok := value.([]byte); ok {
 			h.d = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaDKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSADKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
@@ -315,12 +315,12 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 		}
 		h.keyops = acceptor
 		return nil
-	case ecdsaXKey:
+	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {
 			h.x = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaXKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSAXKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
@@ -346,12 +346,12 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
-	case ecdsaYKey:
+	case ECDSAYKey:
 		if v, ok := value.([]byte); ok {
 			h.y = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaYKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]interface{}{}
@@ -414,17 +414,17 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	}
 	delete(m, `kty`)
 	delete(m, AlgorithmKey)
-	delete(m, ecdsaCrvKey)
-	delete(m, ecdsaDKey)
+	delete(m, ECDSACrvKey)
+	delete(m, ECDSADKey)
 	delete(m, KeyIDKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
-	delete(m, ecdsaXKey)
+	delete(m, ECDSAXKey)
 	delete(m, X509CertChainKey)
 	delete(m, X509CertThumbprintKey)
 	delete(m, X509CertThumbprintS256Key)
 	delete(m, X509URLKey)
-	delete(m, ecdsaYKey)
+	delete(m, ECDSAYKey)
 	h.privateParams = m
 	return nil
 }
@@ -613,7 +613,7 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaCrvKey, Value: *(h.crv)})
+		pairs = append(pairs, &HeaderPair{Key: ECDSACrvKey, Value: *(h.crv)})
 	}
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
@@ -625,7 +625,7 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
 	}
 	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaXKey, Value: h.x})
+		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
 	}
 	if h.x509CertChain != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
@@ -640,7 +640,7 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
 	}
 	if h.y != nil {
-		pairs = append(pairs, &HeaderPair{Key: ecdsaYKey, Value: h.y})
+		pairs = append(pairs, &HeaderPair{Key: ECDSAYKey, Value: h.y})
 	}
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
@@ -665,7 +665,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.algorithm), true
-	case ecdsaCrvKey:
+	case ECDSACrvKey:
 		if h.crv == nil {
 			return nil, false
 		}
@@ -685,7 +685,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return h.keyops, true
-	case ecdsaXKey:
+	case ECDSAXKey:
 		if h.x == nil {
 			return nil, false
 		}
@@ -710,7 +710,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return *(h.x509URL), true
-	case ecdsaYKey:
+	case ECDSAYKey:
 		if h.y == nil {
 			return nil, false
 		}
@@ -736,12 +736,12 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
-	case ecdsaCrvKey:
+	case ECDSACrvKey:
 		if v, ok := value.(jwa.EllipticCurveAlgorithm); ok {
 			h.crv = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaCrvKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSACrvKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
@@ -761,12 +761,12 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 		}
 		h.keyops = acceptor
 		return nil
-	case ecdsaXKey:
+	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {
 			h.x = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaXKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSAXKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
@@ -792,12 +792,12 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
-	case ecdsaYKey:
+	case ECDSAYKey:
 		if v, ok := value.([]byte); ok {
 			h.y = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ecdsaYKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]interface{}{}
@@ -850,16 +850,16 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 	}
 	delete(m, `kty`)
 	delete(m, AlgorithmKey)
-	delete(m, ecdsaCrvKey)
+	delete(m, ECDSACrvKey)
 	delete(m, KeyIDKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
-	delete(m, ecdsaXKey)
+	delete(m, ECDSAXKey)
 	delete(m, X509CertChainKey)
 	delete(m, X509CertThumbprintKey)
 	delete(m, X509CertThumbprintS256Key)
 	delete(m, X509URLKey)
-	delete(m, ecdsaYKey)
+	delete(m, ECDSAYKey)
 	h.privateParams = m
 	return nil
 }
