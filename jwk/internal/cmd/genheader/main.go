@@ -384,6 +384,7 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n)")
 
 	fmt.Fprintf(&buf, "\n\nconst (")
+	fmt.Fprintf(&buf, "\nKeyTypeKey = \"kty\"")
 	for _, f := range standardHeaders {
 		fmt.Fprintf(&buf, "\n%sKey = %s", f.method, strconv.Quote(f.key))
 	}
