@@ -103,7 +103,7 @@ func TestIterator(t *testing.T) {
 			},
 		},
 		{
-			Extras: map[string]interface{} {
+			Extras: map[string]interface{}{
 				jwk.SymmetricOctetsKey: []byte("abcd"),
 			},
 			Func: func() jwk.Key {
