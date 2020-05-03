@@ -9,14 +9,14 @@ generate-%:
 realclean:
 	rm coverage.out
 
+test:
+	go test -v -race ./...
+
 cover:
-	go test -v -coverpkg=./... -coverprofile=coverage.out ./...
+	go test -v -race -coverpkg=./... -coverprofile=coverage.out ./...
 
 viewcover:
 	go tool cover -html=coverage.out
-
-test:
-	go test -v ./...
 
 lint:
 	golangci-lint run ./...
