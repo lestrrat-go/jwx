@@ -21,6 +21,3 @@
 //
 // You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
 package jwx
-
-// Version describes the version of this library.
-const Version = "0.0.1"

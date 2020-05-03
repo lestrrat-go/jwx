@@ -38,10 +38,17 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) Option {
 	})
 }
 
+// WithToken specifies the token instance that is used when parsing
+// JWT tokens.
 func WithToken(t Token) Option {
 	return option.New(optkeyToken, t)
 }
 
+// WithOpenIDClaims is passed to the various JWT parsing functions, and
+// specifies that it should use an instance of `openid.Token` as the
+// destination to store the parsed results.
+//
+// This is exactly equivalent to specifying `jwt.WithToken(openid.New())`
 func WithOpenIDClaims() Option {
 	return WithToken(openid.New())
 }

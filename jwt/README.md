@@ -30,7 +30,7 @@ func ExampleSignAndParse() {
   { // Create signed payload
     token := jwt.New()
     token.Set(`foo`, `bar`)
-    payload, err = token.Sign(jwa.RS256, privKey)
+    payload, err = jwt.Sign(token, jwa.RS256, privKey)
     if err != nil {
       fmt.Printf("failed to generate signed payload: %s\n", err)
       return
