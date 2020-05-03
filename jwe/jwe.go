@@ -199,8 +199,13 @@ func parseCompact(buf []byte) (*Message, error) {
 	// We need the protected header to contain the content encryption
 	// algorithm. XXX probably other headers need to go there too
 	protected := NewHeaders()
-	protected.Set(ContentEncryptionKey, hdr.ContentEncryption())
-	hdr.Set(ContentEncryptionKey, "")
+	if err := protected.Set(ContentEncryptionKey, hdr.ContentEncryption()); err != nil {
+		return nil, errors.Wrapf(err, "failed to set %#v in protected header", ContentEncryptionKey)
+	}
+
+	if err := hdr.Remove(ContentEncryptionKey); err != nil {
+		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	}
 
 	var enckeybuf buffer.Buffer
 	if err := enckeybuf.Base64Decode(parts[1]); err != nil {

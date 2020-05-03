@@ -37,11 +37,13 @@ func newHMAC(alg jwa.SignatureAlgorithm) (*HMACSigner, error) {
 }
 
 func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
-	return hmacSignFunc(func(payload []byte, key []byte) ([]byte, error) {
+	return func(payload []byte, key []byte) ([]byte, error) {
 		h := hmac.New(hfunc, key)
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return nil, errors.Wrap(err, "failed to write payload using hmac")
+		}
 		return h.Sum(nil), nil
-	})
+	}
 }
 
 func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {

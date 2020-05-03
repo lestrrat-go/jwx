@@ -91,7 +91,9 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
 	kdf := concatkdf.New(crypto.SHA256, []byte(g.algorithm.String()), z.Bytes(), []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
-	kdf.Read(kek)
+	if _, err := kdf.Read(kek); err != nil {
+		return nil, errors.Wrap(err, "failed to read kdf")
+	}
 
 	return ByteWithECPrivateKey{
 		PrivateKey: priv,
@@ -101,9 +103,14 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 
 // HeaderPopulate populates the header with the required EC-DSA public key
 // information ('epk' key)
-func (k ByteWithECPrivateKey) Populate(h Setter) {
+func (k ByteWithECPrivateKey) Populate(h Setter) error {
 	key, err := jwk.New(&k.PrivateKey.PublicKey)
-	if err == nil {
-		h.Set("epk", key)
+	if err != nil {
+		return errors.Wrap(err, "failed to create JWK")
 	}
+
+	if err := h.Set("epk", key); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+	return nil
 }
