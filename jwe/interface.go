@@ -54,7 +54,7 @@ type encryptCtx struct {
 // populater is an interface for things that may modify the
 // JWE header. e.g. ByteWithECPrivateKey
 type populater interface {
-	Populate(keygen.Setter)
+	Populate(keygen.Setter) error
 }
 
 type Visitor = iter.MapVisitor

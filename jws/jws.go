@@ -81,7 +81,9 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
 
-	hdrs.Set(AlgorithmKey, signer.Algorithm())
+	if err := hdrs.Set(AlgorithmKey, signer.Algorithm()); err != nil {
+		return nil, errors.Wrap(err, `failed to set header`)
+	}
 
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
@@ -203,7 +205,9 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 			protected = NewHeaders()
 		}
 
-		protected.Set(AlgorithmKey, signer.Algorithm())
+		if err := protected.Set(AlgorithmKey, signer.Algorithm()); err != nil {
+			return nil, errors.Wrap(err, `failed to set header`)
+		}
 
 		hdrbuf, err := json.Marshal(protected)
 		if err != nil {
@@ -397,7 +401,10 @@ func Parse(src io.Reader) (m *Message, err error) {
 		}
 		if !unicode.IsSpace(r) {
 			first = r
-			rdr.UnreadRune()
+			if err := rdr.UnreadRune(); err != nil {
+				return nil, errors.Wrap(err, `failed to unread rune`)
+			}
+
 			break
 		}
 	}

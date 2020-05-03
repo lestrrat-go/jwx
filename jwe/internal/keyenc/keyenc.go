@@ -155,7 +155,9 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
 	kdf := concatkdf.New(crypto.SHA256, []byte(kw.algorithm.String()), z.Bytes(), kw.apu, kw.apv, pubinfo, []byte{})
 	kek := make([]byte, keysize)
-	kdf.Read(kek)
+	if _, err := kdf.Read(kek); err != nil {
+		return nil, errors.Wrap(err, "failed to read kdf")
+	}
 
 	block, err := aes.NewCipher(kek)
 	if err != nil {

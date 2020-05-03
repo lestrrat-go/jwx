@@ -77,7 +77,7 @@ func (c Hmac) Overhead() int {
 	return c.blockCipher.BlockSize() + c.tagsize
 }
 
-func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
+func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 	if debug.Enabled {
 		debug.Printf("ComputeAuthTag: aad        = %x (%d)\n", aad, len(aad))
 		debug.Printf("ComputeAuthTag: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
@@ -93,13 +93,15 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) []byte {
 	binary.BigEndian.PutUint64(buf[n:], uint64(len(aad)*8))
 
 	h := hmac.New(c.hash, c.integrityKey)
-	h.Write(buf)
+	if _, err := h.Write(buf); err != nil {
+		return nil, errors.Wrap(err, "failed to write ComputeAuthTag using Hmac")
+	}
 	s := h.Sum(nil)
 	if debug.Enabled {
 		debug.Printf("ComputeAuthTag: buf        = %x (%d)\n", buf, len(buf))
 		debug.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.keysize], len(s[:c.keysize]))
 	}
-	return s[:c.tagsize]
+	return s[:c.tagsize], nil
 }
 
 func ensureSize(dst []byte, n int) []byte {
@@ -125,7 +127,12 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	cbc := cipher.NewCBCEncrypter(c.blockCipher, nonce)
 	cbc.CryptBlocks(ciphertext, ciphertext)
 
-	authtag := c.ComputeAuthTag(data, nonce, ciphertext)
+	authtag, err := c.ComputeAuthTag(data, nonce, ciphertext)
+	if err != nil {
+		// Hmac implements cipher.AEAD interface. Seal can't return error.
+		// But currently it never reach here because of Hmac.ComputeAuthTag doesn't return error.
+		panic(fmt.Errorf("failed to seal on hmac: %v", err))
+	}
 
 	retlen := len(dst) + len(ciphertext) + len(authtag)
 
@@ -159,7 +166,11 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	tag := ciphertext[tagOffset:]
 	ciphertext = ciphertext[:tagOffset]
 
-	expectedTag := c.ComputeAuthTag(data, nonce, ciphertext)
+	expectedTag, err := c.ComputeAuthTag(data, nonce, ciphertext)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to compute auth tag`)
+	}
+
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
 		if debug.Enabled {
 			debug.Printf("provided tag = %x\n", tag)

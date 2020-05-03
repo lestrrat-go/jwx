@@ -99,6 +99,15 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
+	if !assert.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1") {
+		return
+	}
+
+	_, ok := msg.Recipients()[0].Headers().Get(jwe.ContentEncryptionKey)
+	if !assert.Equal(t, false, ok, "no content encryption key in message recipients header") {
+		return
+	}
+
 	plaintext, err := msg.Decrypt(jwa.RSA_OAEP, rawkey)
 	if !assert.NoError(t, err, "Decrypt message succeeded") {
 		return

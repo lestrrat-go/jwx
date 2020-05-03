@@ -259,6 +259,7 @@ func generateHeaders() error {
 	// These are used to access a single element by key name
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\nRemove(string) error")
 
 	// These are used to deal with encoded headers
 	fmt.Fprintf(&buf, "\nEncode() ([]byte, error)")
@@ -369,6 +370,13 @@ func generateHeaders() error {
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
 			fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)
+			if f.name == "contentEncryption" {
+				// check for non-empty string, because empty content encryption is just baaaaaad
+				fmt.Fprintf(&buf, "\nif v == \"\" {")
+				fmt.Fprintf(&buf, "\nreturn errors.New(`%#v field cannot be an empty string`)", f.key)
+				fmt.Fprintf(&buf, "\n}")
+			}
+
 			if fieldStorageTypeIsIndirect(f.typ) {
 				fmt.Fprintf(&buf, "\nh.%s = &v", f.name)
 			} else {
@@ -387,6 +395,18 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Remove(key string) error {")
+	fmt.Fprintf(&buf, "\nswitch key {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+		fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\ndelete(h.privateParams, key)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
 	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")

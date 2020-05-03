@@ -182,7 +182,9 @@ func (t *AddressClaim) Accept(v interface{}) error {
 	switch v := v.(type) {
 	case map[string]interface{}:
 		for key, value := range v {
-			t.Set(key, value)
+			if err := t.Set(key, value); err != nil {
+				return errors.Wrap(err, `failed to set header`)
+			}
 		}
 		return nil
 	default:
