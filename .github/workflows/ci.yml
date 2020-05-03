@@ -28,7 +28,12 @@ jobs:
       - name: Install GolangCI-Lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.25.0
       - run: make generate
-      - run: make test
+      - name: Test with coverage
+        run: make cover
+      - name: Upload code coverage to codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.out
       - run: make lint
       - name: Check difference between generation code and commit code
         run: make check_diffs
