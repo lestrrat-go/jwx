@@ -48,21 +48,25 @@ func init() {
 }
 
 func makeSignPKCS1v15(hash crypto.Hash) rsaSignFunc {
-	return rsaSignFunc(func(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
+	return func(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
 		h := hash.New()
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return nil, errors.Wrap(err, "failed to write payload using SignPKCS1v15")
+		}
 		return rsa.SignPKCS1v15(rand.Reader, key, hash, h.Sum(nil))
-	})
+	}
 }
 
 func makeSignPSS(hash crypto.Hash) rsaSignFunc {
-	return rsaSignFunc(func(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
+	return func(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
 		h := hash.New()
-		h.Write(payload)
+		if _, err := h.Write(payload); err != nil {
+			return nil, errors.Wrap(err, "failed to write payload using SignPSS")
+		}
 		return rsa.SignPSS(rand.Reader, key, hash, h.Sum(nil), &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthAuto,
 		})
-	})
+	}
 }
 
 func newRSA(alg jwa.SignatureAlgorithm) (*RSASigner, error) {

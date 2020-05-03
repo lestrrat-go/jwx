@@ -37,11 +37,17 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	k.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {
 	case elliptic.P256():
-		k.Set(ecdsaCrvKey, jwa.P256)
+		if err := k.Set(ecdsaCrvKey, jwa.P256); err != nil {
+			return errors.Wrap(err, `failed to set header`)
+		}
 	case elliptic.P384():
-		k.Set(ecdsaCrvKey, jwa.P384)
+		if err := k.Set(ecdsaCrvKey, jwa.P384); err != nil {
+			return errors.Wrap(err, `failed to set header`)
+		}
 	case elliptic.P521():
-		k.Set(ecdsaCrvKey, jwa.P521)
+		if err := k.Set(ecdsaCrvKey, jwa.P521); err != nil {
+			return errors.Wrap(err, `failed to set header`)
+		}
 	default:
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
@@ -54,11 +60,17 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	k.y = rawKey.Y.Bytes()
 	switch rawKey.Curve {
 	case elliptic.P256():
-		k.Set(ecdsaCrvKey, jwa.P256)
+		if err := k.Set(ecdsaCrvKey, jwa.P256); err != nil {
+			return errors.Wrap(err, "failed to write header")
+		}
 	case elliptic.P384():
-		k.Set(ecdsaCrvKey, jwa.P384)
+		if err := k.Set(ecdsaCrvKey, jwa.P384); err != nil {
+			return errors.Wrap(err, "failed to write header")
+		}
 	case elliptic.P521():
-		k.Set(ecdsaCrvKey, jwa.P521)
+		if err := k.Set(ecdsaCrvKey, jwa.P521); err != nil {
+			return errors.Wrap(err, "failed to write header")
+		}
 	default:
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
