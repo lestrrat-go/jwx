@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -188,7 +189,7 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 	})
-	t.Run("Marshall Unmarshal Private Key", func(t *testing.T) {
+	t.Run("Marshal Unmarshal Private Key", func(t *testing.T) {
 		s := `{"keys":
        [
          {"kty":"EC",
@@ -231,4 +232,41 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Curve types", func(t *testing.T) {
+		crvs := []elliptic.Curve{elliptic.P256(), elliptic.P384(), elliptic.P521()}
+
+		for _, crv := range crvs {
+			crv := crv
+			t.Run(crv.Params().Name, func(t *testing.T) {
+				key, err := ecdsa.GenerateKey(crv, rand.Reader)
+				if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
+					return
+				}
+
+				privkey := jwk.NewECDSAPrivateKey()
+				if !assert.NoError(t, privkey.FromRaw(key), `privkey.FromRaw should succeed`) {
+					return
+				}
+				pubkey := jwk.NewECDSAPublicKey()
+				if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey), `pubkey.FromRaw should succeed`) {
+					return
+				}
+
+				privtp, err := privkey.Thumbprint(crypto.SHA512)
+				if !assert.NoError(t, err, `privkey.Thumbprint should succeed`) {
+					return
+				}
+
+				pubtp, err := pubkey.Thumbprint(crypto.SHA512)
+				if !assert.NoError(t, err, `pubkey.Thumbprint should succeed`) {
+					return
+				}
+
+				if !assert.Equal(t, privtp, pubtp, `Thumbprints should match`) {
+					return
+				}
+			})
+		}
+	})
+
 }
