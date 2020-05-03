@@ -1,29 +1,12 @@
 package jwe
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"sync"
 
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
-
-var compactSerializationBufferPool = sync.Pool{
-	New: func() interface{} {
-		var b bytes.Buffer
-		return &b
-	},
-}
-
-func getCompactSerializationBuffer() *bytes.Buffer {
-	return compactSerializationBufferPool.Get().(*bytes.Buffer)
-}
-
-func releaseCompactSerializationBuffer(b *bytes.Buffer) {
-	b.Reset()
-	compactSerializationBufferPool.Put(b)
-}
 
 // Compact encodes the given message into a JWE compact serialization format.
 func Compact(m *Message, _ ...Option) ([]byte, error) {
@@ -80,8 +63,9 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tag")
 	}
 
-	buf := getCompactSerializationBuffer()
-	defer releaseCompactSerializationBuffer(buf)
+
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
 	buf.Write(protected)
@@ -94,7 +78,9 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 	buf.WriteByte('.')
 	buf.Write(tag)
 
-	return buf.Bytes(), nil
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }
 
 // JSON encodes the message into a JWE JSON serialization format.
