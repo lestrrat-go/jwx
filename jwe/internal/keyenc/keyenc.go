@@ -15,9 +15,9 @@ import (
 	"hash"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
-	"github.com/lestrrat-go/jwx/internal/debug"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
 
@@ -261,8 +261,8 @@ func (d RSAPKCS15Decrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // Decrypt decryptes the encrypted key using RSA PKCS1v1.5
 func (d RSAPKCS15Decrypt) Decrypt(enckey []byte) ([]byte, error) {
-	if debug.Enabled {
-		debug.Printf("START PKCS.Decrypt")
+	if pdebug.Enabled {
+		pdebug.Printf("START PKCS.Decrypt")
 	}
 	// Hey, these notes and workarounds were stolen from go-jose
 	defer func() {
@@ -329,8 +329,8 @@ func (d RSAOAEPDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // Decrypt decryptes the encrypted key using RSA OAEP
 func (d RSAOAEPDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	if debug.Enabled {
-		debug.Printf("START OAEP.Decrypt")
+	if pdebug.Enabled {
+		pdebug.Printf("START OAEP.Decrypt")
 	}
 	var hash hash.Hash
 	switch d.alg {

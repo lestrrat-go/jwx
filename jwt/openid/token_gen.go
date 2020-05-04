@@ -448,11 +448,12 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, GenderKey, value)
 	case BirthdateKey:
-		if v, ok := value.(*BirthdateClaim); ok {
-			h.birthdate = v
-			return nil
+		var acceptor BirthdateClaim
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, BirthdateKey)
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, BirthdateKey, value)
+		h.birthdate = &acceptor
+		return nil
 	case ZoneinfoKey:
 		if v, ok := value.(string); ok {
 			h.zoneinfo = &v
@@ -478,11 +479,11 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
 	case AddressKey:
-		var acceptor *AddressClaim
+		var acceptor AddressClaim
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AddressKey)
 		}
-		h.address = acceptor
+		h.address = &acceptor
 		return nil
 	case UpdatedAtKey:
 		var acceptor types.NumericDate

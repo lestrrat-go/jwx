@@ -24,9 +24,22 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 		}
 		return ops.Accept(l)
 	case []string:
-		list := make([]KeyOperation, len(x))
+		list := make(KeyOperationList, len(x))
 		for i, e := range x {
 			switch e := KeyOperation(e); e {
+			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
+				list[i] = e
+			default:
+				return errors.Errorf(`invalid keyoperation %v`, e)
+			}
+		}
+
+		*ops = list
+		return nil
+	case []KeyOperation:
+		list := make(KeyOperationList, len(x))
+		for i, e := range x {
+			switch e {
 			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
 				list[i] = e
 			default:

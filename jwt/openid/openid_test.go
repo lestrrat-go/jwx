@@ -77,78 +77,99 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
+	getVerify := func(token openid.Token, key string, expected interface{}) bool {
+		v, ok := token.Get(key)
+		if !assert.True(t, ok, `token.Get %#v should succeed`, key) {
+			return false
+		}
+		return assert.Equal(t, v, expected)
+	}
+
 	var base = map[string]struct {
 		Value interface{}
+		Key   string
 		Check func(openid.Token) bool
 	}{
 		"name": {
 			Value: "jwx",
+			Key:   openid.NameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Name(), "jwx")
 			},
 		},
 		"given_name": {
 			Value: "jay",
+			Key:   openid.GivenNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.GivenName(), "jay")
 			},
 		},
 		"middle_name": {
 			Value: "weee",
+			Key:   openid.MiddleNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.MiddleName(), "weee")
 			},
 		},
 		"family_name": {
 			Value: "xi",
+			Key:   openid.FamilyNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.FamilyName(), "xi")
 			},
 		},
 		"nickname": {
 			Value: "jayweexi",
+			Key:   openid.NicknameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Nickname(), "jayweexi")
 			},
 		},
 		"preferred_username": {
 			Value: "jwx",
+			Key:   openid.PreferredUsernameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.PreferredUsername(), "jwx")
 			},
 		},
 		"profile": {
 			Value: "https://github.com/lestrrat-go/jwx",
+			Key:   openid.ProfileKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
 		"picture": {
 			Value: "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
+			Key:   openid.PictureKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Picture(), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
 			},
 		},
 		"website": {
 			Value: "https://github.com/lestrrat-go/jwx",
+			Key:   openid.WebsiteKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
 		"email": {
 			Value: "lestrrat+github@gmail.com",
+			Key:   openid.EmailKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Email(), "lestrrat+github@gmail.com")
 			},
 		},
 		"email_verified": {
 			Value: true,
+			Key:   openid.EmailVerifiedKey,
 			Check: func(token openid.Token) bool {
 				return assert.True(t, token.EmailVerified())
 			},
 		},
 		"gender": {
 			Value: "n/a",
+			Key:   openid.GenderKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Gender(), "n/a")
 			},
@@ -163,24 +184,28 @@ func TestOpenIDClaims(t *testing.T) {
 		},
 		"zoneinfo": {
 			Value: "Asia/Tokyo",
+			Key:   openid.ZoneinfoKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Zoneinfo(), "Asia/Tokyo")
 			},
 		},
 		"locale": {
 			Value: "ja_JP",
+			Key:   openid.LocaleKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Locale(), "ja_JP")
 			},
 		},
 		"phone_number": {
 			Value: "819012345678",
+			Key:   openid.PhoneNumberKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.PhoneNumber(), "819012345678")
 			},
 		},
 		"phone_number_verified": {
 			Value: true,
+			Key:   openid.PhoneNumberVerifiedKey,
 			Check: func(token openid.Token) bool {
 				return assert.True(t, token.PhoneNumberVerified())
 			},
@@ -211,23 +236,46 @@ func TestOpenIDClaims(t *testing.T) {
 		data[name] = value.Value
 	}
 
-	src, err := json.Marshal(data)
-	if !assert.NoError(t, err, `failed to marshal base map`) {
-		return
+	var tokens []openid.Token
+
+	{ // one with Set()
+		token := openid.New()
+		for name, value := range data {
+			if !assert.NoError(t, token.Set(name, value), `token.Set should succeed`) {
+				return
+			}
+		}
+		tokens = append(tokens, token)
 	}
 
-	t.Logf("Using source JSON: %s", src)
+	{ // one with json.Marshal / json.Unmarshal
+		src, err := json.Marshal(data)
+		if !assert.NoError(t, err, `failed to marshal base map`) {
+			return
+		}
 
-	token := openid.New()
-	if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
-		return
+		t.Logf("Using source JSON: %s", src)
+
+		token := openid.New()
+		if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
+			return
+		}
+		tokens = append(tokens, token)
 	}
 
-	for name, value := range base {
-		value := value
-		t.Run(name, func(t *testing.T) {
-			value.Check(token)
-		})
+	for _, token := range tokens {
+		token := token
+		for name, value := range base {
+			value := value
+			t.Run(name, func(t *testing.T) {
+				value.Check(token)
+			})
+			if value.Key != "" {
+				t.Run(name+" via Get()", func(t *testing.T) {
+					getVerify(token, value.Key, value.Value)
+				})
+			}
+		}
 	}
 }
 

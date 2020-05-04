@@ -54,17 +54,38 @@ func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 	assert.Equal(t, expected, []byte(examplePayload), "examplePayload OK")
 }
 
-func TestParse_Compact(t *testing.T) {
-	s := `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+func TestParse(t *testing.T) {
+	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+	t.Run("Compact format", func(t *testing.T) {
+		msg, err := jwe.Parse([]byte(s))
+		if !assert.NoError(t, err, "Parsing JWE is successful") {
+			return
+		}
 
-	msg, err := jwe.Parse([]byte(s))
-	if !assert.NoError(t, err, "Parsing JWE is successful") {
-		return
-	}
+		if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
+			return
+		}
+	})
+	t.Run("JSON format", func(t *testing.T) {
+		msg, err := jwe.Parse([]byte(s))
+		if !assert.NoError(t, err, "Parsing JWE is successful") {
+			return
+		}
 
-	if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
-		return
-	}
+		buf, err := jwe.JSON(msg)
+		if !assert.NoError(t, err, "Serializing to JSON format should succeed") {
+			return
+		}
+
+		msg2, err := jwe.Parse(buf)
+		if !assert.NoError(t, err, "Parsing JWE in JSON format should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, msg, msg2, "messages should match") {
+			return
+		}
+	})
 }
 
 // This test parses the example found in https://tools.ietf.org/html/rfc7516#appendix-A.1,
@@ -117,30 +138,89 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	jsonbuf, err := jwe.Compact(msg)
-	if !assert.NoError(t, err, "Compact serialize succeeded") {
-		return
+	serializers := []struct {
+		Name     string
+		Func     func(*jwe.Message) ([]byte, error)
+		Expected string
+	}{
+		{
+			Name:     "Compact",
+			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.Compact(m) },
+			Expected: serialized,
+		},
+		{
+			Name:     "JSON",
+			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
+			Expected: `{"aad":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJlbmMiOiJBMjU2R0NNIn0","recipients":[{"header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"}],"tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
+		},
+		{
+			Name: "JSON (Pretty)",
+			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyJSONFormat(true)) },
+			Expected: `{
+  "aad": "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ",
+  "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
+  "iv": "48V1_ALb6US04U3b",
+  "protected": "eyJlbmMiOiJBMjU2R0NNIn0",
+  "recipients": [
+    {
+      "header": {
+        "alg": "RSA-OAEP"
+      },
+      "encrypted_key": "OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"
+    }
+  ],
+  "tag": "XFBoMYUZodetZdvTiFvSkQ"
+}`,
+		},
 	}
 
-	if !assert.Equal(t, serialized, string(jsonbuf), "Compact serialize matches") {
-		jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
-		t.Logf("%s", jsonbuf)
-		return
+	for _, serializer := range serializers {
+		serializer := serializer
+		t.Run(serializer.Name, func(t *testing.T) {
+			jsonbuf, err := serializer.Func(msg)
+			if !assert.NoError(t, err, "serialize succeeded") {
+				return
+			}
+
+			if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
+				jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
+				t.Logf("%s", jsonbuf)
+				return
+			}
+
+			encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+				return
+			}
+
+			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+				return
+			}
+		})
 	}
 
-	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-	if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-		return
-	}
+	// Test direct marshaling and unmarshaling
+	t.Run("Marshal/Unmarshal", func(t *testing.T) {
+		buf, err := json.Marshal(msg)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
 
-	plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
-	if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-		return
-	}
+		m2 := jwe.NewMessage()
+		if !assert.NoError(t, json.Unmarshal(buf, m2), `json.Unmarshal should succeed`) {
+			t.Logf("%s", buf)
+			return
+		}
 
-	if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-		return
-	}
+		if !assert.Equal(t, msg, m2, `messages should be the same after roundtrip`) {
+			return
+		}
+	})
 }
 
 // https://tools.ietf.org/html/rfc7516#appendix-A.1.
@@ -242,19 +322,22 @@ func TestEncode_ECDHES(t *testing.T) {
 	if !assert.NoError(t, err, "ecdsa key generated") {
 		return
 	}
+
 	encrypted, err := jwe.Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
 	if !assert.NoError(t, err, "Encrypt succeeds") {
 		return
 	}
 
-	t.Logf("encrypted = %s", encrypted)
-
-	msg, _ := jwe.Parse(encrypted)
-	jsonbuf, _ := json.MarshalIndent(msg, "", "  ")
-	t.Logf("%s", jsonbuf)
+	msg, err := jwe.Parse(encrypted)
+	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+		t.Logf("%s", encrypted)
+		return
+	}
 
 	decrypted, err := jwe.Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
 	if !assert.NoError(t, err, "Decrypt succeeds") {
+		jsonbuf, _ := json.Marshal(msg)
+		t.Logf("%s", jsonbuf)
 		return
 	}
 	t.Logf("%s", decrypted)
@@ -319,40 +402,5 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 	_, err := jwe.Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
 	if !assert.Error(t, err, "should fail to encrypt payload") {
 		return
-	}
-}
-
-func TestHeaders(t *testing.T) {
-	h := jwe.NewHeaders()
-
-	data := map[string]struct {
-		Value    interface{}
-		Expected interface{}
-	}{
-		"kid":     {Value: "kid blah"},
-		"enc":     {Value: jwa.A128GCM},
-		"cty":     {Value: "application/json"},
-		"typ":     {Value: "typ blah"},
-		"x5t":     {Value: "x5t blah"},
-		"x5t#256": {Value: "x5t#256 blah"},
-		"crit":    {Value: []string{"crit blah"}},
-		"jku":     {Value: "http://github.com/lestrrat-go/jwx"},
-		"x5u":     {Value: "http://github.com/lestrrat-go/jwx"},
-	}
-
-	for name, testcase := range data {
-		h.Set(name, testcase.Value)
-		got, ok := h.Get(name)
-		if !assert.True(t, ok, "value should exist") {
-			return
-		}
-
-		expected := testcase.Expected
-		if expected == nil {
-			expected = testcase.Value
-		}
-		if !assert.Equal(t, expected, got, "value should match") {
-			return
-		}
 	}
 }
