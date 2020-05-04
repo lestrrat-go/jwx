@@ -73,7 +73,7 @@ func TestParse(t *testing.T) {
 		}
 
 		buf, err := jwe.JSON(msg)
-		if !assert.NoError(t, err, "Serializing to JSON format should succeeed") {
+		if !assert.NoError(t, err, "Serializing to JSON format should succeed") {
 			return
 		}
 
@@ -86,7 +86,6 @@ func TestParse(t *testing.T) {
 			return
 		}
 	})
-
 }
 
 // This test parses the example found in https://tools.ietf.org/html/rfc7516#appendix-A.1,
