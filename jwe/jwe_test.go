@@ -77,7 +77,6 @@ func TestParse(t *testing.T) {
 			return
 		}
 
-t.Logf("%s", buf)
 		msg2, err := jwe.Parse(buf)
 		if !assert.NoError(t, err, "Parsing JWE in JSON format should succeed") {
 			return
