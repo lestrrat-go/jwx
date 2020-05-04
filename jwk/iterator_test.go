@@ -2,6 +2,7 @@ package jwk_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -121,25 +122,37 @@ func TestIterator(t *testing.T) {
 		},
 	}
 	for _, test := range testcases {
-		extras := test.Extras
 		key := test.Func()
-		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
-			expected := make(map[string]interface{})
-			expected[jwk.KeyTypeKey] = key.KeyType()
-			for k, v := range commonValues {
-				if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
-					return
-				}
-				expected[k] = v
+		key2 := test.Func()
+		expected := make(map[string]interface{})
+		expected[jwk.KeyTypeKey] = key.KeyType()
+		for k, v := range commonValues {
+			if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
+				return
 			}
-			for k, v := range extras {
-				if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
-					return
-				}
-				expected[k] = v
+			expected[k] = v
+		}
+		for k, v := range test.Extras {
+			if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
+				return
+			}
+			expected[k] = v
+		}
+
+		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
+			verifyIterators(t, key, expected)
+		})
+		t.Run(fmt.Sprintf("%T (after json roundtripping)", key), func(t *testing.T) {
+			buf, err := json.Marshal(key)
+			if !assert.NoError(t, err, `json.Marshal should succeed`) {
+				return
 			}
 
-			verifyIterators(t, key, expected)
+			if !assert.NoError(t, json.Unmarshal(buf, key2), `json.Unmarshal should succeed`) {
+				return
+			}
+
+			verifyIterators(t, key2, expected)
 		})
 	}
 }
