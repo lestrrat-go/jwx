@@ -20,14 +20,14 @@ import (
 )
 
 const (
-	rsaDKey  = "d"
-	rsaDPKey = "dp"
-	rsaDQKey = "dq"
-	rsaEKey  = "e"
-	rsaNKey  = "n"
-	rsaPKey  = "p"
-	rsaQKey  = "q"
-	rsaQIKey = "qi"
+	RSADKey  = "d"
+	RSADPKey = "dp"
+	RSADQKey = "dq"
+	RSAEKey  = "e"
+	RSANKey  = "n"
+	RSAPKey  = "p"
+	RSAQKey  = "q"
+	RSAQIKey = "qi"
 )
 
 type RSAPrivateKey interface {
@@ -182,16 +182,16 @@ func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.d != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaDKey, Value: h.d})
+		pairs = append(pairs, &HeaderPair{Key: RSADKey, Value: h.d})
 	}
 	if h.dp != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaDPKey, Value: h.dp})
+		pairs = append(pairs, &HeaderPair{Key: RSADPKey, Value: h.dp})
 	}
 	if h.dq != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaDQKey, Value: h.dq})
+		pairs = append(pairs, &HeaderPair{Key: RSADQKey, Value: h.dq})
 	}
 	if h.e != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaEKey, Value: h.e})
+		pairs = append(pairs, &HeaderPair{Key: RSAEKey, Value: h.e})
 	}
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
@@ -203,16 +203,16 @@ func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
 	}
 	if h.n != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaNKey, Value: h.n})
+		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
 	}
 	if h.p != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaPKey, Value: h.p})
+		pairs = append(pairs, &HeaderPair{Key: RSAPKey, Value: h.p})
 	}
 	if h.q != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaQKey, Value: h.q})
+		pairs = append(pairs, &HeaderPair{Key: RSAQKey, Value: h.q})
 	}
 	if h.qi != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaQIKey, Value: h.qi})
+		pairs = append(pairs, &HeaderPair{Key: RSAQIKey, Value: h.qi})
 	}
 	if h.x509CertChain != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
@@ -244,27 +244,29 @@ func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
 
 func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false
 		}
 		return *(h.algorithm), true
-	case rsaDKey:
+	case RSADKey:
 		if h.d == nil {
 			return nil, false
 		}
 		return h.d, true
-	case rsaDPKey:
+	case RSADPKey:
 		if h.dp == nil {
 			return nil, false
 		}
 		return h.dp, true
-	case rsaDQKey:
+	case RSADQKey:
 		if h.dq == nil {
 			return nil, false
 		}
 		return h.dq, true
-	case rsaEKey:
+	case RSAEKey:
 		if h.e == nil {
 			return nil, false
 		}
@@ -284,22 +286,22 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return h.keyops, true
-	case rsaNKey:
+	case RSANKey:
 		if h.n == nil {
 			return nil, false
 		}
 		return h.n, true
-	case rsaPKey:
+	case RSAPKey:
 		if h.p == nil {
 			return nil, false
 		}
 		return h.p, true
-	case rsaQKey:
+	case RSAQKey:
 		if h.q == nil {
 			return nil, false
 		}
 		return h.q, true
-	case rsaQIKey:
+	case RSAQIKey:
 		if h.qi == nil {
 			return nil, false
 		}
@@ -345,30 +347,30 @@ func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
-	case rsaDKey:
+	case RSADKey:
 		if v, ok := value.([]byte); ok {
 			h.d = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaDKey, value)
-	case rsaDPKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSADKey, value)
+	case RSADPKey:
 		if v, ok := value.([]byte); ok {
 			h.dp = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaDPKey, value)
-	case rsaDQKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSADPKey, value)
+	case RSADQKey:
 		if v, ok := value.([]byte); ok {
 			h.dq = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaDQKey, value)
-	case rsaEKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSADQKey, value)
+	case RSAEKey:
 		if v, ok := value.([]byte); ok {
 			h.e = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaEKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
@@ -388,30 +390,30 @@ func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 		}
 		h.keyops = acceptor
 		return nil
-	case rsaNKey:
+	case RSANKey:
 		if v, ok := value.([]byte); ok {
 			h.n = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaNKey, value)
-	case rsaPKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSANKey, value)
+	case RSAPKey:
 		if v, ok := value.([]byte); ok {
 			h.p = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaPKey, value)
-	case rsaQKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSAPKey, value)
+	case RSAQKey:
 		if v, ok := value.([]byte); ok {
 			h.q = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaQKey, value)
-	case rsaQIKey:
+		return errors.Errorf(`invalid value for %s key: %T`, RSAQKey, value)
+	case RSAQIKey:
 		if v, ok := value.([]byte); ok {
 			h.qi = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaQIKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, RSAQIKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
@@ -539,17 +541,17 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	}
 	delete(m, `kty`)
 	delete(m, AlgorithmKey)
-	delete(m, rsaDKey)
-	delete(m, rsaDPKey)
-	delete(m, rsaDQKey)
-	delete(m, rsaEKey)
+	delete(m, RSADKey)
+	delete(m, RSADPKey)
+	delete(m, RSADQKey)
+	delete(m, RSAEKey)
 	delete(m, KeyIDKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
-	delete(m, rsaNKey)
-	delete(m, rsaPKey)
-	delete(m, rsaQKey)
-	delete(m, rsaQIKey)
+	delete(m, RSANKey)
+	delete(m, RSAPKey)
+	delete(m, RSAQKey)
+	delete(m, RSAQIKey)
 	delete(m, X509CertChainKey)
 	delete(m, X509CertThumbprintKey)
 	delete(m, X509CertThumbprintS256Key)
@@ -751,7 +753,7 @@ func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.e != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaEKey, Value: h.e})
+		pairs = append(pairs, &HeaderPair{Key: RSAEKey, Value: h.e})
 	}
 	if h.keyID != nil {
 		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
@@ -763,7 +765,7 @@ func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
 	}
 	if h.n != nil {
-		pairs = append(pairs, &HeaderPair{Key: rsaNKey, Value: h.n})
+		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
 	}
 	if h.x509CertChain != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
@@ -795,12 +797,14 @@ func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
 
 func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 	switch name {
+	case KeyTypeKey:
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false
 		}
 		return *(h.algorithm), true
-	case rsaEKey:
+	case RSAEKey:
 		if h.e == nil {
 			return nil, false
 		}
@@ -820,7 +824,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 			return nil, false
 		}
 		return h.keyops, true
-	case rsaNKey:
+	case RSANKey:
 		if h.n == nil {
 			return nil, false
 		}
@@ -866,12 +870,12 @@ func (h *rsaPublicKey) Set(name string, value interface{}) error {
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
-	case rsaEKey:
+	case RSAEKey:
 		if v, ok := value.([]byte); ok {
 			h.e = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaEKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
@@ -891,12 +895,12 @@ func (h *rsaPublicKey) Set(name string, value interface{}) error {
 		}
 		h.keyops = acceptor
 		return nil
-	case rsaNKey:
+	case RSANKey:
 		if v, ok := value.([]byte); ok {
 			h.n = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, rsaNKey, value)
+		return errors.Errorf(`invalid value for %s key: %T`, RSANKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
@@ -973,11 +977,11 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 	}
 	delete(m, `kty`)
 	delete(m, AlgorithmKey)
-	delete(m, rsaEKey)
+	delete(m, RSAEKey)
 	delete(m, KeyIDKey)
 	delete(m, KeyUsageKey)
 	delete(m, KeyOpsKey)
-	delete(m, rsaNKey)
+	delete(m, RSANKey)
 	delete(m, X509CertChainKey)
 	delete(m, X509CertThumbprintKey)
 	delete(m, X509CertThumbprintS256Key)

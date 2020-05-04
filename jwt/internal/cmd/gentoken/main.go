@@ -290,6 +290,7 @@ func init() {
 					returnType: "*BirthdateClaim",
 					typ:        "*BirthdateClaim",
 					key:        "birthdate",
+					hasAccept:  true,
 				},
 				{
 					name:       "zoneinfo",
@@ -471,11 +472,16 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "\n}")
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else if f.hasAccept {
-			fmt.Fprintf(&buf, "\nvar acceptor %s", f.typ)
+			if f.IsPointer() {
+				fmt.Fprintf(&buf, "\nvar acceptor %s", strings.TrimPrefix(f.typ, "*"))
+			} else {
+				fmt.Fprintf(&buf, "\nvar acceptor %s", f.typ)
+			}
+
 			fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %s)", keyName)
 			fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
-			if fieldStorageTypeIsIndirect(f.typ) {
+			if fieldStorageTypeIsIndirect(f.typ) || f.IsPointer() {
 				fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
 			} else {
 				fmt.Fprintf(&buf, "\nh.%s = acceptor", f.name)

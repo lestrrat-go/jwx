@@ -102,7 +102,9 @@ type standardHeadersMarshalProxy struct {
 }
 
 func NewHeaders() Headers {
-	return &stdHeaders{}
+	return &stdHeaders{
+		privateParams: map[string]interface{}{},
+	}
 }
 
 func (h *stdHeaders) AgreementPartyUInfo() buffer.Buffer {

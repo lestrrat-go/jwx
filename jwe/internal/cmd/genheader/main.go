@@ -290,7 +290,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
-	fmt.Fprintf(&buf, "\nreturn &stdHeaders{}")
+	fmt.Fprintf(&buf, "\nreturn &stdHeaders{")
+	fmt.Fprintf(&buf, "\nprivateParams: map[string]interface{}{},")
+	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {

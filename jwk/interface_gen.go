@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	KeyTypeKey                = "kty"
 	KeyUsageKey               = "use"
 	KeyOpsKey                 = "key_ops"
 	AlgorithmKey              = "alg"
