@@ -132,7 +132,7 @@ func TestECDSA(t *testing.T) {
 				 }
        ]
   }`
-		expectedPublicKey := `{"kty":"EC","crv":"P-256","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4=","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM="}`
+		expectedPublicKey := `{"kty":"EC","crv":"P-256","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}`
 
 		var set jwk.Set
 		if !assert.NoError(t, json.Unmarshal([]byte(s), &set), "unmarshal(set) should be successful") {
@@ -200,7 +200,7 @@ func TestECDSA(t *testing.T) {
 				 }
        ]
   }`
-		expectedPrivKey := `{"kty":"EC","crv":"P-256","d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE=","key_ops":["verify"],"x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4=","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM="}`
+		expectedPrivKey := `{"kty":"EC","crv":"P-256","d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE","key_ops":["verify"],"x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}`
 
 		set, err := jwk.ParseString(s)
 		if err != nil {
