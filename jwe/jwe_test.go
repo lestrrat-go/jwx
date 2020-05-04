@@ -404,38 +404,3 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 		return
 	}
 }
-
-func TestHeaders(t *testing.T) {
-	h := jwe.NewHeaders()
-
-	data := map[string]struct {
-		Value    interface{}
-		Expected interface{}
-	}{
-		"kid":     {Value: "kid blah"},
-		"enc":     {Value: jwa.A128GCM},
-		"cty":     {Value: "application/json"},
-		"typ":     {Value: "typ blah"},
-		"x5t":     {Value: "x5t blah"},
-		"x5t#256": {Value: "x5t#256 blah"},
-		"crit":    {Value: []string{"crit blah"}},
-		"jku":     {Value: "http://github.com/lestrrat-go/jwx"},
-		"x5u":     {Value: "http://github.com/lestrrat-go/jwx"},
-	}
-
-	for name, testcase := range data {
-		h.Set(name, testcase.Value)
-		got, ok := h.Get(name)
-		if !assert.True(t, ok, "value should exist") {
-			return
-		}
-
-		expected := testcase.Expected
-		if expected == nil {
-			expected = testcase.Value
-		}
-		if !assert.Equal(t, expected, got, "value should match") {
-			return
-		}
-	}
-}
