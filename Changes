@@ -1,6 +1,9 @@
 Changes
 =======
 
+v1.0.1 -
+	* Normalize all JWK serialization to use padding-less base64 encoding (#185)
+
 v1.0.0 - 03 May 2020
   * All packages (`jws`, `jwe`, `jwk`, `jwt`) have all been reworked from
     the ground-up.
