@@ -54,17 +54,40 @@ func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 	assert.Equal(t, expected, []byte(examplePayload), "examplePayload OK")
 }
 
-func TestParse_Compact(t *testing.T) {
-	s := `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+func TestParse(t *testing.T) {
+	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+	t.Run("Compact format", func(t *testing.T) {
+		msg, err := jwe.Parse([]byte(s))
+		if !assert.NoError(t, err, "Parsing JWE is successful") {
+			return
+		}
 
-	msg, err := jwe.Parse([]byte(s))
-	if !assert.NoError(t, err, "Parsing JWE is successful") {
-		return
-	}
+		if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
+			return
+		}
+	})
+	t.Run("JSON format", func(t *testing.T) {
+		msg, err := jwe.Parse([]byte(s))
+		if !assert.NoError(t, err, "Parsing JWE is successful") {
+			return
+		}
 
-	if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
-		return
-	}
+		buf, err := jwe.JSON(msg)
+		if !assert.NoError(t, err, "Serializing to JSON format should succeeed") {
+			return
+		}
+
+t.Logf("%s", buf)
+		msg2, err := jwe.Parse(buf)
+		if !assert.NoError(t, err, "Parsing JWE in JSON format should succeed") {
+			return
+		}
+
+		if !assert.Equal(t, msg, msg2, "messages should match") {
+			return
+		}
+	})
+
 }
 
 // This test parses the example found in https://tools.ietf.org/html/rfc7516#appendix-A.1,

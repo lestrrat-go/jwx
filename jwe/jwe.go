@@ -151,27 +151,11 @@ func ParseString(s string) (*Message, error) {
 }
 
 func parseJSON(buf []byte) (*Message, error) {
-	m := struct {
-		*Message
-		Recipient
-	}{
-		Recipient: NewRecipient(),
-	}
-
+	m := NewMessage()
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse JSON")
 	}
-
-	// if the "signature" field exist, treat it as a flattened
-	if m.Recipient != nil {
-		if len(m.Message.recipients) != 0 {
-			return nil, errors.New("invalid message: mixed flattened/full json serialization")
-		}
-
-		m.Message.recipients = []Recipient{m.Recipient}
-	}
-
-	return m.Message, nil
+	return m, nil
 }
 
 func parseCompact(buf []byte) (*Message, error) {
