@@ -40,6 +40,12 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for P-256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "P-256", jwa.P256.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant P384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
@@ -67,6 +73,12 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.P384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for P-384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "P-384", jwa.P384.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -100,10 +112,30 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for P-521`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "P-521", jwa.P521.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`do not accept invalid constant InvalidEllipticCurve`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
 		if !assert.Error(t, dst.Accept(jwa.InvalidEllipticCurve), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})

@@ -40,6 +40,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A128GCMKW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A128GCMKW", jwa.A128GCMKW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A128KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -67,6 +73,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A128KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A128KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A128KW", jwa.A128KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -100,6 +112,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A192GCMKW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A192GCMKW", jwa.A192GCMKW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A192KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -127,6 +145,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A192KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A192KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A192KW", jwa.A192KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -160,6 +184,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A256GCMKW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A256GCMKW", jwa.A256GCMKW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A256KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -187,6 +217,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A256KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A256KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A256KW", jwa.A256KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -220,6 +256,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for dir`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "dir", jwa.DIRECT.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant ECDH_ES`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -247,6 +289,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.ECDH_ES, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for ECDH-ES`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ECDH-ES", jwa.ECDH_ES.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -280,6 +328,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for ECDH-ES+A128KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ECDH-ES+A128KW", jwa.ECDH_ES_A128KW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant ECDH_ES_A192KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -307,6 +361,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.ECDH_ES_A192KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for ECDH-ES+A192KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ECDH-ES+A192KW", jwa.ECDH_ES_A192KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -340,6 +400,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for ECDH-ES+A256KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ECDH-ES+A256KW", jwa.ECDH_ES_A256KW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant PBES2_HS256_A128KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -367,6 +433,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.PBES2_HS256_A128KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for PBES2-HS256+A128KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PBES2-HS256+A128KW", jwa.PBES2_HS256_A128KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -400,6 +472,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for PBES2-HS384+A192KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PBES2-HS384+A192KW", jwa.PBES2_HS384_A192KW.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant PBES2_HS512_A256KW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -427,6 +505,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.PBES2_HS512_A256KW, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for PBES2-HS512+A256KW`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PBES2-HS512+A256KW", jwa.PBES2_HS512_A256KW.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -460,6 +544,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for RSA1_5`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA1_5", jwa.RSA1_5.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant RSA_OAEP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -490,6 +580,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for RSA-OAEP`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP", jwa.RSA_OAEP.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant RSA_OAEP_256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -517,6 +613,26 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.RSA_OAEP_256, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RSA-OAEP-256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP-256", jwa.RSA_OAEP_256.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})
