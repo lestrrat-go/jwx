@@ -26,4 +26,4 @@ If you are asking for an API change or some such which inhibits you from providi
 Add any other context about the problem here.
 
 **Sponsors**
-Are you sponsoring the authors? Let us know.
+Are you sponsoring the authors? If so, let us know. Otherwise, please delete this section.
