@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -57,14 +58,60 @@ func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 func TestParse(t *testing.T) {
 	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
 	t.Run("Compact format", func(t *testing.T) {
-		msg, err := jwe.Parse([]byte(s))
-		if !assert.NoError(t, err, "Parsing JWE is successful") {
-			return
-		}
+		t.Run("Normal", func(t *testing.T) {
+			msg, err := jwe.Parse([]byte(s))
+			if !assert.NoError(t, err, "Parsing JWE is successful") {
+				return
+			}
 
-		if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
-			return
-		}
+			if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
+				return
+			}
+		})
+
+		parts := strings.Split(s, ".")
+		t.Run("Missing parts", func(t *testing.T) {
+			s2 := strings.Join(parts[:4], ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with missing parts`) {
+				return
+			}
+		})
+		t.Run("Invalid header", func(t *testing.T) {
+			s2 := strings.Join(append(append([]string(nil), "!!invalidheader!!"), parts[1:]...), ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with invalid header`) {
+				return
+			}
+		})
+		t.Run("Invalid encrypted key", func(t *testing.T) {
+			s2 := strings.Join(append(append(append([]string(nil), parts[0]), "!!invalidenckey!!"), parts[2:]...), ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with invalid encrypted key`) {
+				return
+			}
+		})
+		t.Run("Invalid initialization vector", func(t *testing.T) {
+			s2 := strings.Join(append(append(append([]string(nil), parts[:2]...), "!!invalidiv!!"), parts[3:]...), ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with invalid initialization vector`) {
+				return
+			}
+		})
+		t.Run("Invalid content", func(t *testing.T) {
+			s2 := strings.Join(append(append(append([]string(nil), parts[:3]...), "!!invalidcontent!!"), parts[4:]...), ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with invalid content`) {
+				return
+			}
+		})
+		t.Run("Invalid tag", func(t *testing.T) {
+			s2 := strings.Join(append(parts[:4], "!!invalidtag!!"), ".")
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with invalid tag`) {
+				return
+			}
+		})
 	})
 	t.Run("JSON format", func(t *testing.T) {
 		msg, err := jwe.Parse([]byte(s))

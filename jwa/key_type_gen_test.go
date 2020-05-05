@@ -40,6 +40,12 @@ func TestKeyType(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for EC`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "EC", jwa.EC.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant OctetSeq`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
@@ -67,6 +73,12 @@ func TestKeyType(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for oct`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "oct", jwa.OctetSeq.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -100,10 +112,30 @@ func TestKeyType(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for RSA`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA", jwa.RSA.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`do not accept invalid constant InvalidKeyType`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
 		if !assert.Error(t, dst.Accept(jwa.InvalidKeyType), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})

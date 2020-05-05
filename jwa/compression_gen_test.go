@@ -40,6 +40,12 @@ func TestCompressionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for DEF`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "DEF", jwa.Deflate.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant NoCompress`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
@@ -67,6 +73,26 @@ func TestCompressionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.NoCompress, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for `, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "", jwa.NoCompress.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.CompressionAlgorithm
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.CompressionAlgorithm
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})

@@ -40,6 +40,12 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A128CBC-HS256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A128CBC-HS256", jwa.A128CBC_HS256.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A128GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
@@ -67,6 +73,12 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A128GCM, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A128GCM`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A128GCM", jwa.A128GCM.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -100,6 +112,12 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A192CBC-HS384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A192CBC-HS384", jwa.A192CBC_HS384.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A192GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
@@ -127,6 +145,12 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A192GCM, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A192GCM`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A192GCM", jwa.A192GCM.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -160,6 +184,12 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for A256CBC-HS512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A256CBC-HS512", jwa.A256CBC_HS512.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant A256GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
@@ -187,6 +217,26 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.A256GCM, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for A256GCM`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "A256GCM", jwa.A256GCM.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.ContentEncryptionAlgorithm
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.ContentEncryptionAlgorithm
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})

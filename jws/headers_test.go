@@ -1,6 +1,7 @@
 package jws_test
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -204,5 +205,53 @@ func TestHeader(t *testing.T) {
 		if !ok {
 			t.Fatal("Failed to get default value")
 		}
+	})
+
+	t.Run("Iterator", func(t *testing.T) {
+		h := jws.NewHeaders()
+		expected := make(map[string]interface{})
+		for k, v := range values {
+			if !assert.NoError(t, h.Set(k, v), "h.Set should succeed for %s", k) {
+				return
+			}
+			expected[k] = v
+		}
+		t.Run("Iterate", func(t *testing.T) {
+			seen := make(map[string]interface{})
+			for iter := h.Iterate(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				seen[pair.Key.(string)] = pair.Value
+
+				getV, ok := h.Get(pair.Key.(string))
+				if !assert.True(t, ok, `h.Get should succeed for key %#v`, pair.Key) {
+					return
+				}
+				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from h.Get()`) {
+					return
+				}
+			}
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+		t.Run("Walk", func(t *testing.T) {
+			seen := make(map[string]interface{})
+			h.Walk(context.TODO(), jwk.HeaderVisitorFunc(func(key string, value interface{}) error {
+				seen[key] = value
+				return nil
+			}))
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+		t.Run("AsMap", func(t *testing.T) {
+			seen, err := h.AsMap(context.TODO())
+			if !assert.NoError(t, err, `v.AsMap should succeed`) {
+				return
+			}
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
 	})
 }

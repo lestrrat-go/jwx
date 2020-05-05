@@ -481,6 +481,13 @@ func (t typ) GenerateTest() error {
 		fmt.Fprintf(&buf, "\nreturn")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n})")
+
+		fmt.Fprintf(&buf, "\nt.Run(`stringification for %s`, func(t *testing.T) {", e.value)
+		fmt.Fprintf(&buf, "\nt.Parallel()")
+		fmt.Fprintf(&buf, "\nif !assert.Equal(t, %#v, jwa.%s.String(), `stringified value matches`) {", e.value, e.name)
+		fmt.Fprintf(&buf, "\nreturn")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n})")
 	}
 
 	for _, e := range invalids {
@@ -492,6 +499,22 @@ func (t typ) GenerateTest() error {
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n})")
 	}
+
+	fmt.Fprintf(&buf, "\nt.Run(`bail out on random integer value`, func(t *testing.T) {")
+	fmt.Fprintf(&buf, "\nt.Parallel()")
+	fmt.Fprintf(&buf, "\nvar dst jwa.%s", t.name)
+	fmt.Fprintf(&buf, "\nif !assert.Error(t, dst.Accept(1), `accept should fail`) {")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n})")
+
+	fmt.Fprintf(&buf, "\nt.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {")
+	fmt.Fprintf(&buf, "\nt.Parallel()")
+	fmt.Fprintf(&buf, "\nvar dst jwa.%s", t.name)
+	fmt.Fprintf(&buf, "\nif !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n})")
 
 	fmt.Fprintf(&buf, "\n}")
 

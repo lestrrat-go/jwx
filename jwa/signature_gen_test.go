@@ -40,6 +40,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for ES256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ES256", jwa.ES256.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant ES384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -67,6 +73,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.ES384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for ES384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ES384", jwa.ES384.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -100,6 +112,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for ES512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ES512", jwa.ES512.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -127,6 +145,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.HS256, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for HS256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "HS256", jwa.HS256.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -160,6 +184,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for HS384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "HS384", jwa.HS384.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant HS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -187,6 +217,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.HS512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for HS512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "HS512", jwa.HS512.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -220,6 +256,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for none`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "none", jwa.NoSignature.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant PS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -247,6 +289,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.PS256, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for PS256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PS256", jwa.PS256.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -280,6 +328,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for PS384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PS384", jwa.PS384.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant PS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -307,6 +361,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.PS512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for PS512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "PS512", jwa.PS512.String(), `stringified value matches`) {
 			return
 		}
 	})
@@ -340,6 +400,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for RS256`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RS256", jwa.RS256.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant RS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -370,6 +436,12 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`stringification for RS384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RS384", jwa.RS384.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant RS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
@@ -397,6 +469,26 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 		if !assert.Equal(t, jwa.RS512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RS512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RS512", jwa.RS512.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`bail out on random integer value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
+			return
+		}
+	})
+	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
 			return
 		}
 	})

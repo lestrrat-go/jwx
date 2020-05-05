@@ -256,3 +256,43 @@ func TestRoundtrip(t *testing.T) {
 		}
 	}
 }
+
+func TestKeyOperation(t *testing.T) {
+	testcases := []struct {
+		Args  interface{}
+		Error bool
+	}{
+		{
+			Args: "sign",
+		},
+		{
+			Args: []jwk.KeyOperation{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
+		},
+		{
+			Args: jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
+		},
+		{
+			Args: []interface{}{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
+		},
+		{
+			Args: []string{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
+		},
+		{
+			Args:  []string{"sigh"},
+			Error: true,
+		},
+	}
+
+	for _, test := range testcases {
+		var ops jwk.KeyOperationList
+		if test.Error {
+			if !assert.Error(t, ops.Accept(test.Args), `KeyOperationList.Accept should fail`) {
+				return
+			}
+		} else {
+			if !assert.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`) {
+				return
+			}
+		}
+	}
+}
