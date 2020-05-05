@@ -43,13 +43,13 @@ func (c *CertificateChain) Accept(v interface{}) error {
 	case string:
 		list = []string{x}
 	case []interface{}:
-		list := make([]string, len(x))
+		list = make([]string, len(x))
 		for i, e := range x {
 			if es, ok := e.(string); ok {
 				list[i] = es
-			} else {
-				return errors.Errorf(`invalid list element type: expected string, got %T`, v)
+				continue
 			}
+			return errors.Errorf(`invalid list element type: expected string, got %T at element %d`, e, i)
 		}
 	case []string:
 		list = x
