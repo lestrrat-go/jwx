@@ -8,9 +8,11 @@ assignees: ''
 ---
 
 **Disclaimer**
-Rule number one: The authors of this project do NOT know what you are trying to accomplish. In order to understand what you are trying to accomplish, *we need code*. Except for those cases when you absolutely cannot do so, please *ALWAYS* include a standalone Go test function that shows us exactly how the code fails and what your expectations are.
+Rule number one: The authors of this project do NOT know what you are trying to accomplish. In order to understand what you are trying to accomplish, we need code. Except for those cases when you absolutely cannot do so, please ALWAYS include a standalone Go test function that shows us exactly how the code fails and what your expectations are.
 
 Rule number two: Failing to attach a test code may result in the authors not taking up to review your report. We enjoy solving problems, but we are not your support staff. We do not get paid to do this. Please help us help you by providing us with a reproducible code.
+
+Rule number three: Please always delete this disclaimer section before submitting your issue. Failure to do so will result in the authors assuming that you have not read this template.
 
 **Describe the bug**
 A clear and concise description of what the bug is.
