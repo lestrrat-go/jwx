@@ -2,15 +2,22 @@ package openid_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/stretchr/testify/assert"
 )
 
 const aLongLongTimeAgo = 233431200
 const aLongLongTimeAgoString = "233431200"
+const (
+	tokenTime = 233431200
+)
+
+var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
 func assertStockAddressClaim(t *testing.T, x *openid.AddressClaim) bool {
 	t.Helper()
@@ -85,132 +92,211 @@ func TestOpenIDClaims(t *testing.T) {
 		return assert.Equal(t, v, expected)
 	}
 
-	var base = map[string]struct {
-		Value interface{}
-		Key   string
-		Check func(openid.Token) bool
+	var base = []struct {
+		Value    interface{}
+		Expected func(interface{}) interface{}
+		Key      string
+		Check    func(openid.Token) bool
 	}{
-		"name": {
+		{
+			Key:   openid.AudienceKey,
+			Value: []string{"developers", "secops", "tac"},
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.Audience(), []string{"developers", "secops", "tac"})
+			},
+		},
+		{
+			Key: openid.ExpirationKey,
+			Value: tokenTime,
+			Expected: func(v interface{}) interface{} {
+				var n types.NumericDate
+				if err := n.Accept(v); err != nil {
+					panic(err)
+				}
+				return n.Get()
+			},
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.Expiration(), expectedTokenTime)
+			},
+		},
+		{
+			Key: openid.IssuedAtKey,
+			Value: tokenTime,
+			Expected: func(v interface{}) interface{} {
+				var n types.NumericDate
+				if err := n.Accept(v); err != nil {
+					panic(err)
+				}
+				return n.Get()
+			},
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.Expiration(), expectedTokenTime)
+			},
+		},
+		{
+			Key: openid.IssuerKey,
+			Value: "http://www.example.com",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.Issuer(), "http://www.example.com")
+			},
+		},
+		{
+			Key: openid.JwtIDKey,
+			Value: "e9bc097a-ce51-4036-9562-d2ade882db0d",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.JwtID(), "e9bc097a-ce51-4036-9562-d2ade882db0d")
+			},
+		},
+		{
+			Key: openid.NotBeforeKey,
+			Value: tokenTime,
+			Expected: func(v interface{}) interface{} {
+				var n types.NumericDate
+				if err := n.Accept(v); err != nil {
+					panic(err)
+				}
+				return n.Get()
+			},
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.NotBefore(), expectedTokenTime)
+			},
+		},
+		{
+			Key: openid.SubjectKey,
+			Value: "unit test",
+			Check: func(token openid.Token) bool {
+				return assert.Equal(t, token.Subject(), "unit test")
+			},
+		},
+		{
 			Value: "jwx",
 			Key:   openid.NameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Name(), "jwx")
 			},
 		},
-		"given_name": {
+		{
 			Value: "jay",
 			Key:   openid.GivenNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.GivenName(), "jay")
 			},
 		},
-		"middle_name": {
+		{
 			Value: "weee",
 			Key:   openid.MiddleNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.MiddleName(), "weee")
 			},
 		},
-		"family_name": {
+		{
 			Value: "xi",
 			Key:   openid.FamilyNameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.FamilyName(), "xi")
 			},
 		},
-		"nickname": {
+		{
 			Value: "jayweexi",
 			Key:   openid.NicknameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Nickname(), "jayweexi")
 			},
 		},
-		"preferred_username": {
+		{
 			Value: "jwx",
 			Key:   openid.PreferredUsernameKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.PreferredUsername(), "jwx")
 			},
 		},
-		"profile": {
+		{
 			Value: "https://github.com/lestrrat-go/jwx",
 			Key:   openid.ProfileKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
-		"picture": {
+		{
 			Value: "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
 			Key:   openid.PictureKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Picture(), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
 			},
 		},
-		"website": {
+		{
 			Value: "https://github.com/lestrrat-go/jwx",
 			Key:   openid.WebsiteKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
-		"email": {
+		{
 			Value: "lestrrat+github@gmail.com",
 			Key:   openid.EmailKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Email(), "lestrrat+github@gmail.com")
 			},
 		},
-		"email_verified": {
+		{
 			Value: true,
 			Key:   openid.EmailVerifiedKey,
 			Check: func(token openid.Token) bool {
 				return assert.True(t, token.EmailVerified())
 			},
 		},
-		"gender": {
+		{
 			Value: "n/a",
 			Key:   openid.GenderKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Gender(), "n/a")
 			},
 		},
-		"birthdate": {
+		{
 			Value: "2015-11-04",
+			Key:   openid.BirthdateKey,
+			Expected: func(v interface{}) interface{} {
+				var b openid.BirthdateClaim
+				if err := b.Accept(v); err != nil {
+					panic(err)
+				}
+				return &b
+			},
 			Check: func(token openid.Token) bool {
 				var b openid.BirthdateClaim
 				b.Accept("2015-11-04")
 				return assert.Equal(t, token.Birthdate(), &b)
 			},
 		},
-		"zoneinfo": {
+		{
 			Value: "Asia/Tokyo",
 			Key:   openid.ZoneinfoKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Zoneinfo(), "Asia/Tokyo")
 			},
 		},
-		"locale": {
+		{
 			Value: "ja_JP",
 			Key:   openid.LocaleKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Locale(), "ja_JP")
 			},
 		},
-		"phone_number": {
+		{
 			Value: "819012345678",
 			Key:   openid.PhoneNumberKey,
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.PhoneNumber(), "819012345678")
 			},
 		},
-		"phone_number_verified": {
+		{
 			Value: true,
 			Key:   openid.PhoneNumberVerifiedKey,
 			Check: func(token openid.Token) bool {
 				return assert.True(t, token.PhoneNumberVerified())
 			},
 		},
-		"address": {
+		{
 			Value: map[string]interface{}{
 				"formatted":      "〒105-0011 東京都港区芝公園４丁目２−８",
 				"street_address": "芝公園４丁目２−８",
@@ -219,12 +305,34 @@ func TestOpenIDClaims(t *testing.T) {
 				"country":        "日本",
 				"postal_code":    "105-0011",
 			},
+			Key: openid.AddressKey,
+			Expected: func(v interface{}) interface{} {
+				address := openid.NewAddress()
+				m, ok := v.(map[string]interface{})
+				if !ok {
+					panic(fmt.Sprintf("expected map[string]interface{}, got %T", v))
+				}
+				for name, val := range m {
+					if !assert.NoError(t, address.Set(name, val), `address.Set should succeed`) {
+						return nil
+					}
+				}
+				return address
+			},
 			Check: func(token openid.Token) bool {
 				return assertStockAddressClaim(t, token.Address())
 			},
 		},
-		"updated_at": {
+		{
 			Value: aLongLongTimeAgoString,
+			Key:   openid.UpdatedAtKey,
+			Expected: func(v interface{}) interface{} {
+				var n types.NumericDate
+				if err := n.Accept(v); err != nil {
+					panic(err)
+				}
+				return n.Get()
+			},
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
 			},
@@ -232,11 +340,15 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	var data = map[string]interface{}{}
-	for name, value := range base {
-		data[name] = value.Value
+	for _, value := range base {
+		data[value.Key] = value.Value
 	}
 
-	var tokens []openid.Token
+	type openidTokTestCase struct {
+		Name  string
+		Token openid.Token
+	}
+	var tokens []openidTokTestCase
 
 	{ // one with Set()
 		token := openid.New()
@@ -245,11 +357,11 @@ func TestOpenIDClaims(t *testing.T) {
 				return
 			}
 		}
-		tokens = append(tokens, token)
+		tokens = append(tokens, openidTokTestCase{Name: `token constructed by calling Set()`, Token: token})
 	}
 
 	{ // one with json.Marshal / json.Unmarshal
-		src, err := json.Marshal(data)
+		src, err := json.MarshalIndent(data, "", "  ")
 		if !assert.NoError(t, err, `failed to marshal base map`) {
 			return
 		}
@@ -260,22 +372,26 @@ func TestOpenIDClaims(t *testing.T) {
 		if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
 			return
 		}
-		tokens = append(tokens, token)
+		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal+Unmashal`, Token: token})
 	}
 
 	for _, token := range tokens {
 		token := token
-		for name, value := range base {
-			value := value
-			t.Run(name, func(t *testing.T) {
-				value.Check(token)
-			})
-			if value.Key != "" {
-				t.Run(name+" via Get()", func(t *testing.T) {
-					getVerify(token, value.Key, value.Value)
+		t.Run(token.Name, func(t *testing.T) {
+			for _, value := range base {
+				value := value
+				t.Run(value.Key, func(t *testing.T) {
+					value.Check(token.Token)
+				})
+				t.Run(value.Key+" via Get()", func(t *testing.T) {
+					expected := value.Value
+					if expf := value.Expected; expf != nil {
+						expected = expf(value.Value)
+					}
+					getVerify(token.Token, value.Key, expected)
 				})
 			}
-		}
+		})
 	}
 }
 
