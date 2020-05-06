@@ -106,7 +106,7 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Key: openid.ExpirationKey,
+			Key:   openid.ExpirationKey,
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
@@ -120,7 +120,7 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Key: openid.IssuedAtKey,
+			Key:   openid.IssuedAtKey,
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
@@ -134,21 +134,21 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Key: openid.IssuerKey,
+			Key:   openid.IssuerKey,
 			Value: "http://www.example.com",
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Issuer(), "http://www.example.com")
 			},
 		},
 		{
-			Key: openid.JwtIDKey,
+			Key:   openid.JwtIDKey,
 			Value: "e9bc097a-ce51-4036-9562-d2ade882db0d",
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.JwtID(), "e9bc097a-ce51-4036-9562-d2ade882db0d")
 			},
 		},
 		{
-			Key: openid.NotBeforeKey,
+			Key:   openid.NotBeforeKey,
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
@@ -162,7 +162,7 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Key: openid.SubjectKey,
+			Key:   openid.SubjectKey,
 			Value: "unit test",
 			Check: func(token openid.Token) bool {
 				return assert.Equal(t, token.Subject(), "unit test")
