@@ -12,7 +12,7 @@ func (c CertificateChain) MarshalJSON() ([]byte, error) {
 	certs := c.Get()
 	encoded := make([]string, len(certs))
 	for i := 0; i < len(certs); i++ {
-		encoded[i] = base64.EncodeToStringStd(certs[i].Raw)
+		encoded[i] = base64.EncodeToString(certs[i].Raw)
 	}
 	return json.Marshal(encoded)
 }
