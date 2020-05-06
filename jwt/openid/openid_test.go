@@ -453,7 +453,6 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 	})
-
 }
 
 func TestBirthdateClaim(t *testing.T) {
