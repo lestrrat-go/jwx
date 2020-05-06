@@ -1,6 +1,7 @@
 package openid_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -340,8 +341,14 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	var data = map[string]interface{}{}
+	var expected = map[string]interface{}{}
 	for _, value := range base {
 		data[value.Key] = value.Value
+		if expf := value.Expected; expf != nil {
+			expected[value.Key] = expf(value.Value)
+		} else {
+			expected[value.Key] = value.Value
+		}
 	}
 
 	type openidTokTestCase struct {
@@ -374,7 +381,6 @@ func TestOpenIDClaims(t *testing.T) {
 		}
 		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal(map)+Unmashal`, Token: token})
 
-
 		// One more... Marshal the token, _and_ re-unmarshal
 		buf, err := json.Marshal(token)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
@@ -406,6 +412,48 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Iterator", func(t *testing.T) {
+		v := tokens[0].Token
+		t.Run("Iterate", func(t *testing.T) {
+			seen := make(map[string]interface{})
+			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				seen[pair.Key.(string)] = pair.Value
+
+				getV, ok := v.Get(pair.Key.(string))
+				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
+					return
+				}
+				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
+					return
+				}
+			}
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+		t.Run("Walk", func(t *testing.T) {
+			seen := make(map[string]interface{})
+			v.Walk(context.TODO(), openid.VisitorFunc(func(key string, value interface{}) error {
+				seen[key] = value
+				return nil
+			}))
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+		t.Run("AsMap", func(t *testing.T) {
+			seen, err := v.AsMap(context.TODO())
+			if !assert.NoError(t, err, `v.AsMap should succeed`) {
+				return
+			}
+			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+	})
+
 }
 
 func TestBirthdateClaim(t *testing.T) {

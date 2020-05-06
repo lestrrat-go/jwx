@@ -8,4 +8,4 @@ import (
 type ClaimPair = mapiter.Pair
 type Iterator = mapiter.Iterator
 type Visitor = iter.MapVisitor
-type VisitorFunc iter.MapVisitorFunc
+type VisitorFunc = iter.MapVisitorFunc
