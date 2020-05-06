@@ -163,13 +163,13 @@ func generateECDSAPublicKey() (jwk.Key, error) {
 }
 
 func generateSymmetricKey() (jwk.Key, error) {
-		sharedKey := make([]byte, 64)
-		rand.Read(sharedKey)
+	sharedKey := make([]byte, 64)
+	rand.Read(sharedKey)
 
-		key, err := jwk.New(sharedKey)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to generate jwk.SymmetricKey`)
-		}
+	key, err := jwk.New(sharedKey)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate jwk.SymmetricKey`)
+	}
 
 	return key, nil
 }
