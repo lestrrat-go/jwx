@@ -338,6 +338,17 @@ func TestOpenIDClaims(t *testing.T) {
 				return assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
 			},
 		},
+		{
+			Value: `dummy`,
+			Key: `dummy`,
+			Check: func(token openid.Token) bool {
+				v, ok := token.Get(`dummy`)
+				if !assert.True(t, ok, `token.Get should return valid value`) {
+					return false
+				}
+				return assert.Equal(t, `dummy`, v, `values should match`)
+			},
+		},
 	}
 
 	var data = map[string]interface{}{}
