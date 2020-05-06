@@ -340,7 +340,7 @@ func TestOpenIDClaims(t *testing.T) {
 		},
 		{
 			Value: `dummy`,
-			Key: `dummy`,
+			Key:   `dummy`,
 			Check: func(token openid.Token) bool {
 				v, ok := token.Get(`dummy`)
 				if !assert.True(t, ok, `token.Get should return valid value`) {
