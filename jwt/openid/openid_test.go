@@ -360,7 +360,7 @@ func TestOpenIDClaims(t *testing.T) {
 		tokens = append(tokens, openidTokTestCase{Name: `token constructed by calling Set()`, Token: token})
 	}
 
-	{ // one with json.Marshal / json.Unmarshal
+	{ // two with json.Marshal / json.Unmarshal
 		src, err := json.MarshalIndent(data, "", "  ")
 		if !assert.NoError(t, err, `failed to marshal base map`) {
 			return
@@ -372,7 +372,20 @@ func TestOpenIDClaims(t *testing.T) {
 		if !assert.NoError(t, json.Unmarshal(src, &token), `json.Unmarshal should succeed`) {
 			return
 		}
-		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal+Unmashal`, Token: token})
+		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal(map)+Unmashal`, Token: token})
+
+
+		// One more... Marshal the token, _and_ re-unmarshal
+		buf, err := json.Marshal(token)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		token2 := openid.New()
+		if !assert.NoError(t, json.Unmarshal(buf, &token2), `json.Unmarshal should succeed`) {
+			return
+		}
+		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal(openid.Token)+Unmashal`, Token: token2})
 	}
 
 	for _, token := range tokens {
