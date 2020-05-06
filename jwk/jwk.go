@@ -6,6 +6,7 @@ package jwk
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
@@ -18,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/lestrrat-go/iter/arrayiter"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -343,6 +345,34 @@ func assignRawResult(v, t interface{}) error {
 		return errors.Errorf(`argument to Raw() must be settable`)
 	}
 	dst.Set(result)
+
+	return nil
+}
+
+// AssignKeyID is a convenience function to automatically assign the "kid"
+// section of the key, if it already doesn't have one. It uses Key.Thumbprint
+// method with crypto.SHA256 as the default hashing algorithm
+func AssignKeyID(key Key, options ...Option) error {
+	if _, ok := key.Get(KeyIDKey); ok {
+		return nil
+	}
+
+	hash := crypto.SHA256
+	for _, option := range options {
+		switch option.Name() {
+		case optkeyThumbprintHash:
+			hash = option.Value().(crypto.Hash)
+		}
+	}
+
+	h, err := key.Thumbprint(hash)
+	if err != nil {
+		return errors.Wrap(err, `failed to generate thumbprint`)
+	}
+
+	if err := key.Set(KeyIDKey, base64.EncodeToString(h)); err != nil {
+		return errors.Wrap(err, `failed to set "kid"`)
+	}
 
 	return nil
 }

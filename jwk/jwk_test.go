@@ -116,40 +116,53 @@ func TestParse(t *testing.T) {
 	})
 }
 
-func TestRoundtrip(t *testing.T) {
-	generateRSA := func(use string, keyID string) (jwk.Key, error) {
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to generate RSA private key`)
-		}
-
-		k, err := jwk.New(key)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to generate jwk.RSAPrivateKey`)
-		}
-
-		k.Set(jwk.KeyUsageKey, use)
-		k.Set(jwk.KeyIDKey, keyID)
-		return k, nil
+func generateRSAPrivateKey() (jwk.Key, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate RSA private key`)
 	}
 
-	generateECDSA := func(use, keyID string) (jwk.Key, error) {
-		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to generate ECDSA private key`)
-		}
-
-		k, err := jwk.New(key)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to generate jwk.ECDSAPrivateKey`)
-		}
-
-		k.Set(jwk.KeyUsageKey, use)
-		k.Set(jwk.KeyIDKey, keyID)
-		return k, nil
+	k, err := jwk.New(key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate jwk.RSAPrivateKey`)
 	}
 
-	generateSymmetric := func(use, keyID string) (jwk.Key, error) {
+	return k, nil
+}
+
+func generateRSAPublicKey() (jwk.Key, error) {
+	k, err := generateRSAPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return k.(jwk.RSAPrivateKey).PublicKey()
+}
+
+func generateECDSAPrivateKey() (jwk.Key, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate ECDSA private key`)
+	}
+
+	k, err := jwk.New(key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate jwk.ECDSAPrivateKey`)
+	}
+
+	return k, nil
+}
+
+func generateECDSAPublicKey() (jwk.Key, error) {
+	k, err := generateECDSAPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return k.(jwk.ECDSAPrivateKey).PublicKey()
+}
+
+func generateSymmetricKey() (jwk.Key, error) {
 		sharedKey := make([]byte, 64)
 		rand.Read(sharedKey)
 
@@ -158,9 +171,41 @@ func TestRoundtrip(t *testing.T) {
 			return nil, errors.Wrap(err, `failed to generate jwk.SymmetricKey`)
 		}
 
-		key.Set(jwk.KeyUsageKey, use)
-		key.Set(jwk.KeyIDKey, keyID)
-		return key, nil
+	return key, nil
+}
+
+func TestRoundtrip(t *testing.T) {
+	generateRSA := func(use string, keyID string) (jwk.Key, error) {
+		k, err := generateRSAPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateECDSA := func(use, keyID string) (jwk.Key, error) {
+		k, err := generateECDSAPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateSymmetric := func(use, keyID string) (jwk.Key, error) {
+		k, err := generateSymmetricKey()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
 	}
 
 	tests := []struct {
@@ -293,6 +338,34 @@ func TestKeyOperation(t *testing.T) {
 			if !assert.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`) {
 				return
 			}
+		}
+	}
+}
+
+func TestAssignKeyID(t *testing.T) {
+	generators := []func() (jwk.Key, error){
+		generateRSAPrivateKey,
+		generateRSAPublicKey,
+		generateECDSAPrivateKey,
+		generateECDSAPublicKey,
+		generateSymmetricKey,
+	}
+
+	for _, generator := range generators {
+		k, err := generator()
+		if !assert.NoError(t, err, `jwk generation should be successful`) {
+			return
+		}
+
+		if !assert.Empty(t, k.KeyID(), `k.KeyID should be non-empty`) {
+			return
+		}
+		if !assert.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, k.KeyID(), `k.KeyID should be non-empty`) {
+			return
 		}
 	}
 }
