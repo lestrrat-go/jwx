@@ -20,36 +20,69 @@ const (
 
 var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
-func assertStockAddressClaim(t *testing.T, x *openid.AddressClaim) bool {
+func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 	t.Helper()
 	if !assert.NotNil(t, x) {
-		return false
+		return
 	}
 
-	if !assert.Equal(t, "〒105-0011 東京都港区芝公園４丁目２−８", x.Formatted(), "formatted should match") {
-		return false
+	tests := []struct {
+		Accessor func() string
+		KeyName  string
+		Value    string
+	}{
+		{
+			Accessor: x.Formatted,
+			KeyName:  openid.AddressFormattedKey,
+			Value:    "〒105-0011 東京都港区芝公園４丁目２−８",
+		},
+		{
+			Accessor: x.Country,
+			KeyName:  openid.AddressCountryKey,
+			Value:    "日本",
+		},
+		{
+			Accessor: x.Region,
+			KeyName:  openid.AddressRegionKey,
+			Value:    "東京都",
+		},
+		{
+			Accessor: x.Locality,
+			KeyName:  openid.AddressLocalityKey,
+			Value:    "港区",
+		},
+		{
+			Accessor: x.StreetAddress,
+			KeyName:  openid.AddressStreetAddressKey,
+			Value:    "芝公園４丁目２−８",
+		},
+		{
+			Accessor: x.PostalCode,
+			KeyName:  openid.AddressPostalCodeKey,
+			Value:    "105-0011",
+		},
 	}
 
-	if !assert.Equal(t, "日本", x.Country(), "country should match") {
-		return false
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.KeyName, func(t *testing.T) {
+			t.Parallel()
+			t.Run("Accessor", func(t *testing.T) {
+				if !assert.Equal(t, tc.Value, tc.Accessor(), "values should match") {
+					return
+				}
+			})
+			t.Run("Get", func(t *testing.T) {
+				v, ok := x.Get(tc.KeyName)
+				if !assert.True(t, ok, `x.Get should succeed`) {
+					return
+				}
+				if !assert.Equal(t, tc.Value, v, `values should match`) {
+					return
+				}
+			})
+		})
 	}
-
-	if !assert.Equal(t, "東京都", x.Region(), "region should match") {
-		return false
-	}
-
-	if !assert.Equal(t, "港区", x.Locality(), "locality should match") {
-		return false
-	}
-
-	if !assert.Equal(t, "芝公園４丁目２−８", x.StreetAddress(), "street_address should match") {
-		return false
-	}
-
-	if !assert.Equal(t, "105-0011", x.PostalCode(), "postal_code should match") {
-		return false
-	}
-	return true
 }
 
 func TestAdressClaim(t *testing.T) {
@@ -78,9 +111,7 @@ func TestAdressClaim(t *testing.T) {
 	}
 
 	for _, x := range []*openid.AddressClaim{&address, &roundtrip} {
-		if !assertStockAddressClaim(t, x) {
-			return
-		}
+		testStockAddressClaim(t, x)
 	}
 }
 
@@ -97,13 +128,13 @@ func TestOpenIDClaims(t *testing.T) {
 		Value    interface{}
 		Expected func(interface{}) interface{}
 		Key      string
-		Check    func(openid.Token) bool
+		Check    func(openid.Token)
 	}{
 		{
 			Key:   openid.AudienceKey,
 			Value: []string{"developers", "secops", "tac"},
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Audience(), []string{"developers", "secops", "tac"})
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Audience(), []string{"developers", "secops", "tac"})
 			},
 		},
 		{
@@ -116,8 +147,8 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return n.Get()
 			},
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Expiration(), expectedTokenTime)
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Expiration(), expectedTokenTime)
 			},
 		},
 		{
@@ -130,22 +161,22 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return n.Get()
 			},
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Expiration(), expectedTokenTime)
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Expiration(), expectedTokenTime)
 			},
 		},
 		{
 			Key:   openid.IssuerKey,
 			Value: "http://www.example.com",
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Issuer(), "http://www.example.com")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Issuer(), "http://www.example.com")
 			},
 		},
 		{
 			Key:   openid.JwtIDKey,
 			Value: "e9bc097a-ce51-4036-9562-d2ade882db0d",
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.JwtID(), "e9bc097a-ce51-4036-9562-d2ade882db0d")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.JwtID(), "e9bc097a-ce51-4036-9562-d2ade882db0d")
 			},
 		},
 		{
@@ -158,99 +189,99 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return n.Get()
 			},
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.NotBefore(), expectedTokenTime)
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.NotBefore(), expectedTokenTime)
 			},
 		},
 		{
 			Key:   openid.SubjectKey,
 			Value: "unit test",
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Subject(), "unit test")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Subject(), "unit test")
 			},
 		},
 		{
 			Value: "jwx",
 			Key:   openid.NameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Name(), "jwx")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Name(), "jwx")
 			},
 		},
 		{
 			Value: "jay",
 			Key:   openid.GivenNameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.GivenName(), "jay")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.GivenName(), "jay")
 			},
 		},
 		{
 			Value: "weee",
 			Key:   openid.MiddleNameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.MiddleName(), "weee")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.MiddleName(), "weee")
 			},
 		},
 		{
 			Value: "xi",
 			Key:   openid.FamilyNameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.FamilyName(), "xi")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.FamilyName(), "xi")
 			},
 		},
 		{
 			Value: "jayweexi",
 			Key:   openid.NicknameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Nickname(), "jayweexi")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Nickname(), "jayweexi")
 			},
 		},
 		{
 			Value: "jwx",
 			Key:   openid.PreferredUsernameKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.PreferredUsername(), "jwx")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.PreferredUsername(), "jwx")
 			},
 		},
 		{
 			Value: "https://github.com/lestrrat-go/jwx",
 			Key:   openid.ProfileKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
 		{
 			Value: "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
 			Key:   openid.PictureKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Picture(), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Picture(), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
 			},
 		},
 		{
 			Value: "https://github.com/lestrrat-go/jwx",
 			Key:   openid.WebsiteKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx")
 			},
 		},
 		{
 			Value: "lestrrat+github@gmail.com",
 			Key:   openid.EmailKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Email(), "lestrrat+github@gmail.com")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Email(), "lestrrat+github@gmail.com")
 			},
 		},
 		{
 			Value: true,
 			Key:   openid.EmailVerifiedKey,
-			Check: func(token openid.Token) bool {
-				return assert.True(t, token.EmailVerified())
+			Check: func(token openid.Token) {
+				assert.True(t, token.EmailVerified())
 			},
 		},
 		{
 			Value: "n/a",
 			Key:   openid.GenderKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Gender(), "n/a")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Gender(), "n/a")
 			},
 		},
 		{
@@ -263,38 +294,38 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return &b
 			},
-			Check: func(token openid.Token) bool {
+			Check: func(token openid.Token) {
 				var b openid.BirthdateClaim
 				b.Accept("2015-11-04")
-				return assert.Equal(t, token.Birthdate(), &b)
+				assert.Equal(t, token.Birthdate(), &b)
 			},
 		},
 		{
 			Value: "Asia/Tokyo",
 			Key:   openid.ZoneinfoKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Zoneinfo(), "Asia/Tokyo")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Zoneinfo(), "Asia/Tokyo")
 			},
 		},
 		{
 			Value: "ja_JP",
 			Key:   openid.LocaleKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.Locale(), "ja_JP")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.Locale(), "ja_JP")
 			},
 		},
 		{
 			Value: "819012345678",
 			Key:   openid.PhoneNumberKey,
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, token.PhoneNumber(), "819012345678")
+			Check: func(token openid.Token) {
+				assert.Equal(t, token.PhoneNumber(), "819012345678")
 			},
 		},
 		{
 			Value: true,
 			Key:   openid.PhoneNumberVerifiedKey,
-			Check: func(token openid.Token) bool {
-				return assert.True(t, token.PhoneNumberVerified())
+			Check: func(token openid.Token) {
+				assert.True(t, token.PhoneNumberVerified())
 			},
 		},
 		{
@@ -320,8 +351,8 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return address
 			},
-			Check: func(token openid.Token) bool {
-				return assertStockAddressClaim(t, token.Address())
+			Check: func(token openid.Token) {
+				testStockAddressClaim(t, token.Address())
 			},
 		},
 		{
@@ -334,19 +365,21 @@ func TestOpenIDClaims(t *testing.T) {
 				}
 				return n.Get()
 			},
-			Check: func(token openid.Token) bool {
-				return assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
+			Check: func(token openid.Token) {
+				assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
 			},
 		},
 		{
 			Value: `dummy`,
 			Key:   `dummy`,
-			Check: func(token openid.Token) bool {
+			Check: func(token openid.Token) {
 				v, ok := token.Get(`dummy`)
 				if !assert.True(t, ok, `token.Get should return valid value`) {
-					return false
+					return
 				}
-				return assert.Equal(t, `dummy`, v, `values should match`)
+				if !assert.Equal(t, `dummy`, v, `values should match`) {
+					return
+				}
 			},
 		},
 	}
