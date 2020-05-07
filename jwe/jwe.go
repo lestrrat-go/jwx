@@ -213,17 +213,30 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	m.Set(AuthenticatedDataKey, hdrbuf.Bytes())
-	m.Set(CipherTextKey, ctbuf)
-	m.Set(InitializationVectorKey, ivbuf)
-	m.Set(ProtectedHeadersKey, protected)
-	m.Set(RecipientsKey, []Recipient{
+	if err := m.Set(AuthenticatedDataKey, hdrbuf.Bytes()); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+	}
+	if err := m.Set(CipherTextKey, ctbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+	}
+	if err := m.Set(InitializationVectorKey, ivbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+	if err := m.Set(ProtectedHeadersKey, protected); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+	}
+
+	if err := m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
 			headers:      hdr,
 			encryptedKey: enckeybuf,
 		},
-	})
-	m.Set(TagKey, tagbuf)
+	}); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
+	if err := m.Set(TagKey, tagbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+	}
 	return m, nil
 }
 
