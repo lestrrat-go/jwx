@@ -1,7 +1,11 @@
 Changes
 =======
 
-v1.0.2
+v1.0.2 - 07 May 2020
+  * Since 1.0.0, we took somet time to play the test coverage game.
+	  The coverage is around 30% better, and we _did_ uncover some
+    inconsistencies in the API, which got promptly fixed.
+    But I'm tired of the coverage game for the time being. PR's welcome!
   * Add jwk.AssignKeyID to automatically assign a `kid` field to a JWK
 	* Fix jwe.Encrypt / jwe.Decrypt to properly look at the `zip` field
   * Change jwe.Message accessors to return []byte, not buffer.Buffer
