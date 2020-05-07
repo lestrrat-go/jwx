@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+func EncodeToStringStd(src []byte) string {
+	return base64.RawStdEncoding.EncodeToString(src)
+}
+
 func EncodeToString(src []byte) string {
 	return base64.RawURLEncoding.EncodeToString(src)
 }
