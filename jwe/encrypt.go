@@ -133,12 +133,24 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode base64")
 	}
-	msg.Set(AuthenticatedDataKey, decodedAad.Bytes())
-	msg.Set(CipherTextKey, ciphertext)
-	msg.Set(InitializationVectorKey, iv)
-	msg.Set(ProtectedHeadersKey, protected)
-	msg.Set(RecipientsKey, recipients)
-	msg.Set(TagKey, tag)
+	if err := msg.Set(AuthenticatedDataKey, decodedAad.Bytes()); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+	}
+	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+	}
+	if err := msg.Set(InitializationVectorKey, iv); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+	}
+	if err := msg.Set(RecipientsKey, recipients); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
+	if err := msg.Set(TagKey, tag); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+	}
 
 	return msg, nil
 }

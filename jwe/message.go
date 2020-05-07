@@ -150,21 +150,18 @@ func (m *Message) Set(k string, v interface{}) error {
 			return errors.Wrapf(err, `invalid value %T for %s key`, v, AuthenticatedDataKey)
 		}
 		m.authenticatedData = &acceptor
-		return nil
 	case CipherTextKey:
 		var acceptor buffer.Buffer
 		if err := acceptor.Accept(v); err != nil {
 			return errors.Wrapf(err, `invalid value %T for %s key`, v, CipherTextKey)
 		}
 		m.cipherText = &acceptor
-		return nil
 	case InitializationVectorKey:
 		var acceptor buffer.Buffer
 		if err := acceptor.Accept(v); err != nil {
 			return errors.Wrapf(err, `invalid value %T for %s key`, v, InitializationVectorKey)
 		}
 		m.initializationVector = &acceptor
-		return nil
 	case ProtectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
@@ -183,7 +180,6 @@ func (m *Message) Set(k string, v interface{}) error {
 			return errors.Wrapf(err, `invalid value %T for %s key`, v, TagKey)
 		}
 		m.tag = &acceptor
-		return nil
 	case UnprotectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
@@ -196,7 +192,7 @@ func (m *Message) Set(k string, v interface{}) error {
 		}
 		return m.unprotectedHeaders.Set(k, v)
 	}
-	return errors.New(`unreached`)
+	return nil
 }
 
 type messageMarshalProxy struct {
