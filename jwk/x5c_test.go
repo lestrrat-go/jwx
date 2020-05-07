@@ -54,6 +54,10 @@ func Test_X5CHeader(t *testing.T) {
 				}
 
 				buf, err := json.Marshal(c)
+				if !assert.NoError(t, err, `json.Marshal should succeed`) {
+					return
+				}
+
 				if !assert.Equal(t, expected, buf, `json output should match`) {
 					return
 				}
