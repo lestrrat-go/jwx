@@ -3,7 +3,6 @@ package cipher
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -184,10 +183,4 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 
 	plaintext, err = aead.Open(nil, iv, combined, aad)
 	return
-}
-
-func NewRsaContentCipher(alg jwa.ContentEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RsaContentCipher, error) {
-	return &RsaContentCipher{
-		pubkey: pubkey,
-	}, nil
 }
