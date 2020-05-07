@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
@@ -127,14 +128,17 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	msg := NewMessage()
-	if err := msg.authenticatedData.Base64Decode(aad); err != nil {
+
+	decodedAad, err := buffer.FromBase64(aad)
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode base64")
 	}
-	msg.cipherText = ciphertext
-	msg.initializationVector = iv
-	msg.protectedHeaders = protected
-	msg.recipients = recipients
-	msg.tag = tag
+	msg.Set(AuthenticatedDataKey, decodedAad.Bytes())
+	msg.Set(CipherTextKey, ciphertext)
+	msg.Set(InitializationVectorKey, iv)
+	msg.Set(ProtectedHeadersKey, protected)
+	msg.Set(RecipientsKey, recipients)
+	msg.Set(TagKey, tag)
 
 	return msg, nil
 }

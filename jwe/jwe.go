@@ -213,17 +213,17 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	m.authenticatedData.SetBytes(hdrbuf.Bytes())
-	m.protectedHeaders = protected
-	m.tag = tagbuf
-	m.cipherText = ctbuf
-	m.initializationVector = ivbuf
-	m.recipients = []Recipient{
+	m.Set(AuthenticatedDataKey, hdrbuf.Bytes())
+	m.Set(CipherTextKey, ctbuf)
+	m.Set(InitializationVectorKey, ivbuf)
+	m.Set(ProtectedHeadersKey, protected)
+	m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
 			headers:      hdr,
 			encryptedKey: enckeybuf,
 		},
-	}
+	})
+	m.Set(TagKey, tagbuf)
 	return m, nil
 }
 

@@ -29,12 +29,12 @@ type stdRecipient struct {
 
 // Message contains the entire encrypted JWE message
 type Message struct {
-	authenticatedData    buffer.Buffer
-	cipherText           buffer.Buffer
-	initializationVector buffer.Buffer
+	authenticatedData    *buffer.Buffer
+	cipherText           *buffer.Buffer
+	initializationVector *buffer.Buffer
 	protectedHeaders     Headers
 	recipients           []Recipient
-	tag                  buffer.Buffer
+	tag                  *buffer.Buffer
 	unprotectedHeaders   Headers
 }
 

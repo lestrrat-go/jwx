@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/pdebug"
@@ -91,16 +92,32 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
-func (m *Message) AuthenticatedData() buffer.Buffer {
-	return m.authenticatedData
+func (m *Message) AuthenticatedData() []byte {
+	if m.authenticatedData == nil {
+		return nil
+	}
+	return m.authenticatedData.Bytes()
 }
 
-func (m *Message) CipherText() buffer.Buffer {
-	return m.cipherText
+func (m *Message) CipherText() []byte {
+	if m.cipherText == nil {
+		return nil
+	}
+	return m.cipherText.Bytes()
 }
 
-func (m *Message) InitializationVector() buffer.Buffer {
-	return m.initializationVector
+func (m *Message) InitializationVector() []byte {
+	if m.initializationVector == nil {
+		return nil
+	}
+	return m.initializationVector.Bytes()
+}
+
+func (m *Message) Tag() []byte {
+	if m.tag == nil {
+		return nil
+	}
+	return m.tag.Bytes()
 }
 
 func (m *Message) ProtectedHeaders() Headers {
@@ -125,13 +142,70 @@ const (
 	UnprotectedHeadersKey   = "unprotected"
 )
 
+func (m *Message) Set(k string, v interface{}) error {
+	switch k {
+	case AuthenticatedDataKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, AuthenticatedDataKey)
+		}
+		m.authenticatedData = &acceptor
+		return nil
+	case CipherTextKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, CipherTextKey)
+		}
+		m.cipherText = &acceptor
+		return nil
+	case InitializationVectorKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, InitializationVectorKey)
+		}
+		m.initializationVector = &acceptor
+		return nil
+	case ProtectedHeadersKey:
+		cv, ok := v.(Headers)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, ProtectedHeadersKey)
+		}
+		m.protectedHeaders = cv
+	case RecipientsKey:
+		cv, ok := v.([]Recipient)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, RecipientsKey)
+		}
+		m.recipients = cv
+	case TagKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, TagKey)
+		}
+		m.tag = &acceptor
+		return nil
+	case UnprotectedHeadersKey:
+		cv, ok := v.(Headers)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, UnprotectedHeadersKey)
+		}
+		m.unprotectedHeaders = cv
+	default:
+		if m.unprotectedHeaders == nil {
+			m.unprotectedHeaders = NewHeaders()
+		}
+		return m.unprotectedHeaders.Set(k, v)
+	}
+	return errors.New(`unreached`)
+}
+
 type messageMarshalProxy struct {
-	AuthenticatedData    buffer.Buffer     `json:"aad,omitempty"`
-	CipherText           buffer.Buffer     `json:"ciphertext"`
-	InitializationVector buffer.Buffer     `json:"iv,omitempty"`
+	AuthenticatedData    *buffer.Buffer    `json:"aad,omitempty"`
+	CipherText           *buffer.Buffer    `json:"ciphertext"`
+	InitializationVector *buffer.Buffer    `json:"iv,omitempty"`
 	ProtectedHeaders     json.RawMessage   `json:"protected"`
 	Recipients           []json.RawMessage `json:"recipients"`
-	Tag                  buffer.Buffer     `json:"tag,omitempty"`
+	Tag                  *buffer.Buffer    `json:"tag,omitempty"`
 	UnprotectedHeaders   Headers           `json:"unprotected,omitempty"`
 }
 
@@ -143,37 +217,37 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	fmt.Fprintf(&buf, `{`)
 
 	var wrote bool
-	if m.authenticatedData.Len() > 0 {
+	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, AuthenticatedDataKey)
-		if err := enc.Encode(m.authenticatedData); err != nil {
+		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, AuthenticatedDataKey)
 		}
 	}
-	if m.cipherText.Len() > 0 {
+	if cipherText := m.CipherText(); len(cipherText) > 0 {
 		if wrote {
 			fmt.Fprintf(&buf, `,`)
 		}
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, CipherTextKey)
-		if err := enc.Encode(m.cipherText); err != nil {
+		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, CipherTextKey)
 		}
 	}
 
-	if m.initializationVector.Len() > 0 {
+	if iv := m.InitializationVector(); len(iv) > 0 {
 		if wrote {
 			fmt.Fprintf(&buf, `,`)
 		}
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, InitializationVectorKey)
-		if err := enc.Encode(m.initializationVector); err != nil {
+		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, InitializationVectorKey)
 		}
 	}
 
-	if m.protectedHeaders != nil {
-		encodedHeaders, err := m.protectedHeaders.Encode()
+	if h := m.ProtectedHeaders(); h != nil {
+		encodedHeaders, err := h.Encode()
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to encode protected headers`)
 		}
@@ -191,19 +265,19 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		fmt.Fprintf(&buf, `,`)
 	}
 	fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
-	if err := enc.Encode(m.recipients); err != nil {
+	if err := enc.Encode(m.Recipients()); err != nil {
 		return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
 	}
 
-	if m.tag.Len() > 0 {
+	if tag := m.Tag(); len(tag) > 0 {
 		fmt.Fprintf(&buf, `,%#v:`, TagKey)
-		if err := enc.Encode(m.tag); err != nil {
+		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
 		}
 	}
 
-	if m.unprotectedHeaders != nil {
-		unprotected, err := json.Marshal(m.unprotectedHeaders)
+	if h := m.UnprotectedHeaders(); h != nil {
+		unprotected, err := json.Marshal(h)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to encode unprotected headers`)
 		}
