@@ -116,8 +116,13 @@ func TestParse(t *testing.T) {
 	})
 }
 
+func generateRawRSAPrivateKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(rand.Reader, 2048)
+}
+
 func generateRSAPrivateKey() (jwk.Key, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := generateRawRSAPrivateKey()
+
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate RSA private key`)
 	}
@@ -139,8 +144,12 @@ func generateRSAPublicKey() (jwk.Key, error) {
 	return k.(jwk.RSAPrivateKey).PublicKey()
 }
 
+func generateRawECDSAPrivateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+}
+
 func generateECDSAPrivateKey() (jwk.Key, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	key, err := generateRawECDSAPrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate ECDSA private key`)
 	}
@@ -162,11 +171,14 @@ func generateECDSAPublicKey() (jwk.Key, error) {
 	return k.(jwk.ECDSAPrivateKey).PublicKey()
 }
 
-func generateSymmetricKey() (jwk.Key, error) {
+func generateRawSymmetricKey() []byte {
 	sharedKey := make([]byte, 64)
 	rand.Read(sharedKey)
+	return sharedKey
+}
 
-	key, err := jwk.New(sharedKey)
+func generateSymmetricKey() (jwk.Key, error) {
+	key, err := jwk.New(generateRawSymmetricKey())
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate jwk.SymmetricKey`)
 	}
@@ -367,5 +379,77 @@ func TestAssignKeyID(t *testing.T) {
 		if !assert.NotEmpty(t, k.KeyID(), `k.KeyID should be non-empty`) {
 			return
 		}
+	}
+}
+
+func TestPublicKeyOf(t *testing.T) {
+	rsakey, err := generateRawRSAPrivateKey()
+	if !assert.NoError(t, err, `generating raw RSA key should succeed`) {
+		return
+	}
+
+	ecdsakey, err := generateRawECDSAPrivateKey()
+	if !assert.NoError(t, err, `generating raw ECDSA key should succeed`) {
+		return
+	}
+
+	octets := generateRawSymmetricKey()
+
+	keys := []struct {
+		Key           interface{}
+		PublicKeyType reflect.Type
+	}{
+		{
+			Key:           rsakey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+		},
+		{
+			Key:           *rsakey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+		},
+		{
+			Key:           rsakey.PublicKey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+		},
+		{
+			Key:           &rsakey.PublicKey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+		},
+		{
+			Key:           ecdsakey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+		},
+		{
+			Key:           *ecdsakey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+		},
+		{
+			Key:           ecdsakey.PublicKey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+		},
+		{
+			Key:           &ecdsakey.PublicKey,
+			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+		},
+		{
+			Key:           octets,
+			PublicKeyType: reflect.TypeOf(octets),
+		},
+	}
+
+	for _, key := range keys {
+		key := key
+		t.Run(fmt.Sprintf("%T", key.Key), func(t *testing.T) {
+			t.Parallel()
+
+			pubkey, err := jwk.PublicKeyOf(key.Key)
+			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(pubkey), `public key types should match`) {
+				return
+			}
+		})
 	}
 }

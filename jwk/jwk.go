@@ -83,10 +83,16 @@ func New(key interface{}) (Key, error) {
 // PublicKeyOf returns the corresponding public key of the given
 // value `v`. For example, if v is a `*rsa.PrivateKey`, then
 // `*rsa.PublicKey` is returned.
+//
 // If given a public key, then the same public key will be returned.
 // For example, if v is a `*rsa.PublicKey`, then the same value
 // is returned.
+//
 // If v is of a type that we don't support, an error is returned.
+//
+// This is useful when you are dealing with the jwk.Key interface
+// alone and you don't know before hand what the underlying key
+// type is, but you still want to obtain the corresponding public key
 func PublicKeyOf(v interface{}) (interface{}, error) {
 	// may be a silly idea, but if the user gave us a non-pointer value...
 	var ptr interface{}
