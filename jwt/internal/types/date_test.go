@@ -3,14 +3,32 @@ package types_test
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwt/internal/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDate(t *testing.T) {
+	t.Run("Get from a nil NumericDate", func(t *testing.T) {
+		var n *types.NumericDate
+		if !assert.Equal(t, time.Time{}, n.Get()) {
+			return
+		}
+	})
+	t.Run("MarshalJSON with a zero value", func(t *testing.T) {
+		var n *types.NumericDate
+		buf, err := json.Marshal(n)
+		if !assert.NoError(t, err, `json.Marshal against a zero value should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, []byte(`null`), buf, `result should be null`) {
+			return
+		}
+	})
 	t.Run("Accept values", func(t *testing.T) {
 		// NumericDate allows assignment from various different Go types,
 		// so that it's easier for the devs, and conversion to/from JSON
@@ -21,16 +39,16 @@ func TestDate(t *testing.T) {
 			t.Run(fmt.Sprintf("%T", ut), func(t *testing.T) {
 				t1 := jwt.New()
 				err := t1.Set(jwt.IssuedAtKey, ut)
-				if err != nil {
-					t.Fatalf("Failed to set IssuedAt value: %v", ut)
+				if !assert.NoError(t, err) {
+					return
 				}
 				v, ok := t1.Get(jwt.IssuedAtKey)
-				if !ok {
-					t.Fatal("Failed to retrieve IssuedAt value")
+				if !assert.True(t, ok) {
+					return
 				}
 				realized := v.(time.Time)
-				if !reflect.DeepEqual(now, realized) {
-					t.Fatalf("Token time mistmatch. Expected:Realized (%v:%v)", now, realized)
+				if !assert.Equal(t, now, realized) {
+					return
 				}
 			})
 		}

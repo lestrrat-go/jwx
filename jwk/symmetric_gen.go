@@ -29,10 +29,10 @@ type SymmetricKey interface {
 }
 
 type symmetricKey struct {
-	algorithm              *string          // https://tools.ietf.org/html/rfc7517#section-4.4
-	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
+	algorithm              *string           // https://tools.ietf.org/html/rfc7517#section-4.4
+	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	octets                 []byte
 	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
@@ -46,7 +46,7 @@ type symmetricSymmetricKeyMarshalProxy struct {
 	Xalgorithm              *string           `json:"alg,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
+	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
 	Xoctets                 *string           `json:"k,omitempty"`
 	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
 	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
@@ -80,7 +80,10 @@ func (h *symmetricKey) KeyUsage() string {
 }
 
 func (h *symmetricKey) KeyOps() KeyOperationList {
-	return h.keyops
+	if h.keyops != nil {
+		return *(h.keyops)
+	}
+	return nil
 }
 
 func (h *symmetricKey) Octets() []byte {
@@ -130,7 +133,7 @@ func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.keyops != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
+		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyops)})
 	}
 	if h.octets != nil {
 		pairs = append(pairs, &HeaderPair{Key: SymmetricOctetsKey, Value: h.octets})
@@ -186,7 +189,7 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 		if h.keyops == nil {
 			return nil, false
 		}
-		return h.keyops, true
+		return *(h.keyops), true
 	case SymmetricOctetsKey:
 		if h.octets == nil {
 			return nil, false
@@ -250,7 +253,7 @@ func (h *symmetricKey) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		h.keyops = acceptor
+		h.keyops = &acceptor
 		return nil
 	case SymmetricOctetsKey:
 		if v, ok := value.([]byte); ok {

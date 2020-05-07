@@ -103,12 +103,12 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	protected.Set(ContentEncryptionKey, jwa.A128CBC_HS256)
 
 	msg := NewMessage()
-	msg.protectedHeaders = protected
-	msg.authenticatedData = aad
-	msg.cipherText = ciphertext
-	msg.initializationVector = iv
-	msg.tag = tag
-	msg.recipients = []Recipient{r}
+	msg.Set(ProtectedHeadersKey, protected)
+	msg.Set(AuthenticatedDataKey, aad)
+	msg.Set(CipherTextKey, ciphertext)
+	msg.Set(InitializationVectorKey, iv)
+	msg.Set(TagKey, tag)
+	msg.Set(RecipientsKey, []Recipient{r})
 
 	serialized, err := Compact(msg)
 	if !assert.NoError(t, err, "compact serialization is successful") {

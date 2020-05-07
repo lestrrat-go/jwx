@@ -223,32 +223,35 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 
 	for _, serializer := range serializers {
 		serializer := serializer
-		t.Run(serializer.Name, func(t *testing.T) {
-			jsonbuf, err := serializer.Func(msg)
-			if !assert.NoError(t, err, "serialize succeeded") {
-				return
-			}
+		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
+			compression := compression
+			t.Run(serializer.Name+" (compression="+compression.String()+")", func(t *testing.T) {
+				jsonbuf, err := serializer.Func(msg)
+				if !assert.NoError(t, err, "serialize succeeded") {
+					return
+				}
 
-			if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
-				jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
-				t.Logf("%s", jsonbuf)
-				return
-			}
+				if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
+					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
+					t.Logf("%s", jsonbuf)
+					return
+				}
 
-			encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
-			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-				return
-			}
+				encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, compression)
+				if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+					return
+				}
 
-			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
-			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-				return
-			}
+				plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+					return
+				}
 
-			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-				return
-			}
-		})
+				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+					return
+				}
+			})
+		}
 	}
 
 	// Test direct marshaling and unmarshaling

@@ -2,12 +2,12 @@ package jwe
 
 import (
 	"bytes"
-	"compress/flate"
 	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/pdebug"
@@ -92,16 +92,32 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
-func (m *Message) AuthenticatedData() buffer.Buffer {
-	return m.authenticatedData
+func (m *Message) AuthenticatedData() []byte {
+	if m.authenticatedData == nil {
+		return nil
+	}
+	return m.authenticatedData.Bytes()
 }
 
-func (m *Message) CipherText() buffer.Buffer {
-	return m.cipherText
+func (m *Message) CipherText() []byte {
+	if m.cipherText == nil {
+		return nil
+	}
+	return m.cipherText.Bytes()
 }
 
-func (m *Message) InitializationVector() buffer.Buffer {
-	return m.initializationVector
+func (m *Message) InitializationVector() []byte {
+	if m.initializationVector == nil {
+		return nil
+	}
+	return m.initializationVector.Bytes()
+}
+
+func (m *Message) Tag() []byte {
+	if m.tag == nil {
+		return nil
+	}
+	return m.tag.Bytes()
 }
 
 func (m *Message) ProtectedHeaders() Headers {
@@ -126,13 +142,66 @@ const (
 	UnprotectedHeadersKey   = "unprotected"
 )
 
+func (m *Message) Set(k string, v interface{}) error {
+	switch k {
+	case AuthenticatedDataKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, AuthenticatedDataKey)
+		}
+		m.authenticatedData = &acceptor
+	case CipherTextKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, CipherTextKey)
+		}
+		m.cipherText = &acceptor
+	case InitializationVectorKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, InitializationVectorKey)
+		}
+		m.initializationVector = &acceptor
+	case ProtectedHeadersKey:
+		cv, ok := v.(Headers)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, ProtectedHeadersKey)
+		}
+		m.protectedHeaders = cv
+	case RecipientsKey:
+		cv, ok := v.([]Recipient)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, RecipientsKey)
+		}
+		m.recipients = cv
+	case TagKey:
+		var acceptor buffer.Buffer
+		if err := acceptor.Accept(v); err != nil {
+			return errors.Wrapf(err, `invalid value %T for %s key`, v, TagKey)
+		}
+		m.tag = &acceptor
+	case UnprotectedHeadersKey:
+		cv, ok := v.(Headers)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, UnprotectedHeadersKey)
+		}
+		m.unprotectedHeaders = cv
+	default:
+		if m.unprotectedHeaders == nil {
+			m.unprotectedHeaders = NewHeaders()
+		}
+		return m.unprotectedHeaders.Set(k, v)
+	}
+	return nil
+}
+
 type messageMarshalProxy struct {
-	AuthenticatedData    buffer.Buffer     `json:"aad,omitempty"`
-	CipherText           buffer.Buffer     `json:"ciphertext"`
-	InitializationVector buffer.Buffer     `json:"iv,omitempty"`
+	AuthenticatedData    *buffer.Buffer    `json:"aad,omitempty"`
+	CipherText           *buffer.Buffer    `json:"ciphertext"`
+	InitializationVector *buffer.Buffer    `json:"iv,omitempty"`
 	ProtectedHeaders     json.RawMessage   `json:"protected"`
 	Recipients           []json.RawMessage `json:"recipients"`
-	Tag                  buffer.Buffer     `json:"tag,omitempty"`
+	Tag                  *buffer.Buffer    `json:"tag,omitempty"`
 	UnprotectedHeaders   Headers           `json:"unprotected,omitempty"`
 }
 
@@ -144,37 +213,37 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	fmt.Fprintf(&buf, `{`)
 
 	var wrote bool
-	if m.authenticatedData.Len() > 0 {
+	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, AuthenticatedDataKey)
-		if err := enc.Encode(m.authenticatedData); err != nil {
+		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, AuthenticatedDataKey)
 		}
 	}
-	if m.cipherText.Len() > 0 {
+	if cipherText := m.CipherText(); len(cipherText) > 0 {
 		if wrote {
 			fmt.Fprintf(&buf, `,`)
 		}
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, CipherTextKey)
-		if err := enc.Encode(m.cipherText); err != nil {
+		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, CipherTextKey)
 		}
 	}
 
-	if m.initializationVector.Len() > 0 {
+	if iv := m.InitializationVector(); len(iv) > 0 {
 		if wrote {
 			fmt.Fprintf(&buf, `,`)
 		}
 		wrote = true
 		fmt.Fprintf(&buf, `%#v:`, InitializationVectorKey)
-		if err := enc.Encode(m.initializationVector); err != nil {
+		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, InitializationVectorKey)
 		}
 	}
 
-	if m.protectedHeaders != nil {
-		encodedHeaders, err := m.protectedHeaders.Encode()
+	if h := m.ProtectedHeaders(); h != nil {
+		encodedHeaders, err := h.Encode()
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to encode protected headers`)
 		}
@@ -192,19 +261,19 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		fmt.Fprintf(&buf, `,`)
 	}
 	fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
-	if err := enc.Encode(m.recipients); err != nil {
+	if err := enc.Encode(m.Recipients()); err != nil {
 		return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
 	}
 
-	if m.tag.Len() > 0 {
+	if tag := m.Tag(); len(tag) > 0 {
 		fmt.Fprintf(&buf, `,%#v:`, TagKey)
-		if err := enc.Encode(m.tag); err != nil {
+		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
 		}
 	}
 
-	if m.unprotectedHeaders != nil {
-		unprotected, err := json.Marshal(m.unprotectedHeaders)
+	if h := m.UnprotectedHeaders(); h != nil {
+		unprotected, err := json.Marshal(h)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to encode unprotected headers`)
 		}
@@ -295,58 +364,76 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	var plaintext []byte
 	var lastError error
 	for _, recipient := range m.recipients {
+		// strategy: try each recipient. If we fail in one of the steps,
+		// keep looping because there might be another key with the same algo
+
 		if pdebug.Enabled {
 			pdebug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers().Algorithm())
 		}
+
 		if recipient.Headers().Algorithm() != alg {
+			// algorithms don't match
 			continue
 		}
 
 		h2, err := mergeHeaders(context.TODO(), nil, h)
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to copy header: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to copy headers (1)`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		h2, err = mergeHeaders(context.TODO(), h2, recipient.Headers())
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("Failed to merge! %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to copy headers (2)`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to create key decrypter: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to build key decrypter`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		cek, err := k.Decrypt(recipient.EncryptedKey().Bytes())
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to decrypt key: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to decrypt key`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, aad)
-		if err == nil {
-			break
+		if err != nil {
+			lastError = errors.Wrap(err, `failed to decrypt payload`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
+			continue
 		}
-		if pdebug.Enabled {
-			pdebug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm(), err)
+
+		if h2.Compression() == jwa.Deflate {
+			buf, err := uncompress(plaintext)
+			if err != nil {
+				lastError = errors.Wrap(err, `failed to uncompress payload`)
+				if pdebug.Enabled {
+					pdebug.Printf(`%s`, lastError)
+				}
+				continue
+			}
+			plaintext = buf
 		}
-		lastError = errors.Wrap(err, `failed to decrypt ciphertext`)
-		// Keep looping because there might be another key with the same algo
+
+		break
 	}
 
 	if plaintext == nil {
@@ -354,23 +441,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			return nil, errors.Errorf(`failed to find matching recipient to decrypt key (last error = %s)`, lastError)
 		}
 		return nil, errors.New("failed to find matching recipient to decrypt key")
-	}
-
-	if h.Compression() == jwa.Deflate {
-		var output bytes.Buffer
-		w, _ := flate.NewWriter(&output, 1)
-		in := plaintext
-		for len(in) > 0 {
-			n, err := w.Write(in)
-			if err != nil {
-				return nil, errors.Wrap(err, `failed to write to compression writer`)
-			}
-			in = in[n:]
-		}
-		if err := w.Close(); err != nil {
-			return nil, errors.Wrap(err, "failed to close compression writer")
-		}
-		plaintext = output.Bytes()
 	}
 
 	return plaintext, nil

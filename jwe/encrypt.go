@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -22,6 +24,7 @@ func releaseEncryptCtx(ctx *encryptCtx) {
 	ctx.contentEncrypter = nil
 	ctx.generator = nil
 	ctx.keyEncrypters = nil
+	ctx.compress = jwa.NoCompress
 	encryptCtxPool.Put(ctx)
 }
 
@@ -42,7 +45,14 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	protected := NewHeaders()
 	if err := protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
-		return nil, errors.Wrap(err, "failed to set enc in protected header")
+		return nil, errors.Wrap(err, `failed to set "enc" in protected header`)
+	}
+
+	compression := e.compress
+	if compression != jwa.NoCompress {
+		if err := protected.Set(CompressionKey, compression); err != nil {
+			return nil, errors.Wrap(err, `failed to set "zip" in protected header`)
+		}
 	}
 
 	// In JWE, multiple recipients may exist -- they receive an
@@ -95,6 +105,11 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 	}
 
+	plaintext, err = compress(plaintext, compression)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to compress payload before encryption`)
+	}
+
 	// ...on the other hand, there's only one content cipher.
 	iv, ciphertext, tag, err := e.contentEncrypter.Encrypt(cek, plaintext, aad)
 	if err != nil {
@@ -113,14 +128,29 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	}
 
 	msg := NewMessage()
-	if err := msg.authenticatedData.Base64Decode(aad); err != nil {
+
+	decodedAad, err := buffer.FromBase64(aad)
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode base64")
 	}
-	msg.cipherText = ciphertext
-	msg.initializationVector = iv
-	msg.protectedHeaders = protected
-	msg.recipients = recipients
-	msg.tag = tag
+	if err := msg.Set(AuthenticatedDataKey, decodedAad.Bytes()); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+	}
+	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+	}
+	if err := msg.Set(InitializationVectorKey, iv); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+	}
+	if err := msg.Set(RecipientsKey, recipients); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
+	if err := msg.Set(TagKey, tag); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+	}
 
 	return msg, nil
 }

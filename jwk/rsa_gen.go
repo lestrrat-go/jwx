@@ -50,9 +50,9 @@ type rsaPrivateKey struct {
 	dp                     []byte
 	dq                     []byte
 	e                      []byte
-	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
+	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
 	p                      []byte
 	q                      []byte
@@ -73,7 +73,7 @@ type rsaPrivateKeyMarshalProxy struct {
 	Xe                      *string           `json:"e,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
+	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
 	Xn                      *string           `json:"n,omitempty"`
 	Xp                      *string           `json:"p,omitempty"`
 	Xq                      *string           `json:"q,omitempty"`
@@ -126,7 +126,10 @@ func (h *rsaPrivateKey) KeyUsage() string {
 }
 
 func (h *rsaPrivateKey) KeyOps() KeyOperationList {
-	return h.keyops
+	if h.keyops != nil {
+		return *(h.keyops)
+	}
+	return nil
 }
 
 func (h *rsaPrivateKey) N() []byte {
@@ -200,7 +203,7 @@ func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.keyops != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
+		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyops)})
 	}
 	if h.n != nil {
 		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
@@ -285,7 +288,7 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.keyops == nil {
 			return nil, false
 		}
-		return h.keyops, true
+		return *(h.keyops), true
 	case RSANKey:
 		if h.n == nil {
 			return nil, false
@@ -388,7 +391,7 @@ func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		h.keyops = acceptor
+		h.keyops = &acceptor
 		return nil
 	case RSANKey:
 		if v, ok := value.([]byte); ok {
@@ -654,9 +657,9 @@ type RSAPublicKey interface {
 type rsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	e                      []byte
-	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
+	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	n                      []byte
 	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
@@ -671,7 +674,7 @@ type rsaPublicKeyMarshalProxy struct {
 	Xe                      *string           `json:"e,omitempty"`
 	XkeyID                  *string           `json:"kid,omitempty"`
 	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 KeyOperationList  `json:"key_ops,omitempty"`
+	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
 	Xn                      *string           `json:"n,omitempty"`
 	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
 	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
@@ -709,7 +712,10 @@ func (h *rsaPublicKey) KeyUsage() string {
 }
 
 func (h *rsaPublicKey) KeyOps() KeyOperationList {
-	return h.keyops
+	if h.keyops != nil {
+		return *(h.keyops)
+	}
+	return nil
 }
 
 func (h *rsaPublicKey) N() []byte {
@@ -762,7 +768,7 @@ func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.keyops != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
+		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyops)})
 	}
 	if h.n != nil {
 		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
@@ -823,7 +829,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.keyops == nil {
 			return nil, false
 		}
-		return h.keyops, true
+		return *(h.keyops), true
 	case RSANKey:
 		if h.n == nil {
 			return nil, false
@@ -893,7 +899,7 @@ func (h *rsaPublicKey) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		h.keyops = acceptor
+		h.keyops = &acceptor
 		return nil
 	case RSANKey:
 		if v, ok := value.([]byte); ok {

@@ -2,7 +2,6 @@ package cipher
 
 import (
 	"crypto/cipher"
-	"crypto/rsa"
 
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
@@ -32,9 +31,4 @@ type AesContentCipher struct {
 	fetch          Fetcher
 	keysize        int
 	tagsize        int
-}
-
-// RsaContentCipher represents a cipher based on RSA
-type RsaContentCipher struct {
-	pubkey *rsa.PublicKey
 }

@@ -108,6 +108,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	encctx.contentEncrypter = contentcrypt
 	encctx.generator = keygen.NewRandom(keysize)
 	encctx.keyEncrypters = []keyenc.Encrypter{enc}
+	encctx.compress = compressalg
 	msg, err := encctx.Encrypt(payload)
 	if err != nil {
 		if pdebug.Enabled {
@@ -212,16 +213,29 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	m.authenticatedData.SetBytes(hdrbuf.Bytes())
-	m.protectedHeaders = protected
-	m.tag = tagbuf
-	m.cipherText = ctbuf
-	m.initializationVector = ivbuf
-	m.recipients = []Recipient{
+	if err := m.Set(AuthenticatedDataKey, hdrbuf.Bytes()); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+	}
+	if err := m.Set(CipherTextKey, ctbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+	}
+	if err := m.Set(InitializationVectorKey, ivbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+	if err := m.Set(ProtectedHeadersKey, protected); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+	}
+
+	if err := m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
 			headers:      hdr,
 			encryptedKey: enckeybuf,
 		},
+	}); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
+	if err := m.Set(TagKey, tagbuf); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
 	return m, nil
 }

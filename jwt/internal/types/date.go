@@ -52,14 +52,14 @@ func (n *NumericDate) Accept(v interface{}) error {
 	case string:
 		i, err := strconv.ParseInt(x[:], 10, 64)
 		if err != nil {
-			return errors.Errorf(`invalid epoch value`)
+			return errors.Errorf(`invalid epoch value %#v`, x)
 		}
 		t = time.Unix(i, 0)
 
 	case json.Number:
 		intval, err := x.Int64()
 		if err != nil {
-			return errors.Wrap(err, `failed to convert json value to int64`)
+			return errors.Wrapf(err, `failed to convert json value %#v to int64`, x)
 		}
 		t = time.Unix(intval, 0)
 	case time.Time:
