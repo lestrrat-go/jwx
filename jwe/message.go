@@ -2,7 +2,6 @@ package jwe
 
 import (
 	"bytes"
-	"compress/flate"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -295,58 +294,76 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	var plaintext []byte
 	var lastError error
 	for _, recipient := range m.recipients {
+		// strategy: try each recipient. If we fail in one of the steps,
+		// keep looping because there might be another key with the same algo
+
 		if pdebug.Enabled {
 			pdebug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers().Algorithm())
 		}
+
 		if recipient.Headers().Algorithm() != alg {
+			// algorithms don't match
 			continue
 		}
 
 		h2, err := mergeHeaders(context.TODO(), nil, h)
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to copy header: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to copy headers (1)`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		h2, err = mergeHeaders(context.TODO(), h2, recipient.Headers())
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("Failed to merge! %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to copy headers (2)`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to create key decrypter: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to build key decrypter`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		cek, err := k.Decrypt(recipient.EncryptedKey().Bytes())
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("failed to decrypt key: %s", err)
-			}
 			lastError = errors.Wrap(err, `failed to decrypt key`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
 			continue
 		}
 
 		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, aad)
-		if err == nil {
-			break
+		if err != nil {
+			lastError = errors.Wrap(err, `failed to decrypt payload`)
+			if pdebug.Enabled {
+				pdebug.Printf(`%s`, lastError)
+			}
+			continue
 		}
-		if pdebug.Enabled {
-			pdebug.Printf("DecryptMessage: failed to decrypt using %s: %s", h2.Algorithm(), err)
+
+		if h2.Compression() == jwa.Deflate {
+			buf, err := uncompress(plaintext)
+			if err != nil {
+				lastError = errors.Wrap(err, `failed to uncompress payload`)
+				if pdebug.Enabled {
+					pdebug.Printf(`%s`, lastError)
+				}
+				continue
+			}
+			plaintext = buf
 		}
-		lastError = errors.Wrap(err, `failed to decrypt ciphertext`)
-		// Keep looping because there might be another key with the same algo
+
+		break
 	}
 
 	if plaintext == nil {
@@ -354,23 +371,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			return nil, errors.Errorf(`failed to find matching recipient to decrypt key (last error = %s)`, lastError)
 		}
 		return nil, errors.New("failed to find matching recipient to decrypt key")
-	}
-
-	if h.Compression() == jwa.Deflate {
-		var output bytes.Buffer
-		w, _ := flate.NewWriter(&output, 1)
-		in := plaintext
-		for len(in) > 0 {
-			n, err := w.Write(in)
-			if err != nil {
-				return nil, errors.Wrap(err, `failed to write to compression writer`)
-			}
-			in = in[n:]
-		}
-		if err := w.Close(); err != nil {
-			return nil, errors.Wrap(err, "failed to close compression writer")
-		}
-		plaintext = output.Bytes()
 	}
 
 	return plaintext, nil

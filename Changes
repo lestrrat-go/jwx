@@ -3,6 +3,7 @@ Changes
 
 v1.0.2
   * Add jwk.AssignKeyID to automatically assign a `kid` field to a JWK
+	* Fix jwe.Encrypt / jwe.Decrypt to properly look at the `zip` field
 
 v1.0.1 - 04 May 2020
 	* Normalize all JWK serialization to use padding-less base64 encoding (#185)

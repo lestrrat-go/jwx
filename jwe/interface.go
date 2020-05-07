@@ -49,6 +49,7 @@ type encryptCtx struct {
 	contentEncrypter contentEncrypter
 	generator        keygen.Generator
 	keyEncrypters    []keyenc.Encrypter
+	compress         jwa.CompressionAlgorithm
 }
 
 // populater is an interface for things that may modify the

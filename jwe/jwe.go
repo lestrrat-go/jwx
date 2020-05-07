@@ -108,6 +108,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	encctx.contentEncrypter = contentcrypt
 	encctx.generator = keygen.NewRandom(keysize)
 	encctx.keyEncrypters = []keyenc.Encrypter{enc}
+	encctx.compress = compressalg
 	msg, err := encctx.Encrypt(payload)
 	if err != nil {
 		if pdebug.Enabled {

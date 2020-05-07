@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -22,6 +23,7 @@ func releaseEncryptCtx(ctx *encryptCtx) {
 	ctx.contentEncrypter = nil
 	ctx.generator = nil
 	ctx.keyEncrypters = nil
+	ctx.compress = jwa.NoCompress
 	encryptCtxPool.Put(ctx)
 }
 
@@ -42,7 +44,14 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	protected := NewHeaders()
 	if err := protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
-		return nil, errors.Wrap(err, "failed to set enc in protected header")
+		return nil, errors.Wrap(err, `failed to set "enc" in protected header`)
+	}
+
+	compression := e.compress
+	if compression != jwa.NoCompress {
+		if err := protected.Set(CompressionKey, compression); err != nil {
+			return nil, errors.Wrap(err, `failed to set "zip" in protected header`)
+		}
 	}
 
 	// In JWE, multiple recipients may exist -- they receive an
@@ -93,6 +102,11 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	aad, err := protected.Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
+	}
+
+	plaintext, err = compress(plaintext, compression)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to compress payload before encryption`)
 	}
 
 	// ...on the other hand, there's only one content cipher.
