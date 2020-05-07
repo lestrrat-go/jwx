@@ -40,9 +40,9 @@ type ecdsaPrivateKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	d                      []byte
-	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
+	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	x                      []byte
 	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
@@ -59,7 +59,7 @@ type ecdsaPrivateKeyMarshalProxy struct {
 	Xd                      *string                     `json:"d,omitempty"`
 	XkeyID                  *string                     `json:"kid,omitempty"`
 	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 KeyOperationList            `json:"key_ops,omitempty"`
+	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
 	Xx                      *string                     `json:"x,omitempty"`
 	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
 	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
@@ -105,7 +105,10 @@ func (h *ecdsaPrivateKey) KeyUsage() string {
 }
 
 func (h *ecdsaPrivateKey) KeyOps() KeyOperationList {
-	return h.keyops
+	if h.keyops != nil {
+		return *(h.keyops)
+	}
+	return nil
 }
 
 func (h *ecdsaPrivateKey) X() []byte {
@@ -165,7 +168,7 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.keyops != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
+		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyops)})
 	}
 	if h.x != nil {
 		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
@@ -234,7 +237,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.keyops == nil {
 			return nil, false
 		}
-		return h.keyops, true
+		return *(h.keyops), true
 	case ECDSAXKey:
 		if h.x == nil {
 			return nil, false
@@ -315,7 +318,7 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		h.keyops = acceptor
+		h.keyops = &acceptor
 		return nil
 	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {
@@ -507,9 +510,9 @@ type ECDSAPublicKey interface {
 type ecdsaPublicKey struct {
 	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
-	keyID                  *string          // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	keyUsage               *string          // https://tools.ietf.org/html/rfc7517#section-4.2
-	keyops                 KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
+	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
+	keyops                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	x                      []byte
 	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
@@ -525,7 +528,7 @@ type ecdsaPublicKeyMarshalProxy struct {
 	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
 	XkeyID                  *string                     `json:"kid,omitempty"`
 	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 KeyOperationList            `json:"key_ops,omitempty"`
+	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
 	Xx                      *string                     `json:"x,omitempty"`
 	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
 	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
@@ -567,7 +570,10 @@ func (h *ecdsaPublicKey) KeyUsage() string {
 }
 
 func (h *ecdsaPublicKey) KeyOps() KeyOperationList {
-	return h.keyops
+	if h.keyops != nil {
+		return *(h.keyops)
+	}
+	return nil
 }
 
 func (h *ecdsaPublicKey) X() []byte {
@@ -624,7 +630,7 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.keyops != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: h.keyops})
+		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyops)})
 	}
 	if h.x != nil {
 		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
@@ -688,7 +694,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.keyops == nil {
 			return nil, false
 		}
-		return h.keyops, true
+		return *(h.keyops), true
 	case ECDSAXKey:
 		if h.x == nil {
 			return nil, false
@@ -763,7 +769,7 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
 		}
-		h.keyops = acceptor
+		h.keyops = &acceptor
 		return nil
 	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {

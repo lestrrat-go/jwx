@@ -35,12 +35,32 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if _, ok := set.Keys[0].(jwk.ECDSAPrivateKey); !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
+		privKey, ok := set.Keys[0].(jwk.ECDSAPrivateKey)
+		if !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
+			return
+		}
+
+		if !assert.Empty(t, privKey.KeyUsage(), `KeyUsage() should be empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, privKey.KeyOps(), `KeyOps() should be non-empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, privKey.X(), `X() should be non-empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, privKey.Y(), `Y() should be non-empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, privKey.D(), `D() should be non-empty`) {
 			return
 		}
 
 		var rawPrivKey ecdsa.PrivateKey
-		privKey := set.Keys[0].(jwk.ECDSAPrivateKey)
 		if !assert.NoError(t, privKey.Raw(&rawPrivKey), "Raw should succeed") {
 			return
 		}
@@ -49,13 +69,29 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		pubkey, err := privKey.PublicKey()
+		pubKey, err := privKey.PublicKey()
 		if !assert.NoError(t, err, "Should be able to get ECDSA public key") {
 			return
 		}
 
+		if !assert.Empty(t, pubKey.KeyUsage(), `KeyUsage() should be empty`) {
+			return
+		}
+
+		if !assert.Empty(t, pubKey.KeyOps(), `KeyOps() should be empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, pubKey.X(), `X() should be non-empty`) {
+			return
+		}
+
+		if !assert.NotEmpty(t, pubKey.Y(), `Y() should be non-empty`) {
+			return
+		}
+
 		var rawPubKey ecdsa.PublicKey
-		if !assert.NoError(t, pubkey.Raw(&rawPubKey), "Raw should succeed") {
+		if !assert.NoError(t, pubKey.Raw(&rawPubKey), "Raw should succeed") {
 			return
 		}
 

@@ -100,7 +100,7 @@ func fieldStorageType(s string) string {
 }
 
 func fieldStorageTypeIsIndirect(s string) bool {
-	return !(strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`) || strings.HasSuffix(s, `List`))
+	return s == "KeyOperationList" || !(strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`) || strings.HasSuffix(s, `List`))
 }
 
 var standardHeaders []headerField
