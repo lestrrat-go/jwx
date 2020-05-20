@@ -25,6 +25,13 @@ import (
 )
 
 // New creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
+//
+// The constructor auto-detects the type of key to be instantiated
+// based on the input type:
+//
+// * "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
+// * "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
+// * []byte creates a symmetric key
 func New(key interface{}) (Key, error) {
 	if key == nil {
 		return nil, errors.New(`jwk.New requires a non-nil key`)
