@@ -301,11 +301,12 @@ func (h *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 // to avoid having to remove the trailing newline for each successive
 // call to Encode()
 func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
-	if enc, err := json.Marshal(v); err != nil {
+	enc, err := json.Marshal(v)
+	if err != nil {
 		return errors.Wrapf(err, `failed to encode '%s'`, keyName)
-	} else {
-		buf.Write(enc)
 	}
+	buf.Write(enc)
+
 	return nil
 }
 
