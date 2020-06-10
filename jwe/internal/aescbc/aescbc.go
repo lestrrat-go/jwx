@@ -139,7 +139,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ret := ensureSize(dst, retlen)
 	out := ret[len(dst):]
 	n := copy(out, ciphertext)
-	n += copy(out[n:], authtag)
+	copy(out[n:], authtag)
 
 	if pdebug.Enabled {
 		pdebug.Printf("Seal: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))

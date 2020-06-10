@@ -27,7 +27,7 @@ func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 	n += copy(concat[n:], apubuf)
 	n += copy(concat[n:], apvbuf)
 	n += copy(concat[n:], pubinfo)
-	n += copy(concat[n:], privinfo)
+	copy(concat[n:], privinfo)
 
 	return &KDF{
 		hash:      hash.New(),

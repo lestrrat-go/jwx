@@ -29,15 +29,6 @@ linters:
 
 issues:
   exclude-rules:
-    # false positive
-    - path: jwe/internal/aescbc/aescbc.go
-      text: "ineffectual assignment to `n`"
-      linters:
-        - ineffassign
-    - path: internal/concatkdf/concatkdf.go
-      text: "ineffectual assignment to `n`"
-      linters:
-        - ineffassign
     # not needed
     - path: /*.go
       text: "ST1003: should not use underscores in package names"
