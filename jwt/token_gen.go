@@ -143,38 +143,38 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *stdToken) Set(name string, value interface{}) error {
+func (t *stdToken) Set(name string, value interface{}) error {
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AudienceKey)
 		}
-		h.audience = acceptor
+		t.audience = acceptor
 		return nil
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, ExpirationKey)
 		}
-		h.expiration = &acceptor
+		t.expiration = &acceptor
 		return nil
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, IssuedAtKey)
 		}
-		h.issuedAt = &acceptor
+		t.issuedAt = &acceptor
 		return nil
 	case IssuerKey:
 		if v, ok := value.(string); ok {
-			h.issuer = &v
+			t.issuer = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
-			h.jwtID = &v
+			t.jwtID = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
@@ -183,68 +183,68 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, NotBeforeKey)
 		}
-		h.notBefore = &acceptor
+		t.notBefore = &acceptor
 		return nil
 	case SubjectKey:
 		if v, ok := value.(string); ok {
-			h.subject = &v
+			t.subject = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	default:
-		if h.privateClaims == nil {
-			h.privateClaims = map[string]interface{}{}
+		if t.privateClaims == nil {
+			t.privateClaims = map[string]interface{}{}
 		}
-		h.privateClaims[name] = value
+		t.privateClaims[name] = value
 	}
 	return nil
 }
 
-func (h *stdToken) Audience() []string {
-	if h.audience != nil {
-		return h.audience.Get()
+func (t *stdToken) Audience() []string {
+	if t.audience != nil {
+		return t.audience.Get()
 	}
 	return nil
 }
 
-func (h *stdToken) Expiration() time.Time {
-	if h.expiration != nil {
-		return h.expiration.Get()
+func (t *stdToken) Expiration() time.Time {
+	if t.expiration != nil {
+		return t.expiration.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) IssuedAt() time.Time {
-	if h.issuedAt != nil {
-		return h.issuedAt.Get()
+func (t *stdToken) IssuedAt() time.Time {
+	if t.issuedAt != nil {
+		return t.issuedAt.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) Issuer() string {
-	if h.issuer != nil {
-		return *(h.issuer)
+func (t *stdToken) Issuer() string {
+	if t.issuer != nil {
+		return *(t.issuer)
 	}
 	return ""
 }
 
-func (h *stdToken) JwtID() string {
-	if h.jwtID != nil {
-		return *(h.jwtID)
+func (t *stdToken) JwtID() string {
+	if t.jwtID != nil {
+		return *(t.jwtID)
 	}
 	return ""
 }
 
-func (h *stdToken) NotBefore() time.Time {
-	if h.notBefore != nil {
-		return h.notBefore.Get()
+func (t *stdToken) NotBefore() time.Time {
+	if t.notBefore != nil {
+		return t.notBefore.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) Subject() string {
-	if h.subject != nil {
-		return *(h.subject)
+func (t *stdToken) Subject() string {
+	if t.subject != nil {
+		return *(t.subject)
 	}
 	return ""
 }
@@ -253,39 +253,39 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (h *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	defer close(ch)
 
 	var pairs []*ClaimPair
-	if h.audience != nil {
-		v := h.audience.Get()
+	if t.audience != nil {
+		v := t.audience.Get()
 		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
 	}
-	if h.expiration != nil {
-		v := h.expiration.Get()
+	if t.expiration != nil {
+		v := t.expiration.Get()
 		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
 	}
-	if h.issuedAt != nil {
-		v := h.issuedAt.Get()
+	if t.issuedAt != nil {
+		v := t.issuedAt.Get()
 		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
 	}
-	if h.issuer != nil {
-		v := *(h.issuer)
+	if t.issuer != nil {
+		v := *(t.issuer)
 		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
 	}
-	if h.jwtID != nil {
-		v := *(h.jwtID)
+	if t.jwtID != nil {
+		v := *(t.jwtID)
 		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
 	}
-	if h.notBefore != nil {
-		v := h.notBefore.Get()
+	if t.notBefore != nil {
+		v := t.notBefore.Get()
 		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
 	}
-	if h.subject != nil {
-		v := *(h.subject)
+	if t.subject != nil {
+		v := *(t.subject)
 		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
 	}
-	for k, v := range h.privateClaims {
+	for k, v := range t.privateClaims {
 		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
 	}
 	for _, pair := range pairs {
@@ -310,18 +310,18 @@ func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
 	return nil
 }
 
-func (h *stdToken) UnmarshalJSON(buf []byte) error {
+func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	var proxy stdTokenMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal stdToken`)
 	}
-	h.audience = proxy.Xaudience
-	h.expiration = proxy.Xexpiration
-	h.issuedAt = proxy.XissuedAt
-	h.issuer = proxy.Xissuer
-	h.jwtID = proxy.XjwtID
-	h.notBefore = proxy.XnotBefore
-	h.subject = proxy.Xsubject
+	t.audience = proxy.Xaudience
+	t.expiration = proxy.Xexpiration
+	t.issuedAt = proxy.XissuedAt
+	t.issuer = proxy.Xissuer
+	t.jwtID = proxy.XjwtID
+	t.notBefore = proxy.XnotBefore
+	t.subject = proxy.Xsubject
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
@@ -333,29 +333,29 @@ func (h *stdToken) UnmarshalJSON(buf []byte) error {
 	delete(m, JwtIDKey)
 	delete(m, NotBeforeKey)
 	delete(m, SubjectKey)
-	h.privateClaims = m
+	t.privateClaims = m
 	return nil
 }
 
-func (h stdToken) MarshalJSON() ([]byte, error) {
+func (t stdToken) MarshalJSON() ([]byte, error) {
 	var proxy stdTokenMarshalProxy
-	proxy.Xaudience = h.audience
-	proxy.Xexpiration = h.expiration
-	proxy.XissuedAt = h.issuedAt
-	proxy.Xissuer = h.issuer
-	proxy.XjwtID = h.jwtID
-	proxy.XnotBefore = h.notBefore
-	proxy.Xsubject = h.subject
+	proxy.Xaudience = t.audience
+	proxy.Xexpiration = t.expiration
+	proxy.XissuedAt = t.issuedAt
+	proxy.Xissuer = t.issuer
+	proxy.XjwtID = t.jwtID
+	proxy.XnotBefore = t.notBefore
+	proxy.Xsubject = t.subject
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	if err := enc.Encode(proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
 	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateClaims); l > 0 {
+	if l := len(t.privateClaims); l > 0 {
 		buf.Truncate(buf.Len() - 2)
 		keys := make([]string, 0, l)
-		for k := range h.privateClaims {
+		for k := range t.privateClaims {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
@@ -364,7 +364,7 @@ func (h stdToken) MarshalJSON() ([]byte, error) {
 				fmt.Fprintf(&buf, `,`)
 			}
 			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateClaims[k]); err != nil {
+			if err := enc.Encode(t.privateClaims[k]); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
 			}
 		}
@@ -373,16 +373,16 @@ func (h stdToken) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *stdToken) Iterate(ctx context.Context) Iterator {
+func (t *stdToken) Iterate(ctx context.Context) Iterator {
 	ch := make(chan *ClaimPair)
-	go h.iterate(ctx, ch)
+	go t.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *stdToken) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
+func (t *stdToken) Walk(ctx context.Context, visitor Visitor) error {
+	return iter.WalkMap(ctx, t, visitor)
 }
 
-func (h *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+func (t *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
+	return iter.AsMap(ctx, t)
 }

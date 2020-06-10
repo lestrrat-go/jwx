@@ -327,38 +327,38 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 	}
 }
 
-func (h *stdToken) Set(name string, value interface{}) error {
+func (t *stdToken) Set(name string, value interface{}) error {
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AudienceKey)
 		}
-		h.audience = acceptor
+		t.audience = acceptor
 		return nil
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, ExpirationKey)
 		}
-		h.expiration = &acceptor
+		t.expiration = &acceptor
 		return nil
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, IssuedAtKey)
 		}
-		h.issuedAt = &acceptor
+		t.issuedAt = &acceptor
 		return nil
 	case IssuerKey:
 		if v, ok := value.(string); ok {
-			h.issuer = &v
+			t.issuer = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
-			h.jwtID = &v
+			t.jwtID = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
@@ -367,83 +367,83 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, NotBeforeKey)
 		}
-		h.notBefore = &acceptor
+		t.notBefore = &acceptor
 		return nil
 	case SubjectKey:
 		if v, ok := value.(string); ok {
-			h.subject = &v
+			t.subject = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	case NameKey:
 		if v, ok := value.(string); ok {
-			h.name = &v
+			t.name = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, NameKey, value)
 	case GivenNameKey:
 		if v, ok := value.(string); ok {
-			h.givenName = &v
+			t.givenName = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
 	case MiddleNameKey:
 		if v, ok := value.(string); ok {
-			h.middleName = &v
+			t.middleName = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
 	case FamilyNameKey:
 		if v, ok := value.(string); ok {
-			h.familyName = &v
+			t.familyName = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
 	case NicknameKey:
 		if v, ok := value.(string); ok {
-			h.nickname = &v
+			t.nickname = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
 	case PreferredUsernameKey:
 		if v, ok := value.(string); ok {
-			h.preferredUsername = &v
+			t.preferredUsername = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
 	case ProfileKey:
 		if v, ok := value.(string); ok {
-			h.profile = &v
+			t.profile = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
 	case PictureKey:
 		if v, ok := value.(string); ok {
-			h.picture = &v
+			t.picture = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PictureKey, value)
 	case WebsiteKey:
 		if v, ok := value.(string); ok {
-			h.website = &v
+			t.website = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
 	case EmailKey:
 		if v, ok := value.(string); ok {
-			h.email = &v
+			t.email = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, EmailKey, value)
 	case EmailVerifiedKey:
 		if v, ok := value.(bool); ok {
-			h.emailVerified = &v
+			t.emailVerified = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
 	case GenderKey:
 		if v, ok := value.(string); ok {
-			h.gender = &v
+			t.gender = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, GenderKey, value)
@@ -452,29 +452,29 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, BirthdateKey)
 		}
-		h.birthdate = &acceptor
+		t.birthdate = &acceptor
 		return nil
 	case ZoneinfoKey:
 		if v, ok := value.(string); ok {
-			h.zoneinfo = &v
+			t.zoneinfo = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
 	case LocaleKey:
 		if v, ok := value.(string); ok {
-			h.locale = &v
+			t.locale = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
 	case PhoneNumberKey:
 		if v, ok := value.(string); ok {
-			h.phoneNumber = &v
+			t.phoneNumber = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberKey, value)
 	case PhoneNumberVerifiedKey:
 		if v, ok := value.(bool); ok {
-			h.phoneNumberVerified = &v
+			t.phoneNumberVerified = &v
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
@@ -483,196 +483,196 @@ func (h *stdToken) Set(name string, value interface{}) error {
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, AddressKey)
 		}
-		h.address = &acceptor
+		t.address = &acceptor
 		return nil
 	case UpdatedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
 			return errors.Wrapf(err, `invalid value for %s key`, UpdatedAtKey)
 		}
-		h.updatedAt = &acceptor
+		t.updatedAt = &acceptor
 		return nil
 	default:
-		if h.privateClaims == nil {
-			h.privateClaims = map[string]interface{}{}
+		if t.privateClaims == nil {
+			t.privateClaims = map[string]interface{}{}
 		}
-		h.privateClaims[name] = value
+		t.privateClaims[name] = value
 	}
 	return nil
 }
 
-func (h *stdToken) Audience() []string {
-	if h.audience != nil {
-		return h.audience.Get()
+func (t *stdToken) Audience() []string {
+	if t.audience != nil {
+		return t.audience.Get()
 	}
 	return nil
 }
 
-func (h *stdToken) Expiration() time.Time {
-	if h.expiration != nil {
-		return h.expiration.Get()
+func (t *stdToken) Expiration() time.Time {
+	if t.expiration != nil {
+		return t.expiration.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) IssuedAt() time.Time {
-	if h.issuedAt != nil {
-		return h.issuedAt.Get()
+func (t *stdToken) IssuedAt() time.Time {
+	if t.issuedAt != nil {
+		return t.issuedAt.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) Issuer() string {
-	if h.issuer != nil {
-		return *(h.issuer)
+func (t *stdToken) Issuer() string {
+	if t.issuer != nil {
+		return *(t.issuer)
 	}
 	return ""
 }
 
-func (h *stdToken) JwtID() string {
-	if h.jwtID != nil {
-		return *(h.jwtID)
+func (t *stdToken) JwtID() string {
+	if t.jwtID != nil {
+		return *(t.jwtID)
 	}
 	return ""
 }
 
-func (h *stdToken) NotBefore() time.Time {
-	if h.notBefore != nil {
-		return h.notBefore.Get()
+func (t *stdToken) NotBefore() time.Time {
+	if t.notBefore != nil {
+		return t.notBefore.Get()
 	}
 	return time.Time{}
 }
 
-func (h *stdToken) Subject() string {
-	if h.subject != nil {
-		return *(h.subject)
+func (t *stdToken) Subject() string {
+	if t.subject != nil {
+		return *(t.subject)
 	}
 	return ""
 }
 
-func (h *stdToken) Name() string {
-	if h.name != nil {
-		return *(h.name)
+func (t *stdToken) Name() string {
+	if t.name != nil {
+		return *(t.name)
 	}
 	return ""
 }
 
-func (h *stdToken) GivenName() string {
-	if h.givenName != nil {
-		return *(h.givenName)
+func (t *stdToken) GivenName() string {
+	if t.givenName != nil {
+		return *(t.givenName)
 	}
 	return ""
 }
 
-func (h *stdToken) MiddleName() string {
-	if h.middleName != nil {
-		return *(h.middleName)
+func (t *stdToken) MiddleName() string {
+	if t.middleName != nil {
+		return *(t.middleName)
 	}
 	return ""
 }
 
-func (h *stdToken) FamilyName() string {
-	if h.familyName != nil {
-		return *(h.familyName)
+func (t *stdToken) FamilyName() string {
+	if t.familyName != nil {
+		return *(t.familyName)
 	}
 	return ""
 }
 
-func (h *stdToken) Nickname() string {
-	if h.nickname != nil {
-		return *(h.nickname)
+func (t *stdToken) Nickname() string {
+	if t.nickname != nil {
+		return *(t.nickname)
 	}
 	return ""
 }
 
-func (h *stdToken) PreferredUsername() string {
-	if h.preferredUsername != nil {
-		return *(h.preferredUsername)
+func (t *stdToken) PreferredUsername() string {
+	if t.preferredUsername != nil {
+		return *(t.preferredUsername)
 	}
 	return ""
 }
 
-func (h *stdToken) Profile() string {
-	if h.profile != nil {
-		return *(h.profile)
+func (t *stdToken) Profile() string {
+	if t.profile != nil {
+		return *(t.profile)
 	}
 	return ""
 }
 
-func (h *stdToken) Picture() string {
-	if h.picture != nil {
-		return *(h.picture)
+func (t *stdToken) Picture() string {
+	if t.picture != nil {
+		return *(t.picture)
 	}
 	return ""
 }
 
-func (h *stdToken) Website() string {
-	if h.website != nil {
-		return *(h.website)
+func (t *stdToken) Website() string {
+	if t.website != nil {
+		return *(t.website)
 	}
 	return ""
 }
 
-func (h *stdToken) Email() string {
-	if h.email != nil {
-		return *(h.email)
+func (t *stdToken) Email() string {
+	if t.email != nil {
+		return *(t.email)
 	}
 	return ""
 }
 
-func (h *stdToken) EmailVerified() bool {
-	if h.emailVerified != nil {
-		return *(h.emailVerified)
+func (t *stdToken) EmailVerified() bool {
+	if t.emailVerified != nil {
+		return *(t.emailVerified)
 	}
 	return false
 }
 
-func (h *stdToken) Gender() string {
-	if h.gender != nil {
-		return *(h.gender)
+func (t *stdToken) Gender() string {
+	if t.gender != nil {
+		return *(t.gender)
 	}
 	return ""
 }
 
-func (h *stdToken) Birthdate() *BirthdateClaim {
-	return h.birthdate
+func (t *stdToken) Birthdate() *BirthdateClaim {
+	return t.birthdate
 }
 
-func (h *stdToken) Zoneinfo() string {
-	if h.zoneinfo != nil {
-		return *(h.zoneinfo)
+func (t *stdToken) Zoneinfo() string {
+	if t.zoneinfo != nil {
+		return *(t.zoneinfo)
 	}
 	return ""
 }
 
-func (h *stdToken) Locale() string {
-	if h.locale != nil {
-		return *(h.locale)
+func (t *stdToken) Locale() string {
+	if t.locale != nil {
+		return *(t.locale)
 	}
 	return ""
 }
 
-func (h *stdToken) PhoneNumber() string {
-	if h.phoneNumber != nil {
-		return *(h.phoneNumber)
+func (t *stdToken) PhoneNumber() string {
+	if t.phoneNumber != nil {
+		return *(t.phoneNumber)
 	}
 	return ""
 }
 
-func (h *stdToken) PhoneNumberVerified() bool {
-	if h.phoneNumberVerified != nil {
-		return *(h.phoneNumberVerified)
+func (t *stdToken) PhoneNumberVerified() bool {
+	if t.phoneNumberVerified != nil {
+		return *(t.phoneNumberVerified)
 	}
 	return false
 }
 
-func (h *stdToken) Address() *AddressClaim {
-	return h.address
+func (t *stdToken) Address() *AddressClaim {
+	return t.address
 }
 
-func (h *stdToken) UpdatedAt() time.Time {
-	if h.updatedAt != nil {
-		return h.updatedAt.Get()
+func (t *stdToken) UpdatedAt() time.Time {
+	if t.updatedAt != nil {
+		return t.updatedAt.Get()
 	}
 	return time.Time{}
 }
@@ -681,115 +681,115 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (h *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	defer close(ch)
 
 	var pairs []*ClaimPair
-	if h.audience != nil {
-		v := h.audience.Get()
+	if t.audience != nil {
+		v := t.audience.Get()
 		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
 	}
-	if h.expiration != nil {
-		v := h.expiration.Get()
+	if t.expiration != nil {
+		v := t.expiration.Get()
 		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
 	}
-	if h.issuedAt != nil {
-		v := h.issuedAt.Get()
+	if t.issuedAt != nil {
+		v := t.issuedAt.Get()
 		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
 	}
-	if h.issuer != nil {
-		v := *(h.issuer)
+	if t.issuer != nil {
+		v := *(t.issuer)
 		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
 	}
-	if h.jwtID != nil {
-		v := *(h.jwtID)
+	if t.jwtID != nil {
+		v := *(t.jwtID)
 		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
 	}
-	if h.notBefore != nil {
-		v := h.notBefore.Get()
+	if t.notBefore != nil {
+		v := t.notBefore.Get()
 		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
 	}
-	if h.subject != nil {
-		v := *(h.subject)
+	if t.subject != nil {
+		v := *(t.subject)
 		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
 	}
-	if h.name != nil {
-		v := *(h.name)
+	if t.name != nil {
+		v := *(t.name)
 		pairs = append(pairs, &ClaimPair{Key: NameKey, Value: v})
 	}
-	if h.givenName != nil {
-		v := *(h.givenName)
+	if t.givenName != nil {
+		v := *(t.givenName)
 		pairs = append(pairs, &ClaimPair{Key: GivenNameKey, Value: v})
 	}
-	if h.middleName != nil {
-		v := *(h.middleName)
+	if t.middleName != nil {
+		v := *(t.middleName)
 		pairs = append(pairs, &ClaimPair{Key: MiddleNameKey, Value: v})
 	}
-	if h.familyName != nil {
-		v := *(h.familyName)
+	if t.familyName != nil {
+		v := *(t.familyName)
 		pairs = append(pairs, &ClaimPair{Key: FamilyNameKey, Value: v})
 	}
-	if h.nickname != nil {
-		v := *(h.nickname)
+	if t.nickname != nil {
+		v := *(t.nickname)
 		pairs = append(pairs, &ClaimPair{Key: NicknameKey, Value: v})
 	}
-	if h.preferredUsername != nil {
-		v := *(h.preferredUsername)
+	if t.preferredUsername != nil {
+		v := *(t.preferredUsername)
 		pairs = append(pairs, &ClaimPair{Key: PreferredUsernameKey, Value: v})
 	}
-	if h.profile != nil {
-		v := *(h.profile)
+	if t.profile != nil {
+		v := *(t.profile)
 		pairs = append(pairs, &ClaimPair{Key: ProfileKey, Value: v})
 	}
-	if h.picture != nil {
-		v := *(h.picture)
+	if t.picture != nil {
+		v := *(t.picture)
 		pairs = append(pairs, &ClaimPair{Key: PictureKey, Value: v})
 	}
-	if h.website != nil {
-		v := *(h.website)
+	if t.website != nil {
+		v := *(t.website)
 		pairs = append(pairs, &ClaimPair{Key: WebsiteKey, Value: v})
 	}
-	if h.email != nil {
-		v := *(h.email)
+	if t.email != nil {
+		v := *(t.email)
 		pairs = append(pairs, &ClaimPair{Key: EmailKey, Value: v})
 	}
-	if h.emailVerified != nil {
-		v := *(h.emailVerified)
+	if t.emailVerified != nil {
+		v := *(t.emailVerified)
 		pairs = append(pairs, &ClaimPair{Key: EmailVerifiedKey, Value: v})
 	}
-	if h.gender != nil {
-		v := *(h.gender)
+	if t.gender != nil {
+		v := *(t.gender)
 		pairs = append(pairs, &ClaimPair{Key: GenderKey, Value: v})
 	}
-	if h.birthdate != nil {
-		v := h.birthdate
+	if t.birthdate != nil {
+		v := t.birthdate
 		pairs = append(pairs, &ClaimPair{Key: BirthdateKey, Value: v})
 	}
-	if h.zoneinfo != nil {
-		v := *(h.zoneinfo)
+	if t.zoneinfo != nil {
+		v := *(t.zoneinfo)
 		pairs = append(pairs, &ClaimPair{Key: ZoneinfoKey, Value: v})
 	}
-	if h.locale != nil {
-		v := *(h.locale)
+	if t.locale != nil {
+		v := *(t.locale)
 		pairs = append(pairs, &ClaimPair{Key: LocaleKey, Value: v})
 	}
-	if h.phoneNumber != nil {
-		v := *(h.phoneNumber)
+	if t.phoneNumber != nil {
+		v := *(t.phoneNumber)
 		pairs = append(pairs, &ClaimPair{Key: PhoneNumberKey, Value: v})
 	}
-	if h.phoneNumberVerified != nil {
-		v := *(h.phoneNumberVerified)
+	if t.phoneNumberVerified != nil {
+		v := *(t.phoneNumberVerified)
 		pairs = append(pairs, &ClaimPair{Key: PhoneNumberVerifiedKey, Value: v})
 	}
-	if h.address != nil {
-		v := h.address
+	if t.address != nil {
+		v := t.address
 		pairs = append(pairs, &ClaimPair{Key: AddressKey, Value: v})
 	}
-	if h.updatedAt != nil {
-		v := h.updatedAt.Get()
+	if t.updatedAt != nil {
+		v := t.updatedAt.Get()
 		pairs = append(pairs, &ClaimPair{Key: UpdatedAtKey, Value: v})
 	}
-	for k, v := range h.privateClaims {
+	for k, v := range t.privateClaims {
 		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
 	}
 	for _, pair := range pairs {
@@ -814,37 +814,37 @@ func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
 	return nil
 }
 
-func (h *stdToken) UnmarshalJSON(buf []byte) error {
+func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	var proxy openidTokenMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal stdToken`)
 	}
-	h.audience = proxy.Xaudience
-	h.expiration = proxy.Xexpiration
-	h.issuedAt = proxy.XissuedAt
-	h.issuer = proxy.Xissuer
-	h.jwtID = proxy.XjwtID
-	h.notBefore = proxy.XnotBefore
-	h.subject = proxy.Xsubject
-	h.name = proxy.Xname
-	h.givenName = proxy.XgivenName
-	h.middleName = proxy.XmiddleName
-	h.familyName = proxy.XfamilyName
-	h.nickname = proxy.Xnickname
-	h.preferredUsername = proxy.XpreferredUsername
-	h.profile = proxy.Xprofile
-	h.picture = proxy.Xpicture
-	h.website = proxy.Xwebsite
-	h.email = proxy.Xemail
-	h.emailVerified = proxy.XemailVerified
-	h.gender = proxy.Xgender
-	h.birthdate = proxy.Xbirthdate
-	h.zoneinfo = proxy.Xzoneinfo
-	h.locale = proxy.Xlocale
-	h.phoneNumber = proxy.XphoneNumber
-	h.phoneNumberVerified = proxy.XphoneNumberVerified
-	h.address = proxy.Xaddress
-	h.updatedAt = proxy.XupdatedAt
+	t.audience = proxy.Xaudience
+	t.expiration = proxy.Xexpiration
+	t.issuedAt = proxy.XissuedAt
+	t.issuer = proxy.Xissuer
+	t.jwtID = proxy.XjwtID
+	t.notBefore = proxy.XnotBefore
+	t.subject = proxy.Xsubject
+	t.name = proxy.Xname
+	t.givenName = proxy.XgivenName
+	t.middleName = proxy.XmiddleName
+	t.familyName = proxy.XfamilyName
+	t.nickname = proxy.Xnickname
+	t.preferredUsername = proxy.XpreferredUsername
+	t.profile = proxy.Xprofile
+	t.picture = proxy.Xpicture
+	t.website = proxy.Xwebsite
+	t.email = proxy.Xemail
+	t.emailVerified = proxy.XemailVerified
+	t.gender = proxy.Xgender
+	t.birthdate = proxy.Xbirthdate
+	t.zoneinfo = proxy.Xzoneinfo
+	t.locale = proxy.Xlocale
+	t.phoneNumber = proxy.XphoneNumber
+	t.phoneNumberVerified = proxy.XphoneNumberVerified
+	t.address = proxy.Xaddress
+	t.updatedAt = proxy.XupdatedAt
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return errors.Wrap(err, `failed to parse privsate parameters`)
@@ -875,48 +875,48 @@ func (h *stdToken) UnmarshalJSON(buf []byte) error {
 	delete(m, PhoneNumberVerifiedKey)
 	delete(m, AddressKey)
 	delete(m, UpdatedAtKey)
-	h.privateClaims = m
+	t.privateClaims = m
 	return nil
 }
 
-func (h stdToken) MarshalJSON() ([]byte, error) {
+func (t stdToken) MarshalJSON() ([]byte, error) {
 	var proxy openidTokenMarshalProxy
-	proxy.Xaudience = h.audience
-	proxy.Xexpiration = h.expiration
-	proxy.XissuedAt = h.issuedAt
-	proxy.Xissuer = h.issuer
-	proxy.XjwtID = h.jwtID
-	proxy.XnotBefore = h.notBefore
-	proxy.Xsubject = h.subject
-	proxy.Xname = h.name
-	proxy.XgivenName = h.givenName
-	proxy.XmiddleName = h.middleName
-	proxy.XfamilyName = h.familyName
-	proxy.Xnickname = h.nickname
-	proxy.XpreferredUsername = h.preferredUsername
-	proxy.Xprofile = h.profile
-	proxy.Xpicture = h.picture
-	proxy.Xwebsite = h.website
-	proxy.Xemail = h.email
-	proxy.XemailVerified = h.emailVerified
-	proxy.Xgender = h.gender
-	proxy.Xbirthdate = h.birthdate
-	proxy.Xzoneinfo = h.zoneinfo
-	proxy.Xlocale = h.locale
-	proxy.XphoneNumber = h.phoneNumber
-	proxy.XphoneNumberVerified = h.phoneNumberVerified
-	proxy.Xaddress = h.address
-	proxy.XupdatedAt = h.updatedAt
+	proxy.Xaudience = t.audience
+	proxy.Xexpiration = t.expiration
+	proxy.XissuedAt = t.issuedAt
+	proxy.Xissuer = t.issuer
+	proxy.XjwtID = t.jwtID
+	proxy.XnotBefore = t.notBefore
+	proxy.Xsubject = t.subject
+	proxy.Xname = t.name
+	proxy.XgivenName = t.givenName
+	proxy.XmiddleName = t.middleName
+	proxy.XfamilyName = t.familyName
+	proxy.Xnickname = t.nickname
+	proxy.XpreferredUsername = t.preferredUsername
+	proxy.Xprofile = t.profile
+	proxy.Xpicture = t.picture
+	proxy.Xwebsite = t.website
+	proxy.Xemail = t.email
+	proxy.XemailVerified = t.emailVerified
+	proxy.Xgender = t.gender
+	proxy.Xbirthdate = t.birthdate
+	proxy.Xzoneinfo = t.zoneinfo
+	proxy.Xlocale = t.locale
+	proxy.XphoneNumber = t.phoneNumber
+	proxy.XphoneNumberVerified = t.phoneNumberVerified
+	proxy.Xaddress = t.address
+	proxy.XupdatedAt = t.updatedAt
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	if err := enc.Encode(proxy); err != nil {
 		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
 	}
 	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateClaims); l > 0 {
+	if l := len(t.privateClaims); l > 0 {
 		buf.Truncate(buf.Len() - 2)
 		keys := make([]string, 0, l)
-		for k := range h.privateClaims {
+		for k := range t.privateClaims {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
@@ -925,7 +925,7 @@ func (h stdToken) MarshalJSON() ([]byte, error) {
 				fmt.Fprintf(&buf, `,`)
 			}
 			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateClaims[k]); err != nil {
+			if err := enc.Encode(t.privateClaims[k]); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
 			}
 		}
@@ -934,16 +934,16 @@ func (h stdToken) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (h *stdToken) Iterate(ctx context.Context) Iterator {
+func (t *stdToken) Iterate(ctx context.Context) Iterator {
 	ch := make(chan *ClaimPair)
-	go h.iterate(ctx, ch)
+	go t.iterate(ctx, ch)
 	return mapiter.New(ch)
 }
 
-func (h *stdToken) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
+func (t *stdToken) Walk(ctx context.Context, visitor Visitor) error {
+	return iter.WalkMap(ctx, t, visitor)
 }
 
-func (h *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+func (t *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
+	return iter.AsMap(ctx, t)
 }
