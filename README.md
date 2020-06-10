@@ -2,7 +2,7 @@
 
 Implementation of various JWx technologies
 
-[![Build Status](https://travis-ci.org/lestrrat-go/jwx.svg?branch=master)](https://travis-ci.org/lestrrat-go/jwx)
+![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg)
 [![GoDoc](https://godoc.org/github.com/lestrrat-go/jwx?status.svg)](https://godoc.org/github.com/lestrrat-go/jwx)
 [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=master)](http://codecov.io/github/lestrrat-go/jwx?branch=master)
 
