@@ -25,6 +25,7 @@ linters:
     - testpackage
     - godot
     - nestif
+    - goerr113
 
 issues:
   exclude-rules:
@@ -46,10 +47,6 @@ issues:
       text: "don't use an underscore in package name"
       linters:
         - golint
-    - path: /*.go
-      text: "returns unexported type" # exported func XXX returns unexported type xxx which can be annoying to use
-      linters:
-        - golint
     - path: /main.go
       linters:
         - errcheck
@@ -59,13 +56,6 @@ issues:
     - path: /*_test.go
       linters:
         - errcheck
-    # discuss
-    #- path: jwe/internal/aescbc/aescbc.go
-    #  linters:
-    #    - errcheck # TODO: Error return value of `xxx` is not checked
-    #- path: jwe/internal/keygen/keygen.go
-    #  linters:
-    #    - errcheck # TODO: Error return value of `xxx` is not checked
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
