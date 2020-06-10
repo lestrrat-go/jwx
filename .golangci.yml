@@ -25,18 +25,10 @@ linters:
     - testpackage
     - godot
     - nestif
+    - goerr113
 
 issues:
   exclude-rules:
-    # false positive
-    - path: jwe/internal/aescbc/aescbc.go
-      text: "ineffectual assignment to `n`"
-      linters:
-        - ineffassign
-    - path: internal/concatkdf/concatkdf.go
-      text: "ineffectual assignment to `n`"
-      linters:
-        - ineffassign
     # not needed
     - path: /*.go
       text: "ST1003: should not use underscores in package names"
@@ -44,10 +36,6 @@ issues:
         - stylecheck
     - path: /*.go
       text: "don't use an underscore in package name"
-      linters:
-        - golint
-    - path: /*.go
-      text: "returns unexported type" # exported func XXX returns unexported type xxx which can be annoying to use
       linters:
         - golint
     - path: /main.go
@@ -59,13 +47,6 @@ issues:
     - path: /*_test.go
       linters:
         - errcheck
-    # discuss
-    #- path: jwe/internal/aescbc/aescbc.go
-    #  linters:
-    #    - errcheck # TODO: Error return value of `xxx` is not checked
-    #- path: jwe/internal/keygen/keygen.go
-    #  linters:
-    #    - errcheck # TODO: Error return value of `xxx` is not checked
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0

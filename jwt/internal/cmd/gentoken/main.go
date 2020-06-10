@@ -455,7 +455,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		keyName := f.method + "Key"
@@ -463,10 +463,10 @@ func generateToken(tt tokenType) error {
 		if f.name == `algorithm` {
 			fmt.Fprintf(&buf, "\nswitch v := value.(type) {")
 			fmt.Fprintf(&buf, "\ncase string:")
-			fmt.Fprintf(&buf, "\nh.algorithm = &v")
+			fmt.Fprintf(&buf, "\nt.algorithm = &v")
 			fmt.Fprintf(&buf, "\ncase fmt.Stringer:")
 			fmt.Fprintf(&buf, "\ntmp := v.String()")
-			fmt.Fprintf(&buf, "\nh.algorithm = &tmp")
+			fmt.Fprintf(&buf, "\nt.algorithm = &tmp")
 			fmt.Fprintf(&buf, "\ndefault:")
 			fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
 			fmt.Fprintf(&buf, "\n}")
@@ -480,19 +480,19 @@ func generateToken(tt tokenType) error {
 
 			fmt.Fprintf(&buf, "\nif err := acceptor.Accept(value); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `invalid value for %%s key`, %s)", keyName)
-			fmt.Fprintf(&buf, "\n}") // end if err := h.%s.Accept(value)
+			fmt.Fprintf(&buf, "\n}") // end if err := t.%s.Accept(value)
 			if fieldStorageTypeIsIndirect(f.typ) || f.IsPointer() {
-				fmt.Fprintf(&buf, "\nh.%s = &acceptor", f.name)
+				fmt.Fprintf(&buf, "\nt.%s = &acceptor", f.name)
 			} else {
-				fmt.Fprintf(&buf, "\nh.%s = acceptor", f.name)
+				fmt.Fprintf(&buf, "\nt.%s = acceptor", f.name)
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 		} else {
 			fmt.Fprintf(&buf, "\nif v, ok := value.(%s); ok {", f.typ)
 			if fieldStorageTypeIsIndirect(f.typ) {
-				fmt.Fprintf(&buf, "\nh.%s = &v", f.name)
+				fmt.Fprintf(&buf, "\nt.%s = &v", f.name)
 			} else {
-				fmt.Fprintf(&buf, "\nh.%s = v", f.name)
+				fmt.Fprintf(&buf, "\nt.%s = v", f.name)
 			}
 			fmt.Fprintf(&buf, "\nreturn nil")
 			fmt.Fprintf(&buf, "\n}") // end if v, ok := value.(%s)
@@ -500,16 +500,16 @@ func generateToken(tt tokenType) error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nif h.privateClaims == nil {")
-	fmt.Fprintf(&buf, "\nh.privateClaims = map[string]interface{}{}")
-	fmt.Fprintf(&buf, "\n}") // end if h.privateClaims == nil
-	fmt.Fprintf(&buf, "\nh.privateClaims[name] = value")
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = map[string]interface{}{}")
+	fmt.Fprintf(&buf, "\n}") // end if t.privateClaims == nil
+	fmt.Fprintf(&buf, "\nt.privateClaims[name] = value")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *%s) Set(name string, value interface{})
+	fmt.Fprintf(&buf, "\n}") // end func (t *%s) Set(name string, value interface{})
 
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n\nfunc (h *%s) %s() ", tt.structName, f.method)
+		fmt.Fprintf(&buf, "\n\nfunc (t *%s) %s() ", tt.structName, f.method)
 		if f.returnType != "" {
 			fmt.Fprintf(&buf, "%s", f.returnType)
 		} else if f.IsPointer() && f.noDeref {
@@ -520,21 +520,21 @@ func generateToken(tt tokenType) error {
 		fmt.Fprintf(&buf, " {")
 
 		if f.hasGet {
-			fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
-			fmt.Fprintf(&buf, "\nreturn h.%s.Get()", f.name)
+			fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn t.%s.Get()", f.name)
 			fmt.Fprintf(&buf, "\n}")
 			fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.returnType))
 		} else if !f.IsPointer() {
 			if fieldStorageTypeIsIndirect(f.typ) {
-				fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
-				fmt.Fprintf(&buf, "\nreturn *(h.%s)", f.name)
+				fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
+				fmt.Fprintf(&buf, "\nreturn *(t.%s)", f.name)
 				fmt.Fprintf(&buf, "\n}")
 				fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.returnType))
 			} else {
-				fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
+				fmt.Fprintf(&buf, "\nreturn t.%s", f.name)
 			}
 		} else {
-			fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
+			fmt.Fprintf(&buf, "\nreturn t.%s", f.name)
 		}
 		fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) %s() %s
 	}
@@ -545,27 +545,27 @@ func generateToken(tt tokenType) error {
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
 	fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\n\nvar pairs []*ClaimPair")
 	for _, f := range fields {
 		keyName := f.method + "Key"
-		fmt.Fprintf(&buf, "\nif h.%s != nil {", f.name)
+		fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
 		if f.hasGet {
-			fmt.Fprintf(&buf, "\nv := h.%s.Get()", f.name)
+			fmt.Fprintf(&buf, "\nv := t.%s.Get()", f.name)
 		} else {
 			if fieldStorageTypeIsIndirect(f.typ) {
-				fmt.Fprintf(&buf, "\nv := *(h.%s)", f.name)
+				fmt.Fprintf(&buf, "\nv := *(t.%s)", f.name)
 			} else {
-				fmt.Fprintf(&buf, "\nv := h.%s", f.name)
+				fmt.Fprintf(&buf, "\nv := t.%s", f.name)
 			}
 		}
 		fmt.Fprintf(&buf, "\npairs = append(pairs, &ClaimPair{Key: %s, Value: v})", keyName)
 		fmt.Fprintf(&buf, "\n}")
 	}
-	fmt.Fprintf(&buf, "\nfor k, v := range h.privateClaims {")
+	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &ClaimPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
@@ -612,15 +612,16 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n// to avoid having to remove the trailing newline for each successive")
 	fmt.Fprintf(&buf, "\n// call to Encode()")
 	fmt.Fprintf(&buf, "\nfunc writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {")
-	fmt.Fprintf(&buf, "\nif enc, err := json.Marshal(v); err != nil {")
+	fmt.Fprintf(&buf, "\nenc, err := json.Marshal(v)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to encode '%%s'`, keyName)")
-	fmt.Fprintf(&buf, "\n} else {")
-	fmt.Fprintf(&buf, "\nbuf.Write(enc)")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.Write(enc)")
+	fmt.Fprintf(&buf, "\n")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", tt.structName)
@@ -633,15 +634,15 @@ func generateToken(tt tokenType) error {
 			// but we may or may not be dealing with padded base64's.
 			// The unmarshal proxy takes this into account, and grabs the value
 			// as strings so that we can do our own decoding magic
-			fmt.Fprintf(&buf, "\nif h.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
+			fmt.Fprintf(&buf, "\nif t.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
 			fmt.Fprintf(&buf, "\ndecoded, err := base64.DecodeString(*(proxy.X%[1]s))", f.name)
 			fmt.Fprintf(&buf, "\nif err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64 value for %s`)", f.name)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nh.%[1]s = decoded", f.name)
+			fmt.Fprintf(&buf, "\nt.%[1]s = decoded", f.name)
 			fmt.Fprintf(&buf, "\n}")
 		default:
-			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
+			fmt.Fprintf(&buf, "\nt.%[1]s = proxy.X%[1]s", f.name)
 		}
 	}
 
@@ -657,10 +658,10 @@ func generateToken(tt tokenType) error {
 		fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
 	}
 
-	fmt.Fprintf(&buf, "\nh.privateClaims = m")
+	fmt.Fprintf(&buf, "\nt.privateClaims = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nfunc (h %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
 	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
 	for _, f := range fields {
 		switch f.typ {
@@ -668,12 +669,12 @@ func generateToken(tt tokenType) error {
 			// XXX encoding/json uses base64.StdEncoding, which require padding
 			// but we may or may not be dealing with padded base64's.
 			// Before marshaling this value to JSON, we must first encode it
-			fmt.Fprintf(&buf, "\nif len(h.%s) > 0 {", f.name)
-			fmt.Fprintf(&buf, "\nv := base64.EncodeToString(h.%s)", f.name)
+			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", f.name)
+			fmt.Fprintf(&buf, "\nv := base64.EncodeToString(t.%s)", f.name)
 			fmt.Fprintf(&buf, "\nproxy.X%s = &v", f.name)
 			fmt.Fprintf(&buf, "\n}")
 		default:
-			fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
+			fmt.Fprintf(&buf, "\nproxy.X%[1]s = t.%[1]s", f.name)
 		}
 	}
 
@@ -683,10 +684,10 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nhasContent := buf.Len() > 3 // encoding/json always adds a newline, so \"{}\\n\" is the empty hash")
-	fmt.Fprintf(&buf, "\nif l := len(h.privateClaims); l> 0 {")
+	fmt.Fprintf(&buf, "\nif l := len(t.privateClaims); l> 0 {")
 	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
 	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
-	fmt.Fprintf(&buf, "\nfor k := range h.privateClaims {")
+	fmt.Fprintf(&buf, "\nfor k := range t.privateClaims {")
 	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
@@ -695,7 +696,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateClaims[k]); err != nil {")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(t.privateClaims[k]); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
@@ -704,18 +705,18 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
 	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair)")
-	fmt.Fprintf(&buf, "\ngo h.iterate(ctx, ch)")
+	fmt.Fprintf(&buf, "\ngo t.iterate(ctx, ch)")
 	fmt.Fprintf(&buf, "\nreturn mapiter.New(ch)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) Walk(ctx context.Context, visitor Visitor) error {", tt.structName)
-	fmt.Fprintf(&buf, "\nreturn iter.WalkMap(ctx, h, visitor)")
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Walk(ctx context.Context, visitor Visitor) error {", tt.structName)
+	fmt.Fprintf(&buf, "\nreturn iter.WalkMap(ctx, t, visitor)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", tt.structName)
-	fmt.Fprintf(&buf, "\nreturn iter.AsMap(ctx, h)")
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\nreturn iter.AsMap(ctx, t)")
 	fmt.Fprintf(&buf, "\n}")
 
 	return codegen.WriteFormattedCodeToFile(tt.filename, &buf)
