@@ -86,10 +86,10 @@ func Sign(t Token, method jwa.SignatureAlgorithm, key interface{}) ([]byte, erro
 	}
 
 	hdr := jws.NewHeaders()
-	if hdr.Set(`alg`, method.String()) != nil {
+	if err := hdr.Set(`alg`, method.String()); err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
-	if hdr.Set(`typ`, `JWT`) != nil {
+	if err := hdr.Set(`typ`, `JWT`); err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
 	sign, err := jws.Sign(buf, method, key, jws.WithHeaders(hdr))
