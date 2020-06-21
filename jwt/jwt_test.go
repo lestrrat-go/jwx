@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJWTParse(t *testing.T) {
@@ -252,4 +253,18 @@ func TestUnmarshalJSON(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestSignErrors(t *testing.T) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	tok := jwt.New()
+	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid value for alg key")
+
+	_, err = jwt.Sign(tok, jwa.ES256, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing private key")
 }
