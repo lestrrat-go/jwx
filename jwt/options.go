@@ -3,6 +3,7 @@ package jwt
 import (
 	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 )
 
@@ -11,6 +12,7 @@ type Option = option.Interface
 const (
 	optkeyVerify = `verify`
 	optkeyToken  = `token`
+	optkeyKeySet = `keySet`
 )
 
 type VerifyParameters interface {
@@ -31,11 +33,22 @@ func (p *verifyParams) Key() interface{} {
 	return p.key
 }
 
+// WithVerify forces the Parse method to verify the JWT message
+// using the given key. XXX Should have been named something like
+// WithVerificationKey
 func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) Option {
 	return option.New(optkeyVerify, &verifyParams{
 		alg: alg,
 		key: key,
 	})
+}
+
+// WithKeySet forces the Parse method to verify the JWT message
+// using one of the keys in the given key set. The key to be used
+// is chosen by matching the Key ID of the JWT and the ID of the
+// give keys.
+func WithKeySet(set *jwk.Set) Option {
+	return option.New(optkeyKeySet, set)
 }
 
 // WithToken specifies the token instance that is used when parsing
