@@ -113,11 +113,11 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set) (jwa.SignatureAlgorithm, in
 	}
 
 	var rawKey interface{}
-	if err := keys[0].Raw(rawKey); err != nil {
+	if err := keys[0].Raw(&rawKey); err != nil {
 		return "", nil, errors.Wrapf(err, `failed to construct raw key from keyset (key ID=%#v)`, kid)
 	}
 
-	return jwa.SignatureAlgorithm(keys[0].Algorithm()), rawKey, nil
+	return headers.Algorithm(), rawKey, nil
 }
 
 // ParseVerify is marked to be deprecated. Please use jwt.Parse
@@ -141,13 +141,24 @@ func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (To
 // Sign is a convenience function to create a signed JWT token serialized in
 // compact form. `key` must match the key type required by the given
 // signature method `method`
-func Sign(t Token, method jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+func Sign(t Token, method jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
+	var hdr jws.Headers
+	for _, o := range options {
+		switch o.Name() {
+		case optkeyHeaders:
+			hdr = o.Value().(jws.Headers)
+		}
+	}
+
 	buf, err := json.Marshal(t)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to marshal token`)
 	}
 
-	hdr := jws.NewHeaders()
+	if hdr == nil {
+		hdr = jws.NewHeaders()
+	}
+
 	if hdr.Set(`alg`, method.String()) != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}

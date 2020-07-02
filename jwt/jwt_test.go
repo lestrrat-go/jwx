@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
@@ -82,46 +83,71 @@ func TestJWTParse(t *testing.T) {
 }
 
 func TestJWTParseVerify(t *testing.T) {
+
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
 
+	kid := "test-jwt-parse-verify-kid"
+	hdrs := jws.NewHeaders()
+	hdrs.Set(jws.KeyIDKey, kid)
+
 	t1 := jwt.New()
-	signed, err := jwt.Sign(t1, alg, key)
+
+	signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
 	if !assert.NoError(t, err, "token.Sign should succeed") {
 		return
 	}
 
-	t.Run("parse (no signature verification)", func(t *testing.T) {
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-			return
-		}
+	t.Run("ParseVerify(old API)", func(t *testing.T) {
+		t.Run("parse (no signature verification)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (correct signature key)", func(t *testing.T) {
+			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
+			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature key)", func(t *testing.T) {
+			pubkey := key.PublicKey
+			pubkey.E = 0 // bogus value
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
 	})
-	t.Run("parse (correct signature key)", func(t *testing.T) {
-		t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
-		if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
-			return
-		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
-			return
-		}
-	})
-	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-			return
-		}
-	})
-	t.Run("parse (wrong signature key)", func(t *testing.T) {
-		pubkey := key.PublicKey
-		pubkey.E = 0 // bogus value
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-			return
-		}
+	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
+		t.Run("Automatically pick a key from set", func(t *testing.T) {
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.KeyIDKey, kid)
+			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys:[]jwk.Key{pubkey}}))
+			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
 	})
 }
 

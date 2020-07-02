@@ -4,15 +4,17 @@ import (
 	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 )
 
 type Option = option.Interface
 
 const (
-	optkeyVerify = `verify`
-	optkeyToken  = `token`
-	optkeyKeySet = `keySet`
+	optkeyVerify  = `verify`
+	optkeyToken   = `token`
+	optkeyKeySet  = `keySet`
+	optkeyHeaders = `headers`
 )
 
 type VerifyParameters interface {
@@ -64,4 +66,10 @@ func WithToken(t Token) Option {
 // This is exactly equivalent to specifying `jwt.WithToken(openid.New())`
 func WithOpenIDClaims() Option {
 	return WithToken(openid.New())
+}
+
+// WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
+// header values to be included in the header section of the jws message
+func WithHeaders(hdrs jws.Headers) Option {
+	return option.New(optkeyHeaders, hdrs)
 }
