@@ -2,10 +2,12 @@ package jwt_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -84,7 +86,6 @@ func TestJWTParse(t *testing.T) {
 }
 
 func TestJWTParseVerify(t *testing.T) {
-
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if !assert.NoError(t, err, "RSA key generated") {
@@ -141,7 +142,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 
 			pubkey.Set(jwk.KeyIDKey, kid)
-			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys:[]jwk.Key{pubkey}}))
+			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -149,6 +150,49 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 		})
+	})
+
+	// This is a test to check if we allow alg: none in the protected header section.
+	// But in truth, since we delegate everything to jws.Verify anyways, it's really
+	// a test to see if jws.Verify returns an error if alg: none is specified in the
+	// header section. Move this test to jws if need be.
+	t.Run("Check alg=none", func(t *testing.T) {
+		// Create a signed payload, but use alg=none
+		_, payload, signature, err := jws.SplitCompact(bytes.NewReader(signed))
+		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
+			return
+		}
+
+		dummyHeader := jws.NewHeaders()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		for iter := hdrs.Iterate(ctx); iter.Next(ctx); {
+			pair := iter.Pair()
+			dummyHeader.Set(pair.Key.(string), pair.Value)
+		}
+		dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
+
+		dummyMarshaled, err := json.Marshal(dummyHeader)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+		dummyEncoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(dummyMarshaled)))
+		base64.RawURLEncoding.Encode(dummyEncoded, dummyMarshaled)
+
+		signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
+
+		pubkey := jwk.NewRSAPublicKey()
+		if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+			return
+		}
+
+		pubkey.Set(jwk.KeyIDKey, kid)
+
+		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+		// This should fail
+		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
+			return
+		}
 	})
 }
 
