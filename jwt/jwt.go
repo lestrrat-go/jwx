@@ -30,7 +30,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // The token must be encoded in either JSON format or compact format.
 //
 // If the token is signed and you want to verify the payload, you must
-// pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.KeySet) option.
+// pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
