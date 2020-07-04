@@ -16,6 +16,6 @@ func New(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	case jwa.HS256, jwa.HS384, jwa.HS512:
 		return newHMAC(alg)
 	default:
-		return nil, errors.Errorf(`unsupported signature algorithm: %s`, alg)
+		return nil, errors.Errorf(`unsupported signature algorithm: %#v`, alg)
 	}
 }

@@ -2,16 +2,19 @@ package jwt_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
@@ -89,38 +92,105 @@ func TestJWTParseVerify(t *testing.T) {
 		return
 	}
 
+	kid := "test-jwt-parse-verify-kid"
+	hdrs := jws.NewHeaders()
+	hdrs.Set(jws.KeyIDKey, kid)
+
 	t1 := jwt.New()
-	signed, err := jwt.Sign(t1, alg, key)
+
+	signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
 	if !assert.NoError(t, err, "token.Sign should succeed") {
 		return
 	}
 
-	t.Run("parse (no signature verification)", func(t *testing.T) {
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-			return
-		}
+	t.Run("ParseVerify(old API)", func(t *testing.T) {
+		t.Run("parse (no signature verification)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (correct signature key)", func(t *testing.T) {
+			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
+			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
+		t.Run("parse (wrong signature key)", func(t *testing.T) {
+			pubkey := key.PublicKey
+			pubkey.E = 0 // bogus value
+			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
+			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+				return
+			}
+		})
 	})
-	t.Run("parse (correct signature key)", func(t *testing.T) {
-		t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
-		if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
-			return
-		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
-			return
-		}
+	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
+		t.Run("Automatically pick a key from set", func(t *testing.T) {
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.KeyIDKey, kid)
+			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
 	})
-	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+
+	// This is a test to check if we allow alg: none in the protected header section.
+	// But in truth, since we delegate everything to jws.Verify anyways, it's really
+	// a test to see if jws.Verify returns an error if alg: none is specified in the
+	// header section. Move this test to jws if need be.
+	t.Run("Check alg=none", func(t *testing.T) {
+		// Create a signed payload, but use alg=none
+		_, payload, signature, err := jws.SplitCompact(bytes.NewReader(signed))
+		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 			return
 		}
-	})
-	t.Run("parse (wrong signature key)", func(t *testing.T) {
-		pubkey := key.PublicKey
-		pubkey.E = 0 // bogus value
-		_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
-		if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
+
+		dummyHeader := jws.NewHeaders()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		for iter := hdrs.Iterate(ctx); iter.Next(ctx); {
+			pair := iter.Pair()
+			dummyHeader.Set(pair.Key.(string), pair.Value)
+		}
+		dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
+
+		dummyMarshaled, err := json.Marshal(dummyHeader)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+		dummyEncoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(dummyMarshaled)))
+		base64.RawURLEncoding.Encode(dummyEncoded, dummyMarshaled)
+
+		signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
+
+		pubkey := jwk.NewRSAPublicKey()
+		if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+			return
+		}
+
+		pubkey.Set(jwk.KeyIDKey, kid)
+
+		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+		// This should fail
+		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
 			return
 		}
 	})
