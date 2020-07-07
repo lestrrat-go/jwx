@@ -172,3 +172,31 @@ func Sign(t Token, method jwa.SignatureAlgorithm, key interface{}, options ...Op
 
 	return sign, nil
 }
+
+// SignWithKey creates a singed JWT token which is singed by the given JWT key
+func SignWithKey(t Token, key jwk.Key, options ...Option) ([]byte, error) {
+	var hdr jws.Headers
+	for _, o := range options {
+		switch o.Name() {
+		case optkeyHeaders:
+			hdr = o.Value().(jws.Headers)
+		}
+	}
+	if hdr == nil {
+		hdr = jws.NewHeaders()
+	}
+
+	kid := key.KeyID()
+	if kid != "" {
+		if err := hdr.Set(jwk.KeyIDKey, kid); err != nil {
+			return nil, errors.Wrap(err, `failed to sign payload`)
+		}
+	}
+
+	var rawKey interface{}
+	if err := key.Raw(&rawKey); err != nil {
+		return nil, errors.Wrap(err, `failed to sign payload`)
+	}
+
+	return Sign(t, jwa.SignatureAlgorithm(key.Algorithm()), rawKey, WithHeaders(hdr))
+}

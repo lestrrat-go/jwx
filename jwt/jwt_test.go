@@ -338,3 +338,23 @@ func TestSignErrors(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "missing private key")
 }
+
+func TestSignWithKey(t *testing.T) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.Nil(t, err)
+
+	key := jwk.NewRSAPrivateKey()
+	err = key.FromRaw(priv)
+	assert.Nil(t, err)
+
+	key.Set(jwk.KeyIDKey, "test")
+	key.Set(jwk.AlgorithmKey, jwa.RS256)
+
+	tok := jwt.New()
+	signed, err := jwt.SignWithKey(tok, key)
+	assert.Nil(t, err)
+
+	header, err := jws.ParseString(string(signed))
+	signatures := header.LookupSignature("test")
+	assert.Len(t, signatures, 1)
+}
