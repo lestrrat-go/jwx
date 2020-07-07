@@ -355,6 +355,8 @@ func TestSignWithKey(t *testing.T) {
 	assert.Nil(t, err)
 
 	header, err := jws.ParseString(string(signed))
+	assert.Nil(t, err)
+
 	signatures := header.LookupSignature("test")
 	assert.Len(t, signatures, 1)
 }
