@@ -68,11 +68,31 @@ func (s *payloadSigner) PublicHeader() Headers {
 //
 // If you would like to pass custom headers, use the WithHeaders option.
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
-	var hdrs Headers = NewHeaders()
+	var hdrs Headers
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyHeaders:
 			hdrs = o.Value().(Headers)
+		}
+	}
+
+	if hdrs == nil {
+		hdrs = NewHeaders()
+	}
+
+	// If the key is a jwk.Key instance, obtain the raw key
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var tmp interface{}
+		if err := jwkKey.Raw(&tmp); err != nil {
+			return nil, errors.Wrap(err, `failed to get raw key from jwk.Key instance`)
+		}
+		key = tmp
+
+		// If we have a key ID specified by this jwk.Key, use that in the header
+		if kid := jwkKey.KeyID(); kid != "" {
+			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
+				return nil, errors.Wrap(err, `failed to sign payload`)
+			}
 		}
 	}
 
