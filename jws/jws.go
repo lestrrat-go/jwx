@@ -91,7 +91,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		// If we have a key ID specified by this jwk.Key, use that in the header
 		if kid := jwkKey.KeyID(); kid != "" {
 			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
-				return nil, errors.Wrap(err, `failed to sign payload`)
+				return nil, errors.Wrap(err, `set key ID from jwk.Key`)
 			}
 		}
 	}
