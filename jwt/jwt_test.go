@@ -332,7 +332,7 @@ func TestSignErrors(t *testing.T) {
 	tok := jwt.New()
 	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid value for alg key")
+	assert.Contains(t, err.Error(), "unsupported signature algorithm BOGUS")
 
 	_, err = jwt.Sign(tok, jwa.ES256, nil)
 	assert.Error(t, err)
