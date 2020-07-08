@@ -1,6 +1,13 @@
 Changes
 =======
 
+v1.0.3 - 08 Jul 2020
+  * `jws.Sign`, and therefore `jwt.Sign` now accept `jwk.Key` as the
+    key to use for signature. (#199)
+  * `jwt.Sign` could sometimes return a nil error when setting bad
+    values to the protected header failed (#195)
+  * More golangci-lint cleanup (#193)
+
 v1.0.2 - 07 May 2020
   * Since 1.0.0, we took somet time to play the test coverage game.
 	  The coverage is around 30% better, and we _did_ uncover some
