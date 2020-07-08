@@ -332,9 +332,31 @@ func TestSignErrors(t *testing.T) {
 	tok := jwt.New()
 	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid value for alg key")
+	assert.Contains(t, err.Error(), "unsupported signature algorithm BOGUS")
 
 	_, err = jwt.Sign(tok, jwa.ES256, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "missing private key")
+}
+
+func TestSignJWK(t *testing.T) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.Nil(t, err)
+
+	key := jwk.NewRSAPrivateKey()
+	err = key.FromRaw(priv)
+	assert.Nil(t, err)
+
+	key.Set(jwk.KeyIDKey, "test")
+	key.Set(jwk.AlgorithmKey, jwa.RS256)
+
+	tok := jwt.New()
+	signed, err := jwt.Sign(tok, jwa.SignatureAlgorithm(key.Algorithm()), key)
+	assert.Nil(t, err)
+
+	header, err := jws.ParseString(string(signed))
+	assert.Nil(t, err)
+
+	signatures := header.LookupSignature("test")
+	assert.Len(t, signatures, 1)
 }
