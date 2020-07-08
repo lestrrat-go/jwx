@@ -38,6 +38,51 @@ func Example_jwt() {
 		fmt.Printf("privateClaimKey -> '%s'\n", v)
 	}
 	fmt.Printf("sub -> '%s'\n", t.Subject())
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		log.Printf("failed to generate private key: %s", err)
+		return
+	}
+
+	{
+		// Signing a token (using raw rsa.PrivateKey)
+		signed, err := jwt.Sign(t, jwa.RS256, key)
+		if err != nil {
+			log.Printf("failed to sign token: %s", err)
+			return
+		}
+		_ = signed
+	}
+
+	{
+		// Signing a token (using JWK)
+		jwkKey, err := jwk.New(key)
+		if err != nil {
+			log.Printf("failed to create JWK key: %s", err)
+			return
+		}
+
+		signed, err := jwt.Sign(t, jwa.RS256, jwkKey)
+		if err != nil {
+			log.Printf("failed to sign token: %s", err)
+			return
+		}
+		_ = signed
+	}
+	// OUTPUT:
+	// {
+	//   "aud": [
+	//     "Golang Users"
+	//   ],
+	//   "iat": 233431200,
+	//   "sub": "https://github.com/lestrrat-go/jwx/jwt",
+	//   "privateClaimKey": "Hello, World!"
+	// }
+	// aud -> '[Golang Users]'
+	// iat -> '1977-05-25T18:00:00Z'
+	// privateClaimKey -> 'Hello, World!'
+	// sub -> 'https://github.com/lestrrat-go/jwx/jwt'
 }
 
 func Example_openid() {
