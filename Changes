@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.0.4 - 15 Aug 2020
+  * Fix jwt.WithOpenIDClaims(). Looks like something got lost along
+    the way, and it never really worked. (#201 #202)
+
 v1.0.3 - 08 Jul 2020
   * `jws.Sign`, and therefore `jwt.Sign` now accept `jwk.Key` as the
     key to use for signature. (#199)
