@@ -1,12 +1,17 @@
 package openid_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/stretchr/testify/assert"
@@ -436,6 +441,34 @@ func TestOpenIDClaims(t *testing.T) {
 			return
 		}
 		tokens = append(tokens, openidTokTestCase{Name: `token constructed by Marshal(openid.Token)+Unmashal`, Token: token2})
+
+		// Sign it, and use jwt.Parse
+
+		var token3 openid.Token
+		{
+			alg := jwa.RS256
+			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			if !assert.NoError(t, err, `rsa.GeneraKey should succeed`) {
+				return
+			}
+			signed, err := jwt.Sign(token, alg, key)
+			if !assert.NoError(t, err, `jwt.Sign should succeed`) {
+				return
+			}
+
+			tokenTmp, err := jwt.Parse(bytes.NewReader(signed), jwt.WithOpenIDClaims(), jwt.WithVerify(alg, &key.PublicKey))
+			if !assert.NoError(t, err, `parsing the token via jwt.Parse should succeed`) {
+				return
+			}
+
+			// Check if token is an OpenID token
+			if _, ok := tokenTmp.(openid.Token); !assert.True(t, ok, `token should be a openid.Token (%T)`, tokenTmp) {
+				return
+			}
+			token3 = tokenTmp.(openid.Token)
+		}
+
+		tokens = append(tokens, openidTokTestCase{Name: `token constructed by jwt.Parse`, Token: token3})
 	}
 
 	for _, token := range tokens {
