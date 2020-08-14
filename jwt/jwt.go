@@ -35,12 +35,15 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
+	var token Token
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyVerify:
 			params = o.Value().(VerifyParameters)
 		case optkeyKeySet:
 			keyset = o.Value().(*jwk.Set)
+		case optkeyToken:
+			token = o.Value().(Token)
 		}
 	}
 
@@ -57,19 +60,19 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to find matching key for verification`)
 		}
-		return parse(data, true, alg, key)
+		return parse(token, data, true, alg, key)
 	}
 
 	if params != nil {
-		return parse(data, true, params.Algorithm(), params.Key())
+		return parse(token, data, true, params.Algorithm(), params.Key())
 	}
 
-	return parse(data, false, "", nil)
+	return parse(token, data, false, "", nil)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {
 	var payload []byte
 	if verify {
 		v, err := jws.Verify(data, alg, key)
@@ -88,7 +91,9 @@ func parse(data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}
 		payload = m.Payload()
 	}
 
-	token := New()
+	if token == nil {
+		token = New()
+	}
 	if err := json.Unmarshal(payload, token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
@@ -130,12 +135,7 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set) (jwa.SignatureAlgorithm, in
 // choose the key to use using the Key IDs, use the jwt.WithKeySet option
 // along with the jwt.Parse function.
 func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {
-	data, err := ioutil.ReadAll(src)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to read token from source`)
-	}
-
-	return parse(data, true, alg, key)
+	return Parse(src, WithVerify(alg, key))
 }
 
 // Sign is a convenience function to create a signed JWT token serialized in
