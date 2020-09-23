@@ -205,7 +205,7 @@ func TestVerifyClaims(t *testing.T) {
 
 		const DefaultSkew = 0
 
-		args := []jwt.Option{
+		args := []jwt.VerifyOption{
 			jwt.WithClock(jwt.ClockFunc(func() time.Time { return now })),
 			jwt.WithAcceptableSkew(DefaultSkew),
 		}

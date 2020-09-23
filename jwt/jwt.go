@@ -13,16 +13,82 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
+	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/pkg/errors"
 )
 
+type ParseOption func(*parseOptions)
+
+type parseOptions struct {
+	params VerifyParameters
+	keyset *jwk.Set
+	token  Token
+}
+
+type VerifyParameters interface {
+	Algorithm() jwa.SignatureAlgorithm
+	Key() interface{}
+}
+
+type verifyParams struct {
+	alg jwa.SignatureAlgorithm
+	key interface{}
+}
+
+func (p *verifyParams) Algorithm() jwa.SignatureAlgorithm {
+	return p.alg
+}
+
+func (p *verifyParams) Key() interface{} {
+	return p.key
+}
+
+// WithVerify forces the Parse method to verify the JWT message
+// using the given key. XXX Should have been named something like
+// WithVerificationKey
+func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
+	return func(po *parseOptions) {
+		po.params = &verifyParams{
+			alg: alg,
+			key: key,
+		}
+	}
+}
+
+// WithKeySet forces the Parse method to verify the JWT message
+// using one of the keys in the given key set. The key to be used
+// is chosen by matching the Key ID of the JWT and the ID of the
+// give keys.
+func WithKeySet(set *jwk.Set) ParseOption {
+	return func(po *parseOptions) {
+		po.keyset = set
+	}
+}
+
+// WithToken specifies the token instance that is used when parsing
+// JWT tokens.
+func WithToken(t Token) ParseOption {
+	return func(po *parseOptions) {
+		po.token = t
+	}
+}
+
+// WithOpenIDClaims is passed to the various JWT parsing functions, and
+// specifies that it should use an instance of `openid.Token` as the
+// destination to store the parsed results.
+//
+// This is exactly equivalent to specifying `jwt.WithToken(openid.New())`
+func WithOpenIDClaims() ParseOption {
+	return WithToken(openid.New())
+}
+
 // ParseString calls Parse with the given string
-func ParseString(s string, options ...Option) (Token, error) {
+func ParseString(s string, options ...ParseOption) (Token, error) {
 	return Parse(strings.NewReader(s), options...)
 }
 
 // ParseString calls Parse with the given byte sequence
-func ParseBytes(s []byte, options ...Option) (Token, error) {
+func ParseBytes(s []byte, options ...ParseOption) (Token, error) {
 	return Parse(bytes.NewReader(s), options...)
 }
 
@@ -32,19 +98,10 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // If the token is signed and you want to verify the payload, you must
 // pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
-func Parse(src io.Reader, options ...Option) (Token, error) {
-	var params VerifyParameters
-	var keyset *jwk.Set
-	var token Token
+func Parse(src io.Reader, options ...ParseOption) (Token, error) {
+	opts := parseOptions{}
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyVerify:
-			params = o.Value().(VerifyParameters)
-		case optkeyKeySet:
-			keyset = o.Value().(*jwk.Set)
-		case optkeyToken:
-			token = o.Value().(Token)
-		}
+		o(&opts)
 	}
 
 	// We're going to need the raw bytes regardless. Read it.
@@ -55,19 +112,19 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 
 	// If with matching kid is true, then look for the corresponding key in the
 	// given key set, by matching the "kid" key
-	if keyset != nil {
-		alg, key, err := lookupMatchingKey(data, keyset)
+	if opts.keyset != nil {
+		alg, key, err := lookupMatchingKey(data, opts.keyset)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to find matching key for verification`)
 		}
-		return parse(token, data, true, alg, key)
+		return parse(opts.token, data, true, alg, key)
 	}
 
-	if params != nil {
-		return parse(token, data, true, params.Algorithm(), params.Key())
+	if opts.params != nil {
+		return parse(opts.token, data, true, opts.params.Algorithm(), opts.params.Key())
 	}
 
-	return parse(token, data, false, "", nil)
+	return parse(opts.token, data, false, "", nil)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
@@ -138,6 +195,18 @@ func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (To
 	return Parse(src, WithVerify(alg, key))
 }
 
+type SignOption func(*signOptions)
+
+type signOptions struct {
+	hdr jws.Headers
+}
+
+func WithHeaders(hdr jws.Headers) SignOption {
+	return func(so *signOptions) {
+		so.hdr = hdr
+	}
+}
+
 // Sign is a convenience function to create a signed JWT token serialized in
 // compact form.
 //
@@ -153,13 +222,10 @@ func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (To
 //
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`.
-func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
-	var hdr jws.Headers
+func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
+	opts := signOptions{}
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyHeaders:
-			hdr = o.Value().(jws.Headers)
-		}
+		o(&opts)
 	}
 
 	buf, err := json.Marshal(t)
@@ -167,14 +233,14 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 		return nil, errors.Wrap(err, `failed to marshal token`)
 	}
 
-	if hdr == nil {
-		hdr = jws.NewHeaders()
+	if opts.hdr == nil {
+		opts.hdr = jws.NewHeaders()
 	}
 
-	if err := hdr.Set(`typ`, `JWT`); err != nil {
+	if err := opts.hdr.Set(`typ`, `JWT`); err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
-	sign, err := jws.Sign(buf, alg, key, jws.WithHeaders(hdr))
+	sign, err := jws.Sign(buf, alg, key, jws.WithHeaders(opts.hdr))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
 	}
