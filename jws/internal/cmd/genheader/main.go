@@ -209,6 +209,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
 
+	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
+
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")

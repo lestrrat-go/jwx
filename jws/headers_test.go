@@ -38,6 +38,7 @@ func TestHeader(t *testing.T) {
 		jws.X509CertChainKey:      certChain,
 		jws.X509CertThumbprintKey: "QzY0NjREMjkyQTI4RTU2RkE4MUJBRDExNzY1MUY1N0I4QjFCODlBOQ",
 		jws.X509URLKey:            "https://www.x509.com/key.pem",
+		"private":                 "boofoo",
 	}
 
 	t.Run("Type", func(t *testing.T) {
@@ -250,6 +251,17 @@ func TestHeader(t *testing.T) {
 				return
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
+				return
+			}
+		})
+		t.Run("PrivateParams", func(t *testing.T) {
+			pp := h.PrivateParams()
+			v, ok := pp["private"]
+			if !assert.True(t, ok, "key 'private' should exists") {
+				return
+			}
+
+			if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
 				return
 			}
 		})

@@ -18,6 +18,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509CertThumbprintKey:     "thumbprint",
 			jwk.X509CertThumbprintS256Key: "thumbprint256",
 			jwk.X509URLKey:                "cert1",
+			"private":                     "boofoo",
 		}
 
 		h, err := jwk.New([]byte("dummy"))
@@ -43,6 +44,19 @@ func TestHeader(t *testing.T) {
 				return
 			}
 		}
+
+		t.Run("Private params", func(t *testing.T) {
+			pp := h.PrivateParams()
+			v, ok := pp["private"]
+			if !assert.True(t, ok, "key 'private' should exists") {
+				return
+			}
+
+			if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
+				return
+			}
+		})
+
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
 		type dummyStruct struct {

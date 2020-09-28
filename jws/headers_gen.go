@@ -46,6 +46,7 @@ type Headers interface {
 	AsMap(ctx context.Context) (map[string]interface{}, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+	PrivateParams() map[string]interface{}
 }
 
 type stdHeaders struct {
