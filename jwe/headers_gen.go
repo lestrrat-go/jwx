@@ -60,6 +60,7 @@ type Headers interface {
 	Remove(string) error
 	Encode() ([]byte, error)
 	Decode([]byte) error
+	PrivateParams() map[string]interface{}
 }
 
 type stdHeaders struct {
