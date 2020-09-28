@@ -265,6 +265,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nEncode() ([]byte, error)")
 	fmt.Fprintf(&buf, "\nDecode([]byte) error")
 
+	// Access private parameters
+	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
+
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")

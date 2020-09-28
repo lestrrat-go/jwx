@@ -4,7 +4,7 @@ generate:
 	@$(MAKE) generate-jwa generate-jwk generate-jws generate-jwt
 
 generate-%:
-	@cd $(patsubst generate-%,%,$@); go generate 
+	@go generate $(shell pwd -P)/$(patsubst generate-%,%,$@)
 
 realclean:
 	rm coverage.out

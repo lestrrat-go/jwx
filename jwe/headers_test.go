@@ -48,6 +48,7 @@ func TestHeaders(t *testing.T) {
 		{Key: jwe.X509CertThumbprintKey, Value: "x5t blah"},
 		{Key: jwe.X509CertThumbprintS256Key, Value: "x5t#256 blah"},
 		{Key: jwe.X509URLKey, Value: "http://github.com/lestrrat-go/jwx"},
+		{Key: "private", Value: "boofoo"},
 	}
 
 	base := jwe.NewHeaders()
@@ -75,6 +76,18 @@ func TestHeaders(t *testing.T) {
 			if !assert.Equal(t, expected, got, "value should match") {
 				return
 			}
+		}
+	})
+	t.Run("PrivateParams", func(t *testing.T) {
+		h := base
+		pp := h.PrivateParams()
+		v, ok := pp["private"]
+		if !assert.True(t, ok, "key 'private' should exists") {
+			return
+		}
+
+		if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
+			return
 		}
 	})
 	t.Run("Encode", func(t *testing.T) {
