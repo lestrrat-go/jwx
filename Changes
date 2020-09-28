@@ -1,6 +1,14 @@
 Changes
 =======
 
+v1.0.5 - 28 Sep 2020
+  * Reinstate PrivateParams() method in jws and jwe packages.
+    These used to be available until v1.0.0, but somehow got lost during the
+    big change.
+    As a workaround for users of versions 1.0.0 to 1.0.4, you could have
+    achieved the same thing using AsMap() methods, albeit with a slight
+    performance penality (#205, #206)
+
 v1.0.4 - 15 Aug 2020
   * Fix jwt.WithOpenIDClaims(). Looks like something got lost along
     the way, and it never really worked. (#201 #202)
