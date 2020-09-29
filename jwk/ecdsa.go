@@ -172,16 +172,22 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	), nil
 }
 
+const (
+	ellipticCrv521ByteLength = 66 // (521 / 8) + 1
+)
+
 var crvFixedBufferPool = sync.Pool{
 	New: func() interface{} {
-		buf := make([]byte, 66)
+		// In most cases the curve bit size will be less than this length
+		// so allocate the maximum, and keep reusing
+		buf := make([]byte, ellipticCrv521ByteLength)
 		return &buf
 	},
 }
 
 func getCrvFixedBuffer(size int) []byte {
 	buf := *(crvFixedBufferPool.Get().(*[]byte))
-	if size > 66 && cap(buf) < size {
+	if size > ellipticCrv521ByteLength && cap(buf) < size {
 		buf = append(buf, make([]byte, size-cap(buf))...)
 	}
 	return buf[:size]
@@ -209,7 +215,7 @@ func crvPointToFixedBuffer(v *big.Int, crv elliptic.Curve) []byte {
 	case 224, 256, 384: // TODO: use constant?
 		inBytes = bits / 8
 	case 521:
-		inBytes = 66 // 65 + 1
+		inBytes = ellipticCrv521ByteLength
 	default:
 		inBytes = bits / 8
 		if (bits % 8) != 0 {
