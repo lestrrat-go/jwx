@@ -197,7 +197,6 @@ func releaseCrvFixedBuffer(buf []byte) {
 }
 
 func crvPointToFixedBuffer(v *big.Int, crv elliptic.Curve) []byte {
-
 	// We need to create a buffer that fits the entire curve.
 	// If the curve size is 66, that fits in 9 bytes. If the curve
 	// size is 64, it fits in 8 bytes.
