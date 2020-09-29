@@ -174,12 +174,13 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 var crvFixedBufferPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 66)
+		buf := make([]byte, 66)
+		return &buf
 	},
 }
 
 func getCrvFixedBuffer(size int) []byte {
-	buf := crvFixedBufferPool.Get().([]byte)
+	buf := *(crvFixedBufferPool.Get().(*[]byte))
 	if size > 66 && cap(buf) < size {
 		buf = append(buf, make([]byte, size-cap(buf))...)
 	}
@@ -192,7 +193,7 @@ func releaseCrvFixedBuffer(buf []byte) {
 	for i := 1; i < len(buf); i *= 2 {
 		copy(buf[i:], buf[:i])
 	}
-	crvFixedBufferPool.Put(buf)
+	crvFixedBufferPool.Put(&buf)
 }
 
 func crvPointToFixedBuffer(v *big.Int, crv elliptic.Curve) []byte {
