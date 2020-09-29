@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -157,12 +158,67 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PublicKey for thumbprint generation`)
 	}
+
+	xbuf := crvPointToFixedBuffer(key.X, key.Curve)
+	ybuf := crvPointToFixedBuffer(key.Y, key.Curve)
+	defer releaseCrvFixedBuffer(xbuf)
+	defer releaseCrvFixedBuffer(ybuf)
+
 	return ecdsaThumbprint(
 		hash,
 		key.Curve.Params().Name,
-		base64.EncodeToString(key.X.Bytes()),
-		base64.EncodeToString(key.Y.Bytes()),
+		base64.EncodeToString(xbuf),
+		base64.EncodeToString(ybuf),
 	), nil
+}
+
+var crvFixedBufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 66)
+	},
+}
+
+func getCrvFixedBuffer(size int) []byte {
+	buf := crvFixedBufferPool.Get().([]byte)
+	if size > 66 && cap(buf) < size {
+		buf = append(buf, make([]byte, size-cap(buf))...)
+	}
+	return buf[:size]
+}
+
+func releaseCrvFixedBuffer(buf []byte) {
+	buf = buf[:cap(buf)]
+	buf[0] = 0x0
+	for i := 1; i < len(buf); i *= 2 {
+		copy(buf[i:], buf[:i])
+	}
+	crvFixedBufferPool.Put(buf)
+}
+
+func crvPointToFixedBuffer(v *big.Int, crv elliptic.Curve) []byte {
+
+	// We need to create a buffer that fits the entire curve.
+	// If the curve size is 66, that fits in 9 bytes. If the curve
+	// size is 64, it fits in 8 bytes.
+	bits := crv.Params().BitSize
+
+	// For most common cases we know before hand what the byte length
+	// is going to be. optimize
+	var inBytes int
+	switch bits {
+	case 224, 256, 384: // TODO: use constant?
+		inBytes = bits / 8
+	case 521:
+		inBytes = 66 // 65 + 1
+	default:
+		inBytes = bits / 8
+		if (bits % 8) != 0 {
+			inBytes++
+		}
+	}
+
+	buf := getCrvFixedBuffer(inBytes)
+	return bigIntFillBytes(v, buf)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
@@ -172,10 +228,16 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PrivateKey for thumbprint generation`)
 	}
+
+	xbuf := crvPointToFixedBuffer(key.X, key.Curve)
+	ybuf := crvPointToFixedBuffer(key.Y, key.Curve)
+	defer releaseCrvFixedBuffer(xbuf)
+	defer releaseCrvFixedBuffer(ybuf)
+
 	return ecdsaThumbprint(
 		hash,
 		key.Curve.Params().Name,
-		base64.EncodeToString(key.X.Bytes()),
-		base64.EncodeToString(key.Y.Bytes()),
+		base64.EncodeToString(xbuf),
+		base64.EncodeToString(ybuf),
 	), nil
 }
