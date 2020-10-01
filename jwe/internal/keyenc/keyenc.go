@@ -15,11 +15,20 @@ import (
 	"hash"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
+
+// create a byte sequence that has 4 bytes length, then data
+func ndata(v []byte) []byte {
+	dst := make([]byte, len(v)+4)
+	binary.BigEndian.PutUint32(dst, uint32(len(v)))
+	copy(dst[4:], v)
+	return dst
+}
 
 // NewAESCGM creates a key-wrap encrypter using AES-CGM.
 // Although the name suggests otherwise, this does the decryption as well.
@@ -152,8 +161,15 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*8)
 
+	if !privkey.PublicKey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
+		return nil, errors.New(`public key must be on the same curve as private key`)
+	}
+
 	z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
-	kdf := concatkdf.New(crypto.SHA256, []byte(kw.algorithm.String()), z.Bytes(), kw.apu, kw.apv, pubinfo, []byte{})
+	zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
+	defer ecutil.ReleaseECPointBuffer(zBytes)
+
+	kdf := concatkdf.New(crypto.SHA256, ndata([]byte(kw.algorithm.String())), zBytes, ndata(kw.apu), ndata(kw.apv), pubinfo, []byte{})
 	kek := make([]byte, keysize)
 	if _, err := kdf.Read(kek); err != nil {
 		return nil, errors.Wrap(err, "failed to read kdf")
@@ -426,7 +442,7 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	}
 
 	if subtle.ConstantTimeCompare(buffer[:keywrapChunkLen], keywrapDefaultIV) == 0 {
-		return nil, errors.New("keywrap: failed to unwrap key")
+		return nil, errors.New("key unwrap: failed to unwrap key")
 	}
 
 	out := make([]byte, n*keywrapChunkLen)

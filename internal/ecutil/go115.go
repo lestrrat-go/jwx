@@ -1,6 +1,6 @@
 // +build go1.15
 
-package jwk
+package ecutil
 
 import (
 	"math/big"

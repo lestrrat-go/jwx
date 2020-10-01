@@ -140,6 +140,8 @@ const (
 	RecipientsKey           = "recipients"
 	TagKey                  = "tag"
 	UnprotectedHeadersKey   = "unprotected"
+	HeadersKey              = "header"
+	EncryptedKeyKey         = "encrypted_key"
 )
 
 func (m *Message) Set(k string, v interface{}) error {
@@ -200,9 +202,14 @@ type messageMarshalProxy struct {
 	CipherText           *buffer.Buffer    `json:"ciphertext"`
 	InitializationVector *buffer.Buffer    `json:"iv,omitempty"`
 	ProtectedHeaders     json.RawMessage   `json:"protected"`
-	Recipients           []json.RawMessage `json:"recipients"`
+	Recipients           []json.RawMessage `json:"recipients,omitempty"`
 	Tag                  *buffer.Buffer    `json:"tag,omitempty"`
 	UnprotectedHeaders   Headers           `json:"unprotected,omitempty"`
+
+	// For flattened structure. Headers is NOT a Headers type,
+	// so that we can detect its presence by checking proxy.Headers != nil
+	Headers      json.RawMessage `json:"header,omitempty"`
+	EncryptedKey buffer.Buffer   `json:"encrypted_key,omitempty"`
 }
 
 func (m *Message) MarshalJSON() ([]byte, error) {
@@ -257,16 +264,34 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if wrote {
-		fmt.Fprintf(&buf, `,`)
-	}
-	fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
-	if err := enc.Encode(m.Recipients()); err != nil {
-		return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
+	if recipients := m.Recipients(); len(recipients) > 0 {
+		if wrote {
+			fmt.Fprintf(&buf, `,`)
+		}
+		if len(recipients) == 1 { // Use flattened format
+			fmt.Fprintf(&buf, `%#v:`, HeadersKey)
+			if err := enc.Encode(recipients[0].Headers()); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode %s field`, HeadersKey)
+			}
+			if ek := recipients[0].EncryptedKey(); ek.Len() > 0 {
+				fmt.Fprintf(&buf, `,%#v:`, EncryptedKeyKey)
+				if err := enc.Encode(ek); err != nil {
+					return nil, errors.Wrapf(err, `failed to encode %s field`, EncryptedKeyKey)
+				}
+			}
+		} else {
+			fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
+			if err := enc.Encode(recipients); err != nil {
+				return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
+			}
+		}
 	}
 
 	if tag := m.Tag(); len(tag) > 0 {
-		fmt.Fprintf(&buf, `,%#v:`, TagKey)
+		if wrote {
+			fmt.Fprintf(&buf, `,`)
+		}
+		fmt.Fprintf(&buf, `%#v:`, TagKey)
 		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
 		}
@@ -305,13 +330,27 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return errors.Wrap(err, `failed to decode protected headers`)
 	}
 
-	for i, recipientbuf := range proxy.Recipients {
+	// if this were a flattened message, we would see a "header" and "ciphertext"
+	// field. TODO: do both of these conditions need to meet, or just one?
+	if proxy.Headers != nil || len(proxy.EncryptedKey) > 0 {
 		recipient := NewRecipient()
-		if err := json.Unmarshal(recipientbuf, recipient); err != nil {
-			return errors.Wrapf(err, `failed to decode recipient at index %d`, i)
+		hdrs := NewHeaders()
+		if err := json.Unmarshal(proxy.Headers, hdrs); err != nil {
+			return errors.Wrap(err, `failed to decode headers field`)
 		}
 
+		recipient.SetHeaders(hdrs)
+		recipient.SetEncryptedKey(proxy.EncryptedKey)
 		m.recipients = append(m.recipients, recipient)
+	} else {
+		for i, recipientbuf := range proxy.Recipients {
+			recipient := NewRecipient()
+			if err := json.Unmarshal(recipientbuf, recipient); err != nil {
+				return errors.Wrapf(err, `failed to decode recipient at index %d`, i)
+			}
+
+			m.recipients = append(m.recipients, recipient)
+		}
 	}
 
 	m.authenticatedData = proxy.AuthenticatedData
@@ -322,6 +361,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if !proxy.UnprotectedHeaders.(isZeroer).isZero() {
 		m.unprotectedHeaders = proxy.UnprotectedHeaders
 	}
+
 	return nil
 }
 
@@ -329,11 +369,10 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	var err error
 
-	if len(m.recipients) == 0 {
-		return nil, errors.New("no recipients, can not proceed with decrypt")
+	if pdebug.Enabled {
+		g := pdebug.Marker("message.Decrypt (alg = %s)", alg)
+		defer g.End()
 	}
-
-	enc := m.protectedHeaders.ContentEncryption()
 
 	h, err := mergeHeaders(context.TODO(), nil, m.protectedHeaders)
 	if err != nil {
@@ -347,9 +386,13 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
 	}
 
-	aad, err := m.authenticatedData.Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
+	enc := m.protectedHeaders.ContentEncryption()
+	var aad []byte
+	if aadContainer := m.authenticatedData; aadContainer != nil {
+		aad, err = aadContainer.Base64Encode()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
+		}
 	}
 	ciphertext := m.cipherText.Bytes()
 	iv := m.initializationVector.Bytes()
@@ -409,7 +452,8 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if pdebug.Enabled {
 				pdebug.Printf(`%s`, lastError)
 			}
-			continue
+			return nil, lastError
+			//			continue
 		}
 
 		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, aad)

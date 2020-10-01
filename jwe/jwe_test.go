@@ -1,10 +1,12 @@
 package jwe_test
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -198,7 +200,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		{
 			Name:     "JSON",
 			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
-			Expected: `{"aad":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJlbmMiOiJBMjU2R0NNIn0","recipients":[{"header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"}],"tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
+			Expected: `{"aad":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJlbmMiOiJBMjU2R0NNIn0","header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg","tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
 		},
 		{
 			Name: "JSON (Pretty)",
@@ -208,14 +210,10 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
   "protected": "eyJlbmMiOiJBMjU2R0NNIn0",
-  "recipients": [
-    {
-      "header": {
-        "alg": "RSA-OAEP"
-      },
-      "encrypted_key": "OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg"
-    }
-  ],
+  "header": {
+    "alg": "RSA-OAEP"
+  },
+  "encrypted_key": "OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg",
   "tag": "XFBoMYUZodetZdvTiFvSkQ"
 }`,
 		},
@@ -451,6 +449,59 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 	}
 	_, err := jwe.Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
 	if !assert.Error(t, err, "should fail to encrypt payload") {
+		return
+	}
+}
+
+func Test_GHIssue207(t *testing.T) {
+	webKeys, err := jwk.ParseString(`{"alg":"ECDH-ES+A256KW","crv":"P-521","d":"AcH8h_ctsMnopTiCH7wiuM-nAb1CNikC0ubcOZQDLYSVEw93h6_D57aD7DLWbjIsVNzn7Qq8P-kRiTYVoH5GTQVg","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"AAQoEbNeiG3ExYj9bJLGFn4h_bFjERfIcmpQMW5KWlFhqcXTFg0g8-5YWjdJXdNmO_2EuaKe7zOvEq8dCFCb12-R","y":"Ad8E2jp6FSCSd8laERqIt67A2T-MIqQE5301jNYb5SMsCSV1rs1McyvhzHaclYcqTUptoA-rW5kNS9N5124XPHky"}`)
+	if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+		return
+	}
+	webKey := webKeys.Keys[0]
+	thumbprint, err := webKey.Thumbprint(crypto.SHA1)
+	if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
+		return
+	}
+
+	const plaintext = "hi"
+	const expectedThumbprint = "G4OtKQL_qr9Q57atNOU6SJnJxB8"
+	if !assert.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), expectedThumbprint, `thumbprints should match`) {
+		return
+	}
+
+	var key ecdsa.PrivateKey
+	if !assert.NoError(t, webKey.Raw(&key), `jwk.Raw should succeed`) {
+		return
+	}
+
+	const data = `{"ciphertext":"evXmzoQ5TWQvEXdpv9ZCBQ","encrypted_key":"ceVsjF-0LhziK75oHRC-C539hlFJMSbub015a3YtIBgCt7c0IRzkzwoOvo_Jf44FXZi0Vd-4fvDjRkZDzx9DcuDd4ASYDLvW","header":{"alg":"ECDH-ES+A256KW","epk":{"crv":"P-521","kty":"EC","x":"Aad7PFl9cct7WcfM3b_LNkhCHfCotW_nRuarX7GACDyyZkr2dd1g6r3rz-8r2-AyOGD9gc2nhrTEjVHT2W7eu65U","y":"Ab0Mj6BK8g3Fok6oyFlkvKOyquEVxeeJOlsyXKYBputPxFT5Gljr2FoJdViAxVspoSiw1K5oG1h59UBJgPWG4GQV"}},"iv":"KsJgq2xyzE1dZi2BM2xf5g","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"b6m_nW9vfk6xJugm_-Uuj4cbAQh9ECelLc1ZBfO86L0"}`
+	msg, err := jwe.ParseString(data)
+	if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
+		return
+	}
+
+	{
+		var m map[string]interface{}
+		json.Unmarshal([]byte(data), &m)
+
+		buf, _ := json.MarshalIndent(m, "", "  ")
+		t.Logf("%s", buf)
+	}
+
+	{
+		buf, err := json.MarshalIndent(msg, "", "  ")
+		t.Logf("%s", err)
+		t.Logf("%s", buf)
+	}
+
+	descrypted, err := msg.Decrypt(jwa.ECDH_ES_A256KW, &key)
+	if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
+		return
+	}
+
+	expected := "hi"
+	if !assert.Equal(t, string(descrypted), expected, `plaintext should match`) {
 		return
 	}
 }
