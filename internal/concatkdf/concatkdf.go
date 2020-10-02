@@ -3,7 +3,6 @@ package concatkdf
 import (
 	"crypto"
 	"encoding/binary"
-	"hash"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/pkg/errors"
@@ -11,9 +10,8 @@ import (
 
 type KDF struct {
 	buf       []byte
-	hash      hash.Hash
+	hash      crypto.Hash
 	otherinfo []byte
-	round     uint32
 	z         []byte
 }
 
@@ -30,19 +28,20 @@ func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 	copy(concat[n:], privinfo)
 
 	return &KDF{
-		hash:      hash.New(),
+		hash:      hash,
 		otherinfo: concat,
-		round:     1,
 		z:         Z,
 	}
 }
 
-func (k *KDF) Read(buf []byte) (int, error) {
-	h := k.hash
-	for len(buf) > len(k.buf) {
+func (k *KDF) Read(out []byte) (int, error) {
+	var round uint32 = 1
+	h := k.hash.New()
+
+	for len(out) > len(k.buf) {
 		h.Reset()
 
-		if err := binary.Write(h, binary.BigEndian, k.round); err != nil {
+		if err := binary.Write(h, binary.BigEndian, round); err != nil {
 			return 0, errors.Wrap(err, "failed to write round using kdf")
 		}
 		if _, err := h.Write(k.z); err != nil {
@@ -53,10 +52,10 @@ func (k *KDF) Read(buf []byte) (int, error) {
 		}
 
 		k.buf = append(k.buf, h.Sum(nil)...)
-		k.round++
+		round++
 	}
 
-	n := copy(buf, k.buf[:len(buf)])
-	k.buf = k.buf[len(buf):]
+	n := copy(out, k.buf[:len(out)])
+	k.buf = k.buf[len(out):]
 	return n, nil
 }
