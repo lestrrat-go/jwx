@@ -364,33 +364,6 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 }
 
-func TestEncode_ECDHES(t *testing.T) {
-	plaintext := []byte("Lorem ipsum")
-	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if !assert.NoError(t, err, "ecdsa key generated") {
-		return
-	}
-
-	encrypted, err := jwe.Encrypt(plaintext, jwa.ECDH_ES_A128KW, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
-	if !assert.NoError(t, err, "Encrypt succeeds") {
-		return
-	}
-
-	msg, err := jwe.Parse(encrypted)
-	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-		t.Logf("%s", encrypted)
-		return
-	}
-
-	decrypted, err := jwe.Decrypt(encrypted, jwa.ECDH_ES_A128KW, privkey)
-	if !assert.NoError(t, err, "Decrypt succeeds") {
-		jsonbuf, _ := json.Marshal(msg)
-		t.Logf("%s", jsonbuf)
-		return
-	}
-	t.Logf("%s", decrypted)
-}
-
 func TestEncode_ECDH(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
 	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -454,54 +427,70 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 }
 
 func Test_GHIssue207(t *testing.T) {
-	webKeys, err := jwk.ParseString(`{"alg":"ECDH-ES+A256KW","crv":"P-521","d":"AcH8h_ctsMnopTiCH7wiuM-nAb1CNikC0ubcOZQDLYSVEw93h6_D57aD7DLWbjIsVNzn7Qq8P-kRiTYVoH5GTQVg","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"AAQoEbNeiG3ExYj9bJLGFn4h_bFjERfIcmpQMW5KWlFhqcXTFg0g8-5YWjdJXdNmO_2EuaKe7zOvEq8dCFCb12-R","y":"Ad8E2jp6FSCSd8laERqIt67A2T-MIqQE5301jNYb5SMsCSV1rs1McyvhzHaclYcqTUptoA-rW5kNS9N5124XPHky"}`)
-	if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
-		return
-	}
-	webKey := webKeys.Keys[0]
-	thumbprint, err := webKey.Thumbprint(crypto.SHA1)
-	if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
-		return
-	}
-
 	const plaintext = "hi"
-	const expectedThumbprint = "G4OtKQL_qr9Q57atNOU6SJnJxB8"
-	if !assert.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), expectedThumbprint, `thumbprints should match`) {
-		return
+	var testcases = []struct {
+		Algorithm jwa.KeyEncryptionAlgorithm
+		Key        string
+		Data       string
+		Thumbprint string
+		Name       string
+	}{
+		{
+			Name:       `ECDH-ES`,
+			Algorithm: jwa.ECDH_ES,
+			Key:        `{"alg":"ECDH-ES","crv":"P-521","d":"ARxUkIjnB7pjFzM2OIIFcclR-4qbZwv7DoC96cksPKyvVWOkEsZ0CK6deM4AC6G5GClR5TXWMQVC_bNDmfuwPPqF","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"ACewmG5j0POUDQw3rIqFQozK_6yXUsfNjiZtWqQOU7MXsSKK9RsRS8ySmeTG14heUpbbnrC9VdYKSOUGkYnYUl2Y","y":"ACkXSOma_FP93R3u5uYX7gUOlM0LDkNsij9dVFPbafF8hlfYEnUGit2o-tt7W0Zq3t38jEhpjUoGgM04JDJ6_m0x"}`,
+			Data:       `{"ciphertext":"sp0cLt4Rx1p0Ax0Q1OZj7w","header":{"alg":"ECDH-ES","epk":{"crv":"P-521","kty":"EC","x":"APMKQpje5vu39-eS_LX_g15stqbNZ37GgYimW8PZf7d_OOuAygK2YlINYnPoUybrxkoaLRPhbmxc9MBWFdaY8SXx","y":"AMpq4DFi6w-pfnprO58CkfX-ncXtJ8fvox2Ej8Ey3ZY1xjVUtbDJCDCjY53snYaNCEjnFQPAn-IkAG90p2Xcm8ut"}},"iv":"Fjnb5uUWp9euqp1MK_hT4A","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"6nhiy-vyqwVjpy08jrorTpWqvam66HdKxU36XsE3Z3s"}`,
+			Thumbprint: `0_6x6e2sZKeq3ka0QV0PEkJagqg`,
+		},
+		{
+			Name:       `ECDH-ES+A256KW`,
+			Algorithm: jwa.ECDH_ES_A256KW,
+			Key:        `{"alg":"ECDH-ES+A256KW","crv":"P-521","d":"AcH8h_ctsMnopTiCH7wiuM-nAb1CNikC0ubcOZQDLYSVEw93h6_D57aD7DLWbjIsVNzn7Qq8P-kRiTYVoH5GTQVg","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"AAQoEbNeiG3ExYj9bJLGFn4h_bFjERfIcmpQMW5KWlFhqcXTFg0g8-5YWjdJXdNmO_2EuaKe7zOvEq8dCFCb12-R","y":"Ad8E2jp6FSCSd8laERqIt67A2T-MIqQE5301jNYb5SMsCSV1rs1McyvhzHaclYcqTUptoA-rW5kNS9N5124XPHky"}`,
+			Data:       `{"ciphertext":"evXmzoQ5TWQvEXdpv9ZCBQ","encrypted_key":"ceVsjF-0LhziK75oHRC-C539hlFJMSbub015a3YtIBgCt7c0IRzkzwoOvo_Jf44FXZi0Vd-4fvDjRkZDzx9DcuDd4ASYDLvW","header":{"alg":"ECDH-ES+A256KW","epk":{"crv":"P-521","kty":"EC","x":"Aad7PFl9cct7WcfM3b_LNkhCHfCotW_nRuarX7GACDyyZkr2dd1g6r3rz-8r2-AyOGD9gc2nhrTEjVHT2W7eu65U","y":"Ab0Mj6BK8g3Fok6oyFlkvKOyquEVxeeJOlsyXKYBputPxFT5Gljr2FoJdViAxVspoSiw1K5oG1h59UBJgPWG4GQV"}},"iv":"KsJgq2xyzE1dZi2BM2xf5g","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"b6m_nW9vfk6xJugm_-Uuj4cbAQh9ECelLc1ZBfO86L0"}`,
+			Thumbprint: `G4OtKQL_qr9Q57atNOU6SJnJxB8`,
+		},
 	}
 
-	var key ecdsa.PrivateKey
-	if !assert.NoError(t, webKey.Raw(&key), `jwk.Raw should succeed`) {
-		return
-	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			webKeys, err := jwk.ParseString(tc.Key)
+			if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+				return
+			}
+			webKey := webKeys.Keys[0]
+			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
+			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
+				return
+			}
 
-	const data = `{"ciphertext":"evXmzoQ5TWQvEXdpv9ZCBQ","encrypted_key":"ceVsjF-0LhziK75oHRC-C539hlFJMSbub015a3YtIBgCt7c0IRzkzwoOvo_Jf44FXZi0Vd-4fvDjRkZDzx9DcuDd4ASYDLvW","header":{"alg":"ECDH-ES+A256KW","epk":{"crv":"P-521","kty":"EC","x":"Aad7PFl9cct7WcfM3b_LNkhCHfCotW_nRuarX7GACDyyZkr2dd1g6r3rz-8r2-AyOGD9gc2nhrTEjVHT2W7eu65U","y":"Ab0Mj6BK8g3Fok6oyFlkvKOyquEVxeeJOlsyXKYBputPxFT5Gljr2FoJdViAxVspoSiw1K5oG1h59UBJgPWG4GQV"}},"iv":"KsJgq2xyzE1dZi2BM2xf5g","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"b6m_nW9vfk6xJugm_-Uuj4cbAQh9ECelLc1ZBfO86L0"}`
-	msg, err := jwe.ParseString(data)
-	if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
-		return
-	}
+			if !assert.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`) {
+				return
+			}
 
-	{
-		var m map[string]interface{}
-		json.Unmarshal([]byte(data), &m)
+			var key ecdsa.PrivateKey
+			if !assert.NoError(t, webKey.Raw(&key), `jwk.Raw should succeed`) {
+				return
+			}
 
-		buf, _ := json.MarshalIndent(m, "", "  ")
-		t.Logf("%s", buf)
-	}
+			msg, err := jwe.ParseString(tc.Data)
+			if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
+				return
+			}
 
-	{
-		buf, err := json.MarshalIndent(msg, "", "  ")
-		t.Logf("%s", err)
-		t.Logf("%s", buf)
-	}
+			{
+				buf, _ := json.MarshalIndent(msg, "", "  ")
+				t.Logf("%s", buf)
+			}
 
-	descrypted, err := msg.Decrypt(jwa.ECDH_ES_A256KW, &key)
-	if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-		return
-	}
+			decrypted, err := msg.Decrypt(tc.Algorithm, &key)
+			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
+				return
+			}
 
-	expected := "hi"
-	if !assert.Equal(t, string(descrypted), expected, `plaintext should match`) {
-		return
+			if !assert.Equal(t, string(decrypted), plaintext, `plaintext should match`) {
+				return
+			}
+		})
 	}
 }
