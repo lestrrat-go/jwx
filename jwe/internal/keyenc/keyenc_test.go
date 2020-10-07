@@ -118,7 +118,7 @@ func TestDeriveECDHES(t *testing.T) {
 
 	expected := []byte{86, 170, 141, 234, 248, 35, 109, 32, 92, 34, 40, 205, 113, 167, 16, 26}
 
-	output, err := keyenc.DeriveECDHES("A128GCM", apuData, apvData, &bobKey, &aliceKey.PublicKey, 16)
+	output, err := keyenc.DeriveECDHES([]byte("A128GCM"), apuData, apvData, &bobKey, &aliceKey.PublicKey, 16)
 	if !assert.NoError(t, err, `keyenc.DeriveECDHES should succeed`) {
 		return
 	}
