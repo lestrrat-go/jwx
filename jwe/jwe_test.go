@@ -379,8 +379,6 @@ func TestEncode_ECDH(t *testing.T) {
 	for _, alg := range algorithms {
 		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
-			t.Parallel()
-
 			encrypted, err := jwe.Encrypt(plaintext, alg, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
 			if !assert.NoError(t, err, "Encrypt succeeds") {
 				return
