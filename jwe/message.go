@@ -453,23 +453,32 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
-		if err != nil {
-			lastError = errors.Wrap(err, `failed to build key decrypter`)
-			if pdebug.Enabled {
-				pdebug.Printf(`%s`, lastError)
+		var cek []byte
+		if h2.Algorithm() == jwa.DIRECT {
+			var ok bool
+			cek, ok = key.([]byte)
+			if !ok {
+				return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 			}
-			continue
-		}
+		} else {
+			k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
+			if err != nil {
+				lastError = errors.Wrap(err, `failed to build key decrypter`)
+				if pdebug.Enabled {
+					pdebug.Printf(`%s`, lastError)
+				}
+				continue
+			}
 
-		cek, err := k.Decrypt(recipient.EncryptedKey().Bytes())
-		if err != nil {
-			lastError = errors.Wrap(err, `failed to decrypt key`)
-			if pdebug.Enabled {
-				pdebug.Printf(`%s`, lastError)
+			cek, err = k.Decrypt(recipient.EncryptedKey().Bytes())
+			if err != nil {
+				lastError = errors.Wrap(err, `failed to decrypt key`)
+				if pdebug.Enabled {
+					pdebug.Printf(`%s`, lastError)
+				}
+				return nil, lastError
+				//			continue
 			}
-			return nil, lastError
-			//			continue
 		}
 
 		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, computedAad)
