@@ -343,7 +343,10 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			return errors.Wrap(err, `failed to set new headers`)
 		}
 
-		recipient.SetEncryptedKey(proxy.EncryptedKey)
+		if err := recipient.SetEncryptedKey(proxy.EncryptedKey); err != nil {
+			return errors.Wrap(err, `failed to set encryption key`)
+		}
+
 		m.recipients = append(m.recipients, recipient)
 	} else {
 		for i, recipientbuf := range proxy.Recipients {
