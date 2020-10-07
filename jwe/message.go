@@ -339,7 +339,10 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			return errors.Wrap(err, `failed to decode headers field`)
 		}
 
-		recipient.SetHeaders(hdrs)
+		if err := recipient.SetHeaders(hdrs); err != nil {
+			return errors.Wrap(err, `failed to set new headers`)
+		}
+
 		recipient.SetEncryptedKey(proxy.EncryptedKey)
 		m.recipients = append(m.recipients, recipient)
 	} else {
