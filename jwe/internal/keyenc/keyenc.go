@@ -186,7 +186,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		}
 
 		keysize = uint32(c.KeySize())
-	algBytes = []byte(kw.contentalg.String())
+		algBytes = []byte(kw.contentalg.String())
 	case jwa.ECDH_ES_A128KW:
 		keysize = 16
 	case jwa.ECDH_ES_A192KW:
