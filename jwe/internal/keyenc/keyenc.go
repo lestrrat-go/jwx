@@ -135,7 +135,7 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.keyalg
 }
 
-func DeriveECDHES(alg jwa.ContentEncryptionAlgorithm, apu, apv []byte, privkey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey, keysize uint32) ([]byte, error) {
+func DeriveECDHES(alg, apu, apv []byte, privkey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey, keysize uint32) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("DeriveECDHES (keysize = %d)", keysize)
 		defer g.End()
@@ -152,7 +152,7 @@ func DeriveECDHES(alg jwa.ContentEncryptionAlgorithm, apu, apv []byte, privkey *
 	zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
 	defer ecutil.ReleaseECPointBuffer(zBytes)
 
-	kdf := concatkdf.New(crypto.SHA256, []byte(alg.String()), zBytes, apu, apv, pubinfo, []byte{})
+	kdf := concatkdf.New(crypto.SHA256, alg, zBytes, apu, apv, pubinfo, []byte{})
 	key := make([]byte, keysize)
 	if _, err := kdf.Read(key); err != nil {
 		return nil, errors.Wrap(err, "failed to read kdf")
@@ -168,7 +168,12 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		defer g.End()
 	}
 
+	var algBytes []byte
 	var keysize uint32
+
+	// Use keyalg except for when jwa.ECDH_ES
+	algBytes = []byte(kw.keyalg.String())
+
 	switch kw.keyalg {
 	case jwa.ECDH_ES:
 		// Create a content cipher from the content encryption algorithm
@@ -181,6 +186,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		}
 
 		keysize = uint32(c.KeySize())
+	algBytes = []byte(kw.contentalg.String())
 	case jwa.ECDH_ES_A128KW:
 		keysize = 16
 	case jwa.ECDH_ES_A192KW:
@@ -191,7 +197,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		return nil, errors.Errorf("invalid ECDH-ES key wrap algorithm (%s)", kw.keyalg)
 	}
 
-	key, err := DeriveECDHES(kw.contentalg, kw.apu, kw.apv, kw.privkey, kw.pubkey, keysize)
+	key, err := DeriveECDHES(algBytes, kw.apu, kw.apv, kw.privkey, kw.pubkey, keysize)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to derive ECDHES encryption key`)
 	}

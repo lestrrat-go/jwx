@@ -22,6 +22,7 @@ func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 	apvbuf := buffer.Buffer(apv).NData()
 
 	if pdebug.Enabled {
+		pdebug.Printf("alg          = %s", alg)
 		pdebug.Printf("algID   (%d) = %x", len(algbuf), algbuf)
 		pdebug.Printf("zBytes  (%d) = %x", len(Z), Z)
 		pdebug.Printf("apu     (%d) = %x", len(apubuf), apubuf)
