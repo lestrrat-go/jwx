@@ -1,6 +1,5 @@
 // Package ecutil defines tools that help with elliptic curve related
 // computation
-
 package ecutil
 
 import (
