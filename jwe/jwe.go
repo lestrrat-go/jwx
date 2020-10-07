@@ -5,6 +5,7 @@ package jwe
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
@@ -175,20 +176,9 @@ func parseCompact(buf []byte) (*Message, error) {
 		pdebug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
-	hdr := NewHeaders()
-	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
-		return nil, errors.Wrap(err, "failed to parse header JSON")
-	}
-
-	// We need the protected header to contain the content encryption
-	// algorithm. XXX probably other headers need to go there too
 	protected := NewHeaders()
-	if err := protected.Set(ContentEncryptionKey, hdr.ContentEncryption()); err != nil {
-		return nil, errors.Wrapf(err, "failed to set %#v in protected header", ContentEncryptionKey)
-	}
-
-	if err := hdr.Remove(ContentEncryptionKey); err != nil {
-		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	if err := json.Unmarshal(hdrbuf, protected); err != nil {
+		return nil, errors.Wrap(err, "failed to parse header JSON")
 	}
 
 	var enckeybuf buffer.Buffer
@@ -212,9 +202,6 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	if err := m.Set(AuthenticatedDataKey, hdrbuf.Bytes()); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
-	}
 	if err := m.Set(CipherTextKey, ctbuf); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
 	}
@@ -225,9 +212,19 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
 	}
 
+	// Recipients in this case should not contain the content encryption key,
+	// so move that out
+	hdrs, err := mergeHeaders(context.TODO(), nil, protected)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to clone headers`)
+	}
+
+	if err := hdrs.Remove(ContentEncryptionKey); err != nil {
+		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	}
 	if err := m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
-			headers:      hdr,
+			headers:      hdrs,
 			encryptedKey: enckeybuf,
 		},
 	}); err != nil {

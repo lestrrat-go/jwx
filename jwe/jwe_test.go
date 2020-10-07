@@ -170,12 +170,12 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	if !assert.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1") {
-		return
+	{
+		buf, _ := json.MarshalIndent(msg, "", "  ")
+		t.Logf("%s", buf)
 	}
 
-	_, ok := msg.Recipients()[0].Headers().Get(jwe.ContentEncryptionKey)
-	if !assert.Equal(t, false, ok, "no content encryption key in message recipients header") {
+	if !assert.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1") {
 		return
 	}
 
@@ -201,16 +201,15 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		{
 			Name:     "JSON",
 			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
-			Expected: `{"aad":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJlbmMiOiJBMjU2R0NNIn0","header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg","tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
+			Expected: `{"ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg","tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
 		},
 		{
 			Name: "JSON (Pretty)",
 			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyJSONFormat(true)) },
 			Expected: `{
-  "aad": "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ",
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
-  "protected": "eyJlbmMiOiJBMjU2R0NNIn0",
+  "protected": "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ",
   "header": {
     "alg": "RSA-OAEP"
   },
@@ -519,7 +518,8 @@ func TestGoJoseCompatibility(t *testing.T) {
 					return
 				}
 
-				{ buf, _ := json.MarshalIndent(webkey, "", "  ")
+				{
+					buf, _ := json.MarshalIndent(webkey, "", "  ")
 					t.Logf("%s", buf)
 				}
 
@@ -528,7 +528,8 @@ func TestGoJoseCompatibility(t *testing.T) {
 					return
 				}
 
-				{ buf, _ := json.MarshalIndent(parsed, "", "  ")
+				{
+					buf, _ := json.MarshalIndent(parsed, "", "  ")
 					t.Logf("%s", buf)
 				}
 
