@@ -103,7 +103,7 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 	s := h.Sum(nil)
 	if pdebug.Enabled {
 		pdebug.Printf("ComputeAuthTag: buf        = %x (%d)\n", buf, len(buf))
-		pdebug.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.keysize], len(s[:c.keysize]))
+		pdebug.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.tagsize], len(s[:c.tagsize]))
 	}
 	return s[:c.tagsize], nil
 }
@@ -175,7 +175,7 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	tag := ciphertext[tagOffset:]
 	ciphertext = ciphertext[:tagOffset]
 
-	expectedTag, err := c.ComputeAuthTag(data, nonce, ciphertext)
+	expectedTag, err := c.ComputeAuthTag(data, nonce, ciphertext[:tagOffset])
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to compute auth tag`)
 	}
