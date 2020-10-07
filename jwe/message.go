@@ -394,6 +394,16 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
 		}
 	}
+
+	computedAad, err := m.protectedHeaders.Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode protected headers")
+	}
+
+	if aad != nil {
+		computedAad = append(append(computedAad, '.'), aad...)
+	}
+
 	ciphertext := m.cipherText.Bytes()
 	iv := m.initializationVector.Bytes()
 	tag := m.tag.Bytes()
@@ -456,7 +466,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			//			continue
 		}
 
-		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, aad)
+		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, computedAad)
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to decrypt payload`)
 			if pdebug.Enabled {
