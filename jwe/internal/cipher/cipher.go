@@ -41,7 +41,8 @@ func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 
 func (f cbcFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	if pdebug.Enabled {
-		pdebug.Printf("CbcAeadFetch: fetching key (%d)", len(key))
+		g := pdebug.Marker("cipher.CBCFetcher.Fetch")
+		defer g.End()
 	}
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
@@ -149,6 +150,11 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 }
 
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("cipher.AesContentCipher.Decrypt")
+		defer g.End()
+	}
+
 	aead, err := c.fetch.Fetch(cek)
 	if err != nil {
 		if pdebug.Enabled {

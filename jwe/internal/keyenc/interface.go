@@ -41,11 +41,12 @@ type ECDHESEncrypt struct {
 
 // ECDHESDecrypt decrypts keys using ECDH-ES.
 type ECDHESDecrypt struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	apu       []byte
-	apv       []byte
-	privkey   *ecdsa.PrivateKey
-	pubkey    *ecdsa.PublicKey
+	keyalg     jwa.KeyEncryptionAlgorithm
+	contentalg jwa.ContentEncryptionAlgorithm
+	apu        []byte
+	apv        []byte
+	privkey    *ecdsa.PrivateKey
+	pubkey     *ecdsa.PublicKey
 }
 
 // RSAOAEPEncrypt encrypts keys using RSA OAEP algorithm

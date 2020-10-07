@@ -17,18 +17,11 @@ import (
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
+	contentcipher "github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
-
-// create a byte sequence that has 4 bytes length, then data
-func ndata(v []byte) []byte {
-	dst := make([]byte, len(v)+4)
-	binary.BigEndian.PutUint32(dst, uint32(len(v)))
-	copy(dst[4:], v)
-	return dst
-}
 
 // NewAESCGM creates a key-wrap encrypter using AES-CGM.
 // Although the name suggests otherwise, this does the decryption as well.
@@ -126,37 +119,27 @@ func (kw ECDHESEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESDecrypt creates a new key decrypter using ECDH-ES
-func NewECDHESDecrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey, apu, apv []byte, privkey *ecdsa.PrivateKey) *ECDHESDecrypt {
+func NewECDHESDecrypt(keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, pubkey *ecdsa.PublicKey, apu, apv []byte, privkey *ecdsa.PrivateKey) *ECDHESDecrypt {
 	return &ECDHESDecrypt{
-		algorithm: alg,
-		apu:       apu,
-		apv:       apv,
-		privkey:   privkey,
-		pubkey:    pubkey,
+		keyalg:     keyalg,
+		contentalg: contentalg,
+		apu:        apu,
+		apv:        apv,
+		privkey:    privkey,
+		pubkey:     pubkey,
 	}
 }
 
 // Algorithm returns the key encryption algorithm being used
 func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
-	return kw.algorithm
+	return kw.keyalg
 }
 
-// Decrypt decrypts the encrypted key using ECDH-ES
-func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	var keysize uint32
-	switch kw.algorithm {
-	case jwa.ECDH_ES_A128KW:
-		keysize = 16
-	case jwa.ECDH_ES_A192KW:
-		keysize = 24
-	case jwa.ECDH_ES_A256KW:
-		keysize = 32
-	default:
-		return nil, errors.Errorf("invalid ECDH-ES key wrap algorithm (%s)", kw.algorithm)
+func DeriveECDHES(alg jwa.ContentEncryptionAlgorithm, apu, apv []byte, privkey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey, keysize uint32) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("DeriveECDHES (keysize = %d)", keysize)
+		defer g.End()
 	}
-
-	privkey := kw.privkey
-	pubkey := kw.pubkey
 
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*8)
@@ -169,13 +152,56 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
 	defer ecutil.ReleaseECPointBuffer(zBytes)
 
-	kdf := concatkdf.New(crypto.SHA256, ndata([]byte(kw.algorithm.String())), zBytes, ndata(kw.apu), ndata(kw.apv), pubinfo, []byte{})
-	kek := make([]byte, keysize)
-	if _, err := kdf.Read(kek); err != nil {
+	kdf := concatkdf.New(crypto.SHA256, []byte(alg.String()), zBytes, apu, apv, pubinfo, []byte{})
+	key := make([]byte, keysize)
+	if _, err := kdf.Read(key); err != nil {
 		return nil, errors.Wrap(err, "failed to read kdf")
 	}
 
-	block, err := aes.NewCipher(kek)
+	return key, nil
+}
+
+// Decrypt decrypts the encrypted key using ECDH-ES
+func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("keyenc.ECDHESDecrypt.Decrypt")
+		defer g.End()
+	}
+
+	var keysize uint32
+	switch kw.keyalg {
+	case jwa.ECDH_ES:
+		// Create a content cipher from the content encryption algorithm
+		c, err := contentcipher.NewAES(kw.contentalg)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to create content cipher for %s`, kw.contentalg)
+		}
+		if pdebug.Enabled {
+			pdebug.Printf("Using keysize (%d) from content cipher %a", c.KeySize(), kw.contentalg)
+		}
+
+		keysize = uint32(c.KeySize())
+	case jwa.ECDH_ES_A128KW:
+		keysize = 16
+	case jwa.ECDH_ES_A192KW:
+		keysize = 24
+	case jwa.ECDH_ES_A256KW:
+		keysize = 32
+	default:
+		return nil, errors.Errorf("invalid ECDH-ES key wrap algorithm (%s)", kw.keyalg)
+	}
+
+	key, err := DeriveECDHES(kw.contentalg, kw.apu, kw.apv, kw.privkey, kw.pubkey, keysize)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to derive ECDHES encryption key`)
+	}
+
+	// ECDH-ES does not wrap keys
+	if kw.keyalg == jwa.ECDH_ES {
+		return key, nil
+	}
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cipher for ECDH-ES key wrap")
 	}
@@ -412,6 +438,11 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 }
 
 func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("keyenc.Unwrap")
+		defer g.End()
+	}
+
 	if len(ciphertxt)%keywrapChunkLen != 0 {
 		return nil, errors.Errorf(`keyunwrap input must be %d byte blocks`, keywrapChunkLen)
 	}
@@ -442,6 +473,11 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	}
 
 	if subtle.ConstantTimeCompare(buffer[:keywrapChunkLen], keywrapDefaultIV) == 0 {
+		if pdebug.Enabled {
+			pdebug.Printf("buffer prefix does not match default iv")
+			pdebug.Printf("prefix  = %x", buffer[:keywrapChunkLen])
+			pdebug.Printf("default = %x", keywrapDefaultIV)
+		}
 		return nil, errors.New("key unwrap: failed to unwrap key")
 	}
 

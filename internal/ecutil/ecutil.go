@@ -18,7 +18,7 @@ var ecpointBufferPool = sync.Pool{
 	New: func() interface{} {
 		// In most cases the curve bit size will be less than this length
 		// so allocate the maximum, and keep reusing
-		buf := make([]byte, ec521BufferSize)
+		buf := make([]byte, 0, ec521BufferSize)
 		return &buf
 	},
 }
@@ -38,6 +38,7 @@ func ReleaseECPointBuffer(buf []byte) {
 	for i := 1; i < len(buf); i *= 2 {
 		copy(buf[i:], buf[:i])
 	}
+	buf = buf[:0]
 	ecpointBufferPool.Put(&buf)
 }
 
