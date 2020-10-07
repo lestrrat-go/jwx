@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -427,9 +428,9 @@ func Test_A256KW_A256CBC_HS512(t *testing.T) {
 }
 
 func Test_GHIssue207(t *testing.T) {
-	const plaintext = "hi"
+	const plaintext = "hi\n"
 	var testcases = []struct {
-		Algorithm jwa.KeyEncryptionAlgorithm
+		Algorithm  jwa.KeyEncryptionAlgorithm
 		Key        string
 		Data       string
 		Thumbprint string
@@ -437,14 +438,12 @@ func Test_GHIssue207(t *testing.T) {
 	}{
 		{
 			Name:       `ECDH-ES`,
-			Algorithm: jwa.ECDH_ES,
 			Key:        `{"alg":"ECDH-ES","crv":"P-521","d":"ARxUkIjnB7pjFzM2OIIFcclR-4qbZwv7DoC96cksPKyvVWOkEsZ0CK6deM4AC6G5GClR5TXWMQVC_bNDmfuwPPqF","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"ACewmG5j0POUDQw3rIqFQozK_6yXUsfNjiZtWqQOU7MXsSKK9RsRS8ySmeTG14heUpbbnrC9VdYKSOUGkYnYUl2Y","y":"ACkXSOma_FP93R3u5uYX7gUOlM0LDkNsij9dVFPbafF8hlfYEnUGit2o-tt7W0Zq3t38jEhpjUoGgM04JDJ6_m0x"}`,
 			Data:       `{"ciphertext":"sp0cLt4Rx1p0Ax0Q1OZj7w","header":{"alg":"ECDH-ES","epk":{"crv":"P-521","kty":"EC","x":"APMKQpje5vu39-eS_LX_g15stqbNZ37GgYimW8PZf7d_OOuAygK2YlINYnPoUybrxkoaLRPhbmxc9MBWFdaY8SXx","y":"AMpq4DFi6w-pfnprO58CkfX-ncXtJ8fvox2Ej8Ey3ZY1xjVUtbDJCDCjY53snYaNCEjnFQPAn-IkAG90p2Xcm8ut"}},"iv":"Fjnb5uUWp9euqp1MK_hT4A","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"6nhiy-vyqwVjpy08jrorTpWqvam66HdKxU36XsE3Z3s"}`,
 			Thumbprint: `0_6x6e2sZKeq3ka0QV0PEkJagqg`,
 		},
 		{
 			Name:       `ECDH-ES+A256KW`,
-			Algorithm: jwa.ECDH_ES_A256KW,
 			Key:        `{"alg":"ECDH-ES+A256KW","crv":"P-521","d":"AcH8h_ctsMnopTiCH7wiuM-nAb1CNikC0ubcOZQDLYSVEw93h6_D57aD7DLWbjIsVNzn7Qq8P-kRiTYVoH5GTQVg","key_ops":["wrapKey","unwrapKey"],"kty":"EC","x":"AAQoEbNeiG3ExYj9bJLGFn4h_bFjERfIcmpQMW5KWlFhqcXTFg0g8-5YWjdJXdNmO_2EuaKe7zOvEq8dCFCb12-R","y":"Ad8E2jp6FSCSd8laERqIt67A2T-MIqQE5301jNYb5SMsCSV1rs1McyvhzHaclYcqTUptoA-rW5kNS9N5124XPHky"}`,
 			Data:       `{"ciphertext":"evXmzoQ5TWQvEXdpv9ZCBQ","encrypted_key":"ceVsjF-0LhziK75oHRC-C539hlFJMSbub015a3YtIBgCt7c0IRzkzwoOvo_Jf44FXZi0Vd-4fvDjRkZDzx9DcuDd4ASYDLvW","header":{"alg":"ECDH-ES+A256KW","epk":{"crv":"P-521","kty":"EC","x":"Aad7PFl9cct7WcfM3b_LNkhCHfCotW_nRuarX7GACDyyZkr2dd1g6r3rz-8r2-AyOGD9gc2nhrTEjVHT2W7eu65U","y":"Ab0Mj6BK8g3Fok6oyFlkvKOyquEVxeeJOlsyXKYBputPxFT5Gljr2FoJdViAxVspoSiw1K5oG1h59UBJgPWG4GQV"}},"iv":"KsJgq2xyzE1dZi2BM2xf5g","protected":"eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIn0","tag":"b6m_nW9vfk6xJugm_-Uuj4cbAQh9ECelLc1ZBfO86L0"}`,
 			Thumbprint: `G4OtKQL_qr9Q57atNOU6SJnJxB8`,
@@ -483,7 +482,7 @@ func Test_GHIssue207(t *testing.T) {
 				t.Logf("%s", buf)
 			}
 
-			decrypted, err := msg.Decrypt(tc.Algorithm, &key)
+			decrypted, err := msg.Decrypt(((msg.Recipients())[0]).Headers().Algorithm(), &key)
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
 			}
@@ -493,4 +492,56 @@ func Test_GHIssue207(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGoJoseCompatibility(t *testing.T) {
+	t.Run("TestPrecomputedECDHMessagesFromJose4j", func(t *testing.T) {
+		data := []struct{ key, message string }{
+			{
+				`{"kty":"EC","x":"fXx-DfOsmecjKh3VrLZFsF98Z1nutsL4UdFTdgA8S7Y","y":"LGzyJY99aqKk52UIExcNFSTs0S7HnNzQ-DRWBTHDad4","crv":"P-256","d":"OeVCWbXuFuJ9U16q7bhLNoKPLLnK-yTx95grzfvQ2l4"}`,
+				`eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwiYWxnIjoiRUNESC1FUyIsImVwayI6eyJrdHkiOiJFQyIsIngiOiJ3ZlRHNVFHZkItNHUxanVUUEN1aTNESXhFTV82ZUs5ZEk5TXNZckpxWDRnIiwieSI6Ik8yanlRbHQ2TXFGTGtqMWFCWW1aNXZJWHFVRHh6Ulk3dER0WmdZUUVNa0kiLCJjcnYiOiJQLTI1NiJ9fQ..mk4wQzGSSeZ8uSgEYTIetA.fCw3-TosL4p0D5fEXw0bEA.9mPsdmGTVoVexXqEOdN5VUKk-ZNtfOtUfbdjVHoko_o`,
+			},
+			{
+				`{"kty":"EC","x":"nBr92fh2JsEjIF1LR5PKICBeHNIBe0xb7nlBrrU3WoWgfJYfXve1jxC-5VT5EPLt","y":"sUAxL3L5lJdzFUSR9EHLniuBhEbvXfPa_3OiR6Du0_GOlFXXIi4UmbNpk10_Thfq","crv":"P-384","d":"0f0NnWg__Qgqjj3fl2gAlsID4Ni41FR88cmZPVgb6ch-ZShuVJRjoxymCuzVP7Gi"}`,
+				`eyJlbmMiOiJBMTkyQ0JDLUhTMzg0IiwiYWxnIjoiRUNESC1FUyIsImVwayI6eyJrdHkiOiJFQyIsIngiOiJsX3hXdzIyb1NfOWZGbV96amNzYkstd3R3d0RHSlRQLUxnNFVBWDI3WWF1b1YwNml2emwtcm1ra2h6ci11SDBmIiwieSI6IloyYmVnbzBqeE9nY0YtNVp4SFNBOU5jZDVCOW8wUE1pSVlRbm9sWkNQTHA3YndPd1RLUEZaaFZVUlFPSjdoeUciLCJjcnYiOiJQLTM4NCJ9fQ..jSWP7pfa4KcpqKWZ1x8awg.osb-5641Ej1Uon_f3U8bNw.KUQWwb35Gxq3YQ34_AVkebugx4rxq1lO`,
+			},
+			{
+				`{"kty":"EC","x":"AH3rqSYjKue50ThW0qq_qQ76cNtqWrc7hU6kZR6akxy8iTf8ugcpqnbgbi98AgSwIqgJZDBMCk-8eoiGaf3R_kDD","y":"AeafPdJjHLf6pK5V7iyMsL3-6MShpHS6jXQ8m-Bcbp06yxAMn6TJbdkacvj45dy_pdh1s6XZwoxRxNETg_gj-hq9","crv":"P-521","d":"AB2tm9vgGe2BaxZmJQ016GY-U7NV_EWhrPsLDC5l9tAM9DGEwI2cT2HcO20Z6CQndw0ZhqLZ6MEvS8siL-SCxIl2"}`,
+				`eyJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwiYWxnIjoiRUNESC1FUyIsImVwayI6eyJrdHkiOiJFQyIsIngiOiJBQ1RLMlVPSjJ6SVk3U1U4T0xkaG1QQmE4ZUVpd2JrX09UMXE0MHBsRlRwQmJKUXg3YWdqWG9LYml2NS1OTXB6eXZySm1rblM3SjNRUWlUeFgwWmtjemhEIiwieSI6IkFXeTZCR1dkZld2ekVNeGIxQklCQnZmRDJ4bEh6Rjk2YzVVRVQ4SFBUS0RSeUJyMnQ4T2dTX1J2MnNoUmxGbXlqUWpyX25uQk94akcxVTZNWDNlZ2VETzciLCJjcnYiOiJQLTUyMSJ9fQ..EWqSGntxbO_Y_6JRjFkCgg.DGjDNjAYdsnYTpUFJi1gEI4YtNd7gBPMjD3CDH047RAwZKTme6Ah_ztzxSfVg5kG.yGm5jn2LtbFXaK_yf0b0932sI2O77j2gwmL1Y09YC_Y`,
+			},
+		}
+
+		for i, vector := range data {
+			vector := vector
+			t.Run(fmt.Sprintf("Dataset %d", i), func(t *testing.T) {
+				webkey, err := jwk.ParseKey([]byte(vector.key))
+				if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+					return
+				}
+
+				{ buf, _ := json.MarshalIndent(webkey, "", "  ")
+					t.Logf("%s", buf)
+				}
+
+				parsed, err := jwe.ParseString(vector.message)
+				if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
+					return
+				}
+
+				{ buf, _ := json.MarshalIndent(parsed, "", "  ")
+					t.Logf("%s", buf)
+				}
+
+				var key ecdsa.PrivateKey
+				if !assert.NoError(t, webkey.Raw(&key), `webkey.Raw should succeed`) {
+					return
+				}
+
+				_, err = parsed.Decrypt(((parsed.Recipients())[0]).Headers().Algorithm(), &key)
+				if !assert.NoError(t, err, `Decrypt should succeed`) {
+					return
+				}
+			})
+		}
+	})
 }

@@ -63,7 +63,11 @@ func New(key []byte, f BlockCipherFunc) (*Hmac, error) {
 		hash:         hfunc,
 		integrityKey: ikey,
 		keysize:      keysize,
-		tagsize:      NonceSize,
+		tagsize:      keysize, // NonceSize,
+		// While investigating GH #207, I stumbled upon another problem where
+		// the computed tags don't match on decrypt. After poking through the
+		// code using a bunch of debug statements, I've finally found out that
+		// tagsize = keysize makes the whole thing work.
 	}, nil
 }
 
@@ -151,6 +155,11 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 
 // Open fulfills the crypto.AEAD interface
 func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("aescbc.Hmac.Open")
+		defer g.End()
+	}
+
 	if len(ciphertext) < c.keysize {
 		return nil, errors.New("invalid ciphertext (too short)")
 	}
