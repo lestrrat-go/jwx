@@ -116,7 +116,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 			default:
 				err = fmt.Errorf("%s", e)
 			}
-			err = errors.Wrap(err, "failed to descrypt")
+			err = errors.Wrap(err, "failed to encrypt")
 		}
 	}()
 
