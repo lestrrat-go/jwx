@@ -46,7 +46,7 @@ func buildKeywrapDecrypter(alg jwa.KeyEncryptionAlgorithm, _ Headers, key interf
 	return keyenc.NewAESCGM(alg, sharedkey)
 }
 
-func buildECDHESDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
+func buildECDHESDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}) (keyenc.Decrypter, error) {
 	epkif, ok := h.Get(EphemeralPublicKeyKey)
 	if !ok {
 		return nil, errors.New("failed to get 'epk' field")
@@ -96,7 +96,7 @@ func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		return buildKeywrapDecrypter(alg, h, key, keysize)
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		return buildECDHESDecrypter(alg, h, key, keysize)
+		return buildECDHESDecrypter(alg, h, key)
 	}
 
 	return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
