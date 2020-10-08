@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ 'tip', '1.15', '1.14' ]
+        go: [ '1.15', '1.14' ]
     name: Go ${{ matrix.go }} test
     steps:
       - name: Checkout repository

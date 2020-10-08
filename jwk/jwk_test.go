@@ -2,6 +2,7 @@ package jwk_test
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -11,6 +12,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -451,5 +453,27 @@ func TestPublicKeyOf(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestIssue207(t *testing.T) {
+	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
+
+	// Using a loop here because we're using sync.Pool
+	// just for sanity.
+	for i := 0; i < 10; i++ {
+		k, err := jwk.ParseKey([]byte(src))
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+			return
+		}
+
+		thumb, err := k.Thumbprint(crypto.SHA1)
+		if !assert.NoError(t, err, `k.Thumbprint should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, `2Mc_43O_BOrOJTNrGX7uJ6JsIYE`, base64.EncodeToString(thumb), `thumbprints should match`) {
+			return
+		}
 	}
 }

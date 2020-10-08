@@ -5,6 +5,7 @@ package jwe
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/json"
@@ -14,7 +15,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -176,20 +176,9 @@ func parseCompact(buf []byte) (*Message, error) {
 		pdebug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
-	hdr := NewHeaders()
-	if err := json.Unmarshal(hdrbuf, hdr); err != nil {
-		return nil, errors.Wrap(err, "failed to parse header JSON")
-	}
-
-	// We need the protected header to contain the content encryption
-	// algorithm. XXX probably other headers need to go there too
 	protected := NewHeaders()
-	if err := protected.Set(ContentEncryptionKey, hdr.ContentEncryption()); err != nil {
-		return nil, errors.Wrapf(err, "failed to set %#v in protected header", ContentEncryptionKey)
-	}
-
-	if err := hdr.Remove(ContentEncryptionKey); err != nil {
-		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	if err := json.Unmarshal(hdrbuf, protected); err != nil {
+		return nil, errors.Wrap(err, "failed to parse header JSON")
 	}
 
 	var enckeybuf buffer.Buffer
@@ -213,9 +202,6 @@ func parseCompact(buf []byte) (*Message, error) {
 	}
 
 	m := NewMessage()
-	if err := m.Set(AuthenticatedDataKey, hdrbuf.Bytes()); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
-	}
 	if err := m.Set(CipherTextKey, ctbuf); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
 	}
@@ -226,9 +212,19 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
 	}
 
+	// Recipients in this case should not contain the content encryption key,
+	// so move that out
+	hdrs, err := mergeHeaders(context.TODO(), nil, protected)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to clone headers`)
+	}
+
+	if err := hdrs.Remove(ContentEncryptionKey); err != nil {
+		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	}
 	if err := m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
-			headers:      hdr,
+			headers:      hdrs,
 			encryptedKey: enckeybuf,
 		},
 	}); err != nil {
@@ -238,80 +234,4 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
 	return m, nil
-}
-
-// buildKeyDecrypter creates a new KeyDecrypter instance from the given
-// parameters. It is used by the Message.Decrypt method to create
-// key decrypter(s) from the given message. `keysize` is only used by
-// some decrypters. Pass the value from ContentCipher.KeySize().
-func buildKeyDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}, keysize int) (keyenc.Decrypter, error) {
-	switch alg {
-	case jwa.RSA1_5:
-		var privkey *rsa.PrivateKey
-		switch v := key.(type) {
-		case rsa.PrivateKey:
-			privkey = &v
-		case *rsa.PrivateKey:
-			privkey = v
-		default:
-			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
-		}
-
-		return keyenc.NewRSAPKCS15Decrypt(alg, privkey, keysize/2), nil
-	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-		var privkey *rsa.PrivateKey
-		switch v := key.(type) {
-		case rsa.PrivateKey:
-			privkey = &v
-		case *rsa.PrivateKey:
-			privkey = v
-		default:
-			return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
-		}
-
-		return keyenc.NewRSAOAEPDecrypt(alg, privkey)
-	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
-		sharedkey, ok := key.([]byte)
-		if !ok {
-			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
-		}
-		return keyenc.NewAESCGM(alg, sharedkey)
-	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		epkif, ok := h.Get(EphemeralPublicKeyKey)
-		if !ok {
-			return nil, errors.New("failed to get 'epk' field")
-		}
-		if epkif == nil {
-			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
-		}
-
-		epk, ok := epkif.(jwk.ECDSAPublicKey)
-		if !ok {
-			return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
-		}
-
-		var pubkey interface{}
-		if err := epk.Raw(&pubkey); err != nil {
-			return nil, errors.Wrap(err, "failed to get public key")
-		}
-
-		privkey, ok := key.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, errors.Errorf("*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
-		}
-		var apuData, apvData []byte
-		apu := h.AgreementPartyUInfo()
-		if apu.Len() > 0 {
-			apuData = apu.Bytes()
-		}
-
-		apv := h.AgreementPartyVInfo()
-		if apv.Len() > 0 {
-			apuData = apu.Bytes()
-		}
-
-		return keyenc.NewECDHESDecrypt(alg, pubkey.(*ecdsa.PublicKey), apuData, apvData, privkey), nil
-	}
-
-	return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 }

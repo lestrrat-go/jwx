@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -157,11 +158,17 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PublicKey for thumbprint generation`)
 	}
+
+	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
+	ybuf := ecutil.AllocECPointBuffer(key.Y, key.Curve)
+	defer ecutil.ReleaseECPointBuffer(xbuf)
+	defer ecutil.ReleaseECPointBuffer(ybuf)
+
 	return ecdsaThumbprint(
 		hash,
 		key.Curve.Params().Name,
-		base64.EncodeToString(key.X.Bytes()),
-		base64.EncodeToString(key.Y.Bytes()),
+		base64.EncodeToString(xbuf),
+		base64.EncodeToString(ybuf),
 	), nil
 }
 
@@ -172,10 +179,16 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize ecdsa.PrivateKey for thumbprint generation`)
 	}
+
+	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
+	ybuf := ecutil.AllocECPointBuffer(key.Y, key.Curve)
+	defer ecutil.ReleaseECPointBuffer(xbuf)
+	defer ecutil.ReleaseECPointBuffer(ybuf)
+
 	return ecdsaThumbprint(
 		hash,
 		key.Curve.Params().Name,
-		base64.EncodeToString(key.X.Bytes()),
-		base64.EncodeToString(key.Y.Bytes()),
+		base64.EncodeToString(xbuf),
+		base64.EncodeToString(ybuf),
 	), nil
 }

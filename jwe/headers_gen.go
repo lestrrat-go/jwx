@@ -634,5 +634,17 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	// WTF, why are you going through json.Marshal / Unmarshal AGAIN?!
+	// Well, json.Marshal by default sorts its keys in lexicographical order.
+	// Therefore the expectation from the user is to see output ordered as such.
+	//
+	// There are ways to do this manually, but it's extremely painful to take
+	// things like nested structures into consideration, so we'll just bite the
+	// bullet and go through marshaling/unmarshaling again
+
+	var tmp map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &tmp); err != nil {
+		return nil, errors.Wrap(err, `failed to marshal header into intermediate structure`)
+	}
+	return json.Marshal(tmp)
 }

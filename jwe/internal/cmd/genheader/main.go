@@ -513,7 +513,20 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+
+	fmt.Fprintf(&buf, "\n// WTF, why are you going through json.Marshal / Unmarshal AGAIN?!")
+	fmt.Fprintf(&buf, "\n// Well, json.Marshal by default sorts its keys in lexicographical order.")
+	fmt.Fprintf(&buf, "\n// Therefore the expectation from the user is to see output ordered as such.")
+	fmt.Fprintf(&buf, "\n//")
+	fmt.Fprintf(&buf, "\n// There are ways to do this manually, but it's extremely painful to take")
+	fmt.Fprintf(&buf, "\n// things like nested structures into consideration, so we'll just bite the")
+	fmt.Fprintf(&buf, "\n// bullet and go through marshaling/unmarshaling again")
+	fmt.Fprintf(&buf, "\n")
+	fmt.Fprintf(&buf, "\nvar tmp map[string]interface{}")
+	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf.Bytes(), &tmp); err != nil {")
+	fmt.Fprintf(&buf, "\n        return nil, errors.Wrap(err, `failed to marshal header into intermediate structure`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn json.Marshal(tmp)")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
 	formatted, err := imports.Process("", buf.Bytes(), nil)
