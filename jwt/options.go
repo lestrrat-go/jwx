@@ -15,6 +15,7 @@ const (
 	optkeyToken   = `token`
 	optkeyKeySet  = `keySet`
 	optkeyHeaders = `headers`
+	optkeyDefault = `defaultKey`
 )
 
 type VerifyParameters interface {
@@ -51,6 +52,14 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) Option {
 // give keys.
 func WithKeySet(set *jwk.Set) Option {
 	return option.New(optkeyKeySet, set)
+}
+
+// UseDefaultKey is used in conjunction with the option WithKeySet
+// to instruct the Parse method to default to the single key in a key
+// set when no Key ID is included in the JWT. If the key set contains
+// multiple keys then the behaviour is unchanged.
+func UseDefaultKey(value bool) Option {
+	return option.New(optkeyDefault, value)
 }
 
 // WithToken specifies the token instance that is used when parsing
