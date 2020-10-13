@@ -150,6 +150,22 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 		})
+		t.Run("No kid should fail", func(t *testing.T) {
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.KeyIDKey, kid)
+			signedNoKid, err := jwt.Sign(t1, alg, key)
+			if err != nil {
+				t.Fatal("Failed to sign JWT")
+			}
+			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
 		t.Run("Pick default key from set of 1", func(t *testing.T) {
 			pubkey := jwk.NewRSAPublicKey()
 			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
