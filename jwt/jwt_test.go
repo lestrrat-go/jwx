@@ -150,6 +150,62 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 		})
+		t.Run("No kid should fail", func(t *testing.T) {
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.KeyIDKey, kid)
+			signedNoKid, err := jwt.Sign(t1, alg, key)
+			if err != nil {
+				t.Fatal("Failed to sign JWT")
+			}
+			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
+		t.Run("Pick default key from set of 1", func(t *testing.T) {
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.KeyIDKey, kid)
+			signedNoKid, err := jwt.Sign(t1, alg, key)
+			if err != nil {
+				t.Fatal("Failed to sign JWT")
+			}
+			t2, err := jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}), jwt.UseDefaultKey(true))
+			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
+		t.Run("UseDefault with multiple keys should fail", func(t *testing.T) {
+			pubkey1 := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey1.FromRaw(&key.PublicKey)) {
+				return
+			}
+			pubkey2 := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey2.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey1.Set(jwk.KeyIDKey, kid)
+			pubkey2.Set(jwk.KeyIDKey, "test-jwt-parse-verify-kid-2")
+			signedNoKid, err := jwt.Sign(t1, alg, key)
+			if err != nil {
+				t.Fatal("Failed to sign JWT")
+			}
+			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey1, pubkey2}}), jwt.UseDefaultKey(true))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
 	})
 
 	// This is a test to check if we allow alg: none in the protected header section.

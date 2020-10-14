@@ -35,6 +35,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
+	var useDefault bool
 	var token Token
 	for _, o := range options {
 		switch o.Name() {
@@ -44,6 +45,8 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 			keyset = o.Value().(*jwk.Set)
 		case optkeyToken:
 			token = o.Value().(Token)
+		case optkeyDefault:
+			useDefault = o.Value().(bool)
 		}
 	}
 
@@ -56,7 +59,7 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 	// If with matching kid is true, then look for the corresponding key in the
 	// given key set, by matching the "kid" key
 	if keyset != nil {
-		alg, key, err := lookupMatchingKey(data, keyset)
+		alg, key, err := lookupMatchingKey(data, keyset, useDefault)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to find matching key for verification`)
 		}
@@ -100,7 +103,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	return token, nil
 }
 
-func lookupMatchingKey(data []byte, keyset *jwk.Set) (jwa.SignatureAlgorithm, interface{}, error) {
+func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
 	msg, err := jws.Parse(bytes.NewReader(data))
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to parse token data`)
@@ -109,10 +112,19 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set) (jwa.SignatureAlgorithm, in
 	headers := msg.Signatures()[0].ProtectedHeaders()
 	kid := headers.KeyID()
 	if kid == "" {
-		return "", nil, errors.New(`failed to find matching key: no key ID specified in token`)
+		if !useDefault {
+			return "", nil, errors.New(`failed to find matching key: no key ID specified in token`)
+		} else if useDefault && keyset.Len() > 1 {
+			return "", nil, errors.New(`failed to find matching key: no key ID specified in token but multiple in key set`)
+		}
 	}
 
-	keys := keyset.LookupKeyID(kid)
+	var keys []jwk.Key
+	if kid == "" {
+		keys = keyset.Keys
+	} else {
+		keys = keyset.LookupKeyID(kid)
+	}
 	if len(keys) == 0 {
 		return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
 	}
