@@ -45,7 +45,7 @@ func Available() bool {
 	muExecutablePath.RLock()
 	defer muExecutablePath.RUnlock()
 
-	return executablePath == ""
+	return executablePath != ""
 }
 
 func createTempfile(t *testing.T, template string) (*os.File, func(), error) {
