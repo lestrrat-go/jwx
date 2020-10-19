@@ -3,9 +3,12 @@ package jose
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +16,65 @@ import (
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
+
+// Error is returned by LookPath when it fails to classify a file as an
+// executable.
+type Error struct {
+	// Name is the file name for which the error occurred.
+	Name string
+	// Err is the underlying error.
+	Err error
+}
+
+func (e *Error) Error() string {
+	return "exec: " + strconv.Quote(e.Name) + ": " + e.Err.Error()
+}
+
+func (e *Error) Unwrap() error { return e.Err }
+
+var ErrNotFound = errors.New("executable file not found in $PATH")
+
+
+func gofindExecutable(file string) error {
+	d, err := os.Stat(file)
+	if err != nil {
+		fmt.Printf("os.Stat %s failed: %s\n", file, err)
+		return err
+	}
+	if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+		return nil
+	}
+	return os.ErrPermission
+}
+
+func goLookPath(file string) (string, error) {
+	// NOTE(rsc): I wish we could use the Plan 9 behavior here
+	// (only bypass the path if file begins with / or ./ or ../)
+	// but that would not match all the Unix shells.
+
+	if strings.Contains(file, "/") {
+		err := gofindExecutable(file)
+		if err == nil {
+			return file, nil
+		}
+		return "", &Error{file, err}
+	}
+	path := os.Getenv("PATH")
+	for _, dir := range filepath.SplitList(path) {
+		if dir == "" {
+			// Unix shell semantics: path element "" means "."
+			dir = "."
+		}
+		path := filepath.Join(dir, file)
+		fmt.Printf("Checking %s\n", path)
+		if err := gofindExecutable(path); err == nil {
+			fmt.Printf("Found at %s\n", path)
+			return path, nil
+		}
+	}
+	fmt.Println("Tried all paths, no avail")
+	return "", &Error{file, ErrNotFound}
+}
 
 var executablePath string
 var muExecutablePath sync.RWMutex
@@ -28,7 +90,7 @@ func SetExecutable(path string) {
 }
 
 func findExecutable() {
-	p, err := exec.LookPath("jose")
+	p, err := goLookPath("jose")
 	if err == nil {
 		SetExecutable(p)
 	}
