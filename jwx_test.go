@@ -31,7 +31,7 @@ func parseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
-	if testing.Short() {
+	if testing.Short() || !jose.Available() {
 		t.Logf("Skipped during short tests")
 		return
 	}
