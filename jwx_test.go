@@ -127,7 +127,6 @@ func TestJoseCompatibility(t *testing.T) {
 			}
 			defer jwecleanup()
 
-
 			payload, err := jose.DecryptJwe(ctx, t, cryptfile, keyfile)
 			if !assert.NoError(t, err, `jose.DecryptJwe should succeed`) {
 				return
