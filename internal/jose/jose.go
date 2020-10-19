@@ -34,7 +34,6 @@ func (e *Error) Unwrap() error { return e.Err }
 
 var ErrNotFound = errors.New("executable file not found in $PATH")
 
-
 func gofindExecutable(file string) error {
 	d, err := os.Stat(file)
 	if err != nil {
