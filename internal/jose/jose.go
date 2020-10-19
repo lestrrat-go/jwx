@@ -94,7 +94,7 @@ func GenerateJwk(t *testing.T, ctx context.Context, template string) (string, fu
 // a cleanup function.
 // The caller is responsible for calling the cleanup
 // function and make sure all resources are released
-func EncryptJwe(t *testing.T, ctx context.Context, payload []byte, keyfile string) (string, func(), error) {
+func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile string) (string, func(), error) {
 	t.Helper()
 
 	cmdargs := []string{ExecutablePath(), "jwe", "enc", "-k", keyfile}
@@ -131,7 +131,7 @@ func EncryptJwe(t *testing.T, ctx context.Context, payload []byte, keyfile strin
 	return ofile.Name(), ocleanup, nil
 }
 
-func DecryptJwe(t *testing.T, ctx context.Context, cfile, kfile string) ([]byte, error) {
+func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte, error) {
 	t.Helper()
 
 	cmdargs := []string{ExecutablePath(), "jwe", "dec", "-i", cfile, "-k", kfile}

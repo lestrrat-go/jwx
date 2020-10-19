@@ -183,13 +183,13 @@ func TestJoseCompatibility(t *testing.T) {
 
 			expected := []byte("hi")
 
-			cryptfile, jwecleanup, err := jose.EncryptJwe(t, ctx, expected, keyfile)
+			cryptfile, jwecleanup, err := jose.EncryptJwe(ctx, t, expected, keyfile)
 			if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
 				return
 			}
 			defer jwecleanup()
 
-			payload, err := jose.DecryptJwe(t, ctx, cryptfile, keyfile)
+			payload, err := jose.DecryptJwe(ctx, t, cryptfile, keyfile)
 			if !assert.NoError(t, err, `jose.DecryptJwe should succeed`) {
 				return
 			}
