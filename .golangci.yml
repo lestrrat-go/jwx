@@ -27,6 +27,8 @@ linters:
     - nestif
     - goerr113
     - nlreturn
+    - gofumpt
+    - exhaustive
 
 issues:
   exclude-rules:

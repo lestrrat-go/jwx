@@ -108,6 +108,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile strin
 		}
 		//nolint:errcheck
 		pfile.Write(payload)
+		//nolint:errcheck
 		pfile.Sync()
 
 		cmdargs = append(cmdargs, "-I", pfile.Name())
