@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -93,12 +92,12 @@ func parseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
-	if testing.Short() || !jose.Available() {
+	if testing.Short() {
 		t.Logf("Skipped during short tests")
 		return
 	}
 
-	if _, err := exec.LookPath("jose"); err != nil {
+	if !jose.Available() {
 		t.Logf("`jose` binary not availale, skipping tests")
 		return
 	}
