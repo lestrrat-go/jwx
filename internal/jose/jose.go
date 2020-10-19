@@ -37,12 +37,14 @@ func findExecutable() {
 func ExecutablePath() string {
 	muExecutablePath.RLock()
 	defer muExecutablePath.RUnlock()
+
 	return executablePath
 }
 
 func Available() bool {
 	muExecutablePath.RLock()
 	defer muExecutablePath.RUnlock()
+
 	return executablePath == ""
 }
 
@@ -68,7 +70,7 @@ func createTempfile(t *testing.T, template string) (*os.File, func(), error) {
 // a cleanup function.
 // The caller is responsible for calling the cleanup
 // function and make sure all resources are released
-func GenerateJwk(t *testing.T, ctx context.Context, template string) (string, func(), error) {
+func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, func(), error) {
 	t.Helper()
 
 	file, cleanup, err := createTempfile(t, "jwx-jose-key-*.jwk")
@@ -84,6 +86,7 @@ func GenerateJwk(t *testing.T, ctx context.Context, template string) (string, fu
 	if err := cmd.Run(); err != nil {
 		defer cleanup()
 		t.Logf(`failed to execute command: %s`, errdst.String())
+
 		return "", nil, errors.Wrap(err, `failed to generate key`)
 	}
 
@@ -103,6 +106,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile strin
 		if perr != nil {
 			return "", nil, errors.Wrap(perr, `failed to create temporary file`)
 		}
+		//nolint:errcheck
 		pfile.Write(payload)
 		pfile.Sync()
 
@@ -125,6 +129,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile strin
 	if err := cmd.Run(); err != nil {
 		defer ocleanup()
 		t.Logf("Error executing command: %s", errdst.String())
+
 		return "", nil, errors.Wrap(err, `failed to encrypt message`)
 	}
 
@@ -151,6 +156,7 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 
 	if err := cmd.Run(); err != nil {
 		t.Logf("Error executing command: %s", errdst.String())
+
 		return nil, errors.Wrap(err, `failed to decrypt message`)
 	}
 
