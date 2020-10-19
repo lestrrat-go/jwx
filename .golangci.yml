@@ -26,6 +26,7 @@ linters:
     - godot
     - nestif
     - goerr113
+    - nlreturn
 
 issues:
   exclude-rules:
