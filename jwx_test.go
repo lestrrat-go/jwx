@@ -88,7 +88,7 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				keyfile, cleanup, err := jose.GenerateJwk(t, ctx, tc.Template)
+				keyfile, cleanup, err := jose.GenerateJwk(ctx, t, tc.Template)
 				if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
 					return
 				}
@@ -113,7 +113,7 @@ func TestJoseCompatibility(t *testing.T) {
 	})
 	t.Run("jwe", func(t *testing.T) {
 		t.Run("Encrypt with ECDH key", func(t *testing.T) {
-			keyfile, jwkcleanup, err := jose.GenerateJwk(t, ctx, `{"alg": "ECDH-ES"}`)
+			keyfile, jwkcleanup, err := jose.GenerateJwk(ctx, t, `{"alg": "ECDH-ES"}`)
 			if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
 				return
 			}
