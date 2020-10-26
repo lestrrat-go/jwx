@@ -11,11 +11,11 @@ import (
 type Option = option.Interface
 
 const (
-	optkeyVerify  = `verify`
-	optkeyToken   = `token`
-	optkeyKeySet  = `keySet`
-	optkeyHeaders = `headers`
-	optkeyDefault = `defaultKey`
+	optkeyValidate = `validate`
+	optkeyVerify   = `verify`
+	optkeyToken    = `token`
+	optkeyKeySet   = `keySet`
+	optkeyHeaders  = `headers`
 )
 
 type VerifyParameters interface {
@@ -81,4 +81,11 @@ func WithOpenIDClaims() Option {
 // header values to be included in the header section of the jws message
 func WithHeaders(hdrs jws.Headers) Option {
 	return option.New(optkeyHeaders, hdrs)
+}
+
+// WithValidate is passed to `Parse()` method to denote that the
+// validation of the JWT token should be performed after a successful]
+// parsing of the incoming payload.
+func WithValidate(b bool) Option {
+	return option.New(optkeyValidate, b)
 }

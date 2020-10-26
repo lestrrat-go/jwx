@@ -29,9 +29,14 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
-// If the token is signed and you want to verify the payload, you must
-// pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
+// If the token is signed and you want to verify the payload matches the signature,
+// you must pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
+//
+// If you also want to assert the validity of the JWT itself (i.e. expiration
+// and such), use the `Valid()` function on the returned token, or pass the
+// `WithValidation(true)` option. Validation options can also be passed to
+// `Parse`
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
@@ -99,6 +104,10 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	}
 	if err := json.Unmarshal(payload, token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
+	}
+
+	if err := jwt.Validate(token, options); err != nil {
+		return nil, err
 	}
 	return token, nil
 }

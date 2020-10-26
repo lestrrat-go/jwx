@@ -69,11 +69,17 @@ func WithClaimValue(name string, v interface{}) Option {
 	return option.New(name, v)
 }
 
-// Verify makes sure that the essential claims stand.
+// Verify has been deprecated in favor of `Validate` function,
+// to avoid confusion between verifying the JWS signature during `Parse`
+func Verify(t Token, options ...Option) error {
+	return Validate(t, options...)
+}
+
+// Validate makes sure that the essential claims stand.
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
-func Verify(t Token, options ...Option) error {
+func Validate(t Token, options ...Option) error {
 	var issuer string
 	var subject string
 	var audience string
