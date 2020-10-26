@@ -171,3 +171,10 @@ type claimValue struct {
 func WithClaimValue(name string, v interface{}) ValidateOption {
 	return newValidateOption(optkeyClaim, claimValue{name, v})
 }
+
+// WithValidate is passed to `Parse()` method to denote that the
+// validation of the JWT token should be performed after a successful]
+// parsing of the incoming payload.
+func WithValidate(b bool) Option {
+	return option.New(optkeyValidate, b)
+}
