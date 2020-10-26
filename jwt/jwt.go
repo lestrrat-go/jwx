@@ -110,9 +110,9 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	}
 
 	if validate {
-	if err := Validate(token, options...); err != nil {
-		return nil, err
-	}
+		if err := Validate(token, options...); err != nil {
+			return nil, err
+		}
 	}
 	return token, nil
 }
