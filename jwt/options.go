@@ -1,6 +1,8 @@
 package jwt
 
 import (
+	"time"
+
 	"github.com/lestrrat-go/jwx/internal/option"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -16,6 +18,8 @@ const (
 	optkeyToken    = `token`
 	optkeyKeySet   = `keySet`
 	optkeyHeaders  = `headers`
+	optkeyDefault  = `defaultKey`
+	optkeyClaim    = `claimValue`
 )
 
 type VerifyParameters interface {
@@ -88,4 +92,52 @@ func WithHeaders(hdrs jws.Headers) Option {
 // parsing of the incoming payload.
 func WithValidate(b bool) Option {
 	return option.New(optkeyValidate, b)
+}
+
+// WithClock specifies the `Clock` to be used when verifying
+// claims exp and nbf.
+func WithClock(c Clock) Option {
+	return option.New(optkeyClock, c)
+}
+
+// WithAcceptableSkew specifies the duration in which exp and nbf
+// claims may differ by. This value should be positive
+func WithAcceptableSkew(dur time.Duration) Option {
+	return option.New(optkeyAcceptableSkew, dur)
+}
+
+// WithIssuer specifies that expected issuer value. If not specified,
+// the value of issuer is not verified at all.
+func WithIssuer(s string) Option {
+	return option.New(optkeyIssuer, s)
+}
+
+// WithSubject specifies that expected subject value. If not specified,
+// the value of subject is not verified at all.
+func WithSubject(s string) Option {
+	return option.New(optkeySubject, s)
+}
+
+// WithJwtID specifies that expected jti value. If not specified,
+// the value of jti is not verified at all.
+func WithJwtID(s string) Option {
+	return option.New(optkeyJwtid, s)
+}
+
+// WithAudience specifies that expected audience value.
+// Verify will return true if one of the values in the `aud` element
+// matches this value.  If not specified, the value of issuer is not
+// verified at all.
+func WithAudience(s string) Option {
+	return option.New(optkeyAudience, s)
+}
+
+type claimValue struct {
+	name  string
+	value interface{}
+}
+
+// WithClaimValue specifies that expected any claim value.
+func WithClaimValue(name string, v interface{}) Option {
+	return option.New(optkeyClaim, claimValue{name, v})
 }
