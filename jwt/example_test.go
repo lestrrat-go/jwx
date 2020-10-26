@@ -32,6 +32,7 @@ func ExampleSign() {
 
 	{ // Parse signed payload, and perform (1) verification of the signature
 		// and (2) validation of the JWT token
+		// Validation can be performed in a separate step using `jwt.Validate`
 		token, err := jwt.Parse(bytes.NewReader(payload),
 			jwt.WithValidate(true),
 			jwt.WithVerify(jwa.RS256, &privKey.PublicKey),
