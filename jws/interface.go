@@ -31,10 +31,10 @@ type PayloadSigner interface {
 // Message struct with only one `signature` element.
 //
 // Do not expect to use the Message object to verify or construct a
-// signed payloads with. You should only use this when you want to actually
-// want to programmatically view the contents for the full JWS payload.
+// signed payload with. You should only use this when you want to actually
+// programmatically view the contents of the full JWS payload.
 //
-// To sign and verify, use the appropriate `Sign()` nad `Verify()` functions
+// To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
 	payload    []byte
 	signatures []*Signature
