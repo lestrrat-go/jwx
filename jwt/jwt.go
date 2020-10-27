@@ -17,26 +17,32 @@ import (
 )
 
 // ParseString calls Parse with the given string
-func ParseString(s string, options ...Option) (Token, error) {
+func ParseString(s string, options ...ParseOption) (Token, error) {
 	return Parse(strings.NewReader(s), options...)
 }
 
 // ParseString calls Parse with the given byte sequence
-func ParseBytes(s []byte, options ...Option) (Token, error) {
+func ParseBytes(s []byte, options ...ParseOption) (Token, error) {
 	return Parse(bytes.NewReader(s), options...)
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
-// If the token is signed and you want to verify the payload, you must
-// pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
+// If the token is signed and you want to verify the payload matches the signature,
+// you must pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
-func Parse(src io.Reader, options ...Option) (Token, error) {
+//
+// If you also want to assert the validity of the JWT itself (i.e. expiration
+// and such), use the `Valid()` function on the returned token, or pass the
+// `WithValidation(true)` option. Validation options can also be passed to
+// `Parse`
+func Parse(src io.Reader, options ...ParseOption) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
 	var useDefault bool
 	var token Token
+	var validate bool
 	for _, o := range options {
 		switch o.Name() {
 		case optkeyVerify:
@@ -47,6 +53,8 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 			token = o.Value().(Token)
 		case optkeyDefault:
 			useDefault = o.Value().(bool)
+		case optkeyValidate:
+			validate = o.Value().(bool)
 		}
 	}
 
@@ -63,19 +71,19 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to find matching key for verification`)
 		}
-		return parse(token, data, true, alg, key)
+		return parse(token, data, true, alg, key, validate, options...)
 	}
 
 	if params != nil {
-		return parse(token, data, true, params.Algorithm(), params.Key())
+		return parse(token, data, true, params.Algorithm(), params.Key(), validate, options...)
 	}
 
-	return parse(token, data, false, "", nil)
+	return parse(token, data, false, "", nil, validate, options...)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
 	var payload []byte
 	if verify {
 		v, err := jws.Verify(data, alg, key)
@@ -99,6 +107,19 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	}
 	if err := json.Unmarshal(payload, token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
+	}
+
+	if validate {
+		var vopts []ValidateOption
+		for _, o := range options {
+			if v, ok := o.(ValidateOption); ok {
+				vopts = append(vopts, v)
+			}
+		}
+
+		if err := Validate(token, vopts...); err != nil {
+			return nil, err
+		}
 	}
 	return token, nil
 }

@@ -30,10 +30,13 @@ func ExampleSign() {
 		}
 	}
 
-	{ // Parse signed payload
-		// Use jwt.ParseVerify if you want to make absolutely sure that you
-		// are going to verify the signatures every time
-		token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithVerify(jwa.RS256, &privKey.PublicKey))
+	{ // Parse signed payload, and perform (1) verification of the signature
+		// and (2) validation of the JWT token
+		// Validation can be performed in a separate step using `jwt.Validate`
+		token, err := jwt.Parse(bytes.NewReader(payload),
+			jwt.WithValidate(true),
+			jwt.WithVerify(jwa.RS256, &privKey.PublicKey),
+		)
 		if err != nil {
 			fmt.Printf("failed to parse JWT token: %s\n", err)
 			return

@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/lestrrat-go/jwx/internal/option"
 )
 
 const (
@@ -26,54 +24,18 @@ func (f ClockFunc) Now() time.Time {
 	return f()
 }
 
-// WithClock specifies the `Clock` to be used when verifying
-// claims exp and nbf.
-func WithClock(c Clock) Option {
-	return option.New(optkeyClock, c)
+// Verify has been deprecated in favor of `Validate` function,
+// to avoid confusion between verifying the JWS signature during `Parse`,
+// and the validation of the JWT token's contents
+func Verify(t Token, options ...ValidateOption) error {
+	return Validate(t, options...)
 }
 
-// WithAcceptableSkew specifies the duration in which exp and nbf
-// claims may differ by. This value should be positive
-func WithAcceptableSkew(dur time.Duration) Option {
-	return option.New(optkeyAcceptableSkew, dur)
-}
-
-// WithIssuer specifies that expected issuer value. If not specified,
-// the value of issuer is not verified at all.
-func WithIssuer(s string) Option {
-	return option.New(optkeyIssuer, s)
-}
-
-// WithSubject specifies that expected subject value. If not specified,
-// the value of subject is not verified at all.
-func WithSubject(s string) Option {
-	return option.New(optkeySubject, s)
-}
-
-// WithJwtID specifies that expected jti value. If not specified,
-// the value of jti is not verified at all.
-func WithJwtID(s string) Option {
-	return option.New(optkeyJwtid, s)
-}
-
-// WithAudience specifies that expected audience value.
-// Verify will return true if one of the values in the `aud` element
-// matches this value.  If not specified, the value of issuer is not
-// verified at all.
-func WithAudience(s string) Option {
-	return option.New(optkeyAudience, s)
-}
-
-// WithClaimValue specifies that expected any claim value.
-func WithClaimValue(name string, v interface{}) Option {
-	return option.New(name, v)
-}
-
-// Verify makes sure that the essential claims stand.
+// Validate makes sure that the essential claims stand.
 //
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
-func Verify(t Token, options ...Option) error {
+func Validate(t Token, options ...ValidateOption) error {
 	var issuer string
 	var subject string
 	var audience string
@@ -95,8 +57,9 @@ func Verify(t Token, options ...Option) error {
 			audience = o.Value().(string)
 		case optkeyJwtid:
 			jwtid = o.Value().(string)
-		default:
-			claimValues[o.Name()] = o.Value()
+		case optkeyClaim:
+			claim := o.Value().(claimValue)
+			claimValues[claim.name] = claim.value
 		}
 	}
 
