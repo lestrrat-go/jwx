@@ -25,7 +25,8 @@ func (f ClockFunc) Now() time.Time {
 }
 
 // Verify has been deprecated in favor of `Validate` function,
-// to avoid confusion between verifying the JWS signature during `Parse`
+// to avoid confusion between verifying the JWS signature during `Parse`,
+// and the validation of the JWT token's contents
 func Verify(t Token, options ...ValidateOption) error {
 	return Validate(t, options...)
 }
