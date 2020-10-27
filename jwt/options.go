@@ -17,11 +17,14 @@ type parseOption struct {
 }
 
 func newParseOption(n string, v interface{}) ParseOption {
-	return &validateOption{Option: option.New(n, v)}
+	return &parseOption{Option: option.New(n, v)}
 }
+
+func (o *parseOption) isParseOption() bool { return true }
 
 type ParseOption interface {
 	Option
+	isParseOption() bool
 }
 
 type validateOption struct {
@@ -32,8 +35,11 @@ func newValidateOption(n string, v interface{}) ValidateOption {
 	return &validateOption{Option: option.New(n, v)}
 }
 
+func (o *validateOption) isValidateOption() bool { return true }
+
 type ValidateOption interface {
 	Option
+	isValidateOption() bool
 }
 
 const (

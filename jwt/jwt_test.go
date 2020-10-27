@@ -21,6 +21,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+/* This is commented out, because it is intended to cause compilation errors */
+/*
+func TestOption(t *testing.T) {
+	var p jwt.ParseOption
+	var v jwt.ValidateOption
+	var o jwt.Option
+	p = o // should be error
+	v = o // should be error
+	_ = p
+	_ = v
+}
+*/
+
 func TestJWTParse(t *testing.T) {
 	alg := jwa.RS256
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
