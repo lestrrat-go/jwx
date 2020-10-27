@@ -17,12 +17,12 @@ import (
 )
 
 // ParseString calls Parse with the given string
-func ParseString(s string, options ...Option) (Token, error) {
+func ParseString(s string, options ...ParseOption) (Token, error) {
 	return Parse(strings.NewReader(s), options...)
 }
 
 // ParseString calls Parse with the given byte sequence
-func ParseBytes(s []byte, options ...Option) (Token, error) {
+func ParseBytes(s []byte, options ...ParseOption) (Token, error) {
 	return Parse(bytes.NewReader(s), options...)
 }
 
@@ -37,7 +37,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // and such), use the `Valid()` function on the returned token, or pass the
 // `WithValidation(true)` option. Validation options can also be passed to
 // `Parse`
-func Parse(src io.Reader, options ...Option) (Token, error) {
+func Parse(src io.Reader, options ...ParseOption) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
 	var useDefault bool
@@ -83,7 +83,7 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...Option) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
 	var payload []byte
 	if verify {
 		v, err := jws.Verify(data, alg, key)
@@ -110,7 +110,14 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	}
 
 	if validate {
-		if err := Validate(token, options...); err != nil {
+		var vopts []ValidateOption
+		for _, o := range options {
+			if v, ok := o.(ValidateOption); ok {
+				vopts = append(vopts, v)
+			}
+		}
+
+		if err := Validate(token, vopts...); err != nil {
 			return nil, err
 		}
 	}
