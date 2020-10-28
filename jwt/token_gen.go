@@ -9,10 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/json"
-
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
 )
