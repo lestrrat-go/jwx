@@ -103,6 +103,11 @@ func (kw ECDHESEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		return nil, errors.New("key generator generated invalid key (expected ByteWithECPrivateKey)")
 	}
 
+	if kw.algorithm == jwa.ECDH_ES {
+		bwpk.ByteKey = cek
+		return bwpk, nil
+	}
+
 	block, err := aes.NewCipher(bwpk.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate cipher from generated key")

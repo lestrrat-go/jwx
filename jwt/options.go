@@ -117,13 +117,6 @@ func WithHeaders(hdrs jws.Headers) ParseOption {
 	return newParseOption(optkeyHeaders, hdrs)
 }
 
-// WithValidate is passed to `Parse()` method to denote that the
-// validation of the JWT token should be performed after a successful]
-// parsing of the incoming payload.
-func WithValidate(b bool) ParseOption {
-	return newParseOption(optkeyValidate, b)
-}
-
 // WithClock specifies the `Clock` to be used when verifying
 // claims exp and nbf.
 func WithClock(c Clock) ValidateOption {

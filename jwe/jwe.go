@@ -77,18 +77,24 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		default:
 			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
 		}
-	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		pubkey, ok := key.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, errors.New("invalid key: *ecdsa.PublicKey required")
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		var pubkey *ecdsa.PublicKey
+		switch v := key.(type) {
+		case ecdsa.PublicKey:
+			pubkey = &v
+		case *ecdsa.PublicKey:
+			pubkey = v
+		default:
+			return nil, errors.Errorf("invalid key: *ecdsa.PublicKey required (got %T)", key)
 		}
+
 		enc, err = keyenc.NewECDHESEncrypt(keyalg, pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
 		keysize = contentcrypt.KeySize() / 2
-	case jwa.ECDH_ES:
-		fallthrough
+//	case jwa.ECDH_ES:
+//		enc, err = keyenc.NewECDHESEncrypt(keyalg, pubkey)
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		fallthrough
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:

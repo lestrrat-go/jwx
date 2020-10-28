@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -48,24 +48,6 @@ func Available() bool {
 	return executablePath != ""
 }
 
-func createTempfile(t *testing.T, template string) (*os.File, func(), error) {
-	t.Helper()
-
-	file, err := ioutil.TempFile("", template)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create temporary file")
-	}
-
-	//	t.Logf("Created file %s", file.Name())
-	cleanup := func() {
-		//		t.Logf("Closing and removing file %s", file.Name())
-		file.Close()
-		os.Remove(file.Name())
-	}
-
-	return file, cleanup, nil
-}
-
 // GenerateJwk creates a new key using the jose tool, and returns its filename and
 // a cleanup function.
 // The caller is responsible for calling the cleanup
@@ -73,7 +55,7 @@ func createTempfile(t *testing.T, template string) (*os.File, func(), error) {
 func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, func(), error) {
 	t.Helper()
 
-	file, cleanup, err := createTempfile(t, "jwx-jose-key-*.jwk")
+	file, cleanup, err := jwxtest.CreateTempFile("jwx-jose-key-*.jwk")
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to create temporary file")
 	}
@@ -102,7 +84,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile strin
 
 	cmdargs := []string{ExecutablePath(), "jwe", "enc", "-k", keyfile}
 	if len(payload) > 0 {
-		pfile, pcleanup, perr := createTempfile(t, "jwx-jose-payload-*")
+		pfile, pcleanup, perr := jwxtest.CreateTempFile("jwx-jose-payload-*")
 		if perr != nil {
 			return "", nil, errors.Wrap(perr, `failed to create temporary file`)
 		}
@@ -115,7 +97,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile strin
 		defer pcleanup()
 	}
 
-	ofile, ocleanup, oerr := createTempfile(t, `jwx-jose-key-*.jwe`)
+	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-key-*.jwe`)
 	if oerr != nil {
 		return "", nil, errors.Wrap(oerr, "failed to create temporary file")
 	}
@@ -156,7 +138,17 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 	cmd.Stdout = &output
 
 	if err := cmd.Run(); err != nil {
-		t.Logf("Error executing command: %s", errdst.String())
+		t.Logf("Error executing command: %s", err)
+		if output.Len() > 0 {
+			t.Logf("captured output: %s", output.String())
+		}
+
+		if errdst.Len() > 0 {
+			t.Logf("captured error: %s", errdst.String())
+		}
+
+		jwxtest.DumpFile(t, cfile)
+		jwxtest.DumpFile(t, kfile)
 
 		return nil, errors.Wrap(err, `failed to decrypt message`)
 	}

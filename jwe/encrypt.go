@@ -1,7 +1,8 @@
 package jwe
 
 import (
-	"context"
+	"encoding/json"
+	"log"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/buffer"
@@ -92,13 +93,16 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	// If there's only one recipient, you want to include that in the
 	// protected header
-	if len(recipients) == 1 {
-		h, err := mergeHeaders(context.TODO(), protected, recipients[0].Headers())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to merge protected headers")
+	/*
+		if len(recipients) == 1 {
+			h, err := mergeHeaders(context.TODO(), protected, recipients[0].Headers())
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to merge protected headers")
+			}
+			protected = h
+			protected.Set("x-single-recipient", true)
 		}
-		protected = h
-	}
+	*/
 
 	aad, err := protected.Encode()
 	if err != nil {
@@ -141,6 +145,11 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	}
 	if err := msg.Set(InitializationVectorKey, iv); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+
+	{
+		buf, _ := json.MarshalIndent(protected, "", "  ")
+		log.Printf("protected (message.Encrypt) = %s", buf)
 	}
 	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)

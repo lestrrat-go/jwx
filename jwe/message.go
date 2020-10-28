@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 
@@ -65,6 +66,18 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 }
 
 func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
+	log.Printf("=== START mergeHeaders ===")
+	log.Printf("--- h1 ---")
+	{
+		buf, _ := json.MarshalIndent(h1, "", "  ")
+		log.Printf("%s", buf)
+	}
+	log.Printf("--- h2 ---")
+	{
+		buf, _ := json.MarshalIndent(h2, "", "  ")
+		log.Printf("%s", buf)
+	}
+	log.Printf("=== END   mergeHeaders ===")
 	h3 := NewHeaders()
 
 	if h1 != nil {

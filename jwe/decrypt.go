@@ -18,7 +18,7 @@ func buildRSA15Decrypter(alg jwa.KeyEncryptionAlgorithm, _ Headers, key interfac
 	case *rsa.PrivateKey:
 		privkey = v
 	default:
-		return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
+		return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter (got %T)", alg, key)
 	}
 
 	return keyenc.NewRSAPKCS15Decrypt(alg, privkey, keysize/2), nil
@@ -32,7 +32,7 @@ func buildRSAOAEPDecrypter(alg jwa.KeyEncryptionAlgorithm, _ Headers, key interf
 	case *rsa.PrivateKey:
 		privkey = v
 	default:
-		return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
+		return nil, errors.Errorf("*rsa.PrivateKey is required as the key to build %s key decrypter (got %T)", alg, key)
 	}
 
 	return keyenc.NewRSAOAEPDecrypt(alg, privkey)
@@ -41,7 +41,7 @@ func buildRSAOAEPDecrypter(alg jwa.KeyEncryptionAlgorithm, _ Headers, key interf
 func buildKeywrapDecrypter(alg jwa.KeyEncryptionAlgorithm, _ Headers, key interface{}, _ int) (keyenc.Decrypter, error) {
 	sharedkey, ok := key.([]byte)
 	if !ok {
-		return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
+		return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter (got %T)", alg, key)
 	}
 	return keyenc.NewAESCGM(alg, sharedkey)
 }
@@ -67,7 +67,7 @@ func buildECDHESDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interfa
 
 	privkey, ok := key.(*ecdsa.PrivateKey)
 	if !ok {
-		return nil, errors.Errorf("*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
+		return nil, errors.Errorf("*ecdsa.PrivateKey is required as the key to build %s key decrypter (got %T)", alg, key)
 	}
 	var apuData, apvData []byte
 	apu := h.AgreementPartyUInfo()

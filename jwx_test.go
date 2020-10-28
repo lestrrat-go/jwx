@@ -12,6 +12,8 @@ import (
 	"github.com/lestrrat-go/jwx"
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -155,7 +157,7 @@ func TestJoseCompatibility(t *testing.T) {
 				}
 				defer cleanup()
 
-				webkey, err := parseJwkFile(ctx, keyfile)
+				webkey, err := jwxtest.ParseJwkFile(ctx, keyfile)
 				if !assert.NoError(t, err, `ParseJwkFile should succeed`) {
 					return
 				}
@@ -173,29 +175,56 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jwe", func(t *testing.T) {
-		t.Run("Encrypt with ECDH key", func(t *testing.T) {
-			keyfile, jwkcleanup, err := jose.GenerateJwk(ctx, t, `{"alg": "ECDH-ES"}`)
-			if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
-				return
-			}
-			defer jwkcleanup()
+		t.Run("ECDH", func(t *testing.T) {
+			t.Run("jose -> jwx", func(t *testing.T) {
+				keyfile, jwkcleanup, err := jose.GenerateJwk(ctx, t, `{"alg": "ECDH-ES"}`)
+				if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
+					return
+				}
+				defer jwkcleanup()
 
-			expected := []byte("hi")
+				expected := []byte("hi")
 
-			cryptfile, jwecleanup, err := jose.EncryptJwe(ctx, t, expected, keyfile)
-			if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
-				return
-			}
-			defer jwecleanup()
+				cryptfile, jwecleanup, err := jose.EncryptJwe(ctx, t, expected, keyfile)
+				if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
+					return
+				}
+				defer jwecleanup()
 
-			payload, err := jose.DecryptJwe(ctx, t, cryptfile, keyfile)
-			if !assert.NoError(t, err, `jose.DecryptJwe should succeed`) {
-				return
-			}
+				payload, err := jwxtest.DecryptJweFile(ctx, cryptfile, jwa.ECDH_ES, keyfile)
+				if !assert.NoError(t, err, `decryptFile.DecryptJwe should succeed`) {
+					jwxtest.DumpFile(t, cryptfile)
+					return
+				}
 
-			if !assert.Equal(t, expected, payload, `decrypted payloads should match`) {
-				return
-			}
+				if !assert.Equal(t, expected, payload, `decrypted payloads should match`) {
+					return
+				}
+			})
+			t.Run("jwx -> jose", func(t *testing.T) {
+				kfile, kcleanup, kerr := jwxtest.ECDSAPrivateKeyFile()
+				if !assert.NoError(t, kerr, `jwxtest.ECDSAPrivateKeyFile should succeed`) {
+					return
+				}
+				defer kcleanup()
+
+				expected := []byte("hi")
+
+				cryptfile, cleanup, err := jwxtest.EncryptJweFile(ctx, expected, jwa.ECDH_ES, kfile, jwa.A128GCM, jwa.NoCompress)
+				if !assert.NoError(t, err, `jwxtest.EncryptJweFile should succeed`) {
+					return
+				}
+				defer cleanup()
+
+				payload, err := jose.DecryptJwe(ctx, t, cryptfile, kfile)
+				if !assert.NoError(t, err, `jose.DecryptJwe should succeed`) {
+					return
+				}
+
+				if !assert.Equal(t, expected, payload, `decrypted payloads should match`) {
+					return
+				}
+			})
 		})
 	})
 }
