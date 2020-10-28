@@ -1,10 +1,11 @@
 package types_test
 
 import (
-	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"

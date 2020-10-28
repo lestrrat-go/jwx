@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type Number = json.Number 
+type Number = json.Number
 type RawMessage = json.RawMessage
 
 var muGlobalConfig sync.RWMutex

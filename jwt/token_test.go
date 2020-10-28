@@ -2,10 +2,11 @@ package jwt_test
 
 import (
 	"context"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"

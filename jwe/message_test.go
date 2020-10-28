@@ -1,8 +1,9 @@
 package jwe_test
 
 import (
-	"github.com/lestrrat-go/jwx/internal/json"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/stretchr/testify/assert"

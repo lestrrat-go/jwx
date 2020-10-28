@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"time"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwt"

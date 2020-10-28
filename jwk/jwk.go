@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +16,8 @@ import (
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"

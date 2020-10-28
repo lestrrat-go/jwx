@@ -4,11 +4,12 @@ package jwt
 import (
 	"bytes"
 	"context"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"

@@ -7,10 +7,11 @@ import (
 	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"

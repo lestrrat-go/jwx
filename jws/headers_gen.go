@@ -4,10 +4,11 @@ package jws
 import (
 	"bytes"
 	"context"
-	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"sort"
 	"strconv"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"

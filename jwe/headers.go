@@ -2,6 +2,7 @@ package jwe
 
 import (
 	"context"
+
 	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
