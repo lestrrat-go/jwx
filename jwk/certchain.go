@@ -2,7 +2,7 @@ package jwk
 
 import (
 	"crypto/x509"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/pkg/errors"

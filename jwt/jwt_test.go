@@ -8,7 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"strings"
 	"testing"
 	"time"

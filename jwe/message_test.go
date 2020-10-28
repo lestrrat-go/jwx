@@ -1,7 +1,7 @@
 package jwe_test
 
 import (
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwe"

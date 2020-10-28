@@ -174,7 +174,7 @@ func generateHeaders() error {
 	pkgs := []string{
 		"bytes",
 		"context",
-		"encoding/json",
+		"github.com/lestrrat-go/jwx/internal/json",
 		"fmt",
 		"sort",
 		"strconv",

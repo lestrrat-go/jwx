@@ -3,7 +3,7 @@ package jwe
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/buffer"

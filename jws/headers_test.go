@@ -2,7 +2,7 @@ package jws_test
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"reflect"
 	"testing"
 

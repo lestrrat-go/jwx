@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/rsa"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwk"

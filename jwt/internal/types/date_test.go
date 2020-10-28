@@ -1,7 +1,7 @@
 package types_test
 
 import (
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"testing"
 	"time"

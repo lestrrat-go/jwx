@@ -7,7 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"reflect"
 	"testing"

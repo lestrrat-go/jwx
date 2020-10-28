@@ -5,7 +5,7 @@ package jwt
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"io"
 	"io/ioutil"
 	"strings"

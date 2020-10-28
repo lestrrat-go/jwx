@@ -8,7 +8,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"

@@ -2,7 +2,7 @@ package jwk_test
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"testing"
 

@@ -6,7 +6,8 @@ package buffer
 import (
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/pkg/errors"
 )

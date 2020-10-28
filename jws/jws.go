@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"io"
 	"strings"
 	"unicode"

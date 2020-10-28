@@ -4,7 +4,7 @@ package openid
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"fmt"
 	"sort"
 	"strconv"
