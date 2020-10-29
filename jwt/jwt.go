@@ -18,12 +18,12 @@ import (
 )
 
 // ParseString calls Parse with the given string
-func ParseString(s string, options ...ParseOption) (Token, error) {
+func ParseString(s string, options ...Option) (Token, error) {
 	return Parse(strings.NewReader(s), options...)
 }
 
 // ParseString calls Parse with the given byte sequence
-func ParseBytes(s []byte, options ...ParseOption) (Token, error) {
+func ParseBytes(s []byte, options ...Option) (Token, error) {
 	return Parse(bytes.NewReader(s), options...)
 }
 
@@ -38,7 +38,11 @@ func ParseBytes(s []byte, options ...ParseOption) (Token, error) {
 // and such), use the `Valid()` function on the returned token, or pass the
 // `WithValidation(true)` option. Validation options can also be passed to
 // `Parse`
-func Parse(src io.Reader, options ...ParseOption) (Token, error) {
+//
+// This function takes both ParseOption and Validate Option types:
+// ParseOptions control the parsing behavior, and ValidateOptions are
+// passed to `Validate()` when `jwt.WithValidate` is specified.
+func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
 	var useDefault bool
@@ -84,7 +88,7 @@ func Parse(src io.Reader, options ...ParseOption) (Token, error) {
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...Option) (Token, error) {
 	var payload []byte
 	if verify {
 		v, err := jws.Verify(data, alg, key)
@@ -101,6 +105,13 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 			return nil, errors.Wrap(err, `invalid jws message`)
 		}
 		payload = m.Payload()
+
+		// If JWS parse did not produce a full JWS message but also
+		// there were no errors, assume that this is an unsigned, raw
+		// JWT message
+		if len(payload) == 0 && len(m.Signatures()) == 0 {
+			payload = data
+		}
 	}
 
 	if token == nil {
