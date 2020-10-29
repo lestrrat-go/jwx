@@ -1,6 +1,20 @@
 Changes
 =======
 
+v1.0.6
+  * Fix ECDHES ciphers where padding in AAD et al was creating
+    incomptabile values with jose tool
+  * Implement direct key encoding (#213)
+  * Allow JWT tokens to use default JWK if only one key is given
+    and the JWT does not necessarily specifies a key (#214)
+  * Deprecate jwt.Verify and introduce jwt.Validate. JWS verification
+    used the term Verify, which was confusing when users wanted to
+    validate the JWT token itself. (#220)
+  * JWT library optins have been explicitly typed as ValidationOption
+    and ParseOption (#220)
+  * Add jwx.DecoderSettings and jwx.WithUseNumber option to globally
+    change how jwx parses JSON objects (#222)
+
 v1.0.5 - 28 Sep 2020
   * Reinstate PrivateParams() method in jws and jwe packages.
     These used to be available until v1.0.0, but somehow got lost during the
@@ -21,7 +35,7 @@ v1.0.3 - 08 Jul 2020
   * More golangci-lint cleanup (#193)
 
 v1.0.2 - 07 May 2020
-  * Since 1.0.0, we took somet time to play the test coverage game.
+  * Since 1.0.0, we took some time to play the test coverage game.
 	  The coverage is around 30% better, and we _did_ uncover some
     inconsistencies in the API, which got promptly fixed.
     But I'm tired of the coverage game for the time being. PR's welcome!
