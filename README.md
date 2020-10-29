@@ -370,6 +370,9 @@ func init()
 }
 ```
 
+Do be aware that this has *global* effect. All code that calls in to `encoding/json`
+within `jwx` *will* use your settings.
+
 ## Other related libraries:
 
 * https://github.com/dgrijalva/jwt-go
