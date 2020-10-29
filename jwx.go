@@ -21,3 +21,21 @@
 //
 // You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
 package jwx
+
+import "github.com/lestrrat-go/jwx/internal/json"
+
+// DecoderSettings gives you a access to configure the "encoding/json".Decoder
+// used to decode JSON objects within the jwx framework.
+func DecoderSettings(options ...JSONOption) {
+	// XXX We're using this format instead of just passing a single boolean
+	// in case a new option is to be added some time later
+	var useNumber bool
+	for _, option := range options {
+		switch option.Name() {
+		case optkeyUseNumber:
+			useNumber = option.Value().(bool)
+		}
+	}
+
+	json.DecoderSettings(useNumber)
+}

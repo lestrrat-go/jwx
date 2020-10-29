@@ -2,7 +2,8 @@ package jwe
 
 import (
 	"context"
-	"encoding/json"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"

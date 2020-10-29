@@ -7,9 +7,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
-	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"

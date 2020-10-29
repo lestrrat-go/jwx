@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +16,8 @@ import (
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -254,7 +255,7 @@ func (s *Set) UnmarshalJSON(data []byte) error {
 // Parse parses JWK from the incoming io.Reader. This function can handle
 // both single-key and multi-key formats. If you know before hand which
 // format the incoming data is in, you might want to consider using
-// "encoding/json" directly
+// "github.com/lestrrat-go/jwx/internal/json" directly
 //
 // Note that a successful parsing does NOT guarantee a valid key
 func Parse(in io.Reader) (*Set, error) {

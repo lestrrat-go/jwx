@@ -16,6 +16,17 @@ import (
 	"github.com/lestrrat-go/jwx/jwt/openid"
 )
 
+func ExampleDecoderSettings() {
+	// This has not been enabled in this example, but if you want to
+	// parse numbers in the incoming JSON objects as json.Number
+	// instead of floats, you can use the following call to globally
+	// affect the behavior of JSON parsing.
+
+	// func init() {
+	//   jwx.DecoderSettings(jwx.WithUseNumber(true))
+	// }
+}
+
 func Example_jwt() {
 	const aLongLongTimeAgo = 233431200
 

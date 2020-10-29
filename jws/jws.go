@@ -26,10 +26,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"strings"
 	"unicode"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"

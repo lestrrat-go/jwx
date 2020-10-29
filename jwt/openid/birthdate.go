@@ -2,11 +2,12 @@ package openid
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
 	"strconv"
+
+	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/pkg/errors"
 )

@@ -359,6 +359,20 @@ Supported content encryption algorithm:
 
 PRs welcome to support missing algorithms!
 
+## Configuring JSON Parsing
+
+If you want to parse numbers in the incoming JSON objects as json.Number
+instead of floats, you can use the following call to globally affect the behavior of JSON parsing.
+
+```go
+func init()
+  jwx.DecoderSettings(jwx.WithUseNumber(true))
+}
+```
+
+Do be aware that this has *global* effect. All code that calls in to `encoding/json`
+within `jwx` *will* use your settings.
+
 ## Other related libraries:
 
 * https://github.com/dgrijalva/jwt-go
