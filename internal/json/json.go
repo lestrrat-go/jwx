@@ -13,13 +13,14 @@ type RawMessage = json.RawMessage
 var muGlobalConfig sync.RWMutex
 var useNumber bool
 
+// Sets the global configuration for json decoding
 func DecoderSettings(inUseNumber bool) {
 	muGlobalConfig.Lock()
 	useNumber = inUseNumber
 	muGlobalConfig.Unlock()
 }
 
-// Unmarshal respects the values specified in DecoderSettings,
+// NewDecoder respects the values specified in DecoderSettings,
 // and creates a Decoder that has certain features turned on/off
 func NewDecoder(r io.Reader) *json.Decoder {
 	dec := json.NewDecoder(r)
