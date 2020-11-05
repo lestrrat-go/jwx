@@ -188,6 +188,26 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 	return Parse(res.Body)
 }
 
+// ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
+// and assigns the "raw" key to the given parameter. The key must either be
+// a pointer to an empty interface, or a pointer to the actual raw key type
+// such as *rsa.PrivateKEy, *ecdsa.PublicKey, *[]byte, etc.
+func ParseRawKey(data []byte, rawkey interface{}) error {
+	key, err := ParseKey(data)
+	if err != nil {
+		return errors.Wrap(err, `failed to parse key`)
+	}
+
+	if err := key.Raw(rawkey); err != nil {
+		return errors.Wrap(err, `failed to assign to raw key variable`)
+	}
+
+	return nil
+}
+
+// ParseKey parses a single key JWK. This method will report failure for
+// JWK with multiple keys, even if the JWK is valid: You must specify a single
+// key only.
 func ParseKey(data []byte) (Key, error) {
 	var hint struct {
 		Kty string          `json:"kty"`

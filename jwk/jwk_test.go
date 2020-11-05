@@ -69,6 +69,57 @@ func TestParse(t *testing.T) {
 				}
 			}
 		})
+		t.Run("jwk.ParseKey", func(t *testing.T) {
+			t.Helper()
+			key, err := jwk.ParseKey([]byte(src))
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+				return
+			}
+
+			t.Run("Raw", func(t *testing.T) {
+				t.Helper()
+
+				var irawkey interface{}
+				if !assert.NoError(t, key.Raw(&irawkey), `key.Raw(&interface) should ucceed`) {
+					return
+				}
+
+				var crawkey interface{}
+				switch key.(type) {
+				case jwk.RSAPrivateKey:
+					var rawkey rsa.PrivateKey
+					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
+						return
+					}
+					crawkey = &rawkey
+				case jwk.RSAPublicKey:
+					var rawkey rsa.PublicKey
+					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
+						return
+					}
+					crawkey = &rawkey
+				case jwk.ECDSAPrivateKey:
+					var rawkey ecdsa.PrivateKey
+					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
+						return
+					}
+					crawkey = &rawkey
+				default:
+					t.Errorf(`invalid key type %T`, key)
+					return
+				}
+
+				if !assert.IsType(t, crawkey, irawkey, `key types should match`) {
+					return
+				}
+			})
+		})
+		t.Run("ParseRawKey", func(t *testing.T) {
+			var v interface{}
+			if !assert.NoError(t, jwk.ParseRawKey([]byte(src), &v), `jwk.ParseRawKey should succeed`) {
+				return
+			}
+		})
 	}
 
 	t.Run("RSA Public Key", func(t *testing.T) {
