@@ -3,13 +3,14 @@ package jwe_test
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
 	"strings"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -365,8 +366,8 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 
 func TestEncode_ECDH(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
-	privkey, err := jwxtest.GenerateEcdsaKey()
-	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
+	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
 		return
 	}
 
