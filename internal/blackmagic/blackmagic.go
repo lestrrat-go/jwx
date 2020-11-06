@@ -8,7 +8,7 @@ import (
 
 // AssignIfCompatible is a convenience function to safely
 // assign arbitrary values. dst must be a pointer to an
-// empty interace, or it must be a pointer to a compatible
+// empty interface, or it must be a pointer to a compatible
 // variable type that can hold src
 func AssignIfCompatible(dst, src interface{}) error {
 	orv := reflect.ValueOf(src) // save this value for error reporting
