@@ -326,6 +326,23 @@ type element struct {
 	invalid bool
 }
 
+var isSymmetricKeyEncryption = map[string]struct{}{
+	`A128KW`:             struct{}{},
+	`A192KW`:             struct{}{},
+	`A256KW`:             struct{}{},
+	`DIRECT`:             struct{}{},
+	`ECDH_ES`:            struct{}{},
+	`ECDH_ES_A128KW`:     struct{}{},
+	`ECDH_ES_A192KW`:     struct{}{},
+	`ECDH_ES_A256KW`:     struct{}{},
+	`A128GCMKW`:          struct{}{},
+	`A192GCMKW`:          struct{}{},
+	`A256GCMKW`:          struct{}{},
+	`PBES2_HS256_A128KW`: struct{}{},
+	`PBES2_HS384_A192KW`: struct{}{},
+	`PBES2_HS512_A256KW`: struct{}{},
+}
+
 func (t typ) Generate() error {
 	var buf bytes.Buffer
 
@@ -403,6 +420,30 @@ func (t typ) Generate() error {
 	fmt.Fprintf(&buf, "\nfunc (v %s) String() string {", t.name)
 	fmt.Fprintf(&buf, "\nreturn string(v)")
 	fmt.Fprintf(&buf, "\n}")
+
+	if t.name == "KeyEncryptionAlgorithm" {
+		fmt.Fprintf(&buf, "\n\n// IsSymmetric returns true if the algorithm is a symmetric type")
+		fmt.Fprintf(&buf, "\nfunc (v %s) IsSymmetric() bool {", t.name)
+		fmt.Fprintf(&buf, "\nswitch v {")
+		fmt.Fprintf(&buf, "\ncase ")
+		var count int
+		for _, e := range t.elements {
+			if _, ok := isSymmetricKeyEncryption[e.name]; !ok {
+				continue
+			}
+			if count == 0 {
+				fmt.Fprintf(&buf, "%s", e.name)
+			} else {
+				fmt.Fprintf(&buf, ",%s", e.name)
+			}
+			count++
+		}
+		fmt.Fprintf(&buf, ":")
+		fmt.Fprintf(&buf, "\nreturn true")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn false")
+		fmt.Fprintf(&buf, "\n}")
+	}
 
 	formatted, err := imports.Process("", buf.Bytes(), nil)
 	if err != nil {
@@ -516,6 +557,21 @@ func (t typ) GenerateTest() error {
 	fmt.Fprintf(&buf, "\nreturn")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n})")
+
+	if t.name == "KeyEncryptionAlgorithm" {
+		fmt.Fprintf(&buf, "\nt.Run(`check symmetric values`, func(t *testing.T) {")
+		fmt.Fprintf(&buf, "\nt.Parallel()")
+		for _, e := range t.elements {
+			fmt.Fprintf(&buf, "\nt.Run(`%s`, func(t *testing.T) {", e.name)
+			if _, ok := isSymmetricKeyEncryption[e.name]; ok {
+				fmt.Fprintf(&buf, "\nassert.True(t, jwa.%s.IsSymmetric(), `jwa.%s should be symmetric`)", e.name)
+			} else {
+				fmt.Fprintf(&buf, "\nassert.False(t, jwa.%s.IsSymmetric(), `jwa.%s should be symmetric`)", e.name)
+			}
+			fmt.Fprintf(&buf, "\n})")
+		}
+		fmt.Fprintf(&buf, "\n})")
+	}
 
 	fmt.Fprintf(&buf, "\n}")
 

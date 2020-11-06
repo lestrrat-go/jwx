@@ -637,4 +637,58 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`check symmetric values`, func(t *testing.T) {
+		t.Parallel()
+		t.Run(`A128GCMKW`, func(t *testing.T) {
+			assert.True(t, jwa.A128GCMKW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`A128KW`, func(t *testing.T) {
+			assert.True(t, jwa.A128KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`A192GCMKW`, func(t *testing.T) {
+			assert.True(t, jwa.A192GCMKW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`A192KW`, func(t *testing.T) {
+			assert.True(t, jwa.A192KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`A256GCMKW`, func(t *testing.T) {
+			assert.True(t, jwa.A256GCMKW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`A256KW`, func(t *testing.T) {
+			assert.True(t, jwa.A256KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`DIRECT`, func(t *testing.T) {
+			assert.True(t, jwa.DIRECT.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`ECDH_ES`, func(t *testing.T) {
+			assert.True(t, jwa.ECDH_ES.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`ECDH_ES_A128KW`, func(t *testing.T) {
+			assert.True(t, jwa.ECDH_ES_A128KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`ECDH_ES_A192KW`, func(t *testing.T) {
+			assert.True(t, jwa.ECDH_ES_A192KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`ECDH_ES_A256KW`, func(t *testing.T) {
+			assert.True(t, jwa.ECDH_ES_A256KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`PBES2_HS256_A128KW`, func(t *testing.T) {
+			assert.True(t, jwa.PBES2_HS256_A128KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`PBES2_HS384_A192KW`, func(t *testing.T) {
+			assert.True(t, jwa.PBES2_HS384_A192KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`PBES2_HS512_A256KW`, func(t *testing.T) {
+			assert.True(t, jwa.PBES2_HS512_A256KW.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`RSA1_5`, func(t *testing.T) {
+			assert.False(t, jwa.RSA1_5.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`RSA_OAEP`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+		t.Run(`RSA_OAEP_256`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP_256.IsSymmetric(), `jwa.%!s(MISSING) should be symmetric`)
+		})
+	})
 }

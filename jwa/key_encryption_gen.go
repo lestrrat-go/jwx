@@ -64,3 +64,12 @@ func (v *KeyEncryptionAlgorithm) Accept(value interface{}) error {
 func (v KeyEncryptionAlgorithm) String() string {
 	return string(v)
 }
+
+// IsSymmetric returns true if the algorithm is a symmetric type
+func (v KeyEncryptionAlgorithm) IsSymmetric() bool {
+	switch v {
+	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT, ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW, PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW:
+		return true
+	}
+	return false
+}
