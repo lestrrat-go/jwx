@@ -66,6 +66,7 @@ func GenerateEcdsaPublicJwk() (jwk.Key, error) {
 
 func GenerateSymmetricKey() []byte {
 	sharedKey := make([]byte, 64)
+	//nolint:errcheck
 	rand.Read(sharedKey)
 	return sharedKey
 }
