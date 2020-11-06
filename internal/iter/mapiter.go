@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/pkg/errors"
 )
 
 // MapVisitor is a specialized visitor for our purposes.
