@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
@@ -126,7 +127,7 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 		key.Precomputed.Qinv = qi
 	}
 
-	return assignRawResult(v, &key)
+	return blackmagic.AssignIfCompatible(v, &key)
 }
 
 // Raw takes the values stored in the Key object, and creates the
@@ -144,7 +145,7 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	key.N = n
 	key.E = int(e.Int64())
 
-	return assignRawResult(v, &key)
+	return blackmagic.AssignIfCompatible(v, &key)
 }
 
 func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {

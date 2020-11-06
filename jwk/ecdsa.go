@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
@@ -108,7 +109,7 @@ func (k *ecdsaPublicKey) Raw(v interface{}) error {
 		return errors.Wrap(err, `failed to build public key`)
 	}
 
-	return assignRawResult(v, pubk)
+	return blackmagic.AssignIfCompatible(v, pubk)
 }
 
 func (k *ecdsaPrivateKey) Raw(v interface{}) error {
@@ -123,7 +124,7 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	key.D = &d
 	key.PublicKey = *pubk
 
-	return assignRawResult(v, &key)
+	return blackmagic.AssignIfCompatible(v, &key)
 }
 
 func (k *ecdsaPrivateKey) PublicKey() (ECDSAPublicKey, error) {
