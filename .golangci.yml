@@ -9,23 +9,30 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - gomnd
-    - gocritic
-    - lll
-    - gochecknoinits
-    - wsl
-    - nakedret
-    - funlen
-    - gochecknoglobals
-    - gocognit
-    - godox
-    - gocyclo
     - dupl
-    - gosec
-    - testpackage
+    - exhaustive
+    - exhaustivestruct
+    - errorlint
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - gocritic
+    - gocyclo
     - godot
-    - nestif
+    - godox
     - goerr113
+    - gofumpt
+    - gomnd
+    - gosec
+    - lll
+    - nakedret
+    - nestif
+    - nlreturn
+    - testpackage
+    - wrapcheck
+    - wsl
 
 issues:
   exclude-rules:

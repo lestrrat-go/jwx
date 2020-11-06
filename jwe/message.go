@@ -477,8 +477,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 				if pdebug.Enabled {
 					pdebug.Printf(`%s`, lastError)
 				}
-				return nil, lastError
-				//			continue
+				continue
 			}
 		}
 
