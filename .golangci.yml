@@ -11,7 +11,9 @@ linters:
   disable:
     - dupl
     - exhaustive
+    - errorlint
     - funlen
+    - gci
     - gochecknoglobals
     - gochecknoinits
     - gocognit
@@ -28,6 +30,7 @@ linters:
     - nestif
     - nlreturn
     - testpackage
+    - wrapcheck
     - wsl
 
 issues:

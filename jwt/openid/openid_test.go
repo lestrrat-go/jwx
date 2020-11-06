@@ -91,6 +91,8 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 }
 
 func TestAdressClaim(t *testing.T) {
+	t.Parallel()
+
 	const src = `{
     "formatted": "〒105-0011 東京都港区芝公園４丁目２−８",
 		"street_address": "芝公園４丁目２−８",

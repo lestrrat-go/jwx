@@ -28,7 +28,7 @@ func WalkMap(ctx context.Context, src mapiter.Source, visitor MapVisitor) error 
 func AsMap(ctx context.Context, src mapiter.Source) (map[string]interface{}, error) {
 	var m map[string]interface{}
 	if err := mapiter.AsMap(ctx, src, &m); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, `mapiter.AsMap failed`)
 	}
 	return m, nil
 }

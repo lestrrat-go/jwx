@@ -365,6 +365,8 @@ func TestAssignKeyID(t *testing.T) {
 }
 
 func TestPublicKeyOf(t *testing.T) {
+	t.Parallel()
+
 	rsakey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, `generating raw RSA key should succeed`) {
 		return

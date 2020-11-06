@@ -555,7 +555,7 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		n, err := rdr.Read(buf)
 		// return on unexpected read error
 		if err != nil && err != io.EOF {
-			return nil, nil, nil, err
+			return nil, nil, nil, errors.Wrap(err, `unexpected end of input`)
 		}
 
 		// append to current buffer
