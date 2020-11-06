@@ -2,12 +2,10 @@ package jwe_test
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -15,8 +13,8 @@ import (
 )
 
 func TestHeaders(t *testing.T) {
-	rawKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
+	rawKey, err := jwxtest.GenerateEcdsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
 	}
 	privKey, err := jwk.New(rawKey)

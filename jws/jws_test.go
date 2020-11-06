@@ -3,7 +3,6 @@ package jws_test
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -137,7 +137,7 @@ func TestRoundtrip(t *testing.T) {
 
 func TestVerifyWithJWKSet(t *testing.T) {
 	payload := []byte("Hello, World!")
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
@@ -173,7 +173,7 @@ func TestVerifyWithJWKSet(t *testing.T) {
 		return
 	}
 
-	key2, err := rsa.GenerateKey(rand.Reader, 2048)
+	key2, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
@@ -190,7 +190,7 @@ func TestVerifyWithJWKSet(t *testing.T) {
 func TestRoundtrip_RSACompact(t *testing.T) {
 	payload := []byte("Hello, World!")
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		key, err := jwxtest.GenerateRsaKey()
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
 		}
@@ -861,7 +861,7 @@ func TestSign_HeaderValues(t *testing.T) {
 */
 
 func TestPublicHeaders(t *testing.T) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "GenerateKey should succeed") {
 		return
 	}

@@ -3,13 +3,12 @@ package openid_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwt"
@@ -448,7 +447,7 @@ func TestOpenIDClaims(t *testing.T) {
 		var token3 openid.Token
 		{
 			alg := jwa.RS256
-			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			key, err := jwxtest.GenerateRsaKey()
 			if !assert.NoError(t, err, `rsa.GeneraKey should succeed`) {
 				return
 			}

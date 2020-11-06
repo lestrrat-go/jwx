@@ -367,7 +367,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 func TestEncode_ECDH(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
 	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if !assert.NoError(t, err, "ecdsa key generated") {
+	if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
 		return
 	}
 

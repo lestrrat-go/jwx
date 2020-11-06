@@ -2,18 +2,17 @@ package keyconv_test
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/rsa"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestKeyconv(t *testing.T) {
 	t.Run("RSA", func(t *testing.T) {
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		key, err := jwxtest.GenerateRsaKey()
 		if !assert.NoError(t, err, `rsa.GenerateKey should succeed`) {
 			return
 		}
@@ -121,7 +120,7 @@ func TestKeyconv(t *testing.T) {
 		})
 	})
 	t.Run("ECDSA", func(t *testing.T) {
-		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		key, err := jwxtest.GenerateEcdsaKey()
 		if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
 			return
 		}
