@@ -9,7 +9,7 @@ import (
 // AssignIfCompatible is a convenience function to safely
 // assign arbitrary values. dst must be a pointer to an
 // empty interface, or it must be a pointer to a compatible
-// variable type that can hold src
+// variable type that can hold src.
 func AssignIfCompatible(dst, src interface{}) error {
 	orv := reflect.ValueOf(src) // save this value for error reporting
 	result := orv
@@ -28,7 +28,7 @@ func AssignIfCompatible(dst, src interface{}) error {
 
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Ptr {
-		return errors.Errorf(`argument to Raw() must be a pointer: %T`, dst)
+		return errors.Errorf(`argument to AssignIfCompatible() must be a pointer: %T`, dst)
 	}
 
 	actualDst := rv.Elem()
@@ -43,11 +43,11 @@ func AssignIfCompatible(dst, src interface{}) error {
 		}
 	}
 	if !result.Type().AssignableTo(actualDst.Type()) {
-		return errors.Errorf(`argument to Raw() must be compatible with %T (was %T)`, orv.Interface(), dst)
+		return errors.Errorf(`argument to AssignIfCompatible() must be compatible with %T (was %T)`, orv.Interface(), dst)
 	}
 
 	if !actualDst.CanSet() {
-		return errors.Errorf(`argument to Raw() must be settable`)
+		return errors.Errorf(`argument to AssignIfCompatible() must be settable`)
 	}
 	actualDst.Set(result)
 

@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/keyconv"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -31,33 +32,23 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	var keysize int
 	switch keyalg {
 	case jwa.RSA1_5:
-		var pubkey *rsa.PublicKey
-		switch v := key.(type) {
-		case rsa.PublicKey:
-			pubkey = &v
-		case *rsa.PublicKey:
-			pubkey = v
-		default:
-			return nil, errors.Errorf("*rsa.PublicKey is required as the key to build %s key encrypter", keyalg)
+		var pubkey rsa.PublicKey
+		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
+			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
 
-		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, pubkey)
+		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, &pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
 		keysize = contentcrypt.KeySize() / 2
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
-		var pubkey *rsa.PublicKey
-		switch v := key.(type) {
-		case rsa.PublicKey:
-			pubkey = &v
-		case *rsa.PublicKey:
-			pubkey = v
-		default:
-			return nil, errors.Errorf("*rsa.PublicKey is required as the key to build %s key encrypter", keyalg)
+		var pubkey rsa.PublicKey
+		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
+			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
 
-		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, pubkey)
+		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, &pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
@@ -78,11 +69,12 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
 		}
 	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		pubkey, ok := key.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, errors.New("invalid key: *ecdsa.PublicKey required")
+		var pubkey ecdsa.PublicKey
+		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
-		enc, err = keyenc.NewECDHESEncrypt(keyalg, pubkey)
+
+		enc, err = keyenc.NewECDHESEncrypt(keyalg, &pubkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
