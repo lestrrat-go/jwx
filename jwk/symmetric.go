@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +32,7 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 // Raw returns the octets for this symmetric key.
 // Since this is a symmetric key, this just calls Octets
 func (k symmetricKey) Raw(v interface{}) error {
-	return assignRawResult(v, k.octets)
+	return blackmagic.AssignIfCompatible(v, k.octets)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
