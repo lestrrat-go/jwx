@@ -235,6 +235,8 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 }
 
 func TestEncode(t *testing.T) {
+	t.Parallel()
+
 	// HS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.1 works
 	t.Run("HS256Compact", func(t *testing.T) {
 		t.Parallel()
@@ -683,7 +685,6 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("CompleteJSON", func(t *testing.T) {
-
 		t.Parallel()
 		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
