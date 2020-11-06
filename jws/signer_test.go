@@ -1,13 +1,10 @@
 package jws_test
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
 	"strings"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jws/sign"
@@ -35,7 +32,7 @@ func TestSign(t *testing.T) {
 		}
 	})
 	t.Run("RSA roundtrip", func(t *testing.T) {
-		rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
+		rsakey, err := jwxtest.GenerateRsaKey()
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
 		}
@@ -63,12 +60,12 @@ func TestSign(t *testing.T) {
 	})
 }
 func TestSignMulti(t *testing.T) {
-	rsakey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsakey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
 
-	dsakey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	dsakey, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err, "ECDSA key generated") {
 		return
 	}

@@ -91,6 +91,9 @@ func New(key interface{}) (Key, error) {
 // value `v`. For example, if v is a `*rsa.PrivateKey`, then
 // `*rsa.PublicKey` is returned.
 //
+// Not to be confused with jwk.Key.PubliKey(). In hindsight, this should
+// have been named PublicRawKeyOf() or some such.
+//
 // If given a public key, then the same public key will be returned.
 // For example, if v is a `*rsa.PublicKey`, then the same value
 // is returned.

@@ -3,23 +3,19 @@ package jwt_test
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 /* This is commented out, because it is intended to cause compilation errors */
@@ -37,9 +33,10 @@ func TestOption(t *testing.T) {
 
 func TestJWTParse(t *testing.T) {
 	alg := jwa.RS256
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal("Failed to generate RSA key")
+
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+		return
 	}
 	t1 := jwt.New()
 	signed, err := jwt.Sign(t1, alg, key)
@@ -101,7 +98,7 @@ func TestJWTParse(t *testing.T) {
 
 func TestJWTParseVerify(t *testing.T) {
 	alg := jwa.RS256
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
@@ -354,7 +351,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestGH52(t *testing.T) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -396,8 +393,10 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 
 func TestSignErrors(t *testing.T) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
+	priv, err := jwxtest.GenerateEcdsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
+		return
+	}
 
 	tok := jwt.New()
 	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
@@ -410,7 +409,7 @@ func TestSignErrors(t *testing.T) {
 }
 
 func TestSignJWK(t *testing.T) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	priv, err := jwxtest.GenerateRsaKey()
 	assert.Nil(t, err)
 
 	key := jwk.NewRSAPrivateKey()

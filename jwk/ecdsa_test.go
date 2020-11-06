@@ -4,10 +4,10 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -118,8 +118,8 @@ func TestECDSA(t *testing.T) {
 	})
 	t.Run("Initialization", func(t *testing.T) {
 		// Generate an ECDSA P-256 test key.
-		ecPrk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if !assert.NoError(t, err, "Failed to generate EC P-256 key") {
+		ecPrk, err := jwxtest.GenerateEcdsaKey()
+		if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 			return
 		}
 		// Test initialization of a private EC JWK.
@@ -275,8 +275,8 @@ func TestECDSA(t *testing.T) {
 		for _, crv := range crvs {
 			crv := crv
 			t.Run(crv.Params().Name, func(t *testing.T) {
-				key, err := ecdsa.GenerateKey(crv, rand.Reader)
-				if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
+				key, err := jwxtest.GenerateEcdsaKey()
+				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 					return
 				}
 
