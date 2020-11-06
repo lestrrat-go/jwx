@@ -11,6 +11,7 @@ linters:
   disable:
     - dupl
     - exhaustive
+    - exhaustivestruct
     - errorlint
     - funlen
     - gci
