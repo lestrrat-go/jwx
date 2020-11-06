@@ -10,6 +10,7 @@ import (
 )
 
 func TestCompressionAlgorithm(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant Deflate`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm

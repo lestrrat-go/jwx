@@ -13,6 +13,7 @@ import (
 )
 
 func TestHeaders(t *testing.T) {
+	t.Parallel()
 	rawKey, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
@@ -52,6 +53,7 @@ func TestHeaders(t *testing.T) {
 	base := jwe.NewHeaders()
 
 	t.Run("Set values", func(t *testing.T) {
+		// DO NOT RUN THIS IN PARALLEL. THIS IS AN INITIALIZER
 		for _, tc := range data {
 			if !assert.NoError(t, base.Set(tc.Key, tc.Value), "Headers.Set should succeed") {
 				return
@@ -60,7 +62,16 @@ func TestHeaders(t *testing.T) {
 	})
 
 	t.Run("Set/Get", func(t *testing.T) {
-		h := base
+		t.Parallel()
+		h := jwe.NewHeaders()
+		ctx := context.Background()
+
+		for iter := base.Iterate(ctx); iter.Next(ctx); {
+			pair := iter.Pair()
+			if !assert.NoError(t, h.Set(pair.Key.(string), pair.Value), `h.Set should be successful`) {
+				return
+			}
+		}
 		for _, tc := range data {
 			got, ok := h.Get(tc.Key)
 			if !assert.True(t, ok, "value for %s should exist", tc.Key) {
@@ -77,8 +88,13 @@ func TestHeaders(t *testing.T) {
 		}
 	})
 	t.Run("PrivateParams", func(t *testing.T) {
+		t.Parallel()
 		h := base
-		pp := h.PrivateParams()
+		pp, err := h.AsMap(context.Background())
+		if !assert.NoError(t, err, `h.AsMap should succeed`) {
+			return
+		}
+
 		v, ok := pp["private"]
 		if !assert.True(t, ok, "key 'private' should exists") {
 			return
@@ -89,6 +105,7 @@ func TestHeaders(t *testing.T) {
 		}
 	})
 	t.Run("Encode", func(t *testing.T) {
+		t.Parallel()
 		h1 := jwe.NewHeaders()
 		h1.Set(jwe.AlgorithmKey, jwa.A128GCMKW)
 		h1.Set("foo", "bar")
@@ -109,6 +126,7 @@ func TestHeaders(t *testing.T) {
 	})
 
 	t.Run("Iterator", func(t *testing.T) {
+		t.Parallel()
 		expected := map[string]interface{}{}
 		for _, tc := range data {
 			v := tc.Value

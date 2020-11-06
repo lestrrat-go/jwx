@@ -13,25 +13,30 @@ import (
 )
 
 func TestSign(t *testing.T) {
+	t.Parallel()
 	t.Run("Bad algorithm", func(t *testing.T) {
+		t.Parallel()
 		_, err := jws.Sign([]byte(nil), jwa.SignatureAlgorithm("FooBar"), nil)
 		if !assert.Error(t, err, "Unknown algorithm should return error") {
 			return
 		}
 	})
 	t.Run("No private key", func(t *testing.T) {
+		t.Parallel()
 		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jwa.RS256, nil)
 		if !assert.Error(t, err, "Sign with no private key should return error") {
 			return
 		}
 	})
 	t.Run("RSA verify with no public key", func(t *testing.T) {
+		t.Parallel()
 		_, err := jws.Verify([]byte(nil), jwa.RS256, nil)
 		if !assert.Error(t, err, "Verify with no private key should return error") {
 			return
 		}
 	})
 	t.Run("RSA roundtrip", func(t *testing.T) {
+		t.Parallel()
 		rsakey, err := jwxtest.GenerateRsaKey()
 		if !assert.NoError(t, err, "RSA key generated") {
 			return

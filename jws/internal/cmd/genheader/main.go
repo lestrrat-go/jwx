@@ -209,6 +209,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
 
+	fmt.Fprintf(&buf, "\n\n// PrivateParams returns the non-standard elements in the source structure")
+	fmt.Fprintf(&buf, "\n// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
+	fmt.Fprintf(&buf, "\n// Use AsMap() to get a copy of the entire header instead")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
 
 	fmt.Fprintf(&buf, "\n}")

@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-
-	"github.com/lestrrat-go/jwx/internal/json"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -61,6 +61,10 @@ type Headers interface {
 	Remove(string) error
 	Encode() ([]byte, error)
 	Decode([]byte) error
+	// PrivateParams returns the map containing the private parameters
+	// in the associated header. WARNING: DO NOT USE PrivateParams()
+	// IF YOU HAVE CONCURRENT CODE ACCESSING THEM. Use AsMap() to
+	// get a copy of the entire header instead
 	PrivateParams() map[string]interface{}
 }
 
@@ -82,6 +86,7 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string                         `json:"x5t#S256,omitempty"` //
 	x509URL                *string                         `json:"x5u,omitempty"`      //
 	privateParams          map[string]interface{}
+	mu                     sync.RWMutex
 }
 
 type standardHeadersMarshalProxy struct {
@@ -110,6 +115,8 @@ func NewHeaders() Headers {
 }
 
 func (h *stdHeaders) AgreementPartyUInfo() buffer.Buffer {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.agreementPartyUInfo == nil {
 		return buffer.Buffer{}
 	}
@@ -117,6 +124,8 @@ func (h *stdHeaders) AgreementPartyUInfo() buffer.Buffer {
 }
 
 func (h *stdHeaders) AgreementPartyVInfo() buffer.Buffer {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.agreementPartyVInfo == nil {
 		return buffer.Buffer{}
 	}
@@ -124,6 +133,8 @@ func (h *stdHeaders) AgreementPartyVInfo() buffer.Buffer {
 }
 
 func (h *stdHeaders) Algorithm() jwa.KeyEncryptionAlgorithm {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm == nil {
 		return ""
 	}
@@ -131,6 +142,8 @@ func (h *stdHeaders) Algorithm() jwa.KeyEncryptionAlgorithm {
 }
 
 func (h *stdHeaders) Compression() jwa.CompressionAlgorithm {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.compression == nil {
 		return ""
 	}
@@ -138,6 +151,8 @@ func (h *stdHeaders) Compression() jwa.CompressionAlgorithm {
 }
 
 func (h *stdHeaders) ContentEncryption() jwa.ContentEncryptionAlgorithm {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.contentEncryption == nil {
 		return ""
 	}
@@ -145,6 +160,8 @@ func (h *stdHeaders) ContentEncryption() jwa.ContentEncryptionAlgorithm {
 }
 
 func (h *stdHeaders) ContentType() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.contentType == nil {
 		return ""
 	}
@@ -152,18 +169,26 @@ func (h *stdHeaders) ContentType() string {
 }
 
 func (h *stdHeaders) Critical() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.critical
 }
 
 func (h *stdHeaders) EphemeralPublicKey() jwk.ECDSAPublicKey {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.ephemeralPublicKey
 }
 
 func (h *stdHeaders) JWK() jwk.Key {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.jwk
 }
 
 func (h *stdHeaders) JWKSetURL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.jwkSetURL == nil {
 		return ""
 	}
@@ -171,6 +196,8 @@ func (h *stdHeaders) JWKSetURL() string {
 }
 
 func (h *stdHeaders) KeyID() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID == nil {
 		return ""
 	}
@@ -178,6 +205,8 @@ func (h *stdHeaders) KeyID() string {
 }
 
 func (h *stdHeaders) Type() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.typ == nil {
 		return ""
 	}
@@ -185,10 +214,14 @@ func (h *stdHeaders) Type() string {
 }
 
 func (h *stdHeaders) X509CertChain() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.x509CertChain
 }
 
 func (h *stdHeaders) X509CertThumbprint() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint == nil {
 		return ""
 	}
@@ -196,6 +229,8 @@ func (h *stdHeaders) X509CertThumbprint() string {
 }
 
 func (h *stdHeaders) X509CertThumbprintS256() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 == nil {
 		return ""
 	}
@@ -203,6 +238,8 @@ func (h *stdHeaders) X509CertThumbprintS256() string {
 }
 
 func (h *stdHeaders) X509URL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL == nil {
 		return ""
 	}
@@ -211,6 +248,8 @@ func (h *stdHeaders) X509URL() string {
 
 func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer close(ch)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	var pairs []*HeaderPair
 	if h.agreementPartyUInfo != nil {
 		pairs = append(pairs, &HeaderPair{Key: AgreementPartyUInfoKey, Value: *(h.agreementPartyUInfo)})
@@ -273,10 +312,14 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 }
 
 func (h *stdHeaders) PrivateParams() map[string]interface{} {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.privateParams
 }
 
 func (h *stdHeaders) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case AgreementPartyUInfoKey:
 		if h.agreementPartyUInfo == nil {
@@ -365,6 +408,8 @@ func (h *stdHeaders) Get(name string) (interface{}, bool) {
 }
 
 func (h *stdHeaders) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case AgreementPartyUInfoKey:
 		var acceptor buffer.Buffer
@@ -477,6 +522,8 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 }
 
 func (h *stdHeaders) Remove(key string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch key {
 	case AgreementPartyUInfoKey:
 		h.agreementPartyUInfo = nil
@@ -517,6 +564,8 @@ func (h *stdHeaders) Remove(key string) error {
 }
 
 func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	var proxy standardHeadersMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
 		return errors.Wrap(err, `failed to unmarshal headers`)
@@ -582,6 +631,8 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	var proxy standardHeadersMarshalProxy
 	if h.jwk != nil {
 		jwkbuf, err := json.Marshal(h.jwk)
