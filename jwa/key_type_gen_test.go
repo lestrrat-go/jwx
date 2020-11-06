@@ -10,6 +10,7 @@ import (
 )
 
 func TestKeyType(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType

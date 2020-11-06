@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lestrrat-go/jwx/internal/codegen"
 	"github.com/pkg/errors"
-	"golang.org/x/tools/imports"
 )
 
 const (
@@ -228,6 +228,7 @@ func generateHeaders() error {
 		"fmt",
 		"sort",
 		"strconv",
+		"sync",
 		"github.com/lestrrat-go/jwx/buffer",
 		"github.com/lestrrat-go/jwx/jwa",
 		"github.com/lestrrat-go/jwx/jwk",
@@ -266,6 +267,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nDecode([]byte) error")
 
 	// Access private parameters
+	fmt.Fprintf(&buf, "\n// PrivateParams returns the map containing the non-standard ('private') parameters")
+	fmt.Fprintf(&buf, "\n// in the associated header. WARNING: DO NOT USE PrivateParams()")
+	fmt.Fprintf(&buf, "\n// IF YOU HAVE CONCURRENT CODE ACCESSING THEM. Use AsMap() to")
+	fmt.Fprintf(&buf, "\n// get a copy of the entire header instead")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
 
 	fmt.Fprintf(&buf, "\n}")
@@ -275,6 +280,7 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, fieldStorageType(f.typ), f.jsonTag, f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
+	fmt.Fprintf(&buf, "\nmu sync.RWMutex")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	// Proxy is used when unmarshaling headers
@@ -300,6 +306,8 @@ func generateHeaders() error {
 
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) %s() %s{", f.method, f.typ)
+		fmt.Fprintf(&buf, "\nh.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 		if !fieldStorageTypeIsIndirect(f.typ) {
 			fmt.Fprintf(&buf, "\nreturn h.%s", f.name)
 		} else {
@@ -315,7 +323,8 @@ func generateHeaders() error {
 	// in this header.
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {")
 	fmt.Fprintf(&buf, "\ndefer close(ch)")
-
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
@@ -340,10 +349,14 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) PrivateParams() map[string]interface{} {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nreturn h.privateParams")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Get(name string) (interface{}, bool) {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -363,6 +376,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Set(name string, value interface{}) error {")
+	fmt.Fprintf(&buf, "\nh.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -402,6 +417,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Remove(key string) error {")
+	fmt.Fprintf(&buf, "\nh.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch key {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -414,6 +431,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nh.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal headers`)")
@@ -465,6 +484,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
 	fmt.Fprintf(&buf, "\nif h.jwk != nil {")
 	fmt.Fprintf(&buf, "\njwkbuf, err := json.Marshal(h.jwk)")
@@ -529,18 +550,9 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn json.Marshal(tmp)")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
-	formatted, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		buf.WriteTo(os.Stdout)
-		return errors.Wrap(err, `failed to format code`)
+	if err := codegen.WriteFormattedCodeToFile("headers_gen.go", &buf); err != nil {
+		return errors.Wrap(err, `failed to write formatted code to headers_gen.go`)
 	}
-
-	f, err := os.Create("headers_gen.go")
-	if err != nil {
-		return errors.Wrap(err, `failed to open headers_gen.go`)
-	}
-	defer f.Close()
-	f.Write(formatted)
 
 	return nil
 }

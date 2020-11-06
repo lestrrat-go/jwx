@@ -10,6 +10,7 @@ import (
 )
 
 func TestKeyEncryptionAlgorithm(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant A128GCMKW`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm

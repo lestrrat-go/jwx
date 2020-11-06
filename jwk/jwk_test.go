@@ -18,6 +18,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	t.Parallel()
 	k, err := jwk.New(nil)
 	if !assert.Nil(t, k, "key should be nil") {
 		return
@@ -28,6 +29,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	verify := func(t *testing.T, src string, expected reflect.Type) {
 		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
@@ -121,6 +123,7 @@ func TestParse(t *testing.T) {
 	}
 
 	t.Run("RSA Public Key", func(t *testing.T) {
+		t.Parallel()
 		const src = `{
       "e":"AQAB",
 			"kty":"RSA",
@@ -129,6 +132,7 @@ func TestParse(t *testing.T) {
 		verify(t, src, reflect.TypeOf((*jwk.RSAPublicKey)(nil)).Elem())
 	})
 	t.Run("RSA Private Key", func(t *testing.T) {
+		t.Parallel()
 		const src = `{
       "kty":"RSA",
       "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
@@ -145,6 +149,7 @@ func TestParse(t *testing.T) {
 		verify(t, src, reflect.TypeOf((*jwk.RSAPrivateKey)(nil)).Elem())
 	})
 	t.Run("ECDSA Private Key", func(t *testing.T) {
+		t.Parallel()
 		const src = `{
 		  "kty" : "EC",
 		  "crv" : "P-256",
@@ -155,6 +160,7 @@ func TestParse(t *testing.T) {
 		verify(t, src, reflect.TypeOf((*jwk.ECDSAPrivateKey)(nil)).Elem())
 	})
 	t.Run("Invalid ECDSA Private Key", func(t *testing.T) {
+		t.Parallel()
 		const src = `{
 		  "kty" : "EC",
 		  "crv" : "P-256",
@@ -169,6 +175,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestRoundtrip(t *testing.T) {
+	t.Parallel()
 	generateRSA := func(use string, keyID string) (jwk.Key, error) {
 		k, err := jwxtest.GenerateRsaJwk()
 		if err != nil {
@@ -297,6 +304,7 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestKeyOperation(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		Args  interface{}
 		Error bool
@@ -337,6 +345,7 @@ func TestKeyOperation(t *testing.T) {
 }
 
 func TestAssignKeyID(t *testing.T) {
+	t.Parallel()
 	generators := []func() (jwk.Key, error){
 		jwxtest.GenerateRsaJwk,
 		jwxtest.GenerateRsaPublicJwk,
@@ -439,6 +448,7 @@ func TestPublicKeyOf(t *testing.T) {
 }
 
 func TestIssue207(t *testing.T) {
+	t.Parallel()
 	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
 
 	// Using a loop here because we're using sync.Pool

@@ -10,6 +10,7 @@ import (
 )
 
 func TestSignatureAlgorithm(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant ES256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm

@@ -10,6 +10,7 @@ import (
 )
 
 func TestContentEncryptionAlgorithm(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant A128CBC_HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm

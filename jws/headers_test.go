@@ -14,6 +14,8 @@ import (
 )
 
 func TestHeader(t *testing.T) {
+	t.Parallel()
+
 	publicKey := `{"kty":"RSA",
 	             "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
 	             "e":"AQAB",
@@ -43,10 +45,12 @@ func TestHeader(t *testing.T) {
 	}
 
 	t.Run("Type", func(t *testing.T) {
+		t.Parallel()
 		var h jws.Headers = jws.NewHeaders()
 		_ = h
 	})
 	t.Run("Sanity", func(t *testing.T) {
+		t.Parallel()
 		h := jws.NewHeaders()
 		if !assert.NoError(t, json.Unmarshal([]byte(publicKey), h), "unmarshal public key should succeed") {
 			return
@@ -56,6 +60,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("Private parameters", func(t *testing.T) {
+		t.Parallel()
 		t.Run("Without standard headers", func(t *testing.T) {
 			t.Parallel()
 			const src = `{ "foo": 1, "bar": "two", "baz": true }`
@@ -124,6 +129,7 @@ func TestHeader(t *testing.T) {
 		})
 	})
 	t.Run("Roundtrip", func(t *testing.T) {
+		t.Parallel()
 		h := jws.NewHeaders()
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), "h.Set should succeed for %s", k) {
@@ -141,6 +147,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("JSON Roundtrip", func(t *testing.T) {
+		t.Parallel()
 		h := jws.NewHeaders()
 		for k, v := range values {
 			err := h.Set(k, v)
@@ -166,6 +173,7 @@ func TestHeader(t *testing.T) {
 		}
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
+		t.Parallel()
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64
@@ -210,6 +218,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("Iterator", func(t *testing.T) {
+		t.Parallel()
 		h := jws.NewHeaders()
 		expected := make(map[string]interface{})
 		for k, v := range values {
@@ -219,6 +228,7 @@ func TestHeader(t *testing.T) {
 			expected[k] = v
 		}
 		t.Run("Iterate", func(t *testing.T) {
+			t.Parallel()
 			seen := make(map[string]interface{})
 			for iter := h.Iterate(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
@@ -237,6 +247,7 @@ func TestHeader(t *testing.T) {
 			}
 		})
 		t.Run("Walk", func(t *testing.T) {
+			t.Parallel()
 			seen := make(map[string]interface{})
 			h.Walk(context.TODO(), jwk.HeaderVisitorFunc(func(key string, value interface{}) error {
 				seen[key] = value
@@ -247,6 +258,7 @@ func TestHeader(t *testing.T) {
 			}
 		})
 		t.Run("AsMap", func(t *testing.T) {
+			t.Parallel()
 			seen, err := h.AsMap(context.TODO())
 			if !assert.NoError(t, err, `v.AsMap should succeed`) {
 				return
@@ -256,7 +268,12 @@ func TestHeader(t *testing.T) {
 			}
 		})
 		t.Run("PrivateParams", func(t *testing.T) {
-			pp := h.PrivateParams()
+			t.Parallel()
+			pp, err := h.AsMap(context.Background())
+			if !assert.NoError(t, err, `h.AsMap should succeed`) {
+				return
+			}
+
 			v, ok := pp["private"]
 			if !assert.True(t, ok, "key 'private' should exists") {
 				return

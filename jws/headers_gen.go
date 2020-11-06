@@ -46,6 +46,10 @@ type Headers interface {
 	AsMap(ctx context.Context) (map[string]interface{}, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+
+	// PrivateParams returns the non-standard elements in the source structure
+	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
+	// Use AsMap() to get a copy of the entire header instead
 	PrivateParams() map[string]interface{}
 }
 

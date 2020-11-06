@@ -32,6 +32,8 @@ func TestOption(t *testing.T) {
 */
 
 func TestJWTParse(t *testing.T) {
+	t.Parallel()
+
 	alg := jwa.RS256
 
 	key, err := jwxtest.GenerateRsaKey()
@@ -45,6 +47,7 @@ func TestJWTParse(t *testing.T) {
 	}
 
 	t.Run("Parse (no signature verification)", func(t *testing.T) {
+		t.Parallel()
 		t2, err := jwt.Parse(bytes.NewReader(signed))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
@@ -54,6 +57,7 @@ func TestJWTParse(t *testing.T) {
 		}
 	})
 	t.Run("ParseString (no signature verification)", func(t *testing.T) {
+		t.Parallel()
 		t2, err := jwt.ParseString(string(signed))
 		if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
 			return
@@ -63,6 +67,7 @@ func TestJWTParse(t *testing.T) {
 		}
 	})
 	t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
+		t.Parallel()
 		t2, err := jwt.ParseBytes(signed)
 		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
 			return
@@ -72,6 +77,7 @@ func TestJWTParse(t *testing.T) {
 		}
 	})
 	t.Run("Parse (correct signature key)", func(t *testing.T) {
+		t.Parallel()
 		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
@@ -81,12 +87,14 @@ func TestJWTParse(t *testing.T) {
 		}
 	})
 	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+		t.Parallel()
 		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
 	})
 	t.Run("parse (wrong signature key)", func(t *testing.T) {
+		t.Parallel()
 		pubkey := key.PublicKey
 		pubkey.E = 0 // bogus value
 		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
@@ -97,6 +105,7 @@ func TestJWTParse(t *testing.T) {
 }
 
 func TestJWTParseVerify(t *testing.T) {
+	t.Parallel()
 	alg := jwa.RS256
 	key, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
@@ -115,13 +124,16 @@ func TestJWTParseVerify(t *testing.T) {
 	}
 
 	t.Run("ParseVerify(old API)", func(t *testing.T) {
+		t.Parallel()
 		t.Run("parse (no signature verification)", func(t *testing.T) {
+			t.Parallel()
 			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
 			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
 				return
 			}
 		})
 		t.Run("parse (correct signature key)", func(t *testing.T) {
+			t.Parallel()
 			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
 			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
 				return
@@ -131,12 +143,14 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 		})
 		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
+			t.Parallel()
 			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
 			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
 				return
 			}
 		})
 		t.Run("parse (wrong signature key)", func(t *testing.T) {
+			t.Parallel()
 			pubkey := key.PublicKey
 			pubkey.E = 0 // bogus value
 			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
@@ -146,7 +160,9 @@ func TestJWTParseVerify(t *testing.T) {
 		})
 	})
 	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
+		t.Parallel()
 		t.Run("Automatically pick a key from set", func(t *testing.T) {
+			t.Parallel()
 			pubkey := jwk.NewRSAPublicKey()
 			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
 				return
@@ -162,6 +178,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 		})
 		t.Run("No kid should fail", func(t *testing.T) {
+			t.Parallel()
 			pubkey := jwk.NewRSAPublicKey()
 			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
 				return
@@ -178,6 +195,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 		})
 		t.Run("Pick default key from set of 1", func(t *testing.T) {
+			t.Parallel()
 			pubkey := jwk.NewRSAPublicKey()
 			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
 				return
@@ -197,6 +215,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 		})
 		t.Run("UseDefault with multiple keys should fail", func(t *testing.T) {
+			t.Parallel()
 			pubkey1 := jwk.NewRSAPublicKey()
 			if !assert.NoError(t, pubkey1.FromRaw(&key.PublicKey)) {
 				return
@@ -224,6 +243,7 @@ func TestJWTParseVerify(t *testing.T) {
 	// a test to see if jws.Verify returns an error if alg: none is specified in the
 	// header section. Move this test to jws if need be.
 	t.Run("Check alg=none", func(t *testing.T) {
+		t.Parallel()
 		// Create a signed payload, but use alg=none
 		_, payload, signature, err := jws.SplitCompact(bytes.NewReader(signed))
 		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
@@ -264,8 +284,10 @@ func TestJWTParseVerify(t *testing.T) {
 }
 
 func TestValidateClaims(t *testing.T) {
+	t.Parallel()
 	// GitHub issue #37: tokens are invalid in the second they are created (because Now() is not after IssuedAt())
 	t.Run(jwt.IssuedAtKey+"+skew", func(t *testing.T) {
+		t.Parallel()
 		token := jwt.New()
 		now := time.Now().UTC()
 		token.Set(jwt.IssuedAtKey, now)
@@ -290,6 +312,7 @@ const aLongLongTimeAgo = 233431200
 const aLongLongTimeAgoString = "233431200"
 
 func TestUnmarshal(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		Title        string
 		Source       string
@@ -331,6 +354,7 @@ func TestUnmarshal(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Title, func(t *testing.T) {
+			t.Parallel()
 			token := jwt.New()
 			if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`) {
 				return
@@ -351,6 +375,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestGH52(t *testing.T) {
+	t.Parallel()
 	priv, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err) {
 		return
@@ -375,7 +400,9 @@ func TestGH52(t *testing.T) {
 }
 
 func TestUnmarshalJSON(t *testing.T) {
+	t.Parallel()
 	t.Run("Unmarshal audience with multiple values", func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
 			return
@@ -393,6 +420,7 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 
 func TestSignErrors(t *testing.T) {
+	t.Parallel()
 	priv, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
@@ -409,6 +437,7 @@ func TestSignErrors(t *testing.T) {
 }
 
 func TestSignJWK(t *testing.T) {
+	t.Parallel()
 	priv, err := jwxtest.GenerateRsaKey()
 	assert.Nil(t, err)
 

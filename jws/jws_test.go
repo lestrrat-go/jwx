@@ -27,13 +27,16 @@ const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.ey
 const badValue = "%badvalue%"
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
+		t.Parallel()
 		_, err := jws.Parse(&bytes.Buffer{})
 		if !assert.Error(t, err, "Parsing an empty buffer should result in an error") {
 			return
 		}
 	})
 	t.Run("Compact missing parts", func(t *testing.T) {
+		t.Parallel()
 		incoming := strings.Join(
 			(strings.Split(
 				exampleCompactSerialization,
@@ -47,6 +50,7 @@ func TestParse(t *testing.T) {
 		}
 	})
 	t.Run("Compact bad header", func(t *testing.T) {
+		t.Parallel()
 		parts := strings.Split(exampleCompactSerialization, ".")
 		parts[0] = badValue
 		incoming := strings.Join(parts, ".")
@@ -57,6 +61,7 @@ func TestParse(t *testing.T) {
 		}
 	})
 	t.Run("Compact bad payload", func(t *testing.T) {
+		t.Parallel()
 		parts := strings.Split(exampleCompactSerialization, ".")
 		parts[1] = badValue
 		incoming := strings.Join(parts, ".")
@@ -67,6 +72,7 @@ func TestParse(t *testing.T) {
 		}
 	})
 	t.Run("Compact bad signature", func(t *testing.T) {
+		t.Parallel()
 		parts := strings.Split(exampleCompactSerialization, ".")
 		parts[2] = badValue
 		incoming := strings.Join(parts, ".")
@@ -80,6 +86,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestRoundtrip(t *testing.T) {
+	t.Parallel()
 	payload := []byte("Lorem ipsum")
 	sharedkey := []byte("Avracadabra")
 
@@ -87,6 +94,7 @@ func TestRoundtrip(t *testing.T) {
 	for _, alg := range hmacAlgorithms {
 		alg := alg
 		t.Run("HMAC "+alg.String(), func(t *testing.T) {
+			t.Parallel()
 			signed, err := jws.Sign(payload, alg, sharedkey)
 			if !assert.NoError(t, err, "Sign succeeds") {
 				return
@@ -227,8 +235,11 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 }
 
 func TestEncode(t *testing.T) {
+	t.Parallel()
+
 	// HS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.1 works
 	t.Run("HS256Compact", func(t *testing.T) {
+		t.Parallel()
 		const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
 		const hmacKey = `AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow`
 		const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
@@ -306,6 +317,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("HS256CompactLiteral", func(t *testing.T) {
+		t.Parallel()
 		const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
 		const jwksrc = `{
 "kty":"oct",
@@ -374,6 +386,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("ES512Compact", func(t *testing.T) {
+		t.Parallel()
 		// ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
 		hdr := []byte{123, 34, 97, 108, 103, 34, 58, 34, 69, 83, 53, 49, 50, 34, 125}
 		const jwksrc = `{
@@ -454,6 +467,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("RS256Compact", func(t *testing.T) {
+		t.Parallel()
 		// RS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.2 works
 		const hdr = `{"alg":"RS256"}`
 		const expected = `eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw`
@@ -546,6 +560,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("ES256Compact", func(t *testing.T) {
+		t.Parallel()
 		// ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
 		const hdr = `{"alg":"ES256"}`
 		const jwksrc = `{
@@ -631,6 +646,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("UnsecuredCompact", func(t *testing.T) {
+		t.Parallel()
 		s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
 
 		m, err := jws.Parse(strings.NewReader(s))
@@ -669,6 +685,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("CompleteJSON", func(t *testing.T) {
+		t.Parallel()
 		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "signatures":[
@@ -701,6 +718,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("Protected Header lookup", func(t *testing.T) {
+		t.Parallel()
 		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "signatures":[
@@ -730,6 +748,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("FlattenedJSON", func(t *testing.T) {
+		t.Parallel()
 		s := `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "protected":"eyJhbGciOiJFUzI1NiJ9",
@@ -752,6 +771,7 @@ func TestEncode(t *testing.T) {
 		t.Logf("%s", jsonbuf)
 	})
 	t.Run("SplitCompact short", func(t *testing.T) {
+		t.Parallel()
 		// Create string with X.Y.Z
 		numX := 100
 		numY := 100
@@ -783,6 +803,7 @@ func TestEncode(t *testing.T) {
 		}
 	})
 	t.Run("SplitCompact long", func(t *testing.T) {
+		t.Parallel()
 		// Create string with X.Y.Z
 		numX := 8000
 		numY := 8000

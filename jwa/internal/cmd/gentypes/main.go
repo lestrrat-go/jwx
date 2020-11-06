@@ -448,6 +448,7 @@ func (t typ) GenerateTest() error {
 	fmt.Fprintf(&buf, "\n)")
 
 	fmt.Fprintf(&buf, "\n\nfunc Test%s(t *testing.T) {", t.name)
+	fmt.Fprintf(&buf, "\nt.Parallel()")
 	for _, e := range valids {
 		fmt.Fprintf(&buf, "\nt.Run(`accept jwa constant %s`, func(t *testing.T) {", e.name)
 		fmt.Fprintf(&buf, "\nt.Parallel()")

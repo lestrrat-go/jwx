@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -10,7 +11,11 @@ import (
 )
 
 func TestHeader(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Roundtrip", func(t *testing.T) {
+		t.Parallel()
+
 		values := map[string]interface{}{
 			jwk.KeyIDKey:                  "helloworld01",
 			jwk.KeyOpsKey:                 jwk.KeyOperationList{jwk.KeyOpSign},
@@ -46,7 +51,12 @@ func TestHeader(t *testing.T) {
 		}
 
 		t.Run("Private params", func(t *testing.T) {
-			pp := h.PrivateParams()
+			t.Parallel()
+			pp, err := h.AsMap(context.Background())
+			if !assert.NoError(t, err, `h.AsMap should succeed`) {
+				return
+			}
+
 			v, ok := pp["private"]
 			if !assert.True(t, ok, "key 'private' should exists") {
 				return
@@ -58,6 +68,7 @@ func TestHeader(t *testing.T) {
 		})
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
+		t.Parallel()
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64
@@ -102,6 +113,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("Algorithm", func(t *testing.T) {
+		t.Parallel()
 		h, err := jwk.New([]byte("dummy"))
 		if !assert.NoError(t, err, `jwk.New should succeed`) {
 			return

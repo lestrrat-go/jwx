@@ -10,6 +10,7 @@ import (
 )
 
 func TestEllipticCurveAlgorithm(t *testing.T) {
+	t.Parallel()
 	t.Run(`accept jwa constant P256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
