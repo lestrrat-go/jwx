@@ -331,16 +331,9 @@ var isSymmetricKeyEncryption = map[string]struct{}{
 	`A192KW`:             struct{}{},
 	`A256KW`:             struct{}{},
 	`DIRECT`:             struct{}{},
-	`ECDH_ES`:            struct{}{},
-	`ECDH_ES_A128KW`:     struct{}{},
-	`ECDH_ES_A192KW`:     struct{}{},
-	`ECDH_ES_A256KW`:     struct{}{},
 	`A128GCMKW`:          struct{}{},
 	`A192GCMKW`:          struct{}{},
 	`A256GCMKW`:          struct{}{},
-	`PBES2_HS256_A128KW`: struct{}{},
-	`PBES2_HS384_A192KW`: struct{}{},
-	`PBES2_HS512_A256KW`: struct{}{},
 }
 
 func (t typ) Generate() error {
@@ -564,9 +557,9 @@ func (t typ) GenerateTest() error {
 		for _, e := range t.elements {
 			fmt.Fprintf(&buf, "\nt.Run(`%s`, func(t *testing.T) {", e.name)
 			if _, ok := isSymmetricKeyEncryption[e.name]; ok {
-				fmt.Fprintf(&buf, "\nassert.True(t, jwa.%s.IsSymmetric(), `jwa.%s should be symmetric`)", e.name)
+				fmt.Fprintf(&buf, "\nassert.True(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should be symmetric`)", e.name)
 			} else {
-				fmt.Fprintf(&buf, "\nassert.False(t, jwa.%s.IsSymmetric(), `jwa.%s should be symmetric`)", e.name)
+				fmt.Fprintf(&buf, "\nassert.False(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should NOT be symmetric`)", e.name)
 			}
 			fmt.Fprintf(&buf, "\n})")
 		}
