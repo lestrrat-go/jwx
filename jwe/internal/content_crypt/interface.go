@@ -15,3 +15,8 @@ type Generic struct {
 	cipher  cipher.ContentCipher
 	cekgen  keygen.Generator
 }
+
+type Cipher interface {
+	Decrypt([]byte, []byte, []byte, []byte, []byte) ([]byte, error)
+	KeySize() int
+}

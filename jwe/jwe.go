@@ -23,6 +23,11 @@ import (
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwe.Encrypt")
+		defer g.End()
+	}
+
 	contentcrypt, err := content_crypt.NewAES(contentalg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
@@ -207,7 +212,7 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	// Recipients in this case should not contain the content encryption key,
 	// so move that out
-	hdrs, err := mergeHeaders(context.TODO(), nil, protected)
+	hdrs, err := protected.Clone(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to clone headers`)
 	}

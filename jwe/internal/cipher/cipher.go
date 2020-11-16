@@ -76,21 +76,21 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 		keysize = 32
 		fetcher = gcm
 	case jwa.A128CBC_HS256:
-		keysize = 16 * 2
+		keysize = 16
 		fetcher = cbc
 	case jwa.A192CBC_HS384:
-		keysize = 24 * 2
+		keysize = 24
 		fetcher = cbc
 	case jwa.A256CBC_HS512:
-		keysize = 32 * 2
+		keysize = 32
 		fetcher = cbc
 	default:
 		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
 	}
 
 	return &AesContentCipher{
-		keysize: keysize,
-		tagsize: TagSize,
+		keysize: keysize * 2,
+		tagsize: keysize,
 		fetch:   fetcher,
 	}, nil
 }
@@ -151,14 +151,14 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("cipher.AesContentCipher.Decrypt")
+		g := pdebug.Marker("cipher.AesContentCipher.Decrypt").BindError(&err)
 		defer g.End()
 	}
 
 	aead, err := c.fetch.Fetch(cek)
 	if err != nil {
 		if pdebug.Enabled {
-			pdebug.Printf("AeadFetch failed for %v: %s", cek, err)
+			pdebug.Printf("AeadFetch failed for %x: %s", cek, err)
 		}
 		return nil, errors.Wrap(err, "failed to fetch AEAD data")
 	}
@@ -184,9 +184,18 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 	copy(combined[len(ciphertxt):], tag)
 
 	if pdebug.Enabled {
+		pdebug.Printf("AesContentCipher.decrypt: cek      = %x (%d)", cek, len(cek))
+		pdebug.Printf("AesContentCipher.decrypt: iv       = %x (%d)", iv, len(iv))
+		pdebug.Printf("AesContentCipher.decrypt: tag      = %x (%d)", tag, len(tag))
+		pdebug.Printf("AesContentCipher.decrypt: aad      = %x (%d)", aad, len(aad))
 		pdebug.Printf("AesContentCipher.decrypt: combined = %x (%d)", combined, len(combined))
 	}
 
-	plaintext, err = aead.Open(nil, iv, combined, aad)
+	buf, aeaderr := aead.Open(nil, iv, combined, aad)
+	if aeaderr != nil {
+		err = errors.Wrap(aeaderr, `aead.Open failed`)
+		return
+	}
+	plaintext = buf
 	return
 }

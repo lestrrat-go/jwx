@@ -3,14 +3,15 @@ package jwe
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -62,30 +63,6 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 	proxy.EncryptedKey = r.encryptedKey
 
 	return json.Marshal(proxy)
-}
-
-func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
-	h3 := NewHeaders()
-
-	if h1 != nil {
-		for iter := h1.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if err := h3.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set header`)
-			}
-		}
-	}
-
-	if h2 != nil {
-		for iter := h2.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if err := h3.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set header`)
-			}
-		}
-	}
-
-	return h3, nil
 }
 
 // NewMessage creates a new message
@@ -374,6 +351,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 
 // Decrypt decrypts the message using the specified algorithm and key
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("Message.Decrypt (alg = %s, key typ = %T)", alg, key)
+		defer g.End()
+	}
+
 	var err error
 
 	if pdebug.Enabled {
@@ -381,11 +363,12 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		defer g.End()
 	}
 
-	h, err := mergeHeaders(context.TODO(), nil, m.protectedHeaders)
+	ctx := context.TODO()
+	h, err := m.protectedHeaders.Clone(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to copy protected headers`)
 	}
-	h, err = mergeHeaders(context.TODO(), h, m.unprotectedHeaders)
+	h, err = h.Merge(ctx, m.unprotectedHeaders)
 	if err != nil {
 		if pdebug.Enabled {
 			pdebug.Printf("failed to merge unprotected header")
@@ -407,19 +390,23 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		return nil, errors.Wrap(err, "failed to encode protected headers")
 	}
 
-	if aad != nil {
-		computedAad = append(append(computedAad, '.'), aad...)
-	}
-
 	ciphertext := m.cipherText.Bytes()
 	iv := m.initializationVector.Bytes()
 	tag := m.tag.Bytes()
 
-	cipher, err := buildContentCipher(enc)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unsupported content cipher algorithm '%s'", enc)
-	}
-	keysize := cipher.KeySize()
+	dec := NewDecrypter(alg, enc, key).
+		AuthenticatedData(aad).
+		ComputedAuthenticatedData(computedAad).
+		InitializationVector(iv).
+		Tag(tag)
+
+	/*
+		cipher, err := buildContentCipher(enc)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unsupported content cipher algorithm '%s'", enc)
+		}
+		keysize := cipher.KeySize()
+	*/
 
 	var plaintext []byte
 	var lastError error
@@ -436,7 +423,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		h2, err := mergeHeaders(context.TODO(), nil, h)
+		h2, err := h.Clone(ctx)
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to copy headers (1)`)
 			if pdebug.Enabled {
@@ -445,7 +432,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		h2, err = mergeHeaders(context.TODO(), h2, recipient.Headers())
+		h2, err = h2.Merge(ctx, recipient.Headers())
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to copy headers (2)`)
 			if pdebug.Enabled {
@@ -454,43 +441,87 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		var cek []byte
-		if h2.Algorithm() == jwa.DIRECT {
-			var ok bool
-			cek, ok = key.([]byte)
+		switch alg {
+		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+			epkif, ok := h2.Get(EphemeralPublicKeyKey)
 			if !ok {
-				return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
+				return nil, errors.New("failed to get 'epk' field")
 			}
-		} else {
-			k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
-			if err != nil {
-				lastError = errors.Wrap(err, `failed to build key decrypter`)
-				if pdebug.Enabled {
-					pdebug.Printf(`%s`, lastError)
-				}
-				continue
+			epk, ok := epkif.(jwk.ECDSAPublicKey)
+			if !ok {
+				return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
 			}
 
-			cek, err = k.Decrypt(recipient.EncryptedKey().Bytes())
-			if err != nil {
-				lastError = errors.Wrap(err, `failed to decrypt key`)
-				if pdebug.Enabled {
-					pdebug.Printf(`%s`, lastError)
-				}
-				continue
+			var pubkey ecdsa.PublicKey
+			if err := epk.Raw(&pubkey); err != nil {
+				return nil, errors.Wrap(err, "failed to get public key")
+			}
+			dec.PublicKey(&pubkey)
+
+			if apu := h2.AgreementPartyUInfo(); apu.Len() > 0 {
+				dec.AgreementPartyUInfo(apu.Bytes())
+			}
+
+			if apv := h2.AgreementPartyVInfo(); apv.Len() > 0 {
+				dec.AgreementPartyVInfo(apv.Bytes())
 			}
 		}
 
-		plaintext, err = cipher.Decrypt(cek, iv, ciphertext, tag, computedAad)
+		plaintext, err = dec.Decrypt(recipient.EncryptedKey().Bytes(), ciphertext)
 		if err != nil {
-			lastError = errors.Wrap(err, `failed to decrypt payload`)
-			if pdebug.Enabled {
-				pdebug.Printf(`%s`, lastError)
-			}
+			lastError = errors.Wrap(err, `failed to decrypt`)
 			continue
 		}
 
-		if h2.Compression() == jwa.Deflate {
+		if pdebug.Enabled {
+			pdebug.Printf("Successfully decrypted message. Checking for compression...")
+		}
+
+		/*
+
+			var cek []byte
+			if h2.Algorithm().IsSymmetric() {
+				//			k, err := buildSymmetricKeyDecrypter(h2.Algorithm(), key)
+				var ok bool
+				cek, ok = key.([]byte)
+				if !ok {
+					return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
+				}
+			} else {
+				k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
+				if err != nil {
+					lastError = errors.Wrap(err, `failed to build key decrypter`)
+					if pdebug.Enabled {
+						pdebug.Printf(`%s`, lastError)
+					}
+					continue
+				}
+
+				cek, err = k.Decrypt(recipient.EncryptedKey().Bytes())
+				if err != nil {
+					lastError = errors.Wrap(err, `failed to decrypt key`)
+					if pdebug.Enabled {
+						pdebug.Printf(`%s`, lastError)
+					}
+					continue
+				}
+			}
+
+			plaintext, err := dec.Decrypt(cek, ciphertext)
+			if err != nil {
+				lastError = errors.Wrap(err, `failed to decrypt message`)
+				continue
+			}
+		*/
+
+		if h2.Compression() != jwa.Deflate {
+			if pdebug.Enabled {
+				pdebug.Printf("No compression handling necessary.")
+			}
+		} else {
+			if pdebug.Enabled {
+				pdebug.Printf("Uncompressing plaintext")
+			}
 			buf, err := uncompress(plaintext)
 			if err != nil {
 				lastError = errors.Wrap(err, `failed to uncompress payload`)
@@ -501,7 +532,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			}
 			plaintext = buf
 		}
-
 		break
 	}
 
@@ -513,13 +543,4 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	}
 
 	return plaintext, nil
-}
-
-func buildContentCipher(alg jwa.ContentEncryptionAlgorithm) (cipher.ContentCipher, error) {
-	switch alg {
-	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
-		return cipher.NewAES(alg)
-	}
-
-	return nil, errors.Errorf(`invalid content cipher algorith (%s)`, alg)
 }

@@ -61,11 +61,14 @@ type Headers interface {
 	Remove(string) error
 	Encode() ([]byte, error)
 	Decode([]byte) error
-	// PrivateParams returns the map containing the private parameters
+	// PrivateParams returns the map containing the non-standard ('private') parameters
 	// in the associated header. WARNING: DO NOT USE PrivateParams()
 	// IF YOU HAVE CONCURRENT CODE ACCESSING THEM. Use AsMap() to
 	// get a copy of the entire header instead
 	PrivateParams() map[string]interface{}
+	Clone(context.Context) (Headers, error)
+	Copy(context.Context, Headers) error
+	Merge(context.Context, Headers) (Headers, error)
 }
 
 type stdHeaders struct {

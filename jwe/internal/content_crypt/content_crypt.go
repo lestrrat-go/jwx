@@ -36,8 +36,10 @@ func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 
 func NewAES(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 	if pdebug.Enabled {
-		pdebug.Printf("AES Crypt: alg = %s", alg)
+		g := pdebug.Marker("NewAES (alg = %s)", alg)
+		defer g.End()
 	}
+
 	c, err := cipher.NewAES(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `aes crypt: failed to create content cipher`)
