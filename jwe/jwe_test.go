@@ -223,7 +223,11 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		serializer := serializer
 		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
 			compression := compression
-			t.Run(serializer.Name+" (compression="+compression.String()+")", func(t *testing.T) {
+			compName := compression.String()
+			if compName == "" {
+				compName = "none"
+			}
+			t.Run(serializer.Name+" (compression="+compName+")", func(t *testing.T) {
 				jsonbuf, err := serializer.Func(msg)
 				if !assert.NoError(t, err, "serialize succeeded") {
 					return

@@ -80,23 +80,23 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 		tagsize = 16
 		fetcher = gcm
 	case jwa.A128CBC_HS256:
-		keysize = 16
-		tagsize = keysize
+		tagsize = 16
+		keysize = tagsize * 2
 		fetcher = cbc
 	case jwa.A192CBC_HS384:
-		keysize = 24
-		tagsize = keysize
+		tagsize = 24
+		keysize = tagsize * 2
 		fetcher = cbc
 	case jwa.A256CBC_HS512:
-		keysize = 32
-		tagsize = keysize
+		tagsize = 32
+		keysize = tagsize * 2
 		fetcher = cbc
 	default:
 		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
 	}
 
 	return &AesContentCipher{
-		keysize: keysize * 2,
+		keysize: keysize,
 		tagsize: tagsize,
 		fetch:   fetcher,
 	}, nil
