@@ -64,25 +64,32 @@ func (c AesContentCipher) TagSize() int {
 
 func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	var keysize int
+	var tagsize int
 	var fetcher Fetcher
 	switch alg {
 	case jwa.A128GCM:
 		keysize = 16
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A192GCM:
 		keysize = 24
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A256GCM:
 		keysize = 32
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A128CBC_HS256:
 		keysize = 16
+		tagsize = keysize
 		fetcher = cbc
 	case jwa.A192CBC_HS384:
 		keysize = 24
+		tagsize = keysize
 		fetcher = cbc
 	case jwa.A256CBC_HS512:
 		keysize = 32
+		tagsize = keysize
 		fetcher = cbc
 	default:
 		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
@@ -90,7 +97,7 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 
 	return &AesContentCipher{
 		keysize: keysize * 2,
-		tagsize: keysize,
+		tagsize: tagsize,
 		fetch:   fetcher,
 	}, nil
 }
@@ -133,6 +140,11 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()
+
+	if tagoffset < 0 {
+		panic(fmt.Sprintf("tag offset is less than 0 (combined len = %d, tagsize = %d)", len(combined), c.TagSize()))
+	}
+
 	if pdebug.Enabled {
 		pdebug.Printf("tagsize = %d", c.TagSize())
 	}
