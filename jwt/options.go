@@ -43,14 +43,14 @@ type ValidateOption interface {
 }
 
 const (
-	optkeyValidate = `validate`
-	optkeyVerify   = `verify`
-	optkeyToken    = `token`
-	optkeyKeySet   = `keySet`
-	optkeyKeyLookup   = `keyLookup`
-	optkeyHeaders  = `headers`
-	optkeyDefault  = `defaultKey`
-	optkeyClaim    = `claimValue`
+	optkeyValidate  = `validate`
+	optkeyVerify    = `verify`
+	optkeyToken     = `token`
+	optkeyKeySet    = `keySet`
+	optkeyKeyLookup = `keyLookup`
+	optkeyHeaders   = `headers`
+	optkeyDefault   = `defaultKey`
+	optkeyClaim     = `claimValue`
 )
 
 type VerifyParameters interface {
