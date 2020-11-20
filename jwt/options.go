@@ -47,6 +47,7 @@ const (
 	optkeyVerify   = `verify`
 	optkeyToken    = `token`
 	optkeyKeySet   = `keySet`
+	optkeyKeyLookup   = `keyLookup`
 	optkeyHeaders  = `headers`
 	optkeyDefault  = `defaultKey`
 	optkeyClaim    = `claimValue`
@@ -86,6 +87,15 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // give keys.
 func WithKeySet(set *jwk.Set) ParseOption {
 	return newParseOption(optkeyKeySet, set)
+}
+
+// KeyLookupFunc is a hook to lookup the key by kid
+type KeyLookupFunc func(kid string) (interface{}, error)
+
+// WithKeyLookup forces the Parse method to verify the JWT message
+// using KeyLookupFunc to load the key
+func WithKeyLookup(f KeyLookupFunc) ParseOption {
+	return newParseOption(optkeyKeyLookup, f)
 }
 
 // UseDefaultKey is used in conjunction with the option WithKeySet

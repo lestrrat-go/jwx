@@ -161,6 +161,19 @@ func TestJWTParseVerify(t *testing.T) {
 	})
 	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
 		t.Parallel()
+		t.Run("Automatically pick a key from keyLookup", func(t *testing.T) {
+			t.Parallel()
+			t2, err := jwt.Parse(bytes.NewReader(signed),
+				jwt.WithKeyLookup(func(kid string) (interface{}, error) {
+					return &key.PublicKey, nil
+				}))
+			if !assert.NoError(t, err, `jwt.Parse with keyLookup should succeed`) {
+				return
+			}
+			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+				return
+			}
+		})
 		t.Run("Automatically pick a key from set", func(t *testing.T) {
 			t.Parallel()
 			pubkey := jwk.NewRSAPublicKey()

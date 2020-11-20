@@ -45,6 +45,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
+	var keyLookup KeyLookupFunc
 	var useDefault bool
 	var token Token
 	var validate bool
@@ -54,6 +55,8 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 			params = o.Value().(VerifyParameters)
 		case optkeyKeySet:
 			keyset = o.Value().(*jwk.Set)
+		case optkeyKeyLookup:
+			keyLookup = o.Value().(KeyLookupFunc)
 		case optkeyToken:
 			token = o.Value().(Token)
 		case optkeyDefault:
@@ -81,6 +84,26 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 
 	if params != nil {
 		return parse(token, data, true, params.Algorithm(), params.Key(), validate, options...)
+	}
+
+	// lookup the key with a KeyLookupFunc
+	if keyLookup != nil {
+		header, err := parseHeader(data)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse header`)
+		}
+
+		kid, alg := header.KeyID(), header.Algorithm()
+		if kid == "" {
+			return nil, errors.New(`empty kid`)
+		}
+
+		key, err := keyLookup(kid)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to lookup key with kid: %s`, kid)
+		}
+
+		return parse(token, data, true, alg, key, validate, options...)
 	}
 
 	return parse(token, data, false, "", nil, validate, options...)
@@ -168,6 +191,16 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.Signa
 	}
 
 	return headers.Algorithm(), rawKey, nil
+}
+
+// parse header
+func parseHeader(data []byte) (jws.Headers, error) {
+	msg, err := jws.Parse(bytes.NewReader(data))
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to parse token data`)
+	}
+
+	return msg.Signatures()[0].ProtectedHeaders(), nil
 }
 
 // ParseVerify is marked to be deprecated. Please use jwt.Parse
