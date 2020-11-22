@@ -158,8 +158,11 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jwe", func(t *testing.T) {
-		expected := []byte("hi")
+		expected := []byte("Lorem ipsum")
 		t.Run("ECDH", func(t *testing.T) {
+			// XXX for ECDH-ES (remove the following t.SkipNow() to enable this test)
+			t.SkipNow()
+
 			// let jose generate a key file
 			joseJwkFile, joseJwkCleanup, err := jose.GenerateJwk(ctx, t, `{"alg": "ECDH-ES"}`)
 			if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
@@ -190,8 +193,9 @@ func TestJoseCompatibility(t *testing.T) {
 				}
 				defer joseCryptCleanup()
 
-				// let jwx decrypt the jose crypted file
+				jwxtest.DumpFile(t, joseCryptFile)
 
+				// let jwx decrypt the jose crypted file
 				payload, err := jwxtest.DecryptJweFile(ctx, joseCryptFile, jwa.ECDH_ES, joseJwkFile)
 				if !assert.NoError(t, err, `decryptFile.DecryptJwe should succeed`) {
 					jwxtest.DumpFile(t, joseCryptFile)

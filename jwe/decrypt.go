@@ -98,7 +98,7 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 			}
 			d.cipher = cipher
 		default:
-			return nil, errors.Errorf(`invalid content cipher algorith (%s)`, d.ctalg)
+			return nil, errors.Errorf(`invalid content cipher algorithm (%s)`, d.ctalg)
 		}
 	}
 
@@ -185,7 +185,7 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 		var ok bool
 		cek, ok = d.privkey.([]byte)
 		if !ok {
-			return nil, errors.Errorf("decrypt key: []byte is required as the key to build %s key decrypter", d.keyalg)
+			return nil, errors.Errorf("decrypt key: []byte is required as the key to build %s key decrypter (got %T)", d.keyalg, d.privkey)
 		}
 
 		return d.decryptSymmetricKey(recipientKey, cek)

@@ -442,7 +442,15 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		}
 
 		switch alg {
-		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		case jwa.ECDH_ES:
+			// XXX for ECDH-ES
+			// disable this entire case, and replace the next case statement with the following:
+			//
+			// ```START
+			// case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+			// ```END
+			return nil, errors.New(`ECDH-ES is not yet supported`)
+		case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 			epkif, ok := h2.Get(EphemeralPublicKeyKey)
 			if !ok {
 				return nil, errors.New("failed to get 'epk' field")
@@ -471,6 +479,10 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to decrypt`)
 			continue
+		}
+
+		if plaintext == nil {
+			panic("fuck")
 		}
 
 		if pdebug.Enabled {
@@ -539,7 +551,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if lastError != nil {
 			return nil, errors.Errorf(`failed to find matching recipient to decrypt key (last error = %s)`, lastError)
 		}
-		return nil, errors.New("failed to find matching recipient to decrypt key")
+		return nil, errors.New("failed to find matching recipient")
 	}
 
 	return plaintext, nil

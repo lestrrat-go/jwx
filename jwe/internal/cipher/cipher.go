@@ -15,14 +15,6 @@ import (
 var gcm = &gcmFetcher{}
 var cbc = &cbcFetcher{}
 
-func GCMFetcher() Fetcher {
-	return gcm
-}
-
-func CBCFetcher() Fetcher {
-	return cbc
-}
-
 func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
@@ -63,6 +55,11 @@ func (c AesContentCipher) TagSize() int {
 }
 
 func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("NewAES")
+		defer g.End()
+	}
+
 	var keysize int
 	var tagsize int
 	var fetcher Fetcher
@@ -93,6 +90,14 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 		fetcher = cbc
 	default:
 		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
+	}
+
+	if pdebug.Enabled {
+		if fetcher == gcm {
+			pdebug.Printf("Using GCM")
+		} else {
+			pdebug.Printf("using CBC")
+		}
 	}
 
 	return &AesContentCipher{

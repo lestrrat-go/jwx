@@ -74,6 +74,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 				return nil, errors.Wrap(err, "failed to set header")
 			}
 		}
+
 		enckey, err := enc.Encrypt(cek)
 		if err != nil {
 			if pdebug.Enabled {
@@ -126,10 +127,10 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	if pdebug.Enabled {
 		pdebug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
-		pdebug.Printf("Encrypt.Encrypt: aad        = %x", aad)
-		pdebug.Printf("Encrypt.Encrypt: ciphertext = %x", ciphertext)
-		pdebug.Printf("Encrypt.Encrypt: iv         = %x", iv)
-		pdebug.Printf("Encrypt.Encrypt: tag        = %x", tag)
+		pdebug.Printf("Encrypt.Encrypt: aad        = %x (%d)", aad, len(aad))
+		pdebug.Printf("Encrypt.Encrypt: ciphertext = %x (%d)", ciphertext, len(ciphertext))
+		pdebug.Printf("Encrypt.Encrypt: iv         = %x (%d)", iv, len(iv))
+		pdebug.Printf("Encrypt.Encrypt: tag        = %x (%d)", tag, len(tag))
 	}
 
 	msg := NewMessage()
