@@ -55,8 +55,8 @@ func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 		keysize = keysize * 2
 	}
 	return &Generic{
-		alg:    alg,
-		cipher: c,
+		alg:     alg,
+		cipher:  c,
 		keysize: keysize,
 		tagsize: 16,
 	}, nil

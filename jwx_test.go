@@ -167,7 +167,6 @@ func TestJoseCompatibility(t *testing.T) {
 			joseJwkFile, joseJwkCleanup, err := jose.GenerateJwk(ctx, t, `{"alg": "ECDH-ES"}`)
 			if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
 				return
-
 			}
 			defer joseJwkCleanup()
 
