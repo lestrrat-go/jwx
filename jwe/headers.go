@@ -73,11 +73,15 @@ func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
 	h3 := NewHeaders()
 
 	if h != nil {
-		h.Copy(ctx, h3)
+		if err := h.Copy(ctx, h3); err != nil {
+			return nil, errors.Wrap(err, `failed to copy headers from receiver`)
+		}
 	}
 
 	if h2 != nil {
-		h2.Copy(ctx, h3)
+		if err := h2.Copy(ctx, h3); err != nil {
+			return nil, errors.Wrap(err, `failed to copy headers from argument`)
+		}
 	}
 
 	return h3, nil
