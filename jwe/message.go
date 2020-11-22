@@ -400,14 +400,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		InitializationVector(iv).
 		Tag(tag)
 
-	/*
-		cipher, err := buildContentCipher(enc)
-		if err != nil {
-			return nil, errors.Wrapf(err, "unsupported content cipher algorithm '%s'", enc)
-		}
-		keysize := cipher.KeySize()
-	*/
-
 	var plaintext []byte
 	var lastError error
 	for _, recipient := range m.recipients {
@@ -488,43 +480,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		if pdebug.Enabled {
 			pdebug.Printf("Successfully decrypted message. Checking for compression...")
 		}
-
-		/*
-
-			var cek []byte
-			if h2.Algorithm().IsSymmetric() {
-				//			k, err := buildSymmetricKeyDecrypter(h2.Algorithm(), key)
-				var ok bool
-				cek, ok = key.([]byte)
-				if !ok {
-					return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
-				}
-			} else {
-				k, err := buildKeyDecrypter(h2.Algorithm(), h2, key, keysize)
-				if err != nil {
-					lastError = errors.Wrap(err, `failed to build key decrypter`)
-					if pdebug.Enabled {
-						pdebug.Printf(`%s`, lastError)
-					}
-					continue
-				}
-
-				cek, err = k.Decrypt(recipient.EncryptedKey().Bytes())
-				if err != nil {
-					lastError = errors.Wrap(err, `failed to decrypt key`)
-					if pdebug.Enabled {
-						pdebug.Printf(`%s`, lastError)
-					}
-					continue
-				}
-			}
-
-			plaintext, err := dec.Decrypt(cek, ciphertext)
-			if err != nil {
-				lastError = errors.Wrap(err, `failed to decrypt message`)
-				continue
-			}
-		*/
 
 		if h2.Compression() != jwa.Deflate {
 			if pdebug.Enabled {
