@@ -51,6 +51,42 @@ func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) 
 	return iter.AsMap(ctx, h)
 }
 
+func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {
+	dst := NewHeaders()
+	if err := h.Copy(ctx, dst); err != nil {
+		return nil, errors.Wrap(err, `failed to copy header contents to new object`)
+	}
+	return dst, nil
+}
+
+func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
+			return errors.Wrapf(err, `failed to set header`)
+		}
+	}
+	return nil
+}
+
+func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
+	h3 := NewHeaders()
+
+	if h != nil {
+		if err := h.Copy(ctx, h3); err != nil {
+			return nil, errors.Wrap(err, `failed to copy headers from receiver`)
+		}
+	}
+
+	if h2 != nil {
+		if err := h2.Copy(ctx, h3); err != nil {
+			return nil, errors.Wrap(err, `failed to copy headers from argument`)
+		}
+	}
+
+	return h3, nil
+}
+
 func (h *stdHeaders) Encode() ([]byte, error) {
 	buf, err := json.Marshal(h)
 	if err != nil {

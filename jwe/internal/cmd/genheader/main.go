@@ -273,6 +273,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n// get a copy of the entire header instead")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
 
+	fmt.Fprintf(&buf, "\nClone(context.Context) (Headers, error)")
+	fmt.Fprintf(&buf, "\nCopy(context.Context, Headers) error")
+	fmt.Fprintf(&buf, "\nMerge(context.Context, Headers) (Headers, error)")
+
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")

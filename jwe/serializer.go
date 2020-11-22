@@ -26,15 +26,16 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 		return nil, errors.New("invalid protected header")
 	}
 
-	hcopy, err := mergeHeaders(context.TODO(), nil, m.protectedHeaders)
+	ctx := context.TODO()
+	hcopy, err := m.protectedHeaders.Clone(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to copy protected header")
 	}
-	hcopy, err = mergeHeaders(context.TODO(), hcopy, m.unprotectedHeaders)
+	hcopy, err = hcopy.Merge(ctx, m.unprotectedHeaders)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge unprotected header")
 	}
-	hcopy, err = mergeHeaders(context.TODO(), hcopy, recipient.Headers())
+	hcopy, err = hcopy.Merge(ctx, recipient.Headers())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to merge recipient header")
 	}

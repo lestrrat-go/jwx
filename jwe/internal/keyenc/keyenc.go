@@ -103,6 +103,10 @@ func (kw ECDHESEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		return nil, errors.New("key generator generated invalid key (expected ByteWithECPrivateKey)")
 	}
 
+	if kw.algorithm == jwa.ECDH_ES {
+		return bwpk, nil
+	}
+
 	block, err := aes.NewCipher(bwpk.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate cipher from generated key")
@@ -182,7 +186,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 			return nil, errors.Wrapf(err, `failed to create content cipher for %s`, kw.contentalg)
 		}
 		if pdebug.Enabled {
-			pdebug.Printf("Using keysize (%d) from content cipher %a", c.KeySize(), kw.contentalg)
+			pdebug.Printf("Using keysize (%d) from content cipher %s", c.KeySize(), kw.contentalg)
 		}
 
 		keysize = uint32(c.KeySize())
@@ -204,6 +208,9 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 
 	// ECDH-ES does not wrap keys
 	if kw.keyalg == jwa.ECDH_ES {
+		if pdebug.Enabled {
+			pdebug.Printf("Skip unwrapping for ECHD-ES")
+		}
 		return key, nil
 	}
 

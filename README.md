@@ -335,7 +335,7 @@ Supported key encryption algorithm:
 | AES key wrap (192)                       | YES        | jwa.A192KW             |
 | AES key wrap (256)                       | YES        | jwa.A256KW             |
 | Direct encryption                        | NO         | jwa.DIRECT             |
-| ECDH-ES                                  | YES        | jwa.ECDH_ES            |
+| ECDH-ES                                  | NO (see #) | jwa.ECDH_ES            |
 | ECDH-ES + AES key wrap (128)             | YES        | jwa.ECDH_ES_A128KW     |
 | ECDH-ES + AES key wrap (192)             | YES        | jwa.ECDH_ES_A192KW     |
 | ECDH-ES + AES key wrap (256)             | YES        | jwa.ECDH_ES_A256KW     |

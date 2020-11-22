@@ -55,7 +55,6 @@ func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey) (*Ecdhes
 	var keysize int
 	switch alg {
 	case jwa.ECDH_ES:
-		return nil, errors.New("unimplemented")
 	case jwa.ECDH_ES_A128KW:
 		keysize = 16
 	case jwa.ECDH_ES_A192KW:

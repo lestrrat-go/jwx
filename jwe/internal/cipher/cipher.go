@@ -15,14 +15,6 @@ import (
 var gcm = &gcmFetcher{}
 var cbc = &cbcFetcher{}
 
-func GCMFetcher() Fetcher {
-	return gcm
-}
-
-func CBCFetcher() Fetcher {
-	return cbc
-}
-
 func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
@@ -63,34 +55,54 @@ func (c AesContentCipher) TagSize() int {
 }
 
 func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("NewAES")
+		defer g.End()
+	}
+
 	var keysize int
+	var tagsize int
 	var fetcher Fetcher
 	switch alg {
 	case jwa.A128GCM:
 		keysize = 16
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A192GCM:
 		keysize = 24
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A256GCM:
 		keysize = 32
+		tagsize = 16
 		fetcher = gcm
 	case jwa.A128CBC_HS256:
-		keysize = 16 * 2
+		tagsize = 16
+		keysize = tagsize * 2
 		fetcher = cbc
 	case jwa.A192CBC_HS384:
-		keysize = 24 * 2
+		tagsize = 24
+		keysize = tagsize * 2
 		fetcher = cbc
 	case jwa.A256CBC_HS512:
-		keysize = 32 * 2
+		tagsize = 32
+		keysize = tagsize * 2
 		fetcher = cbc
 	default:
 		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
 	}
 
+	if pdebug.Enabled {
+		if fetcher == gcm {
+			pdebug.Printf("Using GCM")
+		} else {
+			pdebug.Printf("using CBC")
+		}
+	}
+
 	return &AesContentCipher{
 		keysize: keysize,
-		tagsize: TagSize,
+		tagsize: tagsize,
 		fetch:   fetcher,
 	}, nil
 }
@@ -133,6 +145,11 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()
+
+	if tagoffset < 0 {
+		panic(fmt.Sprintf("tag offset is less than 0 (combined len = %d, tagsize = %d)", len(combined), c.TagSize()))
+	}
+
 	if pdebug.Enabled {
 		pdebug.Printf("tagsize = %d", c.TagSize())
 	}
@@ -151,14 +168,14 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("cipher.AesContentCipher.Decrypt")
+		g := pdebug.Marker("cipher.AesContentCipher.Decrypt").BindError(&err)
 		defer g.End()
 	}
 
 	aead, err := c.fetch.Fetch(cek)
 	if err != nil {
 		if pdebug.Enabled {
-			pdebug.Printf("AeadFetch failed for %v: %s", cek, err)
+			pdebug.Printf("AeadFetch failed for %x: %s", cek, err)
 		}
 		return nil, errors.Wrap(err, "failed to fetch AEAD data")
 	}
@@ -184,9 +201,18 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 	copy(combined[len(ciphertxt):], tag)
 
 	if pdebug.Enabled {
+		pdebug.Printf("AesContentCipher.decrypt: cek      = %x (%d)", cek, len(cek))
+		pdebug.Printf("AesContentCipher.decrypt: iv       = %x (%d)", iv, len(iv))
+		pdebug.Printf("AesContentCipher.decrypt: tag      = %x (%d)", tag, len(tag))
+		pdebug.Printf("AesContentCipher.decrypt: aad      = %x (%d)", aad, len(aad))
 		pdebug.Printf("AesContentCipher.decrypt: combined = %x (%d)", combined, len(combined))
 	}
 
-	plaintext, err = aead.Open(nil, iv, combined, aad)
+	buf, aeaderr := aead.Open(nil, iv, combined, aad)
+	if aeaderr != nil {
+		err = errors.Wrap(aeaderr, `aead.Open failed`)
+		return
+	}
+	plaintext = buf
 	return
 }

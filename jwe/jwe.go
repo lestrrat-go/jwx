@@ -23,7 +23,12 @@ import (
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
-	contentcrypt, err := content_crypt.NewAES(contentalg)
+	if pdebug.Enabled {
+		g := pdebug.Marker("jwe.Encrypt")
+		defer g.End()
+	}
+
+	contentcrypt, err := content_crypt.NewGeneric(contentalg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}
@@ -68,7 +73,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		default:
 			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
 		}
-	case jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var pubkey ecdsa.PublicKey
 		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
 			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
@@ -78,9 +83,20 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
-		keysize = contentcrypt.KeySize() / 2
-	case jwa.ECDH_ES:
-		fallthrough
+
+		switch keyalg {
+		case jwa.ECDH_ES:
+			// https://tools.ietf.org/html/rfc7518#page-15
+			// In Direct Key Agreement mode, the output of the Concat KDF MUST be a
+			// key of the same length as that used by the "enc" algorithm.
+			keysize = contentcrypt.KeySize()
+		case jwa.ECDH_ES_A128KW:
+			keysize = 16
+		case jwa.ECDH_ES_A192KW:
+			keysize = 24
+		case jwa.ECDH_ES_A256KW:
+			keysize = 32
+		}
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		fallthrough
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
@@ -207,7 +223,7 @@ func parseCompact(buf []byte) (*Message, error) {
 
 	// Recipients in this case should not contain the content encryption key,
 	// so move that out
-	hdrs, err := mergeHeaders(context.TODO(), nil, protected)
+	hdrs, err := protected.Clone(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to clone headers`)
 	}

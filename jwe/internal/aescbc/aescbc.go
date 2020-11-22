@@ -29,7 +29,11 @@ type Hmac struct {
 
 type BlockCipherFunc func([]byte) (cipher.Block, error)
 
-func New(key []byte, f BlockCipherFunc) (*Hmac, error) {
+func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("Hmac.New").BindError(&err)
+		defer g.End()
+	}
 	keysize := len(key) / 2
 	ikey := key[:keysize]
 	ekey := key[keysize:]
@@ -41,9 +45,10 @@ func New(key []byte, f BlockCipherFunc) (*Hmac, error) {
 		pdebug.Printf("New: ekey                  = %x (%d)\n", ekey, len(ekey))
 	}
 
-	bc, err := f(ekey)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to execute block cipher function`)
+	bc, ciphererr := f(ekey)
+	if ciphererr != nil {
+		err = errors.Wrap(ciphererr, `failed to execute block cipher function`)
+		return
 	}
 
 	var hfunc func() hash.Hash

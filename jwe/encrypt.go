@@ -30,6 +30,11 @@ func releaseEncryptCtx(ctx *encryptCtx) {
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
 func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
+	if pdebug.Enabled {
+		g := pdebug.Marker("encryptCtx.Encrypt")
+		defer g.End()
+	}
+
 	bk, err := e.generator.Generate()
 	if err != nil {
 		if pdebug.Enabled {
@@ -69,6 +74,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 				return nil, errors.Wrap(err, "failed to set header")
 			}
 		}
+
 		enckey, err := enc.Encrypt(cek)
 		if err != nil {
 			if pdebug.Enabled {
@@ -93,7 +99,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := mergeHeaders(context.TODO(), protected, recipients[0].Headers())
+		h, err := protected.Merge(context.TODO(), recipients[0].Headers())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}
@@ -121,10 +127,10 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	if pdebug.Enabled {
 		pdebug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
-		pdebug.Printf("Encrypt.Encrypt: aad        = %x", aad)
-		pdebug.Printf("Encrypt.Encrypt: ciphertext = %x", ciphertext)
-		pdebug.Printf("Encrypt.Encrypt: iv         = %x", iv)
-		pdebug.Printf("Encrypt.Encrypt: tag        = %x", tag)
+		pdebug.Printf("Encrypt.Encrypt: aad        = %x (%d)", aad, len(aad))
+		pdebug.Printf("Encrypt.Encrypt: ciphertext = %x (%d)", ciphertext, len(ciphertext))
+		pdebug.Printf("Encrypt.Encrypt: iv         = %x (%d)", iv, len(iv))
+		pdebug.Printf("Encrypt.Encrypt: tag        = %x (%d)", tag, len(tag))
 	}
 
 	msg := NewMessage()
