@@ -327,13 +327,13 @@ type element struct {
 }
 
 var isSymmetricKeyEncryption = map[string]struct{}{
-	`A128KW`:    struct{}{},
-	`A192KW`:    struct{}{},
-	`A256KW`:    struct{}{},
-	`DIRECT`:    struct{}{},
-	`A128GCMKW`: struct{}{},
-	`A192GCMKW`: struct{}{},
-	`A256GCMKW`: struct{}{},
+	`A128KW`:    {},
+	`A192KW`:    {},
+	`A256KW`:    {},
+	`DIRECT`:    {},
+	`A128GCMKW`: {},
+	`A192GCMKW`: {},
+	`A256GCMKW`: {},
 }
 
 func (t typ) Generate() error {
