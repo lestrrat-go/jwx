@@ -5,7 +5,6 @@ package jwe
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 
@@ -221,24 +220,10 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
 	}
 
-	// Recipients in this case should not contain the content encryption key,
-	// so move that out
-	hdrs, err := protected.Clone(context.TODO())
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to clone headers`)
+	if err := m.makeDummyRecipient(enckeybuf, protected); err != nil {
+		return nil, errors.Wrap(err, `failed to setup recipient`)
 	}
 
-	if err := hdrs.Remove(ContentEncryptionKey); err != nil {
-		return nil, errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
-	}
-	if err := m.Set(RecipientsKey, []Recipient{
-		&stdRecipient{
-			headers:      hdrs,
-			encryptedKey: enckeybuf,
-		},
-	}); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
-	}
 	if err := m.Set(TagKey, tagbuf); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}

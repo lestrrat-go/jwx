@@ -346,6 +346,35 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		m.unprotectedHeaders = proxy.UnprotectedHeaders
 	}
 
+	if len(m.recipients) == 0 {
+		if err := m.makeDummyRecipient(proxy.EncryptedKey, m.protectedHeaders); err != nil {
+			return errors.Wrap(err, `failed to setup recipient`)
+		}
+	}
+
+	return nil
+}
+
+func (m *Message) makeDummyRecipient(enckeybuf buffer.Buffer, protected Headers) error {
+	// Recipients in this case should not contain the content encryption key,
+	// so move that out
+	hdrs, err := protected.Clone(context.TODO())
+	if err != nil {
+		return errors.Wrap(err, `failed to clone headers`)
+	}
+
+	if err := hdrs.Remove(ContentEncryptionKey); err != nil {
+		return errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
+	}
+
+	if err := m.Set(RecipientsKey, []Recipient{
+		&stdRecipient{
+			headers:      hdrs,
+			encryptedKey: enckeybuf,
+		},
+	}); err != nil {
+		return errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
 	return nil
 }
 
@@ -402,7 +431,16 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 
 	var plaintext []byte
 	var lastError error
-	for _, recipient := range m.recipients {
+
+	// if we have no recipients, pretend like we only have one
+	recipients := m.recipients
+	if len(recipients) == 0 {
+		r := NewRecipient()
+		r.SetHeaders(m.protectedHeaders)
+		recipients = append(recipients, r)
+	}
+
+	for _, recipient := range recipients {
 		// strategy: try each recipient. If we fail in one of the steps,
 		// keep looping because there might be another key with the same algo
 
@@ -474,7 +512,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		}
 
 		if pdebug.Enabled {
-			pdebug.Printf("Successfully decrypted message. Checking for compression...")
+			pdebug.Printf("Successfully decrypted message (len %d). Checking for compression...", len(plaintext))
 		}
 
 		if h2.Compression() != jwa.Deflate {
