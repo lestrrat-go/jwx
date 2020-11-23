@@ -436,7 +436,9 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	recipients := m.recipients
 	if len(recipients) == 0 {
 		r := NewRecipient()
-		r.SetHeaders(m.protectedHeaders)
+		if err := r.SetHeaders(m.protectedHeaders); err != nil {
+			return nil, errors.Wrap(err, `failed to set headers to recipient`)
+		}
 		recipients = append(recipients, r)
 	}
 
