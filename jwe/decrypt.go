@@ -113,13 +113,13 @@ func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, 
 
 	cek, keyerr := d.DecryptKey(recipientKey)
 	if keyerr != nil {
-		err = errors.Wrap(err, `failed to decrypt key`)
+		err = errors.Wrap(keyerr, `failed to decrypt key`)
 		return
 	}
 
 	cipher, ciphererr := d.ContentCipher()
 	if ciphererr != nil {
-		err = errors.Wrap(err, `failed to fetch content crypt cipher`)
+		err = errors.Wrap(ciphererr, `failed to fetch content crypt cipher`)
 		return
 	}
 
