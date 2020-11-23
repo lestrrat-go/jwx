@@ -473,10 +473,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			continue
 		}
 
-		if plaintext == nil {
-			panic("fuck")
-		}
-
 		if pdebug.Enabled {
 			pdebug.Printf("Successfully decrypted message. Checking for compression...")
 		}
