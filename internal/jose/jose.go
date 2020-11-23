@@ -166,3 +166,24 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 
 	return output.Bytes(), nil
 }
+
+func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
+	t.Helper()
+
+	fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-fmt-data-*", bytes.NewReader(data))
+	if perr != nil {
+		return nil, errors.Wrap(perr, `failed to write data to file`)
+	}
+	defer pcleanup()
+
+	cmdargs := []string{"jwe", "fmt", "-i", fn}
+
+	var output bytes.Buffer
+	if err := RunJoseCommand(ctx, t, cmdargs, &output); err != nil {
+		jwxtest.DumpFile(t, fn)
+
+		return nil, errors.Wrap(err, `failed to format JWE message`)
+	}
+
+	return output.Bytes(), nil
+}
