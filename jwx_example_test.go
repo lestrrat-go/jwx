@@ -1,6 +1,7 @@
 package jwx_test
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -132,28 +133,64 @@ func Example_openid() {
 }
 
 func Example_jwk() {
-	set, err := jwk.FetchHTTP("https://foobar.domain/jwk.json")
+	set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return
 	}
 
-	// If you KNOW you have exactly one key, you can just
-	// use set.Keys[0]
-	keys := set.LookupKeyID("mykey")
-	if len(keys) == 0 {
-		log.Printf("failed to lookup key: %s", err)
-		return
+	// Key setss can be serialized back to JSON
+	{
+		jsonbuf, err := json.Marshal(set)
+		if err != nil {
+			log.Printf("failed to marshal key set into JSON: %s", err)
+			return
+		}
+		log.Printf("%s", jsonbuf)
 	}
 
-	var key interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-	if err := keys[0].Raw(&key); err != nil {
-		log.Printf("failed to create public key: %s", err)
-		return
-	}
+	for it := set.Iterate(context.Background()); it.Next(context.Background()); {
+		pair := it.Pair()
+		key := pair.Value.(jwk.Key)
 
-	// Use key for jws.Verify() or whatever
-	_ = key
+		var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+		if err := key.Raw(&rawkey); err != nil {
+			log.Printf("failed to create public key: %s", err)
+			return
+		}
+		// Use rawkey for jws.Verify() or whatever.
+		_ = rawkey
+
+		// You can creatre jwk.Key from a raw key, too
+		fromRawKey, err := jwk.New(rawkey)
+
+
+		// Keys can be serialized back to JSON
+		jsonbuf, err := json.Marshal(key)
+		if err != nil {
+			log.Printf("failed to marshal key into JSON: %s", err)
+			return
+		}
+		log.Printf("%s", jsonbuf)
+
+		// If you know the underlying Key type (RSA, EC, Symmetric), you can
+		// create an empy instance first
+		//    key := jwk.NewRSAPrivateKey()
+		// ..and then use json.Unmarshal
+		//    json.Unmarshal(key, jsonbuf)
+		//
+		// but if you don't know the type first, you have an abstract type
+		// jwk.Key, which can't be used as the first argument to json.Unmarshal
+		//
+		// In this case, use jwk.Parse()
+		fromJsonKey, err := jwk.ParseBytes(jsonbuf)
+		if err != nil {
+			log.Printf("failed to parse json: %s", err)
+			return
+		}
+		_ = fromJsonKey
+		_ = fromRawKey
+	}
 }
 
 func Example_jws() {
