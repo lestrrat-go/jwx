@@ -268,8 +268,10 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
 // If the verification is successful, `err` is nil, and the content of the
 // payload that was signed is returned. If you need more fine-grained
-// control of the verification process, manually call `Parse`, generate a
-// verifier, and call `Verify` on the parsed JWS message object.
+// control of the verification process, manually generate a
+// `Verifier` in `verify` subpackage, and call `Verify` method on it.
+// If you need to access signatures and JOSE headers in a JWS message,
+// use `Parse` function to get `Message` object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
 	verifier, err := verify.New(alg)
 	if err != nil {
