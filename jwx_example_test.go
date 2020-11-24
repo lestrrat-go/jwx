@@ -163,6 +163,10 @@ func Example_jwk() {
 
 		// You can creatre jwk.Key from a raw key, too
 		fromRawKey, err := jwk.New(rawkey)
+		if err != nil {
+			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
+			return
+		}
 
 
 		// Keys can be serialized back to JSON
