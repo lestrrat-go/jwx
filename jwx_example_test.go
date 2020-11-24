@@ -168,7 +168,6 @@ func Example_jwk() {
 			return
 		}
 
-
 		// Keys can be serialized back to JSON
 		jsonbuf, err := json.Marshal(key)
 		if err != nil {
@@ -187,12 +186,12 @@ func Example_jwk() {
 		// jwk.Key, which can't be used as the first argument to json.Unmarshal
 		//
 		// In this case, use jwk.Parse()
-		fromJsonKey, err := jwk.ParseBytes(jsonbuf)
+		fromJSONKey, err := jwk.ParseBytes(jsonbuf)
 		if err != nil {
 			log.Printf("failed to parse json: %s", err)
 			return
 		}
-		_ = fromJsonKey
+		_ = fromJSONKey
 		_ = fromRawKey
 	}
 }
