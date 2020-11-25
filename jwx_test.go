@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
@@ -239,4 +240,27 @@ func TestJoseCompatibility(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestGHIssue230(t *testing.T) {
+	data := "eyJhbGciOiJFQ0RILUVTIiwiY2xldmlzIjp7InBpbiI6InRhbmciLCJ0YW5nIjp7ImFkdiI6eyJrZXlzIjpbeyJhbGciOiJFQ01SIiwiY3J2IjoiUC01MjEiLCJrZXlfb3BzIjpbImRlcml2ZUtleSJdLCJrdHkiOiJFQyIsIngiOiJBZm5tR2xHRTFHRUZ5NEpUT2tGWmo5ZEhEUmdpVE5IeFBST3hpZDZLdm0xVGRFQkZ3bElsSVB6TG5lTjlnb3h6OUVGYmJLM3BoN0tWZS05aVF4MmxhOVNFIiwieSI6IkFmZGFaTVYzVzk1NE14elQxeXF3MWVaRU9xTFFZZnBXSGczMlJvekhyQjBEYmoxWWV3OVFvTDg1M2Y2aUw2REIyRC1nbEcxSFFsb3czdGRNdFhjN1pSY0IifSx7ImFsZyI6IkVTNTEyIiwiY3J2IjoiUC01MjEiLCJrZXlfb3BzIjpbInZlcmlmeSJdLCJrdHkiOiJFQyIsIngiOiJBR0drcXRPZzZqel9pZnhmVnVWQ01CalVySFhCTGtfS2hIb3lKRkU5NmJucTZKZVVHNFNMZnRrZ2FIYk5WT0U4Q3Mwd0JqR0ZkSWxDbnBmak94RGJfbFBoIiwieSI6IkFLU0laT0JYY1Jfa3RkWjZ6T3F3TGI5SEJzai0yYmRMUmw5dFZVbnVlV2N3aXg5X3NiekliSWx0SE9YUGhBTW9yaUlYMWVyNzc4Unh6Vkg5d0FtaUhGa1kifV19LCJ1cmwiOiJodHRwOi8vbG9jYWxob3N0OjM5NDIxIn19LCJlbmMiOiJBMjU2R0NNIiwiZXBrIjp7ImNydiI6IlAtNTIxIiwia3R5IjoiRUMiLCJ4IjoiQUJMUm9sQWotZFdVdzZLSjg2T3J6d1F6RjlGT09URFZBZnNWNkh0OU0zREhyQ045Q0N6dVJ1b3cwbWp6M3BjZnVCaFpYREpfN0dkdzE0LXdneV9fTFNrYyIsInkiOiJBT3NRMzlKZmFQVGhjc2FZTjhSMVBHXzIwYXZxRU1NRl9fM2RHQmI3c1BqNmktNEJORDVMdkZ3cVpJT1l4SS1kVWlvNzkyOWY1YnE0eEdJY0lGWWtlbllxIn0sImtpZCI6ImhlZmVpNzVqMkp4Sko3REZnSDAxUWlOVmlGayJ9..GH3-8v7wfxEsRnki.wns--EIYTRjM3Tb0HyA.EGn2Gq7PnSVvPaMN0oRi5A"
+
+	compactMsg, err := jwe.ParseString(data)
+	if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
+		return
+	}
+
+	formatted, err := jose.FmtJwe(context.TODO(), t, []byte(data))
+	if !assert.NoError(t, err, `jose.FmtJwe should succeed`) {
+		return
+	}
+
+	jsonMsg, err := jwe.Parse(formatted)
+	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, compactMsg, jsonMsg, `messages should match`) {
+		return
+	}
 }

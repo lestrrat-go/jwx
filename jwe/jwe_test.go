@@ -66,7 +66,6 @@ func TestParse(t *testing.T) {
 			if !assert.NoError(t, err, "Parsing JWE is successful") {
 				return
 			}
-
 			if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
 				return
 			}
@@ -708,3 +707,28 @@ func TestGoJoseCompatibility(t *testing.T) {
 }
 
 */
+
+func TestGHIssue230(t *testing.T) {
+	t.Parallel()
+
+	const data = `{"ciphertext":"wko","encrypted_key":"","iv":"y-wj7nfa-T8XG58z","protected":"eyJhbGciOiJkaXIiLCJjbGV2aXMiOnsicGluIjoidHBtMiIsInRwbTIiOnsiaGFzaCI6InNoYTI1NiIsImp3a19wcml2IjoiQU80QUlCSTFRYjQ2SHZXUmNSRHVxRXdoN2ZWc3hSNE91MVhsOHBRX2hMMTlPeUc3QUJDVG80S2RqWEZYcEFUOWtLeWptVVJPOTVBaXc4U1o4MGZXRmtDMGdEazJLTXEtamJTZU1wcFZFaFJaWEpxQmhWNXVGZ1V0T0J4eUFjRzFZRjhFMW5Ob1dPWk9Eek5EUkRrOE1ZVWZrWVNpS0ZKb2pPZ0UxSjRIZkRoM0lBelY2MFR6V2NWcXJ0QnlwX2EyZ1V2a0JqcGpTeVF2Nmc2amJMSXpEaG10VnZLMmxDazhlMjUzdG1MSDNPQWk0Q0tZcWFZY0tjTTltSTdTRXBpVldlSjZZVFBEdmtORndpa0tNRjE3czVYQUlFUjZpczNNTVBpNkZTOWQ3ZmdMV25hUkpabDVNNUJDMldxN2NsVmYiLCJqd2tfcHViIjoiQUM0QUNBQUxBQUFFMGdBQUFCQUFJREpTSVhRSVVocjVPaDVkNXZWaWVGUDBmZG9pVFd3S1RicXJRRVRhVmx4QyIsImtleSI6ImVjYyJ9fSwiZW5jIjoiQTI1NkdDTSJ9","tag":"lir7v9YbCCZQKf5-yJ0BTQ"}`
+
+	msg, err := jwe.Parse([]byte(data))
+	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+		return
+	}
+
+	compact, err := jwe.Compact(msg)
+	if !assert.NoError(t, err, `jwe.Compact should succeed`) {
+		return
+	}
+
+	msg2, err := jwe.Parse(compact)
+	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, msg, msg2, `data -> msg -> compact -> msg2 produces msg == msg2`) {
+		return
+	}
+}
