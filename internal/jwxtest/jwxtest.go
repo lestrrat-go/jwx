@@ -125,36 +125,48 @@ func DumpFile(t *testing.T, file string) {
 	if !assert.NoError(t, err, `failed to read file %s for debugging`, file) {
 		return
 	}
-	if strings.HasSuffix(file, ".jwe") {
-		if !bytes.ContainsRune(buf, '{') {
-			// assume compact serialization
-			t.Logf("=== BEGIN %s (raw) ===", file)
-			t.Logf("%s", buf)
-			t.Logf("=== END   %s (raw) ===", file)
 
-			// cross our fingers our jwe implementation works
-			m, err := jwe.Parse(buf)
-			if !assert.NoError(t, err, `failed to parse JWE encrypted message`) {
-				return
-			}
+	if isHash, isArray := bytes.ContainsRune(buf, '{'), bytes.ContainsRune(buf, '['); isHash || isArray {
+		// Looks like a JSON-like thing. Dump that in a formatted manner, and
+		// be done with it
 
-			buf, _ = json.MarshalIndent(m, "", "  ")
+		var v interface{}
+		if isHash {
+			v = map[string]interface{}{}
+		} else {
+			v = []interface{}{}
 		}
+
+		if !assert.NoError(t, json.Unmarshal(buf, &v), `failed to parse contents as JSON`) {
+			return
+		}
+
+		buf, _ = json.MarshalIndent(v, "", "  ")
+		t.Logf("=== BEGIN %s (formatted JSON) ===", file)
+		t.Logf("%s", buf)
+		t.Logf("=== END   %s (formatted JSON) ===", file)
+		return
 	}
 
-	if strings.HasSuffix(file, ".jwk") {
-		// Assume JSON
-		var m map[string]interface{}
-		if !assert.NoError(t, json.Unmarshal(buf, &m), `failed to parse contents as JSON`) {
+	// If the contents do not look like JSON, then we attempt to parse each content
+	// based on heuristics (from its file name) and do our best
+	t.Logf("=== BEGIN %s (raw) ===", file)
+	t.Logf("%s", buf)
+	t.Logf("=== END   %s (raw) ===", file)
+
+	if strings.HasSuffix(file, ".jwe") {
+		// cross our fingers our jwe implementation works
+		m, err := jwe.Parse(buf)
+		if !assert.NoError(t, err, `failed to parse JWE encrypted message`) {
 			return
 		}
 
 		buf, _ = json.MarshalIndent(m, "", "  ")
 	}
 
-	t.Logf("=== BEGIN %s ===", file)
+	t.Logf("=== BEGIN %s (formatted JSON) ===", file)
 	t.Logf("%s", buf)
-	t.Logf("=== END   %s ===", file)
+	t.Logf("=== END   %s (formatted JSON) ===", file)
 }
 
 func CreateTempFile(template string) (*os.File, func(), error) {

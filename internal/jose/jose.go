@@ -110,10 +110,14 @@ func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, fu
 // a cleanup function.
 // The caller is responsible for calling the cleanup
 // function and make sure all resources are released
-func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile string) (string, func(), error) {
+func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile string, compact bool) (string, func(), error) {
 	t.Helper()
 
 	cmdargs := []string{"jwe", "enc", "-k", keyfile}
+	if compact {
+		cmdargs = append(cmdargs, "-c")
+	}
+
 	var pfile string
 	if len(payload) > 0 {
 		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
