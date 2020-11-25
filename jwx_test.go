@@ -198,7 +198,15 @@ func TestJoseCompatibility(t *testing.T) {
 				// let jwx decrypt the jose crypted file
 				payload, err := jwxtest.DecryptJweFile(ctx, joseCryptFile, jwa.ECDH_ES, joseJwkFile)
 				if !assert.NoError(t, err, `decryptFile.DecryptJwe should succeed`) {
+					// If this fails, let's see what happens if we do this via jose
+					joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, joseJwkFile, true)
+					if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
+						return
+					}
+					defer joseCryptCleanup()
+					t.Logf("=== DEBUG: JWE contents, had we encrypted using jose...")
 					jwxtest.DumpFile(t, joseCryptFile)
+
 					return
 				}
 
