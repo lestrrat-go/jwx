@@ -187,7 +187,7 @@ func TestJoseCompatibility(t *testing.T) {
 			})
 			t.Run("Encrypt with jose, Decrypt with jwx", func(t *testing.T) {
 				// let jose encrypt payload using the key file
-				joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, joseJwkFile)
+				joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, joseJwkFile, true)
 				if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
 					return
 				}
@@ -199,22 +199,6 @@ func TestJoseCompatibility(t *testing.T) {
 				payload, err := jwxtest.DecryptJweFile(ctx, joseCryptFile, jwa.ECDH_ES, joseJwkFile)
 				if !assert.NoError(t, err, `decryptFile.DecryptJwe should succeed`) {
 					jwxtest.DumpFile(t, joseCryptFile)
-					return
-				}
-
-				if !assert.Equal(t, expected, payload, `decrypted payloads should match`) {
-					return
-				}
-			})
-			t.Run("Encrypt with jwx, Decrypt with jose", func(t *testing.T) {
-				jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, expected, jwa.ECDH_ES, joseJwkFile, jwa.A128GCM, jwa.NoCompress)
-				if !assert.NoError(t, err, `jwxtest.EncryptJweFile should succeed`) {
-					return
-				}
-				defer jwxCryptCleanup()
-
-				payload, err := jose.DecryptJwe(ctx, t, jwxCryptFile, joseJwkFile)
-				if !assert.NoError(t, err, `jose.DecryptJwe should succeed`) {
 					return
 				}
 
