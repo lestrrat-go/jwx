@@ -18,7 +18,7 @@ func Test_X5CHeader(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal", func(t *testing.T) {
 		// The input contains padding. We can accept either as input, but only emit
-		// strings encoded without padding
+		// strings encoded with padding
 		certsNopad := make([]string, len(certs))
 		for i, cert := range certs {
 			for len(cert) > 0 && cert[len(cert)-1] == '=' {
@@ -27,7 +27,7 @@ func Test_X5CHeader(t *testing.T) {
 			certsNopad[i] = cert
 		}
 
-		expected, err := json.Marshal(certsNopad)
+		expected, err := json.Marshal(certs)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
 		}

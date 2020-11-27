@@ -7,7 +7,7 @@ import (
 )
 
 func EncodeToStringStd(src []byte) string {
-	return base64.RawStdEncoding.EncodeToString(src)
+	return base64.StdEncoding.EncodeToString(src)
 }
 
 func EncodeToString(src []byte) string {
