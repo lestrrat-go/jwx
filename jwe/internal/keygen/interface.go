@@ -39,6 +39,12 @@ type ByteWithECPrivateKey struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
+type ByteWithIVAndTag struct {
+	ByteKey
+	IV  []byte
+	Tag []byte
+}
+
 // ByteSource is an interface for things that return a byte sequence.
 // This is used for KeyGenerator so that the result of computations can
 // carry more than just the generate byte sequence.

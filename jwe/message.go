@@ -505,6 +505,34 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if apv := h2.AgreementPartyVInfo(); apv.Len() > 0 {
 				dec.AgreementPartyVInfo(apv.Bytes())
 			}
+		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+			ivB64, ok := h2.Get(InitializationVectorKey)
+			if !ok {
+				return nil, errors.New("failed to get 'iv' field")
+			}
+			ivB64Str, ok := ivB64.(string)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'iv': %T", ivB64)
+			}
+			tagB64, ok := h2.Get(TagKey)
+			if !ok {
+				return nil, errors.New("failed to get 'tag' field")
+			}
+			tagB64Str, ok := tagB64.(string)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
+			}
+			var iv, tag buffer.Buffer
+			err := iv.Base64Decode([]byte(ivB64Str))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
+			}
+			err = tag.Base64Decode([]byte(tagB64Str))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
+			}
+			dec.KeyInitializationVector(iv)
+			dec.KeyTag(tag)
 		}
 
 		plaintext, err = dec.Decrypt(recipient.EncryptedKey().Bytes(), ciphertext)

@@ -57,12 +57,18 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
 		keysize = contentcrypt.KeySize() / 2
-	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
+		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
 			return nil, errors.New("invalid key: []byte required")
 		}
-		enc, err = keyenc.NewAES(keyalg, sharedkey)
+		switch keyalg {
+		case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+			enc, err = keyenc.NewAES(keyalg, sharedkey)
+		default:
+			enc, err = keyenc.NewAESGCMEncrypt(keyalg, sharedkey)
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}
@@ -96,8 +102,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		case jwa.ECDH_ES_A256KW:
 			keysize = 32
 		}
-	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-		fallthrough
+
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		fallthrough
 	default:

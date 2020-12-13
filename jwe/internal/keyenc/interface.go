@@ -32,6 +32,13 @@ type AES struct {
 	keyID     string
 }
 
+// AESGCM encrypts content encryption keys using AES-GCM key wrap.
+type AESGCMEncrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	sharedkey []byte
+	keyID     string
+}
+
 // ECDHESEncrypt encrypts content encryption keys using ECDH-ES.
 type ECDHESEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm

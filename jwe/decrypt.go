@@ -2,6 +2,7 @@ package jwe
 
 import (
 	"crypto/aes"
+	cryptocipher "crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/rsa"
 
@@ -25,6 +26,8 @@ type Decrypter struct {
 	ctalg       jwa.ContentEncryptionAlgorithm
 	iv          []byte
 	keyalg      jwa.KeyEncryptionAlgorithm
+	keyiv       []byte
+	keytag      []byte
 	privkey     interface{}
 	pubkey      interface{}
 	tag         []byte
@@ -73,6 +76,16 @@ func (d *Decrypter) ContentEncryptionAlgorithm(ctalg jwa.ContentEncryptionAlgori
 
 func (d *Decrypter) InitializationVector(iv []byte) *Decrypter {
 	d.iv = iv
+	return d
+}
+
+func (d *Decrypter) KeyInitializationVector(keyiv []byte) *Decrypter {
+	d.keyiv = keyiv
+	return d
+}
+
+func (d *Decrypter) KeyTag(keytag []byte) *Decrypter {
+	d.keytag = keytag
 	return d
 }
 
@@ -163,12 +176,37 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 
 		jek, err := keyenc.Unwrap(block, recipientKey)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to wrap key`)
+			return nil, errors.Wrap(err, `failed to unwrap key`)
 		}
 
 		if pdebug.Enabled {
 			pdebug.Printf("cek len = %d", len(cek))
 			pdebug.Printf("Wrapped key len = %d", len(jek))
+		}
+		return jek, nil
+	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		if pdebug.Enabled {
+			pdebug.Printf("cek len = %d", len(cek))
+		}
+		if len(d.iv) != 12 {
+			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.iv)*8)
+		}
+		if len(d.tag) != 16 {
+			return nil, errors.Errorf("GCM requires 128-bit tag, got %d", len(d.tag)*8)
+		}
+		block, err := aes.NewCipher(cek)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to create new AES cipher`)
+		}
+		aesgcm, err := cryptocipher.NewGCM(block)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to create new GCM wrap`)
+		}
+		ciphertext := recipientKey[:]
+		ciphertext = append(ciphertext, d.keytag...)
+		jek, err := aesgcm.Open(nil, d.keyiv, ciphertext, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to decode key`)
 		}
 		return jek, nil
 	default:

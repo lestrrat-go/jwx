@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash"
+	"io"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
@@ -67,6 +68,47 @@ func (kw *AES) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		return nil, errors.Wrap(err, `keywrap: failed to wrap key`)
 	}
 	return keygen.ByteKey(encrypted), nil
+}
+
+func NewAESGCMEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AESGCMEncrypt, error) {
+	return &AESGCMEncrypt{
+		algorithm: alg,
+		sharedkey: sharedkey,
+	}, nil
+}
+
+func (kw AESGCMEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw AESGCMEncrypt) KeyID() string {
+	return kw.keyID
+}
+
+func (kw AESGCMEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
+	block, err := aes.NewCipher(kw.sharedkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cipher from shared key")
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil errors.Wrap(err, "failed to create gcm from cipher")
+	}
+
+	iv := make([]byte, aesgcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get random iv")
+	}
+
+	encrypted := aesgcm.Seal(nil, iv, cek, nil)
+	tag := encrypted[len(encrypted)-aesgcm.Overhead():]
+	ciphertext := encrypted[:len(encrypted)-aesgcm.Overhead()]
+	return keygen.ByteWithIVAndTag{
+		ByteKey: ciphertext,
+		IV:      iv,
+		Tag:     tag,
+	}, nil
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES
