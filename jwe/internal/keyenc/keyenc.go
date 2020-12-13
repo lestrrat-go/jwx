@@ -9,11 +9,14 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"hash"
 	"io"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
@@ -92,7 +95,7 @@ func (kw AESGCMEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 	}
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil errors.Wrap(err, "failed to create gcm from cipher")
+		return nil, errors.Wrap(err, "failed to create gcm from cipher")
 	}
 
 	iv := make([]byte, aesgcm.NonceSize())
@@ -108,6 +111,66 @@ func (kw AESGCMEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		ByteKey: ciphertext,
 		IV:      iv,
 		Tag:     tag,
+	}, nil
+}
+
+func NewPBES2Encrypt(alg jwa.KeyEncryptionAlgorithm, password []byte) (*PBES2Encrypt, error) {
+	var hashFunc func() hash.Hash
+	var keylen int
+	switch alg {
+	case jwa.PBES2_HS256_A128KW:
+		hashFunc = sha256.New
+		keylen = 16
+	case jwa.PBES2_HS384_A192KW:
+		hashFunc = sha512.New384
+		keylen = 24
+	case jwa.PBES2_HS512_A256KW:
+		hashFunc = sha512.New
+		keylen = 32
+	default:
+		return nil, errors.Errorf("unexpected key encryption algorithm %s", alg)
+	}
+	return &PBES2Encrypt{
+		algorithm: alg,
+		password:  password,
+		hashFunc:  hashFunc,
+		keylen:    keylen,
+	}, nil
+}
+
+func (kw PBES2Encrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw PBES2Encrypt) KeyID() string {
+	return kw.keyID
+}
+
+func (kw PBES2Encrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
+	count := 10000
+	salt := make([]byte, kw.keylen)
+	_, err := io.ReadFull(rand.Reader, salt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get random salt")
+	}
+
+	fullsalt := []byte(kw.algorithm)
+	fullsalt = append(fullsalt, byte(0))
+	fullsalt = append(fullsalt, salt...)
+	sharedkey := pbkdf2.Key(kw.password, fullsalt, count, kw.keylen, kw.hashFunc)
+
+	block, err := aes.NewCipher(sharedkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cipher from shared key")
+	}
+	encrypted, err := Wrap(block, cek)
+	if err != nil {
+		return nil, errors.Wrap(err, `keywrap: failed to wrap key`)
+	}
+	return keygen.ByteWithSaltAndCount{
+		ByteKey: encrypted,
+		Salt:    salt,
+		Count:   count,
 	}, nil
 }
 

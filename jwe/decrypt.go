@@ -5,6 +5,11 @@ import (
 	cryptocipher "crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/sha512"
+	"hash"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -26,7 +31,9 @@ type Decrypter struct {
 	ctalg       jwa.ContentEncryptionAlgorithm
 	iv          []byte
 	keyalg      jwa.KeyEncryptionAlgorithm
+	keycount    int
 	keyiv       []byte
+	keysalt     []byte
 	keytag      []byte
 	privkey     interface{}
 	pubkey      interface{}
@@ -79,8 +86,18 @@ func (d *Decrypter) InitializationVector(iv []byte) *Decrypter {
 	return d
 }
 
+func (d *Decrypter) KeyCount(keycount int) *Decrypter {
+	d.keycount = keycount
+	return d
+}
+
 func (d *Decrypter) KeyInitializationVector(keyiv []byte) *Decrypter {
 	d.keyiv = keyiv
+	return d
+}
+
+func (d *Decrypter) KeySalt(keysalt []byte) *Decrypter {
+	d.keysalt = keysalt
 	return d
 }
 
@@ -168,6 +185,25 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 			pdebug.Printf("Successfully decrypted symmetric key (key len = %d)", len(cek))
 		}
 		return cek, nil
+	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+		var hashFunc func() hash.Hash
+		var keylen int
+		switch d.keyalg {
+		case jwa.PBES2_HS256_A128KW:
+			hashFunc = sha256.New
+			keylen = 16
+		case jwa.PBES2_HS384_A192KW:
+			hashFunc = sha512.New384
+			keylen = 24
+		case jwa.PBES2_HS512_A256KW:
+			hashFunc = sha512.New
+			keylen = 32
+		}
+		salt := []byte(d.keyalg)
+		salt = append(salt, byte(0))
+		salt = append(salt, d.keysalt...)
+		cek = pbkdf2.Key(cek, salt, d.keycount, keylen, hashFunc)
+		fallthrough
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		block, err := aes.NewCipher(cek)
 		if err != nil {

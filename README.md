@@ -381,9 +381,9 @@ Supported key encryption algorithm:
 | AES-GCM key wrap (128)                   | YES        | jwa.A128GCMKW          |
 | AES-GCM key wrap (192)                   | YES        | jwa.A192GCMKW          |
 | AES-GCM key wrap (256)                   | YES        | jwa.A256GCMKW          |
-| PBES2 + HMAC-SHA256 + AES key wrap (128) | NO         | jwa.PBES2_HS256_A128KW |
-| PBES2 + HMAC-SHA384 + AES key wrap (192) | NO         | jwa.PBES2_HS384_A192KW |
-| PBES2 + HMAC-SHA512 + AES key wrap (256) | NO         | jwa.PBES2_HS512_A256KW |
+| PBES2 + HMAC-SHA256 + AES key wrap (128) | YES        | jwa.PBES2_HS256_A128KW |
+| PBES2 + HMAC-SHA384 + AES key wrap (192) | YES        | jwa.PBES2_HS384_A192KW |
+| PBES2 + HMAC-SHA512 + AES key wrap (256) | YES        | jwa.PBES2_HS512_A256KW |
 
 Supported content encryption algorithm:
 

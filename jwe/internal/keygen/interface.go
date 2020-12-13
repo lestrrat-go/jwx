@@ -45,6 +45,12 @@ type ByteWithIVAndTag struct {
 	Tag []byte
 }
 
+type ByteWithSaltAndCount struct {
+	ByteKey
+	Salt  []byte
+	Count int
+}
+
 // ByteSource is an interface for things that return a byte sequence.
 // This is used for KeyGenerator so that the result of computations can
 // carry more than just the generate byte sequence.

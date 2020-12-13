@@ -3,6 +3,7 @@ package keyenc
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"hash"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
@@ -86,4 +87,13 @@ type RSAPKCSEncrypt struct {
 // DirectDecrypt does no encryption (Note: Unimplemented)
 type DirectDecrypt struct {
 	Key []byte
+}
+
+// PBES2Encrypt encrypts keys with PBES2 / PBKDF2 password
+type PBES2Encrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	password  []byte
+	hashFunc  func() hash.Hash
+	keylen    int
+	keyID     string
 }

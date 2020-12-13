@@ -58,7 +58,8 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		}
 		keysize = contentcrypt.KeySize() / 2
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
-		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW,
+		jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		sharedkey, ok := key.([]byte)
 		if !ok {
 			return nil, errors.New("invalid key: []byte required")
@@ -66,6 +67,8 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		switch keyalg {
 		case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 			enc, err = keyenc.NewAES(keyalg, sharedkey)
+		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+			enc, err = keyenc.NewPBES2Encrypt(keyalg, sharedkey)
 		default:
 			enc, err = keyenc.NewAESGCMEncrypt(keyalg, sharedkey)
 		}
@@ -102,9 +105,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		case jwa.ECDH_ES_A256KW:
 			keysize = 32
 		}
-
-	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-		fallthrough
 	default:
 		if pdebug.Enabled {
 			pdebug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
