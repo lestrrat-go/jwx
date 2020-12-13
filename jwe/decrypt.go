@@ -235,7 +235,7 @@ func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
 
-		return keyenc.NewAESCGM(alg, sharedkey)
+		return keyenc.NewAES(alg, sharedkey)
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var pubkey ecdsa.PublicKey
 		if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {

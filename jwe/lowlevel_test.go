@@ -54,7 +54,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 
 	const compactExpected = `eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ.AxY8DCtDaGlsbGljb3RoZQ.KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY.U0m_YmjN04DJvceFICbCVQ`
 
-	k, err := keyenc.NewAESCGM(jwa.A128KW, sharedkey)
+	k, err := keyenc.NewAES(jwa.A128KW, sharedkey)
 	if !assert.NoError(t, err, "Create key wrap") {
 		return
 	}

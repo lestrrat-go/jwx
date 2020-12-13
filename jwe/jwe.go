@@ -62,7 +62,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if !ok {
 			return nil, errors.New("invalid key: []byte required")
 		}
-		enc, err = keyenc.NewAESCGM(keyalg, sharedkey)
+		enc, err = keyenc.NewAES(keyalg, sharedkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}

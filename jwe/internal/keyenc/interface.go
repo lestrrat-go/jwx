@@ -24,9 +24,9 @@ type Decrypter interface {
 	Decrypt([]byte) ([]byte, error)
 }
 
-// AESCGM encrypts content encryption keys using AES-CGM key wrap.
+// AES encrypts content encryption keys using AES key wrap.
 // Contrary to what the name implies, it also decrypt encrypted keys
-type AESCGM struct {
+type AES struct {
 	alg       jwa.KeyEncryptionAlgorithm
 	sharedkey []byte
 	keyID     string

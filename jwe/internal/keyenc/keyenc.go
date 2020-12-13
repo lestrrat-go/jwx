@@ -23,27 +23,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewAESCGM creates a key-wrap encrypter using AES-CGM.
+// NewAES creates a key-wrap encrypter using AES.
 // Although the name suggests otherwise, this does the decryption as well.
-func NewAESCGM(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AESCGM, error) {
-	return &AESCGM{
+func NewAES(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AES, error) {
+	return &AES{
 		alg:       alg,
 		sharedkey: sharedkey,
 	}, nil
 }
 
 // Algorithm returns the key encryption algorithm being used
-func (kw *AESCGM) Algorithm() jwa.KeyEncryptionAlgorithm {
+func (kw *AES) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.alg
 }
 
 // KeyID returns the key ID associated with this encrypter
-func (kw *AESCGM) KeyID() string {
+func (kw *AES) KeyID() string {
 	return kw.keyID
 }
 
-// Decrypt decrypts the encrypted key using AES-CGM key unwrap
-func (kw *AESCGM) Decrypt(enckey []byte) ([]byte, error) {
+// Decrypt decrypts the encrypted key using AES key unwrap
+func (kw *AES) Decrypt(enckey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cipher from shared key")
@@ -57,7 +57,7 @@ func (kw *AESCGM) Decrypt(enckey []byte) ([]byte, error) {
 }
 
 // KeyEncrypt encrypts the given content encryption key
-func (kw *AESCGM) Encrypt(cek []byte) (keygen.ByteSource, error) {
+func (kw *AES) Encrypt(cek []byte) (keygen.ByteSource, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cipher from shared key")
