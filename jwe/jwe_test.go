@@ -375,9 +375,7 @@ func TestEncode_ECDH(t *testing.T) {
 	}
 
 	algorithms := []jwa.KeyEncryptionAlgorithm{
-		// XXX for ECDH-ES
-		// uncomment the next line
-		// jwa.ECDH_ES,
+		jwa.ECDH_ES,
 		jwa.ECDH_ES_A256KW,
 		jwa.ECDH_ES_A192KW,
 		jwa.ECDH_ES_A128KW,
@@ -417,10 +415,6 @@ func TestEncode_ECDH(t *testing.T) {
 }
 
 func Test_GHIssue207(t *testing.T) {
-	// XXX for ECDH-ES
-	// Remove the t.SkipNow()
-	t.SkipNow()
-
 	const plaintext = "hi\n"
 	var testcases = []struct {
 		Algorithm  jwa.KeyEncryptionAlgorithm
