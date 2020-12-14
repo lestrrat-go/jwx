@@ -416,18 +416,6 @@ func TestEncode_ECDH(t *testing.T) {
 	}
 }
 
-func Test_A256KW_A256CBC_HS512(t *testing.T) {
-	var keysize = 32
-	var key = make([]byte, keysize)
-	for i := 0; i < keysize; i++ {
-		key[i] = byte(i)
-	}
-	_, err := jwe.Encrypt([]byte(examplePayload), jwa.A256KW, key, jwa.A256CBC_HS512, jwa.NoCompress)
-	if !assert.Error(t, err, "should fail to encrypt payload") {
-		return
-	}
-}
-
 func Test_GHIssue207(t *testing.T) {
 	// XXX for ECDH-ES
 	// Remove the t.SkipNow()

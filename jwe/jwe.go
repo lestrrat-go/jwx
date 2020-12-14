@@ -45,7 +45,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
-		keysize = contentcrypt.KeySize() / 2
+		keysize = contentcrypt.KeySize()
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var pubkey rsa.PublicKey
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
@@ -56,7 +56,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
-		keysize = contentcrypt.KeySize() / 2
+		keysize = contentcrypt.KeySize()
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
 		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW,
 		jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:

@@ -160,9 +160,16 @@ func TestJoseCompatibility(t *testing.T) {
 	})
 	t.Run("jwe", func(t *testing.T) {
 		tests := []interopTest{
-			// interopTest{jwa.RSA_OAEP, jwa.A128GCM},
+			{jwa.RSA1_5, jwa.A128GCM},
+			{jwa.RSA1_5, jwa.A128CBC_HS256},
+			{jwa.RSA1_5, jwa.A256CBC_HS512},
+			{jwa.RSA_OAEP, jwa.A128GCM},
 			{jwa.RSA_OAEP, jwa.A128CBC_HS256},
-			// interopTest{jwa.ECDH_ES, jwa.A256CBC_HS512},
+			{jwa.RSA_OAEP, jwa.A256CBC_HS512},
+			{jwa.RSA_OAEP_256, jwa.A128GCM},
+			{jwa.RSA_OAEP_256, jwa.A128CBC_HS256},
+			{jwa.RSA_OAEP_256, jwa.A256CBC_HS512},
+			// {jwa.ECDH_ES, jwa.A256CBC_HS512},
 			{jwa.ECDH_ES_A128KW, jwa.A128GCM},
 			{jwa.A256GCMKW, jwa.A256GCM},
 			{jwa.PBES2_HS512_A256KW, jwa.A256GCM},

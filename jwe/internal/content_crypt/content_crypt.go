@@ -48,16 +48,10 @@ func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 		pdebug.Printf("AES Crypt: cipher.keysize = %d", c.KeySize())
 	}
 
-	keysize := c.KeySize()
-	switch alg {
-	case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM:
-	case jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
-		keysize = keysize * 2
-	}
 	return &Generic{
 		alg:     alg,
 		cipher:  c,
-		keysize: keysize,
+		keysize: c.KeySize(),
 		tagsize: 16,
 	}, nil
 }
