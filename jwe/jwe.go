@@ -86,11 +86,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
 
-		enc, err = keyenc.NewECDHESEncrypt(keyalg, &pubkey)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
-		}
-
 		switch keyalg {
 		case jwa.ECDH_ES:
 			// https://tools.ietf.org/html/rfc7518#page-15
@@ -103,6 +98,11 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			keysize = 24
 		case jwa.ECDH_ES_A256KW:
 			keysize = 32
+		}
+
+		enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
 	default:
 		if pdebug.Enabled {
