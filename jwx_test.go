@@ -171,8 +171,21 @@ func TestJoseCompatibility(t *testing.T) {
 			{jwa.RSA_OAEP_256, jwa.A256CBC_HS512},
 			// {jwa.ECDH_ES, jwa.A256CBC_HS512},
 			{jwa.ECDH_ES_A128KW, jwa.A128GCM},
+			// {jwa.ECDH_ES_A128KW, jwa.A128CBC_HS256},
+			// {jwa.ECDH_ES_A256KW, jwa.A256GCM}, fails intermittently
+			// {jwa.ECDH_ES_A256KW, jwa.A256CBC_HS512},
+			{jwa.A128KW, jwa.A128GCM},
+			{jwa.A128KW, jwa.A128CBC_HS256},
+			{jwa.A256KW, jwa.A256GCM},
+			{jwa.A256KW, jwa.A256CBC_HS512},
+			{jwa.A128GCMKW, jwa.A128GCM},
+			// {jwa.A128GCMKW, jwa.A128CBC_HS256},
 			{jwa.A256GCMKW, jwa.A256GCM},
+			// {jwa.A256GCMKW, jwa.A256CBC_HS512},
+			{jwa.PBES2_HS256_A128KW, jwa.A128GCM},
+			{jwa.PBES2_HS256_A128KW, jwa.A128CBC_HS256},
 			{jwa.PBES2_HS512_A256KW, jwa.A256GCM},
+			{jwa.PBES2_HS512_A256KW, jwa.A256CBC_HS512},
 		}
 		for _, test := range tests {
 			test := test

@@ -76,11 +76,10 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}
 		keysize = contentcrypt.KeySize()
-		switch aesKeySize := keysize / 2; aesKeySize {
-		case 16, 24, 32:
-		default:
-			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
-		}
+		// NOTE: there was formerly a restriction, introduced
+		// in PR #26, which disallowed certain key/content
+		// algorithm combinations. This seemed bogus, and
+		// interop with the jose tool demonstrates it.
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var pubkey ecdsa.PublicKey
 		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
