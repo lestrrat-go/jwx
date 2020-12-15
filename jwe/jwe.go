@@ -33,7 +33,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	}
 
 	var enc keyenc.Encrypter
-	var keysize int
 	switch keyalg {
 	case jwa.RSA1_5:
 		var pubkey rsa.PublicKey
@@ -45,7 +44,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
-		keysize = contentcrypt.KeySize()
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var pubkey rsa.PublicKey
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
@@ -56,7 +54,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
-		keysize = contentcrypt.KeySize()
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
 		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW,
 		jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
@@ -75,7 +72,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}
-		keysize = contentcrypt.KeySize()
 		// NOTE: there was formerly a restriction, introduced
 		// in PR #26, which disallowed certain key/content
 		// algorithm combinations. This seemed bogus, and
@@ -86,6 +82,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
 
+		var keysize int
 		switch keyalg {
 		case jwa.ECDH_ES:
 			// https://tools.ietf.org/html/rfc7518#page-15
@@ -111,6 +108,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
+	keysize := contentcrypt.KeySize()
 	if pdebug.Enabled {
 		pdebug.Printf("Encrypt: keysize = %d", keysize)
 	}
