@@ -9,10 +9,14 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"hash"
+	"io"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
@@ -23,27 +27,27 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewAESCGM creates a key-wrap encrypter using AES-CGM.
+// NewAES creates a key-wrap encrypter using AES.
 // Although the name suggests otherwise, this does the decryption as well.
-func NewAESCGM(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AESCGM, error) {
-	return &AESCGM{
+func NewAES(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AES, error) {
+	return &AES{
 		alg:       alg,
 		sharedkey: sharedkey,
 	}, nil
 }
 
 // Algorithm returns the key encryption algorithm being used
-func (kw *AESCGM) Algorithm() jwa.KeyEncryptionAlgorithm {
+func (kw *AES) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.alg
 }
 
 // KeyID returns the key ID associated with this encrypter
-func (kw *AESCGM) KeyID() string {
+func (kw *AES) KeyID() string {
 	return kw.keyID
 }
 
-// Decrypt decrypts the encrypted key using AES-CGM key unwrap
-func (kw *AESCGM) Decrypt(enckey []byte) ([]byte, error) {
+// Decrypt decrypts the encrypted key using AES key unwrap
+func (kw *AES) Decrypt(enckey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cipher from shared key")
@@ -57,7 +61,7 @@ func (kw *AESCGM) Decrypt(enckey []byte) ([]byte, error) {
 }
 
 // KeyEncrypt encrypts the given content encryption key
-func (kw *AESCGM) Encrypt(cek []byte) (keygen.ByteSource, error) {
+func (kw *AES) Encrypt(cek []byte) (keygen.ByteSource, error) {
 	block, err := aes.NewCipher(kw.sharedkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cipher from shared key")
@@ -67,6 +71,107 @@ func (kw *AESCGM) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		return nil, errors.Wrap(err, `keywrap: failed to wrap key`)
 	}
 	return keygen.ByteKey(encrypted), nil
+}
+
+func NewAESGCMEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AESGCMEncrypt, error) {
+	return &AESGCMEncrypt{
+		algorithm: alg,
+		sharedkey: sharedkey,
+	}, nil
+}
+
+func (kw AESGCMEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw AESGCMEncrypt) KeyID() string {
+	return kw.keyID
+}
+
+func (kw AESGCMEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
+	block, err := aes.NewCipher(kw.sharedkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cipher from shared key")
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create gcm from cipher")
+	}
+
+	iv := make([]byte, aesgcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, iv)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get random iv")
+	}
+
+	encrypted := aesgcm.Seal(nil, iv, cek, nil)
+	tag := encrypted[len(encrypted)-aesgcm.Overhead():]
+	ciphertext := encrypted[:len(encrypted)-aesgcm.Overhead()]
+	return keygen.ByteWithIVAndTag{
+		ByteKey: ciphertext,
+		IV:      iv,
+		Tag:     tag,
+	}, nil
+}
+
+func NewPBES2Encrypt(alg jwa.KeyEncryptionAlgorithm, password []byte) (*PBES2Encrypt, error) {
+	var hashFunc func() hash.Hash
+	var keylen int
+	switch alg {
+	case jwa.PBES2_HS256_A128KW:
+		hashFunc = sha256.New
+		keylen = 16
+	case jwa.PBES2_HS384_A192KW:
+		hashFunc = sha512.New384
+		keylen = 24
+	case jwa.PBES2_HS512_A256KW:
+		hashFunc = sha512.New
+		keylen = 32
+	default:
+		return nil, errors.Errorf("unexpected key encryption algorithm %s", alg)
+	}
+	return &PBES2Encrypt{
+		algorithm: alg,
+		password:  password,
+		hashFunc:  hashFunc,
+		keylen:    keylen,
+	}, nil
+}
+
+func (kw PBES2Encrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.algorithm
+}
+
+func (kw PBES2Encrypt) KeyID() string {
+	return kw.keyID
+}
+
+func (kw PBES2Encrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
+	count := 10000
+	salt := make([]byte, kw.keylen)
+	_, err := io.ReadFull(rand.Reader, salt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get random salt")
+	}
+
+	fullsalt := []byte(kw.algorithm)
+	fullsalt = append(fullsalt, byte(0))
+	fullsalt = append(fullsalt, salt...)
+	sharedkey := pbkdf2.Key(kw.password, fullsalt, count, kw.keylen, kw.hashFunc)
+
+	block, err := aes.NewCipher(sharedkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cipher from shared key")
+	}
+	encrypted, err := Wrap(block, cek)
+	if err != nil {
+		return nil, errors.Wrap(err, `keywrap: failed to wrap key`)
+	}
+	return keygen.ByteWithSaltAndCount{
+		ByteKey: encrypted,
+		Salt:    salt,
+		Count:   count,
+	}, nil
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES

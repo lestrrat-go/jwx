@@ -2,8 +2,14 @@ package jwe
 
 import (
 	"crypto/aes"
+	cryptocipher "crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/sha512"
+	"hash"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -25,6 +31,10 @@ type Decrypter struct {
 	ctalg       jwa.ContentEncryptionAlgorithm
 	iv          []byte
 	keyalg      jwa.KeyEncryptionAlgorithm
+	keycount    int
+	keyiv       []byte
+	keysalt     []byte
+	keytag      []byte
 	privkey     interface{}
 	pubkey      interface{}
 	tag         []byte
@@ -73,6 +83,26 @@ func (d *Decrypter) ContentEncryptionAlgorithm(ctalg jwa.ContentEncryptionAlgori
 
 func (d *Decrypter) InitializationVector(iv []byte) *Decrypter {
 	d.iv = iv
+	return d
+}
+
+func (d *Decrypter) KeyCount(keycount int) *Decrypter {
+	d.keycount = keycount
+	return d
+}
+
+func (d *Decrypter) KeyInitializationVector(keyiv []byte) *Decrypter {
+	d.keyiv = keyiv
+	return d
+}
+
+func (d *Decrypter) KeySalt(keysalt []byte) *Decrypter {
+	d.keysalt = keysalt
+	return d
+}
+
+func (d *Decrypter) KeyTag(keytag []byte) *Decrypter {
+	d.keytag = keytag
 	return d
 }
 
@@ -155,6 +185,25 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 			pdebug.Printf("Successfully decrypted symmetric key (key len = %d)", len(cek))
 		}
 		return cek, nil
+	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+		var hashFunc func() hash.Hash
+		var keylen int
+		switch d.keyalg {
+		case jwa.PBES2_HS256_A128KW:
+			hashFunc = sha256.New
+			keylen = 16
+		case jwa.PBES2_HS384_A192KW:
+			hashFunc = sha512.New384
+			keylen = 24
+		case jwa.PBES2_HS512_A256KW:
+			hashFunc = sha512.New
+			keylen = 32
+		}
+		salt := []byte(d.keyalg)
+		salt = append(salt, byte(0))
+		salt = append(salt, d.keysalt...)
+		cek = pbkdf2.Key(cek, salt, d.keycount, keylen, hashFunc)
+		fallthrough
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		block, err := aes.NewCipher(cek)
 		if err != nil {
@@ -163,12 +212,37 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 
 		jek, err := keyenc.Unwrap(block, recipientKey)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to wrap key`)
+			return nil, errors.Wrap(err, `failed to unwrap key`)
 		}
 
 		if pdebug.Enabled {
 			pdebug.Printf("cek len = %d", len(cek))
 			pdebug.Printf("Wrapped key len = %d", len(jek))
+		}
+		return jek, nil
+	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		if pdebug.Enabled {
+			pdebug.Printf("cek len = %d", len(cek))
+		}
+		if len(d.iv) != 12 {
+			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.iv)*8)
+		}
+		if len(d.tag) != 16 {
+			return nil, errors.Errorf("GCM requires 128-bit tag, got %d", len(d.tag)*8)
+		}
+		block, err := aes.NewCipher(cek)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to create new AES cipher`)
+		}
+		aesgcm, err := cryptocipher.NewGCM(block)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to create new GCM wrap`)
+		}
+		ciphertext := recipientKey[:]
+		ciphertext = append(ciphertext, d.keytag...)
+		jek, err := aesgcm.Open(nil, d.keyiv, ciphertext, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to decode key`)
 		}
 		return jek, nil
 	default:
@@ -235,7 +309,7 @@ func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
 
-		return keyenc.NewAESCGM(alg, sharedkey)
+		return keyenc.NewAES(alg, sharedkey)
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var pubkey ecdsa.PublicKey
 		if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {

@@ -113,9 +113,11 @@ func (m *Message) UnprotectedHeaders() Headers {
 const (
 	AuthenticatedDataKey    = "aad"
 	CipherTextKey           = "ciphertext"
+	CountKey                = "p2c"
 	InitializationVectorKey = "iv"
 	ProtectedHeadersKey     = "protected"
 	RecipientsKey           = "recipients"
+	SaltKey                 = "p2s"
 	TagKey                  = "tag"
 	UnprotectedHeadersKey   = "unprotected"
 	HeadersKey              = "header"
@@ -505,6 +507,59 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if apv := h2.AgreementPartyVInfo(); apv.Len() > 0 {
 				dec.AgreementPartyVInfo(apv.Bytes())
 			}
+		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+			ivB64, ok := h2.Get(InitializationVectorKey)
+			if !ok {
+				return nil, errors.New("failed to get 'iv' field")
+			}
+			ivB64Str, ok := ivB64.(string)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'iv': %T", ivB64)
+			}
+			tagB64, ok := h2.Get(TagKey)
+			if !ok {
+				return nil, errors.New("failed to get 'tag' field")
+			}
+			tagB64Str, ok := tagB64.(string)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
+			}
+			var iv, tag buffer.Buffer
+			err := iv.Base64Decode([]byte(ivB64Str))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
+			}
+			err = tag.Base64Decode([]byte(tagB64Str))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
+			}
+			dec.KeyInitializationVector(iv)
+			dec.KeyTag(tag)
+		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+			saltB64, ok := h2.Get(SaltKey)
+			if !ok {
+				return nil, errors.New("failed to get 'p2s' field")
+			}
+			saltB64Str, ok := saltB64.(string)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'p2s': %T", saltB64)
+			}
+
+			count, ok := h2.Get(CountKey)
+			if !ok {
+				return nil, errors.New("failed to get 'p2c' field")
+			}
+			countFlt, ok := count.(float64)
+			if !ok {
+				return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
+			}
+			var salt buffer.Buffer
+			err = salt.Base64Decode([]byte(saltB64Str))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to b64-decode 'salt'")
+			}
+			dec.KeySalt(salt)
+			dec.KeyCount(int(countFlt))
 		}
 
 		plaintext, err = dec.Decrypt(recipient.EncryptedKey().Bytes(), ciphertext)

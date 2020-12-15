@@ -334,6 +334,10 @@ var isSymmetricKeyEncryption = map[string]struct{}{
 	`A128GCMKW`: {},
 	`A192GCMKW`: {},
 	`A256GCMKW`: {},
+
+	`PBES2_HS256_A128KW`: {},
+	`PBES2_HS384_A192KW`: {},
+	`PBES2_HS512_A256KW`: {},
 }
 
 func (t typ) Generate() error {

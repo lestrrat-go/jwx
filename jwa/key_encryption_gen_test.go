@@ -673,13 +673,13 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			assert.False(t, jwa.ECDH_ES_A256KW.IsSymmetric(), `jwa.ECDH_ES_A256KW should NOT be symmetric`)
 		})
 		t.Run(`PBES2_HS256_A128KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS256_A128KW.IsSymmetric(), `jwa.PBES2_HS256_A128KW should NOT be symmetric`)
+			assert.True(t, jwa.PBES2_HS256_A128KW.IsSymmetric(), `jwa.PBES2_HS256_A128KW should be symmetric`)
 		})
 		t.Run(`PBES2_HS384_A192KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS384_A192KW.IsSymmetric(), `jwa.PBES2_HS384_A192KW should NOT be symmetric`)
+			assert.True(t, jwa.PBES2_HS384_A192KW.IsSymmetric(), `jwa.PBES2_HS384_A192KW should be symmetric`)
 		})
 		t.Run(`PBES2_HS512_A256KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS512_A256KW.IsSymmetric(), `jwa.PBES2_HS512_A256KW should NOT be symmetric`)
+			assert.True(t, jwa.PBES2_HS512_A256KW.IsSymmetric(), `jwa.PBES2_HS512_A256KW should be symmetric`)
 		})
 		t.Run(`RSA1_5`, func(t *testing.T) {
 			assert.False(t, jwa.RSA1_5.IsSymmetric(), `jwa.RSA1_5 should NOT be symmetric`)

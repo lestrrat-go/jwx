@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -111,5 +112,33 @@ func (k ByteWithECPrivateKey) Populate(h Setter) error {
 	if err := h.Set("epk", key); err != nil {
 		return errors.Wrap(err, "failed to write header")
 	}
+	return nil
+}
+
+// HeaderPopulate populkates the header with the required AES GCM
+// parameters ('iv' and 'tag')
+func (k ByteWithIVAndTag) Populate(h Setter) error {
+	if err := h.Set("iv", buffer.Buffer(k.IV)); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+
+	if err := h.Set("tag", buffer.Buffer(k.Tag)); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+
+	return nil
+}
+
+// HeaderPopulate populkates the header with the required PBES2
+// parameters ('p2s' and 'p2c')
+func (k ByteWithSaltAndCount) Populate(h Setter) error {
+	if err := h.Set("p2c", k.Count); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+
+	if err := h.Set("p2s", buffer.Buffer(k.Salt)); err != nil {
+		return errors.Wrap(err, "failed to write header")
+	}
+
 	return nil
 }

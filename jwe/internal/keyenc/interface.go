@@ -3,6 +3,7 @@ package keyenc
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"hash"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
@@ -24,10 +25,17 @@ type Decrypter interface {
 	Decrypt([]byte) ([]byte, error)
 }
 
-// AESCGM encrypts content encryption keys using AES-CGM key wrap.
+// AES encrypts content encryption keys using AES key wrap.
 // Contrary to what the name implies, it also decrypt encrypted keys
-type AESCGM struct {
+type AES struct {
 	alg       jwa.KeyEncryptionAlgorithm
+	sharedkey []byte
+	keyID     string
+}
+
+// AESGCM encrypts content encryption keys using AES-GCM key wrap.
+type AESGCMEncrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
 	sharedkey []byte
 	keyID     string
 }
@@ -79,4 +87,13 @@ type RSAPKCSEncrypt struct {
 // DirectDecrypt does no encryption (Note: Unimplemented)
 type DirectDecrypt struct {
 	Key []byte
+}
+
+// PBES2Encrypt encrypts keys with PBES2 / PBKDF2 password
+type PBES2Encrypt struct {
+	algorithm jwa.KeyEncryptionAlgorithm
+	password  []byte
+	hashFunc  func() hash.Hash
+	keylen    int
+	keyID     string
 }

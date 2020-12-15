@@ -68,7 +68,7 @@ func (v KeyEncryptionAlgorithm) String() string {
 // IsSymmetric returns true if the algorithm is a symmetric type
 func (v KeyEncryptionAlgorithm) IsSymmetric() bool {
 	switch v {
-	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT:
+	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT, PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW:
 		return true
 	}
 	return false

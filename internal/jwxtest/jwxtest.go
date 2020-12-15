@@ -242,12 +242,23 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 		return "", nil, errors.Wrapf(err, `failed to parse keyfile %s`, keyfile)
 	}
 
-	var rawkey ecdsa.PrivateKey
-	if err := key.Raw(&rawkey); err != nil {
-		return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+	var keyarg interface{}
+	switch keyalg {
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		var rawkey ecdsa.PrivateKey
+		if err := key.Raw(&rawkey); err != nil {
+			return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+		}
+		keyarg = rawkey.PublicKey
+	default:
+		var rawkey []byte
+		if err := key.Raw(&rawkey); err != nil {
+			return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+		}
+		keyarg = rawkey
 	}
 
-	buf, err := jwe.Encrypt(payload, keyalg, rawkey.PublicKey, contentalg, compressalg)
+	buf, err := jwe.Encrypt(payload, keyalg, keyarg, contentalg, compressalg)
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to encrypt payload`)
 	}
