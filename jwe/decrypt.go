@@ -224,11 +224,11 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 		if pdebug.Enabled {
 			pdebug.Printf("cek len = %d", len(cek))
 		}
-		if len(d.iv) != 12 {
-			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.iv)*8)
+		if len(d.keyiv) != 12 {
+			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
 		}
-		if len(d.tag) != 16 {
-			return nil, errors.Errorf("GCM requires 128-bit tag, got %d", len(d.tag)*8)
+		if len(d.keytag) != 16 {
+			return nil, errors.Errorf("GCM requires 128-bit tag, got %d", len(d.keytag)*8)
 		}
 		block, err := aes.NewCipher(cek)
 		if err != nil {
