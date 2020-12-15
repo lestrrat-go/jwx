@@ -172,7 +172,7 @@ func TestJoseCompatibility(t *testing.T) {
 			// {jwa.ECDH_ES, jwa.A256CBC_HS512},
 			{jwa.ECDH_ES_A128KW, jwa.A128GCM},
 			// {jwa.ECDH_ES_A128KW, jwa.A128CBC_HS256},
-			// {jwa.ECDH_ES_A256KW, jwa.A256GCM}, fails intermittently
+			{jwa.ECDH_ES_A256KW, jwa.A256GCM},
 			// {jwa.ECDH_ES_A256KW, jwa.A256CBC_HS512},
 			{jwa.A128KW, jwa.A128GCM},
 			{jwa.A128KW, jwa.A128CBC_HS256},

@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -84,7 +85,9 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	binary.BigEndian.PutUint32(pubinfo, uint32(g.keysize)*8)
 
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
-	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), z.Bytes(), []byte{}, []byte{}, pubinfo, []byte{})
+	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
+	defer ecutil.ReleaseECPointBuffer(zBytes)
+	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
 	if _, err := kdf.Read(kek); err != nil {
 		return nil, errors.Wrap(err, "failed to read kdf")
