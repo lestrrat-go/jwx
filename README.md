@@ -20,10 +20,6 @@ PR/issues welcome.
 | [jws](https://github.com/lestrrat-go/jwx/tree/master/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
 | [jwe](https://github.com/lestrrat-go/jwx/tree/master/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 
-### In progress:
-
-* jwe - more algorithms
-
 ## Why?
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
@@ -37,8 +33,6 @@ For example, a certain library looks like it had most of JWS, JWE, JWK covered, 
 Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
 So here's go-jwx. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
-
-As of this writing (Nov 2015), it's still lacking a few of the algorithms for JWE that are described in JWA (which I believe to be less frequently used), but in general you should be able to do pretty much everything allowed in the specifications.
 
 ## Notes for users of pre-1.0.0 release
 
