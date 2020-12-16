@@ -175,8 +175,8 @@ func (kw PBES2Encrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES
-func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, key *ecdsa.PublicKey) (*ECDHESEncrypt, error) {
-	generator, err := keygen.NewEcdhes(alg, key)
+func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, key *ecdsa.PublicKey) (*ECDHESEncrypt, error) {
+	generator, err := keygen.NewEcdhes(alg, enc, keysize, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create key generator")
 	}

@@ -33,7 +33,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	}
 
 	var enc keyenc.Encrypter
-	var keysize int
 	switch keyalg {
 	case jwa.RSA1_5:
 		var pubkey rsa.PublicKey
@@ -45,7 +44,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
 		}
-		keysize = contentcrypt.KeySize() / 2
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var pubkey rsa.PublicKey
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
@@ -56,7 +54,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
 		}
-		keysize = contentcrypt.KeySize() / 2
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
 		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW,
 		jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
@@ -75,23 +72,17 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
 		}
-		keysize = contentcrypt.KeySize()
-		switch aesKeySize := keysize / 2; aesKeySize {
-		case 16, 24, 32:
-		default:
-			return nil, errors.Errorf("unsupported keysize %d (from content encryption algorithm %s). consider using content encryption that uses 32, 48, or 64 byte keys", keysize, contentalg)
-		}
+		// NOTE: there was formerly a restriction, introduced
+		// in PR #26, which disallowed certain key/content
+		// algorithm combinations. This seemed bogus, and
+		// interop with the jose tool demonstrates it.
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var pubkey ecdsa.PublicKey
 		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
 			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
 		}
 
-		enc, err = keyenc.NewECDHESEncrypt(keyalg, &pubkey)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
-		}
-
+		var keysize int
 		switch keyalg {
 		case jwa.ECDH_ES:
 			// https://tools.ietf.org/html/rfc7518#page-15
@@ -105,6 +96,11 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		case jwa.ECDH_ES_A256KW:
 			keysize = 32
 		}
+
+		enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
+		}
 	default:
 		if pdebug.Enabled {
 			pdebug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
@@ -112,6 +108,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
+	keysize := contentcrypt.KeySize()
 	if pdebug.Enabled {
 		pdebug.Printf("Encrypt: keysize = %d", keysize)
 	}

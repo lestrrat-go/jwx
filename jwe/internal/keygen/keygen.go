@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -52,22 +53,10 @@ func (g Random) Generate() (ByteSource, error) {
 }
 
 // NewEcdhes creates a new key generator using ECDH-ES
-func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, pubkey *ecdsa.PublicKey) (*Ecdhes, error) {
-	var keysize int
-	switch alg {
-	case jwa.ECDH_ES:
-	case jwa.ECDH_ES_A128KW:
-		keysize = 16
-	case jwa.ECDH_ES_A192KW:
-		keysize = 24
-	case jwa.ECDH_ES_A256KW:
-		keysize = 32
-	default:
-		return nil, errors.Errorf("invalid ECDH-ES key generation algorithm (%s)", alg)
-	}
-
+func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdsa.PublicKey) (*Ecdhes, error) {
 	return &Ecdhes{
 		algorithm: alg,
+		enc:       enc,
 		keysize:   keysize,
 		pubkey:    pubkey,
 	}, nil
@@ -85,11 +74,20 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 		return nil, errors.Wrap(err, "failed to generate key for ECDH-ES")
 	}
 
+	var algorithm string
+	if g.algorithm == jwa.ECDH_ES {
+		algorithm = g.enc.String()
+	} else {
+		algorithm = g.algorithm.String()
+	}
+
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, uint32(g.keysize)*8)
 
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
-	kdf := concatkdf.New(crypto.SHA256, []byte(g.algorithm.String()), z.Bytes(), []byte{}, []byte{}, pubinfo, []byte{})
+	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
+	defer ecutil.ReleaseECPointBuffer(zBytes)
+	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
 	if _, err := kdf.Read(kek); err != nil {
 		return nil, errors.Wrap(err, "failed to read kdf")

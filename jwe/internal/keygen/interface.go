@@ -22,6 +22,7 @@ type Random struct {
 // EcdhesKeyGenerate generates keys using ECDH-ES algorithm
 type Ecdhes struct {
 	algorithm jwa.KeyEncryptionAlgorithm
+	enc       jwa.ContentEncryptionAlgorithm
 	keysize   int
 	pubkey    *ecdsa.PublicKey
 }
