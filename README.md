@@ -204,7 +204,7 @@ func main() {
     return
   }
 
-  // Key setss can be serialized back to JSON
+  // Key sets can be serialized back to JSON
   {
     jsonbuf, err := json.Marshal(set)
     if err != nil {
@@ -226,7 +226,7 @@ func main() {
     // Use rawkey for jws.Verify() or whatever.
     _ = rawkey
 
-    // You can creatre jwk.Key from a raw key, too
+    // You can create jwk.Key from a raw key, too
     fromRawKey, err := jwk.New(rawkey)
 
 
@@ -286,7 +286,7 @@ func main() {
     return
   }
 
-  // When you received a JWS message, you can verify the signature
+  // When you receive a JWS message, you can verify the signature
   // and grab the payload sent in the message in one go:
   verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
   if err != nil {
