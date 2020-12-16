@@ -82,7 +82,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 			}
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
-		if enc.Algorithm() == jwa.ECDH_ES {
+		if enc.Algorithm() == jwa.ECDH_ES || enc.Algorithm() == jwa.DIRECT {
 			if len(e.keyEncrypters) > 1 {
 				return nil, errors.Errorf("unable to support multiple recipients for ECDH-ES")
 			}

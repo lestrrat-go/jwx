@@ -25,6 +25,12 @@ type Decrypter interface {
 	Decrypt([]byte) ([]byte, error)
 }
 
+type Noop struct {
+	alg       jwa.KeyEncryptionAlgorithm
+	sharedkey []byte
+	keyID     string
+}
+
 // AES encrypts content encryption keys using AES key wrap.
 // Contrary to what the name implies, it also decrypt encrypted keys
 type AES struct {
