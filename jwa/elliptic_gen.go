@@ -13,10 +13,14 @@ type EllipticCurveAlgorithm string
 
 // Supported values for EllipticCurveAlgorithm
 const (
+	Ed25519              EllipticCurveAlgorithm = "Ed25519"
+	Ed448                EllipticCurveAlgorithm = "Ed448"
 	InvalidEllipticCurve EllipticCurveAlgorithm = "P-invalid"
 	P256                 EllipticCurveAlgorithm = "P-256"
 	P384                 EllipticCurveAlgorithm = "P-384"
 	P521                 EllipticCurveAlgorithm = "P-521"
+	X25519               EllipticCurveAlgorithm = "X25519"
+	X448                 EllipticCurveAlgorithm = "X448"
 )
 
 // Accept is used when conversion from values given by
@@ -38,7 +42,7 @@ func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
 		tmp = EllipticCurveAlgorithm(s)
 	}
 	switch tmp {
-	case P256, P384, P521:
+	case Ed25519, Ed448, P256, P384, P521, X25519, X448:
 	default:
 		return errors.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
 	}
