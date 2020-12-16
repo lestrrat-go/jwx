@@ -1,19 +1,23 @@
 Changes
 =======
 
-v1.0.6
+v1.0.6 17 Dec 2020
   * Fix ECDHES ciphers where padding in AAD et al was creating
     incomptabile values with jose tool
-  * Implement direct key encoding (#213)
+  * Also fix ECDH-ES cek handling (#248)
+  * Implement direct key encoding (#213, #249)
   * Allow JWT tokens to use default JWK if only one key is given
     and the JWT does not necessarily specifies a key (#214)
   * Deprecate jwt.Verify and introduce jwt.Validate. JWS verification
     used the term Verify, which was confusing when users wanted to
     validate the JWT token itself. (#220)
   * JWT library optins have been explicitly typed as ValidationOption
-    and ParseOption (#220)
+    and ParseOption (#220, #223)
   * Add jwx.DecoderSettings and jwx.WithUseNumber option to globally
     change how jwx parses JSON objects (#222)
+  * Encode x5c field as base64 with padding (#244)
+  * Add more interoperability tests against jose tool.
+  * Special thanks to anatol and imirkin!
 
 v1.0.5 - 28 Sep 2020
   * Reinstate PrivateParams() method in jws and jwe packages.
