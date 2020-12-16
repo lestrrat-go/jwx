@@ -374,7 +374,7 @@ Supported key encryption algorithm:
 | AES key wrap (192)                       | YES        | jwa.A192KW             |
 | AES key wrap (256)                       | YES        | jwa.A256KW             |
 | Direct encryption                        | NO         | jwa.DIRECT             |
-| ECDH-ES                                  | NO (see #234) | jwa.ECDH_ES            |
+| ECDH-ES                                  | YES (1)    | jwa.ECDH_ES            |
 | ECDH-ES + AES key wrap (128)             | YES        | jwa.ECDH_ES_A128KW     |
 | ECDH-ES + AES key wrap (192)             | YES        | jwa.ECDH_ES_A192KW     |
 | ECDH-ES + AES key wrap (256)             | YES        | jwa.ECDH_ES_A256KW     |
@@ -384,6 +384,8 @@ Supported key encryption algorithm:
 | PBES2 + HMAC-SHA256 + AES key wrap (128) | YES        | jwa.PBES2_HS256_A128KW |
 | PBES2 + HMAC-SHA384 + AES key wrap (192) | YES        | jwa.PBES2_HS384_A192KW |
 | PBES2 + HMAC-SHA512 + AES key wrap (256) | YES        | jwa.PBES2_HS512_A256KW |
+
+Note 1: Single-recipient only
 
 Supported content encryption algorithm:
 
