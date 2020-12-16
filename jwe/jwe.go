@@ -101,6 +101,12 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}
+	case jwa.DIRECT:
+		sharedkey, ok := key.([]byte)
+		if !ok {
+			return nil, errors.New("invalid key: []byte required")
+		}
+		enc, _ = keyenc.NewNoop(keyalg, sharedkey)
 	default:
 		if pdebug.Enabled {
 			pdebug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)

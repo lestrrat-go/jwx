@@ -189,6 +189,10 @@ func TestJoseCompatibility(t *testing.T) {
 			{jwa.PBES2_HS256_A128KW, jwa.A128CBC_HS256},
 			{jwa.PBES2_HS512_A256KW, jwa.A256GCM},
 			{jwa.PBES2_HS512_A256KW, jwa.A256CBC_HS512},
+			{jwa.DIRECT, jwa.A128GCM},
+			{jwa.DIRECT, jwa.A128CBC_HS256},
+			{jwa.DIRECT, jwa.A256GCM},
+			{jwa.DIRECT, jwa.A256CBC_HS512},
 		}
 		for _, test := range tests {
 			test := test
@@ -209,7 +213,11 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 	expected := []byte("Lorem ipsum")
 
 	// let jose generate a key file
-	joseJwkFile, joseJwkCleanup, err := jose.GenerateJwk(ctx, t, fmt.Sprintf(`{"alg": "%s"}`, spec.alg))
+	alg := spec.alg.String()
+	if spec.alg == jwa.DIRECT {
+		alg = spec.enc.String()
+	}
+	joseJwkFile, joseJwkCleanup, err := jose.GenerateJwk(ctx, t, fmt.Sprintf(`{"alg": "%s"}`, alg))
 	if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
 		return
 	}
@@ -242,7 +250,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 	})
 	t.Run("Encrypt with jose, Decrypt with jwx", func(t *testing.T) {
 		// let jose encrypt payload using the key file
-		joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, joseJwkFile, spec.enc.String(), true)
+		joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, spec.alg.String(), joseJwkFile, spec.enc.String(), true)
 		if !assert.NoError(t, err, `jose.EncryptJwe should succeed`) {
 			return
 		}

@@ -111,10 +111,15 @@ func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, fu
 // a cleanup function.
 // The caller is responsible for calling the cleanup
 // function and make sure all resources are released
-func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, keyfile string, enc string, compact bool) (string, func(), error) {
+func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, keyfile string, enc string, compact bool) (string, func(), error) {
 	t.Helper()
 
-	arg := fmt.Sprintf(`{"protected":{"enc":"%s"}}`, enc)
+	var arg string
+	if alg == "dir" {
+		arg = fmt.Sprintf(`{"protected":{"alg":"dir","enc":"%s"}}`, enc)
+	} else {
+		arg = fmt.Sprintf(`{"protected":{"enc":"%s"}}`, enc)
+	}
 
 	cmdargs := []string{"jwe", "enc", "-k", keyfile, "-i", arg}
 	if compact {

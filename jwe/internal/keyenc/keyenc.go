@@ -27,6 +27,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+func NewNoop(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*Noop, error) {
+	return &Noop{
+		alg:       alg,
+		sharedkey: sharedkey,
+	}, nil
+}
+
+func (kw *Noop) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return kw.alg
+}
+
+func (kw *Noop) KeyID() string {
+	return kw.keyID
+}
+
+func (kw *Noop) Encrypt(cek []byte) (keygen.ByteSource, error) {
+	return keygen.ByteKey(kw.sharedkey), nil
+}
+
 // NewAES creates a key-wrap encrypter using AES.
 // Although the name suggests otherwise, this does the decryption as well.
 func NewAES(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AES, error) {
