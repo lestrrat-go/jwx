@@ -35,8 +35,16 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 }
 
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
-	k.x = rawKey.X.Bytes()
-	k.y = rawKey.Y.Bytes()
+	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
+	ybuf := ecutil.AllocECPointBuffer(rawKey.Y, rawKey.Curve)
+	defer ecutil.ReleaseECPointBuffer(xbuf)
+	defer ecutil.ReleaseECPointBuffer(ybuf)
+
+	k.x = make([]byte, len(xbuf))
+	copy(k.x, xbuf)
+	k.y = make([]byte, len(ybuf))
+	copy(k.y, ybuf)
+
 	switch rawKey.Curve {
 	case elliptic.P256():
 		if err := k.Set(ECDSACrvKey, jwa.P256); err != nil {
@@ -58,8 +66,20 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 }
 
 func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
-	k.x = rawKey.X.Bytes()
-	k.y = rawKey.Y.Bytes()
+	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
+	ybuf := ecutil.AllocECPointBuffer(rawKey.Y, rawKey.Curve)
+	dbuf := ecutil.AllocECPointBuffer(rawKey.D, rawKey.Curve)
+	defer ecutil.ReleaseECPointBuffer(xbuf)
+	defer ecutil.ReleaseECPointBuffer(ybuf)
+	defer ecutil.ReleaseECPointBuffer(dbuf)
+
+	k.x = make([]byte, len(xbuf))
+	copy(k.x, xbuf)
+	k.y = make([]byte, len(ybuf))
+	copy(k.y, ybuf)
+	k.d = make([]byte, len(dbuf))
+	copy(k.d, dbuf)
+
 	switch rawKey.Curve {
 	case elliptic.P256():
 		if err := k.Set(ECDSACrvKey, jwa.P256); err != nil {
@@ -76,8 +96,6 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	default:
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
-
-	k.d = rawKey.D.Bytes()
 
 	return nil
 }
