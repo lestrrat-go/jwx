@@ -42,3 +42,6 @@ type HMACSigner struct {
 	alg  jwa.SignatureAlgorithm
 	sign hmacSignFunc
 }
+
+type EdDSASigner struct {
+}

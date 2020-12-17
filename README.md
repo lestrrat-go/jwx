@@ -325,6 +325,9 @@ Supported signature algorithms:
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256          |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384          |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512          |
+| EdDSA (1)                               | YES        | jwa.EdDSA          |
+
+Note 1: Experimental
 
 ### JWE
 
