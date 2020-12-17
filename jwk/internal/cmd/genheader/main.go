@@ -363,6 +363,58 @@ var keyTypes = []keyType{
 			},
 		},
 	},
+	{
+		filename: `okp_gen.go`,
+		prefix:   `OKP`,
+		keyType:  `jwa.OKP`,
+		headerTypes: []headerType{
+			{
+				name:       "PublicKey",
+				rawKeyType: `interface{}`,
+				headers: []headerField{
+					{
+						name:   `x`,
+						method: `X`,
+						typ:    `[]byte`,
+						key:    `x`,
+					},
+					{
+						name:   `crv`,
+						method: `Crv`,
+						typ:    `jwa.EllipticCurveAlgorithm`,
+						key:    `crv`,
+					},
+				},
+			},
+			{
+				name:       "PrivateKey",
+				rawKeyType: `interface{}`,
+				ifMethods: []string{
+					`PublicKey() (OKPPublicKey, error)`,
+				},
+				headers: []headerField{
+					{
+						name:   `x`,
+						method: `X`,
+						typ:    `[]byte`,
+						key:    `x`,
+					},
+					{
+						name:   `d`,
+						method: `D`,
+						typ:    `[]byte`,
+						key:    `d`,
+					},
+					{
+						name:   `crv`,
+						method: `Crv`,
+						typ:    `jwa.EllipticCurveAlgorithm`,
+						key:    `crv`,
+					},
+				},
+			},
+		},
+	},
 }
 
 func generateGenericHeaders() error {

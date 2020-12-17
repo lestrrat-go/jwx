@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -90,6 +91,25 @@ func GenerateSymmetricJwk() (jwk.Key, error) {
 	}
 
 	return key, nil
+}
+
+func GenerateEd25519Key() (ed25519.PrivateKey, error) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	return priv, err
+}
+
+func GenerateEd25519Jwk() (jwk.Key, error) {
+	key, err := GenerateEd25519Key()
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate Ed25519 private key`)
+	}
+
+	k, err := jwk.New(key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate jwk.OKPPrivateKey`)
+	}
+
+	return k, nil
 }
 
 func WriteFile(template string, src io.Reader) (string, func(), error) {

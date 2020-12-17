@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
 	"reflect"
@@ -63,7 +64,7 @@ func TestParse(t *testing.T) {
 				key := pair.Value.(jwk.Key)
 
 				switch key := key.(type) {
-				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.SymmetricKey:
+				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
 				default:
 					assert.Fail(t, fmt.Sprintf("invalid type: %T", key))
 				}
@@ -104,6 +105,21 @@ func TestParse(t *testing.T) {
 						return
 					}
 					crawkey = &rawkey
+				case jwk.OKPPrivateKey:
+					var rawkey ed25519.PrivateKey
+					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
+						return
+					}
+					crawkey = rawkey
+				// NOTE: Has to come after private
+				// key, since it's a subset of the
+				// private key variant.
+				case jwk.OKPPublicKey:
+					var rawkey ed25519.PublicKey
+					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
+						return
+					}
+					crawkey = rawkey
 				default:
 					t.Errorf(`invalid key type %T`, key)
 					return
@@ -172,6 +188,27 @@ func TestParse(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Ed25519 Public Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "Ed25519",
+		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+	})
+	t.Run("Ed25519 Private Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "Ed25519",
+		  "d"   : "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+	})
 }
 
 func TestRoundtrip(t *testing.T) {
@@ -200,6 +237,17 @@ func TestRoundtrip(t *testing.T) {
 
 	generateSymmetric := func(use, keyID string) (jwk.Key, error) {
 		k, err := jwxtest.GenerateSymmetricJwk()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateEd25519 := func(use, keyID string) (jwk.Key, error) {
+		k, err := jwxtest.GenerateEd25519Jwk()
 		if err != nil {
 			return nil, err
 		}
@@ -258,6 +306,11 @@ func TestRoundtrip(t *testing.T) {
 			use:      "sig",
 			keyID:    "sig5",
 			generate: generateECDSA,
+		},
+		{
+			use:      "sig",
+			keyID:    "sig6",
+			generate: generateEd25519,
 		},
 	}
 
@@ -352,6 +405,7 @@ func TestAssignKeyID(t *testing.T) {
 		jwxtest.GenerateEcdsaJwk,
 		jwxtest.GenerateEcdsaPublicJwk,
 		jwxtest.GenerateSymmetricJwk,
+		jwxtest.GenerateEd25519Jwk,
 	}
 
 	for _, generator := range generators {
@@ -387,6 +441,11 @@ func TestPublicKeyOf(t *testing.T) {
 	}
 
 	octets := jwxtest.GenerateSymmetricKey()
+
+	ed25519key, err := jwxtest.GenerateEd25519Key()
+	if !assert.NoError(t, err, `generating raw Ed25519 key should succeed`) {
+		return
+	}
 
 	keys := []struct {
 		Key           interface{}
@@ -428,6 +487,14 @@ func TestPublicKeyOf(t *testing.T) {
 			Key:           octets,
 			PublicKeyType: reflect.TypeOf(octets),
 		},
+		{
+			Key:           ed25519key,
+			PublicKeyType: reflect.TypeOf(ed25519key.Public()),
+		},
+		{
+			Key:           ed25519key.Public(),
+			PublicKeyType: reflect.TypeOf(ed25519key.Public()),
+		},
 	}
 
 	for _, key := range keys {
@@ -436,7 +503,7 @@ func TestPublicKeyOf(t *testing.T) {
 			t.Parallel()
 
 			pubkey, err := jwk.PublicKeyOf(key.Key)
-			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`) {
+			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, key.Key) {
 				return
 			}
 

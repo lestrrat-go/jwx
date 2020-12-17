@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ import (
 //
 // * "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
 // * "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
+// * "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
 // * []byte creates a symmetric key
 func New(key interface{}) (Key, error) {
 	if key == nil {
@@ -72,6 +74,18 @@ func New(key interface{}) (Key, error) {
 		return k, nil
 	case *ecdsa.PublicKey:
 		k := NewECDSAPublicKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
+	case ed25519.PrivateKey:
+		k := NewOKPPrivateKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
+	case ed25519.PublicKey:
+		k := NewOKPPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
 		}
@@ -127,6 +141,10 @@ func PublicKeyOf(v interface{}) (interface{}, error) {
 	case *ecdsa.PrivateKey:
 		return &x.PublicKey, nil
 	case *ecdsa.PublicKey:
+		return x, nil
+	case ed25519.PrivateKey:
+		return x.Public(), nil
+	case ed25519.PublicKey:
 		return x, nil
 	case []byte:
 		return x, nil
@@ -236,6 +254,12 @@ func ParseKey(data []byte) (Key, error) {
 		}
 	case jwa.OctetSeq:
 		key = newSymmetricKey()
+	case jwa.OKP:
+		if len(hint.D) > 0 {
+			key = newOKPPrivateKey()
+		} else {
+			key = newOKPPublicKey()
+		}
 	default:
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
