@@ -119,6 +119,42 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`accept jwa constant EdDSA`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.EdDSA), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string EdDSA`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept("EdDSA"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for EdDSA`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "EdDSA"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for EdDSA`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "EdDSA", jwa.EdDSA.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm

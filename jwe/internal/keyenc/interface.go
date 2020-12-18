@@ -1,7 +1,6 @@
 package keyenc
 
 import (
-	"crypto/ecdsa"
 	"crypto/rsa"
 	"hash"
 
@@ -59,8 +58,8 @@ type ECDHESDecrypt struct {
 	contentalg jwa.ContentEncryptionAlgorithm
 	apu        []byte
 	apv        []byte
-	privkey    *ecdsa.PrivateKey
-	pubkey     *ecdsa.PublicKey
+	privkey    interface{}
+	pubkey     interface{}
 }
 
 // RSAOAEPEncrypt encrypts keys using RSA OAEP algorithm

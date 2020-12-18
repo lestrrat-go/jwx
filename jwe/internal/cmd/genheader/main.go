@@ -140,7 +140,7 @@ func generateHeaders() error {
 		{
 			name:   `ephemeralPublicKey`,
 			method: `EphemeralPublicKey`,
-			typ:    `jwk.ECDSAPublicKey`,
+			typ:    `jwk.Key`,
 			key:    `epk`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
 			jsonTag: "`" + `json:"epk,omitempty"` + "`",
@@ -458,11 +458,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nif err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse epk field`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nif ecEpk, ok := epk.(jwk.ECDSAPublicKey); ok {")
-	fmt.Fprintf(&buf, "\nh.ephemeralPublicKey = ecEpk")
-	fmt.Fprintf(&buf, "\n} else {")
-	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid type for epk field %%T`, epk)")
-	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nh.ephemeralPublicKey = epk")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {

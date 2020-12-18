@@ -47,6 +47,42 @@ func TestKeyType(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`accept jwa constant OKP`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		if !assert.NoError(t, dst.Accept(jwa.OKP), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string OKP`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		if !assert.NoError(t, dst.Accept("OKP"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for OKP`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		if !assert.NoError(t, dst.Accept(stringer{src: "OKP"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for OKP`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "OKP", jwa.OKP.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant OctetSeq`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
 	"reflect"
@@ -13,7 +14,9 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,7 +66,7 @@ func TestParse(t *testing.T) {
 				key := pair.Value.(jwk.Key)
 
 				switch key := key.(type) {
-				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.SymmetricKey:
+				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
 				default:
 					assert.Fail(t, fmt.Sprintf("invalid type: %T", key))
 				}
@@ -85,7 +88,7 @@ func TestParse(t *testing.T) {
 				}
 
 				var crawkey interface{}
-				switch key.(type) {
+				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
 					var rawkey rsa.PrivateKey
 					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
@@ -104,6 +107,43 @@ func TestParse(t *testing.T) {
 						return
 					}
 					crawkey = &rawkey
+				case jwk.OKPPrivateKey:
+					switch k.Crv() {
+					case jwa.Ed25519:
+						var rawkey ed25519.PrivateKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					case jwa.X25519:
+						var rawkey x25519.PrivateKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PrivateKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					default:
+						t.Errorf(`invalid curve %s`, k.Crv())
+					}
+				// NOTE: Has to come after private
+				// key, since it's a subset of the
+				// private key variant.
+				case jwk.OKPPublicKey:
+					switch k.Crv() {
+					case jwa.Ed25519:
+						var rawkey ed25519.PublicKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					case jwa.X25519:
+						var rawkey x25519.PublicKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PublicKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					default:
+						t.Errorf(`invalid curve %s`, k.Crv())
+					}
 				default:
 					t.Errorf(`invalid key type %T`, key)
 					return
@@ -172,6 +212,48 @@ func TestParse(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Ed25519 Public Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "Ed25519",
+		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+	})
+	t.Run("Ed25519 Private Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "Ed25519",
+		  "d"   : "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+	})
+	t.Run("X25519 Public Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "X25519",
+		  "x"   : "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+	})
+	t.Run("X25519 Private Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "X25519",
+		  "d"   : "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
+		  "x"   : "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+	})
 }
 
 func TestRoundtrip(t *testing.T) {
@@ -200,6 +282,28 @@ func TestRoundtrip(t *testing.T) {
 
 	generateSymmetric := func(use, keyID string) (jwk.Key, error) {
 		k, err := jwxtest.GenerateSymmetricJwk()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateEd25519 := func(use, keyID string) (jwk.Key, error) {
+		k, err := jwxtest.GenerateEd25519Jwk()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateX25519 := func(use, keyID string) (jwk.Key, error) {
+		k, err := jwxtest.GenerateX25519Jwk()
 		if err != nil {
 			return nil, err
 		}
@@ -258,6 +362,16 @@ func TestRoundtrip(t *testing.T) {
 			use:      "sig",
 			keyID:    "sig5",
 			generate: generateECDSA,
+		},
+		{
+			use:      "sig",
+			keyID:    "sig6",
+			generate: generateEd25519,
+		},
+		{
+			use:      "enc",
+			keyID:    "enc6",
+			generate: generateX25519,
 		},
 	}
 
@@ -352,6 +466,7 @@ func TestAssignKeyID(t *testing.T) {
 		jwxtest.GenerateEcdsaJwk,
 		jwxtest.GenerateEcdsaPublicJwk,
 		jwxtest.GenerateSymmetricJwk,
+		jwxtest.GenerateEd25519Jwk,
 	}
 
 	for _, generator := range generators {
@@ -387,6 +502,16 @@ func TestPublicKeyOf(t *testing.T) {
 	}
 
 	octets := jwxtest.GenerateSymmetricKey()
+
+	ed25519key, err := jwxtest.GenerateEd25519Key()
+	if !assert.NoError(t, err, `generating raw Ed25519 key should succeed`) {
+		return
+	}
+
+	x25519key, err := jwxtest.GenerateX25519Key()
+	if !assert.NoError(t, err, `generating raw X25519 key should succeed`) {
+		return
+	}
 
 	keys := []struct {
 		Key           interface{}
@@ -428,6 +553,22 @@ func TestPublicKeyOf(t *testing.T) {
 			Key:           octets,
 			PublicKeyType: reflect.TypeOf(octets),
 		},
+		{
+			Key:           ed25519key,
+			PublicKeyType: reflect.TypeOf(ed25519key.Public()),
+		},
+		{
+			Key:           ed25519key.Public(),
+			PublicKeyType: reflect.TypeOf(ed25519key.Public()),
+		},
+		{
+			Key:           x25519key,
+			PublicKeyType: reflect.TypeOf(x25519key.Public()),
+		},
+		{
+			Key:           x25519key.Public(),
+			PublicKeyType: reflect.TypeOf(x25519key.Public()),
+		},
 	}
 
 	for _, key := range keys {
@@ -436,7 +577,7 @@ func TestPublicKeyOf(t *testing.T) {
 			t.Parallel()
 
 			pubkey, err := jwk.PublicKeyOf(key.Key)
-			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`) {
+			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, key.Key) {
 				return
 			}
 

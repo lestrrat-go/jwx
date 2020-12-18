@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -77,11 +78,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		// algorithm combinations. This seemed bogus, and
 		// interop with the jose tool demonstrates it.
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		var pubkey ecdsa.PublicKey
-		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
-		}
-
 		var keysize int
 		switch keyalg {
 		case jwa.ECDH_ES:
@@ -97,7 +93,16 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 			keysize = 32
 		}
 
-		enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
+		switch key := key.(type) {
+		case x25519.PublicKey:
+			enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, key)
+		default:
+			var pubkey ecdsa.PublicKey
+			if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+				return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
+			}
+			enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
 		}

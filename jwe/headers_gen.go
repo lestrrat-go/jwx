@@ -44,7 +44,7 @@ type Headers interface {
 	ContentEncryption() jwa.ContentEncryptionAlgorithm
 	ContentType() string
 	Critical() []string
-	EphemeralPublicKey() jwk.ECDSAPublicKey
+	EphemeralPublicKey() jwk.Key
 	JWK() jwk.Key
 	JWKSetURL() string
 	KeyID() string
@@ -79,7 +79,7 @@ type stdHeaders struct {
 	contentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`      //
 	contentType            *string                         `json:"cty,omitempty"`      //
 	critical               []string                        `json:"crit,omitempty"`     //
-	ephemeralPublicKey     jwk.ECDSAPublicKey              `json:"epk,omitempty"`      //
+	ephemeralPublicKey     jwk.Key                         `json:"epk,omitempty"`      //
 	jwk                    jwk.Key                         `json:"jwk,omitempty"`      //
 	jwkSetURL              *string                         `json:"jku,omitempty"`      //
 	keyID                  *string                         `json:"kid,omitempty"`      //
@@ -177,7 +177,7 @@ func (h *stdHeaders) Critical() []string {
 	return h.critical
 }
 
-func (h *stdHeaders) EphemeralPublicKey() jwk.ECDSAPublicKey {
+func (h *stdHeaders) EphemeralPublicKey() jwk.Key {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.ephemeralPublicKey
@@ -462,7 +462,7 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case EphemeralPublicKeyKey:
-		if v, ok := value.(jwk.ECDSAPublicKey); ok {
+		if v, ok := value.(jwk.Key); ok {
 			h.ephemeralPublicKey = v
 			return nil
 		}
@@ -589,11 +589,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 		if err != nil {
 			return errors.Wrap(err, `failed to parse epk field`)
 		}
-		if ecEpk, ok := epk.(jwk.ECDSAPublicKey); ok {
-			h.ephemeralPublicKey = ecEpk
-		} else {
-			return errors.Errorf(`invalid type for epk field %T`, epk)
-		}
+		h.ephemeralPublicKey = epk
 	}
 	h.agreementPartyUInfo = proxy.XagreementPartyUInfo
 	h.agreementPartyVInfo = proxy.XagreementPartyVInfo

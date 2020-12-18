@@ -27,6 +27,7 @@ _testmain.go
 .idea
 .vscode
 .DS_Store
+*~
 
 coverage.out
 go.sum

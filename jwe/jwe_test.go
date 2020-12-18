@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -367,12 +368,8 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 }
 
-func TestEncode_ECDH(t *testing.T) {
+func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}) {
 	plaintext := []byte("Lorem ipsum")
-	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
-		return
-	}
 
 	algorithms := []jwa.KeyEncryptionAlgorithm{
 		jwa.ECDH_ES,
@@ -384,7 +381,7 @@ func TestEncode_ECDH(t *testing.T) {
 	for _, alg := range algorithms {
 		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
-			encrypted, err := jwe.Encrypt(plaintext, alg, &privkey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+			encrypted, err := jwe.Encrypt(plaintext, alg, pubkey, jwa.A256GCM, jwa.NoCompress)
 			if !assert.NoError(t, err, "Encrypt succeeds") {
 				return
 			}
@@ -412,6 +409,34 @@ func TestEncode_ECDH(t *testing.T) {
 			t.Logf("%s", decrypted)
 		})
 	}
+}
+
+func TestEncode_ECDH(t *testing.T) {
+	curves := []elliptic.Curve{
+		elliptic.P256(),
+		elliptic.P384(),
+		elliptic.P521(),
+	}
+	for _, crv := range curves {
+		crv := crv
+		t.Run(crv.Params().Name, func(t *testing.T) {
+			privkey, err := ecdsa.GenerateKey(crv, rand.Reader)
+			if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
+				return
+			}
+
+			testEncodeECDHWithKey(t, privkey, &privkey.PublicKey)
+		})
+	}
+}
+
+func TestEncode_X25519(t *testing.T) {
+	pubkey, privkey, err := x25519.GenerateKey(rand.Reader)
+	if !assert.NoError(t, err, `x25519.GenerateKey should succeed`) {
+		return
+	}
+
+	testEncodeECDHWithKey(t, privkey, pubkey)
 }
 
 func Test_GHIssue207(t *testing.T) {

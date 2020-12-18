@@ -102,6 +102,11 @@ func _main() error {
 					value:   `oct`,
 					comment: `Octet sequence (used to represent symmetric keys)`,
 				},
+				{
+					name:    `OKP`,
+					value:   `OKP`,
+					comment: `Octet string key pairs`,
+				},
 			},
 		},
 		{
@@ -125,6 +130,22 @@ func _main() error {
 				{
 					name:  `P521`,
 					value: `P-521`,
+				},
+				{
+					name:  `Ed25519`,
+					value: `Ed25519`,
+				},
+				{
+					name:  `Ed448`,
+					value: `Ed448`,
+				},
+				{
+					name:  `X25519`,
+					value: `X25519`,
+				},
+				{
+					name:  `X448`,
+					value: `X448`,
 				},
 			},
 		},
@@ -181,6 +202,11 @@ func _main() error {
 					name:    `ES512`,
 					value:   "ES512",
 					comment: `ECDSA using P-521 and SHA-512`,
+				},
+				{
+					name:    `EdDSA`,
+					value:   `EdDSA`,
+					comment: `EdDSA signature algorithms`,
 				},
 				{
 					name:    `PS256`,

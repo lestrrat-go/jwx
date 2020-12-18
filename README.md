@@ -259,6 +259,18 @@ func main() {
 }
 ```
 
+Supported key types:
+
+| kty | Curve                   | Go Key Type                                |
+|:----|:------------------------|:-------------------------------------------|
+| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey             |
+| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey         |
+| oct | N/A                     | []byte                                     |
+| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey     |
+|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey |
+
+Note 1: Experimental
+
 ### JWS
 
 See also `VerifyWithJWK` and `VerifyWithJKU`
@@ -314,6 +326,9 @@ Supported signature algorithms:
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256          |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384          |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512          |
+| EdDSA (1)                               | YES        | jwa.EdDSA          |
+
+Note 1: Experimental
 
 ### JWE
 

@@ -33,3 +33,6 @@ type ECDSAVerifier struct {
 type HMACVerifier struct {
 	signer sign.Signer
 }
+
+type EdDSAVerifier struct {
+}

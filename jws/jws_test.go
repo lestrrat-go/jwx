@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
@@ -642,6 +643,102 @@ func TestEncode(t *testing.T) {
 			return
 		}
 		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds") {
+			return
+		}
+	})
+	t.Run("EdDSACompact", func(t *testing.T) {
+		t.Parallel()
+		// EdDSACompact tests that https://tools.ietf.org/html/rfc8037#appendix-A.1-5 works
+		const hdr = `{"alg":"EdDSA"}`
+		const jwksrc = `{
+    "kty":"OKP",
+    "crv":"Ed25519",
+    "d":"nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+    "x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+  }`
+		const examplePayload = `Example of Ed25519 signing`
+		const expected = `hgyY0il_MGCjP0JzlnLWG1PPOt7-09PGcvMg3AIbQR6dWbhijcNR4ki4iylGjg5BhVsPt9g7sVvpAr_MuM0KAg`
+		expectedDecoded := buffer.Buffer{}
+		err := expectedDecoded.Base64Decode([]byte(expected))
+		if !assert.NoError(t, err, "Expected Signature decode successful") {
+			return
+		}
+
+		privkey := jwk.NewOKPPrivateKey()
+		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should succeed`) {
+			return
+		}
+
+		var rawkey ed25519.PrivateKey
+		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+			return
+		}
+
+		signer, err := sign.New(jwa.EdDSA)
+		if !assert.NoError(t, err, "EdDSASign created successfully") {
+			return
+		}
+
+		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
+		if !assert.NoError(t, err, "base64 encode successful") {
+			return
+		}
+		payload, err := buffer.Buffer(examplePayload).Base64Encode()
+		if !assert.NoError(t, err, "base64 encode successful") {
+			return
+		}
+
+		signingInput := bytes.Join(
+			[][]byte{
+				hdrbuf,
+				payload,
+			},
+			[]byte{'.'},
+		)
+		signature, err := signer.Sign(signingInput, rawkey)
+		if !assert.NoError(t, err, "PayloadSign is successful") {
+			return
+		}
+		sigbuf, err := buffer.Buffer(signature).Base64Encode()
+		if !assert.NoError(t, err, "base64 encode successful") {
+			return
+		}
+
+		encoded := bytes.Join(
+			[][]byte{
+				signingInput,
+				sigbuf,
+			},
+			[]byte{'.'},
+		)
+
+		// The signature contains random factor, so unfortunately we can't match
+		// the output against a fixed expected outcome. We'll wave doing an
+		// exact match, and just try to verify using the signature
+
+		msg, err := jws.Parse(bytes.NewReader(encoded))
+		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
+			return
+		}
+
+		signatures := msg.Signatures()
+		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
+			return
+		}
+
+		algorithm := signatures[0].ProtectedHeaders().Algorithm()
+		if algorithm != jwa.EdDSA {
+			t.Fatal("Algorithm in header does not match")
+		}
+
+		v, err := verify.New(jwa.EdDSA)
+		if !assert.NoError(t, err, "EcdsaVerify created") {
+			return
+		}
+		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.Public()), "Verify succeeds") {
+			return
+		}
+		if !assert.Equal(t, signature, expectedDecoded.Bytes(), "signatures match") {
 			return
 		}
 	})

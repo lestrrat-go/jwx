@@ -16,6 +16,7 @@ import (
 	"hash"
 	"io"
 
+	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/internal/concatkdf"
@@ -23,6 +24,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	contentcipher "github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -194,8 +196,17 @@ func (kw PBES2Encrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES
-func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, key *ecdsa.PublicKey) (*ECDHESEncrypt, error) {
-	generator, err := keygen.NewEcdhes(alg, enc, keysize, key)
+func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, keyif interface{}) (*ECDHESEncrypt, error) {
+	var generator keygen.Generator
+	var err error
+	switch key := keyif.(type) {
+	case *ecdsa.PublicKey:
+		generator, err = keygen.NewEcdhes(alg, enc, keysize, key)
+	case x25519.PublicKey:
+		generator, err = keygen.NewX25519(alg, enc, keysize, key)
+	default:
+		return nil, errors.Errorf("unexpected key type %T", keyif)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create key generator")
 	}
@@ -222,7 +233,7 @@ func (kw ECDHESEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 		return nil, errors.Wrap(err, "failed to create key generator")
 	}
 
-	bwpk, ok := kg.(keygen.ByteWithECPrivateKey)
+	bwpk, ok := kg.(keygen.ByteWithECPublicKey)
 	if !ok {
 		return nil, errors.New("key generator generated invalid key (expected ByteWithECPrivateKey)")
 	}
@@ -247,7 +258,7 @@ func (kw ECDHESEncrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESDecrypt creates a new key decrypter using ECDH-ES
-func NewECDHESDecrypt(keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, pubkey *ecdsa.PublicKey, apu, apv []byte, privkey *ecdsa.PrivateKey) *ECDHESDecrypt {
+func NewECDHESDecrypt(keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, pubkey interface{}, apu, apv []byte, privkey interface{}) *ECDHESDecrypt {
 	return &ECDHESDecrypt{
 		keyalg:     keyalg,
 		contentalg: contentalg,
@@ -263,7 +274,41 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.keyalg
 }
 
-func DeriveECDHES(alg, apu, apv []byte, privkey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey, keysize uint32) ([]byte, error) {
+func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
+	switch privkeyif.(type) {
+	case x25519.PrivateKey:
+		privkey, ok := privkeyif.(x25519.PrivateKey)
+		if !ok {
+			return nil, errors.Errorf(`private key must be x25519.PrivateKey, was: %T`, privkeyif)
+		}
+		pubkey, ok := pubkeyif.(x25519.PublicKey)
+		if !ok {
+			return nil, errors.Errorf(`public key must be x25519.PublicKey, was: %T`, pubkeyif)
+		}
+		return curve25519.X25519(privkey.Seed(), pubkey)
+	default:
+		privkey, ok := privkeyif.(*ecdsa.PrivateKey)
+		if !ok {
+			return nil, errors.Errorf(`private key must be *ecdsa.PrivateKey, was: %T`, privkeyif)
+		}
+		pubkey, ok := pubkeyif.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.Errorf(`public key must be *ecdsa.PublicKey, was: %T`, pubkeyif)
+		}
+		if !privkey.PublicKey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
+			return nil, errors.New(`public key must be on the same curve as private key`)
+		}
+
+		z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
+		zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
+		defer ecutil.ReleaseECPointBuffer(zBytes)
+		zCopy := make([]byte, len(zBytes))
+		copy(zCopy, zBytes)
+		return zCopy, nil
+	}
+}
+
+func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{}, keysize uint32) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.Marker("DeriveECDHES (keysize = %d)", keysize)
 		defer g.End()
@@ -271,15 +316,10 @@ func DeriveECDHES(alg, apu, apv []byte, privkey *ecdsa.PrivateKey, pubkey *ecdsa
 
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*8)
-
-	if !privkey.PublicKey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
-		return nil, errors.New(`public key must be on the same curve as private key`)
+	zBytes, err := DeriveZ(privkey, pubkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to determine Z")
 	}
-
-	z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
-	zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
-	defer ecutil.ReleaseECPointBuffer(zBytes)
-
 	kdf := concatkdf.New(crypto.SHA256, alg, zBytes, apu, apv, pubinfo, []byte{})
 	key := make([]byte, keysize)
 	if _, err := kdf.Read(key); err != nil {

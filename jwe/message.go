@@ -481,16 +481,22 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if !ok {
 				return nil, errors.New("failed to get 'epk' field")
 			}
-			epk, ok := epkif.(jwk.ECDSAPublicKey)
-			if !ok {
-				return nil, errors.Errorf("'epk' header is required as the key to build %s key decrypter", alg)
+			switch epk := epkif.(type) {
+			case jwk.ECDSAPublicKey:
+				var pubkey ecdsa.PublicKey
+				if err := epk.Raw(&pubkey); err != nil {
+					return nil, errors.Wrap(err, "failed to get public key")
+				}
+				dec.PublicKey(&pubkey)
+			case jwk.OKPPublicKey:
+				var pubkey interface{}
+				if err := epk.Raw(&pubkey); err != nil {
+					return nil, errors.Wrap(err, "failed to get public key")
+				}
+				dec.PublicKey(pubkey)
+			default:
+				return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
 			}
-
-			var pubkey ecdsa.PublicKey
-			if err := epk.Raw(&pubkey); err != nil {
-				return nil, errors.Wrap(err, "failed to get public key")
-			}
-			dec.PublicKey(&pubkey)
 
 			if apu := h2.AgreementPartyUInfo(); apu.Len() > 0 {
 				dec.AgreementPartyUInfo(apu.Bytes())

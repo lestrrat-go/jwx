@@ -11,6 +11,78 @@ import (
 
 func TestEllipticCurveAlgorithm(t *testing.T) {
 	t.Parallel()
+	t.Run(`accept jwa constant Ed25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.Ed25519), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string Ed25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept("Ed25519"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for Ed25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "Ed25519"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for Ed25519`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "Ed25519", jwa.Ed25519.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`accept jwa constant Ed448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.Ed448), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string Ed448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept("Ed448"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for Ed448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "Ed448"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.Ed448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for Ed448`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "Ed448", jwa.Ed448.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant P256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
@@ -116,6 +188,78 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 	t.Run(`stringification for P-521`, func(t *testing.T) {
 		t.Parallel()
 		if !assert.Equal(t, "P-521", jwa.P521.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`accept jwa constant X25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.X25519), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string X25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept("X25519"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for X25519`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "X25519"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X25519, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for X25519`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "X25519", jwa.X25519.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`accept jwa constant X448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.X448), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string X448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept("X448"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for X448`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.EllipticCurveAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "X448"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.X448, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for X448`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "X448", jwa.X448.String(), `stringified value matches`) {
 			return
 		}
 	})
