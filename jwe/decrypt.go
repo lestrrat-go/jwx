@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 )
@@ -311,17 +312,22 @@ func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 
 		return keyenc.NewAES(alg, sharedkey)
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		var pubkey ecdsa.PublicKey
-		if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {
-			return nil, errors.Wrapf(err, "*ecdsa.PublicKey is required as the key to build %s key decrypter", alg)
-		}
+		switch d.pubkey.(type) {
+		case x25519.PublicKey:
+			return keyenc.NewECDHESDecrypt(alg, d.ctalg, d.pubkey, d.apu, d.apv, d.privkey), nil
+		default:
+			var pubkey ecdsa.PublicKey
+			if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {
+				return nil, errors.Wrapf(err, "*ecdsa.PublicKey is required as the key to build %s key decrypter", alg)
+			}
 
-		var privkey ecdsa.PrivateKey
-		if err := keyconv.ECDSAPrivateKey(&privkey, d.privkey); err != nil {
-			return nil, errors.Wrapf(err, "*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
-		}
+			var privkey ecdsa.PrivateKey
+			if err := keyconv.ECDSAPrivateKey(&privkey, d.privkey); err != nil {
+				return nil, errors.Wrapf(err, "*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
+			}
 
-		return keyenc.NewECDHESDecrypt(alg, d.ctalg, &pubkey, d.apu, d.apv, &privkey), nil
+			return keyenc.NewECDHESDecrypt(alg, d.ctalg, &pubkey, d.apu, d.apv, &privkey), nil
+		}
 	default:
 		return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 	}

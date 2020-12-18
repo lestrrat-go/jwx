@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -427,6 +428,15 @@ func TestEncode_ECDH(t *testing.T) {
 			testEncodeECDHWithKey(t, privkey, &privkey.PublicKey)
 		})
 	}
+}
+
+func TestEncode_X25519(t *testing.T) {
+	pubkey, privkey, err := x25519.GenerateKey(rand.Reader)
+	if !assert.NoError(t, err, `x25519.GenerateKey should succeed`) {
+		return
+	}
+
+	testEncodeECDHWithKey(t, privkey, pubkey)
 }
 
 func Test_GHIssue207(t *testing.T) {
