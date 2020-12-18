@@ -608,19 +608,6 @@ func generateToken(tt tokenType) error {
 	*/
 
 	// JSON related stuff
-	fmt.Fprintf(&buf, "\n\n// this is almost identical to json.Encoder.Encode(), but we use Marshal")
-	fmt.Fprintf(&buf, "\n// to avoid having to remove the trailing newline for each successive")
-	fmt.Fprintf(&buf, "\n// call to Encode()")
-	fmt.Fprintf(&buf, "\nfunc writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {")
-	fmt.Fprintf(&buf, "\nenc, err := json.Marshal(v)")
-	fmt.Fprintf(&buf, "\nif err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to encode '%%s'`, keyName)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nbuf.Write(enc)")
-	fmt.Fprintf(&buf, "\n")
-	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}")
-
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
@@ -650,7 +637,7 @@ func generateToken(tt tokenType) error {
 	// have other parameters.
 	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
 	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse private parameters`)")
 	fmt.Fprintf(&buf, "\n}")
 	// Delete all known keys
 	for _, f := range fields {

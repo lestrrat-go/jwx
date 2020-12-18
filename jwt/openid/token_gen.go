@@ -801,19 +801,6 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	}
 }
 
-// this is almost identical to json.Encoder.Encode(), but we use Marshal
-// to avoid having to remove the trailing newline for each successive
-// call to Encode()
-func writeJSON(buf *bytes.Buffer, v interface{}, keyName string) error {
-	enc, err := json.Marshal(v)
-	if err != nil {
-		return errors.Wrapf(err, `failed to encode '%s'`, keyName)
-	}
-	buf.Write(enc)
-
-	return nil
-}
-
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	var proxy openidTokenMarshalProxy
 	if err := json.Unmarshal(buf, &proxy); err != nil {
@@ -847,7 +834,7 @@ func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.updatedAt = proxy.XupdatedAt
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
+		return errors.Wrap(err, `failed to parse private parameters`)
 	}
 	delete(m, AudienceKey)
 	delete(m, ExpirationKey)
