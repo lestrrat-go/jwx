@@ -33,7 +33,7 @@ jobs:
       - name: Test with coverage
         run: make cover
       - name: Upload code coverage to codecov
-        if: matrix.go == 'tip'
+        if: matrix.go == '1.15'
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
