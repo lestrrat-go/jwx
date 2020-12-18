@@ -629,7 +629,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h *stdHeaders) MarshalJSON() ([]byte, error) {
+func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	var proxy standardHeadersMarshalProxy
