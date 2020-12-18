@@ -54,14 +54,14 @@ type Token interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 }
 type stdToken struct {
-	audience      types.StringList       // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	expiration    *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	issuedAt      *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.6
-	issuer        *string                // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	jwtID         *string                // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	notBefore     *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	subject       *string                // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	privateClaims map[string]interface{} `json:"-"`
+	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	issuer        *string            // https://tools.ietf.org/html/rfc7519#section-4.1.1
+	jwtID         *string            // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	notBefore     *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	subject       *string            // https://tools.ietf.org/html/rfc7519#section-4.1.2
+	privateClaims map[string]interface{}
 }
 
 type stdTokenMarshalProxy struct {

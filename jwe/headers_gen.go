@@ -72,22 +72,22 @@ type Headers interface {
 }
 
 type stdHeaders struct {
-	agreementPartyUInfo    *buffer.Buffer                  `json:"apu,omitempty"`      //
-	agreementPartyVInfo    *buffer.Buffer                  `json:"apv,omitempty"`      //
-	algorithm              *jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`      //
-	compression            *jwa.CompressionAlgorithm       `json:"zip,omitempty"`      //
-	contentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`      //
-	contentType            *string                         `json:"cty,omitempty"`      //
-	critical               []string                        `json:"crit,omitempty"`     //
-	ephemeralPublicKey     jwk.Key                         `json:"epk,omitempty"`      //
-	jwk                    jwk.Key                         `json:"jwk,omitempty"`      //
-	jwkSetURL              *string                         `json:"jku,omitempty"`      //
-	keyID                  *string                         `json:"kid,omitempty"`      //
-	typ                    *string                         `json:"typ,omitempty"`      //
-	x509CertChain          []string                        `json:"x5c,omitempty"`      //
-	x509CertThumbprint     *string                         `json:"x5t,omitempty"`      //
-	x509CertThumbprintS256 *string                         `json:"x5t#S256,omitempty"` //
-	x509URL                *string                         `json:"x5u,omitempty"`      //
+	agreementPartyUInfo    *buffer.Buffer                  //
+	agreementPartyVInfo    *buffer.Buffer                  //
+	algorithm              *jwa.KeyEncryptionAlgorithm     //
+	compression            *jwa.CompressionAlgorithm       //
+	contentEncryption      *jwa.ContentEncryptionAlgorithm //
+	contentType            *string                         //
+	critical               []string                        //
+	ephemeralPublicKey     jwk.Key                         //
+	jwk                    jwk.Key                         //
+	jwkSetURL              *string                         //
+	keyID                  *string                         //
+	typ                    *string                         //
+	x509CertChain          []string                        //
+	x509CertThumbprint     *string                         //
+	x509CertThumbprintS256 *string                         //
+	x509URL                *string                         //
 	privateParams          map[string]interface{}
 	mu                     sync.RWMutex
 }
@@ -629,7 +629,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h stdHeaders) MarshalJSON() ([]byte, error) {
+func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	var proxy standardHeadersMarshalProxy

@@ -384,7 +384,7 @@ func generateToken(tt tokenType) error {
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
-	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{} `json:\"-\"`")
+	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type Token
 
 	// Proxy is used when unmarshaling headers

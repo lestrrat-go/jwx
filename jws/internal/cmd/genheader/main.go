@@ -218,7 +218,7 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, fieldStorageType(f.typ), f.jsonTag, f.comment)
+		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
