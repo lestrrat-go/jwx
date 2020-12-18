@@ -18,6 +18,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -102,6 +103,25 @@ func GenerateEd25519Jwk() (jwk.Key, error) {
 	key, err := GenerateEd25519Key()
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate Ed25519 private key`)
+	}
+
+	k, err := jwk.New(key)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate jwk.OKPPrivateKey`)
+	}
+
+	return k, nil
+}
+
+func GenerateX25519Key() (x25519.PrivateKey, error) {
+	_, priv, err := x25519.GenerateKey(rand.Reader)
+	return priv, err
+}
+
+func GenerateX25519Jwk() (jwk.Key, error) {
+	key, err := GenerateX25519Key()
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate X25519 private key`)
 	}
 
 	k, err := jwk.New(key)

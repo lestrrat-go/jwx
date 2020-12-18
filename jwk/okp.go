@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +40,11 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 		if err := k.Set(OKPCrvKey, jwa.Ed25519); err != nil {
 			return errors.Wrap(err, `failed to set header`)
 		}
+	case x25519.PublicKey:
+		k.x = rawKey
+		if err := k.Set(OKPCrvKey, jwa.X25519); err != nil {
+			return errors.Wrap(err, `failed to set header`)
+		}
 	default:
 		return errors.Errorf(`unknown key type %T`, rawKeyIf)
 	}
@@ -54,6 +60,12 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 		if err := k.Set(OKPCrvKey, jwa.Ed25519); err != nil {
 			return errors.Wrap(err, `failed to set header`)
 		}
+	case x25519.PrivateKey:
+		k.d = rawKey.Seed()
+		k.x = rawKey.Public().(x25519.PublicKey)
+		if err := k.Set(OKPCrvKey, jwa.X25519); err != nil {
+			return errors.Wrap(err, `failed to set header`)
+		}
 	default:
 		return errors.Errorf(`unknown key type %T`, rawKeyIf)
 	}
@@ -65,6 +77,8 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (interface{}
 	switch alg {
 	case jwa.Ed25519:
 		return ed25519.PublicKey(xbuf), nil
+	case jwa.X25519:
+		return x25519.PublicKey(xbuf), nil
 	default:
 		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
 	}
@@ -88,6 +102,15 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 			return nil, errors.Errorf(`invalid x value given d value`)
 		}
 		return ret, nil
+	case jwa.X25519:
+		ret, err := x25519.NewKeyFromSeed(dbuf)
+		if err != nil {
+			return nil, errors.Wrap(err, `unable to construct x25519 private key from seed`)
+		}
+		if !bytes.Equal(xbuf, ret.Public().(x25519.PublicKey)) {
+			return nil, errors.Errorf(`invalid x value given d value`)
+		}
+		return ret, nil
 	default:
 		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
 	}
@@ -107,6 +130,10 @@ func (k *okpPrivateKey) PublicKey() (OKPPublicKey, error) {
 	switch k.Crv() {
 	case jwa.Ed25519:
 		if err := newKey.FromRaw(ed25519.PublicKey(k.x)); err != nil {
+			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
+		}
+	case jwa.X25519:
+		if err := newKey.FromRaw(x25519.PublicKey(k.x)); err != nil {
 			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
 		}
 	default:

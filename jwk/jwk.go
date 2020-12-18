@@ -17,11 +17,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/internal/json"
-
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
 )
 
@@ -90,6 +90,18 @@ func New(key interface{}) (Key, error) {
 			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
 		}
 		return k, nil
+	case x25519.PrivateKey:
+		k := NewOKPPrivateKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
+	case x25519.PublicKey:
+		k := NewOKPPublicKey()
+		if err := k.FromRaw(rawKey); err != nil {
+			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+		}
+		return k, nil
 	case []byte:
 		k := NewSymmetricKey()
 		if err := k.FromRaw(rawKey); err != nil {
@@ -145,6 +157,10 @@ func PublicKeyOf(v interface{}) (interface{}, error) {
 	case ed25519.PrivateKey:
 		return x.Public(), nil
 	case ed25519.PublicKey:
+		return x, nil
+	case x25519.PrivateKey:
+		return x.Public(), nil
+	case x25519.PublicKey:
 		return x, nil
 	case []byte:
 		return x, nil

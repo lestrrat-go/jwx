@@ -14,7 +14,9 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,7 +88,7 @@ func TestParse(t *testing.T) {
 				}
 
 				var crawkey interface{}
-				switch key.(type) {
+				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
 					var rawkey rsa.PrivateKey
 					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
@@ -106,20 +108,42 @@ func TestParse(t *testing.T) {
 					}
 					crawkey = &rawkey
 				case jwk.OKPPrivateKey:
-					var rawkey ed25519.PrivateKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
-						return
+					switch k.Crv() {
+					case jwa.Ed25519:
+						var rawkey ed25519.PrivateKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					case jwa.X25519:
+						var rawkey x25519.PrivateKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PrivateKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					default:
+						t.Errorf(`invalid curve %s`, k.Crv())
 					}
-					crawkey = rawkey
 				// NOTE: Has to come after private
 				// key, since it's a subset of the
 				// private key variant.
 				case jwk.OKPPublicKey:
-					var rawkey ed25519.PublicKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
-						return
+					switch k.Crv() {
+					case jwa.Ed25519:
+						var rawkey ed25519.PublicKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					case jwa.X25519:
+						var rawkey x25519.PublicKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PublicKey) should succeed`) {
+							return
+						}
+						crawkey = rawkey
+					default:
+						t.Errorf(`invalid curve %s`, k.Crv())
 					}
-					crawkey = rawkey
 				default:
 					t.Errorf(`invalid key type %T`, key)
 					return
@@ -209,6 +233,27 @@ func TestParse(t *testing.T) {
 		}`
 		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
 	})
+	t.Run("X25519 Public Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "X25519",
+		  "x"   : "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+	})
+	t.Run("X25519 Private Key", func(t *testing.T) {
+		t.Parallel()
+		// Key taken from RFC 8037
+		const src = `{
+		  "kty" : "OKP",
+		  "crv" : "X25519",
+		  "d"   : "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
+		  "x"   : "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo"
+		}`
+		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+	})
 }
 
 func TestRoundtrip(t *testing.T) {
@@ -248,6 +293,17 @@ func TestRoundtrip(t *testing.T) {
 
 	generateEd25519 := func(use, keyID string) (jwk.Key, error) {
 		k, err := jwxtest.GenerateEd25519Jwk()
+		if err != nil {
+			return nil, err
+		}
+
+		k.Set(jwk.KeyUsageKey, use)
+		k.Set(jwk.KeyIDKey, keyID)
+		return k, nil
+	}
+
+	generateX25519 := func(use, keyID string) (jwk.Key, error) {
+		k, err := jwxtest.GenerateX25519Jwk()
 		if err != nil {
 			return nil, err
 		}
@@ -311,6 +367,11 @@ func TestRoundtrip(t *testing.T) {
 			use:      "sig",
 			keyID:    "sig6",
 			generate: generateEd25519,
+		},
+		{
+			use:      "enc",
+			keyID:    "enc6",
+			generate: generateX25519,
 		},
 	}
 
@@ -447,6 +508,11 @@ func TestPublicKeyOf(t *testing.T) {
 		return
 	}
 
+	x25519key, err := jwxtest.GenerateX25519Key()
+	if !assert.NoError(t, err, `generating raw X25519 key should succeed`) {
+		return
+	}
+
 	keys := []struct {
 		Key           interface{}
 		PublicKeyType reflect.Type
@@ -494,6 +560,14 @@ func TestPublicKeyOf(t *testing.T) {
 		{
 			Key:           ed25519key.Public(),
 			PublicKeyType: reflect.TypeOf(ed25519key.Public()),
+		},
+		{
+			Key:           x25519key,
+			PublicKeyType: reflect.TypeOf(x25519key.Public()),
+		},
+		{
+			Key:           x25519key.Public(),
+			PublicKeyType: reflect.TypeOf(x25519key.Public()),
 		},
 	}
 
