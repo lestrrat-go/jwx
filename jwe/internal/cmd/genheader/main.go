@@ -281,7 +281,7 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\ntype stdHeaders struct {")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\n%s %s %s // %s", f.name, fieldStorageType(f.typ), f.jsonTag, f.comment)
+		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\nmu sync.RWMutex")
@@ -483,7 +483,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) MarshalJSON() ([]byte, error) {")
 	fmt.Fprintf(&buf, "\nh.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")

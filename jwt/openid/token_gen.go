@@ -80,33 +80,33 @@ type Token interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 }
 type stdToken struct {
-	audience            types.StringList       // https://tools.ietf.org/html/rfc7519#section-4.1.3
-	expiration          *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.4
-	issuedAt            *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.6
-	issuer              *string                // https://tools.ietf.org/html/rfc7519#section-4.1.1
-	jwtID               *string                // https://tools.ietf.org/html/rfc7519#section-4.1.7
-	notBefore           *types.NumericDate     // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	subject             *string                // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	name                *string                //
-	givenName           *string                //
-	middleName          *string                //
-	familyName          *string                //
-	nickname            *string                //
-	preferredUsername   *string                //
-	profile             *string                //
-	picture             *string                //
-	website             *string                //
-	email               *string                //
-	emailVerified       *bool                  //
-	gender              *string                //
-	birthdate           *BirthdateClaim        //
-	zoneinfo            *string                //
-	locale              *string                //
-	phoneNumber         *string                //
-	phoneNumberVerified *bool                  //
-	address             *AddressClaim          //
-	updatedAt           *types.NumericDate     //
-	privateClaims       map[string]interface{} `json:"-"`
+	audience            types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	expiration          *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	issuedAt            *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
+	issuer              *string            // https://tools.ietf.org/html/rfc7519#section-4.1.1
+	jwtID               *string            // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	notBefore           *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.5
+	subject             *string            // https://tools.ietf.org/html/rfc7519#section-4.1.2
+	name                *string            //
+	givenName           *string            //
+	middleName          *string            //
+	familyName          *string            //
+	nickname            *string            //
+	preferredUsername   *string            //
+	profile             *string            //
+	picture             *string            //
+	website             *string            //
+	email               *string            //
+	emailVerified       *bool              //
+	gender              *string            //
+	birthdate           *BirthdateClaim    //
+	zoneinfo            *string            //
+	locale              *string            //
+	phoneNumber         *string            //
+	phoneNumberVerified *bool              //
+	address             *AddressClaim      //
+	updatedAt           *types.NumericDate //
+	privateClaims       map[string]interface{}
 }
 
 type openidTokenMarshalProxy struct {

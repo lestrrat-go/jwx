@@ -54,17 +54,17 @@ type Headers interface {
 }
 
 type stdHeaders struct {
-	algorithm              *jwa.SignatureAlgorithm `json:"alg,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.1
-	contentType            *string                 `json:"cty,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.10
-	critical               []string                `json:"crit,omitempty"`     // https://tools.ietf.org/html/rfc7515#section-4.1.11
-	jwk                    jwk.Key                 `json:"jwk,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.3
-	jwkSetURL              *string                 `json:"jku,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.2
-	keyID                  *string                 `json:"kid,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.4
-	typ                    *string                 `json:"typ,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.9
-	x509CertChain          []string                `json:"x5c,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.6
-	x509CertThumbprint     *string                 `json:"x5t,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.7
-	x509CertThumbprintS256 *string                 `json:"x5t#S256,omitempty"` // https://tools.ietf.org/html/rfc7515#section-4.1.8
-	x509URL                *string                 `json:"x5u,omitempty"`      // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	algorithm              *jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1
+	contentType            *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.10
+	critical               []string                // https://tools.ietf.org/html/rfc7515#section-4.1.11
+	jwk                    jwk.Key                 // https://tools.ietf.org/html/rfc7515#section-4.1.3
+	jwkSetURL              *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.2
+	keyID                  *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.4
+	typ                    *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.9
+	x509CertChain          []string                // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 }
 
