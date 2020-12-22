@@ -16,7 +16,7 @@ const (
 	// this key should be used for signatures
 	ForSignature KeyUsageType = "sig"
 	// ForEncryption is the value used in the headers to indicate that
-	// this key should be used for encryptiong
+	// this key should be used for encrypting
 	ForEncryption KeyUsageType = "enc"
 )
 

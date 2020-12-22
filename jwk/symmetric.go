@@ -36,7 +36,7 @@ func (k symmetricKey) Raw(v interface{}) error {
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
-// hakhing algorithm, according to RFC 7638
+// hashing algorithm, according to RFC 7638
 func (k symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	var octets []byte
 	if err := k.Raw(&octets); err != nil {

@@ -164,7 +164,7 @@ func (k ByteWithECPublicKey) Populate(h Setter) error {
 	return nil
 }
 
-// HeaderPopulate populkates the header with the required AES GCM
+// HeaderPopulate populates the header with the required AES GCM
 // parameters ('iv' and 'tag')
 func (k ByteWithIVAndTag) Populate(h Setter) error {
 	if err := h.Set("iv", buffer.Buffer(k.IV)); err != nil {
@@ -178,7 +178,7 @@ func (k ByteWithIVAndTag) Populate(h Setter) error {
 	return nil
 }
 
-// HeaderPopulate populkates the header with the required PBES2
+// HeaderPopulate populates the header with the required PBES2
 // parameters ('p2s' and 'p2c')
 func (k ByteWithSaltAndCount) Populate(h Setter) error {
 	if err := h.Set("p2c", k.Count); err != nil {

@@ -478,7 +478,7 @@ func (d RSAPKCS15Decrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return d.alg
 }
 
-// Decrypt decryptes the encrypted key using RSA PKCS1v1.5
+// Decrypt decrypts the encrypted key using RSA PKCS1v1.5
 func (d RSAPKCS15Decrypt) Decrypt(enckey []byte) ([]byte, error) {
 	if pdebug.Enabled {
 		pdebug.Printf("START PKCS.Decrypt")
@@ -546,7 +546,7 @@ func (d RSAOAEPDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return d.alg
 }
 
-// Decrypt decryptes the encrypted key using RSA OAEP
+// Decrypt decrypts the encrypted key using RSA OAEP
 func (d RSAOAEPDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	if pdebug.Enabled {
 		pdebug.Printf("START OAEP.Decrypt")

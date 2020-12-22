@@ -37,7 +37,7 @@ type X25519 struct {
 }
 
 // ByteKey is a generated key that only has the key's byte buffer
-// as its instance data. If a ke needs to do more, such as providing
+// as its instance data. If a key needs to do more, such as providing
 // values to be set in a JWE header, that key type wraps a ByteKey
 type ByteKey []byte
 

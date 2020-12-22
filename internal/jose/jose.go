@@ -107,7 +107,7 @@ func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, fu
 	return file.Name(), cleanup, nil
 }
 
-// EncryptJwe creats an encrypted JWE message and returns its filename and
+// EncryptJwe creates an encrypted JWE message and returns its filename and
 // a cleanup function.
 // The caller is responsible for calling the cleanup
 // function and make sure all resources are released

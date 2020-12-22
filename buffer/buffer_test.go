@@ -77,7 +77,7 @@ func TestFunky(t *testing.T) {
 func TestBuffer_NData(t *testing.T) {
 	payload := []byte("Alice")
 	nd := Buffer(payload).NData()
-	if !assert.Equal(t, []byte{0, 0, 0, 5, 65, 108, 105, 99, 101}, nd, "NData mathces") {
+	if !assert.Equal(t, []byte{0, 0, 0, 5, 65, 108, 105, 99, 101}, nd, "NData matches") {
 		return
 	}
 
