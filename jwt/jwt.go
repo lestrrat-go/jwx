@@ -31,7 +31,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // The token must be encoded in either JSON format or compact format.
 //
 // If the token is signed and you want to verify the payload matches the signature,
-// you must pass the jwt.WithVerify(alg, key) or jwt.WithVerifyKeySet(jwk.Set) option.
+// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(*jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 //
 // If you also want to assert the validity of the JWT itself (i.e. expiration
