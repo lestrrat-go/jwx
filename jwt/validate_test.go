@@ -40,7 +40,7 @@ func TestGHIssue10(t *testing.T) {
 		// optional parameters
 		err = jwt.Validate(t1)
 		if err != nil {
-			t.Fatalf("Error varifying claim: %s", err.Error())
+			t.Fatalf("Error verifying claim: %s", err.Error())
 		}
 
 		// This should succeed, because WithAudience is provided, and its

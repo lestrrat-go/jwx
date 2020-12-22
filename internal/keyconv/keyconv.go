@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// RSAPrivateKey assigns src to dst, converting its typ from a
+// RSAPrivateKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
 func RSAPrivateKey(dst interface{}, src interface{}) error {
 	var ptr *rsa.PrivateKey
@@ -23,7 +23,7 @@ func RSAPrivateKey(dst interface{}, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-// RSAPublicKey assigns src to dst, converting its typ from a
+// RSAPublicKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
 func RSAPublicKey(dst interface{}, src interface{}) error {
 	var ptr *rsa.PublicKey
@@ -38,7 +38,7 @@ func RSAPublicKey(dst interface{}, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-// ECDSAPrivateKey assigns src to dst, converting its typ from a
+// ECDSAPrivateKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
 func ECDSAPrivateKey(dst interface{}, src interface{}) error {
 	var ptr *ecdsa.PrivateKey
@@ -53,7 +53,7 @@ func ECDSAPrivateKey(dst interface{}, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-// ECDSAPublicKey assigns src to dst, converting its typ from a
+// ECDSAPublicKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
 func ECDSAPublicKey(dst interface{}, src interface{}) error {
 	var ptr *ecdsa.PublicKey

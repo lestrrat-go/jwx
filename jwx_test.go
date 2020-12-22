@@ -84,7 +84,7 @@ func TestJoseCompatibility(t *testing.T) {
 	}
 
 	if !jose.Available() {
-		t.Logf("`jose` binary not availale, skipping tests")
+		t.Logf("`jose` binary not available, skipping tests")
 		return
 	}
 

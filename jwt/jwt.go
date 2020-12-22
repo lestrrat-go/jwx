@@ -22,7 +22,7 @@ func ParseString(s string, options ...Option) (Token, error) {
 	return Parse(strings.NewReader(s), options...)
 }
 
-// ParseString calls Parse with the given byte sequence
+// ParseBytes calls Parse with the given byte sequence
 func ParseBytes(s []byte, options ...Option) (Token, error) {
 	return Parse(bytes.NewReader(s), options...)
 }

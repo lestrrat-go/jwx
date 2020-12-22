@@ -25,7 +25,7 @@ func newJSONOption(n string, v interface{}) JSONOption {
 	}
 }
 
-// WithUseNumber controls whethere the jwx package should unmarshal
+// WithUseNumber controls whether the jwx package should unmarshal
 // JSON objects with the "encoding/json".Decoder.UseNumber feature on.
 //
 // Default is false.

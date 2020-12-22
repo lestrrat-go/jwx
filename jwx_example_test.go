@@ -139,7 +139,7 @@ func Example_jwk() {
 		return
 	}
 
-	// Key setss can be serialized back to JSON
+	// Key sets can be serialized back to JSON
 	{
 		jsonbuf, err := json.Marshal(set)
 		if err != nil {
@@ -161,7 +161,7 @@ func Example_jwk() {
 		// Use rawkey for jws.Verify() or whatever.
 		_ = rawkey
 
-		// You can creatre jwk.Key from a raw key, too
+		// You can create jwk.Key from a raw key, too
 		fromRawKey, err := jwk.New(rawkey)
 		if err != nil {
 			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
@@ -177,7 +177,7 @@ func Example_jwk() {
 		log.Printf("%s", jsonbuf)
 
 		// If you know the underlying Key type (RSA, EC, Symmetric), you can
-		// create an empy instance first
+		// create an empty instance first
 		//    key := jwk.NewRSAPrivateKey()
 		// ..and then use json.Unmarshal
 		//    json.Unmarshal(key, jsonbuf)
