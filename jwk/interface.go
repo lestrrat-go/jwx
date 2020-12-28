@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"crypto/x509"
+	"time"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
@@ -41,7 +42,8 @@ const (
 // Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
 type Set struct {
-	Keys []Key `json:"keys"`
+	Keys    []Key     `json:"keys"`
+	Expires time.Time `json:"expires"`
 }
 
 type HeaderVisitor = iter.MapVisitor

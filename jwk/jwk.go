@@ -15,7 +15,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -186,7 +188,20 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 		}
 		defer f.Close()
 
-		return Parse(f)
+		set, err := Parse(f)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse jwk file")
+		}
+
+		for _, option := range options {
+			switch option.Name() {
+			case optkeyHTTPExpiration, optkeyManualExpiration:
+				duration := option.Value().(time.Duration)
+				set.Expires = time.Now().Add(duration)
+			}
+		}
+
+		return set, nil
 	}
 	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
@@ -221,7 +236,72 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 		return nil, fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 	}
 
-	return Parse(res.Body)
+	set, err := Parse(res.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse response body")
+	}
+
+	for _, option := range options {
+		switch option.Name() {
+		case optkeyHTTPExpiration:
+			duration := option.Value().(time.Duration)
+			duration = getCacheDuration(&res.Header, duration)
+			set.Expires = time.Now().Add(duration)
+		case optkeyManualExpiration:
+			duration := option.Value().(time.Duration)
+			set.Expires = time.Now().Add(duration)
+		}
+	}
+
+	return set, nil
+}
+
+// getCacheDuration looks through the HTTP response headers for a cache-control
+// header containing a max-age directive or an Expires header. If neither are
+// found, or if the found values are less than minDuration, then minDuration is
+// returned
+func getCacheDuration(headers *http.Header, minDuration time.Duration) time.Duration {
+	// Look for a max-age
+	ccs := headers.Values("cache-control")
+	for _, cc := range ccs {
+		directives := strings.Split(cc, ",")
+		for _, directive := range directives {
+			kvp := strings.Split(directive, "=")
+			if len(kvp) != 2 {
+				continue
+			}
+			if strings.ToLower(strings.TrimSpace(kvp[0])) == "max-age" {
+				i, err := strconv.ParseInt(strings.TrimSpace(kvp[1]), 10, 32)
+				if err != nil || i < 0 {
+					continue
+				}
+
+				duration := time.Second * time.Duration(i)
+				if duration > minDuration {
+					return duration
+				}
+
+				// Found a max-age, but didn't use it. We can stop
+				return minDuration
+			}
+		}
+	}
+
+	// Look for an Expires header, only if max-age didn't exist
+	expires := strings.TrimSpace(headers.Get("expires"))
+	if expires != "" {
+		// Try to parse it
+		t, err := http.ParseTime(expires)
+		if err == nil {
+			duration := time.Until(t)
+			if duration > minDuration {
+				return duration
+			}
+		}
+	}
+
+	// Couldn't find an usable expiration
+	return minDuration
 }
 
 // ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
@@ -364,6 +444,15 @@ func (s *Set) Iterate(ctx context.Context) KeyIterator {
 	ch := make(chan *KeyPair, s.Len())
 	go iterate(ctx, s.Keys, ch)
 	return arrayiter.New(ch)
+}
+
+// IsExpired returns true if the
+func (s *Set) IsExpired() bool {
+	if s.Expires.IsZero() {
+		return false
+	}
+
+	return time.Now().After(s.Expires)
 }
 
 func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
