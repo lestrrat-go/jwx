@@ -18,20 +18,20 @@ type gatekeepEntry struct {
 	expires time.Time
 }
 
-type MemoryStore struct {
+type Store struct {
 	ttl        time.Duration
 	gatekeeper map[string]*gatekeepEntry
 	muGk       sync.Mutex
 }
 
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{
+func NewStore() *Store {
+	return &Store{
 		ttl:        15 * time.Minute,
 		gatekeeper: make(map[string]*gatekeepEntry),
 	}
 }
 
-func (store *MemoryStore) gatekeep(u string) chan struct{} {
+func (store *Store) gatekeep(u string) chan struct{} {
 	store.muGk.Lock()
 
 	gke, ok := store.gatekeeper[u]
@@ -62,7 +62,7 @@ func (store *MemoryStore) gatekeep(u string) chan struct{} {
 // Returns the response body as []byte, a boolean indicating if the
 // response body came from a cache (true -> came from a cache,
 // false -> came from new http request)
-func (store *MemoryStore) fetchHTTP(ctx context.Context, u string, httpcl *http.Client) ([]byte, bool, error) {
+func (store *Store) fetchHTTP(ctx context.Context, u string, httpcl *http.Client) ([]byte, bool, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to new request to remote JWK")
@@ -86,7 +86,7 @@ func (store *MemoryStore) fetchHTTP(ctx context.Context, u string, httpcl *http.
 	return buf, res.Header.Get(httpcache.XFromCache) == "1", nil
 }
 
-func (store *MemoryStore) Fetch(ctx context.Context, u string, options ...Option) (*Set, error) {
+func (store *Store) Fetch(ctx context.Context, u string, options ...Option) (*Set, error) {
 	var set *Set
 	if err := store.refresh(ctx, u, &set, options...); err != nil {
 		return nil, err
@@ -94,11 +94,11 @@ func (store *MemoryStore) Fetch(ctx context.Context, u string, options ...Option
 	return set, nil
 }
 
-func (store *MemoryStore) Refresh(ctx context.Context, u string, set **Set, options ...Option) error {
+func (store *Store) Refresh(ctx context.Context, u string, set **Set, options ...Option) error {
 	return store.refresh(ctx, u, set, options...)
 }
 
-func (store *MemoryStore) refresh(ctx context.Context, u string, set **Set, options ...Option) error {
+func (store *Store) refresh(ctx context.Context, u string, set **Set, options ...Option) error {
 	ch := store.gatekeep(u)
 	ch <- struct{}{}
 	defer func() { <-ch }()

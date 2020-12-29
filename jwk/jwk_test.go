@@ -615,7 +615,7 @@ func TestIssue207(t *testing.T) {
 	}
 }
 
-func TestMemoryStore(t *testing.T) {
+func TestStore(t *testing.T) {
 	const src = `{
       "e":"AQAB",
 			"kty":"RSA",
@@ -634,7 +634,7 @@ func TestMemoryStore(t *testing.T) {
 
 		io.WriteString(w, src)
 	}))
-	store := jwk.NewMemoryStore()
+	store := jwk.NewStore()
 
 	set, err := store.Fetch(ctx, srv.URL, jwk.WithHTTPClient(srv.Client()))
 	if !assert.NoError(t, err, `store.Fetch should succeed`) {
