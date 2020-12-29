@@ -27,8 +27,6 @@ jobs:
           echo "::add-path::$(go env GOPATH)/bin"
       - name: Install jose
         run: sudo apt-get install -y jose
-      - name: Install GolangCI-Lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.32.2
       - run: make generate
       - name: Test with coverage
         run: make cover
@@ -37,7 +35,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
-      - run: make lint
       - name: Check difference between generation code and commit code
         run: make check_diffs
 

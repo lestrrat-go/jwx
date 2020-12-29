@@ -1,9 +1,10 @@
 .PHONY: generate realclean cover viewcover test lint check_diffs imports
 
 generate: 
-	@$(MAKE) generate-jwa generate-jwk generate-jws generate-jwt
+	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
 
 generate-%:
+	@echo "> Generating for $(patsubst generate-%,%,$@)"
 	@go generate $(shell pwd -P)/$(patsubst generate-%,%,$@)
 
 realclean:
