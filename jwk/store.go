@@ -11,6 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var DefaultHTTPCache = httpcache.NewMemoryCache()
+
 type gatekeepEntry struct {
 	ch      chan struct{}
 	expires time.Time
@@ -101,7 +103,7 @@ func (store *MemoryStore) refresh(ctx context.Context, u string, set **Set, opti
 	ch <- struct{}{}
 	defer func() { <-ch }()
 
-	var cache httpcache.Cache = DefaultCache
+	var cache httpcache.Cache = DefaultHTTPCache
 	httpcl := http.DefaultClient
 	for _, option := range options {
 		switch option.Name() {
