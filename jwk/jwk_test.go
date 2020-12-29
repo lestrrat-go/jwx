@@ -7,8 +7,12 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -608,5 +612,45 @@ func TestIssue207(t *testing.T) {
 		if !assert.Equal(t, `2Mc_43O_BOrOJTNrGX7uJ6JsIYE`, base64.EncodeToString(thumb), `thumbprints should match`) {
 			return
 		}
+	}
+}
+
+func TestMemoryStore(t *testing.T) {
+	const src = `{
+      "e":"AQAB",
+			"kty":"RSA",
+      "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+		}`
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	var reqCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqCount++
+		hdr := w.Header()
+		hdr.Set(`Cache-Control`, `max-age=1`)
+		hdr.Set(`Content-Type`, `application/json`)
+		
+		io.WriteString(w, src)
+	}))
+	store := jwk.NewMemoryStore()
+
+	set, err := store.Fetch(ctx, srv.URL, jwk.WithHTTPClient(srv.Client()))
+	if !assert.NoError(t, err, `store.Fetch should succeed`) {
+		return
+	}
+	_ = set // TODO: verify set
+
+	// Second request, immediately after wards
+	store.Fetch(ctx, srv.URL, jwk.WithHTTPClient(srv.Client()))
+
+	// Third request, after one second. This should trigger
+	// a cache miss
+	time.Sleep(time.Second)
+	store.Fetch(ctx, srv.URL, jwk.WithHTTPClient(srv.Client()))
+
+	if !assert.Equal(t, reqCount, 2, `there should be two requests sent to the server`) {
+		return
 	}
 }
