@@ -631,7 +631,7 @@ func TestMemoryStore(t *testing.T) {
 		hdr := w.Header()
 		hdr.Set(`Cache-Control`, `max-age=1`)
 		hdr.Set(`Content-Type`, `application/json`)
-		
+
 		io.WriteString(w, src)
 	}))
 	store := jwk.NewMemoryStore()
