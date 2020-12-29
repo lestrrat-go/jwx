@@ -368,6 +368,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 }
 
+//nolint:thelper
 func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}) {
 	plaintext := []byte("Lorem ipsum")
 

@@ -27,10 +27,13 @@ linters:
     - gomnd
     - gosec
     - lll
+    - makezero
     - nakedret
     - nestif
     - nlreturn
+    - paralleltest
     - testpackage
+    - thelper
     - wrapcheck
     - wsl
 
@@ -54,6 +57,12 @@ issues:
     - path: /*_test.go
       linters:
         - errcheck
+    - path: /*_example_test.go
+      linters:
+        - forbidigo
+    - path: cmd/jwx/jwx.go
+      linters:
+        - forbidigo
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
