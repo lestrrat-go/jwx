@@ -41,7 +41,7 @@ const (
 // Set is a convenience struct to allow generating and parsing
 // JWK sets as opposed to single JWKs
 type Set struct {
-	Keys []Key `json:"keys"`
+	Keys []Key
 }
 
 type HeaderVisitor = iter.MapVisitor
