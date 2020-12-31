@@ -26,7 +26,8 @@ type watchTarget struct {
 	keySet *Set
 
 	// protects keySet from concurrent access
-	muKeySet *sync.Mutex
+	// TODO: uncomment later
+	// muKeySet *sync.Mutex
 
 	// interval between refreshes
 	refreshInterval time.Duration
@@ -83,7 +84,7 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	// reflect.Select() is slow IF we are executing it over and over
 	// in a very fast iteration, but we assume here that refreshes happen
-	// seldomly enough that being able to call one `select{}` with multiple
+	// seldom enough that being able to call one `select{}` with multiple
 	// targets / channels outweighs the speed penalty of using reflect.
 	selcases := []reflect.SelectCase{
 		{
@@ -137,6 +138,8 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		default:
 			// Time to refresh a target
 			target := targets[chosen-baseidx]
+
+			//nolint:errcheck
 			go af.refresh(context.Background(), target)
 
 			target.timer.Reset(target.refreshInterval)
