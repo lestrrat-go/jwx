@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 	"sync"
