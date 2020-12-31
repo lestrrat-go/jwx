@@ -12,7 +12,9 @@ import (
 
 type AutoRefresh struct {
 	cache          map[string]*Set
-	muCache        *sync.RWMutex
+	fetching       map[string]chan struct{}
+	muCache        sync.RWMutex
+	muFetching     sync.Mutex
 	newWatchTarget chan *watchTarget
 }
 
@@ -37,11 +39,21 @@ type watchTarget struct {
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:          make(map[string]*Set),
-		muCache:        &sync.RWMutex{},
+		fetching:       make(map[string]chan struct{}),
 		newWatchTarget: make(chan *watchTarget),
 	}
 	go af.refreshLoop(ctx)
 	return af
+}
+
+func (af *AutoRefresh) getCached(url string) (*Set, bool) {
+	af.muCache.RLock()
+	ks, ok := af.cache[url]
+	af.muCache.RUnlock()
+	if ok {
+		return ks, true
+	}
+	return nil, false
 }
 
 func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRefreshOption) (*Set, error) {
@@ -53,33 +65,51 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		}
 	}
 
-	af.muCache.RLock()
-	ks, ok := af.cache[url]
-	af.muCache.RUnlock()
-	if ok {
+	ks, found := af.getCached(url)
+	if found {
 		return ks, nil
 	}
 
-	target := &watchTarget{
-		httpcl:          http.DefaultClient,
-		refreshInterval: refreshInterval,
-		url:             url,
-	}
+	// To avoid a thundering herd, only one goroutine per url may enter into this
+	// initial fetch phase.
+	af.muFetching.Lock()
+	fetchingCh, fetching := af.fetching[url]
+	// unlock happens in each of the if/else clauses because we need to perform
+	// the channel initialization when there is no channel present
+	if fetching {
+		af.muFetching.Unlock()
+		<-fetchingCh
+	} else {
+		fetchingCh = make(chan struct{})
+		af.fetching[url] = fetchingCh
+		af.muFetching.Unlock()
+		target := &watchTarget{
+			httpcl:          http.DefaultClient,
+			refreshInterval: refreshInterval,
+			url:             url,
+		}
 
-	// The first time around, we need to fetch the keyset
-	if err := af.refresh(ctx, target); err != nil {
-		return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
+		// The first time around, we need to fetch the keyset
+		if err := af.refresh(ctx, target); err != nil {
+			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
+		}
+		// Notify the refresher goroutine that we have a new entry
+		af.newWatchTarget <- target
+
+		// first delete the entry from the map, then close the channel or
+		// otherwise we may end up getting multiple groutines doing the fetch
+		af.muFetching.Lock()
+		delete(af.fetching, url)
+		af.muFetching.Unlock()
+
+		close(fetchingCh)
 	}
 
 	// the cache should now be populated
-	af.muCache.RLock()
-	ks, ok = af.cache[url]
-	af.muCache.RUnlock()
+	ks, ok := af.getCached(url)
 	if !ok {
 		panic("cache was not populated after explicit refresh")
 	}
-
-	af.newWatchTarget <- target
 
 	return ks, nil
 }

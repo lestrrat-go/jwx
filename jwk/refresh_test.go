@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -39,25 +40,34 @@ func TestAutoRefresh(t *testing.T) {
 	af := jwk.NewAutoRefresh(ctx)
 
 	retries := 5
+
+	var wg sync.WaitGroup
+	wg.Add(retries)
 	for i := 0; i < retries; i++ {
-		ks, err := af.Fetch(ctx, srv.URL, jwk.WithRefreshInterval(3*time.Second))
-		if !assert.NoError(t, err, `af.Fetch should succeed`) {
-			return
-		}
-
-		for iter := ks.Iterate(ctx); iter.Next(ctx); {
-			key := iter.Pair().Value.(jwk.Key)
-			v, ok := key.Get(`accessCount`)
-			if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+		// Run these in separate goroutines to emulate a possible thundering herd
+		go func() {
+			ks, err := af.Fetch(ctx, srv.URL, jwk.WithRefreshInterval(3*time.Second))
+			if !assert.NoError(t, err, `af.Fetch should succeed`) {
 				return
 			}
 
-			if !assert.Equal(t, v, float64(1), `key.Get("accessCount") should be 1`) {
-				return
+			for iter := ks.Iterate(ctx); iter.Next(ctx); {
+				key := iter.Pair().Value.(jwk.Key)
+				v, ok := key.Get(`accessCount`)
+				if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+					return
+				}
+
+				if !assert.Equal(t, v, float64(1), `key.Get("accessCount") should be 1`) {
+					return
+				}
 			}
-		}
+			wg.Done()
+		}()
 	}
 
+	t.Logf("Waiting for fetching goroutines...")
+	wg.Wait()
 	t.Logf("Waiting for the refresh ...")
 	time.Sleep(6 * time.Second)
 	ks, err := af.Fetch(ctx, srv.URL)
