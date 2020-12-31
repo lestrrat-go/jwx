@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
