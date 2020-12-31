@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -11,6 +12,7 @@ import (
 
 type AutoRefresh struct {
 	cache          map[string]*Set
+	muCache        *sync.RWMutex
 	newWatchTarget chan *watchTarget
 }
 
@@ -18,11 +20,6 @@ type watchTarget struct {
 	// The HTTP client to use. The user may opt to use a client who is
 	// aware of HTTP caching.
 	httpcl *http.Client
-
-	// The actual keyset. Must be treated as readonly by the end consumer.
-	// will be updated asynchronously, therefore muKeySet must be consulted
-	// before accessing this
-	keySet *Set
 
 	// protects keySet from concurrent access
 	// TODO: uncomment later
@@ -40,6 +37,7 @@ type watchTarget struct {
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:          make(map[string]*Set),
+		muCache:        &sync.RWMutex{},
 		newWatchTarget: make(chan *watchTarget),
 	}
 	go af.refreshLoop(ctx)
@@ -55,25 +53,32 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		}
 	}
 
+	af.muCache.RLock()
 	ks, ok := af.cache[url]
+	af.muCache.RUnlock()
 	if ok {
 		return ks, nil
 	}
 
-	// The first time around, we need to fetch the keyset
 	target := &watchTarget{
 		httpcl:          http.DefaultClient,
-		keySet:          ks,
 		refreshInterval: refreshInterval,
 		url:             url,
 	}
+
+	// The first time around, we need to fetch the keyset
 	if err := af.refresh(ctx, target); err != nil {
 		return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
 	}
 
-	// new entry. Do the fetch once in a blocking manner
-	ks = target.keySet
-	af.cache[url] = ks
+	// the cache should now be populated
+	af.muCache.RLock()
+	ks, ok = af.cache[url]
+	af.muCache.RUnlock()
+	if !ok {
+		panic("cache was not populated after explicit refresh")
+	}
+
 	af.newWatchTarget <- target
 
 	return ks, nil
@@ -169,8 +174,9 @@ func (af *AutoRefresh) refresh(ctx context.Context, target *watchTarget) error {
 	}
 
 	// Got a new key set. replace the keyset in the target
-	target.keySet = keyset
+	af.muCache.Lock()
 	af.cache[target.url] = keyset
+	af.muCache.Unlock()
 
 	return nil
 }

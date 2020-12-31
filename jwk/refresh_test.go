@@ -13,6 +13,8 @@ import (
 )
 
 func TestAutoRefresh(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -38,7 +40,7 @@ func TestAutoRefresh(t *testing.T) {
 
 	retries := 5
 	for i := 0; i < retries; i++ {
-		ks, err := af.Fetch(ctx, srv.URL, jwk.WithRefreshInterval(5*time.Second))
+		ks, err := af.Fetch(ctx, srv.URL, jwk.WithRefreshInterval(3*time.Second))
 		if !assert.NoError(t, err, `af.Fetch should succeed`) {
 			return
 		}
@@ -56,7 +58,8 @@ func TestAutoRefresh(t *testing.T) {
 		}
 	}
 
-	time.Sleep(10 * time.Second)
+	t.Logf("Waiting for the refresh ...")
+	time.Sleep(6 * time.Second)
 	ks, err := af.Fetch(ctx, srv.URL)
 	if !assert.NoError(t, err, `af.Fetch should succeed`) {
 		return
