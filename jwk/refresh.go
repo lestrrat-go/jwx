@@ -12,13 +12,14 @@ import (
 )
 
 type AutoRefresh struct {
-	cache       map[string]*Set
-	configureCh chan struct{}
-	fetching    map[string]chan struct{}
-	muCache     sync.RWMutex
-	muFetching  sync.Mutex
-	muRegistry  sync.RWMutex
-	registry    map[string]*target
+	cache        map[string]*Set
+	configureCh  chan struct{}
+	fetching     map[string]chan struct{}
+	muCache      sync.RWMutex
+	muFetching   sync.Mutex
+	muRegistry   sync.RWMutex
+	registry     map[string]*target
+	resetTimerCh chan *resetTimerReq
 }
 
 type target struct {
@@ -60,12 +61,18 @@ type target struct {
 	timer *time.Timer
 }
 
+type resetTimerReq struct {
+	t *target
+	d time.Duration
+}
+
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		cache:       make(map[string]*Set),
-		configureCh: make(chan struct{}),
-		fetching:    make(map[string]chan struct{}),
-		registry:    make(map[string]*target),
+		cache:        make(map[string]*Set),
+		configureCh:  make(chan struct{}),
+		fetching:     make(map[string]chan struct{}),
+		registry:     make(map[string]*target),
+		resetTimerCh: make(chan *resetTimerReq),
 	}
 	go af.refreshLoop(ctx)
 	return af
@@ -227,6 +234,10 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			Dir:  reflect.SelectRecv,
 			Chan: reflect.ValueOf(af.configureCh),
 		},
+		{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(af.resetTimerCh),
+		},
 	}
 	baseidx := len(baseSelcases)
 
@@ -259,7 +270,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		}
 		af.muRegistry.RUnlock()
 
-		chosen, _, recvOK := reflect.Select(selcases)
+		chosen, recv, recvOK := reflect.Select(selcases)
 		switch chosen {
 		case 0:
 			// <-ctx.Done(). Just bail out of this loop
@@ -269,6 +280,25 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			// since we're rebuilding everything for each iteration,
 			// we just need to start the loop all over again
 			continue
+		case 2:
+			// <-resetTimerCh. interrupt polling, and reset the timer on
+			// a single target. this needs to be handled inside this
+			// select, or otherwise timer.Stop() causes a write on its channel
+			// which is indistinguishable from a legitimate event
+			if !recvOK {
+				continue
+			}
+
+			req := recv.Interface().(*resetTimerReq)
+			t := req.t
+			d := req.d
+			if !t.timer.Stop() {
+				select {
+				case <-t.timer.C:
+				default:
+				}
+			}
+			t.timer.Reset(d)
 		default:
 			// Do not fire a refresh in case the channel was closed.
 			if !recvOK {
@@ -284,15 +314,12 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	}
 }
 
-func resetTimer(res *http.Response, t *target) {
+func (af *AutoRefresh) resetTimer(res *http.Response, t *target) {
 	refreshInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-	if !t.timer.Stop() {
-		select {
-		case <-t.timer.C:
-		default:
-		}
+	af.resetTimerCh <- &resetTimerReq{
+		t: t,
+		d: refreshInterval,
 	}
-	t.timer.Reset(refreshInterval)
 }
 
 func (af *AutoRefresh) refresh(ctx context.Context, url string) error {
@@ -321,7 +348,7 @@ func (af *AutoRefresh) refresh(ctx context.Context, url string) error {
 
 	// Register this cleanup handler so that we setup a new timer even
 	// in case of a parse failure
-	defer resetTimer(res, t)
+	defer af.resetTimer(res, t)
 
 	keyset, err := Parse(res.Body)
 	if err != nil {
