@@ -61,7 +61,7 @@ func TestAutoRefresh(t *testing.T) {
 						return
 					}
 
-					if !assert.Equal(t, v, float64(1), `key.Get("accessCount") should be 1`) {
+					if !assert.Equal(t, float64(1), v, `key.Get("accessCount") should be 1`) {
 						return
 					}
 				}
@@ -84,7 +84,7 @@ func TestAutoRefresh(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, v, float64(2), `key.Get("accessCount") should be 2`) {
+			if !assert.Equal(t, float64(2), v, `key.Get("accessCount") should be 2`) {
 				return
 			}
 		}
@@ -134,7 +134,7 @@ func TestAutoRefresh(t *testing.T) {
 						return
 					}
 
-					if !assert.Equal(t, v, float64(1), `key.Get("accessCount") should be 1`) {
+					if !assert.Equal(t, float64(1), v, `key.Get("accessCount") should be 1`) {
 						return
 					}
 				}
@@ -157,7 +157,7 @@ func TestAutoRefresh(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, v, float64(2), `key.Get("accessCount") should be 2`) {
+			if !assert.Equal(t, float64(2), v, `key.Get("accessCount") should be 2`) {
 				return
 			}
 		}
