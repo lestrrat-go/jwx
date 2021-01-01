@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lestrrat-go/httpcc"
 	"github.com/pkg/errors"
 )
 
@@ -27,9 +28,34 @@ type watchTarget struct {
 	// TODO: uncomment later
 	// muKeySet *sync.Mutex
 
-	// interval between refreshes
-	refreshInterval time.Duration
-	url             string
+	// Interval between refreshes are calculated two ways.
+	// 1) You can set an explicit refresh interval by using WithRefreshInterval().
+	//    In this mode, it doesn't matter what the HTTP response says in its
+	//    Cache-Control or Expires headers
+	// 2) You can let us calculate the time-to-refresh based on the key's
+	//	  Cache-Control or Expires headers.
+	//    First, the user provides us the absolute minimum interval before
+	//    refreshes. We will never check for refreshes before this specified
+	//    amount of time.
+	//
+	//    Next, max-age directive in the Cache-Control header is consulted.
+	//    If `max-age` is not present, we skip the following section, and
+	//    proceed to the next option.
+	//    If `max-age > user-supplied minimum interval`, then we use the max-age,
+	//    otherwise the user-supplied minimum interval is used.
+	//
+	//    Next, the value specified in Expires header is consulted.
+	//    If the header is not present, we skip the following seciont and
+	//    proceed to the next option.
+	//    We take the time until expiration `expires - time.Now()`, and
+	//	  if `time-until-expiration > user-supplied minimum interval`, then
+	//    we use the expires value, otherwise the user-supplied minimum interval is used.
+	//
+	//    If all of the above fails, we used the user-supplied minimum interval
+	refreshInterval    *time.Duration
+	minRefreshInterval time.Duration
+
+	url string
 
 	// The timer for refreshing the keyset. should not be set by anyone
 	// other than the refreshing goroutine
@@ -57,11 +83,18 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 }
 
 func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRefreshOption) (*Set, error) {
-	refreshInterval := time.Hour
+	// TODO: if we're given new values here, maybe we should reset the
+	// intervals. We currently ignore everything but the first call
+	var hasRefreshInterval bool
+	var refreshInterval time.Duration
+	minRefreshInterval := time.Hour
 	for _, option := range options {
 		switch option.Name() {
 		case optkeyRefreshInterval:
 			refreshInterval = option.Value().(time.Duration)
+			hasRefreshInterval = true
+		case optkeyMinRefreshInterval:
+			minRefreshInterval = option.Value().(time.Duration)
 		}
 	}
 
@@ -84,9 +117,12 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		af.fetching[url] = fetchingCh
 		af.muFetching.Unlock()
 		target := &watchTarget{
-			httpcl:          http.DefaultClient,
-			refreshInterval: refreshInterval,
-			url:             url,
+			httpcl:             http.DefaultClient,
+			minRefreshInterval: minRefreshInterval,
+			url:                url,
+		}
+		if hasRefreshInterval {
+			target.refreshInterval = &refreshInterval
 		}
 
 		// The first time around, we need to fetch the keyset
@@ -162,7 +198,6 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			if !found {
 				targets = append(targets, target)
 			}
-			target.timer = time.NewTimer(target.refreshInterval)
 
 			selcases = append(selcases, reflect.SelectCase{
 				Dir:  reflect.SelectRecv,
@@ -175,8 +210,6 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 
 			//nolint:errcheck
 			go af.refresh(context.Background(), target)
-
-			target.timer.Reset(target.refreshInterval)
 		}
 	}
 }
@@ -208,5 +241,47 @@ func (af *AutoRefresh) refresh(ctx context.Context, target *watchTarget) error {
 	af.cache[target.url] = keyset
 	af.muCache.Unlock()
 
+	refreshInterval := calculateRefreshDuration(res, target)
+	target.timer = time.NewTimer(refreshInterval)
+
 	return nil
+}
+
+func calculateRefreshDuration(res *http.Response, target *watchTarget) time.Duration {
+	// This always has precedence
+	if ptr := target.refreshInterval; ptr != nil {
+		return *ptr
+	}
+
+	minRefreshInterval := target.minRefreshInterval
+	if v := res.Header.Get(`Cache-Control`); v != "" {
+		dir, err := httpcc.ParseResponse(res.Header.Get(`Cache-Control`))
+		if err == nil {
+			maxAge, ok := dir.MaxAge()
+			if ok {
+				resDuration := time.Duration(maxAge) * time.Second
+				if resDuration > minRefreshInterval {
+					return resDuration
+				}
+				return minRefreshInterval
+			}
+			// fallthrough
+		}
+		// fallthrough
+	}
+
+	if v := res.Header.Get(`Expires`); v != "" {
+		expires, err := http.ParseTime(v)
+		if err == nil {
+			resDuration := time.Until(expires)
+			if resDuration > minRefreshInterval {
+				return resDuration
+			}
+			return minRefreshInterval
+		}
+		// fallthrough
+	}
+
+	// Previous fallthroughs are a little redandunt, but hey, it's all good.
+	return minRefreshInterval
 }
