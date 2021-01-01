@@ -200,7 +200,6 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		if err := af.refresh(ctx, url); err != nil {
 			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
 		}
-
 	}
 
 	// the cache should now be populated
