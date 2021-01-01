@@ -12,14 +12,16 @@ import (
 )
 
 type AutoRefresh struct {
-	cache          map[string]*Set
-	fetching       map[string]chan struct{}
-	muCache        sync.RWMutex
-	muFetching     sync.Mutex
-	newWatchTarget chan *watchTarget
+	cache       map[string]*Set
+	configureCh chan struct{}
+	fetching    map[string]chan struct{}
+	muCache     sync.RWMutex
+	muFetching  sync.Mutex
+	muRegistry  sync.RWMutex
+	registry    map[string]*target
 }
 
-type watchTarget struct {
+type target struct {
 	// The HTTP client to use. The user may opt to use a client who is
 	// aware of HTTP caching.
 	httpcl *http.Client
@@ -64,9 +66,10 @@ type watchTarget struct {
 
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		cache:          make(map[string]*Set),
-		fetching:       make(map[string]chan struct{}),
-		newWatchTarget: make(chan *watchTarget),
+		cache:       make(map[string]*Set),
+		configureCh: make(chan struct{}),
+		fetching:    make(map[string]chan struct{}),
+		registry:    make(map[string]*target),
 	}
 	go af.refreshLoop(ctx)
 	return af
@@ -116,29 +119,39 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		fetchingCh = make(chan struct{})
 		af.fetching[url] = fetchingCh
 		af.muFetching.Unlock()
-		target := &watchTarget{
+
+		t := &target{
 			httpcl:             http.DefaultClient,
 			minRefreshInterval: minRefreshInterval,
 			url:                url,
+			// This is a placeholder timer so we can call Reset() on it later
+			// Make it sufficiently in the future so that we don't have bogus
+			// events firing
+			timer: time.NewTimer(24*time.Hour),
 		}
 		if hasRefreshInterval {
-			target.refreshInterval = &refreshInterval
+			t.refreshInterval = &refreshInterval
 		}
 
+		// Record this in the registry
+		af.muRegistry.Lock()
+		af.registry[url] = t
+		af.muRegistry.Unlock()
+
 		// The first time around, we need to fetch the keyset
-		if err := af.refresh(ctx, target); err != nil {
+		if err := af.refresh(ctx, url); err != nil {
 			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
 		}
+
 		// Notify the refresher goroutine that we have a new entry
-		af.newWatchTarget <- target
+		af.configureCh <- struct{}{}
 
 		// first delete the entry from the map, then close the channel or
 		// otherwise we may end up getting multiple groutines doing the fetch
 		af.muFetching.Lock()
 		delete(af.fetching, url)
-		af.muFetching.Unlock()
-
 		close(fetchingCh)
+		af.muFetching.Unlock()
 	}
 
 	// the cache should now be populated
@@ -156,71 +169,85 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	// in a very fast iteration, but we assume here that refreshes happen
 	// seldom enough that being able to call one `select{}` with multiple
 	// targets / channels outweighs the speed penalty of using reflect.
-	selcases := []reflect.SelectCase{
+	baseSelcases := []reflect.SelectCase{
 		{
 			Dir:  reflect.SelectRecv,
 			Chan: reflect.ValueOf(ctx.Done()),
 		},
 		{
 			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(af.newWatchTarget),
+			Chan: reflect.ValueOf(af.configureCh),
 		},
 	}
-	baseidx := len(selcases)
-	targets := []*watchTarget{}
+	baseidx := len(baseSelcases)
+
+	var targets []*target
+	var selcases []reflect.SelectCase
+	var url2idx map[string]int
 	for {
-		chosen, recv, recvOK := reflect.Select(selcases)
+		// It seems silly, but it's much easier to keep track of things
+		// if we re-build the select cases every iteration
+
+		af.muRegistry.RLock()
+		if cap(targets) < len(af.registry) {
+			targets = make([]*target, 0, len(af.registry))
+		} else {
+			targets = targets[:0]
+		}
+
+		if cap(selcases) < len(af.registry) {
+			selcases = make([]reflect.SelectCase, 0, len(af.registry)+baseidx)
+		} else {
+			selcases = selcases[:0]
+		}
+		selcases = append(selcases, baseSelcases...)
+
+		url2idx = make(map[string]int)
+		for url, data := range af.registry {
+			targets = append(targets, data)
+			url2idx[url] = len(targets) - 1
+			selcases = append(selcases, reflect.SelectCase{
+				Dir:  reflect.SelectRecv,
+				Chan: reflect.ValueOf(data.timer.C),
+			})
+		}
+		af.muRegistry.RUnlock()
+
+		chosen, _, _ := reflect.Select(selcases)
 		switch chosen {
 		case 0:
 			// <-ctx.Done(). Just bail out of this loop
 			return
 		case 1:
-			// <-newWatchTarget. Add this to the list of cases
-			if !recvOK {
-				continue
-			}
-
-			target, ok := recv.Interface().(*watchTarget)
-			if !ok {
-				continue
-			}
-
-			// iterate through the targets and update the old entry
-			// if in case we get a new one (hey, could happen).
-			// Otherwise, append it
-			var found bool
-			for _, t := range targets {
-				if t.url == target.url {
-					found = true
-					break
-				}
-			}
-			if !found {
-				targets = append(targets, target)
-			}
-
-			selcases = append(selcases, reflect.SelectCase{
-				Dir:  reflect.SelectRecv,
-				Chan: reflect.ValueOf(target.timer.C),
-			})
-		// TODO: case 2, remove from watch list
+			// <-configureCh. rebuild the select list from the registry.
+			// since we're rebuilding everything for each iteration,
+			// we just need to start the loop all over again
+			continue
 		default:
 			// Time to refresh a target
-			target := targets[chosen-baseidx]
+			t := targets[chosen-baseidx]
 
 			//nolint:errcheck
-			go af.refresh(context.Background(), target)
+			go af.refresh(context.Background(), t.url)
 		}
 	}
 }
 
-func (af *AutoRefresh) refresh(ctx context.Context, target *watchTarget) error {
-	req, err := http.NewRequest(http.MethodGet, target.url, nil)
+func (af *AutoRefresh) refresh(ctx context.Context, url string) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to new request to remote JWK")
 	}
 
-	res, err := target.httpcl.Do(req.WithContext(ctx))
+	af.muRegistry.RLock()
+	t, ok := af.registry[url]
+	af.muRegistry.RUnlock()
+
+	if !ok {
+		return errors.Errorf(`url "%s" is not registered`, url)
+	}
+
+	res, err := t.httpcl.Do(req.WithContext(ctx))
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch remote JWK")
 	}
@@ -236,24 +263,29 @@ func (af *AutoRefresh) refresh(ctx context.Context, target *watchTarget) error {
 		return errors.Wrap(err, `failed to parse JWK`)
 	}
 
+	refreshInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+	if !t.timer.Stop() {
+		select {
+		case <-t.timer.C:
+		default:
+		}
+	}
+	t.timer.Reset(refreshInterval)
+
 	// Got a new key set. replace the keyset in the target
 	af.muCache.Lock()
-	af.cache[target.url] = keyset
+	af.cache[url] = keyset
 	af.muCache.Unlock()
-
-	refreshInterval := calculateRefreshDuration(res, target)
-	target.timer = time.NewTimer(refreshInterval)
 
 	return nil
 }
 
-func calculateRefreshDuration(res *http.Response, target *watchTarget) time.Duration {
+func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration, minRefreshInterval time.Duration) time.Duration {
 	// This always has precedence
-	if ptr := target.refreshInterval; ptr != nil {
-		return *ptr
+	if refreshInterval != nil {
+		return *refreshInterval
 	}
 
-	minRefreshInterval := target.minRefreshInterval
 	if v := res.Header.Get(`Cache-Control`); v != "" {
 		dir, err := httpcc.ParseResponse(res.Header.Get(`Cache-Control`))
 		if err == nil {
