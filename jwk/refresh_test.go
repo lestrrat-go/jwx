@@ -38,6 +38,7 @@ func TestAutoRefresh(t *testing.T) {
 
 			json.NewEncoder(w).Encode(key)
 		}))
+		defer srv.Close()
 
 		af := jwk.NewAutoRefresh(ctx)
 		af.Configure(srv.URL, jwk.WithRefreshInterval(3*time.Second))
@@ -72,7 +73,7 @@ func TestAutoRefresh(t *testing.T) {
 		t.Logf("Waiting for fetching goroutines...")
 		wg.Wait()
 		t.Logf("Waiting for the refresh ...")
-		time.Sleep(6 * time.Second)
+		time.Sleep(4 * time.Second)
 		ks, err := af.Fetch(ctx, srv.URL)
 		if !assert.NoError(t, err, `af.Fetch should succeed`) {
 			return
@@ -111,6 +112,7 @@ func TestAutoRefresh(t *testing.T) {
 
 			json.NewEncoder(w).Encode(key)
 		}))
+		defer srv.Close()
 
 		af := jwk.NewAutoRefresh(ctx)
 		af.Configure(srv.URL, jwk.WithMinRefreshInterval(time.Second))
@@ -145,7 +147,7 @@ func TestAutoRefresh(t *testing.T) {
 		t.Logf("Waiting for fetching goroutines...")
 		wg.Wait()
 		t.Logf("Waiting for the refresh ...")
-		time.Sleep(6 * time.Second)
+		time.Sleep(4 * time.Second)
 		ks, err := af.Fetch(ctx, srv.URL)
 		if !assert.NoError(t, err, `af.Fetch should succeed`) {
 			return

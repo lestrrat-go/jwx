@@ -282,9 +282,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			continue
 		case 2:
 			// <-resetTimerCh. interrupt polling, and reset the timer on
-			// a single target. this needs to be handled inside this
-			// select, or otherwise timer.Stop() causes a write on its channel
-			// which is indistinguishable from a legitimate event
+			// a single target. this needs to be handled inside this select
 			if !recvOK {
 				continue
 			}
