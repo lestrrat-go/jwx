@@ -85,9 +85,8 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 	return nil, false
 }
 
-func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRefreshOption) (*Set, error) {
-	// TODO: if we're given new values here, maybe we should reset the
-	// intervals. We currently ignore everything but the first call
+func (af *AutoRefresh) configure(url string, options ...AutoRefreshOption) {
+	httpcl := http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
 	minRefreshInterval := time.Hour
@@ -98,9 +97,81 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 			hasRefreshInterval = true
 		case optkeyMinRefreshInterval:
 			minRefreshInterval = option.Value().(time.Duration)
+		case optkeyHTTPClient:
+			httpcl = option.Value().(*http.Client)
 		}
 	}
 
+	var doReconfigure bool
+	af.muRegistry.Lock()
+	t, ok := af.registry[url]
+	if ok {
+		if t.httpcl != httpcl {
+			t.httpcl = httpcl
+			doReconfigure = true
+		}
+
+		if t.minRefreshInterval != minRefreshInterval {
+			t.minRefreshInterval = minRefreshInterval
+			doReconfigure = true
+		}
+
+		if t.refreshInterval != nil {
+			if !hasRefreshInterval {
+				t.refreshInterval = nil
+				doReconfigure = true
+			} else if *t.refreshInterval != refreshInterval {
+				*t.refreshInterval = refreshInterval
+				doReconfigure = true
+			}
+		} else {
+			if hasRefreshInterval {
+				t.refreshInterval = &refreshInterval
+				doReconfigure = true
+			}
+		}
+	} else {
+		t = &target{
+			httpcl:             httpcl,
+			minRefreshInterval: minRefreshInterval,
+			url:                url,
+			// This is a placeholder timer so we can call Reset() on it later
+			// Make it sufficiently in the future so that we don't have bogus
+			// events firing
+			timer: time.NewTimer(24 * time.Hour),
+		}
+		if hasRefreshInterval {
+			t.refreshInterval = &refreshInterval
+		}
+
+		// Record this in the registry
+		af.registry[url] = t
+		doReconfigure = true
+	}
+	af.muRegistry.Unlock()
+
+	if doReconfigure {
+		// Tell the backend to reconfigure itself
+		af.configureCh <- struct{}{}
+	}
+}
+
+func (af *AutoRefresh) releaseFetching(url string) {
+	// first delete the entry from the map, then close the channel or
+	// otherwise we may end up getting multiple groutines doing the fetch
+	af.muFetching.Lock()
+	fetchingCh, ok := af.fetching[url]
+	if !ok {
+		// Juuuuuuust in case. But shouldn't happen
+		af.muFetching.Unlock()
+		return
+	}
+	delete(af.fetching, url)
+	close(fetchingCh)
+	af.muFetching.Unlock()
+}
+
+func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRefreshOption) (*Set, error) {
 	ks, found := af.getCached(url)
 	if found {
 		return ks, nil
@@ -120,38 +191,16 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		af.fetching[url] = fetchingCh
 		af.muFetching.Unlock()
 
-		t := &target{
-			httpcl:             http.DefaultClient,
-			minRefreshInterval: minRefreshInterval,
-			url:                url,
-			// This is a placeholder timer so we can call Reset() on it later
-			// Make it sufficiently in the future so that we don't have bogus
-			// events firing
-			timer: time.NewTimer(24*time.Hour),
-		}
-		if hasRefreshInterval {
-			t.refreshInterval = &refreshInterval
-		}
+		// Register a cleanup handler, to make sure we always
+		defer af.releaseFetching(url)
 
-		// Record this in the registry
-		af.muRegistry.Lock()
-		af.registry[url] = t
-		af.muRegistry.Unlock()
+		af.configure(url, options...)
 
 		// The first time around, we need to fetch the keyset
 		if err := af.refresh(ctx, url); err != nil {
 			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
 		}
 
-		// Notify the refresher goroutine that we have a new entry
-		af.configureCh <- struct{}{}
-
-		// first delete the entry from the map, then close the channel or
-		// otherwise we may end up getting multiple groutines doing the fetch
-		af.muFetching.Lock()
-		delete(af.fetching, url)
-		close(fetchingCh)
-		af.muFetching.Unlock()
 	}
 
 	// the cache should now be populated
@@ -233,6 +282,17 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	}
 }
 
+func resetTimer(res *http.Response, t *target) {
+	refreshInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+	if !t.timer.Stop() {
+		select {
+		case <-t.timer.C:
+		default:
+		}
+	}
+	t.timer.Reset(refreshInterval)
+}
+
 func (af *AutoRefresh) refresh(ctx context.Context, url string) error {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -257,20 +317,17 @@ func (af *AutoRefresh) refresh(ctx context.Context, url string) error {
 		return errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 	}
 
+	// Register this cleanup handler so that we setup a new timer even
+	// in case of a parse failure
+	defer resetTimer(res, t)
+
 	keyset, err := Parse(res.Body)
 	if err != nil {
-		// persist the old key set, even if it may be stale.
+		// We don't delete the old key. We persist the old key set, even if it may be stale.
+		// so the user has something to work with
+		// TODO: maybe this behavior should be customizable?
 		return errors.Wrap(err, `failed to parse JWK`)
 	}
-
-	refreshInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-	if !t.timer.Stop() {
-		select {
-		case <-t.timer.C:
-		default:
-		}
-	}
-	t.timer.Reset(refreshInterval)
 
 	// Got a new key set. replace the keyset in the target
 	af.muCache.Lock()
