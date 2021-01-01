@@ -81,7 +81,7 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 	return nil, false
 }
 
-func (af *AutoRefresh) configure(url string, options ...AutoRefreshOption) {
+func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	httpcl := http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
@@ -167,7 +167,14 @@ func (af *AutoRefresh) releaseFetching(url string) {
 	af.muFetching.Unlock()
 }
 
-func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRefreshOption) (*Set, error) {
+func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
+	af.muRegistry.RLock()
+	_, ok := af.registry[url]
+	if !ok {
+		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
+	}
+	af.muRegistry.RUnlock()
+
 	ks, found := af.getCached(url)
 	if found {
 		return ks, nil
@@ -190,8 +197,6 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 		// Register a cleanup handler, to make sure we always
 		defer af.releaseFetching(url)
 
-		af.configure(url, options...)
-
 		// The first time around, we need to fetch the keyset
 		if err := af.refresh(ctx, url); err != nil {
 			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
@@ -199,7 +204,7 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string, options ...AutoRef
 	}
 
 	// the cache should now be populated
-	ks, ok := af.getCached(url)
+	ks, ok = af.getCached(url)
 	if !ok {
 		panic("cache was not populated after explicit refresh")
 	}

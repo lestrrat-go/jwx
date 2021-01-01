@@ -40,6 +40,7 @@ func TestAutoRefresh(t *testing.T) {
 		}))
 
 		af := jwk.NewAutoRefresh(ctx)
+		af.Configure(srv.URL, jwk.WithRefreshInterval(3*time.Second))
 
 		retries := 5
 
@@ -48,7 +49,7 @@ func TestAutoRefresh(t *testing.T) {
 		for i := 0; i < retries; i++ {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
-				ks, err := af.Fetch(ctx, srv.URL, jwk.WithRefreshInterval(3*time.Second))
+				ks, err := af.Fetch(ctx, srv.URL)
 				if !assert.NoError(t, err, `af.Fetch should succeed`) {
 					return
 				}
@@ -112,6 +113,7 @@ func TestAutoRefresh(t *testing.T) {
 		}))
 
 		af := jwk.NewAutoRefresh(ctx)
+		af.Configure(srv.URL, jwk.WithMinRefreshInterval(time.Second))
 
 		retries := 5
 
@@ -120,7 +122,7 @@ func TestAutoRefresh(t *testing.T) {
 		for i := 0; i < retries; i++ {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
-				ks, err := af.Fetch(ctx, srv.URL, jwk.WithMinRefreshInterval(time.Second))
+				ks, err := af.Fetch(ctx, srv.URL)
 				if !assert.NoError(t, err, `af.Fetch should succeed`) {
 					return
 				}
