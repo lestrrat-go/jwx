@@ -26,10 +26,6 @@ type target struct {
 	// aware of HTTP caching.
 	httpcl *http.Client
 
-	// protects keySet from concurrent access
-	// TODO: uncomment later
-	// muKeySet *sync.Mutex
-
 	// Interval between refreshes are calculated two ways.
 	// 1) You can set an explicit refresh interval by using WithRefreshInterval().
 	//    In this mode, it doesn't matter what the HTTP response says in its
