@@ -231,7 +231,6 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 
 	var targets []*target
 	var selcases []reflect.SelectCase
-	var url2idx map[string]int
 	for {
 		// It seems silly, but it's much easier to keep track of things
 		// if we re-build the select cases every iteration
@@ -250,10 +249,8 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		}
 		selcases = append(selcases, baseSelcases...)
 
-		url2idx = make(map[string]int)
-		for url, data := range af.registry {
+		for _, data := range af.registry {
 			targets = append(targets, data)
-			url2idx[url] = len(targets) - 1
 			selcases = append(selcases, reflect.SelectCase{
 				Dir:  reflect.SelectRecv,
 				Chan: reflect.ValueOf(data.timer.C),
