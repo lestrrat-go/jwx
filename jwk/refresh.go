@@ -259,7 +259,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		}
 		af.muRegistry.RUnlock()
 
-		chosen, _, _ := reflect.Select(selcases)
+		chosen, _, recvOK := reflect.Select(selcases)
 		switch chosen {
 		case 0:
 			// <-ctx.Done(). Just bail out of this loop
@@ -270,6 +270,11 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			// we just need to start the loop all over again
 			continue
 		default:
+			// Do not fire a refresh in case the channel was closed.
+			if !recvOK {
+				continue
+			}
+
 			// Time to refresh a target
 			t := targets[chosen-baseidx]
 
