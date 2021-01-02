@@ -371,7 +371,7 @@ func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration
 	}
 
 	if v := res.Header.Get(`Cache-Control`); v != "" {
-		dir, err := httpcc.ParseResponse(res.Header.Get(`Cache-Control`))
+		dir, err := httpcc.ParseResponse(v)
 		if err == nil {
 			maxAge, ok := dir.MaxAge()
 			if ok {
