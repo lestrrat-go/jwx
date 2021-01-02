@@ -311,7 +311,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			t := targets[chosen-baseidx]
 
 			//nolint:errcheck
-			go af.refresh(context.Background(), t.url)
+			go af.refresh(ctx, t.url)
 		}
 	}
 }
