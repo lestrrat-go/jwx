@@ -52,7 +52,7 @@ func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 // we compare the max-age value and the value specified by this option
 // and take the larger one.
 //
-// Nexst we check for the Expires header, and similarly if the header is
+// Next we check for the Expires header, and similarly if the header is
 // present, we compare it against the value specified by this option,
 // and take the larger one.
 //
