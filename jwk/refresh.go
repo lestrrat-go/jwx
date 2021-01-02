@@ -217,7 +217,7 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
 	// the cache should now be populated
 	ks, ok = af.getCached(url)
 	if !ok {
-		panic("cache was not populated after explicit refresh")
+		return nil, errors.New("cache was not populated after explicit refresh")
 	}
 
 	return ks, nil
