@@ -23,8 +23,8 @@ type AutoRefresh struct {
 }
 
 type target struct {
-	// The HTTP client to use. The user may opt to use a client who is
-	// aware of HTTP caching.
+	// The HTTP client to use. The user may opt to use a client which is
+	// aware of HTTP caching, or one that goes through a proxy
 	httpcl *http.Client
 
 	// Interval between refreshes are calculated two ways.
