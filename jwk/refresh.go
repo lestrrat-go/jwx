@@ -195,7 +195,11 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
 	// the channel initialization when there is no channel present
 	if fetching {
 		af.muFetching.Unlock()
-		<-fetchingCh
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-fetchingCh:
+		}
 	} else {
 		fetchingCh = make(chan struct{})
 		af.fetching[url] = fetchingCh
