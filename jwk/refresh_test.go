@@ -8,10 +8,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/backoff"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
+
+func checkAccessCount(t *testing.T, ctx context.Context, ks *jwk.Set, expected int) bool {
+	t.Helper()
+	for iter := ks.Iterate(ctx); iter.Next(ctx); {
+		key := iter.Pair().Value.(jwk.Key)
+		v, ok := key.Get(`accessCount`)
+		if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+			return false
+		}
+
+		if !assert.Equal(t, float64(expected), v, `key.Get("accessCount") should be %d`, expected) {
+			return false
+		}
+	}
+	return true
+}
 
 func TestAutoRefresh(t *testing.T) {
 	t.Parallel()
@@ -50,23 +67,14 @@ func TestAutoRefresh(t *testing.T) {
 		for i := 0; i < retries; i++ {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
+				defer wg.Done()
 				ks, err := af.Fetch(ctx, srv.URL)
 				if !assert.NoError(t, err, `af.Fetch should succeed`) {
 					return
 				}
-
-				for iter := ks.Iterate(ctx); iter.Next(ctx); {
-					key := iter.Pair().Value.(jwk.Key)
-					v, ok := key.Get(`accessCount`)
-					if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
-						return
-					}
-
-					if !assert.Equal(t, float64(1), v, `key.Get("accessCount") should be 1`) {
-						return
-					}
+				if !checkAccessCount(t, ctx, ks, 1) {
+					return
 				}
-				wg.Done()
 			}()
 		}
 
@@ -78,16 +86,8 @@ func TestAutoRefresh(t *testing.T) {
 		if !assert.NoError(t, err, `af.Fetch should succeed`) {
 			return
 		}
-		for iter := ks.Iterate(ctx); iter.Next(ctx); {
-			key := iter.Pair().Value.(jwk.Key)
-			v, ok := key.Get(`accessCount`)
-			if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, float64(2), v, `key.Get("accessCount") should be 2`) {
-				return
-			}
+		if !checkAccessCount(t, ctx, ks, 2) {
+			return
 		}
 	})
 	t.Run("Calculate next refresh from Cache-Control header", func(t *testing.T) {
@@ -124,23 +124,15 @@ func TestAutoRefresh(t *testing.T) {
 		for i := 0; i < retries; i++ {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
+				defer wg.Done()
 				ks, err := af.Fetch(ctx, srv.URL)
 				if !assert.NoError(t, err, `af.Fetch should succeed`) {
 					return
 				}
 
-				for iter := ks.Iterate(ctx); iter.Next(ctx); {
-					key := iter.Pair().Value.(jwk.Key)
-					v, ok := key.Get(`accessCount`)
-					if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
-						return
-					}
-
-					if !assert.Equal(t, float64(1), v, `key.Get("accessCount") should be 1`) {
-						return
-					}
+				if !checkAccessCount(t, ctx, ks, 1) {
+					return
 				}
-				wg.Done()
 			}()
 		}
 
@@ -152,16 +144,72 @@ func TestAutoRefresh(t *testing.T) {
 		if !assert.NoError(t, err, `af.Fetch should succeed`) {
 			return
 		}
-		for iter := ks.Iterate(ctx); iter.Next(ctx); {
-			key := iter.Pair().Value.(jwk.Key)
-			v, ok := key.Get(`accessCount`)
-			if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+		if !checkAccessCount(t, ctx, ks, 2) {
+			return
+		}
+	})
+	t.Run("Backoff", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		var accessCount int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			accessCount++
+			if accessCount > 1 && accessCount < 4 {
+				http.Error(w, "wait for it....", http.StatusForbidden)
 				return
 			}
 
-			if !assert.Equal(t, float64(2), v, `key.Get("accessCount") should be 2`) {
-				return
+			key := map[string]interface{}{
+				"kty":         "EC",
+				"crv":         "P-256",
+				"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+				"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+				"accessCount": accessCount,
 			}
+			hdrs := w.Header()
+			hdrs.Set(`Content-Type`, `application/json`)
+			hdrs.Set(`Cache-Control`, `max-age=1`)
+
+			json.NewEncoder(w).Encode(key)
+		}))
+		defer srv.Close()
+
+		af := jwk.NewAutoRefresh(ctx)
+		bo := backoff.Constant(backoff.WithInterval(time.Second))
+		af.Configure(srv.URL, jwk.WithRefreshBackoff(bo), jwk.WithMinRefreshInterval(1))
+
+		// First fetch should succeed
+		ks, err := af.Fetch(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Fetch (#1) should succed`) {
+			return
+		}
+		if !checkAccessCount(t, ctx, ks, 1) {
+			return
+		}
+
+		// enough time for 1 refresh to have occurred
+		time.Sleep(1500 * time.Millisecond)
+		ks, err = af.Fetch(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Fetch (#2) should succeed`) {
+			return
+		}
+		// Should be using the cached version
+		if !checkAccessCount(t, ctx, ks, 1) {
+			return
+		}
+
+		// enough time for 2 refreshes to have occurred
+		time.Sleep(2500 * time.Millisecond)
+
+		ks, err = af.Fetch(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Fetch (#3) should succeed`) {
+			return
+		}
+		// should be new
+		if !checkAccessCount(t, ctx, ks, 4) {
+			return
 		}
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/lestrrat-go/backoff"
 	"github.com/lestrrat-go/jwx/internal/option"
 )
 
@@ -15,6 +16,7 @@ const (
 	optkeyThumbprintHash     = `thumbprint-hash`
 	optkeyRefreshInterval    = `refresh-interval`
 	optkeyMinRefreshInterval = `min-refresh-interval`
+	optkeyRefreshBackoff     = `refresh-backoff`
 )
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
@@ -74,5 +76,15 @@ func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 	return &autoRefreshOption{
 		option.New(optkeyMinRefreshInterval, d),
+	}
+}
+
+// WithRefreshRetryBackoff specifies the backoff policy to use when
+// refreshing a JWKS from a remote server fails. This does not have
+// any effect on initial `Fetch()`, or any of the `Refresh()` calls --
+// the backoff is applied ONLY on the background refreshing goroutine.
+func WithRefreshBackoff(v backoff.Policy) AutoRefreshOption {
+	return &autoRefreshOption{
+		option.New(optkeyRefreshBackoff, v),
 	}
 }
