@@ -11,6 +11,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AutoRefresh is a container that keeps track of *jwk.Set object by their source URLs.
+// The *jwk.Set objects are refreshed automatically behind the scenes.
+//
+// Before retrieving the *jwk.Set objects, the user must pre-register the
+// URLs they intend to use by calling `Configure()`
+//
+//  ar := jwk.NewAutoRefresh(ctx)
+//  ar.Configure(url, options...)
+//
+// Once registered, you can call `Fetch()` to retrieve the *jwk.Set object.
+//
+// All JWKS objects that are retrieved via the auto-fetch mechanism should be
+// treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
 	cache        map[string]*Set
 	configureCh  chan struct{}
@@ -66,6 +79,22 @@ type resetTimerReq struct {
 	d time.Duration
 }
 
+// NewAutoRefresh creates a container that keeps track of JWKS objects which
+// are automatically refreshed.
+//
+// The context object in the argument controls the life-span of the
+// auto-refresh worker. If you are using this in a long running process, this
+// should mostly be set to a context that ends when the main loop/part of your
+// program exits:
+//
+// func MainLoop() {
+//   ctx, cancel := context.WithCancel(context.Background())
+//   defer cancel()
+//   ar := jwk.AutoRefresh(ctx)
+//   for ... {
+//     ...
+//   }
+// }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:        make(map[string]*Set),
@@ -88,6 +117,23 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 	return nil, false
 }
 
+// Configure registers the url to be controlled by AutoRefresh, and also
+// sets any options associated to it.
+//
+// Note that options are treated as a whole -- you can't just update
+// one value. For example, if you did:
+//
+//   ar.Configure(url, jwk.WithHTTPClient(...))
+//   ar.Configure(url, jwk.WithRefreshInterval(...))
+//
+// The the end result is that `url` is ONLY associated with the options
+// given in the second call to `Configure()`, i.e. `jwk.WithRefreshInterval`.
+// The other unspecified options, including the HTTP client, is set to
+// their default values.
+//
+// Configuration must propagate between goroutines, and therefore are
+// not atomic (But changes should be felt "soon enough" for practical
+// purposes)
 func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	httpcl := http.DefaultClient
 	var hasRefreshInterval bool
@@ -174,6 +220,16 @@ func (af *AutoRefresh) releaseFetching(url string) {
 	af.muFetching.Unlock()
 }
 
+// Fetch retrieves the *jwk.Set object associated with the `url`.
+// If it has previously been fetched, then a cached value is returned.
+// If this the first time `url` was requested, an HTTP request will be
+// sent, synchronously. Also, when accessed via multiple goroutines
+// concurrently, the first time around only one goroutine will be
+// allowed to perform  the initialization (HTTP fetch and cache population).
+// All other goroutines will be blocked until the operation is completed.
+//
+// DO NOT modify the *jwk.Set object returned by this method, as the
+// objects are shared among all consumers and the backend goroutine
 func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
 	af.muRegistry.RLock()
 	_, ok := af.registry[url]
