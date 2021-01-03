@@ -9,14 +9,16 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/backoff"
+	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
-func checkAccessCount(t *testing.T, ctx context.Context, ks *jwk.Set, expected int) bool {
+//nolint:golint
+func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected int) bool {
 	t.Helper()
-	for iter := ks.Iterate(ctx); iter.Next(ctx); {
+	for iter := src.Iterate(ctx); iter.Next(ctx); {
 		key := iter.Pair().Value.(jwk.Key)
 		v, ok := key.Get(`accessCount`)
 		if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
