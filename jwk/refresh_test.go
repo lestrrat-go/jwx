@@ -217,9 +217,17 @@ func TestAutoRefresh(t *testing.T) {
 }
 
 func TestRefreshSnapshot(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	var jwksURLs []string
 	getJwksURL := func(dst *[]string, url string) bool {
-		res, err := http.Get(url)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return false
+		}
+
+		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return false
 		}
@@ -243,9 +251,6 @@ func TestRefreshSnapshot(t *testing.T) {
 	if !getJwksURL(&jwksURLs, "https://accounts.google.com/.well-known/openid-configuration") {
 		t.SkipNow()
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
 
 	ar := jwk.NewAutoRefresh(ctx)
 	for _, url := range jwksURLs {
