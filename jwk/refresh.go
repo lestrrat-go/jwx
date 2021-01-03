@@ -79,6 +79,10 @@ type target struct {
 
 	// Semaphore to limit the number of concurrent refreshes in the background
 	sem chan struct{}
+
+	// for debugging, snapshoting
+	lastRefresh time.Time
+	nextRefresh time.Time
 }
 
 type resetTimerReq struct {
@@ -466,10 +470,14 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		af.muCache.Lock()
 		af.cache[url] = keyset
 		af.muCache.Unlock()
+		nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
 		af.resetTimerCh <- &resetTimerReq{
 			t: t,
-			d: calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval),
+			d: nextInterval,
 		}
+		now := time.Now()
+		t.lastRefresh = now.Local()
+		t.nextRefresh = now.Add(nextInterval).Local()
 		break
 	}
 
@@ -520,4 +528,25 @@ func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration
 
 	// Previous fallthroughs are a little redandunt, but hey, it's all good.
 	return minRefreshInterval
+}
+
+type TargetSnapshot struct {
+	URL         string
+	NextRefresh time.Time
+	LastRefresh time.Time
+}
+
+func (af *AutoRefresh) Snapshot() <-chan TargetSnapshot {
+	af.muRegistry.Lock()
+	ch := make(chan TargetSnapshot, len(af.registry))
+	for url, t := range af.registry {
+		ch <- TargetSnapshot{
+			URL:         url,
+			NextRefresh: t.nextRefresh,
+			LastRefresh: t.lastRefresh,
+		}
+	}
+	af.muRegistry.Unlock()
+	close(ch)
+	return ch
 }

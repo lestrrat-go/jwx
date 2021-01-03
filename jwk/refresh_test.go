@@ -215,3 +215,48 @@ func TestAutoRefresh(t *testing.T) {
 		}
 	})
 }
+
+func TestRefreshSnapshot(t *testing.T) {
+	var jwksURLs []string
+	getJwksURL := func(dst *[]string, url string) bool {
+		res, err := http.Get(url)
+		if err != nil {
+			return false
+		}
+		defer res.Body.Close()
+
+		var m map[string]interface{}
+		if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+			return false
+		}
+
+		jwksURL, ok := m["jwks_uri"]
+		if !ok {
+			return false
+		}
+		*dst = append(*dst, jwksURL.(string))
+		return true
+	}
+	if !getJwksURL(&jwksURLs, "https://oidc-sample.onelogin.com/oidc/2/.well-known/openid-configuration") {
+		t.SkipNow()
+	}
+	if !getJwksURL(&jwksURLs, "https://accounts.google.com/.well-known/openid-configuration") {
+		t.SkipNow()
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	ar := jwk.NewAutoRefresh(ctx)
+	for _, url := range jwksURLs {
+		ar.Configure(url)
+	}
+
+	for _, url := range jwksURLs {
+		_, _ = ar.Refresh(ctx, url)
+	}
+
+	for target := range ar.Snapshot() {
+		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
+	}
+}
