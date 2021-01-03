@@ -473,6 +473,14 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		break
 	}
 
+	if lastError != nil {
+		// If we failed to get a single time, then queue another fetch in the future.
+		af.resetTimerCh <- &resetTimerReq{
+			t: t,
+			d: t.minRefreshInterval,
+		}
+	}
+
 	return lastError
 }
 
