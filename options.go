@@ -18,7 +18,7 @@ type jsonOption struct {
 func (o *jsonOption) isJSONOption() {}
 
 func newJSONOption(n interface{}, v interface{}) JSONOption {
-	return &jsonOption{ option.New(n, v) }
+	return &jsonOption{option.New(n, v)}
 }
 
 // WithUseNumber controls whether the jwx package should unmarshal

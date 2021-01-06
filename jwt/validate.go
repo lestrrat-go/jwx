@@ -6,15 +6,6 @@ import (
 	"time"
 )
 
-const (
-	optkeyAcceptableSkew = "acceptableSkew"
-	optkeyClock          = "clock"
-	optkeyIssuer         = "issuer"
-	optkeySubject        = "subject"
-	optkeyAudience       = "audience"
-	optkeyJwtid          = "jwtid"
-)
-
 type Clock interface {
 	Now() time.Time
 }
