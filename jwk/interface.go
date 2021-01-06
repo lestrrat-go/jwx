@@ -50,3 +50,12 @@ type HeaderPair = mapiter.Pair
 type HeaderIterator = mapiter.Iterator
 type KeyPair = arrayiter.Pair
 type KeyIterator = arrayiter.Iterator
+
+type AutoRefreshOption interface {
+	Option
+	autoRefreshOptionMarker
+}
+
+type autoRefreshOptionMarker interface {
+	autoRefreshOption() bool
+}
