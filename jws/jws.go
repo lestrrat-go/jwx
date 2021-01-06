@@ -81,8 +81,8 @@ func (s *payloadSigner) PublicHeader() Headers {
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
 	var hdrs Headers
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyHeaders:
+		switch o.Ident() {
+		case identHeaders{}:
 			hdrs = o.Value().(Headers)
 		}
 	}
@@ -214,8 +214,8 @@ func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, he
 func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	var signers []PayloadSigner
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyPayloadSigner:
+		switch o.Ident() {
+		case identPayloadSigner{}:
 			signers = append(signers, o.Value().(PayloadSigner))
 		}
 	}

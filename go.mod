@@ -6,6 +6,7 @@ require (
 	github.com/lestrrat-go/backoff/v2 v2.0.3
 	github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3
 	github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911
+	github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35
 	github.com/lestrrat-go/pdebug v0.0.0-20200204225717-4d6bd78da58d
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.6.1

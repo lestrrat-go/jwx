@@ -6,15 +6,6 @@ import (
 	"time"
 )
 
-const (
-	optkeyAcceptableSkew = "acceptableSkew"
-	optkeyClock          = "clock"
-	optkeyIssuer         = "issuer"
-	optkeySubject        = "subject"
-	optkeyAudience       = "audience"
-	optkeyJwtid          = "jwtid"
-)
-
 type Clock interface {
 	Now() time.Time
 }
@@ -44,20 +35,20 @@ func Validate(t Token, options ...ValidateOption) error {
 	var skew time.Duration
 	claimValues := make(map[string]interface{})
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyClock:
+		switch o.Ident() {
+		case identClock{}:
 			clock = o.Value().(Clock)
-		case optkeyAcceptableSkew:
+		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
-		case optkeyIssuer:
+		case identIssuer{}:
 			issuer = o.Value().(string)
-		case optkeySubject:
+		case identSubject{}:
 			subject = o.Value().(string)
-		case optkeyAudience:
+		case identAudience{}:
 			audience = o.Value().(string)
-		case optkeyJwtid:
+		case identJwtid{}:
 			jwtid = o.Value().(string)
-		case optkeyClaim:
+		case identClaim{}:
 			claim := o.Value().(claimValue)
 			claimValues[claim.name] = claim.value
 		}
