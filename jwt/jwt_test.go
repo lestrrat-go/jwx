@@ -3,8 +3,10 @@ package jwt_test
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -385,18 +387,26 @@ func TestGH52(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	for i := 0; i < 1000; i++ {
-		tok := jwt.New()
+	const max = 1000
+	var wg sync.WaitGroup
+	wg.Add(max)
+	for i := 0; i < max; i++ {
+		// Do not use t.Run here as it will clutter up the outpuA
+		go func(t *testing.T, priv *ecdsa.PrivateKey) {
+			defer wg.Done()
+			tok := jwt.New()
 
-		s, err := jwt.Sign(tok, jwa.ES256, priv)
-		if !assert.NoError(t, err) {
-			return
-		}
+			s, err := jwt.Sign(tok, jwa.ES256, priv)
+			if !assert.NoError(t, err) {
+				return
+			}
 
-		if _, err = jws.Verify(s, jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
-			return
-		}
+			if _, err = jws.Verify(s, jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
+				return
+			}
+		}(t, priv)
 	}
+	wg.Wait()
 }
 
 func TestUnmarshalJSON(t *testing.T) {

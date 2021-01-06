@@ -10,7 +10,9 @@ import (
 )
 
 func TestGHIssue10(t *testing.T) {
+	t.Parallel()
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
 
@@ -30,6 +32,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 		err := t1.Set(jwt.AudienceKey, []string{"foo", "bar", "baz"})
 		if err != nil {
@@ -54,6 +57,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
 
@@ -73,6 +77,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 
 		// NotBefore is set to future date
@@ -97,6 +102,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run(jwt.ExpirationKey, func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 
 		// issuedat = 1 Hr before current time
@@ -127,6 +133,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run("Parse and validate", func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 
 		// issuedat = 1 Hr before current time
