@@ -1,28 +1,24 @@
 package jwx
 
-import "github.com/lestrrat-go/jwx/internal/option"
+import "github.com/lestrrat-go/option"
 
-const (
-	optkeyUseNumber = "json-use-number"
-)
+type identUseNumber struct{}
 
 type Option = option.Interface
 
 type JSONOption interface {
 	Option
-	isJSONOption() bool
+	isJSONOption()
 }
 
 type jsonOption struct {
 	Option
 }
 
-func (o *jsonOption) isJSONOption() bool { return true }
+func (o *jsonOption) isJSONOption() {}
 
-func newJSONOption(n string, v interface{}) JSONOption {
-	return &jsonOption{
-		Option: option.New(n, v),
-	}
+func newJSONOption(n interface{}, v interface{}) JSONOption {
+	return &jsonOption{ option.New(n, v) }
 }
 
 // WithUseNumber controls whether the jwx package should unmarshal
@@ -30,5 +26,5 @@ func newJSONOption(n string, v interface{}) JSONOption {
 //
 // Default is false.
 func WithUseNumber(b bool) JSONOption {
-	return newJSONOption(optkeyUseNumber, b)
+	return newJSONOption(identUseNumber{}, b)
 }

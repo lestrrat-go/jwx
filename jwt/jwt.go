@@ -49,16 +49,16 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 	var token Token
 	var validate bool
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyVerify:
+		switch o.Ident() {
+		case identVerify{}:
 			params = o.Value().(VerifyParameters)
-		case optkeyKeySet:
+		case identKeySet{}:
 			keyset = o.Value().(*jwk.Set)
-		case optkeyToken:
+		case identToken{}:
 			token = o.Value().(Token)
-		case optkeyDefault:
+		case identDefault{}:
 			useDefault = o.Value().(bool)
-		case optkeyValidate:
+		case identValidate{}:
 			validate = o.Value().(bool)
 		}
 	}
@@ -201,8 +201,8 @@ func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (To
 func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
 	var hdr jws.Headers
 	for _, o := range options {
-		switch o.Name() {
-		case optkeyHeaders:
+		switch o.Ident() {
+		case identHeaders{}:
 			hdr = o.Value().(jws.Headers)
 		}
 	}

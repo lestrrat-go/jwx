@@ -152,15 +152,15 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
-		switch option.Name() {
-		case optkeyRefreshBackoff:
+		switch option.Ident() {
+		case identRefreshBackoff{}:
 			bo = option.Value().(backoff.Policy)
-		case optkeyRefreshInterval:
+		case identRefreshInterval{}:
 			refreshInterval = option.Value().(time.Duration)
 			hasRefreshInterval = true
-		case optkeyMinRefreshInterval:
+		case identMinRefreshInterval{}:
 			minRefreshInterval = option.Value().(time.Duration)
-		case optkeyHTTPClient:
+		case identHTTPClient{}:
 			httpcl = option.Value().(*http.Client)
 		}
 	}

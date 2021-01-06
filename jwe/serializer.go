@@ -88,8 +88,8 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 func JSON(m *Message, options ...Option) ([]byte, error) {
 	var pretty bool
 	for _, option := range options {
-		switch option.Name() {
-		case optkeyPrettyJSONFormat:
+		switch option.Ident() {
+		case identPrettyJSONFormat{}:
 			pretty = option.Value().(bool)
 		}
 	}

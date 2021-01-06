@@ -6,18 +6,16 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
-	"github.com/lestrrat-go/jwx/internal/option"
+	"github.com/lestrrat-go/option"
 )
 
 type Option = option.Interface
 
-const (
-	optkeyHTTPClient         = `http-client`
-	optkeyThumbprintHash     = `thumbprint-hash`
-	optkeyRefreshInterval    = `refresh-interval`
-	optkeyMinRefreshInterval = `min-refresh-interval`
-	optkeyRefreshBackoff     = `refresh-backoff`
-)
+type identHTTPClient struct{}
+type identThumbprintHash struct{}
+type identRefreshInterval struct{}
+type identMinRefreshInterval struct{}
+type identRefreshBackoff struct{}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching *jwk.Set objects.
@@ -26,12 +24,12 @@ const (
 // eventhough the return value is marked as an `AutoRefreshOption`
 func WithHTTPClient(cl *http.Client) AutoRefreshOption {
 	return &autoRefreshOption{
-		option.New(optkeyHTTPClient, cl),
+		option.New(identHTTPClient{}, cl),
 	}
 }
 
 func WithThumbprintHash(h crypto.Hash) Option {
-	return option.New(optkeyThumbprintHash, h)
+	return option.New(identThumbprintHash{}, h)
 }
 
 type autoRefreshOption struct {
@@ -50,7 +48,7 @@ func (aro *autoRefreshOption) autoRefreshOption() bool {
 // and refreshes will *always* happen in this interval.
 func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 	return &autoRefreshOption{
-		option.New(optkeyRefreshInterval, d),
+		option.New(identRefreshInterval{}, d),
 	}
 }
 
@@ -75,7 +73,7 @@ func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 // If unspecified, the minimum refresh interval is 1 hour
 func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 	return &autoRefreshOption{
-		option.New(optkeyMinRefreshInterval, d),
+		option.New(identMinRefreshInterval{}, d),
 	}
 }
 
@@ -85,6 +83,6 @@ func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 // the backoff is applied ONLY on the background refreshing goroutine.
 func WithRefreshBackoff(v backoff.Policy) AutoRefreshOption {
 	return &autoRefreshOption{
-		option.New(optkeyRefreshBackoff, v),
+		option.New(identRefreshBackoff{}, v),
 	}
 }

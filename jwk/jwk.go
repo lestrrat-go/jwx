@@ -200,8 +200,8 @@ func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
 func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option) (*Set, error) {
 	httpcl := http.DefaultClient
 	for _, option := range options {
-		switch option.Name() {
-		case optkeyHTTPClient:
+		switch option.Ident() {
+		case identHTTPClient{}:
 			httpcl = option.Value().(*http.Client)
 		}
 	}
@@ -389,8 +389,8 @@ func AssignKeyID(key Key, options ...Option) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
-		switch option.Name() {
-		case optkeyThumbprintHash:
+		switch option.Ident() {
+		case identThumbprintHash{}:
 			hash = option.Value().(crypto.Hash)
 		}
 	}
