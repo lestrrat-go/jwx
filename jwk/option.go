@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lestrrat-go/backoff"
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/option"
 )
 

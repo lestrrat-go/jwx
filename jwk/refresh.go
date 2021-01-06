@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lestrrat-go/backoff"
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/httpcc"
 	"github.com/pkg/errors"
 )
