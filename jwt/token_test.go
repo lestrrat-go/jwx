@@ -19,6 +19,7 @@ const (
 var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
 func TestHeader(t *testing.T) {
+	t.Parallel()
 	values := map[string]interface{}{
 		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
 		jwt.ExpirationKey: expectedTokenTime,
@@ -30,6 +31,7 @@ func TestHeader(t *testing.T) {
 	}
 
 	t.Run("Roundtrip", func(t *testing.T) {
+		t.Parallel()
 		h := jwt.New()
 		for k, v := range values {
 			if !assert.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k) {
@@ -46,6 +48,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("RoundtripError", func(t *testing.T) {
+		t.Parallel()
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64
@@ -86,6 +89,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("GetError", func(t *testing.T) {
+		t.Parallel()
 		h := jwt.New()
 		issuer := h.Issuer()
 		if issuer != "" {
@@ -99,6 +103,7 @@ func TestHeader(t *testing.T) {
 }
 
 func TestTokenMarshal(t *testing.T) {
+	t.Parallel()
 	t1 := jwt.New()
 	err := t1.Set(jwt.JwtIDKey, "AbCdEfG")
 	if err != nil {
@@ -154,6 +159,7 @@ func TestTokenMarshal(t *testing.T) {
 }
 
 func TestToken(t *testing.T) {
+	t.Parallel()
 	tok := jwt.New()
 
 	claims := map[string]interface{}{

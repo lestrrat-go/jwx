@@ -50,16 +50,21 @@ func Available() bool {
 	return executablePath != ""
 }
 
-func RunJoseCommand(ctx context.Context, t *testing.T, args []string, out io.Writer) error {
+func RunJoseCommand(ctx context.Context, t *testing.T, args []string, outw, errw io.Writer) error {
 	var errout bytes.Buffer
 	var capout bytes.Buffer
 
 	cmd := exec.CommandContext(ctx, ExecutablePath(), args...)
-	cmd.Stderr = &errout
-	if out == nil {
+	if outw == nil {
 		cmd.Stdout = &capout
 	} else {
-		cmd.Stdout = io.MultiWriter(out, &capout)
+		cmd.Stdout = io.MultiWriter(outw, &capout)
+	}
+
+	if errw == nil {
+		cmd.Stderr = &errout
+	} else {
+		cmd.Stderr = io.MultiWriter(outw, &errout)
 	}
 
 	t.Logf("Executing `%s %s`\n", ExecutablePath(), strings.Join(args, " "))
@@ -92,15 +97,7 @@ func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, fu
 		return "", nil, errors.Wrap(err, "failed to create temporary file")
 	}
 
-	var errdst bytes.Buffer
-
-	cmd := exec.CommandContext(ctx, ExecutablePath(), "jwk", "gen", "-i", template, "-o", file.Name())
-	cmd.Stderr = &errdst
-
-	if err := cmd.Run(); err != nil {
-		defer cleanup()
-		t.Logf(`failed to execute command: %s`, errdst.String())
-
+	if err := RunJoseCommand(ctx, t, []string{"jwk", "gen", "-i", template, "-o", file.Name()}, nil, nil); err != nil {
 		return "", nil, errors.Wrap(err, `failed to generate key`)
 	}
 
@@ -145,7 +142,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 
 	cmdargs = append(cmdargs, "-o", ofile.Name())
 
-	if err := RunJoseCommand(ctx, t, cmdargs, nil); err != nil {
+	if err := RunJoseCommand(ctx, t, cmdargs, nil, nil); err != nil {
 		defer ocleanup()
 		if pfile != "" {
 			jwxtest.DumpFile(t, pfile)
@@ -169,7 +166,7 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 	}
 
 	var output bytes.Buffer
-	if err := RunJoseCommand(ctx, t, cmdargs, &output); err != nil {
+	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
 		jwxtest.DumpFile(t, cfile)
 		jwxtest.DumpFile(t, kfile)
 
@@ -191,7 +188,7 @@ func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 	cmdargs := []string{"jwe", "fmt", "-i", fn}
 
 	var output bytes.Buffer
-	if err := RunJoseCommand(ctx, t, cmdargs, &output); err != nil {
+	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
 		jwxtest.DumpFile(t, fn)
 
 		return nil, errors.Wrap(err, `failed to format JWE message`)

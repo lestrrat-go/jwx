@@ -27,8 +27,8 @@ func (w jsonUnmarshalWrapper) Decode(v interface{}) error {
 }
 
 func TestDecoderSetting(t *testing.T) {
+	// DO NOT MAKE THIS TEST PARALLEL. This test uses features with global side effects
 	const src = `{"foo": 1}`
-
 	for _, useNumber := range []bool{true, false} {
 		useNumber := useNumber
 		t.Run(fmt.Sprintf("jwx.WithUseNumber(%t)", useNumber), func(t *testing.T) {
@@ -78,6 +78,8 @@ func TestDecoderSetting(t *testing.T) {
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
+	t.Parallel()
+
 	if testing.Short() {
 		t.Logf("Skipped during short tests")
 		return
@@ -88,10 +90,8 @@ func TestJoseCompatibility(t *testing.T) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	t.Run("jwk", func(t *testing.T) {
+		t.Parallel()
 		testcases := []struct {
 			Name      string
 			Raw       interface{}
@@ -135,6 +135,11 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
 				keyfile, cleanup, err := jose.GenerateJwk(ctx, t, tc.Template)
 				if !assert.NoError(t, err, `jose.GenerateJwk should succeed`) {
 					return
@@ -159,6 +164,7 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jwe", func(t *testing.T) {
+		t.Parallel()
 		tests := []interopTest{
 			{jwa.RSA1_5, jwa.A128GCM},
 			{jwa.RSA1_5, jwa.A128CBC_HS256},
@@ -194,12 +200,15 @@ func TestJoseCompatibility(t *testing.T) {
 			{jwa.DIRECT, jwa.A256GCM},
 			{jwa.DIRECT, jwa.A256CBC_HS512},
 		}
+
 		for _, test := range tests {
 			test := test
-			t.Run(fmt.Sprintf("%s-%s", test.alg, test.enc),
-				func(t *testing.T) {
-					joseInteropTest(ctx, test, t)
-				})
+			t.Run(fmt.Sprintf("%s-%s", test.alg, test.enc), func(t *testing.T) {
+				t.Parallel()
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				joseInteropTest(ctx, test, t)
+			})
 		}
 	})
 }
@@ -210,6 +219,8 @@ type interopTest struct {
 }
 
 func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
+	t.Helper()
+
 	expected := []byte("Lorem ipsum")
 
 	// let jose generate a key file
@@ -287,6 +298,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 }
 
 func TestGHIssue230(t *testing.T) {
+	t.Parallel()
 	if !jose.Available() {
 		t.SkipNow()
 	}
