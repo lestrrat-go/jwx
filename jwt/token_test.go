@@ -48,7 +48,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("RoundtripError", func(t *testing.T) {
-	t.Parallel()
+		t.Parallel()
 		type dummyStruct struct {
 			dummy1 int
 			dummy2 float64
@@ -89,7 +89,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("GetError", func(t *testing.T) {
-	t.Parallel()
+		t.Parallel()
 		h := jwt.New()
 		issuer := h.Issuer()
 		if issuer != "" {

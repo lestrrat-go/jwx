@@ -392,7 +392,7 @@ func TestGH52(t *testing.T) {
 	wg.Add(max)
 	for i := 0; i < max; i++ {
 		// Do not use t.Run here as it will clutter up the outpuA
-		go func(t *testing.T, priv *ecdsa.PrivateKey) {
+		go func(t *testing.T, priv *ecdsa.PrivateKey, i int) {
 			defer wg.Done()
 			tok := jwt.New()
 
@@ -404,7 +404,7 @@ func TestGH52(t *testing.T) {
 			if _, err = jws.Verify(s, jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
 				return
 			}
-		}(t, priv)
+		}(t, priv, i)
 	}
 	wg.Wait()
 }
