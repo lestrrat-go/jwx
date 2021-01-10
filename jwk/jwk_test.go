@@ -610,3 +610,21 @@ func TestIssue207(t *testing.T) {
 		}
 	}
 }
+
+func TestIssue270(t *testing.T) {
+	t.Parallel()
+	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
+	k, err := jwk.ParseKey([]byte(src))
+	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+		return
+	}
+
+	for _, usage := range []string{"sig", "enc"} {
+		if !assert.NoError(t, k.Set(jwk.KeyUsageKey, usage)) {
+			return
+		}
+		if !assert.NoError(t, k.Set(jwk.KeyUsageKey, jwk.KeyUsageType(usage))) {
+			return
+		}
+	}
+}
