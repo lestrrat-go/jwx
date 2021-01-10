@@ -627,5 +627,4 @@ func TestIssue270(t *testing.T) {
 			return
 		}
 	}
-
 }
