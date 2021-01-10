@@ -1,6 +1,19 @@
 Changes
 =======
 
+{{NEXT}}
+[New features]
+  * Added jwk.AutoRefresh, which is a tool to periodically refresh JWKS. (#265)
+  * Added experimental ed25519 support (#252)
+[Bug fixes]
+  * Fix `Set()` method for jwk Keys to properly accept either `jwk.KeyUsageType`
+    or a simple string.
+[Miscellaneous]
+  * Updated dependencies
+  * Changed options to use github.com/lestrrat-go/option
+  * Various typos, unused annotations, etc, have been fixed by contributors
+  
+
 v1.0.6 17 Dec 2020
   * Fix ECDHES ciphers where padding in AAD et al was creating
     incomptabile values with jose tool
