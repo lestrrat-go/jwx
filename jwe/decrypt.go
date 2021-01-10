@@ -332,11 +332,3 @@ func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 		return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 	}
 }
-
-/*
-
-buildKeyDecrypter(d.keyalg, h2, d.privkey, cipher.KeySize())
-
-func buildECDHESDecrypter(alg jwa.KeyEncryptionAlgorithm, h Headers, key interface{}) (keyenc.Decrypter, error) {
-}
-*/

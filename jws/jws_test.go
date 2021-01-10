@@ -933,51 +933,6 @@ func TestEncode(t *testing.T) {
 	})
 }
 
-/*
-func TestSign_HeaderValues(t *testing.T) {
-	const jwksrc = `{
-    "kty":"EC",
-    "crv":"P-256",
-    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
-    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
-    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
-  }`
-
-	privkey, err := ecdsautil.PrivateKeyFromJSON([]byte(jwksrc))
-	if !assert.NoError(t, err, "parsing jwk should be successful") {
-		return
-	}
-
-	payload := []byte("Hello, World!")
-
-	hdr := jws.NewHeader()
-	hdr.KeyID = "helloworld01"
-	encoded, err := jws.Sign(payload, jwa.ES256, privkey, jws.WithPublicHeaders(hdr))
-	if !assert.NoError(t, err, "Sign should succeed") {
-		return
-	}
-
-	// Although we set KeyID to the public header, in compact serialization
-	// there's no difference
-	msg, err := jws.Parse(bytes.NewReader(encoded))
-	if !assert.NoError(t, err, `parse should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, hdr.KeyID, msg.Signatures[0].ProtectedHeader.KeyID, "KeyID should match") {
-		return
-	}
-
-	verified, err := jws.Verify(encoded, jwa.ES256, &privkey.PublicKey)
-	if !assert.NoError(t, err, "Verify should succeed") {
-		return
-	}
-	if !assert.Equal(t, verified, payload, "Payload should match") {
-		return
-	}
-}
-*/
-
 func TestPublicHeaders(t *testing.T) {
 	key, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "GenerateKey should succeed") {
@@ -996,12 +951,6 @@ func TestPublicHeaders(t *testing.T) {
 		return
 	}
 	_ = pubjwk // TODO
-
-	/*
-		if !assert.NoError(t, signer.UnprotectedHeaders().Set("jwk", pubjwk), "Set('jwk') should succeed") {
-			return
-		}
-	*/
 }
 
 func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
