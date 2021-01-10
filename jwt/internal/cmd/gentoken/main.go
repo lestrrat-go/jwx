@@ -576,36 +576,6 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
-	/*
-
-
-			switch {
-			case field.IsList():
-				fmt.Fprintf(&buf, "\n\nfunc (t *%s) %s() %s {", tt.structName, field.method, field.typ)
-				fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.method)
-				fmt.Fprintf(&buf, "\nreturn v.([]string)")
-				fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
-				fmt.Fprintf(&buf, "\nreturn nil")
-				fmt.Fprintf(&buf, "\n}") // end func (t stdToken) %s() %s
-			case field.typ == "*types.NumericDate":
-				fmt.Fprintf(&buf, "\n\nfunc (t *%s) %s() time.Time {", tt.structName, field.method)
-				fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.method)
-				fmt.Fprintf(&buf, "\nreturn v.(time.Time)")
-				fmt.Fprintf(&buf, "\n}")
-				fmt.Fprintf(&buf, "\nreturn time.Time{}")
-				fmt.Fprintf(&buf, "\n}") // end func (t Token) %s()
-			case field.IsPointer():
-				fmt.Fprintf(&buf, "\n\n// %s is a convenience function to retrieve the corresponding value store in the token", field.method)
-				fmt.Fprintf(&buf, "\n// if there is a problem retrieving the value, the zero value is returned. If you need to differentiate between existing/non-existing values, use `Get` instead")
-				fmt.Fprintf(&buf, "\n\nfunc (t *%s) %s() %s {", tt.structName, field.method, field.PointerElem())
-				fmt.Fprintf(&buf, "\nif v, ok := t.Get(%sKey); ok {", field.method)
-				fmt.Fprintf(&buf, "\nreturn v.(%s)", field.PointerElem())
-				fmt.Fprintf(&buf, "\n}") // end if v, ok := t.Get(%sKey)
-				fmt.Fprintf(&buf, "\nreturn %s", zeroval(field.PointerElem()))
-				fmt.Fprintf(&buf, "\n}") // end func (t Token) %s() %s
-			}
-		}
-	*/
 
 	// JSON related stuff
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
