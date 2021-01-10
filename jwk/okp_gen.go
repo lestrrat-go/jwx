@@ -291,11 +291,20 @@ func (h *okpPrivateKey) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case KeyUsageKey:
-		if v, ok := value.(string); ok {
+		switch v := value.(type) {
+		case KeyUsageType:
+			switch v {
+			case ForSignature, ForEncryption:
+				tmp := v.String()
+				h.keyUsage = &tmp
+			default:
+				return errors.Errorf(`invalid key usage type %s`, v)
+			}
+		case string:
 			h.keyUsage = &v
-			return nil
+		default:
+			return errors.Errorf(`invalid key usage type %s`, v)
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyUsageKey, value)
 	case KeyOpsKey:
 		var acceptor KeyOperationList
 		if err := acceptor.Accept(value); err != nil {
@@ -706,11 +715,20 @@ func (h *okpPublicKey) Set(name string, value interface{}) error {
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case KeyUsageKey:
-		if v, ok := value.(string); ok {
+		switch v := value.(type) {
+		case KeyUsageType:
+			switch v {
+			case ForSignature, ForEncryption:
+				tmp := v.String()
+				h.keyUsage = &tmp
+			default:
+				return errors.Errorf(`invalid key usage type %s`, v)
+			}
+		case string:
 			h.keyUsage = &v
-			return nil
+		default:
+			return errors.Errorf(`invalid key usage type %s`, v)
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyUsageKey, value)
 	case KeyOpsKey:
 		var acceptor KeyOperationList
 		if err := acceptor.Accept(value); err != nil {
