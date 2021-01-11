@@ -1,7 +1,7 @@
 Changes
 =======
 
-{{NEXT}}
+v1.0.7 11 Jan 2021
 [New features]
   * Added jwk.AutoRefresh, which is a tool to periodically refresh JWKS. (#265)
   * Added experimental ed25519 support (#252)
@@ -12,7 +12,10 @@ Changes
   * Updated dependencies
   * Changed options to use github.com/lestrrat-go/option
   * Various typos, unused annotations, etc, have been fixed by contributors
-  
+  * Nobody except for the author really should care, but the underlying
+    `pdebug` utility, which is used for print debugging, has been
+    upgraded to v3, which should stop parallel test execution from throwing
+    an error when run with -race
 
 v1.0.6 17 Dec 2020
   * Fix ECDHES ciphers where padding in AAD et al was creating
