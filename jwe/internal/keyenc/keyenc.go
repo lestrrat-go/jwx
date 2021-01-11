@@ -25,7 +25,7 @@ import (
 	contentcipher "github.com/lestrrat-go/jwx/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -310,7 +310,7 @@ func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
 
 func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{}, keysize uint32) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("DeriveECDHES (keysize = %d)", keysize)
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
@@ -332,7 +332,7 @@ func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{},
 // Decrypt decrypts the encrypted key using ECDH-ES
 func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("keyenc.ECDHESDecrypt.Decrypt")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
@@ -616,7 +616,7 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 
 func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("keyenc.Unwrap")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 

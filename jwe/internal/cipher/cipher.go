@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -33,7 +33,7 @@ func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 
 func (f cbcFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("cipher.CBCFetcher.Fetch")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 	aead, err := aescbc.New(key, aes.NewCipher)
@@ -56,7 +56,7 @@ func (c AesContentCipher) TagSize() int {
 
 func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("NewAES")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
@@ -168,7 +168,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("cipher.AesContentCipher.Decrypt").BindError(&err)
+		g := pdebug.FuncMarker().BindError(&err)
 		defer g.End()
 	}
 

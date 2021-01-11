@@ -17,14 +17,14 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("jwe.Encrypt")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 

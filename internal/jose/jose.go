@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 

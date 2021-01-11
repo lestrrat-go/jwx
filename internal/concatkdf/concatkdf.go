@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/lestrrat-go/jwx/buffer"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 

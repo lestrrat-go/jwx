@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -383,17 +383,11 @@ func (m *Message) makeDummyRecipient(enckeybuf buffer.Buffer, protected Headers)
 // Decrypt decrypts the message using the specified algorithm and key
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("Message.Decrypt (alg = %s, key typ = %T)", alg, key)
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
 	var err error
-
-	if pdebug.Enabled {
-		g := pdebug.Marker("message.Decrypt (alg = %s)", alg)
-		defer g.End()
-	}
-
 	ctx := context.TODO()
 	h, err := m.protectedHeaders.Clone(ctx)
 	if err != nil {

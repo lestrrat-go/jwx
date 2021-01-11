@@ -11,7 +11,7 @@ import (
 	"hash"
 
 	"github.com/lestrrat-go/jwx/internal/padbuf"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +31,7 @@ type BlockCipherFunc func([]byte) (cipher.Block, error)
 
 func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("Hmac.New").BindError(&err)
+		g := pdebug.FuncMarker().BindError(&err)
 		defer g.End()
 	}
 	keysize := len(key) / 2
@@ -161,7 +161,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 // Open fulfills the crypto.AEAD interface
 func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("aescbc.Hmac.Open")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 

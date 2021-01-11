@@ -3,7 +3,7 @@ package content_crypt
 import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +35,7 @@ func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 
 func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("NewAES (alg = %s)", alg)
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
