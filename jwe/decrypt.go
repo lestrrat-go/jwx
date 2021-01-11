@@ -17,7 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -138,7 +138,7 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 
 func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("Decrypter.Decrypt").BindError(&err)
+		g := pdebug.FuncMarker().BindError(&err)
 		defer g.End()
 	}
 
@@ -253,7 +253,7 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 
 func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("Decrypter.DecryptKey").BindError(&err)
+		g := pdebug.FuncMarker().BindError(&err)
 		defer g.End()
 	}
 	if d.keyalg.IsSymmetric() {

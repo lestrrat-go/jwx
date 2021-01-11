@@ -6,7 +6,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/pdebug"
+	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +31,7 @@ func releaseEncryptCtx(ctx *encryptCtx) {
 // Encrypt takes the plaintext and encrypts into a JWE message.
 func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	if pdebug.Enabled {
-		g := pdebug.Marker("encryptCtx.Encrypt")
+		g := pdebug.FuncMarker()
 		defer g.End()
 	}
 
