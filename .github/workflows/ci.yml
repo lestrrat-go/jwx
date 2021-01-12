@@ -14,7 +14,9 @@ jobs:
       - name: Cache Go modules
         uses: actions/cache@v2
         with:
-          path: ~/go/pkg/mod
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -33,7 +35,7 @@ jobs:
           echo "::add-path::$HOME/gotip/bin"
           echo "::add-path::$(go env GOPATH)/bin"
       - name: Install jose
-        run: sudo apt-get install -y jose
+        run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
       - name: Test with coverage
         run: make cover
