@@ -12,11 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.15', '1.14' ]
+        go: [ '1.15.x', '1.14.x' ]
     name: Go ${{ matrix.go }} test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Install Go stable version
         if: matrix.go != 'tip'
         uses: actions/setup-go@v2
@@ -32,7 +41,7 @@ jobs:
           echo "::add-path::$HOME/gotip/bin"
           echo "::add-path::$(go env GOPATH)/bin"
       - name: Install jose
-        run: sudo apt-get install -y jose
+        run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
       - name: Test with coverage
         run: make cover
