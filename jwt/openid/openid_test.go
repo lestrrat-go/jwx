@@ -71,7 +71,6 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.KeyName, func(t *testing.T) {
-			t.Parallel()
 			t.Run("Accessor", func(t *testing.T) {
 				if !assert.Equal(t, tc.Value, tc.Accessor(), "values should match") {
 					return
@@ -91,8 +90,6 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 }
 
 func TestAdressClaim(t *testing.T) {
-	t.Parallel()
-
 	const src = `{
     "formatted": "〒105-0011 東京都港区芝公園４丁目２−８",
 		"street_address": "芝公園４丁目２−８",
@@ -535,7 +532,9 @@ func TestOpenIDClaims(t *testing.T) {
 }
 
 func TestBirthdateClaim(t *testing.T) {
+	t.Parallel()
 	t.Run("regular date", func(t *testing.T) {
+		t.Parallel()
 		const src = `"2015-11-04"`
 		var b openid.BirthdateClaim
 		if !assert.NoError(t, json.Unmarshal([]byte(src), &b), `json.Unmarshal should succeed`) {

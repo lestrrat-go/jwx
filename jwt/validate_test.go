@@ -172,6 +172,7 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run("any claim value", func(t *testing.T) {
+		t.Parallel()
 		t1 := jwt.New()
 		t1.Set("email", "email@example.com")
 

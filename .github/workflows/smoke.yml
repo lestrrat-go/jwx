@@ -1,7 +1,14 @@
-name: CI
+# Smoke tests only run on non-master branches. Smoke tests cut
+# some corners by running selected tests in parallel (to shave off
+# some execution time)
+# Once a pull request is merged to master, workflows/ci.yml is run
+name: Smoke Tests
 on:
   push:
-    branches:
+    branches-ignore:
+      - master
+  pull_request:
+    branches-ignore:
       - master
 
 jobs:
@@ -9,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.15.x', '1.14.x' ]
+        go: [ '1.15', '1.14' ]
     name: Go ${{ matrix.go }} test
     steps:
       - name: Checkout repository
@@ -24,29 +31,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install Go stable version
-        if: matrix.go != 'tip'
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Install Go tip
-        if: matrix.go == 'tip'
-        run: |
-          git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
-          cd $HOME/gotip/src
-          ./make.bash
-          echo "::set-env name=GOROOT::$HOME/gotip"
-          echo "::add-path::$HOME/gotip/bin"
-          echo "::add-path::$(go env GOPATH)/bin"
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
-      - name: Test with coverage
-        run: make cover
-      - name: Upload code coverage to codecov
-        if: matrix.go == '1.15'
-        uses: codecov/codecov-action@v1
-        with:
-          file: ./coverage.out
+      - name: Run smoke tests
+        run: make smoke
       - name: Check difference between generation code and commit code
         run: make check_diffs
-

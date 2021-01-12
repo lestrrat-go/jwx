@@ -20,6 +20,9 @@ cover:
 	@cat coverage.out.tmp | grep -v "internal/cmd" | grep -v "internal/codegen" > coverage.out
 	@rm coverage.out.tmp
 
+smoke:
+	go test -v -race -short ./...
+
 viewcover:
 	go tool cover -html=coverage.out
 

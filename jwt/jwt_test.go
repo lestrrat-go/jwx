@@ -377,6 +377,10 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestGH52(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	t.Parallel()
 	priv, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err) {
