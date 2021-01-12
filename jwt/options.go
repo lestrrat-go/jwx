@@ -87,7 +87,7 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // WithKeySet forces the Parse method to verify the JWT message
 // using one of the keys in the given key set. The key to be used
 // is chosen by matching the Key ID of the JWT and the ID of the
-// give keys.
+// given keys.
 func WithKeySet(set *jwk.Set) ParseOption {
 	return newParseOption(identKeySet{}, set)
 }
