@@ -71,7 +71,6 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.KeyName, func(t *testing.T) {
-			t.Parallel()
 			t.Run("Accessor", func(t *testing.T) {
 				if !assert.Equal(t, tc.Value, tc.Accessor(), "values should match") {
 					return
