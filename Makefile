@@ -21,7 +21,7 @@ cover:
 	@rm coverage.out.tmp
 
 smoke:
-	go run internal/cmd/testrunner/main.go
+	go test -v -race -short ./...
 
 viewcover:
 	go tool cover -html=coverage.out
