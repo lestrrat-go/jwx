@@ -123,6 +123,8 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
+	t.Parallel()
+
 	getVerify := func(token openid.Token, key string, expected interface{}) bool {
 		v, ok := token.Get(key)
 		if !assert.True(t, ok, `token.Get %#v should succeed`, key) {
