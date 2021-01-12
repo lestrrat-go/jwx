@@ -90,8 +90,6 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 }
 
 func TestAdressClaim(t *testing.T) {
-	t.Parallel()
-
 	const src = `{
     "formatted": "〒105-0011 東京都港区芝公園４丁目２−８",
 		"street_address": "芝公園４丁目２−８",
@@ -122,8 +120,6 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
-	t.Parallel()
-
 	getVerify := func(token openid.Token, key string, expected interface{}) bool {
 		v, ok := token.Get(key)
 		if !assert.True(t, ok, `token.Get %#v should succeed`, key) {
@@ -477,7 +473,6 @@ func TestOpenIDClaims(t *testing.T) {
 	for _, token := range tokens {
 		token := token
 		t.Run(token.Name, func(t *testing.T) {
-			t.Parallel()
 			for _, value := range base {
 				value := value
 				t.Run(value.Key, func(t *testing.T) {
@@ -497,7 +492,6 @@ func TestOpenIDClaims(t *testing.T) {
 	t.Run("Iterator", func(t *testing.T) {
 		v := tokens[0].Token
 		t.Run("Iterate", func(t *testing.T) {
-			t.Parallel()
 			seen := make(map[string]interface{})
 			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
@@ -516,7 +510,6 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 		t.Run("Walk", func(t *testing.T) {
-			t.Parallel()
 			seen := make(map[string]interface{})
 			v.Walk(context.TODO(), openid.VisitorFunc(func(key string, value interface{}) error {
 				seen[key] = value
@@ -527,7 +520,6 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 		t.Run("AsMap", func(t *testing.T) {
-			t.Parallel()
 			seen, err := v.AsMap(context.TODO())
 			if !assert.NoError(t, err, `v.AsMap should succeed`) {
 				return
