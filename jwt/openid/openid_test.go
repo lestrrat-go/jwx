@@ -476,6 +476,7 @@ func TestOpenIDClaims(t *testing.T) {
 	for _, token := range tokens {
 		token := token
 		t.Run(token.Name, func(t *testing.T) {
+			t.Parallel()
 			for _, value := range base {
 				value := value
 				t.Run(value.Key, func(t *testing.T) {
@@ -495,6 +496,7 @@ func TestOpenIDClaims(t *testing.T) {
 	t.Run("Iterator", func(t *testing.T) {
 		v := tokens[0].Token
 		t.Run("Iterate", func(t *testing.T) {
+			t.Parallel()
 			seen := make(map[string]interface{})
 			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
@@ -513,6 +515,7 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 		t.Run("Walk", func(t *testing.T) {
+			t.Parallel()
 			seen := make(map[string]interface{})
 			v.Walk(context.TODO(), openid.VisitorFunc(func(key string, value interface{}) error {
 				seen[key] = value
@@ -523,6 +526,7 @@ func TestOpenIDClaims(t *testing.T) {
 			}
 		})
 		t.Run("AsMap", func(t *testing.T) {
+			t.Parallel()
 			seen, err := v.AsMap(context.TODO())
 			if !assert.NoError(t, err, `v.AsMap should succeed`) {
 				return
@@ -535,7 +539,9 @@ func TestOpenIDClaims(t *testing.T) {
 }
 
 func TestBirthdateClaim(t *testing.T) {
+	t.Parallel()
 	t.Run("regular date", func(t *testing.T) {
+		t.Parallel()
 		const src = `"2015-11-04"`
 		var b openid.BirthdateClaim
 		if !assert.NoError(t, json.Unmarshal([]byte(src), &b), `json.Unmarshal should succeed`) {
