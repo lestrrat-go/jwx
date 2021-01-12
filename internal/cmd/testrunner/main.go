@@ -44,7 +44,7 @@ func main() {
 	wg.Add(len(targets))
 	for i, target := range targets {
 		target.Output = &bytes.Buffer{}
-		cmd := exec.Command("go", "test", "-race", "-v", "-tags=debug0", target.Package)
+		cmd := exec.Command("go", "test", "-short", "-race", "-v", "-tags=debug0", target.Package)
 		cmd.Stderr = target.Output
 		cmd.Stdout = target.Output
 		go func(idx int, wg *sync.WaitGroup) {
