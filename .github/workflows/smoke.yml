@@ -28,7 +28,7 @@ jobs:
       - name: Install jose
         run: sudo apt-get install -y jose
       - run: make generate
-      - name: Test with coverage
+      - name: Run smoke tests
         run: make smoke
       - name: Check difference between generation code and commit code
         run: make check_diffs
