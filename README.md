@@ -3,7 +3,7 @@
 Implementation of various JWx technologies
 
 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg)
-[![GoDoc](https://godoc.org/github.com/lestrrat-go/jwx?status.svg)](https://godoc.org/github.com/lestrrat-go/jwx)
+[![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx)
 [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=master)](http://codecov.io/github/lestrrat-go/jwx?branch=master)
 
 ## Status
