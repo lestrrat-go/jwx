@@ -8,11 +8,38 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwk"
 )
+
+func Example() {
+	// Use jwk.AutoRefresh if you intend to keep reuse the JWKS
+	// over and over
+	set, err := jwk.Fetch("https://foobar.domain/json")
+	if err != nil {
+		log.Printf("failed to parse JWK: %s", err)
+		return
+	}
+
+	// If you KNOW you have exactly one key, you can just
+	// use set.Keys[0]
+	keys := set.LookupKeyID("mykey")
+	if len(keys) == 0 {
+		log.Printf("failed to lookup key: %s", err)
+		return
+	}
+
+	var key interface{}
+	if err := keys[0].Raw(&key); err != nil {
+		log.Printf("failed to generate public key: %s", err)
+		return
+	}
+	// Use key for jws.Verify() or whatever
+	_ = key
+}
 
 func ExampleNew() {
 	// New returns different underlying types of jwk.Key objects
