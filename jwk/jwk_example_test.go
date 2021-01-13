@@ -77,6 +77,7 @@ func ExampleNew() {
 	// OUTPUT:
 }
 
+//nolint:govet
 func ExampleMarshalJSON() {
 	// to get the same values every time, we need to create a static source
 	// of "randomness"
@@ -119,6 +120,7 @@ func ExampleMarshalJSON() {
 
 func ExampleAutoRefresh() {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 	ar := jwk.NewAutoRefresh(ctx)
