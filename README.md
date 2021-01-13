@@ -332,7 +332,7 @@ Note 1: Experimental
 
 ### JWE
 
-See the examples here as well: https://godoc.org/github.com/lestrrat-go/jwx/jwe#pkg-examples
+See the examples here as well: [https://github.com/lestrrat-go/jwx/jwe](./jwe/README.md)
 
 ```go
 import(
