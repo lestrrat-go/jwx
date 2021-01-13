@@ -148,7 +148,7 @@ func Example_openid() {
 
 ### JWK
 
-See the examples here as well: https://godoc.org/github.com/lestrrat-go/jwx/jwk#pkg-examples
+See the examples here as well: [https://github.com/lestrrat-go/jwx/jwk](./jwk/README.md)
 
 Create a JWK file from RSA public key:
 
@@ -271,9 +271,16 @@ Supported key types:
 
 Note 1: Experimental
 
-### JWS
+### JWS - Verify parse and verify a signed JWT
 
-See also `VerifyWithJWK` and `VerifyWithJKU`
+```go
+  token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
+  if err != nil {
+    fmt.Printf("failed to parse payload: %s\n", err)
+  }
+```
+
+### JWS - Sign / verify arbitrary data
 
 ```go
 import(
@@ -332,7 +339,7 @@ Note 1: Experimental
 
 ### JWE
 
-See the examples here as well: https://godoc.org/github.com/lestrrat-go/jwx/jwe#pkg-examples
+See the examples here as well: [https://github.com/lestrrat-go/jwx/jwe](./jwe/README.md)
 
 ```go
 import(

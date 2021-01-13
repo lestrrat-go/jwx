@@ -16,20 +16,25 @@ import (
 )
 
 //nolint:golint
-func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected int) bool {
+func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected ...int) bool {
 	t.Helper()
-	for iter := src.Iterate(ctx); iter.Next(ctx); {
-		key := iter.Pair().Value.(jwk.Key)
-		v, ok := key.Get(`accessCount`)
-		if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
-			return false
-		}
 
-		if !assert.Equal(t, float64(expected), v, `key.Get("accessCount") should be %d`, expected) {
-			return false
+	iter := src.Iterate(ctx)
+	iter.Next(ctx)
+
+	key := iter.Pair().Value.(jwk.Key)
+	v, ok := key.Get(`accessCount`)
+	if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+		return false
+	}
+
+	for _, e := range expected {
+		if v == float64(e) {
+			return assert.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
 		}
 	}
-	return true
+
+	return assert.Fail(t, `key.Get("accessCount") should be one of %#v (got %d)`, expected, v)
 }
 
 func TestAutoRefresh(t *testing.T) {
@@ -210,7 +215,7 @@ func TestAutoRefresh(t *testing.T) {
 			return
 		}
 		// should be new
-		if !checkAccessCount(t, ctx, ks, 4) {
+		if !checkAccessCount(t, ctx, ks, 4, 5) {
 			return
 		}
 	})
