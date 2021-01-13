@@ -271,9 +271,16 @@ Supported key types:
 
 Note 1: Experimental
 
-### JWS
+### JWS - Verify parse and verify a signed JWT
 
-See also `VerifyWithJWK` and `VerifyWithJKU`
+```go
+  token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
+  if err != nil {
+    fmt.Printf("failed to parse payload: %s\n", err)
+  }
+```
+
+### JWS - Sign / verify arbitrary data
 
 ```go
 import(
