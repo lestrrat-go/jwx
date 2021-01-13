@@ -210,7 +210,7 @@ func TestAutoRefresh(t *testing.T) {
 			return
 		}
 		// should be new
-		if !checkAccessCount(t, ctx, ks, 4) {
+		if !checkAccessCount(t, ctx, ks, 4) && !checkAccessCount(t, ctx, ks, 5) {
 			return
 		}
 	})
