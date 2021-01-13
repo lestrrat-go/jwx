@@ -136,10 +136,10 @@ func ExampleMarshalJSON() {
 
 	// OUTPUT:
 	// {
-	//   "kty": "EC",
 	//   "crv": "P-384",
 	//   "d": "ODkwMTIzNDU2Nzg5MDEyMz7deMbyLt8g4cjcxozuIoygLLlAeoQ1AfM9TSvxkFHJ",
 	//   "kid": "mykey",
+	//   "kty": "EC",
 	//   "x": "gvvRMqm1w5aHn7sVNA2QUJeOVcedUnmiug6VhU834gzS9k87crVwu9dz7uLOdoQl",
 	//   "y": "7fVF7b6J_6_g6Wu9RuJw8geWxEi5ja9Gp2TSdELm5u2E-M7IF-bsxqcdOj3n1n7N"
 	// }

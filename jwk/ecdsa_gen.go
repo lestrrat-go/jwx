@@ -491,7 +491,11 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
+	}
+	return json.Marshal(m)
 }
 
 func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -936,7 +940,11 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
+	}
+	return json.Marshal(m)
 }
 
 func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
