@@ -148,7 +148,7 @@ func Example_openid() {
 
 ### JWK
 
-See the examples here as well: https://godoc.org/github.com/lestrrat-go/jwx/jwk#pkg-examples
+See the examples here as well: [https://github.com/lestrrat-go/jwx/jwk](./jwk/README.md)
 
 Create a JWK file from RSA public key:
 
