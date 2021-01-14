@@ -17,7 +17,7 @@ type PayloadSigner interface {
 
 // Message represents a full JWS encoded message. Flattened serialization
 // is not supported as a struct, but rather it's represented as a
-// Message struct with only one `signature` element. 
+// Message struct with only one `signature` element.
 //
 // Do not expect to use the Message object to verify or construct a
 // signed payload with. You should only use this when you want to actually
