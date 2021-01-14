@@ -1,6 +1,23 @@
 Changes
 =======
 
+v1.0.8 15 Jan 2021
+[New features]
+  * Fixed `jws.Message` and `jws.Signature` to be properly formatted when
+    marshaled into JSON. In the same manner, `json.Unmarshal` should also
+    work as expected.
+  * Added API to programatically manipulate `jws.Message` and `jws.Signature`
+[Miscellaneous]
+  * The order of keys are now consistent as when used with `json.Marshal`.
+    Previously some objects used their own ordering, but now the code goes
+    through one extra roundtrip of `json.Unmarshal`/`json.Marshal` to preserve
+    compatible behavior. This *may* lead to slightly slower performance if
+    you are performing `json.Marshal` over and over in very quick succession.
+		Please file an issue if you have real world cases where the change
+		causes problems for you.
+  * Added more examples in various places.
+  * Tests runs have been sped up for the most oft used cases
+
 v1.0.7 11 Jan 2021
 [New features]
   * Added jwk.AutoRefresh, which is a tool to periodically refresh JWKS. (#265)
