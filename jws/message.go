@@ -60,7 +60,7 @@ func (m *Message) AppendSignature(v *Signature) *Message {
 	return m
 }
 
-func (m *Message) Clear() *Message {
+func (m *Message) ClearSignatures() *Message {
 	m.signatures = nil
 	return m
 }
