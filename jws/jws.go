@@ -25,13 +25,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/base64"
 	"io"
 	"strings"
 	"unicode"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
-
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -123,22 +122,10 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
-	enc := base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(hdrbuf); err != nil {
-		return nil, errors.Wrap(err, `failed to write headers as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing headers as base64`)
-	}
 
+	buf.WriteString(base64.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
-	enc = base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(payload); err != nil {
-		return nil, errors.Wrap(err, `failed to write payload as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing payload as base64`)
-	}
+	buf.WriteString(base64.EncodeToString(payload))
 
 	signature, err := signer.Sign(buf.Bytes(), key)
 	if err != nil {
@@ -146,13 +133,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 	}
 
 	buf.WriteByte('.')
-	enc = base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(signature); err != nil {
-		return nil, errors.Wrap(err, `failed to write signature as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing signature as base64`)
-	}
+	buf.WriteString(base64.EncodeToString(signature))
 
 	result := make([]byte, buf.Len())
 	copy(result, buf.Bytes())
@@ -172,22 +153,9 @@ func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, he
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
-	enc := base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(headers); err != nil {
-		return nil, errors.Wrap(err, `failed to write headers as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing headers as base64`)
-	}
-
+	buf.WriteString(base64.EncodeToString(headers))
 	buf.WriteByte('.')
-	enc = base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(payload); err != nil {
-		return nil, errors.Wrap(err, `failed to write payload as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing payload as base64`)
-	}
+	buf.WriteString(base64.EncodeToString(payload))
 
 	signature, err := signer.Sign(buf.Bytes(), key)
 	if err != nil {
@@ -195,13 +163,7 @@ func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, he
 	}
 
 	buf.WriteByte('.')
-	enc = base64.NewEncoder(base64.RawURLEncoding, buf)
-	if _, err := enc.Write(signature); err != nil {
-		return nil, errors.Wrap(err, `failed to write signature as base64`)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, errors.Wrap(err, `failed to finalize writing signature as base64`)
-	}
+	buf.WriteString(base64.EncodeToString(signature))
 
 	result := make([]byte, buf.Len())
 	copy(result, buf.Bytes())
@@ -227,7 +189,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	var result Message
 
 	result.payload = payload
-	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	encodedPayload := base64.EncodeToString(payload)
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
@@ -245,7 +207,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to marshal headers`)
 		}
-		encodedHeader := base64.RawURLEncoding.EncodeToString(hdrbuf)
+		encodedHeader := base64.EncodeToString(hdrbuf)
 
 		buf.Reset()
 		buf.WriteString(encodedHeader)
@@ -290,8 +252,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 			return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 		}
 
-		enc := base64.RawURLEncoding
-		payload := enc.EncodeToString(m.payload)
+		payload := base64.EncodeToString(m.payload)
 
 		buf := pool.GetBytesBuffer()
 		defer pool.ReleaseBytesBuffer(buf)
@@ -302,7 +263,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
 			}
 
-			buf.WriteString(enc.EncodeToString(protected))
+			buf.WriteString(base64.EncodeToString(protected))
 			buf.WriteByte('.')
 			buf.WriteString(payload)
 
@@ -325,16 +286,16 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	verifyBuf.WriteByte('.')
 	verifyBuf.Write(payload)
 
-	decodedSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(signature)))
-	if _, err := base64.RawURLEncoding.Decode(decodedSignature, signature); err != nil {
+	decodedSignature, err := base64.Decode(signature)
+	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode signature`)
 	}
 	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
 	}
 
-	decodedPayload := make([]byte, base64.RawURLEncoding.DecodedLen(len(payload)))
-	if _, err := base64.RawURLEncoding.Decode(decodedPayload, payload); err != nil {
+	decodedPayload, err := base64.Decode(payload)
+	if err != nil {
 		return nil, errors.Wrap(err, `message verified, failed to decode payload`)
 	}
 	return decodedPayload, nil
@@ -523,22 +484,23 @@ func parseCompact(rdr io.Reader) (m *Message, err error) {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}
 
-	decodedHeader := make([]byte, base64.RawURLEncoding.DecodedLen(len(protected)))
-	if _, err := base64.RawURLEncoding.Decode(decodedHeader, protected); err != nil {
-		return nil, errors.Wrap(err, `failed to decode headers`)
+	decodedHeader, err := base64.Decode(protected)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decode protected headers`)
 	}
+
 	var hdr stdHeaders
 	if err := json.Unmarshal(decodedHeader, &hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
 
-	decodedPayload := make([]byte, base64.RawURLEncoding.DecodedLen(len(payload)))
-	if _, err = base64.RawURLEncoding.Decode(decodedPayload, payload); err != nil {
+	decodedPayload, err := base64.Decode(payload)
+	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode payload`)
 	}
 
-	decodedSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(signature)))
-	if _, err := base64.RawURLEncoding.Decode(decodedSignature, signature); err != nil {
+	decodedSignature, err := base64.Decode(signature)
+	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode signature`)
 	}
 

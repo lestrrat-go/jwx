@@ -273,6 +273,8 @@ Note 1: Experimental
 
 ### JWS - Verify parse and verify a signed JWT
 
+See the examples here as well: [https://github.com/lestrrat-go/jwx/jws](./jws/README.md)
+
 ```go
   token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
   if err != nil {

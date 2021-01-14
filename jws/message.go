@@ -1,30 +1,68 @@
 package jws
 
 import (
-	"encoding/base64"
-
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/pkg/errors"
 )
 
+func NewSignature() *Signature {
+	return &Signature{}
+}
+
 func (s Signature) PublicHeaders() Headers {
 	return s.headers
+}
+
+func (s *Signature) SetPublicHeaders(v Headers) *Signature {
+	s.headers = v
+	return s
 }
 
 func (s Signature) ProtectedHeaders() Headers {
 	return s.protected
 }
 
+func (s *Signature) SetProtectedHeaders(v Headers) *Signature {
+	s.protected = v
+	return s
+}
+
 func (s Signature) Signature() []byte {
 	return s.signature
 }
 
+func (s *Signature) SetSignature(v []byte) *Signature {
+	s.signature = v
+	return s
+}
+
+func NewMessage() *Message {
+	return &Message{}
+}
+
+// Payload returns the decoded payload
 func (m Message) Payload() []byte {
 	return m.payload
 }
 
+func (m *Message) SetPayload(v []byte) *Message {
+	m.payload = v
+	return m
+}
+
 func (m Message) Signatures() []*Signature {
 	return m.signatures
+}
+
+func (m *Message) AppendSignature(v *Signature) *Message {
+	m.signatures = append(m.signatures, v)
+	return m
+}
+
+func (m *Message) ClearSignatures() *Message {
+	m.signatures = nil
+	return m
 }
 
 // LookupSignature looks up a particular signature entry using
@@ -76,13 +114,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	}
 
 	// Everything in the proxy is base64 encoded, except for signatures.header
-	enc := base64.RawURLEncoding
-
 	if len(proxy.Payload) == 0 {
 		return errors.New(`"payload" must be non-empty`)
 	}
 
-	buf, err := enc.DecodeString(proxy.Payload)
+	buf, err := base64.DecodeString(proxy.Payload)
 	if err != nil {
 		return errors.Wrap(err, `failed to decode payload`)
 	}
@@ -116,7 +152,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 
 		if len(sigproxy.Protected) > 0 {
-			buf, err = enc.DecodeString(sigproxy.Protected)
+			buf, err = base64.DecodeString(sigproxy.Protected)
 			if err != nil {
 				return errors.Wrapf(err, `failed to decode "protected" for signature #%d`, i+1)
 			}
@@ -130,7 +166,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			return errors.Errorf(`"signature" must be non-empty for signature #%d`, i+1)
 		}
 
-		buf, err = enc.DecodeString(sigproxy.Signature)
+		buf, err = base64.DecodeString(sigproxy.Signature)
 		if err != nil {
 			return errors.Wrapf(err, `failed to decode "signature" for signature #%d`, i+1)
 		}
@@ -144,8 +180,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 func (m Message) MarshalJSON() ([]byte, error) {
 	var proxy messageProxy
 
-	enc := base64.RawURLEncoding
-	proxy.Payload = enc.EncodeToString(m.payload)
+	proxy.Payload = base64.EncodeToString(m.payload)
 
 	if len(m.signatures) == 1 {
 		sig := m.signatures[0]
@@ -163,7 +198,7 @@ func (m Message) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to marshal "protected"`)
 		}
-		protected := enc.EncodeToString(buf)
+		protected := base64.EncodeToString(buf)
 		proxy.Protected = &protected
 	} else {
 		for i, sig := range m.signatures {
@@ -179,8 +214,8 @@ func (m Message) MarshalJSON() ([]byte, error) {
 			if err != nil {
 				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
 			}
-			sigproxy.Protected = enc.EncodeToString(buf)
-			sigproxy.Signature = enc.EncodeToString(sig.signature)
+			sigproxy.Protected = base64.EncodeToString(buf)
+			sigproxy.Signature = base64.EncodeToString(sig.signature)
 
 			proxy.Signatures = append(proxy.Signatures, &sigproxy)
 		}
