@@ -7,17 +7,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-type encodedSignature struct {
-	Protected string  `json:"protected,omitempty"`
-	Headers   Headers `json:"header,omitempty"`
-	Signature string  `json:"signature,omitempty"`
-}
-
-type encodedMessage struct {
-	Payload    string              `json:"payload"`
-	Signatures []*encodedSignature `json:"signatures,omitempty"`
-}
-
 // PayloadSigner generates signature for the given payload
 type PayloadSigner interface {
 	Sign([]byte) ([]byte, error)

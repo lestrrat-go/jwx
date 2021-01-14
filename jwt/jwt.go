@@ -68,6 +68,7 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to read from token data source`)
 	}
+	data = bytes.TrimSpace(data)
 
 	// If with matching kid is true, then look for the corresponding key in the
 	// given key set, by matching the "kid" key
@@ -91,26 +92,31 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...Option) (Token, error) {
 	var payload []byte
 	if verify {
+		// If verify is true, the data MUST be a valid jws message
 		v, err := jws.Verify(data, alg, key)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to verify jws signature`)
 		}
 		payload = v
 	} else {
-		// TODO: seems slightly wasteful to use ioutil.ReadAll and then
-		// create a new reader again. jws API kind of forces us to use
-		// readers, but perhaps this can be fixed in future releases
-		m, err := jws.Parse(bytes.NewReader(data))
-		if err != nil {
-			return nil, errors.Wrap(err, `invalid jws message`)
-		}
-		payload = m.Payload()
-
-		// If JWS parse did not produce a full JWS message but also
-		// there were no errors, assume that this is an unsigned, raw
-		// JWT message
-		if len(payload) == 0 && len(m.Signatures()) == 0 {
-			payload = data
+		// 1. eyXXX.XXXX.XXXX
+		// 2. { "signatures": [ ... ] }
+		// 3. { "foo": "bar" }
+		if data[0] == '{' {
+			m, err := jws.Parse(bytes.NewReader(data))
+			if err == nil {
+				payload = m.Payload()
+			} else {
+				// It's JSON, but we don't have proper JWS fields.
+				payload = data
+			}
+		} else {
+			// Probably compact JWS
+			m, err := jws.Parse(bytes.NewReader(data))
+			if err != nil {
+				return nil, errors.Wrap(err, `invalid jws message`)
+			}
+			payload = m.Payload()
 		}
 	}
 
