@@ -147,23 +147,43 @@ func (m Message) MarshalJSON() ([]byte, error) {
 	enc := base64.RawURLEncoding
 	proxy.Payload = enc.EncodeToString(m.payload)
 
-	for i, sig := range m.signatures {
-		var sigproxy signatureProxy
+	if len(m.signatures) == 1 {
+		sig := m.signatures[0]
+		var s = string(sig.signature)
+		proxy.Signature = &s
 
 		buf, err := json.Marshal(sig.headers)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to marshal "header" for signature #%d`, i+1)
+			return nil, errors.Wrap(err, `failed to marshal "header"`)
 		}
-		sigproxy.Header = buf
+		hdr := json.RawMessage(buf)
+		proxy.Header = &hdr
 
 		buf, err = json.Marshal(sig.protected)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+			return nil, errors.Wrap(err, `failed to marshal "protected"`)
 		}
-		sigproxy.Protected = enc.EncodeToString(buf)
-		sigproxy.Signature = enc.EncodeToString(sig.signature)
+		protected := enc.EncodeToString(buf)
+		proxy.Protected = &protected
+	} else {
+		for i, sig := range m.signatures {
+			var sigproxy signatureProxy
 
-		proxy.Signatures = append(proxy.Signatures, &sigproxy)
+			buf, err := json.Marshal(sig.headers)
+			if err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal "header" for signature #%d`, i+1)
+			}
+			sigproxy.Header = buf
+
+			buf, err = json.Marshal(sig.protected)
+			if err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+			}
+			sigproxy.Protected = enc.EncodeToString(buf)
+			sigproxy.Signature = enc.EncodeToString(sig.signature)
+
+			proxy.Signatures = append(proxy.Signatures, &sigproxy)
+		}
 	}
 
 	return json.Marshal(proxy)
