@@ -73,7 +73,7 @@ func ExampleMessage() {
 
 	// Construct a message. DO NOT use values that are base64 encoded
 	m := jws.NewMessage().
-		SetPayload([]byte(decodedPayload)).
+		SetPayload(decodedPayload).
 		AppendSignature(
 			jws.NewSignature().
 				SetSignature(decodedSig1).

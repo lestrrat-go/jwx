@@ -77,7 +77,7 @@ func TestMessage(t *testing.T) {
 		_ = protected2.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 
 		m := jws.NewMessage().
-			SetPayload([]byte(decodedPayload)).
+			SetPayload(decodedPayload).
 			AppendSignature(
 				jws.NewSignature().
 					SetSignature(decodedSig1).
