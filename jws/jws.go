@@ -224,9 +224,10 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		return nil, errors.New(`no signers provided`)
 	}
 
-	var result encodedMessage
+	var result Message
 
-	result.Payload = base64.RawURLEncoding.EncodeToString(payload)
+	result.payload = payload
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
@@ -249,16 +250,16 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		buf.Reset()
 		buf.WriteString(encodedHeader)
 		buf.WriteByte('.')
-		buf.WriteString(result.Payload)
+		buf.WriteString(encodedPayload)
 		signature, err := signer.Sign(buf.Bytes())
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to sign payload`)
 		}
 
-		result.Signatures = append(result.Signatures, &encodedSignature{
-			Headers:   signer.PublicHeader(),
-			Protected: encodedHeader,
-			Signature: base64.RawURLEncoding.EncodeToString(signature),
+		result.signatures = append(result.signatures, &Signature{
+			headers:   signer.PublicHeader(),
+			protected: protected,
+			signature: signature,
 		})
 	}
 
@@ -284,50 +285,29 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	}
 
 	if buf[0] == '{' {
-		// FUuuuuuuuuuuuuuuuck // WTF am I doing here.
-		var proxy fullMessageProxy
-		if err := json.Unmarshal(buf, &proxy); err != nil {
-			return nil, errors.Wrap(err, `failed to unmarshal JWS message`)
+		var m Message
+		if err := json.Unmarshal(buf, &m); err != nil {
+			return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 		}
 
-		// There's something wrong if the Message part is not initialized
-		if len(proxy.Payload) == 0 {
-			return nil, errors.New(`invalid JWS message format (missing payload)`)
-		}
-
-		// if we're using the compact serialization format, then m.Signature
-		// will be non-nil
-		if len(proxy.Signature) > 0 {
-			if len(proxy.Signatures) > 0 {
-				return nil, errors.New(`invalid JWS message format (signature and signatures both exist)`)
-			}
-			encodedSig, err := proxy.encodedSignature()
-			if err != nil {
-				return nil, err // don't think we need to wrap this one
-			}
-
-			proxy.Signatures = append(proxy.Signatures, encodedSig)
-		}
+		enc := base64.RawURLEncoding
+		payload := enc.EncodeToString(m.payload)
 
 		buf := pool.GetBytesBuffer()
 		defer pool.ReleaseBytesBuffer(buf)
-		for _, sig := range proxy.Signatures {
+		for i, sig := range m.signatures {
 			buf.Reset()
-			buf.WriteString(sig.Protected)
-			buf.WriteByte('.')
-			buf.WriteString(proxy.Payload)
-			decodedSignature, err := base64.RawURLEncoding.DecodeString(sig.Signature)
+			protected, err := json.Marshal(sig.protected)
 			if err != nil {
-				continue
+				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
 			}
 
-			if err := verifier.Verify(buf.Bytes(), decodedSignature, key); err == nil {
-				// verified!
-				decodedPayload, err := base64.RawURLEncoding.DecodeString(proxy.Payload)
-				if err != nil {
-					return nil, errors.Wrap(err, `message verified, failed to decode payload`)
-				}
-				return decodedPayload, nil
+			buf.WriteString(enc.EncodeToString(protected))
+			buf.WriteByte('.')
+			buf.WriteString(payload)
+
+			if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
+				return m.payload, nil
 			}
 		}
 		return nil, errors.New(`could not verify with any of the signatures`)
@@ -462,82 +442,12 @@ func ParseString(s string) (*Message, error) {
 	return Parse(strings.NewReader(s))
 }
 
-type fullMessageProxy struct {
-	// encoded signature fields
-	Signature json.RawMessage `json:"signature"`
-	Headers   json.RawMessage `json:"header"` // あれ、"s"いらないんだっけ
-	Protected json.RawMessage `json:"protected"`
-
-	// encoded message fields
-	Signatures []*encodedSignature `json:"signatures"`
-	Payload    string              `json:"payload"`
-}
-
-func (proxy *fullMessageProxy) encodedSignature() (*encodedSignature, error) {
-	var encodedSig encodedSignature
-	if err := json.Unmarshal(proxy.Protected, &encodedSig.Protected); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal 'protected' field`)
-	}
-	if err := json.Unmarshal(proxy.Signature, &encodedSig.Signature); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal 'signature' field`)
-	}
-	h := NewHeaders()
-	if err := json.Unmarshal(proxy.Headers, h); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal 'header' field`)
-	}
-
-	return &encodedSig, nil
-}
-
 func parseJSON(src io.Reader) (result *Message, err error) {
-	var proxy fullMessageProxy
-	if err := json.NewDecoder(src).Decode(&proxy); err != nil {
+	var m Message
+	if err := json.NewDecoder(src).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
 	}
-
-	if len(proxy.Signature) > 0 {
-		if len(proxy.Signatures) > 0 {
-			return nil, errors.New("invalid message: mixed compact/full json serialization")
-		}
-
-		encodedSig, err := proxy.encodedSignature()
-		if err != nil {
-			return nil, err // don't think we need to wrap this one
-		}
-		proxy.Signatures = append(proxy.Signatures, encodedSig)
-	}
-
-	var plain Message
-	plain.payload, err = base64.RawURLEncoding.DecodeString(proxy.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode payload`)
-	}
-
-	for i, sig := range proxy.Signatures {
-		var plainSig Signature
-
-		plainSig.headers = sig.Headers
-
-		if l := len(sig.Protected); l > 0 {
-			plainSig.protected = NewHeaders()
-			hdrbuf, err := base64.RawURLEncoding.DecodeString(sig.Protected)
-			if err != nil {
-				return nil, errors.Wrapf(err, `failed to base64 decode protected header for signature #%d`, i+1)
-			}
-			if err := json.Unmarshal(hdrbuf, &plainSig.protected); err != nil {
-				return nil, errors.Wrapf(err, `failed to unmarshal protected header for signature #%d`, i+1)
-			}
-		}
-
-		plainSig.signature, err = base64.RawURLEncoding.DecodeString(sig.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, `failed to decode signature #%d`, i)
-		}
-
-		plain.signatures = append(plain.signatures, &plainSig)
-	}
-
-	return &plain, nil
+	return &m, nil
 }
 
 // SplitCompact splits a JWT and returns its three parts

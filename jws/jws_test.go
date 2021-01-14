@@ -1004,7 +1004,7 @@ func TestGHIssue126(t *testing.T) {
 		return
 	}
 
-	if !assert.Equal(t, err.Error(), `invalid JWS message format (missing payload)`) {
+	if !assert.Equal(t, err.Error(), `failed to unmarshal JSON message: "payload" must be non-empty`) {
 		return
 	}
 }
