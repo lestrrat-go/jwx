@@ -639,7 +639,11 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
+	}
+	return json.Marshal(m)
 }
 
 func (h *rsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -1057,7 +1061,11 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
+	}
+	return json.Marshal(m)
 }
 
 func (h *rsaPublicKey) Iterate(ctx context.Context) HeaderIterator {

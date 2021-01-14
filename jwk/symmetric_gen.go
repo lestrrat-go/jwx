@@ -387,7 +387,11 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, `}`)
 	}
-	return buf.Bytes(), nil
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
+	}
+	return json.Marshal(m)
 }
 
 func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {

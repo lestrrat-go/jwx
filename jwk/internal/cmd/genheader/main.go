@@ -883,7 +883,11 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
 		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nreturn buf.Bytes(), nil")
+		fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
+		fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf.Bytes(), &m); err != nil {")
+		fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn json.Marshal(m)")
 		fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Iterate(ctx context.Context) HeaderIterator {", structName)
