@@ -47,11 +47,11 @@ func Decode(src []byte) ([]byte, error) {
 	}
 
 	dst := make([]byte, enc.DecodedLen(len(src)))
-	_, err := enc.Decode(dst, src)
+	n, err := enc.Decode(dst, src)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode source`)
 	}
-	return dst, nil
+	return dst[:n], nil
 }
 
 func DecodeString(src string) ([]byte, error) {
