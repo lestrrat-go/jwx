@@ -32,7 +32,7 @@ For example, a certain library looks like it had most of JWS, JWE, JWK covered, 
 
 Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
-So here's go-jwx. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
+So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
 
 ## Notes for users of pre-1.0.0 release
 
