@@ -1,4 +1,4 @@
-package sign
+package jws
 
 import (
 	"crypto/hmac"
@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var HMACSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
+var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]func() hash.Hash{
@@ -20,12 +20,12 @@ func init() {
 	}
 
 	for alg, h := range algs {
-		HMACSignFuncs[alg] = makeHMACSignFunc(h)
+		hmacSignFuncs[alg] = makeHMACSignFunc(h)
 	}
 }
 
-func newHMAC(alg jwa.SignatureAlgorithm) (Signer, error) {
-	signer, ok := HMACSignFuncs[alg]
+func newHMACSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
+	signer, ok := hmacSignFuncs[alg]
 	if !ok {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create HMAC signer: %s`, alg)
 	}
@@ -62,3 +62,24 @@ func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 
 	return s.sign(payload, hmackey)
 }
+
+func newHMACVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
+	s, err := newHMACSigner(alg)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to generate HMAC signer`)
+	}
+	return &HMACVerifier{signer: s}, nil
+}
+
+func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
+	expected, err := v.signer.Sign(payload, key)
+	if err != nil {
+		return errors.Wrap(err, `failed to generated signature`)
+	}
+
+	if !hmac.Equal(signature, expected) {
+		return errors.New(`failed to match hmac signature`)
+	}
+	return nil
+}
+

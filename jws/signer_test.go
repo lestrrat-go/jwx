@@ -7,8 +7,6 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/jws/sign"
-	"github.com/lestrrat-go/jwx/jws/verify"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,7 +40,7 @@ func TestSign(t *testing.T) {
 			return
 		}
 
-		signer, err := sign.New(jwa.RS256)
+		signer, err := jws.NewSigner(jwa.RS256)
 		if !assert.NoError(t, err, `creating a signer should succeed`) {
 			return
 		}
@@ -54,7 +52,7 @@ func TestSign(t *testing.T) {
 			return
 		}
 
-		verifier, err := verify.New(jwa.RS256)
+		verifier, err := jws.NewVerifier(jwa.RS256)
 		if !assert.NoError(t, err, "creating a verifier should succeed") {
 			return
 		}
@@ -64,6 +62,7 @@ func TestSign(t *testing.T) {
 		}
 	})
 }
+
 func TestSignMulti(t *testing.T) {
 	rsakey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
@@ -75,14 +74,14 @@ func TestSignMulti(t *testing.T) {
 		return
 	}
 
-	s1, err := sign.New(jwa.RS256)
+	s1, err := jws.NewSigner(jwa.RS256)
 	if !assert.NoError(t, err, "RSA Signer created") {
 		return
 	}
 	s1hdr := jws.NewHeaders()
 	s1hdr.Set(jws.KeyIDKey, "2010-12-29")
 
-	s2, err := sign.New(jwa.ES256)
+	s2, err := jws.NewSigner(jwa.ES256)
 	if !assert.NoError(t, err, "DSA Signer created") {
 		return
 	}

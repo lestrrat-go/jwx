@@ -34,13 +34,11 @@ import (
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/jws/sign"
-	"github.com/lestrrat-go/jwx/jws/verify"
 	"github.com/pkg/errors"
 )
 
 type payloadSigner struct {
-	signer    sign.Signer
+	signer    Signer
 	key       interface{}
 	protected Headers
 	public    Headers
@@ -106,7 +104,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		}
 	}
 
-	signer, err := sign.New(alg)
+	signer, err := NewSigner(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
@@ -145,7 +143,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 // multiple signers.
 //
 func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, headers []byte) ([]byte, error) {
-	signer, err := sign.New(alg)
+	signer, err := NewSigner(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
@@ -236,7 +234,7 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
-	verifier, err := verify.New(alg)
+	verifier, err := NewVerifier(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
 	}

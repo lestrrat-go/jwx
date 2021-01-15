@@ -18,8 +18,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/jws/sign"
-	"github.com/lestrrat-go/jwx/jws/verify"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,8 +114,8 @@ func TestRoundtrip(t *testing.T) {
 		t.Run("Sign", func(t *testing.T) {
 			var options []jws.Option
 			for _, alg := range hmacAlgorithms {
-				signer, err := sign.New(alg)
-				if !assert.NoError(t, err, `sign.New should succeed`) {
+				signer, err := jws.NewSigner(alg)
+				if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
 					return
 				}
 				options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
@@ -268,7 +266,7 @@ func TestEncode(t *testing.T) {
 			[]byte{'.'},
 		)
 
-		sign, err := sign.New(jwa.HS256)
+		sign, err := jws.NewSigner(jwa.HS256)
 		if !assert.NoError(t, err, "HMAC signer created successfully") {
 			return
 		}
@@ -308,7 +306,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := verify.New(jwa.HS256)
+		v, err := jws.NewVerifier(jwa.HS256)
 		if !assert.NoError(t, err, "HmacVerify created") {
 			return
 		}
@@ -369,7 +367,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := verify.New(alg)
+		v, err := jws.NewVerifier(alg)
 		if !assert.NoError(t, err, "HmacVerify created") {
 			return
 		}
@@ -494,7 +492,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		sign, err := sign.New(jwa.RS256)
+		sign, err := jws.NewSigner(jwa.RS256)
 		if !assert.NoError(t, err, "RsaSign created successfully") {
 			return
 		}
@@ -551,7 +549,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := verify.New(jwa.RS256)
+		v, err := jws.NewVerifier(jwa.RS256)
 		if !assert.NoError(t, err, "Verify created") {
 			return
 		}
@@ -581,7 +579,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		signer, err := sign.New(jwa.ES256)
+		signer, err := jws.NewSigner(jwa.ES256)
 		if !assert.NoError(t, err, "RsaSign created successfully") {
 			return
 		}
@@ -638,7 +636,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := verify.New(jwa.ES256)
+		v, err := jws.NewVerifier(jwa.ES256)
 		if !assert.NoError(t, err, "EcdsaVerify created") {
 			return
 		}
@@ -674,7 +672,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		signer, err := sign.New(jwa.EdDSA)
+		signer, err := jws.NewSigner(jwa.EdDSA)
 		if !assert.NoError(t, err, "EdDSASign created successfully") {
 			return
 		}
@@ -731,7 +729,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := verify.New(jwa.EdDSA)
+		v, err := jws.NewVerifier(jwa.EdDSA)
 		if !assert.NoError(t, err, "EcdsaVerify created") {
 			return
 		}
@@ -939,8 +937,8 @@ func TestPublicHeaders(t *testing.T) {
 		return
 	}
 
-	signer, err := sign.New(jwa.RS256)
-	if !assert.NoError(t, err, "rsasign.NewSigner should succeed") {
+	signer, err := jws.NewSigner(jwa.RS256)
+	if !assert.NoError(t, err, "jws.NewSigner should succeed") {
 		return
 	}
 	_ = signer // TODO
@@ -973,7 +971,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 
-	v, err := verify.New(jwa.ES384)
+	v, err := jws.NewVerifier(jwa.ES384)
 	if !assert.NoError(t, err, "EcdsaVerify created") {
 		return
 	}
