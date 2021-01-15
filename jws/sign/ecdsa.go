@@ -53,7 +53,7 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 	}
 }
 
-func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSASigner, error) {
+func newECDSA(alg jwa.SignatureAlgorithm) (Signer, error) {
 	signfn, ok := ecdsaSignFuncs[alg]
 	if !ok {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create ECDSA signer: %s`, alg)

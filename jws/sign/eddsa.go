@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newEdDSA() (*EdDSASigner, error) {
+func newEdDSA() (Signer, error) {
 	return &EdDSASigner{}, nil
 }
 

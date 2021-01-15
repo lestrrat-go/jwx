@@ -24,7 +24,7 @@ func init() {
 	}
 }
 
-func newHMAC(alg jwa.SignatureAlgorithm) (*HMACSigner, error) {
+func newHMAC(alg jwa.SignatureAlgorithm) (Signer, error) {
 	signer, ok := HMACSignFuncs[alg]
 	if !ok {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create HMAC signer: %s`, alg)

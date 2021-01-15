@@ -69,7 +69,7 @@ func makeSignPSS(hash crypto.Hash) rsaSignFunc {
 	}
 }
 
-func newRSA(alg jwa.SignatureAlgorithm) (*RSASigner, error) {
+func newRSA(alg jwa.SignatureAlgorithm) (Signer, error) {
 	signfn, ok := rsaSignFuncs[alg]
 	if !ok {
 		return nil, errors.Errorf(`unsupported algorithm while trying to create RSA signer: %s`, alg)
