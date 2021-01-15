@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/internal/codegen"
+	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
 )
 
@@ -550,9 +550,11 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn json.Marshal(tmp)")
 	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
-	if err := codegen.WriteFormattedCodeToFile("headers_gen.go", &buf); err != nil {
-		return errors.Wrap(err, `failed to write formatted code to headers_gen.go`)
+	if err := codegen.WriteFile(`headers_gen.go`, &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
+		}
+		return errors.Wrap(err, `failed to write to headers_gen.go`)
 	}
-
 	return nil
 }

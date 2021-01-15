@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/internal/codegen"
+	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
 )
 
@@ -495,7 +495,13 @@ func generateGenericHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\n}")
 
-	return codegen.WriteFormattedCodeToFile("interface_gen.go", &buf)
+	if err := codegen.WriteFile("interface_gen.go", &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
+		}
+		return errors.Wrap(err, `failed to write to interface_gen.go`)
+	}
+	return nil
 }
 
 func generateHeaders() error {
@@ -522,6 +528,7 @@ func generateHeader(kt keyType) error {
 		"crypto/x509",
 		"fmt",
 		"github.com/lestrrat-go/jwx/internal/base64",
+		"github.com/lestrrat-go/jwx/internal/json",
 		"github.com/lestrrat-go/jwx/jwa",
 		"github.com/pkg/errors",
 	}
@@ -905,5 +912,11 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 	}
 
-	return codegen.WriteFormattedCodeToFile(kt.filename, &buf)
+	if err := codegen.WriteFile(kt.filename, &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
+		}
+		return errors.Wrapf(err, `failed to write to %s`, kt.filename)
+	}
+	return nil
 }
