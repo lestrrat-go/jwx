@@ -68,7 +68,6 @@ func TestInternal(t *testing.T) {
 							return
 						}
 					}
-					return
 				})
 				t.Run("Verifier", func(t *testing.T) {
 					_, err := tc.Verifier.Create(alg)
@@ -81,7 +80,6 @@ func TestInternal(t *testing.T) {
 							return
 						}
 					}
-					return
 				})
 			}
 		})

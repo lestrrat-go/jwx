@@ -82,4 +82,3 @@ func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err er
 	}
 	return nil
 }
-

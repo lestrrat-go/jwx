@@ -140,4 +140,3 @@ type HMACVerifier struct {
 
 type EdDSAVerifier struct {
 }
-
