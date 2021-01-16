@@ -1,6 +1,7 @@
 package jws_test
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -27,6 +28,13 @@ const badValue = "%badvalue%"
 
 func TestParse(t *testing.T) {
 	t.Parallel()
+	t.Run("Empty []byte", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.ParseBytes(nil)
+		if !assert.Error(t, err, "Parsing an empty byte slice should result in an error") {
+			return
+		}
+	})
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
 		t.Parallel()
 		_, err := jws.Parse(&bytes.Buffer{})
@@ -43,9 +51,18 @@ func TestParse(t *testing.T) {
 			))[:2],
 			".",
 		)
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with less than 3 parts should be an error") {
-			return
+
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				// Force Parse() to choose un-optimized path by using bufio.NewReader
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with less than 3 parts should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad header", func(t *testing.T) {
@@ -54,9 +71,16 @@ func TestParse(t *testing.T) {
 		parts[0] = badValue
 		incoming := strings.Join(parts, ".")
 
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad header should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad header should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad payload", func(t *testing.T) {
@@ -65,9 +89,16 @@ func TestParse(t *testing.T) {
 		parts[1] = badValue
 		incoming := strings.Join(parts, ".")
 
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad payload should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad payload should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad signature", func(t *testing.T) {
@@ -76,10 +107,16 @@ func TestParse(t *testing.T) {
 		parts[2] = badValue
 		incoming := strings.Join(parts, ".")
 
-		t.Logf("incoming = '%s'", incoming)
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad signature should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad signature should be an error") {
+				return
+			}
 		}
 	})
 }
@@ -208,7 +245,7 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 		}
 
 		parsers := map[string]func([]byte) (*jws.Message, error){
-			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bytes.NewReader(b)) },
+			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bufio.NewReader(bytes.NewReader(b))) },
 			"Parse(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
 		}
 		for name, f := range parsers {
