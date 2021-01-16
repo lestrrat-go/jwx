@@ -1,6 +1,7 @@
 package jws_test
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -27,6 +28,13 @@ const badValue = "%badvalue%"
 
 func TestParse(t *testing.T) {
 	t.Parallel()
+	t.Run("Empty []byte", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.ParseBytes(nil)
+		if !assert.Error(t, err, "Parsing an empty byte slice should result in an error") {
+			return
+		}
+	})
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
 		t.Parallel()
 		_, err := jws.Parse(&bytes.Buffer{})
@@ -43,9 +51,18 @@ func TestParse(t *testing.T) {
 			))[:2],
 			".",
 		)
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with less than 3 parts should be an error") {
-			return
+
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				// Force Parse() to choose un-optimized path by using bufio.NewReader
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with less than 3 parts should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad header", func(t *testing.T) {
@@ -54,9 +71,16 @@ func TestParse(t *testing.T) {
 		parts[0] = badValue
 		incoming := strings.Join(parts, ".")
 
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad header should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad header should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad payload", func(t *testing.T) {
@@ -65,9 +89,16 @@ func TestParse(t *testing.T) {
 		parts[1] = badValue
 		incoming := strings.Join(parts, ".")
 
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad payload should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad payload should be an error") {
+				return
+			}
 		}
 	})
 	t.Run("Compact bad signature", func(t *testing.T) {
@@ -76,10 +107,16 @@ func TestParse(t *testing.T) {
 		parts[2] = badValue
 		incoming := strings.Join(parts, ".")
 
-		t.Logf("incoming = '%s'", incoming)
-		_, err := jws.ParseString(incoming)
-		if !assert.Error(t, err, "Parsing compact serialization with bad signature should be an error") {
-			return
+		for _, useReader := range []bool{true, false} {
+			var err error
+			if useReader {
+				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+			} else {
+				_, err = jws.ParseString(incoming)
+			}
+			if !assert.Error(t, err, "Parsing compact serialization with bad signature should be an error") {
+				return
+			}
 		}
 	})
 }
@@ -208,7 +245,7 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 		}
 
 		parsers := map[string]func([]byte) (*jws.Message, error){
-			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bytes.NewReader(b)) },
+			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bufio.NewReader(bytes.NewReader(b))) },
 			"Parse(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
 		}
 		for name, f := range parsers {
@@ -865,68 +902,56 @@ func TestEncode(t *testing.T) {
 		jsonbuf, _ := json.MarshalIndent(m, "", "  ")
 		t.Logf("%s", jsonbuf)
 	})
-	t.Run("SplitCompact short", func(t *testing.T) {
-		t.Parallel()
-		// Create string with X.Y.Z
-		numX := 100
-		numY := 100
-		numZ := 100
-		var largeString = ""
-		for i := 0; i < numX; i++ {
-			largeString += "X"
+	t.Run("SplitCompact", func(t *testing.T) {
+		testcases := []struct {
+			Name string
+			Size int
+		}{
+			{Name: "Short", Size: 100},
+			{Name: "Short", Size: 8000},
 		}
-		largeString += "."
-		for i := 0; i < numY; i++ {
-			largeString += "Y"
-		}
-		largeString += "."
-		for i := 0; i < numZ; i++ {
-			largeString += "Z"
-		}
-		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
-		if !assert.NoError(t, err, "SplitCompactShort string split") {
-			return
-		}
-		if !assert.Len(t, x, numX, "Length of header") {
-			return
-		}
-		if !assert.Len(t, y, numY, "Length of payload") {
-			return
-		}
-		if !assert.Len(t, z, numZ, "Length of signature") {
-			return
-		}
-	})
-	t.Run("SplitCompact long", func(t *testing.T) {
-		t.Parallel()
-		// Create string with X.Y.Z
-		numX := 8000
-		numY := 8000
-		numZ := 8000
-		var largeString = ""
-		for i := 0; i < numX; i++ {
-			largeString += "X"
-		}
-		largeString += "."
-		for i := 0; i < numY; i++ {
-			largeString += "Y"
-		}
-		largeString += "."
-		for i := 0; i < numZ; i++ {
-			largeString += "Z"
-		}
-		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
-		if !assert.NoError(t, err, "SplitCompactShort string split") {
-			return
-		}
-		if !assert.Len(t, x, numX, "Length of header") {
-			return
-		}
-		if !assert.Len(t, y, numY, "Length of payload") {
-			return
-		}
-		if !assert.Len(t, z, numZ, "Length of signature") {
-			return
+		for _, tc := range testcases {
+			size := tc.Size
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+				// Create payload with X.Y.Z
+				var payload []byte
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'X')
+				}
+				payload = append(payload, '.')
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'Y')
+				}
+				payload = append(payload, '.')
+
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'Y')
+				}
+
+				// Test using optimized and non-optimized path
+				for _, optimized := range []bool{true, false} {
+					var x, y, z []byte
+					var err error
+					if optimized {
+						x, y, z, err = jws.SplitCompact(bytes.NewReader(payload))
+					} else {
+						x, y, z, err = jws.SplitCompact(bufio.NewReader(bytes.NewReader(payload)))
+					}
+					if !assert.NoError(t, err, "SplitCompact should succeed") {
+						return
+					}
+					if !assert.Len(t, x, size, "Length of header") {
+						return
+					}
+					if !assert.Len(t, y, size, "Length of payload") {
+						return
+					}
+					if !assert.Len(t, z, size, "Length of signature") {
+						return
+					}
+				}
+			})
 		}
 	})
 }

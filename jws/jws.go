@@ -26,8 +26,10 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"io/ioutil"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -272,7 +274,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		return nil, errors.New(`could not verify with any of the signatures`)
 	}
 
-	protected, payload, signature, err := SplitCompact(bytes.NewReader(buf))
+	protected, payload, signature, err := SplitCompactBytes(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
 	}
@@ -361,9 +363,32 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]b
 	return nil, errors.New("failed to verify with any of the keys")
 }
 
+// This is an "optimized" ioutil.ReadAll(). It will attempt to read
+// all of the contents from the reader IF the reader is of a certain
+// concrete type.
+func readAll(rdr io.Reader) ([]byte, bool) {
+	switch rdr.(type) {
+	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
+		data, err := ioutil.ReadAll(rdr)
+		if err != nil {
+			return nil, false
+		}
+		return data, true
+	default:
+		return nil, false
+	}
+}
+
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
+//
+// Parse will be removed in v1.1.0.
+// v1.1.0 will introduce `ParseReader(io.Reader)`. Use that instead.
 func Parse(src io.Reader) (m *Message, err error) {
+	if data, ok := readAll(src); ok {
+		return ParseBytes(data)
+	}
+
 	rdr := bufio.NewReader(src)
 	var first rune
 	for {
@@ -397,8 +422,31 @@ func Parse(src io.Reader) (m *Message, err error) {
 }
 
 // ParseString is the same as Parse, but take in a string
+//
+// ParseString will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)`. Use `Parse([]byte(s))` instead.
 func ParseString(s string) (*Message, error) {
-	return Parse(strings.NewReader(s))
+	return ParseBytes([]byte(s))
+}
+
+// ParseBytes is the same as Parse, but take byte sequence.
+//
+// ParseBytes will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)`. Use that instead.
+func ParseBytes(s []byte) (*Message, error) {
+	for i := 0; i < len(s); i++ {
+		r := rune(s[i])
+		if r >= utf8.RuneSelf {
+			r, _ = utf8.DecodeRune(s)
+		}
+		if !unicode.IsSpace(r) {
+			if r == '{' {
+				return parseJSONBytes(s)
+			}
+			return parseCompactBytes(s)
+		}
+	}
+	return nil, errors.New("invalid byte sequence")
 }
 
 func parseJSON(src io.Reader) (result *Message, err error) {
@@ -409,9 +457,21 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 	return &m, nil
 }
 
+func parseJSONBytes(data []byte) (result *Message, err error) {
+	var m Message
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
+	}
+	return &m, nil
+}
+
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
+	if data, ok := readAll(rdr); ok {
+		return SplitCompactBytes(data)
+	}
+
 	var protected []byte
 	var payload []byte
 	var signature []byte
@@ -475,13 +535,34 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	return protected, payload, signature, nil
 }
 
+// SplitCompactBytes splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
+func SplitCompactBytes(data []byte) ([]byte, []byte, []byte, error) {
+	parts := bytes.Split(data, []byte("."))
+	if len(parts) < 3 {
+		return nil, nil, nil, errors.New(`invalid number of segments`)
+	}
+	return parts[0], parts[1], parts[2], nil
+}
+
 // parseCompact parses a JWS value serialized via compact serialization.
 func parseCompact(rdr io.Reader) (m *Message, err error) {
 	protected, payload, signature, err := SplitCompact(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}
+	return parse(protected, payload, signature)
+}
 
+func parseCompactBytes(data []byte) (m *Message, err error) {
+	protected, payload, signature, err := SplitCompactBytes(data)
+	if err != nil {
+		return nil, errors.Wrap(err, `invalid compact serialization format`)
+	}
+	return parse(protected, payload, signature)
+}
+
+func parse(protected, payload, signature []byte) (*Message, error) {
 	decodedHeader, err := base64.Decode(protected)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode protected headers`)

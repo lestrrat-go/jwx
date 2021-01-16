@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"strings"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 
@@ -18,13 +17,19 @@ import (
 )
 
 // ParseString calls Parse with the given string
+//
+// ParseString will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func ParseString(s string, options ...Option) (Token, error) {
-	return Parse(strings.NewReader(s), options...)
+	return parseBytes([]byte(s), options...)
 }
 
 // ParseBytes calls Parse with the given byte sequence
+//
+// ParseBytes will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func ParseBytes(s []byte, options ...Option) (Token, error) {
-	return Parse(bytes.NewReader(s), options...)
+	return parseBytes(s, options...)
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
@@ -42,7 +47,19 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // This function takes both ParseOption and Validate Option types:
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
+//
+// Parse will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func Parse(src io.Reader, options ...Option) (Token, error) {
+	// We're going to need the raw bytes regardless. Read it.
+	data, err := ioutil.ReadAll(src)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to read from token data source`)
+	}
+	return parseBytes(data, options...)
+}
+
+func parseBytes(data []byte, options ...Option) (Token, error) {
 	var params VerifyParameters
 	var keyset *jwk.Set
 	var useDefault bool
@@ -63,11 +80,6 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 		}
 	}
 
-	// We're going to need the raw bytes regardless. Read it.
-	data, err := ioutil.ReadAll(src)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to read from token data source`)
-	}
 	data = bytes.TrimSpace(data)
 
 	// If with matching kid is true, then look for the corresponding key in the
@@ -103,7 +115,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		// 2. { "signatures": [ ... ] }
 		// 3. { "foo": "bar" }
 		if data[0] == '{' {
-			m, err := jws.Parse(bytes.NewReader(data))
+			m, err := jws.ParseBytes(data)
 			if err == nil {
 				payload = m.Payload()
 			} else {
@@ -112,7 +124,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 			}
 		} else {
 			// Probably compact JWS
-			m, err := jws.Parse(bytes.NewReader(data))
+			m, err := jws.ParseBytes(data)
 			if err != nil {
 				return nil, errors.Wrap(err, `invalid jws message`)
 			}
@@ -143,7 +155,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 }
 
 func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
-	msg, err := jws.Parse(bytes.NewReader(data))
+	msg, err := jws.ParseBytes(data)
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to parse token data`)
 	}
