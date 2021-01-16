@@ -1,15 +1,17 @@
-package sign
+package jws
 
 import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 
 var ecdsaSignFuncs = map[jwa.SignatureAlgorithm]ecdsaSignFunc{}
+var ecdsaVerifyFuncs = map[jwa.SignatureAlgorithm]ecdsaVerifyFunc{}
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]crypto.Hash{
@@ -20,6 +22,7 @@ func init() {
 
 	for alg, h := range algs {
 		ecdsaSignFuncs[alg] = makeECDSASignFunc(h)
+		ecdsaVerifyFuncs[alg] = makeECDSAVerifyFunc(h)
 	}
 }
 
@@ -53,16 +56,11 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 	}
 }
 
-func newECDSA(alg jwa.SignatureAlgorithm) (*ECDSASigner, error) {
-	signfn, ok := ecdsaSignFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create ECDSA signer: %s`, alg)
-	}
-
+func newECDSASigner(alg jwa.SignatureAlgorithm) Signer {
 	return &ECDSASigner{
 		alg:  alg,
-		sign: signfn,
-	}, nil
+		sign: ecdsaSignFuncs[alg], // we know this will succeed
+	}
 }
 
 func (s ECDSASigner) Algorithm() jwa.SignatureAlgorithm {
@@ -85,4 +83,51 @@ func (s ECDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	}
 
 	return s.sign(payload, pubkey)
+}
+
+func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
+	return func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
+		r := pool.GetBigInt()
+		s := pool.GetBigInt()
+		defer pool.ReleaseBigInt(r)
+		defer pool.ReleaseBigInt(s)
+
+		n := len(signature) / 2
+		r.SetBytes(signature[:n])
+		s.SetBytes(signature[n:])
+
+		h := hash.New()
+		if _, err := h.Write(payload); err != nil {
+			return errors.Wrap(err, "failed to write payload using ecdsa")
+		}
+
+		if !ecdsa.Verify(key, h.Sum(nil), r, s) {
+			return errors.New(`failed to verify signature using ecdsa`)
+		}
+		return nil
+	}
+}
+
+func newECDSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
+	return &ECDSAVerifier{
+		verify: ecdsaVerifyFuncs[alg], // we know this will succeed
+	}
+}
+
+func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
+	if key == nil {
+		return errors.New(`missing public key while verifying payload`)
+	}
+
+	var pubkey *ecdsa.PublicKey
+	switch v := key.(type) {
+	case ecdsa.PublicKey:
+		pubkey = &v
+	case *ecdsa.PublicKey:
+		pubkey = v
+	default:
+		return errors.Errorf(`invalid key type %T. *ecdsa.PublicKey is required`, key)
+	}
+
+	return v.verify(payload, signature, pubkey)
 }
