@@ -17,11 +17,17 @@ import (
 )
 
 // ParseString calls Parse with the given string
+//
+// ParseString will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func ParseString(s string, options ...Option) (Token, error) {
 	return parseBytes([]byte(s), options...)
 }
 
 // ParseBytes calls Parse with the given byte sequence
+//
+// ParseBytes will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func ParseBytes(s []byte, options ...Option) (Token, error) {
 	return parseBytes(s, options...)
 }
@@ -41,6 +47,9 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // This function takes both ParseOption and Validate Option types:
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
+//
+// Parse will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
 func Parse(src io.Reader, options ...Option) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := ioutil.ReadAll(src)

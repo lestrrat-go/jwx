@@ -320,6 +320,9 @@ func (s *Set) UnmarshalJSON(data []byte) error {
 // "github.com/lestrrat-go/jwx/internal/json" directly
 //
 // Note that a successful parsing does NOT guarantee a valid key
+//
+// Parse will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
 func Parse(in io.Reader) (*Set, error) {
 	var s Set
 	if err := json.NewDecoder(in).Decode(&s); err != nil {
@@ -331,6 +334,9 @@ func Parse(in io.Reader) (*Set, error) {
 // ParseBytes parses JWK from the incoming byte buffer.
 //
 // Note that a successful parsing does NOT guarantee a valid key
+//
+// ParseBytes will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
 func ParseBytes(buf []byte) (*Set, error) {
 	return Parse(bytes.NewReader(buf))
 }
@@ -338,6 +344,9 @@ func ParseBytes(buf []byte) (*Set, error) {
 // ParseString parses JWK from the incoming string.
 //
 // Note that a successful parsing does NOT guarantee a valid key
+//
+// ParseString will be removed in v1.1.0.
+// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
 func ParseString(s string) (*Set, error) {
 	return Parse(strings.NewReader(s))
 }
