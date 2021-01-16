@@ -24,7 +24,7 @@ func (s EdDSASigner) Sign(payload []byte, keyif interface{}) ([]byte, error) {
 	}
 }
 
-func newEdDSAVerifier() Verifier{
+func newEdDSAVerifier() Verifier {
 	return &EdDSAVerifier{}
 }
 
