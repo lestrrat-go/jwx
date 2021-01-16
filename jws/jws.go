@@ -409,20 +409,7 @@ func Parse(src io.Reader) (m *Message, err error) {
 
 // ParseString is the same as Parse, but take in a string
 func ParseString(s string) (*Message, error) {
-	for i := 0; i < len(s); i++ {
-		r := rune(s[i])
-		if r >= utf8.RuneSelf {
-			r, _ = utf8.DecodeRuneInString(s)
-		}
-		if !unicode.IsSpace(r) {
-			if r == '{' {
-				return parseJSONBytes([]byte(s))
-			} else {
-				return parseCompactBytes([]byte(s))
-			}
-		}
-	}
-	return nil, errors.New("invalid string")
+	return ParseBytes([]byte(s))
 }
 
 // ParseBytes is the same as Parse, but take byte sequence.
