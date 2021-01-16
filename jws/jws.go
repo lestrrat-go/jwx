@@ -363,15 +363,26 @@ func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]b
 	return nil, errors.New("failed to verify with any of the keys")
 }
 
+// This is an "optimized" ioutil.ReadAll(). It will attempt to read
+// all of the contents from the reader IF the reader is of a certain
+// concrete type.
+func readAll(rdr io.Reader) ([]byte, bool) {
+	switch rdr.(type) {
+	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
+		data, err := ioutil.ReadAll(rdr)
+		if err != nil {
+			return nil, false
+		}
+		return data, true
+	default:
+		return nil, false
+	}
+}
+
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 func Parse(src io.Reader) (m *Message, err error) {
-	switch src.(type) {
-	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
-		data, err := ioutil.ReadAll(src)
-		if err != nil {
-			return nil, err
-		}
+	if data, ok := readAll(src); ok {
 		return ParseBytes(data)
 	}
 
@@ -448,12 +459,7 @@ func parseJSONBytes(data []byte) (result *Message, err error) {
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
-	switch rdr.(type) {
-	case *bytes.Buffer, *bytes.Reader, *strings.Reader:
-		data, err := ioutil.ReadAll(rdr)
-		if err != nil {
-			return nil, nil, nil, err
-		}
+	if data, ok := readAll(rdr); ok {
 		return SplitCompactBytes(data)
 	}
 
