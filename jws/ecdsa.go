@@ -56,7 +56,7 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 	}
 }
 
-func newECDSASigner(alg jwa.SignatureAlgorithm) Signer{
+func newECDSASigner(alg jwa.SignatureAlgorithm) Signer {
 	return &ECDSASigner{
 		alg:  alg,
 		sign: ecdsaSignFuncs[alg], // we know this will succeed

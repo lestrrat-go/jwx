@@ -30,7 +30,7 @@ func init() {
 	verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory{
+		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
 				return newRSAVerifier(alg), nil
 			})
