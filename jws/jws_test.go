@@ -902,68 +902,56 @@ func TestEncode(t *testing.T) {
 		jsonbuf, _ := json.MarshalIndent(m, "", "  ")
 		t.Logf("%s", jsonbuf)
 	})
-	t.Run("SplitCompact short", func(t *testing.T) {
-		t.Parallel()
-		// Create string with X.Y.Z
-		numX := 100
-		numY := 100
-		numZ := 100
-		var largeString = ""
-		for i := 0; i < numX; i++ {
-			largeString += "X"
+	t.Run("SplitCompact", func(t *testing.T) {
+		testcases := []struct {
+			Name string
+			Size int
+		}{
+			{Name: "Short", Size: 100},
+			{Name: "Short", Size: 8000},
 		}
-		largeString += "."
-		for i := 0; i < numY; i++ {
-			largeString += "Y"
-		}
-		largeString += "."
-		for i := 0; i < numZ; i++ {
-			largeString += "Z"
-		}
-		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
-		if !assert.NoError(t, err, "SplitCompactShort string split") {
-			return
-		}
-		if !assert.Len(t, x, numX, "Length of header") {
-			return
-		}
-		if !assert.Len(t, y, numY, "Length of payload") {
-			return
-		}
-		if !assert.Len(t, z, numZ, "Length of signature") {
-			return
-		}
-	})
-	t.Run("SplitCompact long", func(t *testing.T) {
-		t.Parallel()
-		// Create string with X.Y.Z
-		numX := 8000
-		numY := 8000
-		numZ := 8000
-		var largeString = ""
-		for i := 0; i < numX; i++ {
-			largeString += "X"
-		}
-		largeString += "."
-		for i := 0; i < numY; i++ {
-			largeString += "Y"
-		}
-		largeString += "."
-		for i := 0; i < numZ; i++ {
-			largeString += "Z"
-		}
-		x, y, z, err := jws.SplitCompact(strings.NewReader(largeString))
-		if !assert.NoError(t, err, "SplitCompactShort string split") {
-			return
-		}
-		if !assert.Len(t, x, numX, "Length of header") {
-			return
-		}
-		if !assert.Len(t, y, numY, "Length of payload") {
-			return
-		}
-		if !assert.Len(t, z, numZ, "Length of signature") {
-			return
+		for _, tc := range testcases {
+			size := tc.Size
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+				// Create payload with X.Y.Z
+				var payload []byte
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'X')
+				}
+				payload = append(payload, '.')
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'Y')
+				}
+				payload = append(payload, '.')
+
+				for i := 0; i < size; i++ {
+					payload = append(payload, 'Y')
+				}
+
+				// Test using optimized and non-optimized path
+				for _, optimized := range []bool{true, false} {
+					var x, y, z []byte
+					var err error
+					if optimized {
+						x, y, z, err = jws.SplitCompact(bytes.NewReader(payload))
+					} else {
+						x, y, z, err = jws.SplitCompact(bufio.NewReader(bytes.NewReader(payload)))
+					}
+					if !assert.NoError(t, err, "SplitCompact should succeed") {
+						return
+					}
+					if !assert.Len(t, x, size, "Length of header") {
+						return
+					}
+					if !assert.Len(t, y, size, "Length of payload") {
+						return
+					}
+					if !assert.Len(t, z, size, "Length of signature") {
+						return
+					}
+				}
+			})
 		}
 	})
 }
