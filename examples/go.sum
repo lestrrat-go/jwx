@@ -8,8 +8,6 @@ github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3 h1:e52qvXxpJPV/
 github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3/go.mod h1:tGS/u00Vh5N6FHNkExqGGNId8e0Big+++0Gf8MBnAvE=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911 h1:FvnrqecqX4zT0wOIbYK1gNgTm0677INEWiFY8UEYggY=
 github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
-github.com/lestrrat-go/jwx v1.0.9-0.20210115231829-1b90c1125a5b h1:ArtrqiYdtez+/fkVYSYhsQvQ4mYyzcvT83JbjjVqDfQ=
-github.com/lestrrat-go/jwx v1.0.9-0.20210115231829-1b90c1125a5b/go.mod h1:6XJ5sxHF5U116AxYxeHfTnfsZRMgmeKY214zwZDdvho=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35 h1:lea8Wt+1ePkVrI2/WD+NgQT5r/XsLAzxeqtyFLcEs10=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/lestrrat-go/pdebug/v3 v3.0.0-20210111091911-ec4f5c88c087 h1:T5Wh8C/p5nWoGuEUBQj+daEXkj1CScB9GshvvsBJhpg=

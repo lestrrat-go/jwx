@@ -12,11 +12,11 @@ import (
 
 type CirclEdDSASignerVerifier struct{}
 
-func NewCirclEdDSASigner(_ jwa.SignatureAlgorithm) (jws.Signer, error) {
+func NewCirclEdDSASigner() (jws.Signer, error) {
 	return &CirclEdDSASignerVerifier{}, nil
 }
 
-func NewCirclEdDSAVerifier(_ jwa.SignatureAlgorithm) (jws.Verifier, error) {
+func NewCirclEdDSAVerifier() (jws.Verifier, error) {
 	return &CirclEdDSASignerVerifier{}, nil
 }
 
