@@ -56,16 +56,11 @@ func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
 	}
 }
 
-func newECDSASigner(alg jwa.SignatureAlgorithm) (Signer, error) {
-	signfn, ok := ecdsaSignFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create ECDSA signer: %s`, alg)
-	}
-
+func newECDSASigner(alg jwa.SignatureAlgorithm) Signer{
 	return &ECDSASigner{
 		alg:  alg,
-		sign: signfn,
-	}, nil
+		sign: ecdsaSignFuncs[alg], // we know this will succeed
+	}
 }
 
 func (s ECDSASigner) Algorithm() jwa.SignatureAlgorithm {
@@ -113,15 +108,10 @@ func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
 	}
 }
 
-func newECDSAVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
-	verifyfn, ok := ecdsaVerifyFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create ECDSA verifier: %s`, alg)
-	}
-
+func newECDSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
 	return &ECDSAVerifier{
-		verify: verifyfn,
-	}, nil
+		verify: ecdsaVerifyFuncs[alg], // we know this will succeed
+	}
 }
 
 func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{}) error {

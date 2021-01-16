@@ -78,15 +78,11 @@ func makeSignPSS(hash crypto.Hash) rsaSignFunc {
 	}
 }
 
-func newRSASigner(alg jwa.SignatureAlgorithm) (Signer, error) {
-	signfn, ok := rsaSignFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create RSA signer: %s`, alg)
-	}
+func newRSASigner(alg jwa.SignatureAlgorithm) Signer {
 	return &RSASigner{
 		alg:  alg,
-		sign: signfn,
-	}, nil
+		sign: rsaSignFuncs[alg], // we know this will succeed
+	}
 }
 
 func (s RSASigner) Algorithm() jwa.SignatureAlgorithm {
@@ -134,15 +130,10 @@ func makeVerifyPSS(hash crypto.Hash) rsaVerifyFunc {
 	}
 }
 
-func newRSAVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
-	verifyfn, ok := rsaVerifyFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create RSA verifier: %s`, alg)
-	}
-
+func newRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
 	return &RSAVerifier{
-		verify: verifyfn,
-	}, nil
+		verify: rsaVerifyFuncs[alg], // we know this will succeed
+	}
 }
 
 func (v RSAVerifier) Verify(payload, signature []byte, key interface{}) error {

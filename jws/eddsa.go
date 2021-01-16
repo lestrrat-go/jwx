@@ -7,11 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newEdDSASigner(alg jwa.SignatureAlgorithm) (Signer, error) {
-	if alg != jwa.EdDSA {
-		return nil, errors.Errorf(`unsupported EdDSA signature algorithm %s`, alg)
-	}
-	return &EdDSASigner{}, nil
+func newEdDSASigner() Signer {
+	return &EdDSASigner{}
 }
 
 func (s EdDSASigner) Algorithm() jwa.SignatureAlgorithm {
@@ -27,11 +24,8 @@ func (s EdDSASigner) Sign(payload []byte, keyif interface{}) ([]byte, error) {
 	}
 }
 
-func newEdDSAVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
-	if alg != jwa.EdDSA {
-		return nil, errors.Errorf(`unsupported EdDSA signature algorithm %s`, alg)
-	}
-	return &EdDSAVerifier{}, nil
+func newEdDSAVerifier() Verifier{
+	return &EdDSAVerifier{}
 }
 
 func (v EdDSAVerifier) Verify(payload, signature []byte, keyIf interface{}) (err error) {

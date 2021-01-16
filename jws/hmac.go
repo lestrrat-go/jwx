@@ -24,16 +24,11 @@ func init() {
 	}
 }
 
-func newHMACSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
-	signer, ok := hmacSignFuncs[alg]
-	if !ok {
-		return nil, errors.Errorf(`unsupported algorithm while trying to create HMAC signer: %s`, alg)
-	}
-
+func newHMACSigner(alg jwa.SignatureAlgorithm) Signer {
 	return &HMACSigner{
 		alg:  alg,
-		sign: signer,
-	}, nil
+		sign: hmacSignFuncs[alg], // we know this will succeed
+	}
 }
 
 func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
@@ -63,12 +58,9 @@ func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	return s.sign(payload, hmackey)
 }
 
-func newHMACVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
-	s, err := newHMACSigner(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate HMAC signer`)
-	}
-	return &HMACVerifier{signer: s}, nil
+func newHMACVerifier(alg jwa.SignatureAlgorithm) Verifier {
+	s := newHMACSigner(alg)
+	return &HMACVerifier{signer: s}
 }
 
 func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
