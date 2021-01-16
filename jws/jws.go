@@ -422,9 +422,8 @@ func ParseBytes(s []byte) (*Message, error) {
 		if !unicode.IsSpace(r) {
 			if r == '{' {
 				return parseJSONBytes(s)
-			} else {
-				return parseCompactBytes(s)
 			}
+			return parseCompactBytes(s)
 		}
 	}
 	return nil, errors.New("invalid byte sequence")
