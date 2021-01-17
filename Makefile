@@ -11,17 +11,17 @@ realclean:
 	rm coverage.out
 
 test:
-	go test -v -race ./...
+	cd examples && go test -v -race && cd .. && go test -v -race ./...
 
 cover:
-	go test -v -race -coverpkg=./... -coverprofile=coverage.out.tmp ./...
+	cd examples && go test -v -race && cd .. && go test -v -race -coverpkg=./... -coverprofile=coverage.out.tmp ./...
 	@# This is NOT cheating. tools to generate code don't need to be
 	@# included in the final result
 	@cat coverage.out.tmp | grep -v "internal/cmd" > coverage.out
 	@rm coverage.out.tmp
 
 smoke:
-	go test -v -race -short ./...
+	cd examples && go test -v -race && cd .. && go test -v -race -short ./...
 
 viewcover:
 	go tool cover -html=coverage.out
