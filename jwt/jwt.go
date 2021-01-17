@@ -36,7 +36,7 @@ func ParseBytes(s []byte, options ...Option) (Token, error) {
 // The token must be encoded in either JSON format or compact format.
 //
 // If the token is signed and you want to verify the payload matches the signature,
-// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(*jwk.Set) option.
+// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 //
 // If you also want to assert the validity of the JWT itself (i.e. expiration
@@ -61,7 +61,7 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 
 func parseBytes(data []byte, options ...Option) (Token, error) {
 	var params VerifyParameters
-	var keyset *jwk.Set
+	var keyset jwk.Set
 	var useDefault bool
 	var token Token
 	var validate bool
@@ -70,7 +70,7 @@ func parseBytes(data []byte, options ...Option) (Token, error) {
 		case identVerify{}:
 			params = o.Value().(VerifyParameters)
 		case identKeySet{}:
-			keyset = o.Value().(*jwk.Set)
+			keyset = o.Value().(jwk.Set)
 		case identToken{}:
 			token = o.Value().(Token)
 		case identDefault{}:
@@ -154,7 +154,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	return token, nil
 }
 
-func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
+func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
 	msg, err := jws.ParseBytes(data)
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to parse token data`)
@@ -170,18 +170,22 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.Signa
 		}
 	}
 
-	var keys []jwk.Key
+	var key jwk.Key
+	var ok bool
 	if kid == "" {
-		keys = keyset.Keys
+		key, ok = keyset.Get(0)
+		if !ok {
+			return "", nil, errors.New(`empty keyset`)
+		}
 	} else {
-		keys = keyset.LookupKeyID(kid)
-	}
-	if len(keys) == 0 {
-		return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
+		key, ok = keyset.LookupKeyID(kid)
+		if !ok {
+			return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
+		}
 	}
 
 	var rawKey interface{}
-	if err := keys[0].Raw(&rawKey); err != nil {
+	if err := key.Raw(&rawKey); err != nil {
 		return "", nil, errors.Wrapf(err, `failed to construct raw key from keyset (key ID=%#v)`, kid)
 	}
 
@@ -194,7 +198,7 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.Signa
 // ParseVerify a function that is similar to Parse(), but does not
 // allow for parsing without signature verification parameters.
 //
-// If you want to provide a *jwk.Set and allow the library to automatically
+// If you want to provide a jwk.Set and allow the library to automatically
 // choose the key to use using the Key IDs, use the jwt.WithKeySet option
 // along with the jwt.Parse function.
 func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {

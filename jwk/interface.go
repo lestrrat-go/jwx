@@ -1,7 +1,9 @@
 package jwk
 
 import (
+	"context"
 	"crypto/x509"
+	"sync"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
@@ -38,10 +40,21 @@ const (
 	KeyOpDeriveBits KeyOperation = "deriveBits" // (derive bits not to be used as a key)
 )
 
-// Set is a convenience struct to allow generating and parsing
-// JWK sets as opposed to single JWKs
-type Set struct {
-	Keys []Key
+// Set represents JWKS object, a collection of jwk.Key objects
+type Set interface {
+	Add(Key) bool
+	Clear()
+	Get(int) (Key, bool)
+	Index(Key) int
+	Len() int
+	LookupKeyID(string) (Key, bool)
+	Remove(Key) bool
+	Iterate(context.Context) KeyIterator
+}
+
+type set struct {
+	keys []Key
+	mu   sync.RWMutex
 }
 
 type HeaderVisitor = iter.MapVisitor

@@ -466,11 +466,11 @@ func Test_GHIssue207(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			webKeys, err := jwk.ParseString(tc.Key)
-			if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 				return
 			}
-			webKey := webKeys.Keys[0]
+
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
 			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
 				return
@@ -596,11 +596,11 @@ func TestDecodePredefined_Direct(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
-			webKeys, err := jwk.ParseString(tc.Key)
-			if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 				return
 			}
-			webKey := webKeys.Keys[0]
+
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
 			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
 				return

@@ -17,7 +17,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -170,7 +169,7 @@ func PublicKeyOf(v interface{}) (interface{}, error) {
 }
 
 // Fetch fetches a JWK resource specified by a URL
-func Fetch(urlstring string, options ...Option) (*Set, error) {
+func Fetch(urlstring string, options ...Option) (Set, error) {
 	u, err := url.Parse(urlstring)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse url`)
@@ -192,12 +191,12 @@ func Fetch(urlstring string, options ...Option) (*Set, error) {
 }
 
 // FetchHTTP wraps FetchHTTPWithContext using the background context.
-func FetchHTTP(jwkurl string, options ...Option) (*Set, error) {
+func FetchHTTP(jwkurl string, options ...Option) (Set, error) {
 	return FetchHTTPWithContext(context.Background(), jwkurl, options...)
 }
 
 // FetchHTTPWithContext fetches the remote JWK and parses its contents
-func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option) (*Set, error) {
+func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option) (Set, error) {
 	httpcl := http.DefaultClient
 	for _, option := range options {
 		switch option.Ident() {
@@ -287,33 +286,6 @@ func ParseKey(data []byte) (Key, error) {
 	return key, nil
 }
 
-func (s *Set) UnmarshalJSON(data []byte) error {
-	var proxy struct {
-		Keys []json.RawMessage `json:"keys"`
-	}
-
-	if err := json.Unmarshal(data, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal into Key (proxy)`)
-	}
-
-	if len(proxy.Keys) == 0 {
-		k, err := ParseKey(data)
-		if err != nil {
-			return errors.Wrap(err, `failed to unmarshal key from JSON headers`)
-		}
-		s.Keys = append(s.Keys, k)
-	} else {
-		for i, buf := range proxy.Keys {
-			k, err := ParseKey([]byte(buf))
-			if err != nil {
-				return errors.Wrapf(err, `failed to unmarshal key #%d (total %d) from multi-key JWK set`, i+1, len(proxy.Keys))
-			}
-			s.Keys = append(s.Keys, k)
-		}
-	}
-	return nil
-}
-
 // Parse parses JWK from the incoming io.Reader. This function can handle
 // both single-key and multi-key formats. If you know before hand which
 // format the incoming data is in, you might want to consider using
@@ -323,12 +295,12 @@ func (s *Set) UnmarshalJSON(data []byte) error {
 //
 // Parse will be removed in v1.1.0.
 // v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
-func Parse(in io.Reader) (*Set, error) {
-	var s Set
-	if err := json.NewDecoder(in).Decode(&s); err != nil {
+func Parse(in io.Reader) (Set, error) {
+	s := NewSet()
+	if err := json.NewDecoder(in).Decode(s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal JWK")
 	}
-	return &s, nil
+	return s, nil
 }
 
 // ParseBytes parses JWK from the incoming byte buffer.
@@ -337,7 +309,7 @@ func Parse(in io.Reader) (*Set, error) {
 //
 // ParseBytes will be removed in v1.1.0.
 // v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
-func ParseBytes(buf []byte) (*Set, error) {
+func ParseBytes(buf []byte) (Set, error) {
 	return Parse(bytes.NewReader(buf))
 }
 
@@ -347,45 +319,8 @@ func ParseBytes(buf []byte) (*Set, error) {
 //
 // ParseString will be removed in v1.1.0.
 // v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
-func ParseString(s string) (*Set, error) {
+func ParseString(s string) (Set, error) {
 	return Parse(strings.NewReader(s))
-}
-
-// LookupKeyID looks for keys matching the given key id. Note that the
-// Set *may* contain multiple keys with the same key id
-func (s Set) LookupKeyID(kid string) []Key {
-	var keys []Key
-	for iter := s.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
-		key := pair.Value.(Key)
-		if key.KeyID() == kid {
-			keys = append(keys, key)
-		}
-	}
-	return keys
-}
-
-func (s *Set) Len() int {
-	return len(s.Keys)
-}
-
-func (s *Set) Iterate(ctx context.Context) KeyIterator {
-	ch := make(chan *KeyPair, s.Len())
-	go iterate(ctx, s.Keys, ch)
-	return arrayiter.New(ch)
-}
-
-func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
-	defer close(ch)
-
-	for i, key := range keys {
-		pair := &KeyPair{Index: i, Value: key}
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
 }
 
 // AssignKeyID is a convenience function to automatically assign the "kid"

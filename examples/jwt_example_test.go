@@ -36,7 +36,7 @@ func ExampleJWT_ParseJWKS() {
 		//   Then jwt.Parse() will automatically find the matching key
 
 		var payload []byte
-		var keyset *jwk.Set
+		var keyset jwk.Set
 		{ // Preparation:
 			// For demonstration purposes, we need to do some preparation
 			// Create a JWK key to sign the token (and also give a KeyID)
@@ -76,7 +76,9 @@ func ExampleJWT_ParseJWKS() {
 			bogusKey := jwk.NewSymmetricKey()
 
 			// This key set contains two keys, the first one is the correct one
-			keyset = &jwk.Set{Keys: []jwk.Key{pubKey, bogusKey}}
+			keyset = jwk.NewSet()
+			keyset.Add(pubKey)
+			keyset.Add(bogusKey)
 		}
 
 		{ // Actual verification:
@@ -104,7 +106,7 @@ func ExampleJWT_ParseJWKS() {
 		//   key set. It would be an error if you have multiple keys in the KeySet.
 
 		var payload []byte
-		var keyset *jwk.Set
+		var keyset jwk.Set
 		{ // Preparation:
 			// Unlike our previous example, we DO NOT want to sign the payload.
 			// Therefore we do NOT set the "kid" value

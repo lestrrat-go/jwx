@@ -200,7 +200,9 @@ func TestVerifyWithJWKSet(t *testing.T) {
 		return
 	}
 
-	verified, err := jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey}}, nil)
+	set := jwk.NewSet()
+	set.Add(jwkKey)
+	verified, err := jws.VerifyWithJWKSet(buf, set, nil)
 	if !assert.NoError(t, err, "Verify is successful") {
 		return
 	}
@@ -225,7 +227,10 @@ func TestVerifyWithJWKSet(t *testing.T) {
 	if !assert.NoError(t, err, "JWK Public key generated") {
 		return
 	}
-	_, err = jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey2}}, nil)
+
+	set.Clear()
+	set.Add(jwkKey2)
+	_, err = jws.VerifyWithJWKSet(buf, set, nil)
 	if !assert.Error(t, err, "Verify with wrong key should fail") {
 		return
 	}
@@ -378,9 +383,9 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to base64 encode payload")
 		}
 
-		keys, _ := jwk.ParseString(jwksrc)
+		jwkKey, _ := jwk.ParseKey([]byte(jwksrc))
 		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
+		if !assert.NoError(t, jwkKey.Raw(&key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte
@@ -443,12 +448,12 @@ func TestEncode(t *testing.T) {
 
 		alg := standardHeaders.Algorithm()
 
-		keys, err := jwk.ParseString(jwksrc)
+		jwkKey, err := jwk.ParseKey([]byte(jwksrc))
 		if err != nil {
 			t.Fatal("Failed to parse JWK")
 		}
 		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
+		if !assert.NoError(t, jwkKey.Raw(&key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte

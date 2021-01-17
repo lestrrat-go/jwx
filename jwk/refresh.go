@@ -12,21 +12,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AutoRefresh is a container that keeps track of *jwk.Set object by their source URLs.
-// The *jwk.Set objects are refreshed automatically behind the scenes.
+// AutoRefresh is a container that keeps track of jwk.Set object by their source URLs.
+// The jwk.Set objects are refreshed automatically behind the scenes.
 //
-// Before retrieving the *jwk.Set objects, the user must pre-register the
+// Before retrieving the jwk.Set objects, the user must pre-register the
 // URLs they intend to use by calling `Configure()`
 //
 //  ar := jwk.NewAutoRefresh(ctx)
 //  ar.Configure(url, options...)
 //
-// Once registered, you can call `Fetch()` to retrieve the *jwk.Set object.
+// Once registered, you can call `Fetch()` to retrieve the jwk.Set object.
 //
 // All JWKS objects that are retrieved via the auto-fetch mechanism should be
 // treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
-	cache        map[string]*Set
+	cache        map[string]Set
 	configureCh  chan struct{}
 	fetching     map[string]chan struct{}
 	muCache      sync.RWMutex
@@ -108,7 +108,7 @@ type resetTimerReq struct {
 // }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		cache:        make(map[string]*Set),
+		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
 		fetching:     make(map[string]chan struct{}),
 		registry:     make(map[string]*target),
@@ -118,7 +118,7 @@ func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	return af
 }
 
-func (af *AutoRefresh) getCached(url string) (*Set, bool) {
+func (af *AutoRefresh) getCached(url string) (Set, bool) {
 	af.muCache.RLock()
 	ks, ok := af.cache[url]
 	af.muCache.RUnlock()
@@ -250,9 +250,9 @@ func (af *AutoRefresh) getRegistered(url string) (*target, bool) {
 // allowed to perform  the initialization (HTTP fetch and cache population).
 // All other goroutines will be blocked until the operation is completed.
 //
-// DO NOT modify the *jwk.Set object returned by this method, as the
+// DO NOT modify the jwk.Set object returned by this method, as the
 // objects are shared among all consumers and the backend goroutine
-func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) Fetch(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
 		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
@@ -269,7 +269,7 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
 // This is useful for when you want to force an HTTP fetch instead of waiting
 // for the background goroutine to do it, for example when you want to
 // make sure the AutoRefresh cache is warmed up before starting your main loop
-func (af *AutoRefresh) Refresh(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) Refresh(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
 		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
@@ -277,7 +277,7 @@ func (af *AutoRefresh) Refresh(ctx context.Context, url string) (*Set, error) {
 	return af.refresh(ctx, url)
 }
 
-func (af *AutoRefresh) refresh(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) refresh(ctx context.Context, url string) (Set, error) {
 	// To avoid a thundering herd, only one goroutine per url may enter into this
 	// initial fetch phase.
 	af.muFetching.Lock()

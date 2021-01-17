@@ -87,8 +87,14 @@ func doJWK() int {
 	}
 
 	// TODO make it flexible
+	firstKey, ok := key.Get(0)
+	if !ok {
+		log.Printf("empty keyset")
+		return 0
+	}
+
 	var pubkey interface{}
-	if err := key.Keys[0].Raw(&pubkey); err != nil {
+	if err := firstKey.Raw(&pubkey); err != nil {
 		log.Printf("%s", err)
 		return 0
 	}

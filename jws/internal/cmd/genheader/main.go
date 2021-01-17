@@ -343,11 +343,11 @@ func generateHeaders() error {
 	// Copy every field except for jwk, whose type needs to be guessed
 	fmt.Fprintf(&buf, "\n\nh.jwk = nil")
 	fmt.Fprintf(&buf, "\nif jwkField := proxy.Xjwk; len(jwkField) > 0 {")
-	fmt.Fprintf(&buf, "\nset, err := jwk.ParseBytes([]byte(proxy.Xjwk))")
-	fmt.Fprintf(&buf, "\n if err != nil {")
+	fmt.Fprintf(&buf, "\nkey, err := jwk.ParseKey([]byte(proxy.Xjwk))")
+	fmt.Fprintf(&buf, "\nif err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse jwk field`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nh.jwk = set.Keys[0]")
+	fmt.Fprintf(&buf, "\nh.jwk = key")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {

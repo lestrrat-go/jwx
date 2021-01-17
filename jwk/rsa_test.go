@@ -100,7 +100,12 @@ func TestRSA(t *testing.T) {
 			return
 		}
 
-		rsakey, ok := set.Keys[0].(jwk.RSAPrivateKey)
+		akey, ok := set.Get(0)
+		if !assert.True(t, ok, `set.Get(0) should succeed`) {
+			return
+		}
+
+		rsakey, ok := akey.(jwk.RSAPrivateKey)
 		if !assert.True(t, ok, "Type assertion for RSAPrivateKey is successful") {
 			return
 		}
