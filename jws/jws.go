@@ -335,12 +335,15 @@ func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
 // By default it will only pick up keys that have the "use" key
 // set to either "sig" or "enc", but you can override it by
 // providing a keyaccept function.
-func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
+func VerifyWithJWKSet(buf []byte, keyset jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
 	if keyaccept == nil {
 		keyaccept = DefaultJWKAcceptor
 	}
 
-	for _, key := range keyset.Keys {
+	for iter := keyset.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+
 		if !keyaccept(key) {
 			continue
 		}

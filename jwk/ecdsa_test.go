@@ -32,11 +32,16 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if !assert.Len(t, set.Keys, 1, `should be 1 key`) {
+		if !assert.Equal(t, set.Len(), 1, `should be 1 key`) {
 			return
 		}
 
-		privKey, ok := set.Keys[0].(jwk.ECDSAPrivateKey)
+		akey, ok := set.Get(0)
+		if !assert.True(t, ok, `set.Get(0) should succeed`) {
+			return
+		}
+
+		privKey, ok := akey.(jwk.ECDSAPrivateKey)
 		if !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
 			return
 		}
@@ -172,26 +177,31 @@ func TestECDSA(t *testing.T) {
   }`
 		expectedPublicKey := `{"crv":"P-256","kty":"EC","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}`
 
-		var set jwk.Set
+		set := jwk.NewSet()
 		if !assert.NoError(t, json.Unmarshal([]byte(s), &set), "unmarshal(set) should be successful") {
 			return
 		}
 
-		if _, ok := set.Keys[0].(jwk.ECDSAPrivateKey); !assert.True(t, ok, "first key should be ECDSAPrivateKey") {
+		akey, ok := set.Get(0)
+		if !assert.True(t, ok, `set.Get(0) should succeed`) {
 			return
 		}
-		key := set.Keys[0].(jwk.ECDSAPrivateKey)
+
+		privKey, ok := akey.(jwk.ECDSAPrivateKey)
+		if !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
+			return
+		}
 
 		var rawKey ecdsa.PrivateKey
-		if !assert.NoError(t, key.Raw(&rawKey), `materialize should succeed`) {
+		if !assert.NoError(t, privKey.Raw(&rawKey), `materialize should succeed`) {
 			return
 		}
 
-		if !assert.Equal(t, jwa.P256, key.Crv(), `curve name should match`) {
+		if !assert.Equal(t, jwa.P256, privKey.Crv(), `curve name should match`) {
 			return
 		}
 
-		pubKey, err := key.PublicKey()
+		pubKey, err := privKey.PublicKey()
 		if !assert.NoError(t, err, `should PublicKey succeed`) {
 			return
 		}
@@ -244,11 +254,19 @@ func TestECDSA(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to parse JWK ECDSA")
 		}
-		ECDSAPrivateKey := set.Keys[0].(jwk.ECDSAPrivateKey)
+		akey, ok := set.Get(0)
+		if !assert.True(t, ok, `set.Get(0) should succeed`) {
+			return
+		}
 
-		privKeyBytes, err := json.Marshal(ECDSAPrivateKey)
-		if err != nil {
-			t.Fatal("Failed to marshal ECDSAPrivateKey")
+		privKey, ok := akey.(jwk.ECDSAPrivateKey)
+		if !assert.True(t, ok, `should be jwk.ECDSAPrivateKey`) {
+			return
+		}
+
+		privKeyBytes, err := json.Marshal(privKey)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
 		}
 		// verify marshal
 
@@ -265,7 +283,7 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		if !assert.Equal(t, expECDSAPrivateKey, ECDSAPrivateKey, "ECDSAPrivate keys should match") {
+		if !assert.Equal(t, expECDSAPrivateKey, privKey, "ECDSAPrivate keys should match") {
 			return
 		}
 	})

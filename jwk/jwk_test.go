@@ -36,16 +36,21 @@ func TestParse(t *testing.T) {
 	verify := func(t *testing.T, src string, expected reflect.Type) {
 		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
-			var set jwk.Set
-			if err := json.Unmarshal([]byte(src), &set); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
+			set := jwk.NewSet()
+			if err := json.Unmarshal([]byte(src), set); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
 				return
 			}
 
-			if !assert.True(t, len(set.Keys) > 0, "set.Keys should be greater than 0") {
+			if !assert.True(t, set.Len() > 0, "set.Keys should be greater than 0") {
 				return
 			}
-			for _, key := range set.Keys {
-				if !assert.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected) {
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			for iter := set.Iterate(ctx); iter.Next(ctx); {
+				pair := iter.Pair()
+				if !assert.True(t, reflect.TypeOf(pair.Value).AssignableTo(expected), "key should be a %s", expected) {
 					return
 				}
 			}
@@ -375,13 +380,15 @@ func TestRoundtrip(t *testing.T) {
 		},
 	}
 
-	var ks1 jwk.Set
+	ks1 := jwk.NewSet()
 	for _, tc := range tests {
 		key, err := tc.generate(tc.use, tc.keyID)
 		if !assert.NoError(t, err, `tc.generate should succeed`) {
 			return
 		}
-		ks1.Keys = append(ks1.Keys, key)
+		if !assert.True(t, ks1.Add(key), `ks1.Add should succeed`) {
+			return
+		}
 	}
 
 	buf, err := json.MarshalIndent(ks1, "", "  ")
@@ -396,18 +403,15 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		keys := ks2.LookupKeyID(tc.keyID)
-		if !assert.Len(t, keys, 1, "Should be 1 key") {
-			return
-		}
-		key1 := keys[0]
-
-		keys = ks1.LookupKeyID(tc.keyID)
-		if !assert.Len(t, keys, 1, "Should be 1 key") {
+		key1, ok := ks2.LookupKeyID(tc.keyID)
+		if !assert.True(t, ok, "ks2.LookupKeyID should succeed") {
 			return
 		}
 
-		key2 := keys[0]
+		key2, ok := ks1.LookupKeyID(tc.keyID)
+		if !assert.True(t, ok, "ks1.LookupKeyID should succeed") {
+			return
+		}
 
 		pk1json, _ := json.Marshal(key1)
 		pk2json, _ := json.Marshal(key2)

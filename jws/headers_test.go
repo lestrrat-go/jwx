@@ -21,7 +21,7 @@ func TestHeader(t *testing.T) {
 	             "e":"AQAB",
 	             "alg":"RS256",
 	             "kid":"2011-04-29"}`
-	jwkPublicKeySet, err := jwk.ParseString(publicKey)
+	jwkPublicKey, err := jwk.ParseKey([]byte(publicKey))
 	if err != nil {
 		t.Fatal("Failed to parse RSA public key")
 	}
@@ -34,7 +34,7 @@ func TestHeader(t *testing.T) {
 		jws.AlgorithmKey:          jwa.ES256,
 		jws.ContentTypeKey:        "example",
 		jws.CriticalKey:           []string{"exp"},
-		jws.JWKKey:                jwkPublicKeySet.Keys[0],
+		jws.JWKKey:                jwkPublicKey,
 		jws.JWKSetURLKey:          "https://www.jwk.com/key.json",
 		jws.TypeKey:               "JWT",
 		jws.KeyIDKey:              "e9bc097a-ce51-4036-9562-d2ade882db0d",

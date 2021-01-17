@@ -356,11 +356,11 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 
 	h.jwk = nil
 	if jwkField := proxy.Xjwk; len(jwkField) > 0 {
-		set, err := jwk.ParseBytes([]byte(proxy.Xjwk))
+		key, err := jwk.ParseKey([]byte(proxy.Xjwk))
 		if err != nil {
 			return errors.Wrap(err, `failed to parse jwk field`)
 		}
-		h.jwk = set.Keys[0]
+		h.jwk = key
 	}
 	h.algorithm = proxy.Xalgorithm
 	h.contentType = proxy.XcontentType

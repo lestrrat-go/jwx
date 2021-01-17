@@ -18,7 +18,7 @@ type identMinRefreshInterval struct{}
 type identRefreshBackoff struct{}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
-// is used when fetching *jwk.Set objects.
+// is used when fetching jwk.Set objects.
 //
 // For historical reasons this method is also used in `jwk.Fetch*` functions,
 // eventhough the return value is marked as an `AutoRefreshOption`
@@ -41,7 +41,7 @@ func (aro *autoRefreshOption) autoRefreshOption() bool {
 }
 
 // WithRefreshInterval specifies the static interval between refreshes
-// of *jwk.Set objects controlled by jwk.AutoRefresh.
+// of jwk.Set objects controlled by jwk.AutoRefresh.
 //
 // Providing this option overrides the adaptive token refreshing based
 // on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),

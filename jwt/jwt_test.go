@@ -171,7 +171,10 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 
 			pubkey.Set(jwk.KeyIDKey, kid)
-			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(set))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -191,7 +194,10 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -208,7 +214,9 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			t2, err := jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}), jwt.UseDefaultKey(true))
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			t2, err := jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -233,7 +241,10 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey1, pubkey2}}), jwt.UseDefaultKey(true))
+			set := jwk.NewSet()
+			set.Add(pubkey1)
+			set.Add(pubkey2)
+			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -277,7 +288,9 @@ func TestJWTParseVerify(t *testing.T) {
 
 		pubkey.Set(jwk.KeyIDKey, kid)
 
-		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+		set := jwk.NewSet()
+		set.Add(pubkey)
+		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(set))
 		// This should fail
 		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
 			return
