@@ -130,6 +130,22 @@ func Example_openid() {
 		fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
 		return
 	}
+	// OUTPUT:
+	// {
+	//   "address": {
+	//     "country": "日本",
+	//     "locality": "港区",
+	//     "postal_code": "105-0011",
+	//     "region": "東京都",
+	//     "street_address": "芝公園 4-2-8"
+	//   },
+	//   "aud": [
+	//     "Golang Users"
+	//   ],
+	//   "iat": 233431200,
+	//   "privateClaimKey": "Hello, World!",
+	//   "sub": "https://github.com/lestrrat-go/jwx/jwt"
+	// }
 }
 
 func Example_jwk() {
