@@ -159,3 +159,114 @@ MAIN:
 	// OUTPUT:
 }
 ```
+
+# Create a JWK file from RSA public key:
+
+```go
+import(
+  "crypto/rand"
+  "crypto/rsa"
+  "encoding/json"
+  "log"
+  "os"
+
+  "github.com/lestrrat-go/jwx/jwk"
+)
+
+func main() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    log.Printf("failed to generate private key: %s", err)
+    return
+  }
+
+  key, err := jwk.New(&privkey.PublicKey)
+  if err != nil {
+    log.Printf("failed to create JWK: %s", err)
+    return
+  }
+
+  jsonbuf, err := json.MarshalIndent(key, "", "  ")
+  if err != nil {
+    log.Printf("failed to generate JSON: %s", err)
+    return
+  }
+
+  os.Stdout.Write(jsonbuf)
+}
+```
+
+Parse and use a JWK key:
+
+```go
+
+import (
+  "encoding/json"
+  "log"
+
+  "github.com/lestrrat-go/jwx/jwk"
+)
+
+func main() {
+  set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
+  if err != nil {
+    log.Printf("failed to parse JWK: %s", err)
+    return
+  }
+
+  // Key sets can be serialized back to JSON
+  {
+    jsonbuf, err := json.Marshal(set)
+    if err != nil {
+      log.Printf("failed to marshal key set into JSON: %s", err)
+      return
+    }
+    log.Printf("%s", jsonbuf)
+  }
+
+  for it := set.Iterate(context.Background()); it.Next(context.Background()); {
+    pair := it.Pair()
+    key := pair.Value.(jwk.Key)
+
+    var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+    if err := key.Raw(&rawkey); err != nil {
+      log.Printf("failed to create public key: %s", err)
+      return
+    }
+    // Use rawkey for jws.Verify() or whatever.
+    _ = rawkey
+
+    // You can create jwk.Key from a raw key, too
+    fromRawKey, err := jwk.New(rawkey)
+
+
+    // Keys can be serialized back to JSON
+    jsonbuf, err := json.Marshal(key)
+    if err != nil {
+      log.Printf("failed to marshal key into JSON: %s", err)
+      return
+    }
+    log.Printf("%s", jsonbuf)
+
+    // If you know the underlying Key type (RSA, EC, Symmetric), you can
+    // create an empy instance first
+    //    key := jwk.NewRSAPrivateKey()
+    // ..and then use json.Unmarshal
+    //    json.Unmarshal(key, jsonbuf)
+    //
+    // but if you don't know the type first, you have an abstract type
+    // jwk.Key, which can't be used as the first argument to json.Unmarshal
+    //
+    // In this case, use jwk.Parse()
+    fromJsonKey, err := jwk.ParseBytes(jsonbuf)
+    if err != nil {
+      log.Printf("failed to parse json: %s", err)
+      return
+    }
+    _ = fromJsonKey
+    _ = fromRawKey
+  }
+}
+```
+
+
