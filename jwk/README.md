@@ -1,4 +1,30 @@
+# github.com/lestrrat-go/jwx/jwk [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
+
 # Create a JWK from the Raw key
+
+Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
+
+* Parse and work with RSA/EC/Symmetric/OKP JWK types
+  * Convert to and from JSON
+  * Convert to and from raw key types (e.g. *rsa.PrivateKey)
+* Ability to keep a JWKS fresh.
+
+Examples are located in the examples directory ([jwk_example_test.go](../examples/jwk_example_test.go))
+
+Supported key types:
+
+| kty | Curve                   | Go Key Type                                   |
+|:----|:------------------------|:----------------------------------------------|
+| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
+| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
+| oct | N/A                     | []byte                                        |
+| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
+|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|
+
+* Note 1: Experimental
+* Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
+
+# SYNOPSIS
 
 ```go
 func ExampleNew() {
@@ -159,3 +185,114 @@ MAIN:
 	// OUTPUT:
 }
 ```
+
+# Create a JWK file from RSA public key:
+
+```go
+import(
+  "crypto/rand"
+  "crypto/rsa"
+  "encoding/json"
+  "log"
+  "os"
+
+  "github.com/lestrrat-go/jwx/jwk"
+)
+
+func main() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    log.Printf("failed to generate private key: %s", err)
+    return
+  }
+
+  key, err := jwk.New(&privkey.PublicKey)
+  if err != nil {
+    log.Printf("failed to create JWK: %s", err)
+    return
+  }
+
+  jsonbuf, err := json.MarshalIndent(key, "", "  ")
+  if err != nil {
+    log.Printf("failed to generate JSON: %s", err)
+    return
+  }
+
+  os.Stdout.Write(jsonbuf)
+}
+```
+
+Parse and use a JWK key:
+
+```go
+
+import (
+  "encoding/json"
+  "log"
+
+  "github.com/lestrrat-go/jwx/jwk"
+)
+
+func main() {
+  set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
+  if err != nil {
+    log.Printf("failed to parse JWK: %s", err)
+    return
+  }
+
+  // Key sets can be serialized back to JSON
+  {
+    jsonbuf, err := json.Marshal(set)
+    if err != nil {
+      log.Printf("failed to marshal key set into JSON: %s", err)
+      return
+    }
+    log.Printf("%s", jsonbuf)
+  }
+
+  for it := set.Iterate(context.Background()); it.Next(context.Background()); {
+    pair := it.Pair()
+    key := pair.Value.(jwk.Key)
+
+    var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+    if err := key.Raw(&rawkey); err != nil {
+      log.Printf("failed to create public key: %s", err)
+      return
+    }
+    // Use rawkey for jws.Verify() or whatever.
+    _ = rawkey
+
+    // You can create jwk.Key from a raw key, too
+    fromRawKey, err := jwk.New(rawkey)
+
+
+    // Keys can be serialized back to JSON
+    jsonbuf, err := json.Marshal(key)
+    if err != nil {
+      log.Printf("failed to marshal key into JSON: %s", err)
+      return
+    }
+    log.Printf("%s", jsonbuf)
+
+    // If you know the underlying Key type (RSA, EC, Symmetric), you can
+    // create an empy instance first
+    //    key := jwk.NewRSAPrivateKey()
+    // ..and then use json.Unmarshal
+    //    json.Unmarshal(key, jsonbuf)
+    //
+    // but if you don't know the type first, you have an abstract type
+    // jwk.Key, which can't be used as the first argument to json.Unmarshal
+    //
+    // In this case, use jwk.Parse()
+    fromJsonKey, err := jwk.ParseBytes(jsonbuf)
+    if err != nil {
+      log.Printf("failed to parse json: %s", err)
+      return
+    }
+    _ = fromJsonKey
+    _ = fromRawKey
+  }
+}
+```
+
+

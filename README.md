@@ -1,16 +1,6 @@
-# jwx
+# github.com/lestrrat-go/jwx ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx) [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=master)](http://codecov.io/github/lestrrat-go/jwx?branch=master)
 
 Implementation of various JWx technologies
-
-![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx)
-[![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=master)](http://codecov.io/github/lestrrat-go/jwx?branch=master)
-
-## Status
-
-### Done
-
-PR/issues welcome.
 
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
@@ -38,385 +28,128 @@ So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable
 
 The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
 
-## Synopsis
+# Packages
 
-### JWT
+## JWA [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwa.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwa)
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwt](./jwt/README.md)
+Package [github.com/lestrrat-go/jwx/jwa](./jwa) defines the various algorithm described in [RFC7518](https://tools.ietf.org/html/rfc7518)
 
-```go
-func ExampleJWT() {
-  const aLongLongTimeAgo = 233431200
+## JWT [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
 
-  t := jwt.New()
-  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
-  t.Set(jwt.AudienceKey, `Golang Users`)
-  t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
-  t.Set(`privateClaimKey`, `Hello, World!`)
+Package [github.com/lestrrat-go/jwx/jwt](./jwt) implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
-  buf, err := json.MarshalIndent(t, "", "  ")
-  if err != nil {
-    fmt.Printf("failed to generate JSON: %s\n", err)
-    return
-  }
+* Convenience methods for oft-used keys ("aud", "sub", "iss", etc)
+* Ability to Get/Set arbitrary keys
+* Conversion to and from JSON
+* Generate signed tokens
+* Verify signed tokens
+* Extra support for OpenID tokens via [github.com/lestrrat-go/jwx/jwt/openid](./jwt/openid)
 
-  fmt.Printf("%s\n", buf)
-  fmt.Printf("aud -> '%s'\n", t.Audience())
-  fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
-  if v, ok := t.Get(`privateClaimKey`); ok {
-    fmt.Printf("privateClaimKey -> '%s'\n", v)
-  }
-  fmt.Printf("sub -> '%s'\n", t.Subject())
+Examples are located in the examples directory ([jwt_example_test.go](./examples/jwt_example_test.go))
 
-  key, err := rsa.GenerateKey(rand.Reader, 2048)
-  if err != nil {
-    log.Printf("failed to generate private key: %s", err)
-    return
-  }
+## JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
 
-  {
-    // Signing a token (using raw rsa.PrivateKey)
-    signed, err := jwt.Sign(t, jwa.RS256, key)
-    if err != nil {
-      log.Printf("failed to sign token: %s", err)
-      return
-    }
-    _ = signed
-  }
+Package [github.com/lestrrat-go/jwx/jwk](./jwk) implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
 
-  {
-    // Signing a token (using JWK)
-    jwkKey, err := jwk.New(key)
-    if err != nil {
-      log.Printf("failed to create JWK key: %s", err)
-      return
-    }
+* Parse and work with RSA/EC/Symmetric/OKP JWK types
+  * Convert to and from JSON
+  * Convert to and from raw key types (e.g. *rsa.PrivateKey)
+* Ability to keep a JWKS fresh.
+* Add arbitrary fields in the JWK object
 
-    signed, err := jwt.Sign(t, jwa.RS256, jwkKey)
-    if err != nil {
-      log.Printf("failed to sign token: %s", err)
-      return
-    }
-    _ = signed
-  }
-}
-```
-
-### JWT (with OpenID claims)
-
-`jwt` package can work with token types other than the default one.
-For OpenID claims, use the token created by `openid.New()`, or
-use the `jwt.WithOpenIDClaims()`. If you need to use other specialized
-claims, use `jwt.WithToken()` to specify the exact token type
-
-```go
-func Example_openid() {
-  const aLongLongTimeAgo = 233431200
-
-  t := openid.New()
-  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
-  t.Set(jwt.AudienceKey, `Golang Users`)
-  t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
-  t.Set(`privateClaimKey`, `Hello, World!`)
-
-  addr := openid.NewAddress()
-  addr.Set(openid.AddressPostalCodeKey, `105-0011`)
-  addr.Set(openid.AddressCountryKey, `日本`)
-  addr.Set(openid.AddressRegionKey, `東京都`)
-  addr.Set(openid.AddressLocalityKey, `港区`)
-  addr.Set(openid.AddressStreetAddressKey, `芝公園 4-2-8`)
-  t.Set(openid.AddressKey, addr)
-
-  buf, err := json.MarshalIndent(t, "", "  ")
-  if err != nil {
-    fmt.Printf("failed to generate JSON: %s\n", err)
-    return
-  }
-  fmt.Printf("%s\n", buf)
-
-  t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
-  if err != nil {
-    fmt.Printf("failed to parse JSON: %s\n", err)
-    return
-  }
-  if _, ok := t2.(openid.Token); !ok {
-    fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
-    return
-  }
-}
-```
-
-### JWK
-
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwk](./jwk/README.md)
-
-Create a JWK file from RSA public key:
-
-```go
-import(
-  "crypto/rand"
-  "crypto/rsa"
-  "encoding/json"
-  "log"
-  "os"
-
-  "github.com/lestrrat-go/jwx/jwk"
-)
-
-func main() {
-  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-  if err != nil {
-    log.Printf("failed to generate private key: %s", err)
-    return
-  }
-
-  key, err := jwk.New(&privkey.PublicKey)
-  if err != nil {
-    log.Printf("failed to create JWK: %s", err)
-    return
-  }
-
-  jsonbuf, err := json.MarshalIndent(key, "", "  ")
-  if err != nil {
-    log.Printf("failed to generate JSON: %s", err)
-    return
-  }
-
-  os.Stdout.Write(jsonbuf)
-}
-```
-
-Parse and use a JWK key:
-
-```go
-
-import (
-  "encoding/json"
-  "log"
-
-  "github.com/lestrrat-go/jwx/jwk"
-)
-
-func main() {
-  set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
-  if err != nil {
-    log.Printf("failed to parse JWK: %s", err)
-    return
-  }
-
-  // Key sets can be serialized back to JSON
-  {
-    jsonbuf, err := json.Marshal(set)
-    if err != nil {
-      log.Printf("failed to marshal key set into JSON: %s", err)
-      return
-    }
-    log.Printf("%s", jsonbuf)
-  }
-
-  for it := set.Iterate(context.Background()); it.Next(context.Background()); {
-    pair := it.Pair()
-    key := pair.Value.(jwk.Key)
-
-    var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-    if err := key.Raw(&rawkey); err != nil {
-      log.Printf("failed to create public key: %s", err)
-      return
-    }
-    // Use rawkey for jws.Verify() or whatever.
-    _ = rawkey
-
-    // You can create jwk.Key from a raw key, too
-    fromRawKey, err := jwk.New(rawkey)
-
-
-    // Keys can be serialized back to JSON
-    jsonbuf, err := json.Marshal(key)
-    if err != nil {
-      log.Printf("failed to marshal key into JSON: %s", err)
-      return
-    }
-    log.Printf("%s", jsonbuf)
-
-    // If you know the underlying Key type (RSA, EC, Symmetric), you can
-    // create an empy instance first
-    //    key := jwk.NewRSAPrivateKey()
-    // ..and then use json.Unmarshal
-    //    json.Unmarshal(key, jsonbuf)
-    //
-    // but if you don't know the type first, you have an abstract type
-    // jwk.Key, which can't be used as the first argument to json.Unmarshal
-    //
-    // In this case, use jwk.Parse()
-    fromJsonKey, err := jwk.ParseBytes(jsonbuf)
-    if err != nil {
-      log.Printf("failed to parse json: %s", err)
-      return
-    }
-    _ = fromJsonKey
-    _ = fromRawKey
-  }
-}
-```
+Examples are located in the examples directory ([jwk_example_test.go](./examples/jwk_example_test.go))
 
 Supported key types:
 
-| kty | Curve                   | Go Key Type                                |
-|:----|:------------------------|:-------------------------------------------|
-| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey             |
-| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey         |
-| oct | N/A                     | []byte                                     |
-| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey     |
-|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey |
+| kty | Curve                   | Go Key Type                                   |
+|:----|:------------------------|:----------------------------------------------|
+| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
+| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
+| oct | N/A                     | []byte                                        |
+| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
+|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|
 
-Note 1: Experimental
+* Note 1: Experimental
+* Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
 
-### JWS - Verify parse and verify a signed JWT
+## JWS [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jws](./jws/README.md)
+Package [github.com/lestrrat-go/jwx/jws](./jws) implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515)
 
-```go
-  token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
-  if err != nil {
-    fmt.Printf("failed to parse payload: %s\n", err)
-  }
-```
+* Parse and generate compact or JSON serializations
+* Sign and verify arbitrary payload
+* Use any of the keys supported in [github.com/lestrrat-go/jwx/jwk](./jwk)
+* Add arbitrary fields in the JWS object
+* Ability to add/replace existing signature methods
 
-### JWS - Sign / verify arbitrary data
-
-```go
-import(
-  "crypto/rand"
-  "crypto/rsa"
-  "log"
-
-  "github.com/lestrrat-go/jwx/jwa"
-  "github.com/lestrrat-go/jwx/jws"
-)
-
-func main() {
-  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-  if err != nil {
-    log.Printf("failed to generate private key: %s", err)
-    return
-  }
-
-  buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
-  if err != nil {
-    log.Printf("failed to created JWS message: %s", err)
-    return
-  }
-
-  // When you receive a JWS message, you can verify the signature
-  // and grab the payload sent in the message in one go:
-  verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
-  if err != nil {
-    log.Printf("failed to verify message: %s", err)
-    return
-  }
-
-  log.Printf("signed message verified! -> %s", verified)
-}
-```
+Examples are located in the examples directory ([jws_example_test.go](./examples/jws_example_test.go))
 
 Supported signature algorithms:
 
-| Algorithm                               | Supported? | Constant in go-jwx |
-|:----------------------------------------|:-----------|:-------------------|
-| HMAC using SHA-256                      | YES        | jwa.HS256          |
-| HMAC using SHA-384                      | YES        | jwa.HS384          |
-| HMAC using SHA-512                      | YES        | jwa.HS512          |
-| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa.RS256          |
-| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa.RS384          |
-| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa.RS512          |
-| ECDSA using P-256 and SHA-256           | YES        | jwa.ES256          |
-| ECDSA using P-384 and SHA-384           | YES        | jwa.ES384          |
-| ECDSA using P-521 and SHA-512           | YES        | jwa.ES512          |
-| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256          |
-| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384          |
-| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512          |
-| EdDSA (1)                               | YES        | jwa.EdDSA          |
+| Algorithm                               | Supported? | Constant in [jwa](./jwa) |
+|:----------------------------------------|:-----------|:-------------------------|
+| HMAC using SHA-256                      | YES        | jwa.HS256                |
+| HMAC using SHA-384                      | YES        | jwa.HS384                |
+| HMAC using SHA-512                      | YES        | jwa.HS512                |
+| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa.RS256                |
+| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa.RS384                |
+| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa.RS512                |
+| ECDSA using P-256 and SHA-256           | YES        | jwa.ES256                |
+| ECDSA using P-384 and SHA-384           | YES        | jwa.ES384                |
+| ECDSA using P-521 and SHA-512           | YES        | jwa.ES512                |
+| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
+| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
+| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
+| EdDSA (1)                               | YES        | jwa.EdDSA                |
 
-Note 1: Experimental
+* Note 1: Experimental
 
-### JWE
+## JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwe](./jwe/README.md)
+Package [github.com/lestrrast-go/jwx/jwe](./jwe) implements JWE as described in [RFC7516](https://tools.ietf.org/html/rfc7516)
 
-```go
-import(
-  "crypto/rand"
-  "crypto/rsa"
-  "log"
+* Encrypt and Decrypt arbitrary data
+* Content compression and decompression
+* Add arbitrary fields in the JWE header object
 
-  "github.com/lestrrat-go/jwx/jwa"
-  "github.com/lestrrat-go/jwx/jwe"
-)
-
-func main() {
-  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-  if err != nil {
-    log.Printf("failed to generate private key: %s", err)
-    return
-  }
-
-  payload := []byte("Lorem Ipsum")
-
-  encrypted, err := jwe.Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
-  if err != nil {
-    log.Printf("failed to encrypt payload: %s", err)
-    return
-  }
-
-  decrypted, err := jwe.Decrypt(encrypted, jwa.RSA1_5, privkey)
-  if err != nil {
-    log.Printf("failed to decrypt: %s", err)
-    return
-  }
-
-  if string(decrypted) != "Lorem Ipsum" {
-    log.Printf("WHAT?!")
-    return
-  }
-}
-```
+Examples are located in the examples directory ([jwe_example_test.go](./examples/jwe_example_test.go))
 
 Supported key encryption algorithm:
 
-| Algorithm                                | Supported? | Constant in go-jwx     |
-|:-----------------------------------------|:-----------|:-----------------------|
-| RSA-PKCS1v1.5                            | YES        | jwa.RSA1_5             |
-| RSA-OAEP-SHA1                            | YES        | jwa.RSA_OAEP           |
-| RSA-OAEP-SHA256                          | YES        | jwa.RSA_OAEP_256       |
-| AES key wrap (128)                       | YES        | jwa.A128KW             |
-| AES key wrap (192)                       | YES        | jwa.A192KW             |
-| AES key wrap (256)                       | YES        | jwa.A256KW             |
-| Direct encryption                        | YES (1)    | jwa.DIRECT             |
-| ECDH-ES                                  | YES (1)    | jwa.ECDH_ES            |
-| ECDH-ES + AES key wrap (128)             | YES        | jwa.ECDH_ES_A128KW     |
-| ECDH-ES + AES key wrap (192)             | YES        | jwa.ECDH_ES_A192KW     |
-| ECDH-ES + AES key wrap (256)             | YES        | jwa.ECDH_ES_A256KW     |
-| AES-GCM key wrap (128)                   | YES        | jwa.A128GCMKW          |
-| AES-GCM key wrap (192)                   | YES        | jwa.A192GCMKW          |
-| AES-GCM key wrap (256)                   | YES        | jwa.A256GCMKW          |
-| PBES2 + HMAC-SHA256 + AES key wrap (128) | YES        | jwa.PBES2_HS256_A128KW |
-| PBES2 + HMAC-SHA384 + AES key wrap (192) | YES        | jwa.PBES2_HS384_A192KW |
-| PBES2 + HMAC-SHA512 + AES key wrap (256) | YES        | jwa.PBES2_HS512_A256KW |
+| Algorithm                                | Supported? | Constant in [jwa](./jwa) |
+|:-----------------------------------------|:-----------|:-------------------------|
+| RSA-PKCS1v1.5                            | YES        | jwa.RSA1_5               |
+| RSA-OAEP-SHA1                            | YES        | jwa.RSA_OAEP             |
+| RSA-OAEP-SHA256                          | YES        | jwa.RSA_OAEP_256         |
+| AES key wrap (128)                       | YES        | jwa.A128KW               |
+| AES key wrap (192)                       | YES        | jwa.A192KW               |
+| AES key wrap (256)                       | YES        | jwa.A256KW               |
+| Direct encryption                        | YES (1)    | jwa.DIRECT               |
+| ECDH-ES                                  | YES (1)    | jwa.ECDH_ES              |
+| ECDH-ES + AES key wrap (128)             | YES        | jwa.ECDH_ES_A128KW       |
+| ECDH-ES + AES key wrap (192)             | YES        | jwa.ECDH_ES_A192KW       |
+| ECDH-ES + AES key wrap (256)             | YES        | jwa.ECDH_ES_A256KW       |
+| AES-GCM key wrap (128)                   | YES        | jwa.A128GCMKW            |
+| AES-GCM key wrap (192)                   | YES        | jwa.A192GCMKW            |
+| AES-GCM key wrap (256)                   | YES        | jwa.A256GCMKW            |
+| PBES2 + HMAC-SHA256 + AES key wrap (128) | YES        | jwa.PBES2_HS256_A128KW   |
+| PBES2 + HMAC-SHA384 + AES key wrap (192) | YES        | jwa.PBES2_HS384_A192KW   |
+| PBES2 + HMAC-SHA512 + AES key wrap (256) | YES        | jwa.PBES2_HS512_A256KW   |
 
-Note 1: Single-recipient only
+* Note 1: Single-recipient only
 
 Supported content encryption algorithm:
 
-| Algorithm                   | Supported? | Constant in go-jwx     |
-|:----------------------------|:-----------|:-----------------------|
-| AES-CBC + HMAC-SHA256 (128) | YES        | jwa.A128CBC_HS256      |
-| AES-CBC + HMAC-SHA384 (192) | YES        | jwa.A192CBC_HS384      |
-| AES-CBC + HMAC-SHA512 (256) | YES        | jwa.A256CBC_HS512      |
-| AES-GCM (128)               | YES        | jwa.A128GCM            |
-| AES-GCM (192)               | YES        | jwa.A192GCM            |
-| AES-GCM (256)               | YES        | jwa.A256GCM            |
+| Algorithm                   | Supported? | Constant in [jwa](./jwa) |
+|:----------------------------|:-----------|:-------------------------|
+| AES-CBC + HMAC-SHA256 (128) | YES        | jwa.A128CBC_HS256        |
+| AES-CBC + HMAC-SHA384 (192) | YES        | jwa.A192CBC_HS384        |
+| AES-CBC + HMAC-SHA512 (256) | YES        | jwa.A256CBC_HS512        |
+| AES-GCM (128)               | YES        | jwa.A128GCM              |
+| AES-GCM (192)               | YES        | jwa.A192GCM              |
+| AES-GCM (256)               | YES        | jwa.A256GCM              |
 
-PRs welcome to support missing algorithms!
+# Global Settings
 
 ## Configuring JSON Parsing
 
@@ -432,18 +165,29 @@ func init()
 Do be aware that this has *global* effect. All code that calls in to `encoding/json`
 within `jwx` *will* use your settings.
 
-## Other related libraries:
+# Other related libraries:
 
 * https://github.com/dgrijalva/jwt-go
 * https://github.com/square/go-jose
 * https://github.com/coreos/oidc
 * https://golang.org/x/oauth2
 
-## Contributions
+# Contributions
 
-PRs welcome!
+## Issues
 
-## Credits
+For bug reports and feature requests, please try to follow the issue templates as much as possible.
+For either bug reports or feature requests, failing tests are even better.
+
+## Pull Requests
+
+Please make sure to include tests that excercise the changes you made.
+
+## Discussions / Usage
+
+Please try [discussions](./discussions) first.
+
+# Credits
 
 * Work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
 * Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
