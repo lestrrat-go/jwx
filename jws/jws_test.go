@@ -913,7 +913,7 @@ func TestEncode(t *testing.T) {
 			Size int
 		}{
 			{Name: "Short", Size: 100},
-			{Name: "Short", Size: 8000},
+			{Name: "Long", Size: 8000},
 		}
 		for _, tc := range testcases {
 			size := tc.Size
