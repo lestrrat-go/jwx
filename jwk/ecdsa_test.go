@@ -75,16 +75,20 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		pubKey, err := privKey.PublicKey()
+		tmpKey, err := jwk.PublicKeyOf(privKey)
 		if !assert.NoError(t, err, "Should be able to get ECDSA public key") {
 			return
 		}
-
-		if !assert.Empty(t, pubKey.KeyUsage(), `KeyUsage() should be empty`) {
+		pubKey, ok := tmpKey.(jwk.ECDSAPublicKey)
+		if !assert.True(t, ok, `tmpKey should be a jwk.ECDSAPublicKey`) {
 			return
 		}
 
-		if !assert.Empty(t, pubKey.KeyOps(), `KeyOps() should be empty`) {
+		if !assert.Equal(t, privKey.KeyUsage(), pubKey.KeyUsage(), `KeyUsage() should match`) {
+			return
+		}
+
+		if !assert.Equal(t, privKey.KeyOps(), pubKey.KeyOps(), `KeyOps() should match`) {
 			return
 		}
 
@@ -201,7 +205,7 @@ func TestECDSA(t *testing.T) {
 			return
 		}
 
-		pubKey, err := privKey.PublicKey()
+		pubKey, err := jwk.PublicKeyOf(privKey)
 		if !assert.NoError(t, err, `should PublicKey succeed`) {
 			return
 		}

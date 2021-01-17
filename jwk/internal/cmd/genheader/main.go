@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	byteSliceType = "[]byte"
+	byteSliceType          = "[]byte"
 )
 
 func main() {
@@ -185,7 +185,6 @@ type keyType struct {
 type headerType struct {
 	allHeaders []headerField
 	headers    []headerField
-	ifMethods  []string
 	rawKeyType string
 	name       string
 	structName string
@@ -219,9 +218,6 @@ var keyTypes = []keyType{
 			{
 				name:       `PrivateKey`,
 				rawKeyType: `*rsa.PrivateKey`,
-				ifMethods: []string{
-					`PublicKey() (RSAPublicKey, error)`,
-				},
 				headers: []headerField{
 					{
 						name:   `d`,
@@ -310,9 +306,6 @@ var keyTypes = []keyType{
 			{
 				name:       `PrivateKey`,
 				rawKeyType: `*ecdsa.PrivateKey`,
-				ifMethods: []string{
-					`PublicKey() (ECDSAPublicKey, error)`,
-				},
 				headers: []headerField{
 					{
 						name:   `d`,
@@ -389,9 +382,6 @@ var keyTypes = []keyType{
 			{
 				name:       "PrivateKey",
 				rawKeyType: `interface{}`,
-				ifMethods: []string{
-					`PublicKey() (OKPPublicKey, error)`,
-				},
 				headers: []headerField{
 					{
 						name:   `x`,
@@ -585,9 +575,6 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nFromRaw(%s) error", ht.rawKeyType)
 		for _, header := range ht.headers {
 			fmt.Fprintf(&buf, "\n%s() %s", header.method, header.typ)
-		}
-		for _, method := range ht.ifMethods {
-			fmt.Fprintf(&buf, "\n%s", method)
 		}
 		fmt.Fprintf(&buf, "\n}")
 

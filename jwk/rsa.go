@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/binary"
@@ -148,17 +149,31 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func (k rsaPrivateKey) PublicKey() (RSAPublicKey, error) {
-	var key rsa.PrivateKey
-	if err := k.Raw(&key); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize key to generate public key`)
+func makeRSAPublicKey(v interface{ Iterate(context.Context) HeaderIterator }) (Key, error) {
+	newKey := NewRSAPublicKey()
+
+	// Iterate and copy everything except for the bits that should not be in the public key
+	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		switch pair.Key {
+		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
+			continue
+		default:
+			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			}
+		}
 	}
 
-	newKey := NewRSAPublicKey()
-	if err := newKey.FromRaw(&key.PublicKey); err != nil {
-		return nil, errors.Wrap(err, `failed to initialize RSAPublicKey`)
-	}
 	return newKey, nil
+}
+
+func (k *rsaPrivateKey) PublicKey() (Key, error) {
+	return makeRSAPublicKey(k)
+}
+
+func (k *rsaPublicKey) PublicKey() (Key, error) {
+	return makeRSAPublicKey(k)
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated

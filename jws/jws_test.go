@@ -498,8 +498,8 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with API library
-		publicKey, err := jwk.PublicKeyOf(key)
-		if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		publicKey, err := jwk.PublicRawKeyOf(key)
+		if !assert.NoError(t, err, `jwk.PublicRawKeyOf should succeed`) {
 			return
 		}
 		verifiedPayload, err := jws.Verify(jwsCompact, alg, publicKey)

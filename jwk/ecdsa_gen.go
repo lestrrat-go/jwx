@@ -33,7 +33,6 @@ type ECDSAPrivateKey interface {
 	D() []byte
 	X() []byte
 	Y() []byte
-	PublicKey() (ECDSAPublicKey, error)
 }
 
 type ecdsaPrivateKey struct {

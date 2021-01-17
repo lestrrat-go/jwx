@@ -114,7 +114,7 @@ func TestRSA(t *testing.T) {
 		var pubkey rsa.PublicKey
 
 		{
-			pkey, err := rsakey.PublicKey()
+			pkey, err := jwk.PublicKeyOf(rsakey)
 			if !assert.NoError(t, err, "rsakey.PublickKey is successful") {
 				return
 			}
