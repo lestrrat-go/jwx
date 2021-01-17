@@ -148,16 +148,16 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 
-		_, err = jwt.ParseBytes(buf, jwt.WithValidate(true))
+		_, err = jwt.Parse(buf, jwt.WithValidate(true))
 		// This should fail, because exp is set in the past
-		if !assert.Error(t, err, "jwt.ParseBytes should fail") {
+		if !assert.Error(t, err, "jwt.Parse should fail") {
 			return
 		}
 
-		_, err = jwt.ParseBytes(buf, jwt.WithValidate(true), jwt.WithAcceptableSkew(time.Hour))
+		_, err = jwt.Parse(buf, jwt.WithValidate(true), jwt.WithAcceptableSkew(time.Hour))
 		// This should succeed, because we have given big skew
 		// that is well enough to get us accepted
-		if !assert.NoError(t, err, "jwt.ParseBytes should succeed (1)") {
+		if !assert.NoError(t, err, "jwt.Parse should succeed (1)") {
 			return
 		}
 
@@ -166,8 +166,8 @@ func TestGHIssue10(t *testing.T) {
 		clock := jwt.ClockFunc(func() time.Time {
 			return tm.Add(-59 * time.Minute)
 		})
-		_, err = jwt.ParseBytes(buf, jwt.WithValidate(true), jwt.WithClock(clock))
-		if !assert.NoError(t, err, "jwt.ParseBytes should succeed (2)") {
+		_, err = jwt.Parse(buf, jwt.WithValidate(true), jwt.WithClock(clock))
+		if !assert.NoError(t, err, "jwt.Parse should succeed (2)") {
 			return
 		}
 	})
