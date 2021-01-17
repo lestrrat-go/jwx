@@ -56,14 +56,21 @@ func parseBytes(data []byte, options ...Option) (Token, error) {
 	var useDefault bool
 	var token Token
 	var validate bool
+	var ok bool
 	for _, o := range options {
 		switch o.Ident() {
 		case identVerify{}:
 			params = o.Value().(VerifyParameters)
 		case identKeySet{}:
-			keyset = o.Value().(jwk.Set)
+			keyset, ok = o.Value().(jwk.Set)
+			if !ok {
+				return nil, errors.Errorf(`invalid JWK set passed via WithKeySet() option (%T)`, o.Value())
+			}
 		case identToken{}:
-			token = o.Value().(Token)
+			token, ok = o.Value().(Token)
+			if !ok {
+				return nil, errors.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
+			}
 		case identDefault{}:
 			useDefault = o.Value().(bool)
 		case identValidate{}:
