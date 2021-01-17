@@ -1,3 +1,5 @@
+# github.com/lestrrat-go/jwx/jwk [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
+
 # Create a JWK from the Raw key
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
@@ -11,15 +13,16 @@ Examples are located in the examples directory ([jwk_example_test.go](../example
 
 Supported key types:
 
-| kty | Curve                   | Go Key Type                                |
-|:----|:------------------------|:-------------------------------------------|
-| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey             |
-| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey         |
-| oct | N/A                     | []byte                                     |
-| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey     |
-|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey |
+| kty | Curve                   | Go Key Type                                   |
+|:----|:------------------------|:----------------------------------------------|
+| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
+| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
+| oct | N/A                     | []byte                                        |
+| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
+|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|
 
-Note 1: Experimental
+* Note 1: Experimental
+* Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
 
 # SYNOPSIS
 

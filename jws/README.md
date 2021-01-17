@@ -1,30 +1,69 @@
-# Sign and Verify a payload
+# github.com/lestrrat-go/jwx/jws [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
+
+Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515)
+
+* Parse and generate compact or JSON serializations
+* Sign and verify arbitrary payload
+* Use any of the keys supported in [github.com/lestrrat-go/jwx/jwk](../jwk)
+* Add arbitrary fields in the JWS object
+* Ability to add/replace existing signature methods
+
+Examples are located in the examples directory ([jws_example_test.go](../examples/jws_example_test.go))
+
+Supported signature algorithms:
+
+| Algorithm                               | Supported? | Constant in [jwa](./jwa) |
+|:----------------------------------------|:-----------|:-------------------------|
+| HMAC using SHA-256                      | YES        | jwa.HS256                |
+| HMAC using SHA-384                      | YES        | jwa.HS384                |
+| HMAC using SHA-512                      | YES        | jwa.HS512                |
+| RSASSA-PKCS-v1.5 using SHA-256          | YES        | jwa.RS256                |
+| RSASSA-PKCS-v1.5 using SHA-384          | YES        | jwa.RS384                |
+| RSASSA-PKCS-v1.5 using SHA-512          | YES        | jwa.RS512                |
+| ECDSA using P-256 and SHA-256           | YES        | jwa.ES256                |
+| ECDSA using P-384 and SHA-384           | YES        | jwa.ES384                |
+| ECDSA using P-521 and SHA-512           | YES        | jwa.ES512                |
+| RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
+| RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
+| RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
+| EdDSA (1)                               | YES        | jwa.EdDSA                |
+
+* Note 1: Experimental
+
+# Sign and verify arbitrary data
 
 ```go
-func ExampleSign() {
-	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Printf("failed to create private key: %s", err)
-		return
-	}
+import(
+  "crypto/rand"
+  "crypto/rsa"
+  "log"
 
-	buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
-	if err != nil {
-		log.Printf("failed to sign payload: %s", err)
-		return
-	}
+  "github.com/lestrrat-go/jwx/jwa"
+  "github.com/lestrrat-go/jwx/jws"
+)
 
-	log.Printf("%s", buf)
+func main() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    log.Printf("failed to generate private key: %s", err)
+    return
+  }
 
-	verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
-	if err != nil {
-		log.Printf("failed to verify JWS message: %s", err)
-		return
-	}
-	log.Printf("message verified!")
+  buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
+  if err != nil {
+    log.Printf("failed to created JWS message: %s", err)
+    return
+  }
 
-	// Do something with `verified` ....
-	_ = verified
+  // When you receive a JWS message, you can verify the signature
+  // and grab the payload sent in the message in one go:
+  verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
+  if err != nil {
+    log.Printf("failed to verify message: %s", err)
+    return
+  }
+
+  log.Printf("signed message verified! -> %s", verified)
 }
 ```
 
@@ -62,3 +101,4 @@ func ExampleMessage() {
 	_ = buf
 }
 ```
+

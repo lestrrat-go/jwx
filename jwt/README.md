@@ -1,6 +1,4 @@
-# jwt
-
-[![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
+# github.com/lestrrat-go/jwx/jwt [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
 
 Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
@@ -14,6 +12,17 @@ Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.i
 # SYNOPSIS
 
 More examples are located in the examples directory ([jwt_example_test.go](../examples/jwt_example_test.go))
+
+# Verify a signed JWT
+
+```go
+  token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
+  if err != nil {
+    fmt.Printf("failed to parse payload: %s\n", err)
+  }
+```
+
+# Token Usage
 
 ```go
 func ExampleJWT() {
