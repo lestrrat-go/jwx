@@ -126,7 +126,9 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, privk)
 }
 
-func makeOKPPublicKey(v interface{ Iterate(context.Context) HeaderIterator }) (Key, error) {
+func makeOKPPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
 	newKey := NewOKPPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key

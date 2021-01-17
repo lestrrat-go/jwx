@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	byteSliceType          = "[]byte"
+	byteSliceType = "[]byte"
 )
 
 func main() {

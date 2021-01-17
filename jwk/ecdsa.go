@@ -146,7 +146,9 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeECDSAPublicKey(v interface{ Iterate(context.Context) HeaderIterator }) (Key, error) {
+func makeECDSAPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
 	newKey := NewECDSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key

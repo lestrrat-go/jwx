@@ -149,7 +149,9 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeRSAPublicKey(v interface{ Iterate(context.Context) HeaderIterator }) (Key, error) {
+func makeRSAPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
 	newKey := NewRSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
