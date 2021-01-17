@@ -1,7 +1,9 @@
 package jwk_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -34,7 +36,16 @@ func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, e
 		}
 	}
 
-	return assert.Fail(t, `key.Get("accessCount") should be one of %#v (got %d)`, expected, v)
+	var buf bytes.Buffer
+	fmt.Fprint(&buf, "[")
+	for i, e := range expected {
+		fmt.Fprintf(&buf, "%d", e)
+		if i < len(expected)-1 {
+			fmt.Fprint(&buf, ", ")
+		}
+	}
+	fmt.Fprintf(&buf, "]")
+	return assert.Fail(t, `key.Get("accessCount") should be one of %s (got %d)`, buf.String(), v)
 }
 
 func TestAutoRefresh(t *testing.T) {
