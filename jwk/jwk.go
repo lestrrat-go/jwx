@@ -112,24 +112,53 @@ func New(key interface{}) (Key, error) {
 	}
 }
 
-// PublicKeyOf returns the corresponding public key of the given
-// value `v`. For example, if v is a `*rsa.PrivateKey`, then
-// `*rsa.PublicKey` is returned.
+// PublicSetOf returns a new jwk.Set consisting of
+// public keys of the keys contained in the set are returned.
 //
-// Not to be confused with jwk.Key.PubliKey(). In hindsight, this should
-// have been named PublicRawKeyOf() or some such.
+// This is useful when you are generating a set of private keys, and
+// you want to generate the corresponding public versions
 //
-// If given a public key, then the same public key will be returned.
-// For example, if v is a `*rsa.PublicKey`, then the same value
-// is returned.
+// Be aware that all fields will be copied onto the new public key. It is the caller's
+// responsibility to remove any fields, if necessary.
+func PublicSetOf(v Set) (Set, error) {
+	newSet := NewSet()
+
+	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		pubKey, err := PublicKeyOf(pair.Value.(Key))
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to get public key of %T`, pair.Value)
+		}
+		newSet.Add(pubKey)
+	}
+
+	return newSet, nil
+}
+
+// PublicKeyOf returns the corresponding public version of the jwk.Key.
+// If `v` is a SymmetricKey, then the same value is returned.
+// If `v` is already a public key, the key itself is returned.
 //
-// If v is of a type that we don't support, an error is returned.
-//
-// This is useful when you are dealing with the jwk.Key interface
-// alone and you don't know before hand what the underlying key
-// type is, but you still want to obtain the corresponding public key
-func PublicKeyOf(v interface{}) (interface{}, error) {
-	// may be a silly idea, but if the user gave us a non-pointer value...
+// If `v` is a private key type that has a `PublicKey()` method, be aware
+// that all fields will be copied onto the new public key. It is the caller's
+// responsibility to remove any fields, if necessary
+func PublicKeyOf(v Key) (Key, error) {
+	switch v := v.(type) {
+	case PublicKeyer:
+		return v.PublicKey()
+	default:
+		return nil, errors.Errorf(`unknown jwk.Key type %T`, v)
+	}
+}
+
+// PublicRawKeyOf returns the corresponding public key of the given
+// value `v` (e.g. given *rsa.PrivateKey, *rsa.PublicKey is returned)
+// If `v` is already a public key, the key itself is returned.
+// The returned value will always be a pointer to the public key,
+// except when a []byte (e.g. symmetric key, ed25519 key) is passed to `v`.
+// In this case, the same []byte value is returned.
+func PublicRawKeyOf(v interface{}) (interface{}, error) {
+	// This may be a silly idea, but if the user gave us a non-pointer value...
 	var ptr interface{}
 	switch v := v.(type) {
 	case rsa.PrivateKey:

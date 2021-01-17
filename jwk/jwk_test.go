@@ -580,16 +580,90 @@ func TestPublicKeyOf(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", key.Key), func(t *testing.T) {
 			t.Parallel()
 
-			pubkey, err := jwk.PublicKeyOf(key.Key)
+			pubkey, err := jwk.PublicRawKeyOf(key.Key)
 			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, key.Key) {
 				return
 			}
 
-			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(pubkey), `public key types should match`) {
+			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(pubkey), `public key types should match (got %T)`, pubkey) {
+				return
+			}
+
+			// Go through jwk.New
+			jwkKey, err := jwk.New(key.Key)
+			if !assert.NoError(t, err, `jwk.New should succeed`) {
+				return
+			}
+
+			pubJwkKey, err := jwk.PublicKeyOf(jwkKey)
+			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey) {
+				return
+			}
+
+			// Get the raw key to compare
+			var rawKey interface{}
+			if !assert.NoError(t, pubJwkKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey) {
 				return
 			}
 		})
 	}
+	t.Run("Set", func(t *testing.T) {
+		var setKeys []struct {
+			Key           jwk.Key
+			PublicKeyType reflect.Type
+		}
+		set := jwk.NewSet()
+		count := 0
+		for _, key := range keys {
+			if reflect.TypeOf(key.Key) == key.PublicKeyType {
+				continue
+			}
+			jwkKey, err := jwk.New(key.Key)
+			if !assert.NoError(t, err, `jwk.New should succeed`) {
+				return
+			}
+			jwkKey.Set(jwk.KeyIDKey, fmt.Sprintf("key%d", count))
+			setKeys = append(setKeys, struct {
+				Key           jwk.Key
+				PublicKeyType reflect.Type
+			}{
+				Key:           jwkKey,
+				PublicKeyType: key.PublicKeyType,
+			})
+			set.Add(jwkKey)
+			count++
+		}
+
+		newSet, err := jwk.PublicSetOf(set)
+		if !assert.NoError(t, err, `jwk.PublicKeyOf(jwk.Set) should succeed`) {
+			return
+		}
+
+		for i, key := range setKeys {
+			setKey, ok := newSet.Get(i)
+			if !assert.True(t, ok, `element %d should be present`, i) {
+				return
+			}
+
+			if !assert.Equal(t, fmt.Sprintf("key%d", i), setKey.KeyID(), `KeyID() should match for %T`, setKey) {
+				return
+			}
+
+			// Get the raw key to compare
+			var rawKey interface{}
+			if !assert.NoError(t, setKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey) {
+				return
+			}
+		}
+	})
 }
 
 func TestIssue207(t *testing.T) {

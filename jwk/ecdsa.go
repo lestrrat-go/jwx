@@ -1,6 +1,7 @@
 package jwk
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -145,17 +146,33 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func (k *ecdsaPrivateKey) PublicKey() (ECDSAPublicKey, error) {
-	var privk ecdsa.PrivateKey
-	if err := k.Raw(&privk); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize ECDSA private key`)
+func makeECDSAPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
+	newKey := NewECDSAPublicKey()
+
+	// Iterate and copy everything except for the bits that should not be in the public key
+	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		switch pair.Key {
+		case ECDSADKey:
+			continue
+		default:
+			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			}
+		}
 	}
 
-	newKey := NewECDSAPublicKey()
-	if err := newKey.FromRaw(&privk.PublicKey); err != nil {
-		return nil, errors.Wrap(err, `failed to initialize ECDSAPublicKey`)
-	}
 	return newKey, nil
+}
+
+func (k *ecdsaPrivateKey) PublicKey() (Key, error) {
+	return makeECDSAPublicKey(k)
+}
+
+func (k *ecdsaPublicKey) PublicKey() (Key, error) {
+	return makeECDSAPublicKey(k)
 }
 
 func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {

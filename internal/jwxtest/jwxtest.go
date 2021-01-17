@@ -48,7 +48,7 @@ func GenerateRsaPublicJwk() (jwk.Key, error) {
 		return nil, errors.Wrap(err, `failed to generate jwk.RSAPrivateKey`)
 	}
 
-	return key.(jwk.RSAPrivateKey).PublicKey()
+	return jwk.PublicKeyOf(key)
 }
 
 func GenerateEcdsaKey() (*ecdsa.PrivateKey, error) {
@@ -75,7 +75,7 @@ func GenerateEcdsaPublicJwk() (jwk.Key, error) {
 		return nil, errors.Wrap(err, `failed to generate jwk.ECDSAPrivateKey`)
 	}
 
-	return key.(jwk.ECDSAPrivateKey).PublicKey()
+	return jwk.PublicKeyOf(key)
 }
 
 func GenerateSymmetricKey() []byte {

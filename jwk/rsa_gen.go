@@ -41,7 +41,6 @@ type RSAPrivateKey interface {
 	P() []byte
 	Q() []byte
 	QI() []byte
-	PublicKey() (RSAPublicKey, error)
 }
 
 type rsaPrivateKey struct {

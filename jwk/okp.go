@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ed25519"
 	"fmt"
@@ -125,21 +126,33 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, privk)
 }
 
-func (k *okpPrivateKey) PublicKey() (OKPPublicKey, error) {
+func makeOKPPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
 	newKey := NewOKPPublicKey()
-	switch k.Crv() {
-	case jwa.Ed25519:
-		if err := newKey.FromRaw(ed25519.PublicKey(k.x)); err != nil {
-			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
+
+	// Iterate and copy everything except for the bits that should not be in the public key
+	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		switch pair.Key {
+		case OKPDKey:
+			continue
+		default:
+			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			}
 		}
-	case jwa.X25519:
-		if err := newKey.FromRaw(x25519.PublicKey(k.x)); err != nil {
-			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
-		}
-	default:
-		return nil, errors.Errorf(`invalid curve algorithm %s`, k.Crv())
 	}
+
 	return newKey, nil
+}
+
+func (k *okpPrivateKey) PublicKey() (Key, error) {
+	return makeOKPPublicKey(k)
+}
+
+func (k *okpPublicKey) PublicKey() (Key, error) {
+	return makeOKPPublicKey(k)
 }
 
 func okpThumbprint(hash crypto.Hash, crv, x string) []byte {

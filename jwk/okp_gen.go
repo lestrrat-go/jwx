@@ -30,7 +30,6 @@ type OKPPrivateKey interface {
 	Crv() jwa.EllipticCurveAlgorithm
 	D() []byte
 	X() []byte
-	PublicKey() (OKPPublicKey, error)
 }
 
 type okpPrivateKey struct {
