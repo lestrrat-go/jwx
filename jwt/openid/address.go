@@ -180,6 +180,12 @@ func (t *AddressClaim) Set(key string, value interface{}) error {
 
 func (t *AddressClaim) Accept(v interface{}) error {
 	switch v := v.(type) {
+	case AddressClaim:
+		*t = v
+		return nil
+	case *AddressClaim:
+		*t = *v
+		return nil
 	case map[string]interface{}:
 		for key, value := range v {
 			if err := t.Set(key, value); err != nil {
