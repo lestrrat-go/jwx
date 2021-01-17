@@ -12,7 +12,7 @@ Examples are located in the examples directory ([jws_example_test.go](../example
 
 Supported signature algorithms:
 
-| Algorithm                               | Supported? | Constant in [jwa](./jwa) |
+| Algorithm                               | Supported? | Constant in [jwa](../jwa) |
 |:----------------------------------------|:-----------|:-------------------------|
 | HMAC using SHA-256                      | YES        | jwa.HS256                |
 | HMAC using SHA-384                      | YES        | jwa.HS384                |
