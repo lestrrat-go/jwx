@@ -42,7 +42,7 @@ The API has been reworked quite substantially between pre- and post 1.0.0 releas
 
 ### JWT
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwt](./jwt/README.md)
+Examples are located in the examples directory ([jwt_examples_test.go](./examples/jwt_examples_test.go))
 
 ```go
 func ExampleJWT() {
@@ -148,7 +148,7 @@ func Example_openid() {
 
 ### JWK
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwk](./jwk/README.md)
+Examples are located in the examples directory ([jwk_examples_test.go](./examples/jwk_examples_test.go))
 
 Create a JWK file from RSA public key:
 
@@ -273,7 +273,7 @@ Note 1: Experimental
 
 ### JWS - Verify parse and verify a signed JWT
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jws](./jws/README.md)
+Examples are located in the examples directory ([jws_examples_test.go](./examples/jws_examples_test.go))
 
 ```go
   token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
@@ -341,7 +341,7 @@ Note 1: Experimental
 
 ### JWE
 
-See the examples here as well: [https://github.com/lestrrat-go/jwx/jwe](./jwe/README.md)
+Examples are located in the examples directory ([jwe_examples_test.go](./examples/jwe_examples_test.go))
 
 ```go
 import(

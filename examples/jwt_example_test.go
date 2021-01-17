@@ -1,21 +1,25 @@
-package jwt_test
+package examples_test
 
 import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwt/openid"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
+const aLongLongTimeAgo = 233431200
+
 //nolint:govet
-func ExampleParse_JWKS() {
+func ExampleJWT_ParseJWKS() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)
@@ -155,7 +159,7 @@ func ExampleParse_JWKS() {
 	// OUTPUT:
 }
 
-func ExampleSign() {
+func ExampleJWT_Sign() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)
@@ -197,7 +201,7 @@ func ExampleSign() {
 	// }
 }
 
-func ExampleToken() {
+func ExampleJWT_Token() {
 	t := jwt.New()
 	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
@@ -231,4 +235,94 @@ func ExampleToken() {
 	// iat -> '1977-05-25T18:00:00Z'
 	// privateClaimKey -> 'Hello, World!'
 	// sub -> 'https://github.com/lestrrat-go/jwx/jwt'
+}
+
+func ExampleJWT_SignToken() {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		log.Printf("failed to generate private key: %s", err)
+		return
+	}
+
+	t := jwt.New()
+
+	{
+		// Signing a token (using raw rsa.PrivateKey)
+		signed, err := jwt.Sign(t, jwa.RS256, key)
+		if err != nil {
+			log.Printf("failed to sign token: %s", err)
+			return
+		}
+		_ = signed
+	}
+
+	{
+		// Signing a token (using JWK)
+		jwkKey, err := jwk.New(key)
+		if err != nil {
+			log.Printf("failed to create JWK key: %s", err)
+			return
+		}
+
+		signed, err := jwt.Sign(t, jwa.RS256, jwkKey)
+		if err != nil {
+			log.Printf("failed to sign token: %s", err)
+			return
+		}
+		_ = signed
+	}
+
+	// OUTPUT:
+}
+
+func ExampleJWT_OpenIDToken() {
+	t := openid.New()
+	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
+	t.Set(jwt.AudienceKey, `Golang Users`)
+	t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
+	t.Set(`privateClaimKey`, `Hello, World!`)
+
+	addr := openid.NewAddress()
+	addr.Set(openid.AddressPostalCodeKey, `105-0011`)
+	addr.Set(openid.AddressCountryKey, `日本`)
+	addr.Set(openid.AddressRegionKey, `東京都`)
+	addr.Set(openid.AddressLocalityKey, `港区`)
+	addr.Set(openid.AddressStreetAddressKey, `芝公園 4-2-8`)
+	if err := t.Set(openid.AddressKey, addr); err != nil {
+		fmt.Printf("failed to set address: %s\n", err)
+		return
+	}
+
+	buf, err := json.MarshalIndent(t, "", "  ")
+	if err != nil {
+		fmt.Printf("failed to generate JSON: %s\n", err)
+		return
+	}
+	fmt.Printf("%s\n", buf)
+
+	t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
+	if err != nil {
+		fmt.Printf("failed to parse JSON: %s\n", err)
+		return
+	}
+	if _, ok := t2.(openid.Token); !ok {
+		fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
+		return
+	}
+	// OUTPUT:
+	// {
+	//   "address": {
+	//     "country": "日本",
+	//     "locality": "港区",
+	//     "postal_code": "105-0011",
+	//     "region": "東京都",
+	//     "street_address": "芝公園 4-2-8"
+	//   },
+	//   "aud": [
+	//     "Golang Users"
+	//   ],
+	//   "iat": 233431200,
+	//   "privateClaimKey": "Hello, World!",
+	//   "sub": "https://github.com/lestrrat-go/jwx/jwt"
+	// }
 }

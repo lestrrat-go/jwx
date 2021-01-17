@@ -1,4 +1,4 @@
-package jwk_test
+package examples_test
 
 import (
 	"bytes"
@@ -15,33 +15,73 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-func Example() {
-	// Use jwk.AutoRefresh if you intend to keep reuse the JWKS
-	// over and over
-	set, err := jwk.Fetch("https://foobar.domain/json")
+func ExampleJWK_Usage() {
+	// Use jwk.AutoRefresh if you intend to keep reuse the JWKS over and over
+	set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return
 	}
 
-	// If you KNOW you have exactly one key, you can just
-	// use set.Keys[0]
-	keys := set.LookupKeyID("mykey")
-	if len(keys) == 0 {
-		log.Printf("failed to lookup key: %s", err)
-		return
+	// Key sets can be serialized back to JSON
+	{
+		jsonbuf, err := json.Marshal(set)
+		if err != nil {
+			log.Printf("failed to marshal key set into JSON: %s", err)
+			return
+		}
+		log.Printf("%s", jsonbuf)
 	}
 
-	var key interface{}
-	if err := keys[0].Raw(&key); err != nil {
-		log.Printf("failed to generate public key: %s", err)
-		return
+	for it := set.Iterate(context.Background()); it.Next(context.Background()); {
+		pair := it.Pair()
+		key := pair.Value.(jwk.Key)
+
+		var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+		if err := key.Raw(&rawkey); err != nil {
+			log.Printf("failed to create public key: %s", err)
+			return
+		}
+		// Use rawkey for jws.Verify() or whatever.
+		_ = rawkey
+
+		// You can create jwk.Key from a raw key, too
+		fromRawKey, err := jwk.New(rawkey)
+		if err != nil {
+			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
+			return
+		}
+
+		// Keys can be serialized back to JSON
+		jsonbuf, err := json.Marshal(key)
+		if err != nil {
+			log.Printf("failed to marshal key into JSON: %s", err)
+			return
+		}
+		log.Printf("%s", jsonbuf)
+
+		// If you know the underlying Key type (RSA, EC, Symmetric), you can
+		// create an empty instance first
+		//    key := jwk.NewRSAPrivateKey()
+		// ..and then use json.Unmarshal
+		//    json.Unmarshal(key, jsonbuf)
+		//
+		// but if you don't know the type first, you have an abstract type
+		// jwk.Key, which can't be used as the first argument to json.Unmarshal
+		//
+		// In this case, use jwk.Parse()
+		fromJSONKey, err := jwk.ParseBytes(jsonbuf)
+		if err != nil {
+			log.Printf("failed to parse json: %s", err)
+			return
+		}
+		_ = fromJSONKey
+		_ = fromRawKey
 	}
-	// Use key for jws.Verify() or whatever
-	_ = key
+	// OUTPUT:
 }
 
-func ExampleNew() {
+func ExampleJWK_New() {
 	// New returns different underlying types of jwk.Key objects
 	// depending on the input value.
 
@@ -105,7 +145,7 @@ func ExampleNew() {
 }
 
 //nolint:govet
-func ExampleMarshalJSON() {
+func ExampleJWK_MarshalJSON() {
 	// to get the same values every time, we need to create a static source
 	// of "randomness"
 	rdr := bytes.NewReader([]byte("01234567890123456789012345678901234567890123456789ABCDEF"))
@@ -145,7 +185,7 @@ func ExampleMarshalJSON() {
 	// }
 }
 
-func ExampleAutoRefresh() {
+func ExampleJWK_AutoRefresh() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

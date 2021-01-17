@@ -1,4 +1,4 @@
-package jwe_test
+package examples_test
 
 import (
 	"crypto/rand"
@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwe"
 )
 
-func ExampleEncrypt() {
+func ExampleJWE_Encrypt() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to generate private key: %s", err)
@@ -42,7 +42,7 @@ func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 	return privkey, encrypted, nil
 }
 
-func ExampleDecrypt() {
+func ExampleJWE_Decrypt() {
 	privkey, encrypted, err := exampleGenPayload()
 	if err != nil {
 		log.Printf("failed to generate encrypted payload: %s", err)
