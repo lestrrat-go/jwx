@@ -38,13 +38,11 @@ So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable
 
 The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
 
-## Synopsis
-
-### JWT
+## JWT
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
 
-Package [jwt](./jwt) implements JSON Web Tokens as described in [https://tools.ietf.org/html/rfc7519].
+Package [github.com/lestrrat-go/jwx/jwt](./jwt) implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
 * Convenience methods for oft-used keys ("aud", "sub", "iss", etc)
 * Ability to Get/Set arbitrary keys
@@ -52,7 +50,7 @@ Package [jwt](./jwt) implements JSON Web Tokens as described in [https://tools.i
 * Generate signed tokens
 * Verify signed tokens
 
-Examples are located in the examples directory ([jwt_examples_test.go](./examples/jwt_examples_test.go))
+Examples are located in the examples directory ([jwt_example_test.go](./examples/jwt_example_test.go))
 
 ### JWT (with OpenID claims)
 
@@ -100,7 +98,7 @@ func Example_openid() {
 
 ### JWK
 
-Examples are located in the examples directory ([jwk_examples_test.go](./examples/jwk_examples_test.go))
+Examples are located in the examples directory ([jwk_example_test.go](./examples/jwk_example_test.go))
 
 Create a JWK file from RSA public key:
 
@@ -225,7 +223,7 @@ Note 1: Experimental
 
 ### JWS - Verify parse and verify a signed JWT
 
-Examples are located in the examples directory ([jws_examples_test.go](./examples/jws_examples_test.go))
+Examples are located in the examples directory ([jws_example_test.go](./examples/jws_example_test.go))
 
 ```go
   token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
@@ -293,7 +291,7 @@ Note 1: Experimental
 
 ### JWE
 
-Examples are located in the examples directory ([jwe_examples_test.go](./examples/jwe_examples_test.go))
+Examples are located in the examples directory ([jwe_example_test.go](./examples/jwe_example_test.go))
 
 ```go
 import(

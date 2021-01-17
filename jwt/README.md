@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
 
-Package jwt implements JSON Web Tokens as described in [https://tools.ietf.org/html/rfc7519].
+Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
 * Convenience methods for oft-used keys ("aud", "sub", "iss", etc)
 * Ability to Get/Set arbitrary keys
@@ -13,7 +13,7 @@ Package jwt implements JSON Web Tokens as described in [https://tools.ietf.org/h
 
 # SYNOPSIS
 
-More examples are located in the examples directory ([jwt_examples_test.go](../examples/jwt_examples_test.go))
+More examples are located in the examples directory ([jwt_example_test.go](../examples/jwt_example_test.go))
 
 ```go
 func ExampleJWT() {
