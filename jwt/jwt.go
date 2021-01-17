@@ -115,7 +115,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		// 2. { "signatures": [ ... ] }
 		// 3. { "foo": "bar" }
 		if data[0] == '{' {
-			m, err := jws.ParseBytes(data)
+			m, err := jws.Parse(data)
 			if err == nil {
 				payload = m.Payload()
 			} else {
@@ -124,7 +124,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 			}
 		} else {
 			// Probably compact JWS
-			m, err := jws.ParseBytes(data)
+			m, err := jws.Parse(data)
 			if err != nil {
 				return nil, errors.Wrap(err, `invalid jws message`)
 			}
@@ -155,7 +155,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 }
 
 func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
-	msg, err := jws.ParseBytes(data)
+	msg, err := jws.Parse(data)
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to parse token data`)
 	}

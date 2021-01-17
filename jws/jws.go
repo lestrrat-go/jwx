@@ -384,12 +384,33 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
-//
-// Parse will be removed in v1.1.0.
-// v1.1.0 will introduce `ParseReader(io.Reader)`. Use that instead.
-func Parse(src io.Reader) (m *Message, err error) {
+func Parse(src []byte) (*Message, error) {
+	for i := 0; i < len(src); i++ {
+		r := rune(src[i])
+		if r >= utf8.RuneSelf {
+			r, _ = utf8.DecodeRune(src)
+		}
+		if !unicode.IsSpace(r) {
+			if r == '{' {
+				return parseJSONBytes(src)
+			}
+			return parseCompactBytes(src)
+		}
+	}
+	return nil, errors.New("invalid byte sequence")
+}
+
+// Parse parses contents from the given source and creates a jws.Message
+// struct. The input can be in either compact or full JSON serialization.
+func ParseString(src string) (*Message, error) {
+	return Parse([]byte(src))
+}
+
+// Parse parses contents from the given source and creates a jws.Message
+// struct. The input can be in either compact or full JSON serialization.
+func ParseReader(src io.Reader) (*Message, error) {
 	if data, ok := readAll(src); ok {
-		return ParseBytes(data)
+		return Parse(data)
 	}
 
 	rdr := bufio.NewReader(src)
@@ -416,40 +437,12 @@ func Parse(src io.Reader) (m *Message, err error) {
 		parser = parseCompact
 	}
 
-	m, err = parser(rdr)
+	m, err := parser(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse jws message`)
 	}
 
 	return m, nil
-}
-
-// ParseString is the same as Parse, but take in a string
-//
-// ParseString will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)`. Use `Parse([]byte(s))` instead.
-func ParseString(s string) (*Message, error) {
-	return ParseBytes([]byte(s))
-}
-
-// ParseBytes is the same as Parse, but take byte sequence.
-//
-// ParseBytes will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)`. Use that instead.
-func ParseBytes(s []byte) (*Message, error) {
-	for i := 0; i < len(s); i++ {
-		r := rune(s[i])
-		if r >= utf8.RuneSelf {
-			r, _ = utf8.DecodeRune(s)
-		}
-		if !unicode.IsSpace(r) {
-			if r == '{' {
-				return parseJSONBytes(s)
-			}
-			return parseCompactBytes(s)
-		}
-	}
-	return nil, errors.New("invalid byte sequence")
 }
 
 func parseJSON(src io.Reader) (result *Message, err error) {
