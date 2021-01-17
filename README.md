@@ -179,7 +179,13 @@ within `jwx` *will* use your settings.
 For bug reports and feature requests, please try to follow the issue templates as much as possible.
 For either bug reports or feature requests, failing tests are even better.
 
-For PRs, please ALWAYS include tests.
+## Pull Requests
+
+Please make sure to include tests that excercise the changes you made.
+
+## Discussions / Usage
+
+Please try [discussions](./discussions) first.
 
 # Credits
 
