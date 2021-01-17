@@ -1,5 +1,28 @@
 # Create a JWK from the Raw key
 
+Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
+
+* Parse and work with RSA/EC/Symmetric/OKP JWK types
+  * Convert to and from JSON
+  * Convert to and from raw key types (e.g. *rsa.PrivateKey)
+* Ability to keep a JWKS fresh.
+
+Examples are located in the examples directory ([jwk_example_test.go](../examples/jwk_example_test.go))
+
+Supported key types:
+
+| kty | Curve                   | Go Key Type                                |
+|:----|:------------------------|:-------------------------------------------|
+| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey             |
+| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey         |
+| oct | N/A                     | []byte                                     |
+| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey     |
+|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey |
+
+Note 1: Experimental
+
+# SYNOPSIS
+
 ```go
 func ExampleNew() {
 	// New returns different underlying types of jwk.Key objects
