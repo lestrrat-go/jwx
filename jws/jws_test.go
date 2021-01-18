@@ -951,7 +951,7 @@ func TestEncode(t *testing.T) {
 					var x, y, z []byte
 					var err error
 					switch method {
-					case 0 : // bytes
+					case 0: // bytes
 						x, y, z, err = jws.SplitCompact(payload)
 					case 1: // un-optimized io.Reader
 						x, y, z, err = jws.SplitCompactReader(bytes.NewReader(payload))
