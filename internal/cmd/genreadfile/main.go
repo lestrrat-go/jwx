@@ -139,12 +139,25 @@ func generateFallbackFile(def definition) error {
 	fmt.Fprintf(&buf, "\n// alternate location to load the files from (if you are reading")
 	fmt.Fprintf(&buf, "\n// this message, your go (or your go doc) is probably running go < 1.16)")
 	fmt.Fprintf(&buf, "\nfunc ReadFile(path string) (%s, error) {", def.ReturnType)
+	if def.ParseOptions {
+		fmt.Fprintf(&buf, "\nvar parseOptions []ParseOption")
+		fmt.Fprintf(&buf, "\nfor _, option := range options {")
+		fmt.Fprintf(&buf, "\nswitch option := option.(type) {")
+		fmt.Fprintf(&buf, "\ncase ParseOption:")
+		fmt.Fprintf(&buf, "\nparseOptions = append(parseOptions, option)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+	}
 	fmt.Fprintf(&buf, "\nf, err := os.Open(path)")
 	fmt.Fprintf(&buf, "\nif err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to open %%s`, path)")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to open %%s`, path)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n\ndefer f.Close()")
-	fmt.Fprintf(&buf, "\nreturn ParseReader(f)")
+	if def.ParseOptions {
+		fmt.Fprintf(&buf, "\nreturn ParseReader(f, parseOptions...)")
+	} else {
+		fmt.Fprintf(&buf, "\nreturn ParseReader(f)")
+	}
 	fmt.Fprintf(&buf, "\n}")
 	if err := codegen.WriteFile(def.FallbackFilename, &buf, codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {

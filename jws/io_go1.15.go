@@ -20,7 +20,7 @@ import (
 func ReadFile(path string) (*Message, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to open %s`, path)
+		return nil, errors.Wrapf(err, `failed to open %s`, path)
 	}
 
 	defer f.Close()

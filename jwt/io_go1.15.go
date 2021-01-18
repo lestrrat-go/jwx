@@ -18,11 +18,18 @@ import (
 // alternate location to load the files from (if you are reading
 // this message, your go (or your go doc) is probably running go < 1.16)
 func ReadFile(path string) (Token, error) {
+	var parseOptions []ParseOption
+	for _, option := range options {
+		switch option := option.(type) {
+		case ParseOption:
+			parseOptions = append(parseOptions, option)
+		}
+	}
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to open %s`, path)
+		return nil, errors.Wrapf(err, `failed to open %s`, path)
 	}
 
 	defer f.Close()
-	return ParseReader(f)
+	return ParseReader(f, parseOptions...)
 }
