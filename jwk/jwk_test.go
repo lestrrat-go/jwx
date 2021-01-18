@@ -417,45 +417,74 @@ func TestRoundtrip(t *testing.T) {
 	}
 }
 
-func TestKeyOperation(t *testing.T) {
+func TestAccept(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
-		Args  interface{}
-		Error bool
-	}{
-		{
-			Args: "sign",
-		},
-		{
-			Args: []jwk.KeyOperation{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
-		},
-		{
-			Args: jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
-		},
-		{
-			Args: []interface{}{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
-		},
-		{
-			Args: []string{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
-		},
-		{
-			Args:  []string{"sigh"},
-			Error: true,
-		},
-	}
+	t.Run("KeyOperation", func(t *testing.T) {
+		t.Parallel()
+		testcases := []struct {
+			Args  interface{}
+			Error bool
+		}{
+			{
+				Args: "sign",
+			},
+			{
+				Args: []jwk.KeyOperation{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
+			},
+			{
+				Args: jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
+			},
+			{
+				Args: []interface{}{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
+			},
+			{
+				Args: []string{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
+			},
+			{
+				Args:  []string{"sigh"},
+				Error: true,
+			},
+		}
 
-	for _, test := range testcases {
-		var ops jwk.KeyOperationList
-		if test.Error {
-			if !assert.Error(t, ops.Accept(test.Args), `KeyOperationList.Accept should fail`) {
-				return
-			}
-		} else {
-			if !assert.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`) {
-				return
+		for _, test := range testcases {
+			var ops jwk.KeyOperationList
+			if test.Error {
+				if !assert.Error(t, ops.Accept(test.Args), `KeyOperationList.Accept should fail`) {
+					return
+				}
+			} else {
+				if !assert.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`) {
+					return
+				}
 			}
 		}
-	}
+	})
+	t.Run("KeyUsage", func(t *testing.T) {
+		t.Parallel()
+		testcases := []struct {
+			Args  interface{}
+			Error bool
+		}{
+			{Args: jwk.ForSignature},
+			{Args: jwk.ForEncryption},
+			{Args: jwk.ForSignature.String()},
+			{Args: jwk.ForEncryption.String()},
+			{Args: jwk.KeyUsageType("bogus"), Error: true},
+			{Args: "bogus", Error: true},
+		}
+		for _, test := range testcases {
+			var usage jwk.KeyUsageType
+			if test.Error {
+				if !assert.Error(t, usage.Accept(test.Args), `KeyUsage.Accept should fail`) {
+					return
+				}
+			} else {
+				if !assert.NoError(t, usage.Accept(test.Args), `KeyUsage.Accept should succeed`) {
+					return
+				}
+			}
+		}
+	})
 }
 
 func TestAssignKeyID(t *testing.T) {

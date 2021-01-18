@@ -12,6 +12,7 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 		switch v {
 		case ForSignature, ForEncryption:
 			*k = v
+			return nil
 		default:
 			return errors.Errorf("invalid key usage type %s", v)
 		}
@@ -19,10 +20,11 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 		switch v {
 		case ForSignature.String(), ForEncryption.String():
 			*k = KeyUsageType(v)
+			return nil
 		default:
 			return errors.Errorf("invalid key usage type %s", v)
 		}
 	}
 
-	return errors.Errorf("invalid value for key usage tyupe %s", v)
+	return errors.Errorf("invalid value for key usage type %s", v)
 }
