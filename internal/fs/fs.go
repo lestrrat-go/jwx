@@ -11,25 +11,8 @@ import (
 )
 
 type FS = fs.FS
-type Option = option.Interface
 
 type identFS struct{}
-
-type OpenOption interface {
-	Option
-	openOption()
-}
-
-type openOption struct {
-	Option
-}
-
-// Wrap another option and make it an OpenOption
-func NewOpenOption(o Option) OpenOption {
-	return &openOption{o}
-}
-
-func (o *openOption) openOption() {}
 
 func WithFS(v fs.FS) OpenOption {
 	return &openOption{option.New(identFS{}, v)}
