@@ -64,15 +64,6 @@ type HeaderIterator = mapiter.Iterator
 type KeyPair = arrayiter.Pair
 type KeyIterator = arrayiter.Iterator
 
-type AutoRefreshOption interface {
-	Option
-	autoRefreshOptionMarker
-}
-
-type autoRefreshOptionMarker interface {
-	autoRefreshOption() bool
-}
-
 type PublicKeyer interface {
 	// PublicKey creates the corresponding PublicKey type for this object.
 	// All fields are copied onto the new public key, except for those that are not allowed.

@@ -9,12 +9,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"os"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -27,10 +25,10 @@ import (
 // The constructor auto-detects the type of key to be instantiated
 // based on the input type:
 //
-// * "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
-// * "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
-// * "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
-// * []byte creates a symmetric key
+//   * "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
+//   * "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
+//   * "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
+//   * []byte creates a symmetric key
 func New(key interface{}) (Key, error) {
 	if key == nil {
 		return nil, errors.New(`jwk.New requires a non-nil key`)
@@ -196,59 +194,59 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 }
 
-// Fetch fetches a JWK resource specified by a URL
-func Fetch(urlstring string, options ...Option) (Set, error) {
-	u, err := url.Parse(urlstring)
+// Fetch fetches a JWK resource specified by a URL. The url must be
+// pointing to a resource that is supported by `net/http`.
+//
+// If you would like to refresh the jwk.Set from a remote resource,
+// consider using jwk.AutoRefresh, which automatically refreshes
+// jwk.Set objects asynchronously.
+func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
+	res, err := fetch(ctx, urlstring, options...)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse url`)
+		return nil, err
 	}
 
-	switch u.Scheme {
-	case "http", "https":
-		return FetchHTTP(urlstring, options...)
-	case "file":
-		f, err := os.Open(u.Path)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to open jwk file`)
-		}
-		defer f.Close()
-
-		return ParseReader(f)
+	defer res.Body.Close()
+	keyset, err := ParseReader(res.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to parse JWK set`)
 	}
-	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
+	return keyset, nil
 }
 
-// FetchHTTP wraps FetchHTTPWithContext using the background context.
-func FetchHTTP(jwkurl string, options ...Option) (Set, error) {
-	return FetchHTTPWithContext(context.Background(), jwkurl, options...)
-}
-
-// FetchHTTPWithContext fetches the remote JWK and parses its contents
-func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option) (Set, error) {
+func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
 	httpcl := http.DefaultClient
+	bo := backoff.Null()
 	for _, option := range options {
 		switch option.Ident() {
 		case identHTTPClient{}:
 			httpcl = option.Value().(*http.Client)
+		case identFetchBackoff{}:
+			bo = option.Value().(backoff.Policy)
 		}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, jwkurl, nil)
+	req, err := http.NewRequest(http.MethodGet, urlstring, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to new request to remote JWK")
 	}
 
-	res, err := httpcl.Do(req.WithContext(ctx))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch remote JWK")
-	}
-	defer res.Body.Close()
+	b := bo.Start(ctx)
+	var lastError error
+	for backoff.Continue(b) {
+		res, err := httpcl.Do(req.WithContext(ctx))
+		if err != nil {
+			lastError = errors.Wrap(err, "failed to fetch remote JWK")
+			continue
+		}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
+		if res.StatusCode != http.StatusOK {
+			lastError = errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
+			continue
+		}
+		return res, nil
 	}
-
-	return ParseReader(res.Body)
+	return nil, lastError
 }
 
 // ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
@@ -272,7 +270,7 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 // report failure if you attempt to pass a JWK set. Only use this function
 // when you know that the data is a single JWK.
 //
-// Note that a successful parsing does NOT guarantee a valid key
+// Note that a successful parsing does NOT necessarily guarantee a valid key.
 func ParseKey(data []byte) (Key, error) {
 	var hint struct {
 		Kty string          `json:"kty"`
