@@ -4,7 +4,6 @@
 package jwk
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -15,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -215,7 +213,7 @@ func Fetch(urlstring string, options ...Option) (Set, error) {
 		}
 		defer f.Close()
 
-		return Parse(f)
+		return ParseReader(f)
 	}
 	return nil, errors.Errorf(`invalid url scheme %s`, u.Scheme)
 }
@@ -250,7 +248,7 @@ func FetchHTTPWithContext(ctx context.Context, jwkurl string, options ...Option)
 		return nil, fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 	}
 
-	return Parse(res.Body)
+	return ParseReader(res.Body)
 }
 
 // ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
@@ -270,9 +268,11 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 	return nil
 }
 
-// ParseKey parses a single key JWK. This method will report failure for
-// JWK with multiple keys, even if the JWK is valid: You must specify a single
-// key only.
+// ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
+// report failure if you attempt to pass a JWK set. Only use this function
+// when you know that the data is a single JWK.
+//
+// Note that a successful parsing does NOT guarantee a valid key
 func ParseKey(data []byte) (Key, error) {
 	var hint struct {
 		Kty string          `json:"kty"`
@@ -316,41 +316,37 @@ func ParseKey(data []byte) (Key, error) {
 	return key, nil
 }
 
-// Parse parses JWK from the incoming io.Reader. This function can handle
-// both single-key and multi-key formats. If you know before hand which
-// format the incoming data is in, you might want to consider using
-// "github.com/lestrrat-go/jwx/internal/json" directly
+// Parse parses JWK from the incoming []byte.
 //
-// Note that a successful parsing does NOT guarantee a valid key
+// For JWK sets, this is a convenience function. It is perfectly safe
+// to call `json.Unmarshal` against a `jwk.Set`, including when you
+// are not sure if the `src` contains a single JWK or a JWK set.
+// `(jwk.Set).Unmarshal` will properly take care of either case,
+// and stow the JWKs in a set accordingly.
 //
-// Parse will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
-func Parse(in io.Reader) (Set, error) {
+// If you want to parse a single key, you should use `jwk.ParseKey`
+// instead, as you would need to inspect the contents of the JSON
+// payload to figure out the concrete type of a jwk.Key
+func Parse(src []byte) (Set, error) {
 	s := NewSet()
-	if err := json.NewDecoder(in).Decode(s); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal JWK")
+	if err := json.Unmarshal(src, s); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal JWK set")
 	}
 	return s, nil
 }
 
-// ParseBytes parses JWK from the incoming byte buffer.
-//
-// Note that a successful parsing does NOT guarantee a valid key
-//
-// ParseBytes will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
-func ParseBytes(buf []byte) (Set, error) {
-	return Parse(bytes.NewReader(buf))
+// ParseReader parses JWK from the incoming byte buffer.
+func ParseReader(src io.Reader) (Set, error) {
+	s := NewSet()
+	if err := json.NewDecoder(src).Decode(s); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal JWK set")
+	}
+	return s, nil
 }
 
 // ParseString parses JWK from the incoming string.
-//
-// Note that a successful parsing does NOT guarantee a valid key
-//
-// ParseString will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(`io.Reader`)
 func ParseString(s string) (Set, error) {
-	return Parse(strings.NewReader(s))
+	return Parse([]byte(s))
 }
 
 // AssignKeyID is a convenience function to automatically assign the "kid"

@@ -115,7 +115,7 @@ func doJWK() int {
 	var buf bytes.Buffer
 	src = io.TeeReader(src, &buf)
 
-	message, err := jws.Parse(src)
+	message, err := jws.ParseReader(src)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0

@@ -26,18 +26,18 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
-func TestParse(t *testing.T) {
+func TestParseReader(t *testing.T) {
 	t.Parallel()
 	t.Run("Empty []byte", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.ParseBytes(nil)
+		_, err := jws.Parse(nil)
 		if !assert.Error(t, err, "Parsing an empty byte slice should result in an error") {
 			return
 		}
 	})
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Parse(&bytes.Buffer{})
+		_, err := jws.ParseReader(&bytes.Buffer{})
 		if !assert.Error(t, err, "Parsing an empty buffer should result in an error") {
 			return
 		}
@@ -55,8 +55,8 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				// Force Parse() to choose un-optimized path by using bufio.NewReader
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				// Force ParseReader() to choose un-optimized path by using bufio.NewReader
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -74,7 +74,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -92,7 +92,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -110,7 +110,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -250,8 +250,9 @@ func TestRoundtrip_RSACompact(t *testing.T) {
 		}
 
 		parsers := map[string]func([]byte) (*jws.Message, error){
-			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bufio.NewReader(bytes.NewReader(b))) },
-			"Parse(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
+			"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
+			"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
+			"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
 		}
 		for name, f := range parsers {
 			m, err := f(buf)
@@ -333,7 +334,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -394,7 +395,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to sign message")
 		}
 
-		msg, err := jws.Parse(bytes.NewReader(jwsCompact))
+		msg, err := jws.ParseReader(bytes.NewReader(jwsCompact))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -576,7 +577,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -663,7 +664,7 @@ func TestEncode(t *testing.T) {
 		// the output against a fixed expected outcome. We'll wave doing an
 		// exact match, and just try to verify using the signature
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -756,7 +757,7 @@ func TestEncode(t *testing.T) {
 		// the output against a fixed expected outcome. We'll wave doing an
 		// exact match, and just try to verify using the signature
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -786,7 +787,7 @@ func TestEncode(t *testing.T) {
 		t.Parallel()
 		s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Parsing compact serialization") {
 			return
 		}
@@ -839,7 +840,7 @@ func TestEncode(t *testing.T) {
     ]
   }`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
 			return
 		}
@@ -871,7 +872,7 @@ func TestEncode(t *testing.T) {
 		// This protected header combination forces the parser/unmarshal to go trough the code path to populate and look for protected header fields.
 		// The signature is valid.
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
 			return
 		}
@@ -895,7 +896,7 @@ func TestEncode(t *testing.T) {
     "signature": "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
   }`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Parsing flattened json serialization") {
 			return
 		}

@@ -1,7 +1,6 @@
 package examples_test
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -87,7 +86,7 @@ func ExampleJWT_ParseJWKS() {
 			// There was a lot of code above, but as a consumer, below is really all you need
 			// to write in your code
 			token, err := jwt.Parse(
-				bytes.NewReader(payload),
+				payload,
 				// Tell the parser that you want to use this keyset
 				jwt.WithKeySet(keyset),
 			)
@@ -139,12 +138,13 @@ func ExampleJWT_ParseJWKS() {
 			}
 
 			// This JWKS can *only* have 1 key.
-			keyset = &jwk.Set{Keys: []jwk.Key{pubKey}}
+			keyset = jwk.NewSet()
+			keyset.Add(pubKey)
 		}
 
 		{
 			token, err := jwt.Parse(
-				bytes.NewReader(payload),
+				payload,
 				// Tell the parser that you want to use this keyset
 				jwt.WithKeySet(keyset),
 				// Tell the parser that you can trust this KeySet, and that
@@ -182,7 +182,8 @@ func ExampleJWT_Sign() {
 	{ // Parse signed payload, and perform (1) verification of the signature
 		// and (2) validation of the JWT token
 		// Validation can be performed in a separate step using `jwt.Validate`
-		token, err := jwt.Parse(bytes.NewReader(payload),
+		token, err := jwt.Parse(
+			payload,
 			jwt.WithValidate(true),
 			jwt.WithVerify(jwa.RS256, &privKey.PublicKey),
 		)
@@ -302,7 +303,7 @@ func ExampleJWT_OpenIDToken() {
 	}
 	fmt.Printf("%s\n", buf)
 
-	t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
+	t2, err := jwt.Parse(buf, jwt.WithOpenIDClaims())
 	if err != nil {
 		fmt.Printf("failed to parse JSON: %s\n", err)
 		return
