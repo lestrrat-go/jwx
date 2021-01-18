@@ -3,7 +3,6 @@ package jwk
 import (
 	"context"
 	"crypto/x509"
-	"encoding/json"
 	"sync"
 
 	"github.com/lestrrat-go/iter/arrayiter"
