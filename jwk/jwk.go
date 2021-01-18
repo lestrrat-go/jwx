@@ -113,10 +113,11 @@ func New(key interface{}) (Key, error) {
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
-// public keys of the keys contained in the set are returned.
+// public keys of the keys contained in the set.
 //
 // This is useful when you are generating a set of private keys, and
-// you want to generate the corresponding public versions
+// you want to generate the corresponding public versions for the
+// users to verify with.
 //
 // Be aware that all fields will be copied onto the new public key. It is the caller's
 // responsibility to remove any fields, if necessary.
