@@ -127,6 +127,7 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 	if qi != nil {
 		key.Precomputed.Qinv = qi
 	}
+	key.Precomputed.CRTValues = []rsa.CRTValue{}
 
 	return blackmagic.AssignIfCompatible(v, &key)
 }
