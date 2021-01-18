@@ -223,7 +223,7 @@ func TestJWTParseVerify(t *testing.T) {
 	t.Run("Check alg=none", func(t *testing.T) {
 		t.Parallel()
 		// Create a signed payload, but use alg=none
-		_, payload, signature, err := jws.SplitCompact(bytes.NewReader(signed))
+		_, payload, signature, err := jws.SplitCompact(signed)
 		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 			return
 		}
