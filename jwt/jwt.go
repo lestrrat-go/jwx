@@ -17,7 +17,7 @@ import (
 )
 
 // ParseString calls Parse against a string
-func ParseString(s string, options ...Option) (Token, error) {
+func ParseString(s string, options ...ParseOption) (Token, error) {
 	return parseBytes([]byte(s), options...)
 }
 
@@ -36,12 +36,12 @@ func ParseString(s string, options ...Option) (Token, error) {
 // This function takes both ParseOption and Validate Option types:
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
-func Parse(s []byte, options ...Option) (Token, error) {
+func Parse(s []byte, options ...ParseOption) (Token, error) {
 	return parseBytes(s, options...)
 }
 
 // ParseString calls Parse against an io.Reader
-func ParseReader(src io.Reader, options ...Option) (Token, error) {
+func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := ioutil.ReadAll(src)
 	if err != nil {
@@ -50,7 +50,7 @@ func ParseReader(src io.Reader, options ...Option) (Token, error) {
 	return parseBytes(data, options...)
 }
 
-func parseBytes(data []byte, options ...Option) (Token, error) {
+func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	var params VerifyParameters
 	var keyset jwk.Set
 	var useDefault bool
@@ -99,7 +99,7 @@ func parseBytes(data []byte, options ...Option) (Token, error) {
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...Option) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
 	var payload []byte
 	if verify {
 		// If verify is true, the data MUST be a valid jws message

@@ -1,6 +1,7 @@
 .PHONY: generate realclean cover viewcover test lint check_diffs imports
 
 generate: 
+	@go generate
 	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
 
 generate-%:
