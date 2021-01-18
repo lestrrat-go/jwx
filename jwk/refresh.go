@@ -456,7 +456,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 			continue
 		}
 
-		keyset, err := Parse(res.Body)
+		keyset, err := ParseReader(res.Body)
 		if err != nil {
 			// We don't delete the old key. We persist the old key set, even if it may be stale.
 			// so the user has something to work with

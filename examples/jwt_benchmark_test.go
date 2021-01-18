@@ -1,6 +1,7 @@
 package examples_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -23,6 +24,7 @@ func BenchmarkJWTParse(b *testing.B) {
 	}
 
 	signedString := string(signed)
+	signedReader := bytes.NewReader(signed)
 	b.Run("ParseString", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -33,10 +35,20 @@ func BenchmarkJWTParse(b *testing.B) {
 			_ = t2
 		}
 	})
-	b.Run("ParseBytes", func(b *testing.B) {
+	b.Run("Parse", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t2, err := jwt.ParseBytes(signed)
+			t2, err := jwt.Parse(signed)
+			if err != nil {
+				b.Fatal(err)
+			}
+			_ = t2
+		}
+	})
+	b.Run("ParseReader", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			t2, err := jwt.ParseReader(signedReader)
 			if err != nil {
 				b.Fatal(err)
 			}

@@ -57,7 +57,7 @@ func TestParse(t *testing.T) {
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
 			t.Helper()
-			set, err := jwk.ParseBytes([]byte(`{"keys":[` + src + `]}`))
+			set, err := jwk.Parse([]byte(`{"keys":[` + src + `]}`))
 			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 				return
 			}
@@ -396,7 +396,7 @@ func TestRoundtrip(t *testing.T) {
 		return
 	}
 
-	ks2, err := jwk.ParseBytes(buf)
+	ks2, err := jwk.Parse(buf)
 	if !assert.NoError(t, err, "JSON unmarshal succeeded") {
 		t.Logf("%s", buf)
 		return

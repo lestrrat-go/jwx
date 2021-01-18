@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"io"
+	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
@@ -170,6 +172,15 @@ func Parse(buf []byte) (*Message, error) {
 // ParseString is the same as Parse, but takes a string.
 func ParseString(s string) (*Message, error) {
 	return Parse([]byte(s))
+}
+
+// ParseReader is the same as Parse, but takes an io.Reader.
+func ParseReader(src io.Reader) (*Message, error) {
+	buf, err := ioutil.ReadAll(src)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to read from io.Reader`)
+	}
+	return Parse(buf)
 }
 
 func parseJSON(buf []byte) (*Message, error) {

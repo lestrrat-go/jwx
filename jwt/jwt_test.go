@@ -50,7 +50,7 @@ func TestJWTParse(t *testing.T) {
 
 	t.Run("Parse (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(bytes.NewReader(signed))
+		t2, err := jwt.Parse(signed)
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
@@ -68,9 +68,9 @@ func TestJWTParse(t *testing.T) {
 			return
 		}
 	})
-	t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
+	t.Run("ParseReader (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.ParseBytes(signed)
+		t2, err := jwt.ParseReader(bytes.NewReader(signed))
 		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
 			return
 		}
@@ -80,7 +80,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("Parse (correct signature key)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
+		t2, err := jwt.Parse(signed, jwt.WithVerify(alg, &key.PublicKey))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
@@ -90,7 +90,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
 		t.Parallel()
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
+		_, err := jwt.Parse(signed, jwt.WithVerify(jwa.RS512, &key.PublicKey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -99,7 +99,7 @@ func TestJWTParse(t *testing.T) {
 		t.Parallel()
 		pubkey := key.PublicKey
 		pubkey.E = 0 // bogus value
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
+		_, err := jwt.Parse(signed, jwt.WithVerify(alg, &pubkey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -125,42 +125,6 @@ func TestJWTParseVerify(t *testing.T) {
 		return
 	}
 
-	t.Run("ParseVerify(old API)", func(t *testing.T) {
-		t.Parallel()
-		t.Run("parse (no signature verification)", func(t *testing.T) {
-			t.Parallel()
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (correct signature key)", func(t *testing.T) {
-			t.Parallel()
-			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
-			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-			t.Parallel()
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature key)", func(t *testing.T) {
-			t.Parallel()
-			pubkey := key.PublicKey
-			pubkey.E = 0 // bogus value
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-	})
 	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
 		t.Parallel()
 		t.Run("Automatically pick a key from set", func(t *testing.T) {
@@ -174,7 +138,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			set := jwk.NewSet()
 			set.Add(pubkey)
-			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(set))
+			t2, err := jwt.Parse(signed, jwt.WithKeySet(set))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -197,7 +161,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			set := jwk.NewSet()
 			set.Add(pubkey)
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set))
+			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -216,7 +180,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 			set := jwk.NewSet()
 			set.Add(pubkey)
-			t2, err := jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set), jwt.UseDefaultKey(true))
+			t2, err := jwt.Parse(signedNoKid, jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -244,7 +208,7 @@ func TestJWTParseVerify(t *testing.T) {
 			set := jwk.NewSet()
 			set.Add(pubkey1)
 			set.Add(pubkey2)
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(set), jwt.UseDefaultKey(true))
+			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -290,7 +254,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 		set := jwk.NewSet()
 		set.Add(pubkey)
-		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(set))
+		_, err = jwt.Parse(signedButNot, jwt.WithKeySet(set))
 		// This should fail
 		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
 			return
