@@ -136,7 +136,6 @@ func (af *AutoRefresh) getCached(url string) (Set, bool) {
 //
 //   ar.Configure(url, jwk.WithHTTPClient(...))
 //   ar.Configure(url, jwk.WithRefreshInterval(...))
-//
 // The the end result is that `url` is ONLY associated with the options
 // given in the second call to `Configure()`, i.e. `jwk.WithRefreshInterval`.
 // The other unspecified options, including the HTTP client, is set to
@@ -153,7 +152,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	bo := backoff.Null()
 	for _, option := range options {
 		switch option.Ident() {
-		case identRefreshBackoff{}:
+		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
 		case identRefreshInterval{}:
 			refreshInterval = option.Value().(time.Duration)
@@ -243,11 +242,16 @@ func (af *AutoRefresh) getRegistered(url string) (*target, bool) {
 	return t, ok
 }
 
+// Fetch returns a jwk.Set from the given url.
+//
 // If it has previously been fetched, then a cached value is returned.
+//
 // If this the first time `url` was requested, an HTTP request will be
-// sent, synchronously. Also, when accessed via multiple goroutines
-// concurrently, the first time around only one goroutine will be
-// allowed to perform  the initialization (HTTP fetch and cache population).
+// sent, synchronously.
+//
+// When accessed via multiple goroutines concurrently, and the cache
+// has not been populated yet, only the first goroutine is
+// allowed to perform the initialization (HTTP fetch and cache population).
 // All other goroutines will be blocked until the operation is completed.
 //
 // DO NOT modify the jwk.Set object returned by this method, as the
@@ -266,7 +270,8 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (Set, error) {
 }
 
 // Refresh is the same as Fetch(), except that HTTP fetching is done synchronously.
-// This is useful for when you want to force an HTTP fetch instead of waiting
+//
+// This is useful when you want to force an HTTP fetch instead of waiting
 // for the background goroutine to do it, for example when you want to
 // make sure the AutoRefresh cache is warmed up before starting your main loop
 func (af *AutoRefresh) Refresh(ctx context.Context, url string) (Set, error) {
@@ -421,11 +426,6 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 }
 
 func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableBackoff bool) error {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to new request to remote JWK")
-	}
-
 	af.muRegistry.RLock()
 	t, ok := af.registry[url]
 	af.muRegistry.RUnlock()
@@ -435,61 +435,58 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	}
 
 	// In case the refresh fails due to errors in fetching/parsing the JWKS,
-	// we want to retry. Create a backoff object, and
-	var b backoff.Controller
+	// we want to retry. Create a backoff object,
+
+	options := []FetchOption{WithHTTPClient(t.httpcl)}
 	if enableBackoff {
-		b = t.backoff.Start(ctx)
-	} else {
-		b = backoff.Null().Start(ctx)
+		options = append(options, WithFetchBackoff(t.backoff))
 	}
-	var lastError error
-	for backoff.Continue(b) {
-		res, err := t.httpcl.Do(req.WithContext(ctx))
-		if err != nil {
-			lastError = errors.Wrap(err, "failed to fetch remote JWK")
-			continue
-		}
+
+	res, err := fetch(ctx, url, options...)
+	if err == nil {
 		defer res.Body.Close()
+		keyset, parseErr := ParseReader(res.Body)
+		if parseErr == nil {
+			// Got a new key set. replace the keyset in the target
+			af.muCache.Lock()
+			af.cache[url] = keyset
+			af.muCache.Unlock()
+			nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+			rtr := &resetTimerReq{
+				t: t,
+				d: nextInterval,
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case af.resetTimerCh <- rtr:
+			}
 
-		if res.StatusCode != http.StatusOK {
-			lastError = errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
-			continue
+			now := time.Now()
+			t.lastRefresh = now.Local()
+			t.nextRefresh = now.Add(nextInterval).Local()
+			return nil
 		}
-
-		keyset, err := ParseReader(res.Body)
-		if err != nil {
-			// We don't delete the old key. We persist the old key set, even if it may be stale.
-			// so the user has something to work with
-			// TODO: maybe this behavior should be customizable?
-			lastError = errors.Wrap(err, `failed to parse JWK`)
-			continue
-		}
-
-		lastError = nil
-		// Got a new key set. replace the keyset in the target
-		af.muCache.Lock()
-		af.cache[url] = keyset
-		af.muCache.Unlock()
-		nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-		af.resetTimerCh <- &resetTimerReq{
-			t: t,
-			d: nextInterval,
-		}
-		now := time.Now()
-		t.lastRefresh = now.Local()
-		t.nextRefresh = now.Add(nextInterval).Local()
-		break
+		err = parseErr
 	}
 
-	if lastError != nil {
-		// If we failed to get a single time, then queue another fetch in the future.
-		af.resetTimerCh <- &resetTimerReq{
-			t: t,
-			d: t.minRefreshInterval,
-		}
+	// We either failed to perform the HTTP GET, or we failed to parse the
+	// JWK set. Even in case of errors, we don't delete the old key.
+	// We persist the old key set, even if it may be stale so the user has something to work with
+	// TODO: maybe this behavior should be customizable?
+
+	// If we failed to get a single time, then queue another fetch in the future.
+	rtr := &resetTimerReq{
+		t: t,
+		d: t.minRefreshInterval,
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case af.resetTimerCh <- rtr:
 	}
 
-	return lastError
+	return err
 }
 
 func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration, minRefreshInterval time.Duration) time.Duration {

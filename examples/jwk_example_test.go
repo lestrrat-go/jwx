@@ -17,7 +17,7 @@ import (
 
 func ExampleJWK_Usage() {
 	// Use jwk.AutoRefresh if you intend to keep reuse the JWKS over and over
-	set, err := jwk.FetchHTTP("https://www.googleapis.com/oauth2/v3/certs")
+	set, err := jwk.Fetch(context.Background(), "https://www.googleapis.com/oauth2/v3/certs")
 	if err != nil {
 		log.Printf("failed to parse JWK: %s", err)
 		return

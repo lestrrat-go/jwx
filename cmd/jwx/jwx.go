@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -70,7 +71,7 @@ func doJWK() int {
 		return 1
 	}
 
-	key, err := jwk.Fetch(c.JWKLocation)
+	key, err := jwk.Fetch(context.TODO(), c.JWKLocation)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
