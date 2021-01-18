@@ -28,7 +28,7 @@ type autoRefreshOption struct {
 	Option
 }
 
-func (_ *autoRefreshOption) autoRefreshOption() {}
+func (*autoRefreshOption) autoRefreshOption() {}
 
 // FetchOption is a type of Option that can be passed to `jwk.Fetch()`
 // This type also implements the `AutoRefreshOption`, and thus can be
@@ -42,8 +42,8 @@ type fetchOption struct {
 	Option
 }
 
-func (_ *fetchOption) autoRefreshOption() {}
-func (_ *fetchOption) fetchOption()       {}
+func (*fetchOption) autoRefreshOption() {}
+func (*fetchOption) fetchOption()       {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
