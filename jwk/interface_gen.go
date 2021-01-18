@@ -36,7 +36,7 @@ type Key interface {
 	Get(string) (interface{}, bool)
 
 	// Set sets the value of a single field. Note that certain fields,
-	// notably "kty" cannot be altered, but will not return an error
+	// notably "kty", cannot be altered, but will not return an error
 	//
 	// This method, which takes an `interface{}`, exists because
 	// these objects can contain extra _arbitrary_ fields that users can
@@ -52,26 +52,27 @@ type Key interface {
 	// empty interface as the first argument.
 	//
 	// If you already know the exact type, it is recommended that you
-	// pass a pointer to the actual key type (e.g. *rsa.PrivateKey, *ecdsa.PublicKey
-	// for efficiency
+	// pass a pointer to the zero value of the actual key type (e.g. &rsa.PrivateKey)
+	// for efficiency.
 	Raw(interface{}) error
 
 	// Thumbprint returns the JWK thumbprint using the indicated
 	// hashing algorithm, according to RFC 7638
 	Thumbprint(crypto.Hash) ([]byte, error)
 
-	// Iterate returns an iterator that returns all keys and values
+	// Iterate returns an iterator that returns all keys and values.
+	// See github.com/lestrrat-go/iter for a description of the iterator.
 	Iterate(ctx context.Context) HeaderIterator
 
 	// Walk is a utility tool that allows a visitor to iterate all keys and values
 	Walk(context.Context, HeaderVisitor) error
 
-	// AsMap is a utility tool returns a map that contains the same fields as the source
+	// AsMap is a utility tool that returns a new map that contains the same fields as the source
 	AsMap(context.Context) (map[string]interface{}, error)
 
 	// PrivateParams returns the non-standard elements in the source structure
 	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
-	// Use AsMap() to get a copy of the entire header instead
+	// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead
 	PrivateParams() map[string]interface{}
 
 	KeyType() jwa.KeyType

@@ -12,8 +12,6 @@ func NewSet() Set {
 	return &set{}
 }
 
-// Get returns the key at index `idx`. If the index is out of range,
-// then the second return value is false.
 func (s *set) Get(idx int) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -24,7 +22,6 @@ func (s *set) Get(idx int) (Key, bool) {
 	return nil, false
 }
 
-// Len returns the number of keys in this set
 func (s *set) Len() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -42,7 +39,6 @@ func (s *set) indexNL(key Key) int {
 	return -1
 }
 
-// Index returns the index where the given key exists, -1 otherwise
 func (s *set) Index(key Key) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -50,8 +46,6 @@ func (s *set) Index(key Key) int {
 	return s.indexNL(key)
 }
 
-// Add adds the specified key. If the key already exists in the set, it is
-// not added.
 func (s *set) Add(key Key) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -63,7 +57,6 @@ func (s *set) Add(key Key) bool {
 	return true
 }
 
-// Remove removes the key from the set.
 func (s *set) Remove(key Key) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -84,7 +77,6 @@ func (s *set) Remove(key Key) bool {
 	return false
 }
 
-// Clear resets the list of keys associated with this set.
 func (s *set) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,7 +84,6 @@ func (s *set) Clear() {
 	s.keys = nil
 }
 
-// Iterate creates an iterator to iterate through all keys in the set
 func (s *set) Iterate(ctx context.Context) KeyIterator {
 	ch := make(chan *KeyPair, s.Len())
 	go iterate(ctx, s.keys, ch)
@@ -160,10 +151,6 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// LookupKeyID returns the first for key matching the given key id.
-// The second return value is false if there are not keys matching the key id.
-// The set *may* contain multiple keys with the same key id. If you
-// need all of them, use `Iterate()`
 func (s *set) LookupKeyID(kid string) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
