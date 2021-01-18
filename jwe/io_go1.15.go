@@ -7,8 +7,12 @@ package jwe
 import (
 	"os"
 
+	"github.com/lestrrat-go/jwx/internal/fs"
 	"github.com/pkg/errors"
 )
+
+// ReadFileOption describes an option that can be passed to `ReadFile`
+type ReadFileOption = fs.OpenOption
 
 // ReadFile reads a JWK set at the specified location.
 //
