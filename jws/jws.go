@@ -269,7 +269,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		return nil, errors.New(`could not verify with any of the signatures`)
 	}
 
-	protected, payload, signature, err := SplitCompactBytes(buf)
+	protected, payload, signature, err := SplitCompact(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
 	}
@@ -322,9 +322,9 @@ func Parse(src []byte) (*Message, error) {
 		}
 		if !unicode.IsSpace(r) {
 			if r == '{' {
-				return parseJSONBytes(src)
+				return parseJSON(src)
 			}
-			return parseCompactBytes(src)
+			return parseCompact(src)
 		}
 	}
 	return nil, errors.New("invalid byte sequence")
@@ -362,9 +362,9 @@ func ParseReader(src io.Reader) (*Message, error) {
 
 	var parser func(io.Reader) (*Message, error)
 	if first == '{' {
-		parser = parseJSON
+		parser = parseJSONReader
 	} else {
-		parser = parseCompact
+		parser = parseCompactReader
 	}
 
 	m, err := parser(rdr)
@@ -375,7 +375,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 	return m, nil
 }
 
-func parseJSON(src io.Reader) (result *Message, err error) {
+func parseJSONReader(src io.Reader) (result *Message, err error) {
 	var m Message
 	if err := json.NewDecoder(src).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
@@ -383,7 +383,7 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 	return &m, nil
 }
 
-func parseJSONBytes(data []byte) (result *Message, err error) {
+func parseJSON(data []byte) (result *Message, err error) {
 	var m Message
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
@@ -393,9 +393,19 @@ func parseJSONBytes(data []byte) (result *Message, err error) {
 
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
+func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
+	parts := bytes.Split(src, []byte("."))
+	if len(parts) < 3 {
+		return nil, nil, nil, errors.New(`invalid number of segments`)
+	}
+	return parts[0], parts[1], parts[2], nil
+}
+
+// SplitCompactReader splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
+func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	if data, ok := readAll(rdr); ok {
-		return SplitCompactBytes(data)
+		return SplitCompact(data)
 	}
 
 	var protected []byte
@@ -461,27 +471,17 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	return protected, payload, signature, nil
 }
 
-// SplitCompactBytes splits a JWT and returns its three parts
-// separately: protected headers, payload and signature.
-func SplitCompactBytes(data []byte) ([]byte, []byte, []byte, error) {
-	parts := bytes.Split(data, []byte("."))
-	if len(parts) < 3 {
-		return nil, nil, nil, errors.New(`invalid number of segments`)
-	}
-	return parts[0], parts[1], parts[2], nil
-}
-
-// parseCompact parses a JWS value serialized via compact serialization.
-func parseCompact(rdr io.Reader) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompact(rdr)
+// parseCompactReader parses a JWS value serialized via compact serialization.
+func parseCompactReader(rdr io.Reader) (m *Message, err error) {
+	protected, payload, signature, err := SplitCompactReader(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}
 	return parse(protected, payload, signature)
 }
 
-func parseCompactBytes(data []byte) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompactBytes(data)
+func parseCompact(data []byte) (m *Message, err error) {
+	protected, payload, signature, err := SplitCompact(data)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}

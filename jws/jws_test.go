@@ -475,7 +475,7 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with standard ecdsa library
-		_, _, jwsSignature, err := jws.SplitCompact(bytes.NewReader(jwsCompact))
+		_, _, jwsSignature, err := jws.SplitCompact(jwsCompact)
 		if err != nil {
 			t.Fatal("Failed to split compact JWT")
 		}
@@ -946,14 +946,17 @@ func TestEncode(t *testing.T) {
 					payload = append(payload, 'Y')
 				}
 
-				// Test using optimized and non-optimized path
-				for _, optimized := range []bool{true, false} {
+				// Test using bytes, reader optimized and non-optimized path
+				for _, method := range []int{0, 1, 2} {
 					var x, y, z []byte
 					var err error
-					if optimized {
-						x, y, z, err = jws.SplitCompact(bytes.NewReader(payload))
-					} else {
-						x, y, z, err = jws.SplitCompact(bufio.NewReader(bytes.NewReader(payload)))
+					switch method {
+					case 0: // bytes
+						x, y, z, err = jws.SplitCompact(payload)
+					case 1: // un-optimized io.Reader
+						x, y, z, err = jws.SplitCompactReader(bytes.NewReader(payload))
+					default: // optimized io.Reader
+						x, y, z, err = jws.SplitCompactReader(bufio.NewReader(bytes.NewReader(payload)))
 					}
 					if !assert.NoError(t, err, "SplitCompact should succeed") {
 						return
@@ -1018,7 +1021,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 
-	protected, payload, signature, err := jws.SplitCompact(strings.NewReader(incoming))
+	protected, payload, signature, err := jws.SplitCompact([]byte(incoming))
 	if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 		return
 	}
