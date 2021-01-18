@@ -247,7 +247,6 @@ func TestRoundtrip(t *testing.T) {
 				testRoundtrip(t, payload, alg, key, keys)
 			})
 		}
-
 	})
 }
 
