@@ -141,8 +141,10 @@ func generateFallbackFile(def definition) error {
 	fmt.Fprintf(&buf, "\n// to provide an alternate location to load the files from to provide an ")
 	fmt.Fprintf(&buf, "\n// alternate location to load the files from (if you are reading")
 	fmt.Fprintf(&buf, "\n// this message, your go (or your go doc) is probably running go < 1.16)")
-	fmt.Fprintf(&buf, "\nfunc ReadFile(path string) (%s, error) {", def.ReturnType)
-	if def.ParseOptions {
+	if !def.ParseOptions {
+		fmt.Fprintf(&buf, "\nfunc ReadFile(path string) (%s, error) {", def.ReturnType)
+	} else {
+		fmt.Fprintf(&buf, "\nfunc ReadFile(path string, options ...ReadFileOption) (%s, error) {", def.ReturnType)
 		fmt.Fprintf(&buf, "\nvar parseOptions []ParseOption")
 		fmt.Fprintf(&buf, "\nfor _, option := range options {")
 		fmt.Fprintf(&buf, "\nswitch option := option.(type) {")

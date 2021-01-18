@@ -21,7 +21,7 @@ type ReadFileOption = fs.OpenOption
 // to provide an alternate location to load the files from to provide an
 // alternate location to load the files from (if you are reading
 // this message, your go (or your go doc) is probably running go < 1.16)
-func ReadFile(path string) (Token, error) {
+func ReadFile(path string, options ...ReadFileOption) (Token, error) {
 	var parseOptions []ParseOption
 	for _, option := range options {
 		switch option := option.(type) {
