@@ -24,7 +24,6 @@ package jws
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -92,12 +91,6 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 
 	// If the key is a jwk.Key instance, obtain the raw key
 	if jwkKey, ok := key.(jwk.Key); ok {
-		var tmp interface{}
-		if err := jwkKey.Raw(&tmp); err != nil {
-			return nil, errors.Wrap(err, `failed to get raw key from jwk.Key instance`)
-		}
-		key = tmp
-
 		// If we have a key ID specified by this jwk.Key, use that in the header
 		if kid := jwkKey.KeyID(); kid != "" {
 			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
@@ -229,6 +222,8 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 }
 
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
+// `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
+//
 // If the verification is successful, `err` is nil, and the content of the
 // payload that was signed is returned. If you need more fine-grained
 // control of the verification process, manually generate a
@@ -299,71 +294,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		return nil, errors.Wrap(err, `message verified, failed to decode payload`)
 	}
 	return decodedPayload, nil
-}
-
-// VerifyWithJKU wraps VerifyWithJKUAndContext using the background context.
-func VerifyWithJKU(buf []byte, jwkurl string, options ...Option) ([]byte, error) {
-	return VerifyWithJKUAndContext(context.Background(), buf, jwkurl, options...)
-}
-
-// VerifyWithJKUAndContext verifies the JWS message using a remote JWK
-// file represented in the url.
-func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string, options ...Option) ([]byte, error) {
-	key, err := jwk.FetchHTTPWithContext(ctx, jwkurl, options...)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
-	}
-
-	return VerifyWithJWKSet(buf, key, nil)
-}
-
-// VerifyWithJWK verifies the JWS message using the specified JWK
-func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
-	var rawkey interface{}
-	if err := key.Raw(&rawkey); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize jwk.Key`)
-	}
-
-	payload, err = Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), rawkey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify message")
-	}
-	return payload, nil
-}
-
-// VerifyWithJWKSet verifies the JWS message using JWK key set.
-// By default it will only pick up keys that have the "use" key
-// set to either "sig" or "enc", but you can override it by
-// providing a keyaccept function.
-func VerifyWithJWKSet(buf []byte, keyset jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
-	if keyaccept == nil {
-		keyaccept = DefaultJWKAcceptor
-	}
-
-	for iter := keyset.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
-		key := pair.Value.(jwk.Key)
-
-		if !keyaccept(key) {
-			continue
-		}
-
-		payload, err := VerifyWithJWK(buf, key)
-		if err == nil {
-			return payload, nil
-		}
-	}
-
-	// refs #140, #141
-	//
-	// We should not be Wrap()'ing the error here, because of various
-	// reasons -- but the fundamental one is that the only value we can get
-	// here is the "last error" seen in the above loop, when the symptom
-	// that we want to report is that none of the keys worked.
-	//
-	// Here, we just return that fact, and we do not rely on the value of
-	// previous errors.
-	return nil, errors.New("failed to verify with any of the keys")
 }
 
 // This is an "optimized" ioutil.ReadAll(). It will attempt to read

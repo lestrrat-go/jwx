@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 
+	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
@@ -72,17 +73,12 @@ func (s ECDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	var pubkey *ecdsa.PrivateKey
-	switch v := key.(type) {
-	case ecdsa.PrivateKey:
-		pubkey = &v
-	case *ecdsa.PrivateKey:
-		pubkey = v
-	default:
-		return nil, errors.Errorf(`invalid key type %T. *ecdsa.PrivateKey is required`, key)
+	var privkey ecdsa.PrivateKey
+	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+		return nil, errors.Wrapf(err, `failed to retrieve ecdsa.PrivateKey out of %T`, key)
 	}
 
-	return s.sign(payload, pubkey)
+	return s.sign(payload, &privkey)
 }
 
 func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
@@ -119,15 +115,10 @@ func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{})
 		return errors.New(`missing public key while verifying payload`)
 	}
 
-	var pubkey *ecdsa.PublicKey
-	switch v := key.(type) {
-	case ecdsa.PublicKey:
-		pubkey = &v
-	case *ecdsa.PublicKey:
-		pubkey = v
-	default:
-		return errors.Errorf(`invalid key type %T. *ecdsa.PublicKey is required`, key)
+	var pubkey ecdsa.PublicKey
+	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+		return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
 	}
 
-	return v.verify(payload, signature, pubkey)
+	return v.verify(payload, signature, &pubkey)
 }

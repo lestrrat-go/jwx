@@ -7,6 +7,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,14 +17,15 @@ func TestKeyconv(t *testing.T) {
 		if !assert.NoError(t, err, `rsa.GenerateKey should succeed`) {
 			return
 		}
-
 		t.Run("PrivateKey", func(t *testing.T) {
+			jwkKey, _ := jwk.New(key)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
 			}{
 				{Src: key},
 				{Src: *key},
+				{Src: jwkKey},
 				{Src: struct{}{}, Error: true},
 			}
 
@@ -69,12 +71,14 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
+			jwkKey, _ := jwk.New(pubkey)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
 			}{
 				{Src: pubkey},
 				{Src: *pubkey},
+				{Src: jwkKey},
 				{Src: struct{}{}, Error: true},
 			}
 
@@ -126,12 +130,14 @@ func TestKeyconv(t *testing.T) {
 		}
 
 		t.Run("PrivateKey", func(t *testing.T) {
+			jwkKey, _ := jwk.New(key)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
 			}{
 				{Src: key},
 				{Src: *key},
+				{Src: jwkKey},
 				{Src: struct{}{}, Error: true},
 			}
 
@@ -177,12 +183,14 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
+			jwkKey, _ := jwk.New(pubkey)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
 			}{
 				{Src: pubkey},
 				{Src: *pubkey},
+				{Src: jwkKey},
 				{Src: struct{}{}, Error: true},
 			}
 

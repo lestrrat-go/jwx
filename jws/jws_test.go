@@ -121,21 +121,158 @@ func TestParseReader(t *testing.T) {
 	})
 }
 
-func TestRoundtrip(t *testing.T) {
-	t.Parallel()
-	payload := []byte("Lorem ipsum")
-	sharedkey := []byte("Avracadabra")
+func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
+	t.Helper()
 
-	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
-	for _, alg := range hmacAlgorithms {
-		alg := alg
-		t.Run("HMAC "+alg.String(), func(t *testing.T) {
+	signed, err := jws.Sign(payload, alg, signKey)
+	if !assert.NoError(t, err, "jws.Sign should succeed") {
+		return
+	}
+
+	parsers := map[string]func([]byte) (*jws.Message, error){
+		"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
+		"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
+		"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
+	}
+	for name, f := range parsers {
+		name := name
+		f := f
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			signed, err := jws.Sign(payload, alg, sharedkey)
-			if !assert.NoError(t, err, "Sign succeeds") {
+			m, err := f(signed)
+			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
 				return
 			}
 
+			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
+				return
+			}
+		})
+	}
+
+	for name, testKey := range keys {
+		name := name
+		testKey := testKey
+		t.Run(name, func(t *testing.T) {
+			verified, err := jws.Verify(signed, alg, testKey)
+			if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
+				return
+			}
+
+			if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
+				return
+			}
+		})
+	}
+}
+
+func TestRoundtrip(t *testing.T) {
+	t.Parallel()
+	payload := []byte("Lorem ipsum")
+
+	t.Run("HMAC", func(t *testing.T) {
+		t.Parallel()
+		sharedkey := []byte("Avracadabra")
+		jwkKey, _ := jwk.New(sharedkey)
+		keys := map[string]interface{}{
+			"[]byte":  sharedkey,
+			"jwk.Key": jwkKey,
+		}
+		hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+		for _, alg := range hmacAlgorithms {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, sharedkey, keys)
+			})
+		}
+	})
+	t.Run("ECDSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateEcdsaKey()
+		if !assert.NoError(t, err, "ECDSA key generated") {
+			return
+		}
+		jwkKey, _ := jwk.New(key.PublicKey)
+		keys := map[string]interface{}{
+			"Verify(ecdsa.PublicKey)":  key.PublicKey,
+			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
+			"Verify(jwk.Key)":          jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+	t.Run("RSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateRsaKey()
+		if !assert.NoError(t, err, "RSA key generated") {
+			return
+		}
+		jwkKey, _ := jwk.New(key.PublicKey)
+		keys := map[string]interface{}{
+			"Verify(rsa.PublicKey)":  key.PublicKey,
+			"Verify(*rsa.PublicKey)": &key.PublicKey,
+			"Verify(jwk.Key)":        jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+	t.Run("EdDSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateEd25519Key()
+		if !assert.NoError(t, err, "ed25519 key generated") {
+			return
+		}
+		pubkey := key.Public()
+		jwkKey, _ := jwk.New(pubkey)
+		keys := map[string]interface{}{
+			"Verify(ed25519.Public())":  pubkey,
+			"Verify(*ed25519.Public())": &pubkey,
+			"Verify(jwk.Key)":           jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+}
+
+func TestSignMulti2(t *testing.T) {
+	sharedkey := []byte("Avracadabra")
+	payload := []byte("Lorem ipsum")
+	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+	var signed []byte
+	t.Run("Sign", func(t *testing.T) {
+		var options []jws.Option
+		for _, alg := range hmacAlgorithms {
+			signer, err := jws.NewSigner(alg)
+			if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
+				return
+			}
+			options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
+		}
+		var err error
+		signed, err = jws.SignMulti(payload, options...)
+		if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
+			return
+		}
+	})
+	for _, alg := range hmacAlgorithms {
+		alg := alg
+		t.Run("Verify "+alg.String(), func(t *testing.T) {
 			verified, err := jws.Verify(signed, alg, sharedkey)
 			if !assert.NoError(t, err, "Verify succeeded") {
 				return
@@ -145,134 +282,6 @@ func TestRoundtrip(t *testing.T) {
 				return
 			}
 		})
-	}
-	t.Run("HMAC SignMulti", func(t *testing.T) {
-		var signed []byte
-		t.Run("Sign", func(t *testing.T) {
-			var options []jws.Option
-			for _, alg := range hmacAlgorithms {
-				signer, err := jws.NewSigner(alg)
-				if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
-					return
-				}
-				options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
-			}
-			var err error
-			signed, err = jws.SignMulti(payload, options...)
-			if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
-				return
-			}
-		})
-		for _, alg := range hmacAlgorithms {
-			alg := alg
-			t.Run("Verify "+alg.String(), func(t *testing.T) {
-				verified, err := jws.Verify(signed, alg, sharedkey)
-				if !assert.NoError(t, err, "Verify succeeded") {
-					return
-				}
-
-				if !assert.Equal(t, payload, verified, "verified payload matches") {
-					return
-				}
-			})
-		}
-	})
-}
-
-func TestVerifyWithJWKSet(t *testing.T) {
-	payload := []byte("Hello, World!")
-	key, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, "RSA key generated") {
-		return
-	}
-
-	jwkKey, err := jwk.New(&key.PublicKey)
-	if !assert.NoError(t, err, "JWK public key generated") {
-		return
-	}
-	err = jwkKey.Set(jwk.AlgorithmKey, jwa.RS256)
-	if !assert.NoError(t, err, "Algorithm set successfully") {
-		return
-	}
-
-	buf, err := jws.Sign(payload, jwa.RS256, key)
-	if !assert.NoError(t, err, "Signature generated successfully") {
-		return
-	}
-
-	set := jwk.NewSet()
-	set.Add(jwkKey)
-	verified, err := jws.VerifyWithJWKSet(buf, set, nil)
-	if !assert.NoError(t, err, "Verify is successful") {
-		return
-	}
-	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
-		return
-	}
-
-	verified, err = jws.VerifyWithJWK(buf, jwkKey)
-	if !assert.NoError(t, err, "Verify is successful") {
-		return
-	}
-
-	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
-		return
-	}
-
-	key2, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, "RSA key generated") {
-		return
-	}
-	jwkKey2, err := jwk.New(&key2.PublicKey)
-	if !assert.NoError(t, err, "JWK Public key generated") {
-		return
-	}
-
-	set.Clear()
-	set.Add(jwkKey2)
-	_, err = jws.VerifyWithJWKSet(buf, set, nil)
-	if !assert.Error(t, err, "Verify with wrong key should fail") {
-		return
-	}
-}
-
-func TestRoundtrip_RSACompact(t *testing.T) {
-	payload := []byte("Hello, World!")
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-		key, err := jwxtest.GenerateRsaKey()
-		if !assert.NoError(t, err, "RSA key generated") {
-			return
-		}
-
-		buf, err := jws.Sign(payload, alg, key)
-		if !assert.NoError(t, err, "(%s) Signature generated successfully", alg) {
-			return
-		}
-
-		parsers := map[string]func([]byte) (*jws.Message, error){
-			"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
-			"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
-			"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
-		}
-		for name, f := range parsers {
-			m, err := f(buf)
-			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
-				return
-			}
-
-			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
-				return
-			}
-		}
-
-		verified, err := jws.Verify(buf, alg, &key.PublicKey)
-		if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
-			return
-		}
-
-		if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
-			return
-		}
 	}
 }
 

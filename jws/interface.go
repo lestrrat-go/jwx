@@ -7,7 +7,6 @@ import (
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
 )
 
 // PayloadSigner generates signature for the given payload.
@@ -40,31 +39,6 @@ type Signature struct {
 	protected Headers // Protected Headers
 	signature []byte  // Signature
 }
-
-// JWKAcceptor decides which keys can be accepted
-// by functions that iterate over a JWK key set.
-type JWKAcceptor interface {
-	Accept(jwk.Key) bool
-}
-
-// JWKAcceptFunc is an implementation of JWKAcceptor
-// using a plain function
-type JWKAcceptFunc func(jwk.Key) bool
-
-// Accept executes the provided function to determine if the
-// given key can be used
-func (f JWKAcceptFunc) Accept(key jwk.Key) bool {
-	return f(key)
-}
-
-// DefaultJWKAcceptor is the default acceptor that is used
-// in functions like VerifyWithJWKSet
-var DefaultJWKAcceptor = JWKAcceptFunc(func(key jwk.Key) bool {
-	if u := key.KeyUsage(); u != "" && u != "enc" && u != "sig" {
-		return false
-	}
-	return true
-})
 
 type Visitor = iter.MapVisitor
 type VisitorFunc = iter.MapVisitorFunc

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 
+	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -96,17 +97,12 @@ func (s RSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	var privkey *rsa.PrivateKey
-	switch v := key.(type) {
-	case rsa.PrivateKey:
-		privkey = &v
-	case *rsa.PrivateKey:
-		privkey = v
-	default:
-		return nil, errors.Errorf(`invalid key type %T. *rsa.PrivateKey is required`, key)
+	var privkey rsa.PrivateKey
+	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
+		return nil, errors.Wrapf(err, `failed to retrieve rsa.PrivateKey out of %T`, key)
 	}
 
-	return s.sign(payload, privkey)
+	return s.sign(payload, &privkey)
 }
 
 func makeVerifyPKCS1v15(hash crypto.Hash) rsaVerifyFunc {
@@ -141,15 +137,10 @@ func (v RSAVerifier) Verify(payload, signature []byte, key interface{}) error {
 		return errors.New(`missing public key while verifying payload`)
 	}
 
-	var pubkey *rsa.PublicKey
-	switch v := key.(type) {
-	case rsa.PublicKey:
-		pubkey = &v
-	case *rsa.PublicKey:
-		pubkey = v
-	default:
-		return errors.Errorf(`invalid key type %T. *rsa.PublicKey is required`, key)
+	var pubkey rsa.PublicKey
+	if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
+		return errors.Wrapf(err, `failed to retrieve rsa.PublicKey out of %T`, key)
 	}
 
-	return v.verify(payload, signature, pubkey)
+	return v.verify(payload, signature, &pubkey)
 }
