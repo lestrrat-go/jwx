@@ -1,3 +1,5 @@
+//go:generate go run internal/cmd/genreadfile/main.go
+
 // Package jwx contains tools that deal with the various JWx (JOSE)
 // technologies such as JWT, JWS, JWE, etc in Go.
 //

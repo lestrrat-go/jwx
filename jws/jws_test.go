@@ -8,6 +8,8 @@ import (
 	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
+	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
@@ -1043,6 +1045,22 @@ func TestGHIssue126(t *testing.T) {
 	}
 
 	if !assert.Equal(t, err.Error(), `failed to unmarshal JSON message: "payload" must be non-empty`) {
+		return
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	f, err := ioutil.TempFile("", "test-read-file-*.jws")
+	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "%s", exampleCompactSerialization)
+
+	if _, err := jws.ReadFile(f.Name()); !assert.NoError(t, err, `jws.ReadFile should succeed`) {
 		return
 	}
 }

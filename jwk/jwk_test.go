@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
@@ -704,5 +705,25 @@ func TestIssue270(t *testing.T) {
 		if !assert.NoError(t, k.Set(jwk.KeyUsageKey, jwk.KeyUsageType(usage))) {
 			return
 		}
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+	if !jose.Available() {
+		t.SkipNow()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	fn, clean, err := jose.GenerateJwk(ctx, t, `{"alg": "RS256"}`)
+	if !assert.NoError(t, err, `jose.GenerateJwk`) {
+		return
+	}
+
+	defer clean()
+	if _, err := jwk.ReadFile(fn); !assert.NoError(t, err, `jwk.ReadFile should succeed`) {
+		return
 	}
 }

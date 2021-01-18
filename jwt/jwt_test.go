@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"testing"
@@ -448,4 +449,27 @@ func TestSignJWK(t *testing.T) {
 
 	signatures := header.LookupSignature("test")
 	assert.Len(t, signatures, 1)
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	f, err := ioutil.TempFile("", "test-read-file-*.jwt")
+	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+		return
+	}
+	defer f.Close()
+
+	token := jwt.New()
+	token.Set(jwt.IssuerKey, `lestrrat`)
+	if !assert.NoError(t, json.NewEncoder(f).Encode(token), `json.NewEncoder.Encode should succeed`) {
+		return
+	}
+
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrat")); !assert.NoError(t, err, `jwt.ReadFile should succeed`) {
+		return
+	}
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat")); !assert.Error(t, err, `jwt.ReadFile should fail`) {
+		return
+	}
 }

@@ -3,6 +3,7 @@ package jwt
 import (
 	"time"
 
+	"github.com/lestrrat-go/jwx/internal/fs"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -27,33 +28,39 @@ type identValidate struct{}
 type identVerify struct{}
 
 type parseOption struct {
-	Option
+	fs.OpenOption
 }
 
 func newParseOption(n interface{}, v interface{}) ParseOption {
-	return &parseOption{Option: option.New(n, v)}
+	return &parseOption{fs.NewOpenOption(option.New(n, v))}
 }
 
-func (o *parseOption) isParseOption() {}
+func (*parseOption) parseOption() {}
 
+// ParseOption describes an Option that can be passed to `Parse()`.
+// ParseOption also implements ReadFileOption, therefore it may be
+// safely pass them to `jwt.ReadFile()`
 type ParseOption interface {
-	Option
-	isParseOption()
+	ReadFileOption
+	parseOption()
 }
 
 type validateOption struct {
-	Option
+	ParseOption
 }
 
 func newValidateOption(n interface{}, v interface{}) ValidateOption {
-	return &validateOption{Option: option.New(n, v)}
+	return &validateOption{newParseOption(n, v)}
 }
 
-func (o *validateOption) isValidateOption() {}
+func (*validateOption) validateOption() {}
 
+// ValidateOption describes an Option that can be passed to Validate().
+// ValidateOption also implements ParseOption, therefore it may be
+// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
 type ValidateOption interface {
-	Option
-	isValidateOption()
+	ParseOption
+	validateOption()
 }
 
 type VerifyParameters interface {
