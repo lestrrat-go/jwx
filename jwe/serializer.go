@@ -10,7 +10,10 @@ import (
 )
 
 // Compact encodes the given message into a JWE compact serialization format.
-func Compact(m *Message, _ ...Option) ([]byte, error) {
+//
+// Currently `Compact()` does not take any options, but the API is
+// set up as such to allow future expansions
+func Compact(m *Message, _ ...SerializerOption) ([]byte, error) {
 	if len(m.recipients) != 1 {
 		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
@@ -85,11 +88,14 @@ func Compact(m *Message, _ ...Option) ([]byte, error) {
 }
 
 // JSON encodes the message into a JWE JSON serialization format.
-func JSON(m *Message, options ...Option) ([]byte, error) {
+//
+// If `WithPrettyFormat(true)` is passed as an option, the returned
+// value will be formatted using `json.MarshalIndent()`
+func JSON(m *Message, options ...SerializerOption) ([]byte, error) {
 	var pretty bool
 	for _, option := range options {
 		switch option.Ident() {
-		case identPrettyJSONFormat{}:
+		case identPrettyFormat{}:
 			pretty = option.Value().(bool)
 		}
 	}

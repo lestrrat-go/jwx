@@ -207,7 +207,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 		{
 			Name: "JSON (Pretty)",
-			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyJSONFormat(true)) },
+			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyFormat(true)) },
 			Expected: `{
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
@@ -236,7 +236,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				}
 
 				if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
-					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
+					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyFormat(true))
 					t.Logf("%s", jsonbuf)
 					return
 				}
