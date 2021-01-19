@@ -3,7 +3,6 @@
 package jwk
 
 import (
-	"bytes"
 	"context"
 	"crypto/x509"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -412,7 +412,7 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})
-	var fields []string
+	fields := make([]string, 0, 11)
 	for iter := h.Iterate(ctx); iter.Next(ctx); {
 		pair := iter.Pair()
 		fields = append(fields, pair.Key.(string))
@@ -420,10 +420,11 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	}
 
 	sort.Strings(fields)
-	var buf bytes.Buffer
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	l := len(fields)
-	enc := json.NewEncoder(&buf)
+	enc := json.NewEncoder(buf)
 	for i, f := range fields {
 		buf.WriteString(strconv.Quote(f))
 		buf.WriteByte(':')
@@ -813,7 +814,7 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})
-	var fields []string
+	fields := make([]string, 0, 10)
 	for iter := h.Iterate(ctx); iter.Next(ctx); {
 		pair := iter.Pair()
 		fields = append(fields, pair.Key.(string))
@@ -821,10 +822,11 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	}
 
 	sort.Strings(fields)
-	var buf bytes.Buffer
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	l := len(fields)
-	enc := json.NewEncoder(&buf)
+	enc := json.NewEncoder(buf)
 	for i, f := range fields {
 		buf.WriteString(strconv.Quote(f))
 		buf.WriteByte(':')
