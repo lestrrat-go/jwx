@@ -420,12 +420,22 @@ func TestSignErrors(t *testing.T) {
 
 	tok := jwt.New()
 	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported signature algorithm BOGUS")
+	if !assert.Error(t, err) {
+		return
+	}
+
+	if !assert.Contains(t, err.Error(), `unsupported signature algorithm "BOGUS"`) {
+		return
+	}
 
 	_, err = jwt.Sign(tok, jwa.ES256, nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing private key")
+	if !assert.Error(t, err) {
+		return
+	}
+
+	if !assert.Contains(t, err.Error(), "missing private key") {
+		return
+	}
 }
 
 func TestSignJWK(t *testing.T) {

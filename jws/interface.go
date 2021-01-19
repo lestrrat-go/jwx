@@ -9,17 +9,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 )
 
-// PayloadSigner generates signature for the given payload.
-// Unlike the plainly named `Signer`, these objects also carry
-// extra metadata such as the protected/public headers that should
-// be applied to the payload
-type PayloadSigner interface {
-	Sign([]byte) ([]byte, error)
-	Algorithm() jwa.SignatureAlgorithm
-	ProtectedHeader() Headers
-	PublicHeader() Headers
-}
-
 // Message represents a full JWS encoded message. Flattened serialization
 // is not supported as a struct, but rather it's represented as a
 // Message struct with only one `signature` element.

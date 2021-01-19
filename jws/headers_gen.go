@@ -43,8 +43,10 @@ type Headers interface {
 	X509CertThumbprintS256() string
 	X509URL() string
 	Iterate(ctx context.Context) Iterator
-	Walk(ctx context.Context, v Visitor) error
-	AsMap(ctx context.Context) (map[string]interface{}, error)
+	Walk(context.Context, Visitor) error
+	AsMap(context.Context) (map[string]interface{}, error)
+	Copy(context.Context, Headers) error
+	Merge(context.Context, Headers) (Headers, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
 

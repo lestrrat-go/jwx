@@ -202,8 +202,10 @@ func generateHeaders() error {
 
 	// These are used to iterate through all keys in a header
 	fmt.Fprintf(&buf, "\nIterate(ctx context.Context) Iterator")
-	fmt.Fprintf(&buf, "\nWalk(ctx context.Context, v Visitor) error")
-	fmt.Fprintf(&buf, "\nAsMap(ctx context.Context) (map[string]interface{}, error)")
+	fmt.Fprintf(&buf, "\nWalk(context.Context, Visitor) error")
+	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
+	fmt.Fprintf(&buf, "\nCopy(context.Context, Headers) error")
+	fmt.Fprintf(&buf, "\nMerge(context.Context, Headers) (Headers, error)")
 
 	// These are used to access a single element by key name
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")

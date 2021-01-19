@@ -527,6 +527,9 @@ func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration
 	return minRefreshInterval
 }
 
+// TargetSnapshot is the structure returned by the Snapshot method.
+// It contains information about a url that has been configured
+// in AutoRefresh.
 type TargetSnapshot struct {
 	URL         string
 	NextRefresh time.Time

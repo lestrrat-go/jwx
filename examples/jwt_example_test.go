@@ -18,7 +18,7 @@ import (
 const aLongLongTimeAgo = 233431200
 
 //nolint:govet
-func ExampleJWT_ParseJWKS() {
+func ExampleJWT_ParseWithJWKS() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)

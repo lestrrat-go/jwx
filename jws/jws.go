@@ -86,93 +86,32 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		}
 	}
 
-	if hdrs == nil {
-		hdrs = NewHeaders()
-	}
-
-	// If the key is a jwk.Key instance, obtain the raw key
-	if jwkKey, ok := key.(jwk.Key); ok {
-		// If we have a key ID specified by this jwk.Key, use that in the header
-		if kid := jwkKey.KeyID(); kid != "" {
-			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
-				return nil, errors.Wrap(err, `set key ID from jwk.Key`)
-			}
-		}
-	}
-
 	signer, err := NewSigner(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
 
-	if err := hdrs.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-		return nil, errors.Wrap(err, `failed to set header`)
-	}
-
-	hdrbuf, err := json.Marshal(hdrs)
+	sig := &Signature{protected: hdrs}
+	_, signature, err := sig.Sign(payload, signer, key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal headers`)
+		return nil, errors.Wrap(err, `failed sign payload`)
 	}
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	buf.WriteString(base64.EncodeToString(hdrbuf))
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(payload))
-
-	signature, err := signer.Sign(buf.Bytes(), key)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
-	}
-
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(signature))
-
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
-	return result, nil
-}
-
-// SignLiteral generates a signature for the given payload and headers, and serializes
-// it in compact serialization format. In this format you may NOT use
-// multiple signers.
-//
-func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, headers []byte) ([]byte, error) {
-	signer, err := NewSigner(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to create signer`)
-	}
-
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	buf.WriteString(base64.EncodeToString(headers))
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(payload))
-
-	signature, err := signer.Sign(buf.Bytes(), key)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
-	}
-
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(signature))
-
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
-	return result, nil
+	return signature, nil
 }
 
 // SignMulti accepts multiple signers via the options parameter,
 // and creates a JWS in JSON serialization format that contains
 // signatures from applying aforementioned signers.
+//
+// Use `jws.WithSigner(...)` to specify values how to generate
+// each signature in the `"signatures": [ ... ]` field.
 func SignMulti(payload []byte, options ...Option) ([]byte, error) {
-	var signers []PayloadSigner
+	var signers []*payloadSigner
 	for _, o := range options {
 		switch o.Ident() {
 		case identPayloadSigner{}:
-			signers = append(signers, o.Value().(PayloadSigner))
+			signers = append(signers, o.Value().(*payloadSigner))
 		}
 	}
 
@@ -183,11 +122,12 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	var result Message
 
 	result.payload = payload
-	encodedPayload := base64.EncodeToString(payload)
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
-	for _, signer := range signers {
+
+	result.signatures = make([]*Signature, 0, len(signers))
+	for i, signer := range signers {
 		protected := signer.ProtectedHeader()
 		if protected == nil {
 			protected = NewHeaders()
@@ -197,26 +137,16 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 			return nil, errors.Wrap(err, `failed to set header`)
 		}
 
-		hdrbuf, err := json.Marshal(protected)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to marshal headers`)
-		}
-		encodedHeader := base64.EncodeToString(hdrbuf)
-
-		buf.Reset()
-		buf.WriteString(encodedHeader)
-		buf.WriteByte('.')
-		buf.WriteString(encodedPayload)
-		signature, err := signer.Sign(buf.Bytes())
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to sign payload`)
-		}
-
-		result.signatures = append(result.signatures, &Signature{
+		sig := &Signature{
 			headers:   signer.PublicHeader(),
 			protected: protected,
-			signature: signature,
-		})
+		}
+		_, _, err := sig.Sign(payload, signer.signer, signer.key)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to generate signature for signer #%d (alg=%s)`, i, signer.Algorithm())
+		}
+
+		result.signatures = append(result.signatures, sig)
 	}
 
 	return json.Marshal(result)
@@ -303,6 +233,7 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]b
 				}
 			}
 		}
+
 		protected, err := json.Marshal(sig.protected)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)

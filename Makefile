@@ -22,7 +22,7 @@ cover:
 	@rm coverage.out.tmp
 
 smoke:
-	cd examples && go test -v -race && cd .. && go test -v -race -short ./...
+	cd examples && go test -race && cd .. && go test -race -short ./...
 
 viewcover:
 	go tool cover -html=coverage.out
