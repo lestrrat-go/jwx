@@ -3,15 +3,15 @@
 package jwe
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -631,72 +631,39 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	var proxy standardHeadersMarshalProxy
-	if h.jwk != nil {
-		jwkbuf, err := json.Marshal(h.jwk)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to marshal jwk field`)
-		}
-		proxy.Xjwk = jwkbuf
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	fields := make([]string, 0, 16)
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	if h.ephemeralPublicKey != nil {
-		epkbuf, err := json.Marshal(h.ephemeralPublicKey)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to marshal epk field`)
-		}
-		proxy.XephemeralPublicKey = epkbuf
-	}
-	proxy.XagreementPartyUInfo = h.agreementPartyUInfo
-	proxy.XagreementPartyVInfo = h.agreementPartyVInfo
-	proxy.Xalgorithm = h.algorithm
-	proxy.Xcompression = h.compression
-	proxy.XcontentEncryption = h.contentEncryption
-	proxy.XcontentType = h.contentType
-	proxy.Xcritical = h.critical
-	proxy.XjwkSetURL = h.jwkSetURL
-	proxy.XkeyID = h.keyID
-	proxy.Xtyp = h.typ
-	proxy.Xx509CertChain = h.x509CertChain
-	proxy.Xx509CertThumbprint = h.x509CertThumbprint
-	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
-	proxy.Xx509URL = h.x509URL
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
-	}
-	hasContent := buf.Len() > 3
-	if l := len(h.privateParams); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range h.privateParams {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
-			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateParams[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
-		}
-		fmt.Fprintf(&buf, `}`)
-	}
-	// WTF, why are you going through json.Marshal / Unmarshal AGAIN?!
-	// Well, json.Marshal by default sorts its keys in lexicographical order.
-	// Therefore the expectation from the user is to see output ordered as such.
-	//
-	// There are ways to do this manually, but it's extremely painful to take
-	// things like nested structures into consideration, so we'll just bite the
-	// bullet and go through marshaling/unmarshaling again
 
-	var tmp map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &tmp); err != nil {
-		return nil, errors.Wrap(err, `failed to marshal header into intermediate structure`)
+	sort.Strings(fields)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	buf.WriteByte('{')
+	l := len(fields)
+	enc := json.NewEncoder(buf)
+	for i, f := range fields {
+		buf.WriteString(strconv.Quote(f))
+		buf.WriteByte(':')
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			enc.Encode(base64.EncodeToString(v))
+		default:
+			enc.Encode(v)
+		}
+
+		if i < l-1 {
+			buf.WriteByte(',')
+		}
 	}
-	return json.Marshal(tmp)
+	buf.WriteByte('}')
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
