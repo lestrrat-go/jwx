@@ -355,7 +355,6 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) (
 	if hdr.KeyID() != "" {
 		if jwkKey, ok := key.(jwk.Key); ok {
 			if jwkKey.KeyID() != hdr.KeyID() {
-				panic("HERE!")
 				return nil, errors.New(`"kid" fields do not match`)
 			}
 		}
