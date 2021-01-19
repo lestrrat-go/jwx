@@ -1,6 +1,85 @@
 Changes
 =======
 
+v1.1.0
+  v1.1.0 is a release that attempts to fix as many of the quirky API
+  that survived the API breaking change of v0.9.x -> v1.0.0. This is
+  hopefully one of the last releases that change backwards compatibility
+  in a major way, for at least some time.
+
+  It is unfortunate that we need to introduce API changes, but we
+  keep learning how the library is being used and the pain points
+  of using this library. Most of the times these pain points are
+  things that we initially did not think about, which in turn
+  requires us to rethink of the API.
+
+  If you do not wish to spend the time fixing your usage, make sure
+  you have your go.mod set up to not automatically track the latest
+  changes.
+
+  However, if you do decide to use the latest version, we believe
+  the API is more uniform across packages, and generally is easier
+  to understand. We hope this library helps some of you out there.
+
+[BREAKING CHANGES]
+  * `jwk.Parse(io.Reader)`, `jws.Parse(io.Reader)`, and `jwt.Parse(io.Reader)`
+    have all been changed to `Parse([]byte)`. To use an `io.Reader`,
+    use `ParseReader(io.Reader)`
+
+    With this change, all four package `jwe`, `jwk`, `jws`, and `jwt` follow
+    the same API design, which should make things easier to navigate:
+
+      Parse([]byte)
+      ParseString(string)
+      ParseReader(io.Reader)
+
+  * `jwk.Set` is now an interface, not a struct. `jwk.Set` now has a
+    well-defined API to access and modify the `jwk.Key` objects that it holds.
+
+  * `jwk.PublicKeyOf()` has been renamed to `jwk.PublicRawKeyOf()`,
+    which converts raw keys (e.g. `rsa.PrivateKey`) to their public
+    counter part (e.g. `rsa.PublicKey`)
+
+    `jwk.PublicKeyOf()` is now used to get the public counter part of
+    `jwk.Key` objects (e.g. `jwk.RSAPrivateKey` to `jwk.RSAPublicKey`)
+
+    `jwk.PublicSetOf()` has been added to get a new `jwk.Set` but with
+    all keys transformed to public keys via `jwk.PublicKeyOf()`
+
+  * `(jwk.Set).LookupKeyID()` no longer returns an array of `jwk.Key`.
+    Instead, only the first key matching the given key ID will be returned.
+    If you need to work with multiple keys, use `(jwk.Set).Iterate()` or
+    `(jwk.Set).Get()` to look for matching keys.
+
+  * `jwk.FetchXXXX` functions have been removed. `jwk.Fetch()` remains, but
+    it now takes `context.Context`, and doesn't support retrieving files
+    from the local file system. See `ReadFile()` for that.
+
+  * `jws.VerifyWithJKU()`, `jws.VerifyWithJWK()`, `jwk.VerifyWithJWKSet()`
+    have all been removed, but `jwk.VerifySet(jwk.Set)` has been added.
+
+  * `jws.SplitCompact(io.Reader)` has been changd to `jws.SplitCompact([]byte)`
+    Similar to `Parse()`, `SplitCompactReader(io.Reader)` and `SplitCompactString(string)`
+    have been added
+
+[New Features]
+  * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
+    `jwt.ReadFile(string)` have been added. On go >= 1.16, you can even use
+    it to load data from embedded contents using `WithFS(fs.FS)` option.
+
+  * `(jwk.Key).PublicKey()` has been added. This method creates a corresponding
+    public key, with all fields (except those that shouldn't be) copied over.
+    This allows you to easily create a public key of a private key with the
+    same "kid" attribute.
+
+  * Both `jws.Verify` and `jws.Sign` methods can now handle `jwk.Key` objects, on
+    top of raw keys (e.g. rsa.PrivateKey).
+
+[Miscellaneous]
+  * Options have been reworked
+  * JSON marshaling should be 10~30% faster.
+
+
 v1.0.8 15 Jan 2021
 [New features]
   * Fixed `jws.Message` and `jws.Signature` to be properly formatted when
