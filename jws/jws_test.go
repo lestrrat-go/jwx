@@ -1067,3 +1067,91 @@ func TestReadFile(t *testing.T) {
 		return
 	}
 }
+
+func TestVerifySet(t *testing.T) {
+	t.Parallel()
+	const payload = "Lorem ipsum"
+
+	makeSet := func(privkey jwk.Key) jwk.Set {
+		set := jwk.NewSet()
+		k1, _ := jwk.New([]byte("abracadavra"))
+		set.Add(k1)
+		k2, _ := jwk.New([]byte("opensasame"))
+		set.Add(k2)
+		pubkey, _ := jwk.PublicKeyOf(privkey)
+		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
+		set.Add(pubkey)
+		return set
+	}
+
+	for _, useJSON := range []bool{true, false} {
+		useJSON := useJSON
+		t.Run(fmt.Sprintf("useJSON=%t", useJSON), func(t *testing.T) {
+			t.Parallel()
+			t.Run(`match via "alg"`, func(t *testing.T) {
+				t.Parallel()
+				key, err := jwxtest.GenerateRsaJwk()
+				if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+					return
+				}
+
+				set := makeSet(key)
+				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+				if useJSON {
+					m, err := jws.Parse(signed)
+					if !assert.NoError(t, err, `jws.Parse should succeed`) {
+						return
+					}
+					signed, err = json.Marshal(m)
+					if !assert.NoError(t, err, `json.Marshal should succeed`) {
+						return
+					}
+				}
+
+				verified, err := jws.VerifySet(signed, set)
+				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+					return
+				}
+				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+			})
+			t.Run(`match via "kid"`, func(t *testing.T) {
+				t.Parallel()
+
+				key, err := jwxtest.GenerateRsaJwk()
+				if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+					return
+				}
+				key.Set(jwk.KeyIDKey, `mykey`)
+
+				set := makeSet(key)
+				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+				if useJSON {
+					m, err := jws.Parse(signed)
+					if !assert.NoError(t, err, `jws.Parse should succeed`) {
+						return
+					}
+					signed, err = json.Marshal(m)
+					if !assert.NoError(t, err, `json.Marshal should succeed`) {
+						return
+					}
+				}
+
+				verified, err := jws.VerifySet(signed, set)
+				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+					return
+				}
+				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+			})
+		})
+	}
+}

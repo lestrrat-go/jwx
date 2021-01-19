@@ -184,7 +184,7 @@ func (m Message) MarshalJSON() ([]byte, error) {
 
 	if len(m.signatures) == 1 {
 		sig := m.signatures[0]
-		var s = string(sig.signature)
+		var s = base64.EncodeToString(sig.signature)
 		proxy.Signature = &s
 
 		buf, err := json.Marshal(sig.headers)

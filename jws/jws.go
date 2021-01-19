@@ -24,6 +24,7 @@ package jws
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -230,48 +231,110 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // `Verifier` in `verify` subpackage, and call `Verify` method on it.
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
-func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
-	verifier, err := NewVerifier(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create verifier")
-	}
-
+func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New(`attempt to verify empty buffer`)
 	}
 
 	if buf[0] == '{' {
-		var m Message
-		if err := json.Unmarshal(buf, &m); err != nil {
-			return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
+		return verifyJSON(buf, alg, key)
+	}
+	return verifyCompact(buf, alg, key)
+}
+
+// VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
+//
+// In order for `VerifySet()` to use a key in the given set, the
+// `jwk.Key` object must have a valid "alg" field, and it also must
+// have either an empty value or the value "sig" in the "use" field.
+//
+// Furthermore if the JWS signature asks for a spefici "kid", the
+// `jwk.Key` must have the same "kid" as the signature.
+func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for iter := set.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+		if key.Algorithm() == "" { // algorithm is not
+println("no algo")
+			continue
 		}
 
-		payload := base64.EncodeToString(m.payload)
-
-		buf := pool.GetBytesBuffer()
-		defer pool.ReleaseBytesBuffer(buf)
-		for i, sig := range m.signatures {
-			buf.Reset()
-			protected, err := json.Marshal(sig.protected)
-			if err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
-			}
-
-			buf.WriteString(base64.EncodeToString(protected))
-			buf.WriteByte('.')
-			buf.WriteString(payload)
-
-			if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
-				return m.payload, nil
-			}
+		if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
+println("wrong usage")
+			continue
 		}
-		return nil, errors.New(`could not verify with any of the signatures`)
+
+		buf, err := Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), key)
+		if err != nil {
+println("no verify " + err.Error())
+			continue
+		}
+
+		return buf, nil
 	}
 
-	protected, payload, signature, err := SplitCompact(buf)
+	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
+}
+
+func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	verifier, err := NewVerifier(alg)
+	if err != nil {
+println("no verifier")
+		return nil, errors.Wrap(err, "failed to create verifier")
+	}
+
+	var m Message
+	if err := json.Unmarshal(signed, &m); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
+	}
+
+	// Pre-compute the base64 encoded version of payload
+	payload := base64.EncodeToString(m.payload)
+
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+
+	for i, sig := range m.signatures {
+		buf.Reset()
+		if hdr := sig.headers; hdr != nil && hdr.KeyID() != "" {
+			if jwkKey, ok := key.(jwk.Key); ok {
+				if jwkKey.KeyID() != hdr.KeyID() {
+println("no kid")
+					continue
+				}
+			}
+		}
+		protected, err := json.Marshal(sig.protected)
+		if err != nil {
+println("no unmarshal")
+			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+		}
+
+		buf.WriteString(base64.EncodeToString(protected))
+		buf.WriteByte('.')
+		buf.WriteString(payload)
+
+		if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
+			return m.payload, nil
+		}
+println("no verify...")
+	}
+	return nil, errors.New(`could not verify with any of the signatures`)
+}
+
+func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	protected, payload, signature, err := SplitCompact(signed)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
+	}
+
+	verifier, err := NewVerifier(alg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create verifier")
 	}
 
 	verifyBuf := pool.GetBytesBuffer()
@@ -284,6 +347,25 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode signature`)
+	}
+
+	hdr := NewHeaders()
+	decodedProtected, err := base64.Decode(protected)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decode headers`)
+	}
+
+	if err := json.Unmarshal(decodedProtected, hdr); err != nil {
+		return nil, errors.Wrap(err, `failed to decode headers`)
+	}
+
+	if hdr.KeyID() != "" {
+		if jwkKey, ok := key.(jwk.Key); ok {
+			if jwkKey.KeyID() != hdr.KeyID() {
+				panic("HERE!")
+				return nil, errors.New(`"kid" fields do not match`)
+			}
+		}
 	}
 	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
