@@ -4,8 +4,8 @@ Changes
 v1.1.0
   v1.1.0 is a release that attempts to fix as many of the quirky API
   that survived the API breaking change of v0.9.x -> v1.0.0. This is
-  hopefully one of the last releases that change backwards compatibility
-  in a major way, for at least some time.
+  hopefully the last releases that change backwards compatibility
+  in a major way, at least for some time to come.
 
   It is unfortunate that we need to introduce API changes, but we
   keep learning how the library is being used and the pain points
@@ -62,6 +62,12 @@ v1.1.0
     Similar to `Parse()`, `SplitCompactReader(io.Reader)` and `SplitCompactString(string)`
     have been added
 
+  * `jws.SignLiteral` has been removed.
+  * `jws.PayloadSigner` has been removed (but should not matter, because
+    this as internal-use only anyways)
+
+  * `jwe.WithPrettyJSONFormat` has been renamed to `jwe.WithPrettyFormat`
+
 [New Features]
   * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
     `jwt.ReadFile(string)` have been added. On go >= 1.16, you can even use
@@ -78,6 +84,10 @@ v1.1.0
 [Miscellaneous]
   * Options have been reworked
   * JSON marshaling should be 10~30% faster.
+  * Location for examples and benchmarks have changed: Now examples/ and bench/ 
+    are their respective locations, and they are each a standalone module,
+    so that in case we need extra imports (such as the case in examples)
+    they do not interfere with users who just want to include jwx in their projects.
 
 
 v1.0.8 15 Jan 2021
