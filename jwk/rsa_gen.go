@@ -604,7 +604,9 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *rsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -1012,7 +1014,9 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *rsaPublicKey) Iterate(ctx context.Context) HeaderIterator {

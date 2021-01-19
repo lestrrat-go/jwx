@@ -475,7 +475,9 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -909,7 +911,9 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {

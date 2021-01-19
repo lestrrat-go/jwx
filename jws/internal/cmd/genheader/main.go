@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
-	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -374,64 +374,46 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
-	fmt.Fprintf(&buf, "\nvar proxy standardHeadersMarshalProxy")
-	fmt.Fprintf(&buf, "\nif h.jwk != nil {")
-	fmt.Fprintf(&buf, "\njwkbuf, err := json.Marshal(h.jwk)")
-	fmt.Fprintf(&buf, "\nif err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to marshal jwk field`)")
+	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
+	fmt.Fprintf(&buf, "\ndefer cancel()")
+	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nfields := make([]string, 0, %d)", len(fields))
+	fmt.Fprintf(&buf, "\nfor iter := h.Iterate(ctx); iter.Next(ctx); {")
+	fmt.Fprintf(&buf, "\npair := iter.Pair()")
+	fmt.Fprintf(&buf, "\nfields = append(fields, pair.Key.(string))")
+	fmt.Fprintf(&buf, "\ndata[pair.Key.(string)] = pair.Value")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nproxy.Xjwk = jwkbuf")
+	fmt.Fprintf(&buf, "\n\nsort.Strings(fields)")
+	fmt.Fprintf(&buf, "\nbuf := pool.GetBytesBuffer()")
+	fmt.Fprintf(&buf, "\ndefer pool.ReleaseBytesBuffer(buf)")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('{')")
+	fmt.Fprintf(&buf, "\nl := len(fields)")
+	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(buf)")
+	fmt.Fprintf(&buf, "\nfor i, f := range fields {")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(strconv.Quote(f))")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(':')")
+	fmt.Fprintf(&buf, "\nv := data[f]")
+	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\ncase []byte:")
+	fmt.Fprintf(&buf, "\nenc.Encode(base64.EncodeToString(v))")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nenc.Encode(v)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n\nif i < l-1 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('}')")
+	fmt.Fprintf(&buf, "\nret := make([]byte, buf.Len())")
+	fmt.Fprintf(&buf, "\ncopy(ret, buf.Bytes())")
+	fmt.Fprintf(&buf, "\nreturn ret, nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	for _, f := range fields {
-		if f.name != jwkKey {
-			fmt.Fprintf(&buf, "\nproxy.X%[1]s = h.%[1]s", f.name)
+	if err := codegen.WriteFile("headers_gen.go", &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
 		}
+		return errors.Wrap(err, `failed to write to headers_gen.go`)
 	}
-
-	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
-	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(&buf)")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nhasContent := buf.Len() > 3 // encoding/json always adds a newline, so \"{}\\n\" is the empty hash")
-	fmt.Fprintf(&buf, "\nif l := len(h.privateParams); l> 0 {")
-	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
-	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
-	fmt.Fprintf(&buf, "\nfor k := range h.privateParams {")
-	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
-	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
-	fmt.Fprintf(&buf, "\nif hasContent || i > 0 {")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(h.privateParams[k]); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf.Bytes(), &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
-
-	formatted, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		buf.WriteTo(os.Stdout)
-		return errors.Wrap(err, `failed to format code`)
-	}
-
-	f, err := os.Create("headers_gen.go")
-	if err != nil {
-		return errors.Wrap(err, `failed to open headers_gen.go`)
-	}
-	defer f.Close()
-	f.Write(formatted)
-
 	return nil
 }

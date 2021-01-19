@@ -862,7 +862,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\nbuf.WriteByte('}')")
 		fmt.Fprintf(&buf, "\nret := make([]byte, buf.Len())")
-		fmt.Fprintf(&buf, "\ncopy(ret buf.Bytes())")
+		fmt.Fprintf(&buf, "\ncopy(ret, buf.Bytes())")
 		fmt.Fprintf(&buf, "\nreturn ret, nil")
 		fmt.Fprintf(&buf, "\n}")
 

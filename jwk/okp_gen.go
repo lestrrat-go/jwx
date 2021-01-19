@@ -441,7 +441,9 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *okpPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -843,7 +845,9 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *okpPublicKey) Iterate(ctx context.Context) HeaderIterator {

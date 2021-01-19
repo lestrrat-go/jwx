@@ -381,7 +381,9 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {
