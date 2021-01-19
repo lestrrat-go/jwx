@@ -443,58 +443,38 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 }
 
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
-	var proxy ecdsaPrivateKeyMarshalProxy
-	proxy.XkeyType = jwa.EC
-	proxy.Xalgorithm = h.algorithm
-	proxy.Xcrv = h.crv
-	if len(h.d) > 0 {
-		v := base64.EncodeToString(h.d)
-		proxy.Xd = &v
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	var fields []string
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	proxy.XkeyID = h.keyID
-	proxy.XkeyUsage = h.keyUsage
-	proxy.Xkeyops = h.keyops
-	if len(h.x) > 0 {
-		v := base64.EncodeToString(h.x)
-		proxy.Xx = &v
-	}
-	proxy.Xx509CertChain = h.x509CertChain
-	proxy.Xx509CertThumbprint = h.x509CertThumbprint
-	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
-	proxy.Xx509URL = h.x509URL
-	if len(h.y) > 0 {
-		v := base64.EncodeToString(h.y)
-		proxy.Xy = &v
-	}
+
+	sort.Strings(fields)
 	var buf bytes.Buffer
+	buf.WriteByte('{')
+	l := len(fields)
 	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
-	}
-	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateParams); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range h.privateParams {
-			keys = append(keys, k)
+	for i, f := range fields {
+		buf.WriteString(strconv.Quote(f))
+		buf.WriteByte(':')
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			enc.Encode(base64.EncodeToString(v))
+		default:
+			enc.Encode(v)
 		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
-			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateParams[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
+
+		if i < l-1 {
+			buf.WriteByte(',')
 		}
-		fmt.Fprintf(&buf, `}`)
 	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
-	}
-	return json.Marshal(m)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 
 func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
@@ -896,54 +876,38 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 }
 
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
-	var proxy ecdsaPublicKeyMarshalProxy
-	proxy.XkeyType = jwa.EC
-	proxy.Xalgorithm = h.algorithm
-	proxy.Xcrv = h.crv
-	proxy.XkeyID = h.keyID
-	proxy.XkeyUsage = h.keyUsage
-	proxy.Xkeyops = h.keyops
-	if len(h.x) > 0 {
-		v := base64.EncodeToString(h.x)
-		proxy.Xx = &v
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	var fields []string
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	proxy.Xx509CertChain = h.x509CertChain
-	proxy.Xx509CertThumbprint = h.x509CertThumbprint
-	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
-	proxy.Xx509URL = h.x509URL
-	if len(h.y) > 0 {
-		v := base64.EncodeToString(h.y)
-		proxy.Xy = &v
-	}
+
+	sort.Strings(fields)
 	var buf bytes.Buffer
+	buf.WriteByte('{')
+	l := len(fields)
 	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
-	}
-	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateParams); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range h.privateParams {
-			keys = append(keys, k)
+	for i, f := range fields {
+		buf.WriteString(strconv.Quote(f))
+		buf.WriteByte(':')
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			enc.Encode(base64.EncodeToString(v))
+		default:
+			enc.Encode(v)
 		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
-			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateParams[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
+
+		if i < l-1 {
+			buf.WriteByte(',')
 		}
-		fmt.Fprintf(&buf, `}`)
 	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
-	}
-	return json.Marshal(m)
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 
 func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
