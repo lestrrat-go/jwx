@@ -259,18 +259,15 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 		pair := iter.Pair()
 		key := pair.Value.(jwk.Key)
 		if key.Algorithm() == "" { // algorithm is not
-println("no algo")
 			continue
 		}
 
 		if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
-println("wrong usage")
 			continue
 		}
 
 		buf, err := Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), key)
 		if err != nil {
-println("no verify " + err.Error())
 			continue
 		}
 
@@ -283,7 +280,6 @@ println("no verify " + err.Error())
 func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
 	verifier, err := NewVerifier(alg)
 	if err != nil {
-println("no verifier")
 		return nil, errors.Wrap(err, "failed to create verifier")
 	}
 
@@ -303,14 +299,12 @@ println("no verifier")
 		if hdr := sig.headers; hdr != nil && hdr.KeyID() != "" {
 			if jwkKey, ok := key.(jwk.Key); ok {
 				if jwkKey.KeyID() != hdr.KeyID() {
-println("no kid")
 					continue
 				}
 			}
 		}
 		protected, err := json.Marshal(sig.protected)
 		if err != nil {
-println("no unmarshal")
 			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
 		}
 
@@ -321,7 +315,6 @@ println("no unmarshal")
 		if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
 			return m.payload, nil
 		}
-println("no verify...")
 	}
 	return nil, errors.New(`could not verify with any of the signatures`)
 }
