@@ -369,7 +369,7 @@ func TestGH52(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	const max = 1000
+	const max = 100
 	var wg sync.WaitGroup
 	wg.Add(max)
 	for i := 0; i < max; i++ {

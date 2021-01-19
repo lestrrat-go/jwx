@@ -618,53 +618,65 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nt.privateClaims = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
-	for _, f := range fields {
-		switch f.typ {
-		case byteSliceType:
-			// XXX encoding/json uses base64.StdEncoding, which require padding
-			// but we may or may not be dealing with padded base64's.
-			// Before marshaling this value to JSON, we must first encode it
-			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", f.name)
-			fmt.Fprintf(&buf, "\nv := base64.EncodeToString(t.%s)", f.name)
-			fmt.Fprintf(&buf, "\nproxy.X%s = &v", f.name)
-			fmt.Fprintf(&buf, "\n}")
-		default:
-			fmt.Fprintf(&buf, "\nproxy.X%[1]s = t.%[1]s", f.name)
+
+	var numericDateFields []tokenField
+	for _, field := range fields {
+		if field.typ == "types.NumericDate" {
+			numericDateFields = append(numericDateFields, field)
 		}
 	}
 
-	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
-	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(&buf)")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
+	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
+	fmt.Fprintf(&buf, "\ndefer cancel()")
+	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nfields := make([]string, 0, %d)", len(fields))
+	fmt.Fprintf(&buf, "\nfor iter := t.Iterate(ctx); iter.Next(ctx); {")
+	fmt.Fprintf(&buf, "\npair := iter.Pair()")
+	fmt.Fprintf(&buf, "\nfields = append(fields, pair.Key.(string))")
+	fmt.Fprintf(&buf, "\ndata[pair.Key.(string)] = pair.Value")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nhasContent := buf.Len() > 3 // encoding/json always adds a newline, so \"{}\\n\" is the empty hash")
-	fmt.Fprintf(&buf, "\nif l := len(t.privateClaims); l> 0 {")
-	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
-	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
-	fmt.Fprintf(&buf, "\nfor k := range t.privateClaims {")
-	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
+	fmt.Fprintf(&buf, "\n\nsort.Strings(fields)")
+	fmt.Fprintf(&buf, "\nbuf := pool.GetBytesBuffer()")
+	fmt.Fprintf(&buf, "\ndefer pool.ReleaseBytesBuffer(buf)")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('{')")
+	fmt.Fprintf(&buf, "\nl := len(fields)")
+	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(buf)")
+	fmt.Fprintf(&buf, "\nfor i, f := range fields {")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(strconv.Quote(f))")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(':')")
+	fmt.Fprintf(&buf, "\nv := data[f]")
+	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\ncase []byte:")
+	fmt.Fprintf(&buf, "\nenc.Encode(base64.EncodeToString(v))")
+	if lndf := len(numericDateFields); lndf > 0 {
+		fmt.Fprintf(&buf, "\ncase time.Time:")
+		fmt.Fprintf(&buf, "\nswitch f {")
+		fmt.Fprintf(&buf, "\ncase ")
+		for i, ndf := range numericDateFields {
+			fmt.Fprintf(&buf, "%sKey", ndf.method)
+			if i < lndf-1 {
+				fmt.Fprintf(&buf, ",")
+			}
+		}
+		fmt.Fprintf(&buf, ":")
+		fmt.Fprintf(&buf, "\nenc.Encode(v.Unix())")
+		fmt.Fprintf(&buf, "\ndefault:")
+		fmt.Fprintf(&buf, "\nenc.Encode(v) // probably not correct, but oh well")
+		fmt.Fprintf(&buf, "\n}")
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nenc.Encode(v)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
-	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
-	fmt.Fprintf(&buf, "\nif hasContent || i > 0 {")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(t.privateClaims[k]); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
+	fmt.Fprintf(&buf, "\n\nif i < l-1 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('}')")
+	fmt.Fprintf(&buf, "\nret := make([]byte, buf.Len())")
+	fmt.Fprintf(&buf, "\ncopy(ret, buf.Bytes())")
+	fmt.Fprintf(&buf, "\nreturn ret, nil")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf.Bytes(), &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
 	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair)")

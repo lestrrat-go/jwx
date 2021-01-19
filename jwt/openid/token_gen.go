@@ -3,16 +3,16 @@
 package openid
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
 )
@@ -868,62 +868,48 @@ func (t *stdToken) UnmarshalJSON(buf []byte) error {
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
-	var proxy openidTokenMarshalProxy
-	proxy.Xaudience = t.audience
-	proxy.Xexpiration = t.expiration
-	proxy.XissuedAt = t.issuedAt
-	proxy.Xissuer = t.issuer
-	proxy.XjwtID = t.jwtID
-	proxy.XnotBefore = t.notBefore
-	proxy.Xsubject = t.subject
-	proxy.Xname = t.name
-	proxy.XgivenName = t.givenName
-	proxy.XmiddleName = t.middleName
-	proxy.XfamilyName = t.familyName
-	proxy.Xnickname = t.nickname
-	proxy.XpreferredUsername = t.preferredUsername
-	proxy.Xprofile = t.profile
-	proxy.Xpicture = t.picture
-	proxy.Xwebsite = t.website
-	proxy.Xemail = t.email
-	proxy.XemailVerified = t.emailVerified
-	proxy.Xgender = t.gender
-	proxy.Xbirthdate = t.birthdate
-	proxy.Xzoneinfo = t.zoneinfo
-	proxy.Xlocale = t.locale
-	proxy.XphoneNumber = t.phoneNumber
-	proxy.XphoneNumberVerified = t.phoneNumberVerified
-	proxy.Xaddress = t.address
-	proxy.XupdatedAt = t.updatedAt
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	fields := make([]string, 0, 26)
+	for iter := t.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(t.privateClaims); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range t.privateClaims {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
+
+	sort.Strings(fields)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	buf.WriteByte('{')
+	l := len(fields)
+	enc := json.NewEncoder(buf)
+	for i, f := range fields {
+		buf.WriteString(strconv.Quote(f))
+		buf.WriteByte(':')
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			enc.Encode(base64.EncodeToString(v))
+		case time.Time:
+			switch f {
+			case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
+				enc.Encode(v.Unix())
+			default:
+				enc.Encode(v) // probably not correct, but oh well
 			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(t.privateClaims[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
+		default:
+			enc.Encode(v)
 		}
-		fmt.Fprintf(&buf, `}`)
+
+		if i < l-1 {
+			buf.WriteByte(',')
+		}
 	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
-	}
-	return json.Marshal(m)
+	buf.WriteByte('}')
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (t *stdToken) Iterate(ctx context.Context) Iterator {
