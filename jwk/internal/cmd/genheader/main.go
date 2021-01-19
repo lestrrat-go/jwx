@@ -853,7 +853,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\ncase []byte:")
 		fmt.Fprintf(&buf, "\nenc.Encode(base64.EncodeToString(v))")
 		fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nenc.Encode(v)")
+		fmt.Fprintf(&buf, "\nenc.Encode(v)")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n\nif i < l-1 {")
 		fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
