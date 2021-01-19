@@ -483,7 +483,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) MarshalJSON() ([]byte, error) {")
+	fmt.Fprintf(&buf, "\n\nfunc (h stdHeaders) MarshalJSON() ([]byte, error) {")
 	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
 	fmt.Fprintf(&buf, "\ndefer cancel()")
 	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")

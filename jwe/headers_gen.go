@@ -630,7 +630,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (h *stdHeaders) MarshalJSON() ([]byte, error) {
+func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})
