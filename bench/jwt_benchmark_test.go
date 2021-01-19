@@ -2,14 +2,16 @@ package bench_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
-func BenchmarkJWTParse(b *testing.B) {
+func BenchmarkJWT(b *testing.B) {
 	alg := jwa.RS256
 
 	key, err := jwxtest.GenerateRsaJwk()
@@ -18,6 +20,8 @@ func BenchmarkJWTParse(b *testing.B) {
 	}
 
 	t1 := jwt.New()
+	t1.Set(jwt.IssuedAtKey, time.Now().Unix())
+	t1.Set(jwt.ExpirationKey, time.Now().Add(time.Hour).Unix())
 	signed, err := jwt.Sign(t1, alg, key)
 	if err != nil {
 		b.Fatal(err)
@@ -56,6 +60,11 @@ func BenchmarkJWTParse(b *testing.B) {
 				b.Fatal(err)
 			}
 			_ = t2
+		}
+	})
+	b.Run("json.Marshal", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, _ = json.Marshal(t1)
 		}
 	})
 }
