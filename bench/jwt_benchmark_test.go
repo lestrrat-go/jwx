@@ -1,4 +1,4 @@
-package examples_test
+package bench_test
 
 import (
 	"bytes"
@@ -48,6 +48,9 @@ func BenchmarkJWTParse(b *testing.B) {
 	b.Run("ParseReader", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
+			b.StopTimer()
+			signedReader.Seek(0, 0)
+			b.StartTimer()
 			t2, err := jwt.ParseReader(signedReader)
 			if err != nil {
 				b.Fatal(err)

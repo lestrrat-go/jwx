@@ -112,7 +112,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		// 1. eyXXX.XXXX.XXXX
 		// 2. { "signatures": [ ... ] }
 		// 3. { "foo": "bar" }
-		if data[0] == '{' {
+		if len(data) > 0 && data[0] == '{' {
 			m, err := jws.Parse(data)
 			if err == nil {
 				payload = m.Payload()
