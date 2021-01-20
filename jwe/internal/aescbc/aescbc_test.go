@@ -61,3 +61,23 @@ func TestVectorsAESCBC128(t *testing.T) {
 		return
 	}
 }
+
+func TestPad(t *testing.T) {
+	for i := 0; i < 256; i++ {
+		buf := make([]byte, i)
+		pb := pad(buf, 16)
+
+		if !assert.Equal(t, len(pb)%16, 0, "pb should be multiple of 16") {
+			return
+		}
+
+		pb, err := unpad(pb, 16)
+		if !assert.NoError(t, err, "Unpad return successfully") {
+			return
+		}
+
+		if !assert.Len(t, pb, i, "Unpad should result in len = %d", i) {
+			return
+		}
+	}
+}
