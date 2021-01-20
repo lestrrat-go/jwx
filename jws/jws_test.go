@@ -408,7 +408,7 @@ func TestEncode(t *testing.T) {
 		n := len(decodedJwsSignature) / 2
 		r.SetBytes(decodedJwsSignature[:n])
 		s.SetBytes(decodedJwsSignature[n:])
-		signingHdr := base64.Encode([]byte(hdr))
+		signingHdr := base64.Encode(hdr)
 		signingPayload := base64.Encode(jwsPayload)
 
 		jwsSigningInput := bytes.Join(

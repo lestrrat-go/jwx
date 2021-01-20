@@ -9,7 +9,7 @@ import (
 )
 
 func Encode(src []byte) []byte {
-	enc :=  base64.RawURLEncoding
+	enc := base64.RawURLEncoding
 	dst := make([]byte, enc.EncodedLen(len(src)))
 	enc.Encode(dst, src)
 	return dst

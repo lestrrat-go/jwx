@@ -78,7 +78,6 @@ func fieldStorageTypeIsIndirect(s string) bool {
 }
 
 func generateHeaders() error {
-
 	fields := []headerField{
 		{
 			name:   `agreementPartyUInfo`,
@@ -86,7 +85,7 @@ func generateHeaders() error {
 			typ:    `[]byte`,
 			key:    `apu`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag:   "`" + `json:"apu,omitempty"` + "`",
+			jsonTag: "`" + `json:"apu,omitempty"` + "`",
 		},
 		{
 			name:   `agreementPartyVInfo`,
@@ -94,7 +93,7 @@ func generateHeaders() error {
 			typ:    `[]byte`,
 			key:    `apv`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag:   "`" + `json:"apv,omitempty"` + "`",
+			jsonTag: "`" + `json:"apv,omitempty"` + "`",
 		},
 		{
 			name:   `algorithm`,
