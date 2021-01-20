@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	ephemeralPublicKey = "ephemeralPublicKey"
+	agreementPartyUInfo = "agreementPartyUInfo"
+	agreementPartyVInfo = "agreementPartyVInfo"
+	ephemeralPublicKey  = "ephemeralPublicKey"
+	jwkKey              = "jwk"
 )
 
 func main() {
@@ -50,7 +53,6 @@ var zerovals = map[string]string{
 	"string":                 `""`,
 	"jwa.SignatureAlgorithm": `""`,
 	"[]string":               "0",
-	"buffer.Buffer":          `buffer.Buffer{}`,
 }
 
 func zeroval(s string) string {
@@ -76,26 +78,22 @@ func fieldStorageTypeIsIndirect(s string) bool {
 }
 
 func generateHeaders() error {
-	const jwkKey = "jwk"
-
 	fields := []headerField{
 		{
 			name:   `agreementPartyUInfo`,
 			method: `AgreementPartyUInfo`,
-			typ:    `buffer.Buffer`,
+			typ:    `[]byte`,
 			key:    `apu`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			hasAccept: true,
-			jsonTag:   "`" + `json:"apu,omitempty"` + "`",
+			jsonTag: "`" + `json:"apu,omitempty"` + "`",
 		},
 		{
 			name:   `agreementPartyVInfo`,
 			method: `AgreementPartyVInfo`,
-			typ:    `buffer.Buffer`,
+			typ:    `[]byte`,
 			key:    `apv`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			hasAccept: true,
-			jsonTag:   "`" + `json:"apv,omitempty"` + "`",
+			jsonTag: "`" + `json:"apv,omitempty"` + "`",
 		},
 		{
 			name:   `algorithm`,
@@ -290,9 +288,10 @@ func generateHeaders() error {
 	// Proxy is used when unmarshaling headers
 	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
 	for _, f := range fields {
-		if f.name == jwkKey || f.name == ephemeralPublicKey {
+		switch f.name {
+		case jwkKey, ephemeralPublicKey, agreementPartyUInfo, agreementPartyVInfo:
 			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
-		} else {
+		default:
 			if fieldStorageTypeIsIndirect(f.typ) {
 				fmt.Fprintf(&buf, "\nX%s *%s %s", f.name, f.typ, f.jsonTag)
 			} else {
@@ -461,11 +460,24 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nh.ephemeralPublicKey = epk")
 	fmt.Fprintf(&buf, "\n}")
 
+	for _, name := range []string{agreementPartyUInfo, agreementPartyVInfo} {
+		fmt.Fprintf(&buf, "\n\nh.%s = nil", name)
+		fmt.Fprintf(&buf, "\nif v := proxy.X%s; len(v) > 0 {", name)
+		fmt.Fprintf(&buf, "\ndecoded, err := base64.Decode(v)")
+		fmt.Fprintf(&buf, "\nif err != nil {")
+		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64`)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nh.%s = decoded", name)
+		fmt.Fprintf(&buf, "\n}")
+	}
+
 	for _, f := range fields {
-		if f.name == "jwk" || f.name == ephemeralPublicKey {
+		switch f.name {
+		case jwkKey, ephemeralPublicKey, agreementPartyUInfo, agreementPartyVInfo:
 			continue
+		default:
+			fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 		}
-		fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
 	}
 
 	// Now for the fun part... It's quite silly, but we need to check if we

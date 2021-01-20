@@ -660,6 +660,8 @@ func TestGHIssue230(t *testing.T) {
 	}
 
 	if !assert.Equal(t, msg, msg2, `data -> msg -> compact -> msg2 produces msg == msg2`) {
+		t.Logf("msg -> %#v", msg)
+		t.Logf("msg2 -> %#v", msg2)
 		return
 	}
 }

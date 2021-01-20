@@ -10,10 +10,10 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
@@ -200,8 +200,8 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
 	}
 
-	hdrbuf := buffer.Buffer{}
-	if err := hdrbuf.Base64Decode(parts[0]); err != nil {
+	hdrbuf, err := base64.Decode(parts[0])
+	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse first part of compact form`)
 	}
 	if pdebug.Enabled {
@@ -213,23 +213,18 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrap(err, "failed to parse header JSON")
 	}
 
-	var enckeybuf buffer.Buffer
-	if err := enckeybuf.Base64Decode(parts[1]); err != nil {
-		return nil, errors.Wrap(err, "failed to base64 decode encryption key")
-	}
-
-	var ivbuf buffer.Buffer
-	if err := ivbuf.Base64Decode(parts[2]); err != nil {
+	ivbuf, err := base64.Decode(parts[2])
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode iv")
 	}
 
-	var ctbuf buffer.Buffer
-	if err := ctbuf.Base64Decode(parts[3]); err != nil {
+	ctbuf, err := base64.Decode(parts[3])
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode content")
 	}
 
-	var tagbuf buffer.Buffer
-	if err := tagbuf.Base64Decode(parts[4]); err != nil {
+	tagbuf, err := base64.Decode(parts[4])
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 decode tag")
 	}
 
@@ -244,7 +239,7 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
 	}
 
-	if err := m.makeDummyRecipient(enckeybuf, protected); err != nil {
+	if err := m.makeDummyRecipient(string(parts[1]), protected); err != nil {
 		return nil, errors.Wrap(err, `failed to setup recipient`)
 	}
 

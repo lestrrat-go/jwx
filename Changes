@@ -68,6 +68,10 @@ v1.1.0
 
   * `jwe.WithPrettyJSONFormat` has been renamed to `jwe.WithPrettyFormat`
 
+  * Package buffer has been removed. This package should have been an internal
+    package to start with, but it was left because it had been incorporated
+    in the public API.
+
 [New Features]
   * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
     `jwt.ReadFile(string)` have been added. On go >= 1.16, you can even use
