@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/crypto/curve25519"
 
-	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
