@@ -226,7 +226,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 		}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, urlstring, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlstring, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to new request to remote JWK")
 	}
@@ -234,7 +234,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	b := bo.Start(ctx)
 	var lastError error
 	for backoff.Continue(b) {
-		res, err := httpcl.Do(req.WithContext(ctx))
+		res, err := httpcl.Do(req)
 		if err != nil {
 			lastError = errors.Wrap(err, "failed to fetch remote JWK")
 			continue
