@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/lestrrat-go/jwx/internal/padbuf"
 	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
@@ -18,6 +17,43 @@ import (
 const (
 	NonceSize = 16
 )
+
+func pad(buf []byte, n int) []byte {
+	rem := n - len(buf)%n
+	if rem == 0 {
+		return buf
+	}
+
+	newbuf := make([]byte, len(buf)+rem)
+	copy(newbuf, buf)
+
+	for i := len(buf); i < len(newbuf); i++ {
+		newbuf[i] = byte(rem)
+	}
+	return newbuf
+}
+
+func unpad(buf []byte, n int) ([]byte, error) {
+	lbuf := len(buf)
+	rem := lbuf % n
+	if rem != 0 {
+		return nil, errors.Errorf("input buffer must be multiple of block size %d", n)
+	}
+
+	count := 0
+	last := buf[lbuf-1]
+	for i := lbuf - 1; i >= 0; i-- {
+		if buf[i] != last {
+			break
+		}
+		count++
+	}
+	if count != int(last) {
+		return nil, errors.New("invalid padding")
+	}
+
+	return buf[:lbuf-int(last)], nil
+}
 
 type Hmac struct {
 	blockCipher  cipher.Block
@@ -131,7 +167,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ctlen := len(plaintext)
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)
-	ciphertext = padbuf.PadBuffer(ciphertext).Pad(c.blockCipher.BlockSize())
+	ciphertext = pad(ciphertext, c.blockCipher.BlockSize())
 
 	cbc := cipher.NewCBCEncrypter(c.blockCipher, nonce)
 	cbc.CryptBlocks(ciphertext, ciphertext)
@@ -197,7 +233,7 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	buf := make([]byte, tagOffset)
 	cbc.CryptBlocks(buf, ciphertext)
 
-	plaintext, err := padbuf.PadBuffer(buf).Unpad(c.blockCipher.BlockSize())
+	plaintext, err := unpad(buf, c.blockCipher.BlockSize())
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate plaintext from decrypted blocks`)
 	}
