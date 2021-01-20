@@ -2,7 +2,6 @@ package jwe
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
@@ -12,24 +11,24 @@ import (
 // Recipient holds the encrypted key and hints to decrypt the key
 type Recipient interface {
 	Headers() Headers
-	EncryptedKey() buffer.Buffer
+	EncryptedKey() []byte
 	SetHeaders(Headers) error
-	SetEncryptedKey(interface{}) error
+	SetEncryptedKey([]byte) error
 }
 
 type stdRecipient struct {
 	headers      Headers
-	encryptedKey buffer.Buffer
+	encryptedKey []byte
 }
 
 // Message contains the entire encrypted JWE message
 type Message struct {
-	authenticatedData    *buffer.Buffer
-	cipherText           *buffer.Buffer
-	initializationVector *buffer.Buffer
+	authenticatedData    []byte
+	cipherText           []byte
+	initializationVector []byte
 	protectedHeaders     Headers
 	recipients           []Recipient
-	tag                  *buffer.Buffer
+	tag                  []byte
 	unprotectedHeaders   Headers
 }
 

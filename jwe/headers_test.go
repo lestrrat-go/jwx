@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -33,8 +32,8 @@ func TestHeaders(t *testing.T) {
 		Value    interface{}
 		Expected interface{}
 	}{
-		{Key: jwe.AgreementPartyUInfoKey, Value: []byte("apu foobarbaz"), Expected: buffer.Buffer("apu foobarbaz")},
-		{Key: jwe.AgreementPartyVInfoKey, Value: []byte("apv foobarbaz"), Expected: buffer.Buffer("apv foobarbaz")},
+		{Key: jwe.AgreementPartyUInfoKey, Value: []byte("apu foobarbaz")},
+		{Key: jwe.AgreementPartyVInfoKey, Value: []byte("apv foobarbaz")},
 		{Key: jwe.CompressionKey, Value: jwa.Deflate},
 		{Key: jwe.ContentEncryptionKey, Value: jwa.A128GCM},
 		{Key: jwe.ContentTypeKey, Value: "application/json"},

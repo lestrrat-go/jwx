@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/buffer"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
@@ -142,11 +142,11 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 	msg := NewMessage()
 
-	decodedAad, err := buffer.FromBase64(aad)
+	decodedAad, err := base64.Decode(aad)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode base64")
 	}
-	if err := msg.Set(AuthenticatedDataKey, decodedAad.Bytes()); err != nil {
+	if err := msg.Set(AuthenticatedDataKey, decodedAad); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
 	}
 	if err := msg.Set(CipherTextKey, ciphertext); err != nil {

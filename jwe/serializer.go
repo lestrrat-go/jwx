@@ -3,6 +3,7 @@ package jwe
 import (
 	"context"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -48,25 +49,10 @@ func Compact(m *Message, _ ...SerializerOption) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode header")
 	}
 
-	encryptedKey, err := recipient.EncryptedKey().Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode encryption key")
-	}
-
-	iv, err := m.initializationVector.Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode iv")
-	}
-
-	cipher, err := m.cipherText.Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode cipher text")
-	}
-
-	tag, err := m.tag.Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode tag")
-	}
+	encryptedKey := base64.Encode(recipient.EncryptedKey())
+	iv := base64.Encode(m.initializationVector)
+	cipher := base64.Encode(m.cipherText)
+	tag := base64.Encode(m.tag)
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)

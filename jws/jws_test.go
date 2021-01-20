@@ -7,17 +7,16 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha512"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -297,20 +296,13 @@ func TestEncode(t *testing.T) {
 		const hmacKey = `AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow`
 		const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 
-		hmacKeyDecoded := buffer.Buffer{}
-		err := hmacKeyDecoded.Base64Decode([]byte(hmacKey))
+		hmacKeyDecoded, err := base64.DecodeString(hmacKey)
 		if !assert.NoError(t, err, "HMAC base64 decoded successful") {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 
 		signingInput := bytes.Join(
 			[][]byte{
@@ -325,14 +317,11 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		signature, err := sign.Sign(signingInput, hmacKeyDecoded.Bytes())
+		signature, err := sign.Sign(signingInput, hmacKeyDecoded)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		sigbuf := base64.Encode(signature)
 
 		encoded := bytes.Join(
 			[][]byte{
@@ -365,7 +354,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded.Bytes()), "Verify succeeds") {
+		if !assert.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded), "Verify succeeds") {
 			return
 		}
 	})
@@ -410,23 +399,18 @@ func TestEncode(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to split compact JWT")
 		}
-		decodedJwsSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(jwsSignature)))
-		decodedLen, err := base64.RawURLEncoding.Decode(decodedJwsSignature, jwsSignature)
-		if err != nil {
-			t.Fatal("Failed to sign message")
+
+		decodedJwsSignature, err := base64.Decode(jwsSignature)
+		if !assert.NoError(t, err, `base64.Decode should succeed`) {
+			return
 		}
 		r, s := &big.Int{}, &big.Int{}
-		n := decodedLen / 2
+		n := len(decodedJwsSignature) / 2
 		r.SetBytes(decodedJwsSignature[:n])
 		s.SetBytes(decodedJwsSignature[n:])
-		signingHdr, err := buffer.Buffer(hdr).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode headers")
-		}
-		signingPayload, err := buffer.Buffer(jwsPayload).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode payload")
-		}
+		signingHdr := base64.Encode([]byte(hdr))
+		signingPayload := base64.Encode(jwsPayload)
+
 		jwsSigningInput := bytes.Join(
 			[][]byte{
 				signingHdr,
@@ -482,15 +466,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -502,10 +479,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		sigbuf := base64.Encode(signature)
 
 		encoded := bytes.Join(
 			[][]byte{
@@ -569,15 +543,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -589,7 +556,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
+		sigbuf := base64.Encode(signature)
 		if !assert.NoError(t, err, "base64 encode successful") {
 			return
 		}
@@ -641,8 +608,7 @@ func TestEncode(t *testing.T) {
   }`
 		const examplePayload = `Example of Ed25519 signing`
 		const expected = `hgyY0il_MGCjP0JzlnLWG1PPOt7-09PGcvMg3AIbQR6dWbhijcNR4ki4iylGjg5BhVsPt9g7sVvpAr_MuM0KAg`
-		expectedDecoded := buffer.Buffer{}
-		err := expectedDecoded.Base64Decode([]byte(expected))
+		expectedDecoded, err := base64.Decode([]byte(expected))
 		if !assert.NoError(t, err, "Expected Signature decode successful") {
 			return
 		}
@@ -662,15 +628,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -678,15 +637,12 @@ func TestEncode(t *testing.T) {
 			},
 			[]byte{'.'},
 		)
+
 		signature, err := signer.Sign(signingInput, rawkey)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		sigbuf := base64.Encode(signature)
 		encoded := bytes.Join(
 			[][]byte{
 				signingInput,
@@ -721,7 +677,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.Public()), "Verify succeeds") {
 			return
 		}
-		if !assert.Equal(t, signature, expectedDecoded.Bytes(), "signatures match") {
+		if !assert.Equal(t, signature, expectedDecoded, "signatures match") {
 			return
 		}
 	})
@@ -962,8 +918,8 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	buf.WriteByte('.')
 	buf.Write(payload)
 
-	decodedSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(signature)))
-	if _, err := base64.RawURLEncoding.Decode(decodedSignature, signature); !assert.NoError(t, err, `decoding signature should succeed`) {
+	decodedSignature, err := base64.Decode(signature)
+	if !assert.NoError(t, err, `decoding signature should succeed`) {
 		return
 	}
 

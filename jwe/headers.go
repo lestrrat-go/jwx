@@ -3,10 +3,10 @@ package jwe
 import (
 	"context"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/pkg/errors"
 )
@@ -93,21 +93,17 @@ func (h *stdHeaders) Encode() ([]byte, error) {
 		return nil, errors.Wrap(err, `failed to marshal headers to JSON prior to encoding`)
 	}
 
-	buf, err = buffer.Buffer(buf).Base64Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 encode encoded header")
-	}
-	return buf, nil
+	return base64.Encode(buf), nil
 }
 
 func (h *stdHeaders) Decode(buf []byte) error {
 	// base64 json string -> json object representation of header
-	b, err := buffer.FromBase64(buf)
+	decoded, err := base64.Decode(buf)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal base64 encoded buffer")
 	}
 
-	if err := json.Unmarshal(b.Bytes(), h); err != nil {
+	if err := json.Unmarshal(decoded, h); err != nil {
 		return errors.Wrap(err, "failed to unmarshal buffer")
 	}
 

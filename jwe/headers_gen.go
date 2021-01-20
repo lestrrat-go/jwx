@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -38,8 +37,8 @@ const (
 
 // Headers describe a standard Header set.
 type Headers interface {
-	AgreementPartyUInfo() buffer.Buffer
-	AgreementPartyVInfo() buffer.Buffer
+	AgreementPartyUInfo() []byte
+	AgreementPartyVInfo() []byte
 	Algorithm() jwa.KeyEncryptionAlgorithm
 	Compression() jwa.CompressionAlgorithm
 	ContentEncryption() jwa.ContentEncryptionAlgorithm
@@ -73,8 +72,8 @@ type Headers interface {
 }
 
 type stdHeaders struct {
-	agreementPartyUInfo    *buffer.Buffer                  //
-	agreementPartyVInfo    *buffer.Buffer                  //
+	agreementPartyUInfo    []byte                          //
+	agreementPartyVInfo    []byte                          //
 	algorithm              *jwa.KeyEncryptionAlgorithm     //
 	compression            *jwa.CompressionAlgorithm       //
 	contentEncryption      *jwa.ContentEncryptionAlgorithm //
@@ -94,8 +93,8 @@ type stdHeaders struct {
 }
 
 type standardHeadersMarshalProxy struct {
-	XagreementPartyUInfo    *buffer.Buffer                  `json:"apu,omitempty"`
-	XagreementPartyVInfo    *buffer.Buffer                  `json:"apv,omitempty"`
+	XagreementPartyUInfo    json.RawMessage                 `json:"apu,omitempty"`
+	XagreementPartyVInfo    json.RawMessage                 `json:"apv,omitempty"`
 	Xalgorithm              *jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
 	Xcompression            *jwa.CompressionAlgorithm       `json:"zip,omitempty"`
 	XcontentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
@@ -118,22 +117,16 @@ func NewHeaders() Headers {
 	}
 }
 
-func (h *stdHeaders) AgreementPartyUInfo() buffer.Buffer {
+func (h *stdHeaders) AgreementPartyUInfo() []byte {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if h.agreementPartyUInfo == nil {
-		return buffer.Buffer{}
-	}
-	return *(h.agreementPartyUInfo)
+	return h.agreementPartyUInfo
 }
 
-func (h *stdHeaders) AgreementPartyVInfo() buffer.Buffer {
+func (h *stdHeaders) AgreementPartyVInfo() []byte {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if h.agreementPartyVInfo == nil {
-		return buffer.Buffer{}
-	}
-	return *(h.agreementPartyVInfo)
+	return h.agreementPartyVInfo
 }
 
 func (h *stdHeaders) Algorithm() jwa.KeyEncryptionAlgorithm {
@@ -256,10 +249,10 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	defer h.mu.RUnlock()
 	var pairs []*HeaderPair
 	if h.agreementPartyUInfo != nil {
-		pairs = append(pairs, &HeaderPair{Key: AgreementPartyUInfoKey, Value: *(h.agreementPartyUInfo)})
+		pairs = append(pairs, &HeaderPair{Key: AgreementPartyUInfoKey, Value: h.agreementPartyUInfo})
 	}
 	if h.agreementPartyVInfo != nil {
-		pairs = append(pairs, &HeaderPair{Key: AgreementPartyVInfoKey, Value: *(h.agreementPartyVInfo)})
+		pairs = append(pairs, &HeaderPair{Key: AgreementPartyVInfoKey, Value: h.agreementPartyVInfo})
 	}
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
@@ -329,12 +322,12 @@ func (h *stdHeaders) Get(name string) (interface{}, bool) {
 		if h.agreementPartyUInfo == nil {
 			return nil, false
 		}
-		return *(h.agreementPartyUInfo), true
+		return h.agreementPartyUInfo, true
 	case AgreementPartyVInfoKey:
 		if h.agreementPartyVInfo == nil {
 			return nil, false
 		}
-		return *(h.agreementPartyVInfo), true
+		return h.agreementPartyVInfo, true
 	case AlgorithmKey:
 		if h.algorithm == nil {
 			return nil, false
@@ -416,19 +409,17 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 	defer h.mu.Unlock()
 	switch name {
 	case AgreementPartyUInfoKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AgreementPartyUInfoKey)
+		if v, ok := value.([]byte); ok {
+			h.agreementPartyUInfo = v
+			return nil
 		}
-		h.agreementPartyUInfo = &acceptor
-		return nil
+		return errors.Errorf(`invalid value for %s key: %T`, AgreementPartyUInfoKey, value)
 	case AgreementPartyVInfoKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AgreementPartyVInfoKey)
+		if v, ok := value.([]byte); ok {
+			h.agreementPartyVInfo = v
+			return nil
 		}
-		h.agreementPartyVInfo = &acceptor
-		return nil
+		return errors.Errorf(`invalid value for %s key: %T`, AgreementPartyVInfoKey, value)
 	case AlgorithmKey:
 		if v, ok := value.(jwa.KeyEncryptionAlgorithm); ok {
 			h.algorithm = &v
@@ -592,8 +583,24 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 		}
 		h.ephemeralPublicKey = epk
 	}
-	h.agreementPartyUInfo = proxy.XagreementPartyUInfo
-	h.agreementPartyVInfo = proxy.XagreementPartyVInfo
+
+	h.agreementPartyUInfo = nil
+	if v := proxy.XagreementPartyUInfo; len(v) > 0 {
+		decoded, err := base64.Decode(v)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode base64`)
+		}
+		h.agreementPartyUInfo = decoded
+	}
+
+	h.agreementPartyVInfo = nil
+	if v := proxy.XagreementPartyVInfo; len(v) > 0 {
+		decoded, err := base64.Decode(v)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode base64`)
+		}
+		h.agreementPartyVInfo = decoded
+	}
 	h.algorithm = proxy.Xalgorithm
 	h.compression = proxy.Xcompression
 	h.contentEncryption = proxy.XcontentEncryption
