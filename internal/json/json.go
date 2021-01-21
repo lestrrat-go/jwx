@@ -12,6 +12,9 @@ import (
 
 type Decoder = json.Decoder
 type Delim = json.Delim
+type Encoder = json.Encoder
+type Marshaler = json.Marshaler
+type Unmarshaler = json.Unmarshaler
 type Number = json.Number
 type RawMessage = json.RawMessage
 

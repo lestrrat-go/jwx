@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
-	"strconv"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -481,21 +480,26 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')
@@ -945,21 +949,26 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')
