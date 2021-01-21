@@ -1,4 +1,4 @@
-.PHONY: generate realclean cover viewcover test lint check_diffs imports
+.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy
 
 generate: 
 	@go generate
@@ -36,3 +36,7 @@ check_diffs:
 imports:
 	goimports -w ./
 
+tidy:
+	go mod tidy
+	cd examples && go mod tidy && cd ..
+	cd bench && go mod tidy && cd ..
