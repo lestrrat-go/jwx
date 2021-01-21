@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+
+	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/pkg/errors"
 )
 
+type Decoder = json.Decoder
+type Delim = json.Delim
 type Number = json.Number
 type RawMessage = json.RawMessage
 
@@ -54,4 +59,35 @@ func Marshal(v interface{}) ([]byte, error) {
 // MarshalIndent is just a proxy for "encoding/json".MarshalIndent
 func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
 	return json.MarshalIndent(v, prefix, indent)
+}
+
+func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
+	var val string
+	if err := dec.Decode(&val); err != nil {
+		return errors.Wrap(err, `error reading next value`)
+	}
+
+	buf, err := base64.DecodeString(val)
+	if err != nil {
+		return errors.Errorf(`expected base64 encoded []byte (%T)`, val)
+	}
+	*dst = buf
+	return nil
+}
+
+func ReadNextStringToken(dec *Decoder) (string, error) {
+	var val string
+	if err := dec.Decode(&val); err != nil {
+		return "", errors.Wrap(err, `error reading next value`)
+	}
+	return val, nil
+}
+
+func AssignNextStringToken(dst **string, dec *Decoder) error {
+	val, err := ReadNextStringToken(dec)
+	if err != nil {
+		return err
+	}
+	*dst = &val
+	return nil
 }

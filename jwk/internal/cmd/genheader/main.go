@@ -113,6 +113,7 @@ func init() {
 			key:     `use`,
 			typ:     `string`,
 			comment: `https://tools.ietf.org/html/rfc7517#section-4.2`,
+			optional: true,
 		},
 		{
 			name:      `keyops`,
@@ -120,6 +121,7 @@ func init() {
 			typ:       `KeyOperationList`,
 			key:       `key_ops`,
 			comment:   `https://tools.ietf.org/html/rfc7517#section-4.3`,
+			optional: true,
 			hasAccept: true,
 		},
 		{
@@ -127,6 +129,7 @@ func init() {
 			method:  `Algorithm`,
 			typ:     `string`,
 			key:     `alg`,
+			optional: true,
 			comment: `https://tools.ietf.org/html/rfc7517#section-4.4`,
 		},
 		{
@@ -134,6 +137,7 @@ func init() {
 			method:  `KeyID`,
 			typ:     `string`,
 			key:     `kid`,
+			optional: true,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
 		},
 		{
@@ -141,6 +145,7 @@ func init() {
 			method:  `X509URL`,
 			typ:     `string`,
 			key:     `x5u`,
+			optional: true,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
 		},
 		{
@@ -152,6 +157,7 @@ func init() {
 			hasAccept:  true,
 			hasGet:     true,
 			noDeref:    true,
+			optional: true,
 			returnType: `[]*x509.Certificate`,
 		},
 		{
@@ -159,6 +165,7 @@ func init() {
 			method:  `X509CertThumbprint`,
 			typ:     `string`,
 			key:     `x5t`,
+			optional: true,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
 		},
 		{
@@ -166,6 +173,7 @@ func init() {
 			method:  `X509CertThumbprintS256`,
 			typ:     `string`,
 			key:     `x5t#S256`,
+			optional: true,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
 		},
 	}
@@ -516,10 +524,18 @@ func generateHeader(kt keyType) error {
 
 	fmt.Fprintf(&buf, "\n\nimport (")
 	pkgs := []string{
+		"bytes",
+		"context",
 		"crypto/x509",
 		"fmt",
+		"sort",
+		"strconv",
+
+		"github.com/lestrrat-go/iter/mapiter",
+		"github.com/lestrrat-go/jwx/internal/iter",
 		"github.com/lestrrat-go/jwx/internal/base64",
 		"github.com/lestrrat-go/jwx/internal/json",
+		"github.com/lestrrat-go/jwx/internal/pool",
 		"github.com/lestrrat-go/jwx/jwa",
 		"github.com/pkg/errors",
 	}
@@ -774,59 +790,90 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}") // end func (h *%s) Set(name string, value interface{})
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", structName)
-		fmt.Fprintf(&buf, "\nvar proxy %s%sMarshalProxy", strings.ToLower(kt.prefix), ht.name)
-		fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
-		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", structName)
-		fmt.Fprintf(&buf, "\n}")
+		for _, f := range ht.allHeaders {
+			fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
+		}
 
-		fmt.Fprintf(&buf, "\nif proxy.XkeyType != %s {", kt.keyType)
-		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid kty value for %s (%%s)`, proxy.XkeyType)", ifName)
+		fmt.Fprintf(&buf, "\ndec := json.NewDecoder(bytes.NewReader(buf))")
+		fmt.Fprintf(&buf, "\nLOOP:")
+		fmt.Fprintf(&buf, "\nfor {")
+		fmt.Fprintf(&buf, "\ntok, err := dec.Token()")
+		fmt.Fprintf(&buf, "\nif err != nil {")
+		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `error reading token`)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nswitch tok := tok.(type) {")
+		fmt.Fprintf(&buf, "\ncase json.Delim:")
+		fmt.Fprintf(&buf, "\n// Assuming we're doing everything correctly, we should ONLY")
+		fmt.Fprintf(&buf, "\n// get either '{' or '}' here.")
+		fmt.Fprintf(&buf, "\nif tok == '}' { // End of object")
+		fmt.Fprintf(&buf, "\nbreak LOOP")
+		fmt.Fprintf(&buf, "\n} else if tok != '{' {")
+		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`expected '{', but got '%%c'`, tok)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\ncase string: // Objects can only have string keys")
+		fmt.Fprintf(&buf, "\nswitch tok {")
+		// kty is special. Hardcode it.
+		fmt.Fprintf(&buf, "\ncase KeyTypeKey:")
+		fmt.Fprintf(&buf, "\nval, err := json.ReadNextStringToken(dec)")
+		fmt.Fprintf(&buf, "\nif err != nil {")
+		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `error reading token`)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nif val != %s.String() {", kt.keyType)
+		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid kty value for RSAPublicKey (%%s)`, val)")
 		fmt.Fprintf(&buf, "\n}")
 
 		for _, f := range ht.allHeaders {
-			switch f.typ {
-			case byteSliceType:
-				// XXX encoding/json uses base64.StdEncoding, which require padding
-				// but we may or may not be dealing with padded base64's.
-				// The unmarshal proxy takes this into account, and grabs the value
-				// as strings so that we can do our own decoding magic
-				if !f.optional {
-					fmt.Fprintf(&buf, "\nif proxy.X%[1]s == nil {", f.name)
-					fmt.Fprintf(&buf, "\nreturn errors.New(`required field %s is missing`)", f.key)
-					fmt.Fprintf(&buf, "\n}")
+			if f.typ == "string" {
+				fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+				fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.name)
+				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
+				fmt.Fprintf(&buf, "\n}")
+			} else if f.typ == "[]byte" {
+				name := f.method
+				switch f.name {
+				case "n", "e", "d", "p", "dp", "dq", "x", "y", "q", "qi", "octets":
+					name = kt.prefix + f.method
 				}
-
-				fmt.Fprintf(&buf, "\nif h.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
-				fmt.Fprintf(&buf, "\ndecoded, err := base64.DecodeString(*(proxy.X%[1]s))", f.name)
-				fmt.Fprintf(&buf, "\nif err != nil {")
-				fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64 value for %s`)", f.name)
+				fmt.Fprintf(&buf, "\ncase %sKey:", name)
+				fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.name)
+				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 				fmt.Fprintf(&buf, "\n}")
-				fmt.Fprintf(&buf, "\nh.%[1]s = decoded", f.name)
-				fmt.Fprintf(&buf, "\n}")
-			default:
-				fmt.Fprintf(&buf, "\nh.%[1]s = proxy.X%[1]s", f.name)
-			}
-		}
-
-		// Now for the fun part... It's quite silly, but we need to check if we
-		// have other parameters.
-		fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-		fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-		fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse privsate parameters`)")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\ndelete(m, `kty`)")
-		// Delete all known keys
-		for _, f := range ht.allHeaders {
-			var keyName string
-			if f.isStd {
-				keyName = f.method + "Key"
 			} else {
-				keyName = kt.prefix + f.method + "Key"
+				name := f.method
+				if f.name == "crv" {
+					name = kt.prefix + f.method
+				}
+				fmt.Fprintf(&buf, "\ncase %sKey:", name)
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+				fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+				fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+				fmt.Fprintf(&buf, "\n}")
+				fmt.Fprintf(&buf, "\nh.%s = &decoded", f.name)
 			}
-			fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
+		}
+		fmt.Fprintf(&buf, "\ndefault:")
+		fmt.Fprintf(&buf, "\nvar decoded interface{}")
+		fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+		fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nif h.privateParams == nil {")
+		fmt.Fprintf(&buf, "\nh.privateParams = make(map[string]interface{})")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nh.privateParams[tok] = decoded")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\ndefault:")
+		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+
+		for _, f := range ht.allHeaders {
+			if !f.optional {
+				fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
+				fmt.Fprintf(&buf, "\nreturn errors.Errorf(`required field %s is missing`)", f.key)
+				fmt.Fprintf(&buf, "\n}")
+			}
 		}
 
-		fmt.Fprintf(&buf, "\nh.privateParams = m")
 		fmt.Fprintf(&buf, "\nreturn nil")
 		fmt.Fprintf(&buf, "\n}")
 
