@@ -29,42 +29,38 @@ func BenchmarkJWT(b *testing.B) {
 
 	signedString := string(signed)
 	signedReader := bytes.NewReader(signed)
-	b.Run("ParseString", func(b *testing.B) {
+	b.Run("jwt.ParseString", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t2, err := jwt.ParseString(signedString)
-			if err != nil {
+			if _, err := jwt.ParseString(signedString); err != nil {
 				b.Fatal(err)
 			}
-			_ = t2
 		}
 	})
-	b.Run("Parse", func(b *testing.B) {
+	b.Run("jwt.Parse", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			t2, err := jwt.Parse(signed)
-			if err != nil {
+			if _, err := jwt.Parse(signed); err != nil {
 				b.Fatal(err)
 			}
-			_ = t2
 		}
 	})
-	b.Run("ParseReader", func(b *testing.B) {
+	b.Run("jwt.ParseReader", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
 			signedReader.Seek(0, 0)
 			b.StartTimer()
-			t2, err := jwt.ParseReader(signedReader)
-			if err != nil {
+			if _, err := jwt.ParseReader(signedReader); err != nil {
 				b.Fatal(err)
 			}
-			_ = t2
 		}
 	})
 	b.Run("json.Marshal", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _ = json.Marshal(t1)
+			if _, err := json.Marshal(t1); err != nil {
+				b.Fatal(err)
+			}
 		}
 	})
 }
