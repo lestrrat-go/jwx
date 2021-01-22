@@ -13,13 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	agreementPartyUInfo = "agreementPartyUInfo"
-	agreementPartyVInfo = "agreementPartyVInfo"
-	ephemeralPublicKey  = "ephemeralPublicKey"
-	jwkKey              = "jwk"
-)
-
 func main() {
 	if err := _main(); err != nil {
 		log.Printf("%s", err)
@@ -38,7 +31,6 @@ type headerField struct {
 	key       string
 	comment   string
 	hasAccept bool
-	jsonTag   string
 }
 
 func (f headerField) IsPointer() bool {
@@ -85,7 +77,6 @@ func generateHeaders() error {
 			typ:    `[]byte`,
 			key:    `apu`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag: "`" + `json:"apu,omitempty"` + "`",
 		},
 		{
 			name:   `agreementPartyVInfo`,
@@ -93,7 +84,6 @@ func generateHeaders() error {
 			typ:    `[]byte`,
 			key:    `apv`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag: "`" + `json:"apv,omitempty"` + "`",
 		},
 		{
 			name:   `algorithm`,
@@ -101,7 +91,6 @@ func generateHeaders() error {
 			typ:    `jwa.KeyEncryptionAlgorithm`,
 			key:    `alg`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag: "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
 			name:   `compression`,
@@ -109,7 +98,6 @@ func generateHeaders() error {
 			typ:    `jwa.CompressionAlgorithm`,
 			key:    `zip`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-			jsonTag: "`" + `json:"zip,omitempty"` + "`",
 		},
 		{
 			name:   `contentEncryption`,
@@ -117,7 +105,6 @@ func generateHeaders() error {
 			typ:    `jwa.ContentEncryptionAlgorithm`,
 			key:    `enc`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-			jsonTag: "`" + `json:"enc,omitempty"` + "`",
 		},
 		{
 			name:   `contentType`,
@@ -125,7 +112,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `cty`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.10`,
-			jsonTag: "`" + `json:"cty,omitempty"` + "`",
 		},
 		{
 			name:   `critical`,
@@ -133,7 +119,6 @@ func generateHeaders() error {
 			typ:    `[]string`,
 			key:    `crit`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-			jsonTag: "`" + `json:"crit,omitempty"` + "`",
 		},
 		{
 			name:   `ephemeralPublicKey`,
@@ -141,7 +126,6 @@ func generateHeaders() error {
 			typ:    `jwk.Key`,
 			key:    `epk`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-			jsonTag: "`" + `json:"epk,omitempty"` + "`",
 		},
 		{
 			name:   `jwk`,
@@ -149,7 +133,6 @@ func generateHeaders() error {
 			typ:    `jwk.Key`,
 			key:    `jwk`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
 		},
 		{
 			name:   `jwkSetURL`,
@@ -157,7 +140,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `jku`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.2`,
-			jsonTag: "`" + `json:"jku,omitempty"` + "`",
 		},
 		{
 			name:   `keyID`,
@@ -165,7 +147,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `kid`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
-			jsonTag: "`" + `json:"kid,omitempty"` + "`",
 		},
 		{
 			name:   `typ`,
@@ -173,7 +154,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `typ`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
-			jsonTag: "`" + `json:"typ,omitempty"` + "`",
 		},
 		{
 			name:   `x509CertChain`,
@@ -181,7 +161,6 @@ func generateHeaders() error {
 			typ:    `[]string`,
 			key:    `x5c`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
-			jsonTag: "`" + `json:"x5c,omitempty"` + "`",
 		},
 		{
 			name:   `x509CertThumbprint`,
@@ -189,7 +168,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `x5t`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
-			jsonTag: "`" + `json:"x5t,omitempty"` + "`",
 		},
 		{
 			name:   `x509CertThumbprintS256`,
@@ -197,7 +175,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `x5t#S256`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
-			jsonTag: "`" + `json:"x5t#S256,omitempty"` + "`",
 		},
 		{
 			name:   `x509URL`,
@@ -205,7 +182,6 @@ func generateHeaders() error {
 			typ:    `string`,
 			key:    `x5u`,
 			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
-			jsonTag: "`" + `json:"x5u,omitempty"` + "`",
 		},
 	}
 
