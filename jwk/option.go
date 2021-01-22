@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"crypto"
-	"net/http"
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -47,8 +46,7 @@ func (*fetchOption) fetchOption()       {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
-//
-func WithHTTPClient(cl *http.Client) FetchOption {
+func WithHTTPClient(cl HTTPClient) FetchOption {
 	return &fetchOption{option.New(identHTTPClient{}, cl)}
 }
 
