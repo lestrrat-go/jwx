@@ -42,7 +42,7 @@ type target struct {
 
 	// The HTTP client to use. The user may opt to use a client which is
 	// aware of HTTP caching, or one that goes through a proxy
-	httpcl *http.Client
+	httpcl HTTPClient
 
 	// Interval between refreshes are calculated two ways.
 	// 1) You can set an explicit refresh interval by using WithRefreshInterval().
@@ -145,7 +145,7 @@ func (af *AutoRefresh) getCached(url string) (Set, bool) {
 // not atomic (But changes should be felt "soon enough" for practical
 // purposes)
 func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
-	httpcl := http.DefaultClient
+	var httpcl HTTPClient = http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
 	minRefreshInterval := time.Hour
@@ -160,7 +160,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 		case identMinRefreshInterval{}:
 			minRefreshInterval = option.Value().(time.Duration)
 		case identHTTPClient{}:
-			httpcl = option.Value().(*http.Client)
+			httpcl = option.Value().(HTTPClient)
 		}
 	}
 
