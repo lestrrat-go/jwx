@@ -3,7 +3,7 @@ module github.com/lestrrat-go/jwx
 go 1.13
 
 require (
-	github.com/lestrrat-go/backoff/v2 v2.0.3
+	github.com/lestrrat-go/backoff/v2 v2.0.4
 	github.com/lestrrat-go/codegen v0.0.0-20210115164254-686308008f83
 	github.com/lestrrat-go/httpcc v0.0.0-20210101035852-e7e8fea419e3
 	github.com/lestrrat-go/iter v0.0.0-20200422075355-fc1769541911
