@@ -3,6 +3,7 @@
 package jwt
 
 import (
+	"bytes"
 	"context"
 	"sort"
 	"time"
@@ -297,30 +298,82 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	}
 }
 
-func (t *stdToken) UnmarshalJSON(buf []byte) error {
-	var proxy stdTokenMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal stdToken`)
+func (h *stdToken) UnmarshalJSON(buf []byte) error {
+	h.audience = nil
+	h.expiration = nil
+	h.issuedAt = nil
+	h.issuer = nil
+	h.jwtID = nil
+	h.notBefore = nil
+	h.subject = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return errors.Wrap(err, `error reading token`)
+		}
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case AudienceKey:
+				var decoded types.StringList
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
+				}
+				h.audience = decoded
+			case ExpirationKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
+				}
+				h.expiration = &decoded
+			case IssuedAtKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
+				}
+				h.issuedAt = &decoded
+			case IssuerKey:
+				if err := json.AssignNextStringToken(&h.issuer, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
+				}
+			case JwtIDKey:
+				if err := json.AssignNextStringToken(&h.jwtID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
+				}
+			case NotBeforeKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
+				}
+				h.notBefore = &decoded
+			case SubjectKey:
+				if err := json.AssignNextStringToken(&h.subject, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateClaims == nil {
+					h.privateClaims = make(map[string]interface{})
+				}
+				h.privateClaims[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	t.audience = proxy.Xaudience
-	t.expiration = proxy.Xexpiration
-	t.issuedAt = proxy.XissuedAt
-	t.issuer = proxy.Xissuer
-	t.jwtID = proxy.XjwtID
-	t.notBefore = proxy.XnotBefore
-	t.subject = proxy.Xsubject
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse private parameters`)
-	}
-	delete(m, AudienceKey)
-	delete(m, ExpirationKey)
-	delete(m, IssuedAtKey)
-	delete(m, IssuerKey)
-	delete(m, JwtIDKey)
-	delete(m, NotBeforeKey)
-	delete(m, SubjectKey)
-	t.privateClaims = m
 	return nil
 }
 

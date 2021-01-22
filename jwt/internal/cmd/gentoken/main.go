@@ -577,45 +577,79 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
-	// JSON related stuff
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdToken) UnmarshalJSON(buf []byte) error {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
+	}
+
+	fmt.Fprintf(&buf, "\ndec := json.NewDecoder(bytes.NewReader(buf))")
+	fmt.Fprintf(&buf, "\nLOOP:")
+	fmt.Fprintf(&buf, "\nfor {")
+	fmt.Fprintf(&buf, "\ntok, err := dec.Token()")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `error reading token`)")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nswitch tok := tok.(type) {")
+	fmt.Fprintf(&buf, "\ncase json.Delim:")
+	fmt.Fprintf(&buf, "\n// Assuming we're doing everything correctly, we should ONLY")
+	fmt.Fprintf(&buf, "\n// get either '{' or '}' here.")
+	fmt.Fprintf(&buf, "\nif tok == '}' { // End of object")
+	fmt.Fprintf(&buf, "\nbreak LOOP")
+	fmt.Fprintf(&buf, "\n} else if tok != '{' {")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`expected '{', but got '%%c'`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ncase string: // Objects can only have string keys")
+	fmt.Fprintf(&buf, "\nswitch tok {")
 
 	for _, f := range fields {
-		switch f.typ {
-		case byteSliceType:
-			// XXX encoding/json uses base64.StdEncoding, which require padding
-			// but we may or may not be dealing with padded base64's.
-			// The unmarshal proxy takes this into account, and grabs the value
-			// as strings so that we can do our own decoding magic
-			fmt.Fprintf(&buf, "\nif t.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
-			fmt.Fprintf(&buf, "\ndecoded, err := base64.DecodeString(*(proxy.X%[1]s))", f.name)
-			fmt.Fprintf(&buf, "\nif err != nil {")
-			fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64 value for %s`)", f.name)
+		if f.typ == "string" {
+			fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nt.%[1]s = decoded", f.name)
+		} else if f.typ == "[]byte" {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
-		default:
-			fmt.Fprintf(&buf, "\nt.%[1]s = proxy.X%[1]s", f.name)
+		} else if f.typ == "types.StringList" || strings.HasPrefix(f.typ, "[]") {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nh.%s = decoded", f.name)
+		} else {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			if strings.HasPrefix(f.typ, "*") {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ[1:])
+			} else {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			}
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nh.%s = &decoded", f.name)
 		}
 	}
-
-	// Now for the fun part... It's quite silly, but we need to check if we
-	// have other parameters.
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse private parameters`)")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nvar decoded interface{}")
+	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
 	fmt.Fprintf(&buf, "\n}")
-	// Delete all known keys
-	for _, f := range fields {
-		keyName := f.method + "Key"
-		fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
-	}
+	fmt.Fprintf(&buf, "\nif h.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nh.privateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nh.privateClaims[tok] = decoded")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\nt.privateClaims = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
