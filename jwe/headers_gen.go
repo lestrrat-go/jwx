@@ -625,7 +625,7 @@ LOOP:
 				}
 			case CriticalKey:
 				var decoded []string
-				if err := dec.Decode(decoded); err != nil {
+				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, CriticalKey)
 				}
 				h.critical = decoded
@@ -663,7 +663,7 @@ LOOP:
 				}
 			case X509CertChainKey:
 				var decoded []string
-				if err := dec.Decode(decoded); err != nil {
+				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
 				}
 				h.x509CertChain = decoded

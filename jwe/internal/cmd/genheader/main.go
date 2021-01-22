@@ -485,7 +485,7 @@ func generateHeaders() error {
 			name := f.method
 			fmt.Fprintf(&buf, "\ncase %sKey:", name)
 			fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
-			fmt.Fprintf(&buf, "\nif err := dec.Decode(decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
 			fmt.Fprintf(&buf, "\nh.%s = decoded", f.name)
