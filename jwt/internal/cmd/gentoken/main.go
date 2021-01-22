@@ -607,7 +607,7 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
 			fmt.Fprintf(&buf, "\n}")
-		} else if f.typ == "[]byte" {
+		} else if f.typ == byteSliceType {
 			name := f.method
 			fmt.Fprintf(&buf, "\ncase %sKey:", name)
 			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.name)

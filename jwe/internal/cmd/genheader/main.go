@@ -101,7 +101,7 @@ func generateHeaders() error {
 			typ:    `jwa.KeyEncryptionAlgorithm`,
 			key:    `alg`,
 			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-			jsonTag:  "`" + `json:"alg,omitempty"` + "`",
+			jsonTag: "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
 			name:   `compression`,
