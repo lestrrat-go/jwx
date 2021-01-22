@@ -282,7 +282,7 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
-	fmt.Fprintf(&buf, "\nmu sync.RWMutex")
+	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	// Proxy is used when unmarshaling headers
@@ -303,6 +303,7 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
 	fmt.Fprintf(&buf, "\nreturn &stdHeaders{")
+	fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
 	fmt.Fprintf(&buf, "\nprivateParams: map[string]interface{}{},")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
