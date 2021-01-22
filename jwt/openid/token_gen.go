@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -81,6 +82,7 @@ type Token interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 }
 type stdToken struct {
+	mu                  *sync.RWMutex
 	audience            types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration          *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt            *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -144,12 +146,15 @@ type openidTokenMarshalProxy struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
+		mu:            &sync.Mutex{},
 		privateClaims: make(map[string]interface{}),
 	}
 }
 
 // Size returns the number of valid claims stored in this token
 func (t *stdToken) Size() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	var count int
 	if len(t.audience) > 0 {
 		count++
@@ -165,6 +170,8 @@ func (t *stdToken) Size() int {
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	switch name {
 	case AudienceKey:
 		if t.audience == nil {
@@ -329,6 +336,8 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 }
 
 func (t *stdToken) Set(name string, value interface{}) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
@@ -503,6 +512,8 @@ func (t *stdToken) Set(name string, value interface{}) error {
 }
 
 func (t *stdToken) Audience() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.audience != nil {
 		return t.audience.Get()
 	}
@@ -510,6 +521,8 @@ func (t *stdToken) Audience() []string {
 }
 
 func (t *stdToken) Expiration() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.expiration != nil {
 		return t.expiration.Get()
 	}
@@ -517,6 +530,8 @@ func (t *stdToken) Expiration() time.Time {
 }
 
 func (t *stdToken) IssuedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuedAt != nil {
 		return t.issuedAt.Get()
 	}
@@ -524,6 +539,8 @@ func (t *stdToken) IssuedAt() time.Time {
 }
 
 func (t *stdToken) Issuer() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuer != nil {
 		return *(t.issuer)
 	}
@@ -531,6 +548,8 @@ func (t *stdToken) Issuer() string {
 }
 
 func (t *stdToken) JwtID() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.jwtID != nil {
 		return *(t.jwtID)
 	}
@@ -538,6 +557,8 @@ func (t *stdToken) JwtID() string {
 }
 
 func (t *stdToken) NotBefore() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.notBefore != nil {
 		return t.notBefore.Get()
 	}
@@ -545,6 +566,8 @@ func (t *stdToken) NotBefore() time.Time {
 }
 
 func (t *stdToken) Subject() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.subject != nil {
 		return *(t.subject)
 	}
@@ -552,6 +575,8 @@ func (t *stdToken) Subject() string {
 }
 
 func (t *stdToken) Name() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.name != nil {
 		return *(t.name)
 	}
@@ -559,6 +584,8 @@ func (t *stdToken) Name() string {
 }
 
 func (t *stdToken) GivenName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.givenName != nil {
 		return *(t.givenName)
 	}
@@ -566,6 +593,8 @@ func (t *stdToken) GivenName() string {
 }
 
 func (t *stdToken) MiddleName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.middleName != nil {
 		return *(t.middleName)
 	}
@@ -573,6 +602,8 @@ func (t *stdToken) MiddleName() string {
 }
 
 func (t *stdToken) FamilyName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.familyName != nil {
 		return *(t.familyName)
 	}
@@ -580,6 +611,8 @@ func (t *stdToken) FamilyName() string {
 }
 
 func (t *stdToken) Nickname() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.nickname != nil {
 		return *(t.nickname)
 	}
@@ -587,6 +620,8 @@ func (t *stdToken) Nickname() string {
 }
 
 func (t *stdToken) PreferredUsername() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.preferredUsername != nil {
 		return *(t.preferredUsername)
 	}
@@ -594,6 +629,8 @@ func (t *stdToken) PreferredUsername() string {
 }
 
 func (t *stdToken) Profile() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.profile != nil {
 		return *(t.profile)
 	}
@@ -601,6 +638,8 @@ func (t *stdToken) Profile() string {
 }
 
 func (t *stdToken) Picture() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.picture != nil {
 		return *(t.picture)
 	}
@@ -608,6 +647,8 @@ func (t *stdToken) Picture() string {
 }
 
 func (t *stdToken) Website() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.website != nil {
 		return *(t.website)
 	}
@@ -615,6 +656,8 @@ func (t *stdToken) Website() string {
 }
 
 func (t *stdToken) Email() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.email != nil {
 		return *(t.email)
 	}
@@ -622,6 +665,8 @@ func (t *stdToken) Email() string {
 }
 
 func (t *stdToken) EmailVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.emailVerified != nil {
 		return *(t.emailVerified)
 	}
@@ -629,6 +674,8 @@ func (t *stdToken) EmailVerified() bool {
 }
 
 func (t *stdToken) Gender() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.gender != nil {
 		return *(t.gender)
 	}
@@ -636,10 +683,14 @@ func (t *stdToken) Gender() string {
 }
 
 func (t *stdToken) Birthdate() *BirthdateClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.birthdate
 }
 
 func (t *stdToken) Zoneinfo() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.zoneinfo != nil {
 		return *(t.zoneinfo)
 	}
@@ -647,6 +698,8 @@ func (t *stdToken) Zoneinfo() string {
 }
 
 func (t *stdToken) Locale() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.locale != nil {
 		return *(t.locale)
 	}
@@ -654,6 +707,8 @@ func (t *stdToken) Locale() string {
 }
 
 func (t *stdToken) PhoneNumber() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.phoneNumber != nil {
 		return *(t.phoneNumber)
 	}
@@ -661,6 +716,8 @@ func (t *stdToken) PhoneNumber() string {
 }
 
 func (t *stdToken) PhoneNumberVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.phoneNumberVerified != nil {
 		return *(t.phoneNumberVerified)
 	}
@@ -668,10 +725,14 @@ func (t *stdToken) PhoneNumberVerified() bool {
 }
 
 func (t *stdToken) Address() *AddressClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.address
 }
 
 func (t *stdToken) UpdatedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.updatedAt != nil {
 		return t.updatedAt.Get()
 	}
@@ -679,10 +740,14 @@ func (t *stdToken) UpdatedAt() time.Time {
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.privateClaims
 }
 
 func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	defer close(ch)
 
 	var pairs []*ClaimPair
@@ -803,6 +868,8 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 }
 
 func (h *stdToken) UnmarshalJSON(buf []byte) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	h.audience = nil
 	h.expiration = nil
 	h.issuedAt = nil
@@ -987,6 +1054,8 @@ LOOP:
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})

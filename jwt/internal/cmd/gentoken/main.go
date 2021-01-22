@@ -381,6 +381,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
+	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
@@ -408,12 +409,15 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, ".\n// Convenience accessors are provided for these standard claims")
 	fmt.Fprintf(&buf, "\nfunc New() %s {", tt.ifName)
 	fmt.Fprintf(&buf, "\nreturn &%s{", tt.structName)
+	fmt.Fprintf(&buf, "\nmu: &sync.Mutex{},")
 	fmt.Fprintf(&buf, "\nprivateClaims: make(map[string]interface{}),")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
 	fmt.Fprintf(&buf, "\nfunc (t *%s) Size() int {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nvar count int")
 	for _, field := range fields {
 		switch {
@@ -432,6 +436,8 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn count")
 	fmt.Fprintf(&buf, "\n}") // end func Size()
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -456,6 +462,8 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		keyName := f.method + "Key"
@@ -518,6 +526,8 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "%s", f.PointerElem())
 		}
 		fmt.Fprintf(&buf, " {")
+		fmt.Fprintf(&buf, "\nt.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 
 		if f.hasGet {
 			fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
@@ -540,12 +550,16 @@ func generateToken(tt tokenType) error {
 	}
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) PrivateClaims() map[string]interface{} {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nreturn t.privateClaims")
 	fmt.Fprintf(&buf, "\n}")
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 	// NOTE: building up an array is *slow*?
@@ -578,6 +592,8 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdToken) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
 	}
@@ -661,6 +677,8 @@ func generateToken(tt tokenType) error {
 	}
 
 	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
 	fmt.Fprintf(&buf, "\ndefer cancel()")
 	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")

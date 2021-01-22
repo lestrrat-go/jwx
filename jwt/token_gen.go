@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -55,6 +56,7 @@ type Token interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 }
 type stdToken struct {
+	mu            *sync.RWMutex
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -80,12 +82,15 @@ type stdTokenMarshalProxy struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
+		mu:            &sync.Mutex{},
 		privateClaims: make(map[string]interface{}),
 	}
 }
 
 // Size returns the number of valid claims stored in this token
 func (t *stdToken) Size() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	var count int
 	if len(t.audience) > 0 {
 		count++
@@ -95,6 +100,8 @@ func (t *stdToken) Size() int {
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	switch name {
 	case AudienceKey:
 		if t.audience == nil {
@@ -145,6 +152,8 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 }
 
 func (t *stdToken) Set(name string, value interface{}) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
@@ -202,6 +211,8 @@ func (t *stdToken) Set(name string, value interface{}) error {
 }
 
 func (t *stdToken) Audience() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.audience != nil {
 		return t.audience.Get()
 	}
@@ -209,6 +220,8 @@ func (t *stdToken) Audience() []string {
 }
 
 func (t *stdToken) Expiration() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.expiration != nil {
 		return t.expiration.Get()
 	}
@@ -216,6 +229,8 @@ func (t *stdToken) Expiration() time.Time {
 }
 
 func (t *stdToken) IssuedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuedAt != nil {
 		return t.issuedAt.Get()
 	}
@@ -223,6 +238,8 @@ func (t *stdToken) IssuedAt() time.Time {
 }
 
 func (t *stdToken) Issuer() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuer != nil {
 		return *(t.issuer)
 	}
@@ -230,6 +247,8 @@ func (t *stdToken) Issuer() string {
 }
 
 func (t *stdToken) JwtID() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.jwtID != nil {
 		return *(t.jwtID)
 	}
@@ -237,6 +256,8 @@ func (t *stdToken) JwtID() string {
 }
 
 func (t *stdToken) NotBefore() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.notBefore != nil {
 		return t.notBefore.Get()
 	}
@@ -244,6 +265,8 @@ func (t *stdToken) NotBefore() time.Time {
 }
 
 func (t *stdToken) Subject() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.subject != nil {
 		return *(t.subject)
 	}
@@ -251,10 +274,14 @@ func (t *stdToken) Subject() string {
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.privateClaims
 }
 
 func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	defer close(ch)
 
 	var pairs []*ClaimPair
@@ -299,6 +326,8 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 }
 
 func (h *stdToken) UnmarshalJSON(buf []byte) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	h.audience = nil
 	h.expiration = nil
 	h.issuedAt = nil
@@ -378,6 +407,8 @@ LOOP:
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})
