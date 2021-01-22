@@ -3,6 +3,7 @@ package jwk
 import (
 	"context"
 	"crypto/x509"
+	"net/http"
 	"sync"
 
 	"github.com/lestrrat-go/iter/arrayiter"
@@ -95,4 +96,10 @@ type PublicKeyer interface {
 	// All fields are copied onto the new public key, except for those that are not allowed.
 	// Returned value must not be the receiver itself.
 	PublicKey() (Key, error)
+}
+
+// HTTPClient specifies the minimum interface that is required for our JWK
+// fetching tools.
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
 }

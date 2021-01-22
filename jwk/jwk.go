@@ -215,12 +215,12 @@ func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, 
 }
 
 func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
-	httpcl := http.DefaultClient
+	var httpcl HTTPClient = http.DefaultClient
 	bo := backoff.Null()
 	for _, option := range options {
 		switch option.Ident() {
 		case identHTTPClient{}:
-			httpcl = option.Value().(*http.Client)
+			httpcl = option.Value().(HTTPClient)
 		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
 		}
