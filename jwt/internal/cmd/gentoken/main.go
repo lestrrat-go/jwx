@@ -409,7 +409,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, ".\n// Convenience accessors are provided for these standard claims")
 	fmt.Fprintf(&buf, "\nfunc New() %s {", tt.ifName)
 	fmt.Fprintf(&buf, "\nreturn &%s{", tt.structName)
-	fmt.Fprintf(&buf, "\nmu: &sync.Mutex{},")
+	fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
 	fmt.Fprintf(&buf, "\nprivateClaims: make(map[string]interface{}),")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
@@ -591,11 +591,11 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
-	fmt.Fprintf(&buf, "\n\nfunc (h *stdToken) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) UnmarshalJSON(buf []byte) error {")
 	fmt.Fprintf(&buf, "\nt.mu.Lock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
 	for _, f := range fields {
-		fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
+		fmt.Fprintf(&buf, "\nt.%s = nil", f.name)
 	}
 
 	fmt.Fprintf(&buf, "\ndec := json.NewDecoder(bytes.NewReader(buf))")
@@ -620,13 +620,13 @@ func generateToken(tt tokenType) error {
 	for _, f := range fields {
 		if f.typ == "string" {
 			fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
-			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
 			fmt.Fprintf(&buf, "\n}")
 		} else if f.typ == byteSliceType {
 			name := f.method
 			fmt.Fprintf(&buf, "\ncase %sKey:", name)
-			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
 		} else if f.typ == "types.StringList" || strings.HasPrefix(f.typ, "[]") {
@@ -636,7 +636,7 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nh.%s = decoded", f.name)
+			fmt.Fprintf(&buf, "\nt.%s = decoded", f.name)
 		} else {
 			name := f.method
 			fmt.Fprintf(&buf, "\ncase %sKey:", name)
@@ -648,7 +648,7 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
 			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nh.%s = &decoded", f.name)
+			fmt.Fprintf(&buf, "\nt.%s = &decoded", f.name)
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
@@ -656,10 +656,10 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nif h.privateClaims == nil {")
-	fmt.Fprintf(&buf, "\nh.privateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nh.privateClaims[tok] = decoded")
+	fmt.Fprintf(&buf, "\nt.privateClaims[tok] = decoded")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")

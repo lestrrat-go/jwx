@@ -146,7 +146,7 @@ type openidTokenMarshalProxy struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
-		mu:            &sync.Mutex{},
+		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
 	}
 }
@@ -867,35 +867,35 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	}
 }
 
-func (h *stdToken) UnmarshalJSON(buf []byte) error {
+func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	h.audience = nil
-	h.expiration = nil
-	h.issuedAt = nil
-	h.issuer = nil
-	h.jwtID = nil
-	h.notBefore = nil
-	h.subject = nil
-	h.name = nil
-	h.givenName = nil
-	h.middleName = nil
-	h.familyName = nil
-	h.nickname = nil
-	h.preferredUsername = nil
-	h.profile = nil
-	h.picture = nil
-	h.website = nil
-	h.email = nil
-	h.emailVerified = nil
-	h.gender = nil
-	h.birthdate = nil
-	h.zoneinfo = nil
-	h.locale = nil
-	h.phoneNumber = nil
-	h.phoneNumberVerified = nil
-	h.address = nil
-	h.updatedAt = nil
+	t.audience = nil
+	t.expiration = nil
+	t.issuedAt = nil
+	t.issuer = nil
+	t.jwtID = nil
+	t.notBefore = nil
+	t.subject = nil
+	t.name = nil
+	t.givenName = nil
+	t.middleName = nil
+	t.familyName = nil
+	t.nickname = nil
+	t.preferredUsername = nil
+	t.profile = nil
+	t.picture = nil
+	t.website = nil
+	t.email = nil
+	t.emailVerified = nil
+	t.gender = nil
+	t.birthdate = nil
+	t.zoneinfo = nil
+	t.locale = nil
+	t.phoneNumber = nil
+	t.phoneNumberVerified = nil
+	t.address = nil
+	t.updatedAt = nil
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {
@@ -919,25 +919,25 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
 				}
-				h.audience = decoded
+				t.audience = decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
 				}
-				h.expiration = &decoded
+				t.expiration = &decoded
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
 				}
-				h.issuedAt = &decoded
+				t.issuedAt = &decoded
 			case IssuerKey:
-				if err := json.AssignNextStringToken(&h.issuer, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
 				}
 			case JwtIDKey:
-				if err := json.AssignNextStringToken(&h.jwtID, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
 				}
 			case NotBeforeKey:
@@ -945,49 +945,49 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
 				}
-				h.notBefore = &decoded
+				t.notBefore = &decoded
 			case SubjectKey:
-				if err := json.AssignNextStringToken(&h.subject, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
 				}
 			case NameKey:
-				if err := json.AssignNextStringToken(&h.name, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, NameKey)
 				}
 			case GivenNameKey:
-				if err := json.AssignNextStringToken(&h.givenName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, GivenNameKey)
 				}
 			case MiddleNameKey:
-				if err := json.AssignNextStringToken(&h.middleName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, MiddleNameKey)
 				}
 			case FamilyNameKey:
-				if err := json.AssignNextStringToken(&h.familyName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, FamilyNameKey)
 				}
 			case NicknameKey:
-				if err := json.AssignNextStringToken(&h.nickname, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, NicknameKey)
 				}
 			case PreferredUsernameKey:
-				if err := json.AssignNextStringToken(&h.preferredUsername, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, PreferredUsernameKey)
 				}
 			case ProfileKey:
-				if err := json.AssignNextStringToken(&h.profile, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, ProfileKey)
 				}
 			case PictureKey:
-				if err := json.AssignNextStringToken(&h.picture, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, PictureKey)
 				}
 			case WebsiteKey:
-				if err := json.AssignNextStringToken(&h.website, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, WebsiteKey)
 				}
 			case EmailKey:
-				if err := json.AssignNextStringToken(&h.email, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, EmailKey)
 				}
 			case EmailVerifiedKey:
@@ -995,9 +995,9 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, EmailVerifiedKey)
 				}
-				h.emailVerified = &decoded
+				t.emailVerified = &decoded
 			case GenderKey:
-				if err := json.AssignNextStringToken(&h.gender, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, GenderKey)
 				}
 			case BirthdateKey:
@@ -1005,17 +1005,17 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, BirthdateKey)
 				}
-				h.birthdate = &decoded
+				t.birthdate = &decoded
 			case ZoneinfoKey:
-				if err := json.AssignNextStringToken(&h.zoneinfo, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, ZoneinfoKey)
 				}
 			case LocaleKey:
-				if err := json.AssignNextStringToken(&h.locale, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, LocaleKey)
 				}
 			case PhoneNumberKey:
-				if err := json.AssignNextStringToken(&h.phoneNumber, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberKey)
 				}
 			case PhoneNumberVerifiedKey:
@@ -1023,28 +1023,28 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberVerifiedKey)
 				}
-				h.phoneNumberVerified = &decoded
+				t.phoneNumberVerified = &decoded
 			case AddressKey:
 				var decoded AddressClaim
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AddressKey)
 				}
-				h.address = &decoded
+				t.address = &decoded
 			case UpdatedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, UpdatedAtKey)
 				}
-				h.updatedAt = &decoded
+				t.updatedAt = &decoded
 			default:
 				var decoded interface{}
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode field %s`, tok)
 				}
-				if h.privateClaims == nil {
-					h.privateClaims = make(map[string]interface{})
+				if t.privateClaims == nil {
+					t.privateClaims = make(map[string]interface{})
 				}
-				h.privateClaims[tok] = decoded
+				t.privateClaims[tok] = decoded
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

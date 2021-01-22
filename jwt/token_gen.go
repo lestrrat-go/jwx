@@ -82,7 +82,7 @@ type stdTokenMarshalProxy struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
-		mu:            &sync.Mutex{},
+		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
 	}
 }
@@ -325,16 +325,16 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	}
 }
 
-func (h *stdToken) UnmarshalJSON(buf []byte) error {
+func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	h.audience = nil
-	h.expiration = nil
-	h.issuedAt = nil
-	h.issuer = nil
-	h.jwtID = nil
-	h.notBefore = nil
-	h.subject = nil
+	t.audience = nil
+	t.expiration = nil
+	t.issuedAt = nil
+	t.issuer = nil
+	t.jwtID = nil
+	t.notBefore = nil
+	t.subject = nil
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {
@@ -358,25 +358,25 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
 				}
-				h.audience = decoded
+				t.audience = decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
 				}
-				h.expiration = &decoded
+				t.expiration = &decoded
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
 				}
-				h.issuedAt = &decoded
+				t.issuedAt = &decoded
 			case IssuerKey:
-				if err := json.AssignNextStringToken(&h.issuer, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
 				}
 			case JwtIDKey:
-				if err := json.AssignNextStringToken(&h.jwtID, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
 				}
 			case NotBeforeKey:
@@ -384,9 +384,9 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
 				}
-				h.notBefore = &decoded
+				t.notBefore = &decoded
 			case SubjectKey:
-				if err := json.AssignNextStringToken(&h.subject, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
 				}
 			default:
@@ -394,10 +394,10 @@ LOOP:
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode field %s`, tok)
 				}
-				if h.privateClaims == nil {
-					h.privateClaims = make(map[string]interface{})
+				if t.privateClaims == nil {
+					t.privateClaims = make(map[string]interface{})
 				}
-				h.privateClaims[tok] = decoded
+				t.privateClaims[tok] = decoded
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)
