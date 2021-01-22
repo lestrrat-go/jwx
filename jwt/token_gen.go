@@ -5,7 +5,6 @@ package jwt
 import (
 	"context"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -340,28 +339,35 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		case time.Time:
 			switch f {
 			case ExpirationKey, IssuedAtKey, NotBeforeKey:
 				enc.Encode(v.Unix())
 			default:
-				enc.Encode(v) // probably not correct, but oh well
+				if err := enc.Encode(v); err != nil {
+					return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+				}
+				buf.Truncate(buf.Len() - 1)
 			}
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')

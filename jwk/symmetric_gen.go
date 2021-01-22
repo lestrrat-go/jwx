@@ -417,9 +417,8 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
 		buf.WriteString(f)
