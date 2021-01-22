@@ -3,6 +3,7 @@
 package jws
 
 import (
+	"bytes"
 	"context"
 	"sort"
 
@@ -352,45 +353,105 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 }
 
 func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
-	var proxy standardHeadersMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal headers`)
-	}
-
+	h.algorithm = nil
+	h.contentType = nil
+	h.critical = nil
 	h.jwk = nil
-	if jwkField := proxy.Xjwk; len(jwkField) > 0 {
-		key, err := jwk.ParseKey([]byte(proxy.Xjwk))
+	h.jwkSetURL = nil
+	h.keyID = nil
+	h.typ = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to parse jwk field`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		h.jwk = key
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case AlgorithmKey:
+				var decoded jwa.SignatureAlgorithm
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+				}
+				h.algorithm = &decoded
+			case ContentTypeKey:
+				if err := json.AssignNextStringToken(&h.contentType, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ContentTypeKey)
+				}
+			case CriticalKey:
+				var decoded []string
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, CriticalKey)
+				}
+				h.critical = decoded
+			case JWKKey:
+				var buf json.RawMessage
+				if err := dec.Decode(&buf); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JWKKey)
+				}
+				key, err := jwk.ParseKey(buf)
+				if err != nil {
+					return errors.Wrapf(err, `failed to parse JWK for key %s`, JWKKey)
+				}
+				h.jwk = key
+			case JWKSetURLKey:
+				if err := json.AssignNextStringToken(&h.jwkSetURL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JWKSetURLKey)
+				}
+			case KeyIDKey:
+				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+				}
+			case TypeKey:
+				if err := json.AssignNextStringToken(&h.typ, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, TypeKey)
+				}
+			case X509CertChainKey:
+				var decoded []string
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+				}
+				h.x509CertChain = decoded
+			case X509CertThumbprintKey:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+				}
+			case X509CertThumbprintS256Key:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+				}
+			case X509URLKey:
+				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateParams == nil {
+					h.privateParams = make(map[string]interface{})
+				}
+				h.privateParams[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	h.algorithm = proxy.Xalgorithm
-	h.contentType = proxy.XcontentType
-	h.critical = proxy.Xcritical
-	h.jwkSetURL = proxy.XjwkSetURL
-	h.keyID = proxy.XkeyID
-	h.typ = proxy.Xtyp
-	h.x509CertChain = proxy.Xx509CertChain
-	h.x509CertThumbprint = proxy.Xx509CertThumbprint
-	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
-	h.x509URL = proxy.Xx509URL
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
-	}
-	delete(m, AlgorithmKey)
-	delete(m, ContentTypeKey)
-	delete(m, CriticalKey)
-	delete(m, JWKKey)
-	delete(m, JWKSetURLKey)
-	delete(m, KeyIDKey)
-	delete(m, TypeKey)
-	delete(m, X509CertChainKey)
-	delete(m, X509CertThumbprintKey)
-	delete(m, X509CertThumbprintS256Key)
-	delete(m, X509URLKey)
-	h.privateParams = m
 	return nil
 }
 
