@@ -1,7 +1,5 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/lestrrat-go/backoff/v2 v2.0.3 h1:2ABaTa5ifB1L90aoRMjaPa97p0WzzVe93Vggv8oZftw=
-github.com/lestrrat-go/backoff/v2 v2.0.3/go.mod h1:mU93bMXuG27/Y5erI5E9weqavpTX5qiVFZI4uXAX0xk=
 github.com/lestrrat-go/backoff/v2 v2.0.4 h1:vXL7jlZboi/vvJQs41ZSmkKWUmnnO1obkUsctdPupDg=
 github.com/lestrrat-go/backoff/v2 v2.0.4/go.mod h1:mU93bMXuG27/Y5erI5E9weqavpTX5qiVFZI4uXAX0xk=
 github.com/lestrrat-go/codegen v0.0.0-20210115164254-686308008f83 h1:nmWQCL26yQpPLefEtuB0k7g9d41Z1YspdzRd35gdpyo=
