@@ -89,7 +89,7 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string                         //
 	x509URL                *string                         //
 	privateParams          map[string]interface{}
-	mu                     sync.RWMutex
+	mu                     *sync.RWMutex
 }
 
 type standardHeadersMarshalProxy struct {
@@ -113,6 +113,7 @@ type standardHeadersMarshalProxy struct {
 
 func NewHeaders() Headers {
 	return &stdHeaders{
+		mu:            &sync.RWMutex{},
 		privateParams: map[string]interface{}{},
 	}
 }
