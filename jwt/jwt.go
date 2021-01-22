@@ -5,6 +5,7 @@ package jwt
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 
@@ -232,4 +233,24 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 	}
 
 	return sign, nil
+}
+
+func Equal(t1, t2 Token) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	m1, err := t1.AsMap(ctx)
+	if err != nil {
+		return false
+	}
+
+	for iter := t2.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if m1[pair.Key.(string)] != pair.Value {
+			return false
+		}
+		delete(m1, pair.Key.(string))
+	}
+
+	return len(m1) == 0
 }
