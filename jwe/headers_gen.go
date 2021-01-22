@@ -37,6 +37,8 @@ const (
 
 // Headers describe a standard Header set.
 type Headers interface {
+	json.Marshaler
+	json.Unmarshaler
 	AgreementPartyUInfo() []byte
 	AgreementPartyVInfo() []byte
 	Algorithm() jwa.KeyEncryptionAlgorithm
@@ -90,25 +92,6 @@ type stdHeaders struct {
 	x509URL                *string                         //
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-}
-
-type standardHeadersMarshalProxy struct {
-	XagreementPartyUInfo    json.RawMessage                 `json:"apu,omitempty"`
-	XagreementPartyVInfo    json.RawMessage                 `json:"apv,omitempty"`
-	Xalgorithm              *jwa.KeyEncryptionAlgorithm     `json:"alg,omitempty"`
-	Xcompression            *jwa.CompressionAlgorithm       `json:"zip,omitempty"`
-	XcontentEncryption      *jwa.ContentEncryptionAlgorithm `json:"enc,omitempty"`
-	XcontentType            *string                         `json:"cty,omitempty"`
-	Xcritical               []string                        `json:"crit,omitempty"`
-	XephemeralPublicKey     json.RawMessage                 `json:"epk,omitempty"`
-	Xjwk                    json.RawMessage                 `json:"jwk,omitempty"`
-	XjwkSetURL              *string                         `json:"jku,omitempty"`
-	XkeyID                  *string                         `json:"kid,omitempty"`
-	Xtyp                    *string                         `json:"typ,omitempty"`
-	Xx509CertChain          []string                        `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                         `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                         `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                         `json:"x5u,omitempty"`
 }
 
 func NewHeaders() Headers {

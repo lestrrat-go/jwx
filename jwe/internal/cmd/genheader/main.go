@@ -245,6 +245,8 @@ func generateHeaders() error {
 
 	fmt.Fprintf(&buf, "\n\n// Headers describe a standard Header set.")
 	fmt.Fprintf(&buf, "\ntype Headers interface {")
+	fmt.Fprintf(&buf, "\njson.Marshaler")
+	fmt.Fprintf(&buf, "\njson.Unmarshaler")
 	// These are the basic values that most jws have
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s() %s", f.method, f.typ) //PointerElem())
@@ -283,22 +285,6 @@ func generateHeaders() error {
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
-	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
-
-	// Proxy is used when unmarshaling headers
-	fmt.Fprintf(&buf, "\n\ntype standardHeadersMarshalProxy struct {")
-	for _, f := range fields {
-		switch f.name {
-		case jwkKey, ephemeralPublicKey, agreementPartyUInfo, agreementPartyVInfo:
-			fmt.Fprintf(&buf, "\nX%s json.RawMessage %s", f.name, f.jsonTag)
-		default:
-			if fieldStorageTypeIsIndirect(f.typ) {
-				fmt.Fprintf(&buf, "\nX%s *%s %s", f.name, f.typ, f.jsonTag)
-			} else {
-				fmt.Fprintf(&buf, "\nX%s %s %s", f.name, f.typ, f.jsonTag)
-			}
-		}
-	}
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")

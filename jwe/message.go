@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -62,11 +63,22 @@ func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
 }
 
 func (r *stdRecipient) MarshalJSON() ([]byte, error) {
-	var proxy recipientMarshalProxy
-	proxy.Headers = r.headers
-	proxy.EncryptedKey = base64.EncodeToString(r.encryptedKey)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
-	return json.Marshal(proxy)
+	buf.WriteString(`{"header":`)
+	hdrbuf, err := r.headers.MarshalJSON()
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal recipient header`)
+	}
+	buf.Write(hdrbuf)
+	buf.WriteString(`,"encrypted_key":"`)
+	buf.WriteString(base64.EncodeToString(r.encryptedKey))
+	buf.WriteString(`"}`)
+
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 // NewMessage creates a new message
