@@ -235,6 +235,8 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 	return sign, nil
 }
 
+// Equal compares two JWT tokens.
+// The comparison for values is currently done using a simple equality ("==").
 func Equal(t1, t2 Token) bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
