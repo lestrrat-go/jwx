@@ -87,7 +87,16 @@ v1.1.0
 
 [Miscellaneous]
   * Options have been reworked
-  * JSON marshaling should be 10~30% faster.
+  * JSON marshaling should be 10~30% faster by default. However, if performance
+    is really bogging you down, you can try to enable the optional module
+    github.com/goccy/go-json by enabling the "goccy" tag
+
+      go build -tags goccy ...
+
+    In some cases you get approx 40~50% performance improvement in serailization
+    https://github.com/lestrrat-go/jwx/pull/314#issue-560594020
+    https://github.com/lestrrat-go/jwx/pull/314#issuecomment-766343888
+
   * Location for examples and benchmarks have changed: Now examples/ and bench/ 
     are their respective locations, and they are each a standalone module,
     so that in case we need extra imports (such as the case in examples)
