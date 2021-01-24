@@ -13,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        json_backend: [ 'stdlib', 'goccy' ]
         go: [ '1.15.x', '1.14.x' ]
-    name: Go ${{ matrix.go }} test
+    name: "Smoke [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

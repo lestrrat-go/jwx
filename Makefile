@@ -32,7 +32,13 @@ cover-goccy:
 	@rm coverage.out.tmp
 
 smoke:
+	$(MAKE) smoke-stdlib
+
+smoke-stdlib:
 	cd examples && go test -race && cd .. && go test -race -short ./...
+
+smoke-goccy:
+	cd examples && go test -tags jwx_goccy -race && cd .. && go test -tags jwx_goccy -race -short ./...
 
 viewcover:
 	go tool cover -html=coverage.out
