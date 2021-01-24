@@ -18,6 +18,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestJSONEngine(t *testing.T) {
+	t.Logf("Running tests using JSON backend => %s\n", json.Engine())
+}
+
 type jsonUnmarshalWrapper struct {
 	buf []byte
 }

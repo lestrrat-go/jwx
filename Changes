@@ -91,7 +91,7 @@ v1.1.0
     is really bogging you down, you can try to enable the optional module
     github.com/goccy/go-json by enabling the "goccy" tag
 
-      go build -tags goccy ...
+      go build -tags jwx_goccy ...
 
     In some cases you get approx 40~50% performance improvement in serailization
     https://github.com/lestrrat-go/jwx/pull/314#issue-560594020

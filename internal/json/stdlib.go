@@ -1,4 +1,4 @@
-// +build !goccy
+// +build !jwx_goccy
 
 package json
 
@@ -14,6 +14,10 @@ type Marshaler = json.Marshaler
 type Number = json.Number
 type RawMessage = json.RawMessage
 type Unmarshaler = json.Unmarshaler
+
+func Engine() string {
+	return "encoding/json"
+}
 
 // NewDecoder respects the values specified in DecoderSettings,
 // and creates a Decoder that has certain features turned on/off
