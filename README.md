@@ -157,7 +157,21 @@ Supported content encryption algorithm:
 
 # Global Settings
 
-## Configuring JSON Parsing
+## Switching to a faster JSON library
+
+By default we use the standard library's `encoding/json` for all of our JSON needs.
+However, if performance for parsing/serializing JSON is really important to you, you might want to enable `github.com/goccy/go-json` by enabling the `goccy` tag.
+
+```shell
+% go build -tags goccy ...
+```
+
+`github.com/goccy/go-json` is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it if it breaks.
+Having said that, `github.com/goccy/go-json` works for 99% of the cases, and it dramatically speeds things up.
+Therefore if you know what you are doing, I hightly recommend enabling this module.
+And when you do enable `github.com/goccy/go-json` and you encounter some mysterious error, I also trust that you know to file an issue to `github.com/goccy/go-json` and NOT to this library.
+
+## Using json.Number
 
 If you want to parse numbers in the incoming JSON objects as json.Number
 instead of floats, you can use the following call to globally affect the behavior of JSON parsing.
