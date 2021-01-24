@@ -7,8 +7,19 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 )
 
+func runJWSBench(b *testing.B, name string, fn func()) {
+	b.Helper()
+	b.Run(name, func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			fn()
+		}
+	})
+}
+
 func BenchmarkJWS(b *testing.B) {
-	s := `{
+	b.Run("Serialization", func(b *testing.B) {
+		const compactStr = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
+		const jsonStr = `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
     "signatures":[
       {
@@ -23,12 +34,32 @@ func BenchmarkJWS(b *testing.B) {
       }
     ]
   }`
+		jsonBuf := []byte(jsonStr)
+		compactBuf := []byte(compactStr)
 
-	m, _ := jws.Parse([]byte(s))
-
-	b.Run("json.Marshal", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_, _ = json.Marshal(m)
-		}
+		b.Run("Compact", func(b *testing.B) {
+			testcases := map[string]func(){
+				"jws.Parse":       func() { _, _ = jws.Parse(compactBuf) },
+				"jws.ParseString": func() { _, _ = jws.ParseString(compactStr) },
+			}
+			for name, tc := range testcases {
+				name := name
+				tc := tc
+				runJWSBench(b, name, tc)
+			}
+		})
+		b.Run("JSON", func(b *testing.B) {
+			m, _ := jws.Parse([]byte(jsonStr))
+			testcases := map[string]func(){
+				"jws.Parse":       func() { _, _ = jws.Parse(jsonBuf) },
+				"jws.ParseString": func() { _, _ = jws.ParseString(jsonStr) },
+				"json.Marshal":    func() { _, _ = json.Marshal(m) },
+			}
+			for name, tc := range testcases {
+				name := name
+				tc := tc
+				runJWSBench(b, name, tc)
+			}
+		})
 	})
 }
