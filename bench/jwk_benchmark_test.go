@@ -49,7 +49,7 @@ func runJSONBench(b *testing.B, privkey jwk.Key) {
 	}
 }
 
-func BenchmarkJwk(b *testing.B) {
+func BenchmarkJWK(b *testing.B) {
 	b.Run("Serialization", func(b *testing.B) {
 		b.Run("RSA", func(b *testing.B) {
 			rsakey, _ := jwxtest.GenerateRsaJwk()
