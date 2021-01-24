@@ -24,9 +24,15 @@ Because I was writing the server side (and the client side for testing), I neede
 
 So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
 
-## Notes for users of pre-1.0.0 release
+## Backwards Compatibility Notice
+
+### Pre-1.0.0 users
 
 The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
+
+### v1.0.x users
+
+The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
 
 # Packages
 
