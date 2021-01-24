@@ -86,7 +86,10 @@ v1.1.0
     top of raw keys (e.g. rsa.PrivateKey).
 
 [Miscellaneous]
+  * Default branch for the repository is now `main`.
+
   * Options have been reworked
+
   * JSON marshaling should be 10~30% faster by default. However, if performance
     is really bogging you down, you can try to enable the optional module
     github.com/goccy/go-json by enabling the "goccy" tag
