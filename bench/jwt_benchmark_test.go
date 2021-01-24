@@ -38,7 +38,8 @@ func BenchmarkJWT(b *testing.B) {
 		b.Run("Sign", func(b *testing.B) {
 			testcases := []Case{
 				{
-					Name: "jwt.ParseString",
+					Name:      "jwt.ParseString",
+					SkipShort: true,
 					Test: func(b *testing.B) error {
 						_, err := jwt.ParseString(signedString)
 						return err
@@ -52,12 +53,11 @@ func BenchmarkJWT(b *testing.B) {
 					},
 				},
 				{
-					Name: "jwt.ParseReader",
+					Name:      "jwt.ParseReader",
+					SkipShort: true,
 					Pretest: func(b *testing.B) error {
-						b.StopTimer()
-						signedReader.Seek(0, 0)
-						b.StartTimer()
-						return nil
+						_, err := signedReader.Seek(0, 0)
+						return err
 					},
 					Test: func(b *testing.B) error {
 						_, err := jwt.ParseReader(signedReader)
@@ -80,7 +80,8 @@ func BenchmarkJWT(b *testing.B) {
 			var v interface{}
 			testcases := []Case{
 				{
-					Name: "jwt.ParseString",
+					Name:      "jwt.ParseString",
+					SkipShort: true,
 					Test: func(b *testing.B) error {
 						_, err := jwt.ParseString(jsonString)
 						return err
@@ -94,12 +95,11 @@ func BenchmarkJWT(b *testing.B) {
 					},
 				},
 				{
-					Name: "jwt.ParseReader",
+					Name:      "jwt.ParseReader",
+					SkipShort: true,
 					Pretest: func(b *testing.B) error {
-						b.StopTimer()
-						jsonReader.Seek(0, 0)
-						b.StartTimer()
-						return nil
+						_, err := jsonReader.Seek(0, 0)
+						return err
 					},
 					Test: func(b *testing.B) error {
 						_, err := jwt.ParseReader(jsonReader)

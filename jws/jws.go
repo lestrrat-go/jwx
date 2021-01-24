@@ -406,6 +406,16 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	return parts[0], parts[1], parts[2], nil
 }
 
+// SplitCompactString splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
+func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
+	parts := strings.Split(src, ".")
+	if len(parts) < 3 {
+		return nil, nil, nil, errors.New(`invalid number of segments`)
+	}
+	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
+}
+
 // SplitCompactReader splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {

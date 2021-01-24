@@ -42,19 +42,19 @@ func runJSONBench(b *testing.B, privkey jwk.Key) {
 					},
 				},
 				{
-					Name: "jwk.ParseString",
+					Name:      "jwk.ParseString",
+					SkipShort: true,
 					Test: func(b *testing.B) error {
 						_, err := jwk.ParseString(s)
 						return err
 					},
 				},
 				{
-					Name: "jwk.ParseReader",
+					Name:      "jwk.ParseReader",
+					SkipShort: true,
 					Pretest: func(b *testing.B) error {
-						b.StopTimer()
-						rdr.Seek(0, 0)
-						b.StartTimer()
-						return nil
+						_, err := rdr.Seek(0, 0)
+						return err
 					},
 					Test: func(b *testing.B) error {
 						_, err := jwk.ParseReader(rdr)
