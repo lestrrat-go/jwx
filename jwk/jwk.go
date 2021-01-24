@@ -246,6 +246,13 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 		}
 		return res, nil
 	}
+
+	// It's possible for us to get here without populating lastError.
+	// e.g. what if we bailed out of `for backoff.Contineu(b)` without making
+	// a single request? or, <-ctx.Done() returned?
+	if lastError == nil {
+		lastError = errors.New(`fetching remote JWK did not complete`)
+	}
 	return nil, lastError
 }
 
