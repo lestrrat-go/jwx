@@ -40,7 +40,7 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 	return parseBytes(s, options...)
 }
 
-// ParseString calls Parse against an io.Reader
+// ParseReader calls Parse against an io.Reader
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := ioutil.ReadAll(src)
