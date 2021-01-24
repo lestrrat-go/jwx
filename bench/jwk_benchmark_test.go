@@ -1,6 +1,7 @@
 package bench_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
@@ -17,7 +18,7 @@ func runJSONBench(b *testing.B, privkey jwk.Key) {
 		b.Fatal(err)
 	}
 
-	testcases := []struct {
+	keytypes := []struct {
 		Name string
 		Key  jwk.Key
 	}{
@@ -25,26 +26,52 @@ func runJSONBench(b *testing.B, privkey jwk.Key) {
 		{Name: "PrivateKey", Key: privkey},
 	}
 
-	for _, tc := range testcases {
-		key := tc.Key
-		b.Run(tc.Name, func(b *testing.B) {
-			b.Run("jwk.Parse", func(b *testing.B) {
-				buf, _ := json.Marshal(key)
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					if _, err := jwk.Parse(buf); err != nil {
-						b.Fatal(err)
-					}
-				}
-			})
-			b.Run("json.Marshal", func(b *testing.B) {
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					if _, err := json.Marshal(key); err != nil {
-						b.Fatal(err)
-					}
-				}
-			})
+	for _, keytype := range keytypes {
+		key := keytype.Key
+		b.Run(keytype.Name, func(b *testing.B) {
+			buf, _ := json.Marshal(key)
+			s := string(buf)
+			rdr := bytes.NewReader(buf)
+
+			testcases := []Case{
+				{
+					Name: "jwk.Parse",
+					Test: func(b *testing.B) error {
+						_, err := jwk.Parse(buf)
+						return err
+					},
+				},
+				{
+					Name: "jwk.ParseString",
+					Test: func(b *testing.B) error {
+						_, err := jwk.ParseString(s)
+						return err
+					},
+				},
+				{
+					Name: "jwk.ParseReader",
+					Pretest: func(b *testing.B) error {
+						b.StopTimer()
+						rdr.Seek(0, 0)
+						b.StartTimer()
+						return nil
+					},
+					Test: func(b *testing.B) error {
+						_, err := jwk.ParseReader(rdr)
+						return err
+					},
+				},
+				{
+					Name: "json.Marshal",
+					Test: func(b *testing.B) error {
+						_, err := json.Marshal(key)
+						return err
+					},
+				},
+			}
+			for _, tc := range testcases {
+				tc.Run(b)
+			}
 		})
 	}
 }

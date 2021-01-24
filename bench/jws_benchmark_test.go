@@ -1,20 +1,12 @@
 package bench_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jws"
 )
-
-func runJWSBench(b *testing.B, name string, fn func()) {
-	b.Helper()
-	b.Run(name, func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			fn()
-		}
-	})
-}
 
 func BenchmarkJWS(b *testing.B) {
 	b.Run("Serialization", func(b *testing.B) {
@@ -35,30 +27,84 @@ func BenchmarkJWS(b *testing.B) {
     ]
   }`
 		jsonBuf := []byte(jsonStr)
+		jsonRdr := bytes.NewReader(jsonBuf)
 		compactBuf := []byte(compactStr)
+		compactRdr := bytes.NewReader(compactBuf)
 
 		b.Run("Compact", func(b *testing.B) {
-			testcases := map[string]func(){
-				"jws.Parse":       func() { _, _ = jws.Parse(compactBuf) },
-				"jws.ParseString": func() { _, _ = jws.ParseString(compactStr) },
+			testcases := []Case{
+				{
+					Name: "jws.Parse",
+					Test: func(b *testing.B) error {
+						_, err := jws.Parse(compactBuf)
+						return err
+					},
+				},
+				{
+					Name: "jws.ParseString",
+					Test: func(b *testing.B) error {
+						_, err := jws.ParseString(compactStr)
+						return err
+					},
+				},
+				{
+					Name: "jws.ParseReader",
+					Pretest: func(b *testing.B) error {
+						b.StopTimer()
+						compactRdr.Seek(0, 0)
+						b.StartTimer()
+						return nil
+					},
+					Test: func(b *testing.B) error {
+						_, err := jws.ParseReader(compactRdr)
+						return err
+					},
+				},
 			}
-			for name, tc := range testcases {
-				name := name
-				tc := tc
-				runJWSBench(b, name, tc)
+			for _, tc := range testcases {
+				tc.Run(b)
 			}
 		})
 		b.Run("JSON", func(b *testing.B) {
 			m, _ := jws.Parse([]byte(jsonStr))
-			testcases := map[string]func(){
-				"jws.Parse":       func() { _, _ = jws.Parse(jsonBuf) },
-				"jws.ParseString": func() { _, _ = jws.ParseString(jsonStr) },
-				"json.Marshal":    func() { _, _ = json.Marshal(m) },
+			testcases := []Case{
+				{
+					Name: "jws.Parse",
+					Test: func(b *testing.B) error {
+						_, err := jws.Parse(jsonBuf)
+						return err
+					},
+				},
+				{
+					Name: "jws.ParseString",
+					Test: func(b *testing.B) error {
+						_, err := jws.ParseString(jsonStr)
+						return err
+					},
+				},
+				{
+					Name: "jws.ParseReader",
+					Pretest: func(b *testing.B) error {
+						b.StopTimer()
+						jsonRdr.Seek(0, 0)
+						b.StartTimer()
+						return nil
+					},
+					Test: func(b *testing.B) error {
+						_, err := jws.ParseReader(jsonRdr)
+						return err
+					},
+				},
+				{
+					Name: "json.Marshal",
+					Test: func(b *testing.B) error {
+						_, err := json.Marshal(m)
+						return err
+					},
+				},
 			}
-			for name, tc := range testcases {
-				name := name
-				tc := tc
-				runJWSBench(b, name, tc)
+			for _, tc := range testcases {
+				tc.Run(b)
 			}
 		})
 	})
