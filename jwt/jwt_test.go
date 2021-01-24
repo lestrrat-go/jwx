@@ -55,7 +55,7 @@ func TestJWTParse(t *testing.T) {
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
@@ -65,7 +65,7 @@ func TestJWTParse(t *testing.T) {
 		if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
@@ -75,7 +75,7 @@ func TestJWTParse(t *testing.T) {
 		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
@@ -85,7 +85,7 @@ func TestJWTParse(t *testing.T) {
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
@@ -186,7 +186,7 @@ func TestJWTParseVerify(t *testing.T) {
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 				return
 			}
 		})
