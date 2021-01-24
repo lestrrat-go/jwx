@@ -3,11 +3,11 @@
 package jwk
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"fmt"
 	"sort"
-	"strconv"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -352,59 +352,116 @@ func (h *okpPrivateKey) Set(name string, value interface{}) error {
 }
 
 func (h *okpPrivateKey) UnmarshalJSON(buf []byte) error {
-	var proxy okpPrivateKeyMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal okpPrivateKey`)
-	}
-	if proxy.XkeyType != jwa.OKP {
-		return errors.Errorf(`invalid kty value for OKPPrivateKey (%s)`, proxy.XkeyType)
-	}
-	h.algorithm = proxy.Xalgorithm
-	h.crv = proxy.Xcrv
-	if proxy.Xd == nil {
-		return errors.New(`required field d is missing`)
-	}
-	if h.d = nil; proxy.Xd != nil {
-		decoded, err := base64.DecodeString(*(proxy.Xd))
+	h.algorithm = nil
+	h.crv = nil
+	h.d = nil
+	h.keyID = nil
+	h.keyUsage = nil
+	h.keyops = nil
+	h.x = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to decode base64 value for d`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		h.d = decoded
-	}
-	h.keyID = proxy.XkeyID
-	h.keyUsage = proxy.XkeyUsage
-	h.keyops = proxy.Xkeyops
-	if proxy.Xx == nil {
-		return errors.New(`required field x is missing`)
-	}
-	if h.x = nil; proxy.Xx != nil {
-		decoded, err := base64.DecodeString(*(proxy.Xx))
-		if err != nil {
-			return errors.Wrap(err, `failed to decode base64 value for x`)
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case KeyTypeKey:
+				val, err := json.ReadNextStringToken(dec)
+				if err != nil {
+					return errors.Wrap(err, `error reading token`)
+				}
+				if val != jwa.OKP.String() {
+					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+				}
+			case AlgorithmKey:
+				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+				}
+			case OKPCrvKey:
+				var decoded jwa.EllipticCurveAlgorithm
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, OKPCrvKey)
+				}
+				h.crv = &decoded
+			case OKPDKey:
+				if err := json.AssignNextBytesToken(&h.d, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, OKPDKey)
+				}
+			case KeyIDKey:
+				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+				}
+			case KeyUsageKey:
+				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyUsageKey)
+				}
+			case KeyOpsKey:
+				var decoded KeyOperationList
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyOpsKey)
+				}
+				h.keyops = &decoded
+			case OKPXKey:
+				if err := json.AssignNextBytesToken(&h.x, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, OKPXKey)
+				}
+			case X509CertChainKey:
+				var decoded CertificateChain
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+				}
+				h.x509CertChain = &decoded
+			case X509CertThumbprintKey:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+				}
+			case X509CertThumbprintS256Key:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+				}
+			case X509URLKey:
+				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateParams == nil {
+					h.privateParams = make(map[string]interface{})
+				}
+				h.privateParams[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
 		}
-		h.x = decoded
 	}
-	h.x509CertChain = proxy.Xx509CertChain
-	h.x509CertThumbprint = proxy.Xx509CertThumbprint
-	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
-	h.x509URL = proxy.Xx509URL
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
+	if h.crv == nil {
+		return errors.Errorf(`required field crv is missing`)
 	}
-	delete(m, `kty`)
-	delete(m, AlgorithmKey)
-	delete(m, OKPCrvKey)
-	delete(m, OKPDKey)
-	delete(m, KeyIDKey)
-	delete(m, KeyUsageKey)
-	delete(m, KeyOpsKey)
-	delete(m, OKPXKey)
-	delete(m, X509CertChainKey)
-	delete(m, X509CertThumbprintKey)
-	delete(m, X509CertThumbprintS256Key)
-	delete(m, X509URLKey)
-	h.privateParams = m
+	if h.d == nil {
+		return errors.Errorf(`required field d is missing`)
+	}
+	if h.x == nil {
+		return errors.Errorf(`required field x is missing`)
+	}
 	return nil
 }
 
@@ -423,21 +480,25 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+		if i > 0 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')
@@ -767,48 +828,108 @@ func (h *okpPublicKey) Set(name string, value interface{}) error {
 }
 
 func (h *okpPublicKey) UnmarshalJSON(buf []byte) error {
-	var proxy okpPublicKeyMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal okpPublicKey`)
-	}
-	if proxy.XkeyType != jwa.OKP {
-		return errors.Errorf(`invalid kty value for OKPPublicKey (%s)`, proxy.XkeyType)
-	}
-	h.algorithm = proxy.Xalgorithm
-	h.crv = proxy.Xcrv
-	h.keyID = proxy.XkeyID
-	h.keyUsage = proxy.XkeyUsage
-	h.keyops = proxy.Xkeyops
-	if proxy.Xx == nil {
-		return errors.New(`required field x is missing`)
-	}
-	if h.x = nil; proxy.Xx != nil {
-		decoded, err := base64.DecodeString(*(proxy.Xx))
+	h.algorithm = nil
+	h.crv = nil
+	h.keyID = nil
+	h.keyUsage = nil
+	h.keyops = nil
+	h.x = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to decode base64 value for x`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		h.x = decoded
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case KeyTypeKey:
+				val, err := json.ReadNextStringToken(dec)
+				if err != nil {
+					return errors.Wrap(err, `error reading token`)
+				}
+				if val != jwa.OKP.String() {
+					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+				}
+			case AlgorithmKey:
+				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+				}
+			case OKPCrvKey:
+				var decoded jwa.EllipticCurveAlgorithm
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, OKPCrvKey)
+				}
+				h.crv = &decoded
+			case KeyIDKey:
+				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+				}
+			case KeyUsageKey:
+				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyUsageKey)
+				}
+			case KeyOpsKey:
+				var decoded KeyOperationList
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyOpsKey)
+				}
+				h.keyops = &decoded
+			case OKPXKey:
+				if err := json.AssignNextBytesToken(&h.x, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, OKPXKey)
+				}
+			case X509CertChainKey:
+				var decoded CertificateChain
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+				}
+				h.x509CertChain = &decoded
+			case X509CertThumbprintKey:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+				}
+			case X509CertThumbprintS256Key:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+				}
+			case X509URLKey:
+				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateParams == nil {
+					h.privateParams = make(map[string]interface{})
+				}
+				h.privateParams[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	h.x509CertChain = proxy.Xx509CertChain
-	h.x509CertThumbprint = proxy.Xx509CertThumbprint
-	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
-	h.x509URL = proxy.Xx509URL
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
+	if h.crv == nil {
+		return errors.Errorf(`required field crv is missing`)
 	}
-	delete(m, `kty`)
-	delete(m, AlgorithmKey)
-	delete(m, OKPCrvKey)
-	delete(m, KeyIDKey)
-	delete(m, KeyUsageKey)
-	delete(m, KeyOpsKey)
-	delete(m, OKPXKey)
-	delete(m, X509CertChainKey)
-	delete(m, X509CertThumbprintKey)
-	delete(m, X509CertThumbprintS256Key)
-	delete(m, X509URLKey)
-	h.privateParams = m
+	if h.x == nil {
+		return errors.Errorf(`required field x is missing`)
+	}
 	return nil
 }
 
@@ -827,21 +948,25 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+		if i > 0 {
+			buf.WriteRune(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')

@@ -3,9 +3,10 @@
 package openid
 
 import (
+	"bytes"
 	"context"
 	"sort"
-	"strconv"
+	"sync"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -81,6 +82,7 @@ type Token interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 }
 type stdToken struct {
+	mu                  *sync.RWMutex
 	audience            types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration          *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt            *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -144,12 +146,15 @@ type openidTokenMarshalProxy struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
+		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
 	}
 }
 
 // Size returns the number of valid claims stored in this token
 func (t *stdToken) Size() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	var count int
 	if len(t.audience) > 0 {
 		count++
@@ -165,6 +170,8 @@ func (t *stdToken) Size() int {
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	switch name {
 	case AudienceKey:
 		if t.audience == nil {
@@ -329,6 +336,8 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 }
 
 func (t *stdToken) Set(name string, value interface{}) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
@@ -503,6 +512,8 @@ func (t *stdToken) Set(name string, value interface{}) error {
 }
 
 func (t *stdToken) Audience() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.audience != nil {
 		return t.audience.Get()
 	}
@@ -510,6 +521,8 @@ func (t *stdToken) Audience() []string {
 }
 
 func (t *stdToken) Expiration() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.expiration != nil {
 		return t.expiration.Get()
 	}
@@ -517,6 +530,8 @@ func (t *stdToken) Expiration() time.Time {
 }
 
 func (t *stdToken) IssuedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuedAt != nil {
 		return t.issuedAt.Get()
 	}
@@ -524,6 +539,8 @@ func (t *stdToken) IssuedAt() time.Time {
 }
 
 func (t *stdToken) Issuer() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.issuer != nil {
 		return *(t.issuer)
 	}
@@ -531,6 +548,8 @@ func (t *stdToken) Issuer() string {
 }
 
 func (t *stdToken) JwtID() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.jwtID != nil {
 		return *(t.jwtID)
 	}
@@ -538,6 +557,8 @@ func (t *stdToken) JwtID() string {
 }
 
 func (t *stdToken) NotBefore() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.notBefore != nil {
 		return t.notBefore.Get()
 	}
@@ -545,6 +566,8 @@ func (t *stdToken) NotBefore() time.Time {
 }
 
 func (t *stdToken) Subject() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.subject != nil {
 		return *(t.subject)
 	}
@@ -552,6 +575,8 @@ func (t *stdToken) Subject() string {
 }
 
 func (t *stdToken) Name() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.name != nil {
 		return *(t.name)
 	}
@@ -559,6 +584,8 @@ func (t *stdToken) Name() string {
 }
 
 func (t *stdToken) GivenName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.givenName != nil {
 		return *(t.givenName)
 	}
@@ -566,6 +593,8 @@ func (t *stdToken) GivenName() string {
 }
 
 func (t *stdToken) MiddleName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.middleName != nil {
 		return *(t.middleName)
 	}
@@ -573,6 +602,8 @@ func (t *stdToken) MiddleName() string {
 }
 
 func (t *stdToken) FamilyName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.familyName != nil {
 		return *(t.familyName)
 	}
@@ -580,6 +611,8 @@ func (t *stdToken) FamilyName() string {
 }
 
 func (t *stdToken) Nickname() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.nickname != nil {
 		return *(t.nickname)
 	}
@@ -587,6 +620,8 @@ func (t *stdToken) Nickname() string {
 }
 
 func (t *stdToken) PreferredUsername() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.preferredUsername != nil {
 		return *(t.preferredUsername)
 	}
@@ -594,6 +629,8 @@ func (t *stdToken) PreferredUsername() string {
 }
 
 func (t *stdToken) Profile() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.profile != nil {
 		return *(t.profile)
 	}
@@ -601,6 +638,8 @@ func (t *stdToken) Profile() string {
 }
 
 func (t *stdToken) Picture() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.picture != nil {
 		return *(t.picture)
 	}
@@ -608,6 +647,8 @@ func (t *stdToken) Picture() string {
 }
 
 func (t *stdToken) Website() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.website != nil {
 		return *(t.website)
 	}
@@ -615,6 +656,8 @@ func (t *stdToken) Website() string {
 }
 
 func (t *stdToken) Email() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.email != nil {
 		return *(t.email)
 	}
@@ -622,6 +665,8 @@ func (t *stdToken) Email() string {
 }
 
 func (t *stdToken) EmailVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.emailVerified != nil {
 		return *(t.emailVerified)
 	}
@@ -629,6 +674,8 @@ func (t *stdToken) EmailVerified() bool {
 }
 
 func (t *stdToken) Gender() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.gender != nil {
 		return *(t.gender)
 	}
@@ -636,10 +683,14 @@ func (t *stdToken) Gender() string {
 }
 
 func (t *stdToken) Birthdate() *BirthdateClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.birthdate
 }
 
 func (t *stdToken) Zoneinfo() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.zoneinfo != nil {
 		return *(t.zoneinfo)
 	}
@@ -647,6 +698,8 @@ func (t *stdToken) Zoneinfo() string {
 }
 
 func (t *stdToken) Locale() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.locale != nil {
 		return *(t.locale)
 	}
@@ -654,6 +707,8 @@ func (t *stdToken) Locale() string {
 }
 
 func (t *stdToken) PhoneNumber() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.phoneNumber != nil {
 		return *(t.phoneNumber)
 	}
@@ -661,6 +716,8 @@ func (t *stdToken) PhoneNumber() string {
 }
 
 func (t *stdToken) PhoneNumberVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.phoneNumberVerified != nil {
 		return *(t.phoneNumberVerified)
 	}
@@ -668,10 +725,14 @@ func (t *stdToken) PhoneNumberVerified() bool {
 }
 
 func (t *stdToken) Address() *AddressClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.address
 }
 
 func (t *stdToken) UpdatedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.updatedAt != nil {
 		return t.updatedAt.Get()
 	}
@@ -679,10 +740,14 @@ func (t *stdToken) UpdatedAt() time.Time {
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.privateClaims
 }
 
 func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	defer close(ch)
 
 	var pairs []*ClaimPair
@@ -803,71 +868,194 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 }
 
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
-	var proxy openidTokenMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal stdToken`)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.audience = nil
+	t.expiration = nil
+	t.issuedAt = nil
+	t.issuer = nil
+	t.jwtID = nil
+	t.notBefore = nil
+	t.subject = nil
+	t.name = nil
+	t.givenName = nil
+	t.middleName = nil
+	t.familyName = nil
+	t.nickname = nil
+	t.preferredUsername = nil
+	t.profile = nil
+	t.picture = nil
+	t.website = nil
+	t.email = nil
+	t.emailVerified = nil
+	t.gender = nil
+	t.birthdate = nil
+	t.zoneinfo = nil
+	t.locale = nil
+	t.phoneNumber = nil
+	t.phoneNumberVerified = nil
+	t.address = nil
+	t.updatedAt = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return errors.Wrap(err, `error reading token`)
+		}
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case AudienceKey:
+				var decoded types.StringList
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
+				}
+				t.audience = decoded
+			case ExpirationKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
+				}
+				t.expiration = &decoded
+			case IssuedAtKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
+				}
+				t.issuedAt = &decoded
+			case IssuerKey:
+				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
+				}
+			case JwtIDKey:
+				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
+				}
+			case NotBeforeKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
+				}
+				t.notBefore = &decoded
+			case SubjectKey:
+				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
+				}
+			case NameKey:
+				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NameKey)
+				}
+			case GivenNameKey:
+				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, GivenNameKey)
+				}
+			case MiddleNameKey:
+				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, MiddleNameKey)
+				}
+			case FamilyNameKey:
+				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, FamilyNameKey)
+				}
+			case NicknameKey:
+				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NicknameKey)
+				}
+			case PreferredUsernameKey:
+				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PreferredUsernameKey)
+				}
+			case ProfileKey:
+				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ProfileKey)
+				}
+			case PictureKey:
+				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PictureKey)
+				}
+			case WebsiteKey:
+				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, WebsiteKey)
+				}
+			case EmailKey:
+				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, EmailKey)
+				}
+			case EmailVerifiedKey:
+				var decoded bool
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, EmailVerifiedKey)
+				}
+				t.emailVerified = &decoded
+			case GenderKey:
+				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, GenderKey)
+				}
+			case BirthdateKey:
+				var decoded BirthdateClaim
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, BirthdateKey)
+				}
+				t.birthdate = &decoded
+			case ZoneinfoKey:
+				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ZoneinfoKey)
+				}
+			case LocaleKey:
+				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, LocaleKey)
+				}
+			case PhoneNumberKey:
+				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberKey)
+				}
+			case PhoneNumberVerifiedKey:
+				var decoded bool
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberVerifiedKey)
+				}
+				t.phoneNumberVerified = &decoded
+			case AddressKey:
+				var decoded AddressClaim
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AddressKey)
+				}
+				t.address = &decoded
+			case UpdatedAtKey:
+				var decoded types.NumericDate
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, UpdatedAtKey)
+				}
+				t.updatedAt = &decoded
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if t.privateClaims == nil {
+					t.privateClaims = make(map[string]interface{})
+				}
+				t.privateClaims[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	t.audience = proxy.Xaudience
-	t.expiration = proxy.Xexpiration
-	t.issuedAt = proxy.XissuedAt
-	t.issuer = proxy.Xissuer
-	t.jwtID = proxy.XjwtID
-	t.notBefore = proxy.XnotBefore
-	t.subject = proxy.Xsubject
-	t.name = proxy.Xname
-	t.givenName = proxy.XgivenName
-	t.middleName = proxy.XmiddleName
-	t.familyName = proxy.XfamilyName
-	t.nickname = proxy.Xnickname
-	t.preferredUsername = proxy.XpreferredUsername
-	t.profile = proxy.Xprofile
-	t.picture = proxy.Xpicture
-	t.website = proxy.Xwebsite
-	t.email = proxy.Xemail
-	t.emailVerified = proxy.XemailVerified
-	t.gender = proxy.Xgender
-	t.birthdate = proxy.Xbirthdate
-	t.zoneinfo = proxy.Xzoneinfo
-	t.locale = proxy.Xlocale
-	t.phoneNumber = proxy.XphoneNumber
-	t.phoneNumberVerified = proxy.XphoneNumberVerified
-	t.address = proxy.Xaddress
-	t.updatedAt = proxy.XupdatedAt
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse private parameters`)
-	}
-	delete(m, AudienceKey)
-	delete(m, ExpirationKey)
-	delete(m, IssuedAtKey)
-	delete(m, IssuerKey)
-	delete(m, JwtIDKey)
-	delete(m, NotBeforeKey)
-	delete(m, SubjectKey)
-	delete(m, NameKey)
-	delete(m, GivenNameKey)
-	delete(m, MiddleNameKey)
-	delete(m, FamilyNameKey)
-	delete(m, NicknameKey)
-	delete(m, PreferredUsernameKey)
-	delete(m, ProfileKey)
-	delete(m, PictureKey)
-	delete(m, WebsiteKey)
-	delete(m, EmailKey)
-	delete(m, EmailVerifiedKey)
-	delete(m, GenderKey)
-	delete(m, BirthdateKey)
-	delete(m, ZoneinfoKey)
-	delete(m, LocaleKey)
-	delete(m, PhoneNumberKey)
-	delete(m, PhoneNumberVerifiedKey)
-	delete(m, AddressKey)
-	delete(m, UpdatedAtKey)
-	t.privateClaims = m
 	return nil
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	data := make(map[string]interface{})
@@ -882,28 +1070,35 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
-	l := len(fields)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
-		buf.WriteString(strconv.Quote(f))
-		buf.WriteByte(':')
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			enc.Encode(base64.EncodeToString(v))
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
 		case time.Time:
 			switch f {
 			case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
 				enc.Encode(v.Unix())
 			default:
-				enc.Encode(v) // probably not correct, but oh well
+				if err := enc.Encode(v); err != nil {
+					return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+				}
+				buf.Truncate(buf.Len() - 1)
 			}
 		default:
-			enc.Encode(v)
-		}
-
-		if i < l-1 {
-			buf.WriteByte(',')
+			if err := enc.Encode(v); err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+			}
+			buf.Truncate(buf.Len() - 1)
 		}
 	}
 	buf.WriteByte('}')

@@ -756,3 +756,21 @@ func TestReadFile(t *testing.T) {
 		return
 	}
 }
+
+func TestPoop(t *testing.T) {
+	t.Parallel()
+	const src = `{
+		  "kty" : "EC",
+		  "crv" : "P-256",
+		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+		}`
+	ks, err := jwk.ParseString(src)
+	if !assert.Error(t, err, `jwk.ParseString should fail`) {
+		buf, _ := json.MarshalIndent(ks, "", "  ")
+		t.Logf("%s", buf)
+		k, _ := ks.Get(0)
+		t.Logf("%#v", k)
+		return
+	}
+}

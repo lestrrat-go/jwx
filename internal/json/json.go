@@ -2,13 +2,11 @@ package json
 
 import (
 	"bytes"
-	"encoding/json"
-	"io"
 	"sync"
-)
 
-type Number = json.Number
-type RawMessage = json.RawMessage
+	"github.com/lestrrat-go/jwx/internal/base64"
+	"github.com/pkg/errors"
+)
 
 var muGlobalConfig sync.RWMutex
 var useNumber bool
@@ -20,20 +18,6 @@ func DecoderSettings(inUseNumber bool) {
 	muGlobalConfig.Unlock()
 }
 
-// NewDecoder respects the values specified in DecoderSettings,
-// and creates a Decoder that has certain features turned on/off
-func NewDecoder(r io.Reader) *json.Decoder {
-	dec := json.NewDecoder(r)
-
-	muGlobalConfig.RLock()
-	if useNumber {
-		dec.UseNumber()
-	}
-	muGlobalConfig.RUnlock()
-
-	return dec
-}
-
 // Unmarshal respects the values specified in DecoderSettings,
 // and uses a Decoder that has certain features turned on/off
 func Unmarshal(b []byte, v interface{}) error {
@@ -41,17 +25,33 @@ func Unmarshal(b []byte, v interface{}) error {
 	return dec.Decode(v)
 }
 
-// NewEncoder is just a proxy for "encoding/json".NewEncoder
-func NewEncoder(w io.Writer) *json.Encoder {
-	return json.NewEncoder(w)
+func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
+	var val string
+	if err := dec.Decode(&val); err != nil {
+		return errors.Wrap(err, `error reading next value`)
+	}
+
+	buf, err := base64.DecodeString(val)
+	if err != nil {
+		return errors.Errorf(`expected base64 encoded []byte (%T)`, val)
+	}
+	*dst = buf
+	return nil
 }
 
-// Marshal is just a proxy for "encoding/json".Marshal
-func Marshal(v interface{}) ([]byte, error) {
-	return json.Marshal(v)
+func ReadNextStringToken(dec *Decoder) (string, error) {
+	var val string
+	if err := dec.Decode(&val); err != nil {
+		return "", errors.Wrap(err, `error reading next value`)
+	}
+	return val, nil
 }
 
-// MarshalIndent is just a proxy for "encoding/json".MarshalIndent
-func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
-	return json.MarshalIndent(v, prefix, indent)
+func AssignNextStringToken(dst **string, dec *Decoder) error {
+	val, err := ReadNextStringToken(dec)
+	if err != nil {
+		return err
+	}
+	*dst = &val
+	return nil
 }

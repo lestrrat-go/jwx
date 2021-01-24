@@ -381,6 +381,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
+	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
@@ -408,12 +409,15 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, ".\n// Convenience accessors are provided for these standard claims")
 	fmt.Fprintf(&buf, "\nfunc New() %s {", tt.ifName)
 	fmt.Fprintf(&buf, "\nreturn &%s{", tt.structName)
+	fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
 	fmt.Fprintf(&buf, "\nprivateClaims: make(map[string]interface{}),")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
 	fmt.Fprintf(&buf, "\nfunc (t *%s) Size() int {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nvar count int")
 	for _, field := range fields {
 		switch {
@@ -432,6 +436,8 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn count")
 	fmt.Fprintf(&buf, "\n}") // end func Size()
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -456,6 +462,8 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		keyName := f.method + "Key"
@@ -518,6 +526,8 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "%s", f.PointerElem())
 		}
 		fmt.Fprintf(&buf, " {")
+		fmt.Fprintf(&buf, "\nt.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 
 		if f.hasGet {
 			fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
@@ -540,12 +550,16 @@ func generateToken(tt tokenType) error {
 	}
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) PrivateClaims() map[string]interface{} {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nreturn t.privateClaims")
 	fmt.Fprintf(&buf, "\n}")
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 	// NOTE: building up an array is *slow*?
@@ -577,45 +591,81 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
-	// JSON related stuff
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\nt.%s = nil", f.name)
+	}
+
+	fmt.Fprintf(&buf, "\ndec := json.NewDecoder(bytes.NewReader(buf))")
+	fmt.Fprintf(&buf, "\nLOOP:")
+	fmt.Fprintf(&buf, "\nfor {")
+	fmt.Fprintf(&buf, "\ntok, err := dec.Token()")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `error reading token`)")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nswitch tok := tok.(type) {")
+	fmt.Fprintf(&buf, "\ncase json.Delim:")
+	fmt.Fprintf(&buf, "\n// Assuming we're doing everything correctly, we should ONLY")
+	fmt.Fprintf(&buf, "\n// get either '{' or '}' here.")
+	fmt.Fprintf(&buf, "\nif tok == '}' { // End of object")
+	fmt.Fprintf(&buf, "\nbreak LOOP")
+	fmt.Fprintf(&buf, "\n} else if tok != '{' {")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`expected '{', but got '%%c'`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ncase string: // Objects can only have string keys")
+	fmt.Fprintf(&buf, "\nswitch tok {")
 
 	for _, f := range fields {
-		switch f.typ {
-		case byteSliceType:
-			// XXX encoding/json uses base64.StdEncoding, which require padding
-			// but we may or may not be dealing with padded base64's.
-			// The unmarshal proxy takes this into account, and grabs the value
-			// as strings so that we can do our own decoding magic
-			fmt.Fprintf(&buf, "\nif t.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
-			fmt.Fprintf(&buf, "\ndecoded, err := base64.DecodeString(*(proxy.X%[1]s))", f.name)
-			fmt.Fprintf(&buf, "\nif err != nil {")
-			fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64 value for %s`)", f.name)
+		if f.typ == "string" {
+			fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
 			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nt.%[1]s = decoded", f.name)
+		} else if f.typ == byteSliceType {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
 			fmt.Fprintf(&buf, "\n}")
-		default:
-			fmt.Fprintf(&buf, "\nt.%[1]s = proxy.X%[1]s", f.name)
+		} else if f.typ == "types.StringList" || strings.HasPrefix(f.typ, "[]") {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nt.%s = decoded", f.name)
+		} else {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			if strings.HasPrefix(f.typ, "*") {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ[1:])
+			} else {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			}
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nt.%s = &decoded", f.name)
 		}
 	}
-
-	// Now for the fun part... It's quite silly, but we need to check if we
-	// have other parameters.
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse private parameters`)")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nvar decoded interface{}")
+	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
 	fmt.Fprintf(&buf, "\n}")
-	// Delete all known keys
-	for _, f := range fields {
-		keyName := f.method + "Key"
-		fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
-	}
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nt.privateClaims[tok] = decoded")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\nt.privateClaims = m")
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}")
 
@@ -627,6 +677,8 @@ func generateToken(tt tokenType) error {
 	}
 
 	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
 	fmt.Fprintf(&buf, "\ndefer cancel()")
 	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
@@ -640,15 +692,20 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nbuf := pool.GetBytesBuffer()")
 	fmt.Fprintf(&buf, "\ndefer pool.ReleaseBytesBuffer(buf)")
 	fmt.Fprintf(&buf, "\nbuf.WriteByte('{')")
-	fmt.Fprintf(&buf, "\nl := len(fields)")
 	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(buf)")
 	fmt.Fprintf(&buf, "\nfor i, f := range fields {")
-	fmt.Fprintf(&buf, "\nbuf.WriteString(strconv.Quote(f))")
-	fmt.Fprintf(&buf, "\nbuf.WriteByte(':')")
+	fmt.Fprintf(&buf, "\nif i > 0 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(f)")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
 	fmt.Fprintf(&buf, "\nv := data[f]")
 	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
 	fmt.Fprintf(&buf, "\ncase []byte:")
-	fmt.Fprintf(&buf, "\nenc.Encode(base64.EncodeToString(v))")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(base64.EncodeToString(v))")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
 	if lndf := len(numericDateFields); lndf > 0 {
 		fmt.Fprintf(&buf, "\ncase time.Time:")
 		fmt.Fprintf(&buf, "\nswitch f {")
@@ -662,14 +719,17 @@ func generateToken(tt tokenType) error {
 		fmt.Fprintf(&buf, ":")
 		fmt.Fprintf(&buf, "\nenc.Encode(v.Unix())")
 		fmt.Fprintf(&buf, "\ndefault:")
-		fmt.Fprintf(&buf, "\nenc.Encode(v) // probably not correct, but oh well")
+		fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
+		fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
 		fmt.Fprintf(&buf, "\n}")
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nenc.Encode(v)")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nif i < l-1 {")
-	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nbuf.WriteByte('}')")
