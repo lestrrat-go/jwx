@@ -160,17 +160,17 @@ Supported content encryption algorithm:
 ## Switching to a faster JSON library
 
 By default we use the standard library's `encoding/json` for all of our JSON needs.
-However, if performance for parsing/serializing JSON is really important to you, you might want to enable `github.com/goccy/go-json` by enabling the `goccy` tag.
+However, if performance for parsing/serializing JSON is really important to you, you might want to enable [github.com/goccy/go-json](https://github.com/goccy/go-sjon) by enabling the `goccy` tag.
 
 ```shell
 % go build -tags goccy ...
 ```
 
-`github.com/goccy/go-json` is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it if it breaks.
+[github.com/goccy/go-json](https://github.com/goccy/go-sjon) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it if it breaks.
 
-Having said that, `github.com/goccy/go-json` works for 99% of the cases, and it dramatically speeds things up.
+Having said that, [github.com/goccy/go-json](https://github.com/goccy/go-sjon) works for 99% of the cases, and it dramatically speeds things up.
 Therefore if you know what you are doing, I hightly recommend enabling this module.
-And when you do enable `github.com/goccy/go-json` and you encounter some mysterious error, I also trust that you know to file an issue to `github.com/goccy/go-json` and NOT to this library.
+And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and **NOT** to this library.
 
 ## Using json.Number
 
