@@ -15,7 +15,17 @@ test:
 	cd examples && go test -v -race && cd .. && go test -v -race ./...
 
 cover:
+	$(MAKE) cover-stdlib
+
+cover-stdlib:
 	cd examples && go test -v -race && cd .. && go test -v -race -coverpkg=./... -coverprofile=coverage.out.tmp ./...
+	@# This is NOT cheating. tools to generate code don't need to be
+	@# included in the final result
+	@cat coverage.out.tmp | grep -v "internal/cmd" > coverage.out
+	@rm coverage.out.tmp
+
+cover-goccy:
+	cd examples && go test -v -tags jwx_goccy -race && cd .. && go test -v -tags jwx_goccy -race -coverpkg=./... -coverprofile=coverage.out.tmp ./...
 	@# This is NOT cheating. tools to generate code don't need to be
 	@# included in the final result
 	@cat coverage.out.tmp | grep -v "internal/cmd" > coverage.out
