@@ -22,45 +22,107 @@ func BenchmarkJWT(b *testing.B) {
 	t1 := jwt.New()
 	t1.Set(jwt.IssuedAtKey, time.Now().Unix())
 	t1.Set(jwt.ExpirationKey, time.Now().Add(time.Hour).Unix())
-	signed, err := jwt.Sign(t1, alg, key)
-	if err != nil {
-		b.Fatal(err)
-	}
 
-	signedString := string(signed)
-	signedReader := bytes.NewReader(signed)
-	b.Run("jwt.ParseString", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			if _, err := jwt.ParseString(signedString); err != nil {
-				b.Fatal(err)
-			}
+	b.Run("Serialization", func(b *testing.B) {
+		signedBuf, err := jwt.Sign(t1, alg, key)
+		if err != nil {
+			b.Fatal(err)
 		}
-	})
-	b.Run("jwt.Parse", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			if _, err := jwt.Parse(signed); err != nil {
-				b.Fatal(err)
+
+		signedString := string(signedBuf)
+		signedReader := bytes.NewReader(signedBuf)
+		jsonBuf, _ := json.Marshal(t1)
+		jsonString := string(jsonBuf)
+		jsonReader := bytes.NewReader(jsonBuf)
+
+		b.Run("Sign", func(b *testing.B) {
+			testcases := []Case{
+				{
+					Name: "jwt.ParseString",
+					Test: func(b *testing.B) error {
+						_, err := jwt.ParseString(signedString)
+						return err
+					},
+				},
+				{
+					Name: "jwt.Parse",
+					Test: func(b *testing.B) error {
+						_, err := jwt.Parse(signedBuf)
+						return err
+					},
+				},
+				{
+					Name: "jwt.ParseReader",
+					Pretest: func(b *testing.B) error {
+						b.StopTimer()
+						signedReader.Seek(0, 0)
+						b.StartTimer()
+						return nil
+					},
+					Test: func(b *testing.B) error {
+						_, err := jwt.ParseReader(signedReader)
+						return err
+					},
+				},
+				{
+					Name: "jwt.Sign",
+					Test: func(b *testing.B) error {
+						_, err := jwt.Sign(t1, alg, key)
+						return err
+					},
+				},
 			}
-		}
-	})
-	b.Run("jwt.ParseReader", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			b.StopTimer()
-			signedReader.Seek(0, 0)
-			b.StartTimer()
-			if _, err := jwt.ParseReader(signedReader); err != nil {
-				b.Fatal(err)
+			for _, tc := range testcases {
+				tc.Run(b)
 			}
-		}
-	})
-	b.Run("json.Marshal", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := json.Marshal(t1); err != nil {
-				b.Fatal(err)
+		})
+		b.Run("JSON", func(b *testing.B) {
+			var v interface{}
+			testcases := []Case{
+				{
+					Name: "jwt.ParseString",
+					Test: func(b *testing.B) error {
+						_, err := jwt.ParseString(jsonString)
+						return err
+					},
+				},
+				{
+					Name: "jwt.Parse",
+					Test: func(b *testing.B) error {
+						_, err := jwt.Parse(jsonBuf)
+						return err
+					},
+				},
+				{
+					Name: "jwt.ParseReader",
+					Pretest: func(b *testing.B) error {
+						b.StopTimer()
+						jsonReader.Seek(0, 0)
+						b.StartTimer()
+						return nil
+					},
+					Test: func(b *testing.B) error {
+						_, err := jwt.ParseReader(jsonReader)
+						return err
+					},
+				},
+				{
+					Name: "json.Unmarshal",
+					Test: func(b *testing.B) error {
+						return json.Unmarshal(jsonBuf, &v)
+					},
+				},
+				{
+					Name: "json.Marshal",
+					Test: func(b *testing.B) error {
+						_, err := json.Marshal(t1)
+						return err
+					},
+				},
 			}
-		}
+			for _, tc := range testcases {
+				tc.Run(b)
+			}
+		})
 	})
 }

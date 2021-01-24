@@ -12,16 +12,29 @@ func BenchmarkJWE(b *testing.B) {
 
 	m, _ := jwe.Parse([]byte(s))
 	js, _ := json.Marshal(m)
-	b.Run("json.Marshal", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_, _ = json.Marshal(m)
-		}
-	})
-	b.Run("json.Unmarshal", func(b *testing.B) {
-		m2 := jwe.NewMessage()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_ = json.Unmarshal(js, m2)
-		}
+
+	var v interface{}
+
+	b.Run("Serialization", func(b *testing.B) {
+		b.Run("JSON", func(b *testing.B) {
+			testcases := []Case{
+				{
+					Name: "json.Marshal",
+					Test: func(b *testing.B) error {
+						_, err := json.Marshal(m)
+						return err
+					},
+				},
+				{
+					Name: "json.Unmarshal",
+					Test: func(b *testing.B) error {
+						return json.Unmarshal(js, &v)
+					},
+				},
+			}
+			for _, tc := range testcases {
+				tc.Run(b)
+			}
+		})
 	})
 }
