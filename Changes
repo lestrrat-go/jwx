@@ -92,7 +92,7 @@ v1.1.0
 
   * JSON marshaling should be 10~30% faster by default. However, if performance
     is really bogging you down, you can try to enable the optional module
-    github.com/goccy/go-json by enabling the "goccy" tag
+    github.com/goccy/go-json by enabling the "jwx_goccy" tag
 
       go build -tags jwx_goccy ...
 
