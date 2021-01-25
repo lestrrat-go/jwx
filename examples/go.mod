@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/cloudflare/circl v1.0.0
-	github.com/lestrrat-go/jwx v1.0.8
+	github.com/lestrrat-go/jwx v0.0.0-00010101000000-000000000000
 	github.com/pkg/errors v0.9.1
 )
 
