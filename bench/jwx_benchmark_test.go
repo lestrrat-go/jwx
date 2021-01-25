@@ -1,6 +1,14 @@
 package bench_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/lestrrat-go/jwx/internal/json"
+)
+
+func TestBackend(t *testing.T) {
+	t.Logf("%s", json.Engine())
+}
 
 // Case is a single benchmark case
 type Case struct {
