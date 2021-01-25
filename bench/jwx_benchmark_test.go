@@ -21,7 +21,7 @@ type Case struct {
 func (c *Case) Run(b *testing.B) {
 	b.Helper()
 	b.Run(c.Name, func(b *testing.B) {
-		if c.SkipShort {
+		if testing.Short() && c.SkipShort {
 			b.SkipNow()
 		}
 
