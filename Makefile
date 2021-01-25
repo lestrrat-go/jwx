@@ -20,8 +20,9 @@ cover:
 cover-stdlib:
 	cd examples && go test -v -race && cd .. && go test -v -race -coverpkg=./... -coverprofile=coverage.out.tmp ./...
 	@# This is NOT cheating. tools to generate code don't need to be
-	@# included in the final result
-	@cat coverage.out.tmp | grep -v "internal/cmd" > coverage.out
+	@# included in the final result. Also, we currently don't do
+	@# any active development on the jwx command
+	@cat coverage.out.tmp | grep -v "internal/cmd" | grep -v "cmd/jwx/jwx.go" > coverage.out
 	@rm coverage.out.tmp
 
 cover-goccy:
