@@ -26,6 +26,10 @@ So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable
 
 ## Backwards Compatibility Notice
 
+### Users of github.com/lestrrat/go-jwx
+
+Uh, why are you using such an ancient version? You now that repository is archived for a reason, yeah?
+
 ### Pre-1.0.0 users
 
 The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
