@@ -12,42 +12,6 @@ func BenchmarkJWS(b *testing.B) {
 	const compactStr = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 	compactBuf := []byte(compactStr)
 	compactRdr := bytes.NewReader(compactBuf)
-	b.Run("Split", func(b *testing.B) {
-		testcases := []Case{
-			{
-
-				Name:      "jws.SplitCompact",
-				SkipShort: true,
-				Test: func(b *testing.B) error {
-					_, _, _, err := jws.SplitCompact(compactBuf)
-					return err
-				},
-			},
-			{
-				Name:      "jws.SplitCompactString",
-				SkipShort: true,
-				Test: func(b *testing.B) error {
-					_, _, _, err := jws.SplitCompactString(compactStr)
-					return err
-				},
-			},
-			{
-				Name:      "jws.SplitCompactReader",
-				SkipShort: true,
-				Pretest: func(b *testing.B) error {
-					_, err := compactRdr.Seek(0, 0)
-					return err
-				},
-				Test: func(b *testing.B) error {
-					_, _, _, err := jws.SplitCompactReader(compactRdr)
-					return err
-				},
-			},
-		}
-		for _, tc := range testcases {
-			tc.Run(b)
-		}
-	})
 	b.Run("Serialization", func(b *testing.B) {
 		const jsonStr = `{
     "payload": "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ",
