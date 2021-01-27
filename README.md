@@ -170,10 +170,13 @@ However, if performance for parsing/serializing JSON is really important to you,
 % go build -tags jwx_goccy ...
 ```
 
-[github.com/goccy/go-json](https://github.com/goccy/go-sjon) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it if it breaks.
+[github.com/goccy/go-json](https://github.com/goccy/go-sjon) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it **IF** it breaks. Please note that that's a big "if".
+As of github.com/goccy/go-json@v0.3.3 I haven't see any problems, and I would say that it is mostly stable.
 
-Having said that, [github.com/goccy/go-json](https://github.com/goccy/go-sjon) works for 99% of the cases, and it dramatically speeds things up.
-Therefore if you know what you are doing, I highly recommend enabling this module.
+However, it is a depdenency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
+If you know what you are doing, I highly recommend enabling this module -- all you need to do is to enable this tag.
+Disable the tag if you feel like it's not worth the hassle.
+
 And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and **NOT** to this library.
 
 ## Using json.Number
