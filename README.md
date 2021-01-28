@@ -239,11 +239,11 @@ Please read https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-li
 
 Presumably you are asking this because your code broke when we bumped the version and broke backwards compatibility. Then the short answer is: "You wouldn't have had to worry about it if you were properly using go.mod"
 
-From time to time, we introduce API changes, because we learn of mistakes in our old ways.
+The longer answer is as follows: From time to time, we introduce API changes, because we learn of mistakes in our old ways.
 Maybe we used the wrong terminology. Maybe we made public something that should have been internal. Maybe we intended an API to be used one way, but it was confusing.
 
 So then we introduce API changes. Sorry if breaks your builds, but it's done because we deem it necessary.
 
-You should also know that We do not introduce API changes between micro versions.
+You should also know that we do not introduce API changes between micro versions.
 And on top of that, Go provides extremely good support for idempodent builds via Go modules.
 If you are in an environment where API changes disrupts your environment, you should definitely migrade to using Go modules now.
