@@ -79,6 +79,11 @@ v1.1.0
 
   * `jwe.WithPrettyJSONFormat` has been renamed to `jwe.WithPrettyFormat`
 
+  * `jwt.Verify` has been removed. Use `jwt.Parse()` aloing with the `jwt.WithVerify()`
+    option to perform signature verification. Validation of verified data
+    can be performed via `(jwt.Token).Validate()` method, which has been available
+    since v1.0.6
+
   * Package `buffer` has been removed. This package should have been an internal
     package to start with, but it was left because it had been incorporated
     in the public API in our initial versions.
