@@ -34,7 +34,7 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // `WithValidation(true)` option. Validation options can also be passed to
 // `Parse`
 //
-// This function takes both ParseOption and Validate Option types:
+// This function takes both ParseOption and ValidateOption types:
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
