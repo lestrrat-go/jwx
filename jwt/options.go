@@ -3,7 +3,6 @@ package jwt
 import (
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/fs"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -28,14 +27,15 @@ type identValidate struct{}
 type identVerify struct{}
 
 type parseOption struct {
-	fs.OpenOption
+	Option
 }
 
 func newParseOption(n interface{}, v interface{}) ParseOption {
-	return &parseOption{fs.NewOpenOption(option.New(n, v))}
+	return &parseOption{option.New(n, v)}
 }
 
 func (*parseOption) parseOption() {}
+func (*parseOption) readOption()  {}
 
 // ParseOption describes an Option that can be passed to `Parse()`.
 // ParseOption also implements ReadFileOption, therefore it may be
