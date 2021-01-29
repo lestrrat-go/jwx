@@ -197,8 +197,10 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 // Fetch fetches a JWK resource specified by a URL. The url must be
 // pointing to a resource that is supported by `net/http`.
 //
-// If you would like to refresh the jwk.Set from a remote resource,
-// consider using jwk.AutoRefresh, which automatically refreshes
+// If you are using the same `jwk.Set` for long periods of time during
+// the lifecycle of your program, and would like to periodically refresh the
+// contents of the object with the data at the remote resource,
+// consider using `jwk.AutoRefresh`, which automatically refreshes
 // jwk.Set objects asynchronously.
 func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
 	res, err := fetch(ctx, urlstring, options...)
@@ -323,15 +325,17 @@ func ParseKey(data []byte) (Key, error) {
 
 // Parse parses JWK from the incoming []byte.
 //
-// For JWK sets, this is a convenience function. It is perfectly safe
-// to call `json.Unmarshal` against a `jwk.Set`, including when you
-// are not sure if the `src` contains a single JWK or a JWK set.
-// `(jwk.Set).Unmarshal` will properly take care of either case,
-// and stow the JWKs in a set accordingly.
+// For JWK sets, this is a convenience function. You could just as well
+// call `json.Unmarshal` against an empty set created by `jwk.NewSet()`
+// to parse a JSON buffer into a `jwk.Set`.
 //
-// If you want to parse a single key, you should use `jwk.ParseKey`
-// instead, as you would need to inspect the contents of the JSON
-// payload to figure out the concrete type of a jwk.Key
+// If you know for sure that you have a single key, you could also
+// use `jwk.ParseKey()`.
+//
+// This method exists because many times the user does not know before hand
+// if a JWK(s) resource at a remote location contains a single JWK key or
+// a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
+// even if the data only contains a single JWK key
 func Parse(src []byte) (Set, error) {
 	s := NewSet()
 	if err := json.Unmarshal(src, s); err != nil {
@@ -340,7 +344,7 @@ func Parse(src []byte) (Set, error) {
 	return s, nil
 }
 
-// ParseReader parses JWK from the incoming byte buffer.
+// ParseReader parses a JWK set from the incoming byte buffer.
 func ParseReader(src io.Reader) (Set, error) {
 	s := NewSet()
 	if err := json.NewDecoder(src).Decode(s); err != nil {
@@ -349,7 +353,7 @@ func ParseReader(src io.Reader) (Set, error) {
 	return s, nil
 }
 
-// ParseString parses JWK from the incoming string.
+// ParseString parses a JWK set from the incoming string.
 func ParseString(s string) (Set, error) {
 	return Parse([]byte(s))
 }

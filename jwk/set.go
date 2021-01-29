@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewSet creates and empty `jwk.Set` object
 func NewSet() Set {
 	return &set{}
 }
