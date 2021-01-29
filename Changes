@@ -74,8 +74,10 @@ v1.1.0
 
 [New Features]
   * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
-    `jwt.ReadFile(string)` have been added. On go >= 1.16, you can even use
-    it to load data from embedded contents using `WithFS(fs.FS)` option.
+    `jwt.ReadFile(string)` have been added. In the future, we plan to introduce
+		a `WithFS` option so you can read from an arbitrary file system, but this cannot
+    be added while we keep go < 1.16 compatibility. If you want something like that,
+    you will need to put an adapter over the jwx for the time being.
 
   * `(jwk.Key).PublicKey()` has been added. This method creates a corresponding
     public key, with all fields (except those that shouldn't be) copied over.
