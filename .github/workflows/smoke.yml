@@ -39,3 +39,5 @@ jobs:
         run: make smoke
       - name: Check difference between generation code and commit code
         run: make check_diffs
+      - name: Run go mod tidy
+        run: go mod tidy
