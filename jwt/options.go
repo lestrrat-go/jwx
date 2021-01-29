@@ -34,8 +34,8 @@ func newParseOption(n interface{}, v interface{}) ParseOption {
 	return &parseOption{option.New(n, v)}
 }
 
-func (*parseOption) parseOption() {}
-func (*parseOption) readOption()  {}
+func (*parseOption) parseOption()    {}
+func (*parseOption) readFileOption() {}
 
 // ParseOption describes an Option that can be passed to `Parse()`.
 // ParseOption also implements ReadFileOption, therefore it may be

@@ -6,7 +6,8 @@ import "os"
 
 // ReadFileOption describes options that can be passed to ReadFile.
 type ReadFileOption interface {
-	readerOption()
+	Option
+	readFileOption()
 }
 
 func ReadFile(path string, options ...ReadFileOption) (Token, error) {

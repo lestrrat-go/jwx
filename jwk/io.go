@@ -8,7 +8,8 @@ import "os"
 // Currently there are no options available that can be passed to ReadFile, but
 // it is provided here for anticipated future additions
 type ReadFileOption interface {
-	readerOption()
+	Option
+	readFileOption()
 }
 
 func ReadFile(path string, _ ...ReadFileOption) (Set, error) {

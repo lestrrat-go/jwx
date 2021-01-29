@@ -67,7 +67,8 @@ func generateFile(def definition) error {
 		fmt.Fprintf(&buf, "\n// it is provided here for anticipated future additions")
 	}
 	fmt.Fprintf(&buf, "\ntype ReadFileOption interface {")
-	fmt.Fprintf(&buf, "\nreaderOption()")
+	fmt.Fprintf(&buf, "\nOption")
+	fmt.Fprintf(&buf, "\nreadFileOption()")
 	fmt.Fprintf(&buf, "\n}")
 
 	if !def.ParseOptions {
