@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/rsa"
@@ -198,7 +197,9 @@ func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
-	var buf bytes.Buffer
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+
 	buf.WriteString(`{"e":"`)
 	buf.WriteString(base64.EncodeUint64ToString(uint64(key.E)))
 	buf.WriteString(`","kty":"RSA","n":"`)
