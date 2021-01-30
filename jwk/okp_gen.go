@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -45,6 +46,18 @@ type okpPrivateKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
+}
+
+func NewOKPPrivateKey() OKPPrivateKey {
+	return newOKPPrivateKey()
+}
+
+func newOKPPrivateKey() *okpPrivateKey {
+	return &okpPrivateKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h okpPrivateKey) KeyType() jwa.KeyType {
@@ -122,8 +135,9 @@ func (h *okpPrivateKey) X509URL() string {
 	return ""
 }
 
-func (h *okpPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *okpPrivateKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OKP})
@@ -163,13 +177,7 @@ func (h *okpPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *okpPrivateKey) PrivateParams() map[string]interface{} {
@@ -177,6 +185,8 @@ func (h *okpPrivateKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *okpPrivateKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -242,6 +252,8 @@ func (h *okpPrivateKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *okpPrivateKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -332,6 +344,38 @@ func (h *okpPrivateKey) Set(name string, value interface{}) error {
 			h.privateParams = map[string]interface{}{}
 		}
 		h.privateParams[name] = value
+	}
+	return nil
+}
+
+func (k *okpPrivateKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case OKPCrvKey:
+		k.crv = nil
+	case OKPDKey:
+		k.d = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case OKPXKey:
+		k.x = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
 	}
 	return nil
 }
@@ -493,8 +537,18 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *okpPrivateKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 
@@ -525,6 +579,18 @@ type okpPublicKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
+}
+
+func NewOKPPublicKey() OKPPublicKey {
+	return newOKPPublicKey()
+}
+
+func newOKPPublicKey() *okpPublicKey {
+	return &okpPublicKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h okpPublicKey) KeyType() jwa.KeyType {
@@ -598,8 +664,9 @@ func (h *okpPublicKey) X509URL() string {
 	return ""
 }
 
-func (h *okpPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *okpPublicKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OKP})
@@ -636,13 +703,7 @@ func (h *okpPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *okpPublicKey) PrivateParams() map[string]interface{} {
@@ -650,6 +711,8 @@ func (h *okpPublicKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *okpPublicKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -710,6 +773,8 @@ func (h *okpPublicKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *okpPublicKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -794,6 +859,36 @@ func (h *okpPublicKey) Set(name string, value interface{}) error {
 			h.privateParams = map[string]interface{}{}
 		}
 		h.privateParams[name] = value
+	}
+	return nil
+}
+
+func (k *okpPublicKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case OKPCrvKey:
+		k.crv = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case OKPXKey:
+		k.x = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
 	}
 	return nil
 }
@@ -947,8 +1042,18 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *okpPublicKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 

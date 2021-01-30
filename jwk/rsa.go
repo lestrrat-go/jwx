@@ -13,27 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewRSAPublicKey() RSAPublicKey {
-	return newRSAPublicKey()
-}
-
-func newRSAPublicKey() *rsaPublicKey {
-	return &rsaPublicKey{
-		privateParams: make(map[string]interface{}),
-	}
-}
-
-func NewRSAPrivateKey() RSAPrivateKey {
-	return newRSAPrivateKey()
-}
-
-func newRSAPrivateKey() *rsaPrivateKey {
-	return &rsaPrivateKey{
-		privateParams: make(map[string]interface{}),
-	}
-}
-
 func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
 	k.d = rawKey.D.Bytes()
 	if len(rawKey.Primes) < 2 {
 		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
@@ -67,6 +50,9 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 }
 
 func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
 	k.n = rawKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))
@@ -82,6 +68,9 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 }
 
 func (k *rsaPrivateKey) Raw(v interface{}) error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	var d, q, p big.Int // note: do not use from sync.Pool
 
 	d.SetBytes(k.d)
@@ -134,6 +123,9 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 // Raw takes the values stored in the Key object, and creates the
 // corresponding *rsa.PublicKey object.
 func (k *rsaPublicKey) Raw(v interface{}) error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	var key rsa.PublicKey
 
 	n := pool.GetBigInt()
@@ -181,6 +173,9 @@ func (k *rsaPublicKey) PublicKey() (Key, error) {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
 func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	var key rsa.PrivateKey
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA private key`)
@@ -189,6 +184,9 @@ func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	var key rsa.PublicKey
 	if err := k.Raw(&key); err != nil {
 		return nil, errors.Wrap(err, `failed to materialize RSA public key`)

@@ -43,6 +43,9 @@ type Key interface {
 	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
+	// Remove removes the field associated with the specified key.
+	Remove(string) error
+
 	// Raw creates the corresponding raw key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
