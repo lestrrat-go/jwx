@@ -63,26 +63,6 @@ type rsaPrivateKey struct {
 	privateParams          map[string]interface{}
 }
 
-type rsaPrivateKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	Xd                      *string           `json:"d,omitempty"`
-	Xdp                     *string           `json:"dp,omitempty"`
-	Xdq                     *string           `json:"dq,omitempty"`
-	Xe                      *string           `json:"e,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xn                      *string           `json:"n,omitempty"`
-	Xp                      *string           `json:"p,omitempty"`
-	Xq                      *string           `json:"q,omitempty"`
-	Xqi                     *string           `json:"qi,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
-}
-
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
@@ -677,20 +657,6 @@ type rsaPublicKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
-}
-
-type rsaPublicKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	Xe                      *string           `json:"e,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xn                      *string           `json:"n,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
 }
 
 func (h rsaPublicKey) KeyType() jwa.KeyType {

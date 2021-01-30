@@ -5,6 +5,7 @@ import (
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
 
@@ -112,17 +113,24 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// no need to lock, as we're getting a copy (s Set)
-	var proxy keySetMarshalProxy
-	proxy.Keys = make([]json.RawMessage, len(s.keys))
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	enc := json.NewEncoder(buf)
+
+	buf.WriteString(`{"keys":[`)
 	for i, k := range s.keys {
-		buf, err := json.Marshal(k)
-		if err != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		if err := enc.Encode(k); err != nil {
 			return nil, errors.Wrapf(err, `failed to marshal key #%d`, i)
 		}
-		proxy.Keys[i] = buf
 	}
-	return json.Marshal(proxy)
+	buf.WriteString("]}")
+
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (s *set) UnmarshalJSON(data []byte) error {

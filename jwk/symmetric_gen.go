@@ -41,19 +41,6 @@ type symmetricKey struct {
 	privateParams          map[string]interface{}
 }
 
-type symmetricSymmetricKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xoctets                 *string           `json:"k,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
-}
-
 func (h symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq
 }

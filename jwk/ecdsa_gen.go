@@ -51,22 +51,6 @@ type ecdsaPrivateKey struct {
 	privateParams          map[string]interface{}
 }
 
-type ecdsaPrivateKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	Xd                      *string                     `json:"d,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
-	Xy                      *string                     `json:"y,omitempty"`
-}
-
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
@@ -573,21 +557,6 @@ type ecdsaPublicKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]interface{}
-}
-
-type ecdsaPublicKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
-	Xy                      *string                     `json:"y,omitempty"`
 }
 
 func (h ecdsaPublicKey) KeyType() jwa.KeyType {

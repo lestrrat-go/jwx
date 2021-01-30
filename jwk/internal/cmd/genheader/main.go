@@ -605,23 +605,6 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 		fmt.Fprintf(&buf, "\n}")
 
-		// Proxy is used when unmarshaling headers
-		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", strings.ToLower(kt.prefix), ht.name)
-		fmt.Fprintf(&buf, "\nXkeyType jwa.KeyType `json:\"kty\"`")
-		for _, f := range ht.allHeaders {
-			switch f.typ {
-			case byteSliceType:
-				// XXX encoding/json uses base64.StdEncoding, which require padding
-				// but we may or may not be dealing with padded base64's.
-				// In order to let the proxy handle this correctly, we need to
-				// accept the values in JSON as strings, not []bytes
-				fmt.Fprintf(&buf, "\nX%s *string %s", f.name, f.Tag())
-			default:
-				fmt.Fprintf(&buf, "\nX%s %s %s", f.name, fieldStorageType(f.typ), f.Tag())
-			}
-		}
-		fmt.Fprintf(&buf, "\n}")
-
 		fmt.Fprintf(&buf, "\n\nfunc (h %s) KeyType() jwa.KeyType {", structName)
 		fmt.Fprintf(&buf, "\nreturn %s", kt.keyType)
 		fmt.Fprintf(&buf, "\n}")

@@ -47,21 +47,6 @@ type okpPrivateKey struct {
 	privateParams          map[string]interface{}
 }
 
-type okpPrivateKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	Xd                      *string                     `json:"d,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
-}
-
 func (h okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP
 }
@@ -540,20 +525,6 @@ type okpPublicKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
-}
-
-type okpPublicKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
 }
 
 func (h okpPublicKey) KeyType() jwa.KeyType {
