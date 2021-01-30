@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -123,6 +124,21 @@ func TestECDSA(t *testing.T) {
 
 		if !assert.NotEmpty(t, rawPrivKey.D, "D exists") {
 			return
+		}
+
+		for _, key := range []jwk.Key{pubKey, privKey} {
+			for iter := key.Iterate(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				key.Remove(pair.Key.(string))
+			}
+
+			m, err := key.AsMap(context.TODO())
+			if !assert.NoError(t, err, `key.AsMap should succeed`) {
+				return
+			}
+			if !assert.Len(t, m, 1, `map should have 1 key`) {
+				return
+			}
 		}
 	})
 	t.Run("Initialization", func(t *testing.T) {

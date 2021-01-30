@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -39,19 +40,18 @@ type symmetricKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type symmetricSymmetricKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xoctets                 *string           `json:"k,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
+func NewSymmetricKey() SymmetricKey {
+	return newSymmetricKey()
+}
+
+func newSymmetricKey() *symmetricKey {
+	return &symmetricKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h symmetricKey) KeyType() jwa.KeyType {
@@ -118,8 +118,9 @@ func (h *symmetricKey) X509URL() string {
 	return ""
 }
 
-func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *symmetricKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OctetSeq})
@@ -153,13 +154,7 @@ func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *symmetricKey) PrivateParams() map[string]interface{} {
@@ -167,6 +162,8 @@ func (h *symmetricKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *symmetricKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -222,6 +219,8 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *symmetricKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -300,6 +299,34 @@ func (h *symmetricKey) Set(name string, value interface{}) error {
 			h.privateParams = map[string]interface{}{}
 		}
 		h.privateParams[name] = value
+	}
+	return nil
+}
+
+func (k *symmetricKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case SymmetricOctetsKey:
+		k.octets = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
 	}
 	return nil
 }
@@ -443,8 +470,18 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 

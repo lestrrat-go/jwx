@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/rsa"
+	"reflect"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -11,6 +12,8 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
+
+var zeroval reflect.Value
 
 func TestRSA(t *testing.T) {
 	verify := func(t *testing.T, key jwk.Key) {
@@ -58,6 +61,18 @@ func TestRSA(t *testing.T) {
 			return
 		}
 		verify(t, key)
+		for iter := key.Iterate(context.TODO()); iter.Next(context.TODO()); {
+			pair := iter.Pair()
+			key.Remove(pair.Key.(string))
+		}
+
+		m, err := key.AsMap(context.TODO())
+		if !assert.NoError(t, err, `key.AsMap should succeed`) {
+			return
+		}
+		if !assert.Len(t, m, 1, `map should have 1 key`) {
+			return
+		}
 	})
 	t.Run("Private Key", func(t *testing.T) {
 		const src = `{
@@ -83,6 +98,7 @@ func TestRSA(t *testing.T) {
 		s := `{"keys":
        [
          {"kty":"RSA",
+					"use":"enc",
           "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
           "e":"AQAB",
           "d":"X4cTteJY_gn4FYPsXB8rdXix5vwsg1FLN5E3EaG6RJoVH-HLLKD9M7dx5oo7GURknchnrRweUkC7hT5fJLM0WbFAKNLWY2vv7B6NqXSzUvxT0_YSfqijwp3RTzlBaCxWp4doFk5N2o8Gy_nHNKroADIkJ46pRUohsXywbReAdYaMwFs9tv8d_cPVY3i07a3t8MN6TNwm0dSawm9v47UiCl3Sk5ZiG7xojPLu4sbg1U2jx4IBTNBznbJSzFHK66jT8bgkuqsk0GjskDJk19Z4qwjwbsnn4j2WBii3RL-Us2lGVkY8fkFzme1z0HbIkfz0Y6mqnOYtqc0X4jfcKoAC8Q",
@@ -145,6 +161,82 @@ func TestRSA(t *testing.T) {
 		}
 
 		if !assert.NotEmpty(t, privkey.Precomputed.Qinv, "Qinv exists") {
+			return
+		}
+
+		testcases := []struct {
+			Method string
+			Key    string
+		}{
+			{
+				Method: "D",
+				Key:    jwk.RSADKey,
+			},
+			{
+				Method: "DP",
+				Key:    jwk.RSADPKey,
+			},
+			{
+				Method: "DQ",
+				Key:    jwk.RSADQKey,
+			},
+			{
+				Method: "KeyUsage",
+				Key:    jwk.KeyUsageKey,
+			},
+			{
+				Method: "E",
+				Key:    jwk.RSAEKey,
+			},
+			{
+				Method: "N",
+				Key:    jwk.RSANKey,
+			},
+			{
+				Method: "P",
+				Key:    jwk.RSAPKey,
+			},
+			{
+				Method: "Q",
+				Key:    jwk.RSAQKey,
+			},
+			{
+				Method: "QI",
+				Key:    jwk.RSAQIKey,
+			},
+		}
+		rv := reflect.ValueOf(rsakey)
+		for _, tc := range testcases {
+			method := rv.MethodByName(tc.Method)
+			if !assert.NotEqual(t, zeroval, method, `rv.MethodByName should return non-zero value`) {
+				return
+			}
+			retvals := method.Call(nil)
+
+			if !assert.Len(t, retvals, 1, `return value should be 1 element`) {
+				return
+			}
+
+			getval, ok := rsakey.Get(tc.Key)
+			if !assert.True(t, ok, `rsakey.Get(%s) should succeed`, tc.Key) {
+				return
+			}
+
+			if !assert.Equal(t, getval, retvals[0].Interface()) {
+				return
+			}
+		}
+
+		for iter := rsakey.Iterate(context.TODO()); iter.Next(context.TODO()); {
+			pair := iter.Pair()
+			rsakey.Remove(pair.Key.(string))
+		}
+
+		m, err := rsakey.AsMap(context.TODO())
+		if !assert.NoError(t, err, `rsakey.AsMap should succeed`) {
+			return
+		}
+		if !assert.Len(t, m, 1, `map should have 1 key`) {
 			return
 		}
 	})

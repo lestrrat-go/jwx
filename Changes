@@ -104,6 +104,10 @@ v1.1.0
     top of raw keys (e.g. rsa.PrivateKey). You no longer need to conver the
     `jwk.Key` objects that you have in to raw keys before using these functions.
 
+  * `(jws.Header).Remove(string)`, `(jwk.Key).Remove(string)`, and
+    `(jwt.Token).Remove(string)` have been added. `jwe.Header` already had a `Remove()`
+    method, so it has not been changed.
+
 [Miscellaneous]
   * Default branch for the repository is now `main`.
 

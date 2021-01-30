@@ -43,6 +43,10 @@ type Key interface {
 	// specify, and there is no way of knowing what type they could be
 	Set(string, interface{}) error
 
+	// Remove removes the field associated with the specified key.
+	// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.
+	Remove(string) error
+
 	// Raw creates the corresponding raw key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
 	// and OctetSeq types create a []byte key.
