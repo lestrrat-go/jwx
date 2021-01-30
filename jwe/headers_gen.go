@@ -227,8 +227,7 @@ func (h *stdHeaders) X509URL() string {
 	return *(h.x509URL)
 }
 
-func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *stdHeaders) makePairs() []*HeaderPair {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	var pairs []*HeaderPair
@@ -283,13 +282,7 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *stdHeaders) PrivateParams() map[string]interface{} {
