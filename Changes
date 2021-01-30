@@ -111,13 +111,15 @@ v1.1.0
     better the contexts in which they can be used. For example, `jwk` now has
     `AutoRefreshOption` and `FetchOption` instead of a single `Option`.
 
-  * JSON marshaling should be 10~30% faster by default. However, if performance
-    is really bogging you down, you can try to enable the optional module
-    github.com/goccy/go-json by enabling the "jwx_goccy" tag
+  * JSON marshaling should be 10~30% faster by default (though they may take
+    more allocations to achieve this).
+
+    However, if performance is really bogging you down, you can try to enable
+    the optional module github.com/goccy/go-json by enabling the "jwx_goccy" tag
 
       go build -tags jwx_goccy ...
 
-    In some cases you get approx 40~50% performance improvement in serailization
+    In some cases you get an extra 40~50% performance improvement in serailization
     https://github.com/lestrrat-go/jwx/pull/314#issue-560594020
     https://github.com/lestrrat-go/jwx/pull/314#issuecomment-766343888
 
