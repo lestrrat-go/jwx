@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -51,6 +52,7 @@ type Headers interface {
 	Merge(context.Context, Headers) (Headers, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+	Remove(string) error
 
 	// PrivateParams returns the non-standard elements in the source structure
 	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
@@ -71,6 +73,7 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
 type standardHeadersMarshalProxy struct {
@@ -88,10 +91,14 @@ type standardHeadersMarshalProxy struct {
 }
 
 func NewHeaders() Headers {
-	return &stdHeaders{}
+	return &stdHeaders{
+		mu: &sync.RWMutex{},
+	}
 }
 
 func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm == nil {
 		return ""
 	}
@@ -99,6 +106,8 @@ func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
 }
 
 func (h *stdHeaders) ContentType() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.contentType == nil {
 		return ""
 	}
@@ -106,14 +115,20 @@ func (h *stdHeaders) ContentType() string {
 }
 
 func (h *stdHeaders) Critical() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.critical
 }
 
 func (h *stdHeaders) JWK() jwk.Key {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.jwk
 }
 
 func (h *stdHeaders) JWKSetURL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.jwkSetURL == nil {
 		return ""
 	}
@@ -121,6 +136,8 @@ func (h *stdHeaders) JWKSetURL() string {
 }
 
 func (h *stdHeaders) KeyID() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID == nil {
 		return ""
 	}
@@ -128,6 +145,8 @@ func (h *stdHeaders) KeyID() string {
 }
 
 func (h *stdHeaders) Type() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.typ == nil {
 		return ""
 	}
@@ -135,10 +154,14 @@ func (h *stdHeaders) Type() string {
 }
 
 func (h *stdHeaders) X509CertChain() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.x509CertChain
 }
 
 func (h *stdHeaders) X509CertThumbprint() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint == nil {
 		return ""
 	}
@@ -146,6 +169,8 @@ func (h *stdHeaders) X509CertThumbprint() string {
 }
 
 func (h *stdHeaders) X509CertThumbprintS256() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 == nil {
 		return ""
 	}
@@ -153,14 +178,17 @@ func (h *stdHeaders) X509CertThumbprintS256() string {
 }
 
 func (h *stdHeaders) X509URL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL == nil {
 		return ""
 	}
 	return *(h.x509URL)
 }
 
-func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *stdHeaders) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
@@ -198,20 +226,18 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *stdHeaders) PrivateParams() map[string]interface{} {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.privateParams
 }
 
 func (h *stdHeaders) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -275,6 +301,8 @@ func (h *stdHeaders) Get(name string) (interface{}, bool) {
 }
 
 func (h *stdHeaders) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case AlgorithmKey:
 		var acceptor jwa.SignatureAlgorithm
@@ -348,6 +376,38 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 			h.privateParams = map[string]interface{}{}
 		}
 		h.privateParams[name] = value
+	}
+	return nil
+}
+
+func (h *stdHeaders) Remove(key string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		h.algorithm = nil
+	case ContentTypeKey:
+		h.contentType = nil
+	case CriticalKey:
+		h.critical = nil
+	case JWKKey:
+		h.jwk = nil
+	case JWKSetURLKey:
+		h.jwkSetURL = nil
+	case KeyIDKey:
+		h.keyID = nil
+	case TypeKey:
+		h.typ = nil
+	case X509CertChainKey:
+		h.x509CertChain = nil
+	case X509CertThumbprintKey:
+		h.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		h.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		h.x509URL = nil
+	default:
+		delete(h.privateParams, key)
 	}
 	return nil
 }

@@ -21,7 +21,6 @@ func TestHeaders(t *testing.T) {
 		"MIIC5zCCAlACAQEwDQYJKoZIhvcNAQEFBQAwgbsxJDAiBgNVBAcTG1ZhbGlDZXJ0IFZhbGlkYXRpb24gTmV0d29yazEXMBUGA1UEChMOVmFsaUNlcnQsIEluYy4xNTAzBgNVBAsTLFZhbGlDZXJ0IENsYXNzIDIgUG9saWN5IFZhbGlkYXRpb24gQXV0aG9yaXR5MSEwHwYDVQQDExhodHRwOi8vd3d3LnZhbGljZXJ0LmNvbS8xIDAeBgkqhkiG9w0BCQEWEWluZm9AdmFsaWNlcnQuY29tMB4XDTk5MDYyNjAwMTk1NFoXDTE5MDYyNjAwMTk1NFowgbsxJDAiBgNVBAcTG1ZhbGlDZXJ0IFZhbGlkYXRpb24gTmV0d29yazEXMBUGA1UEChMOVmFsaUNlcnQsIEluYy4xNTAzBgNVBAsTLFZhbGlDZXJ0IENsYXNzIDIgUG9saWN5IFZhbGlkYXRpb24gQXV0aG9yaXR5MSEwHwYDVQQDExhodHRwOi8vd3d3LnZhbGljZXJ0LmNvbS8xIDAeBgkqhkiG9w0BCQEWEWluZm9AdmFsaWNlcnQuY29tMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDOOnHK5avIWZJV16vYdA757tn2VUdZZUcOBVXc65g2PFxTXdMwzzjsvUGJ7SVCCSRrCl6zfN1SLUzm1NZ9WlmpZdRJEy0kTRxQb7XBhVQ7/nHk01xC+YDgkRoKWzk2Z/M/VXwbP7RfZHM047QSv4dk+NoS/zcnwbNDu+97bi5p9wIDAQABMA0GCSqGSIb3DQEBBQUAA4GBADt/UG9vUJSZSWI4OB9L+KXIPqeCgfYrx+jFzug6EILLGACOTb2oWH+heQC1u+mNr0HZDzTuIYEZoDJJKPTEjlbVUjP9UNV+mWwD5MlM/Mtsq2azSiGM5bUMMj4QssxsodyamEwCW/POuZ6lcg5Ktz885hZo+L7tdEy8W9ViH0Pd",
 	}
 
-	t.Parallel()
 	rawKey, err := jwxtest.GenerateEcdsaKey()
 	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
@@ -120,7 +119,6 @@ func TestHeaders(t *testing.T) {
 	})
 
 	t.Run("Set/Get", func(t *testing.T) {
-		t.Parallel()
 		h := jwe.NewHeaders()
 		ctx := context.Background()
 
@@ -163,7 +161,6 @@ func TestHeaders(t *testing.T) {
 		}
 	})
 	t.Run("PrivateParams", func(t *testing.T) {
-		t.Parallel()
 		h := base
 		pp, err := h.AsMap(context.Background())
 		if !assert.NoError(t, err, `h.AsMap should succeed`) {
@@ -180,7 +177,6 @@ func TestHeaders(t *testing.T) {
 		}
 	})
 	t.Run("Encode", func(t *testing.T) {
-		t.Parallel()
 		h1 := jwe.NewHeaders()
 		h1.Set(jwe.AlgorithmKey, jwa.A128GCMKW)
 		h1.Set("foo", "bar")
@@ -201,7 +197,6 @@ func TestHeaders(t *testing.T) {
 	})
 
 	t.Run("Iterator", func(t *testing.T) {
-		t.Parallel()
 		expected := map[string]interface{}{}
 		for _, tc := range data {
 			v := tc.Value
@@ -241,11 +236,26 @@ func TestHeaders(t *testing.T) {
 			}
 		})
 		t.Run("AsMap", func(t *testing.T) {
-			seen, err := v.AsMap(context.TODO())
+			m, err := v.AsMap(context.TODO())
 			if !assert.NoError(t, err, `v.AsMap should succeed`) {
 				return
 			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
+			if !assert.Equal(t, expected, m, `values should match`) {
+				return
+			}
+		})
+		t.Run("Remove", func(t *testing.T) {
+			h := base
+			for iter := h.Iterate(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				h.Remove(pair.Key.(string))
+			}
+
+			m, err := h.AsMap(context.TODO())
+			if !assert.NoError(t, err, `h.AsMap should succeed`) {
+				return
+			}
+			if !assert.Len(t, m, 0, `len should be zero`) {
 				return
 			}
 		})
