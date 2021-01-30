@@ -30,8 +30,8 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // If you do not specify these parameters, no verification will be performed.
 //
 // If you also want to assert the validity of the JWT itself (i.e. expiration
-// and such), use the `Valid()` function on the returned token, or pass the
-// `WithValidation(true)` option. Validation options can also be passed to
+// and such), use the `Validate()` function on the returned token, or pass the
+// `WithValidate(true)` option. Validate options can also be passed to
 // `Parse`
 //
 // This function takes both ParseOption and ValidateOption types:
