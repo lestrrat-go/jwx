@@ -196,7 +196,7 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -329,6 +329,10 @@ func (k *symmetricKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *symmetricKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *symmetricKey) UnmarshalJSON(buf []byte) error {

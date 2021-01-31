@@ -79,6 +79,9 @@ type Key interface {
 	// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead
 	PrivateParams() map[string]interface{}
 
+	// Clone creates a new instance of the same type
+	Clone() (Key, error)
+
 	KeyType() jwa.KeyType
 	KeyUsage() string
 	KeyOps() KeyOperationList

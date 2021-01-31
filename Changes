@@ -88,6 +88,9 @@ v1.1.0
     package to start with, but it was left because it had been incorporated
     in the public API in our initial versions.
 
+  * `(jwk.Key).Get(jwk.X509CertChainKey)` no longer returns a `jwk.CertificateChain`.
+    Instead it returns a raw []*x509.Certificate.
+
 [New Features]
   * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
     `jwt.ReadFile(string)` have been added. In the future, we plan to introduce
@@ -107,6 +110,8 @@ v1.1.0
   * `(jws.Header).Remove(string)`, `(jwk.Key).Remove(string)`, and
     `(jwt.Token).Remove(string)` have been added. `jwe.Header` already had a `Remove()`
     method, so it has not been changed.
+
+  * `(jwk.Key).Clone() has been added
 
 [Miscellaneous]
   * Default branch for the repository is now `main`.

@@ -480,6 +480,8 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
 	fmt.Fprintf(&buf, "\n// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
+	fmt.Fprintf(&buf, "\n\n// Clone creates a new instance of the same type")
+	fmt.Fprintf(&buf, "\nClone() (Key, error)")
 	fmt.Fprintf(&buf, "\n\nKeyType() jwa.KeyType")
 	for _, f := range standardHeaders {
 		fmt.Fprintf(&buf, "\n%s() ", f.method)
@@ -692,10 +694,13 @@ func generateHeader(kt keyType) error {
 			} else {
 				fmt.Fprintf(&buf, "\ncase %s%sKey:", kt.prefix, f.method)
 			}
+
 			fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n}")
-			if fieldStorageTypeIsIndirect(f.typ) {
+			if f.hasGet {
+				fmt.Fprintf(&buf, "\nreturn h.%s.Get(), true", f.name)
+			} else if fieldStorageTypeIsIndirect(f.typ) {
 				fmt.Fprintf(&buf, "\nreturn *(h.%s), true", f.name)
 			} else {
 				fmt.Fprintf(&buf, "\nreturn h.%s, true", f.name)
@@ -797,6 +802,10 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\ndelete(k.privateParams, key)")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\n\nfunc (k *%s) Clone() (Key, error) {", structName)
+		fmt.Fprintf(&buf, "\nreturn cloneKey(k)")
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", structName)

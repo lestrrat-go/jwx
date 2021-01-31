@@ -302,7 +302,7 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -491,6 +491,10 @@ func (k *rsaPrivateKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *rsaPrivateKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
@@ -889,7 +893,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -1030,6 +1034,10 @@ func (k *rsaPublicKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *rsaPublicKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {

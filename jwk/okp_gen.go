@@ -229,7 +229,7 @@ func (h *okpPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -378,6 +378,10 @@ func (k *okpPrivateKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *okpPrivateKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *okpPrivateKey) UnmarshalJSON(buf []byte) error {
@@ -750,7 +754,7 @@ func (h *okpPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -891,6 +895,10 @@ func (k *okpPublicKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *okpPublicKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *okpPublicKey) UnmarshalJSON(buf []byte) error {
