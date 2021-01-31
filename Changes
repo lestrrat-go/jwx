@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.1.0
+v1.1.0 31 Jan 2021
   v1.1.0 is a release that attempts to fix as many of the quirky APIs
   that survived the API breaking change of v0.9.x -> v1.0.0. This is
   hopefully the last releases that change backwards compatibility
