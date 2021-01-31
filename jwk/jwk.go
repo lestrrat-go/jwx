@@ -386,7 +386,7 @@ func AssignKeyID(key Key, options ...Option) error {
 	return nil
 }
 
-func cloneKey(src Key) (Key, error){
+func cloneKey(src Key) (Key, error) {
 	var dst Key
 	switch src.(type) {
 	case RSAPrivateKey:
