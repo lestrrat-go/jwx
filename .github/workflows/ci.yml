@@ -12,8 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        json_backend: [ 'stdlib', 'goccy' ]
         go: [ '1.15.x', '1.14.x' ]
-    name: Go ${{ matrix.go }} test
+    name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -44,7 +45,7 @@ jobs:
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
       - name: Test with coverage
-        run: make cover
+        run: make cover-${{ matrix.json_backend }}
       - name: Upload code coverage to codecov
         if: matrix.go == '1.15.x'
         uses: codecov/codecov-action@v1

@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ed25519"
 	"fmt"
@@ -13,38 +14,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewOKPPublicKey() OKPPublicKey {
-	return newOKPPublicKey()
-}
-
-func newOKPPublicKey() *okpPublicKey {
-	return &okpPublicKey{
-		privateParams: make(map[string]interface{}),
-	}
-}
-
-func NewOKPPrivateKey() OKPPrivateKey {
-	return newOKPPrivateKey()
-}
-
-func newOKPPrivateKey() *okpPrivateKey {
-	return &okpPrivateKey{
-		privateParams: make(map[string]interface{}),
-	}
-}
-
 func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PublicKey:
 		k.x = rawKey
-		if err := k.Set(OKPCrvKey, jwa.Ed25519); err != nil {
-			return errors.Wrap(err, `failed to set header`)
-		}
+		crv = jwa.Ed25519
+		k.crv = &crv
 	case x25519.PublicKey:
 		k.x = rawKey
-		if err := k.Set(OKPCrvKey, jwa.X25519); err != nil {
-			return errors.Wrap(err, `failed to set header`)
-		}
+		crv = jwa.X25519
+		k.crv = &crv
 	default:
 		return errors.Errorf(`unknown key type %T`, rawKeyIf)
 	}
@@ -53,19 +36,21 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 }
 
 func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PrivateKey:
 		k.d = rawKey.Seed()
 		k.x = rawKey.Public().(ed25519.PublicKey)
-		if err := k.Set(OKPCrvKey, jwa.Ed25519); err != nil {
-			return errors.Wrap(err, `failed to set header`)
-		}
+		crv = jwa.Ed25519
+		k.crv = &crv
 	case x25519.PrivateKey:
 		k.d = rawKey.Seed()
 		k.x = rawKey.Public().(x25519.PublicKey)
-		if err := k.Set(OKPCrvKey, jwa.X25519); err != nil {
-			return errors.Wrap(err, `failed to set header`)
-		}
+		crv = jwa.X25519
+		k.crv = &crv
 	default:
 		return errors.Errorf(`unknown key type %T`, rawKeyIf)
 	}
@@ -86,6 +71,9 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (interface{}
 
 // Raw returns the EC-DSA public key represented by this JWK
 func (k *okpPublicKey) Raw(v interface{}) error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	pubk, err := buildOKPPublicKey(k.Crv(), k.x)
 	if err != nil {
 		return errors.Wrap(err, `failed to build public key`)
@@ -117,6 +105,9 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 }
 
 func (k *okpPrivateKey) Raw(v interface{}) error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	privk, err := buildOKPPrivateKey(k.Crv(), k.x, k.d)
 	if err != nil {
 		return errors.Wrap(err, `failed to build public key`)
@@ -125,21 +116,33 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, privk)
 }
 
-func (k *okpPrivateKey) PublicKey() (OKPPublicKey, error) {
+func makeOKPPublicKey(v interface {
+	Iterate(context.Context) HeaderIterator
+}) (Key, error) {
 	newKey := NewOKPPublicKey()
-	switch k.Crv() {
-	case jwa.Ed25519:
-		if err := newKey.FromRaw(ed25519.PublicKey(k.x)); err != nil {
-			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
+
+	// Iterate and copy everything except for the bits that should not be in the public key
+	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
+		pair := iter.Pair()
+		switch pair.Key {
+		case OKPDKey:
+			continue
+		default:
+			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			}
 		}
-	case jwa.X25519:
-		if err := newKey.FromRaw(x25519.PublicKey(k.x)); err != nil {
-			return nil, errors.Wrap(err, `failed to initialize OKPPublicKey`)
-		}
-	default:
-		return nil, errors.Errorf(`invalid curve algorithm %s`, k.Crv())
 	}
+
 	return newKey, nil
+}
+
+func (k *okpPrivateKey) PublicKey() (Key, error) {
+	return makeOKPPublicKey(k)
+}
+
+func (k *okpPublicKey) PublicKey() (Key, error) {
+	return makeOKPPublicKey(k)
 }
 
 func okpThumbprint(hash crypto.Hash, crv, x string) []byte {
@@ -155,6 +158,9 @@ func okpThumbprint(hash crypto.Hash, crv, x string) []byte {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
 func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	return okpThumbprint(
 		hash,
 		k.Crv().String(),
@@ -165,6 +171,9 @@ func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
 func (k okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+
 	return okpThumbprint(
 		hash,
 		k.Crv().String(),

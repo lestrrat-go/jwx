@@ -19,10 +19,10 @@ import (
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	contentcipher "github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug/v3"

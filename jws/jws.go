@@ -86,99 +86,32 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		}
 	}
 
-	if hdrs == nil {
-		hdrs = NewHeaders()
-	}
-
-	// If the key is a jwk.Key instance, obtain the raw key
-	if jwkKey, ok := key.(jwk.Key); ok {
-		var tmp interface{}
-		if err := jwkKey.Raw(&tmp); err != nil {
-			return nil, errors.Wrap(err, `failed to get raw key from jwk.Key instance`)
-		}
-		key = tmp
-
-		// If we have a key ID specified by this jwk.Key, use that in the header
-		if kid := jwkKey.KeyID(); kid != "" {
-			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
-				return nil, errors.Wrap(err, `set key ID from jwk.Key`)
-			}
-		}
-	}
-
 	signer, err := NewSigner(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to create signer`)
 	}
 
-	if err := hdrs.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-		return nil, errors.Wrap(err, `failed to set header`)
-	}
-
-	hdrbuf, err := json.Marshal(hdrs)
+	sig := &Signature{protected: hdrs}
+	_, signature, err := sig.Sign(payload, signer, key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal headers`)
+		return nil, errors.Wrap(err, `failed sign payload`)
 	}
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	buf.WriteString(base64.EncodeToString(hdrbuf))
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(payload))
-
-	signature, err := signer.Sign(buf.Bytes(), key)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
-	}
-
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(signature))
-
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
-	return result, nil
-}
-
-// SignLiteral generates a signature for the given payload and headers, and serializes
-// it in compact serialization format. In this format you may NOT use
-// multiple signers.
-//
-func SignLiteral(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, headers []byte) ([]byte, error) {
-	signer, err := NewSigner(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to create signer`)
-	}
-
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	buf.WriteString(base64.EncodeToString(headers))
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(payload))
-
-	signature, err := signer.Sign(buf.Bytes(), key)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
-	}
-
-	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(signature))
-
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
-	return result, nil
+	return signature, nil
 }
 
 // SignMulti accepts multiple signers via the options parameter,
 // and creates a JWS in JSON serialization format that contains
 // signatures from applying aforementioned signers.
+//
+// Use `jws.WithSigner(...)` to specify values how to generate
+// each signature in the `"signatures": [ ... ]` field.
 func SignMulti(payload []byte, options ...Option) ([]byte, error) {
-	var signers []PayloadSigner
+	var signers []*payloadSigner
 	for _, o := range options {
 		switch o.Ident() {
 		case identPayloadSigner{}:
-			signers = append(signers, o.Value().(PayloadSigner))
+			signers = append(signers, o.Value().(*payloadSigner))
 		}
 	}
 
@@ -189,11 +122,12 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	var result Message
 
 	result.payload = payload
-	encodedPayload := base64.EncodeToString(payload)
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
-	for _, signer := range signers {
+
+	result.signatures = make([]*Signature, 0, len(signers))
+	for i, signer := range signers {
 		protected := signer.ProtectedHeader()
 		if protected == nil {
 			protected = NewHeaders()
@@ -203,80 +137,128 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 			return nil, errors.Wrap(err, `failed to set header`)
 		}
 
-		hdrbuf, err := json.Marshal(protected)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to marshal headers`)
-		}
-		encodedHeader := base64.EncodeToString(hdrbuf)
-
-		buf.Reset()
-		buf.WriteString(encodedHeader)
-		buf.WriteByte('.')
-		buf.WriteString(encodedPayload)
-		signature, err := signer.Sign(buf.Bytes())
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to sign payload`)
-		}
-
-		result.signatures = append(result.signatures, &Signature{
+		sig := &Signature{
 			headers:   signer.PublicHeader(),
 			protected: protected,
-			signature: signature,
-		})
+		}
+		_, _, err := sig.Sign(payload, signer.signer, signer.key)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to generate signature for signer #%d (alg=%s)`, i, signer.Algorithm())
+		}
+
+		result.signatures = append(result.signatures, sig)
 	}
 
 	return json.Marshal(result)
 }
 
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
+// `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
+//
 // If the verification is successful, `err` is nil, and the content of the
 // payload that was signed is returned. If you need more fine-grained
 // control of the verification process, manually generate a
 // `Verifier` in `verify` subpackage, and call `Verify` method on it.
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
-func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte, err error) {
-	verifier, err := NewVerifier(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create verifier")
-	}
-
+func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New(`attempt to verify empty buffer`)
 	}
 
 	if buf[0] == '{' {
-		var m Message
-		if err := json.Unmarshal(buf, &m); err != nil {
-			return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
+		return verifyJSON(buf, alg, key)
+	}
+	return verifyCompact(buf, alg, key)
+}
+
+// VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
+//
+// In order for `VerifySet()` to use a key in the given set, the
+// `jwk.Key` object must have a valid "alg" field, and it also must
+// have either an empty value or the value "sig" in the "use" field.
+//
+// Furthermore if the JWS signature asks for a spefici "kid", the
+// `jwk.Key` must have the same "kid" as the signature.
+func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for iter := set.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+		if key.Algorithm() == "" { // algorithm is not
+			continue
 		}
 
-		payload := base64.EncodeToString(m.payload)
-
-		buf := pool.GetBytesBuffer()
-		defer pool.ReleaseBytesBuffer(buf)
-		for i, sig := range m.signatures {
-			buf.Reset()
-			protected, err := json.Marshal(sig.protected)
-			if err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
-			}
-
-			buf.WriteString(base64.EncodeToString(protected))
-			buf.WriteByte('.')
-			buf.WriteString(payload)
-
-			if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
-				return m.payload, nil
-			}
+		if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
+			continue
 		}
-		return nil, errors.New(`could not verify with any of the signatures`)
+
+		buf, err := Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), key)
+		if err != nil {
+			continue
+		}
+
+		return buf, nil
 	}
 
-	protected, payload, signature, err := SplitCompactBytes(buf)
+	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
+}
+
+func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	verifier, err := NewVerifier(alg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create verifier")
+	}
+
+	var m Message
+	if err := json.Unmarshal(signed, &m); err != nil {
+		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
+	}
+
+	// Pre-compute the base64 encoded version of payload
+	payload := base64.EncodeToString(m.payload)
+
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+
+	for i, sig := range m.signatures {
+		buf.Reset()
+		if hdr := sig.headers; hdr != nil && hdr.KeyID() != "" {
+			if jwkKey, ok := key.(jwk.Key); ok {
+				if jwkKey.KeyID() != hdr.KeyID() {
+					continue
+				}
+			}
+		}
+
+		protected, err := json.Marshal(sig.protected)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+		}
+
+		buf.WriteString(base64.EncodeToString(protected))
+		buf.WriteByte('.')
+		buf.WriteString(payload)
+
+		if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
+			return m.payload, nil
+		}
+	}
+	return nil, errors.New(`could not verify with any of the signatures`)
+}
+
+func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+	protected, payload, signature, err := SplitCompact(signed)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
+	}
+
+	verifier, err := NewVerifier(alg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create verifier")
 	}
 
 	verifyBuf := pool.GetBytesBuffer()
@@ -290,6 +272,24 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode signature`)
 	}
+
+	hdr := NewHeaders()
+	decodedProtected, err := base64.Decode(protected)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decode headers`)
+	}
+
+	if err := json.Unmarshal(decodedProtected, hdr); err != nil {
+		return nil, errors.Wrap(err, `failed to decode headers`)
+	}
+
+	if hdr.KeyID() != "" {
+		if jwkKey, ok := key.(jwk.Key); ok {
+			if jwkKey.KeyID() != hdr.KeyID() {
+				return nil, errors.New(`"kid" fields do not match`)
+			}
+		}
+	}
 	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
 	}
@@ -299,68 +299,6 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) (ret []byte
 		return nil, errors.Wrap(err, `message verified, failed to decode payload`)
 	}
 	return decodedPayload, nil
-}
-
-// VerifyWithJKU wraps VerifyWithJKUAndContext using the background context.
-func VerifyWithJKU(buf []byte, jwkurl string, options ...Option) ([]byte, error) {
-	return VerifyWithJKUAndContext(context.Background(), buf, jwkurl, options...)
-}
-
-// VerifyWithJKUAndContext verifies the JWS message using a remote JWK
-// file represented in the url.
-func VerifyWithJKUAndContext(ctx context.Context, buf []byte, jwkurl string, options ...Option) ([]byte, error) {
-	key, err := jwk.FetchHTTPWithContext(ctx, jwkurl, options...)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to fetch jwk via HTTP`)
-	}
-
-	return VerifyWithJWKSet(buf, key, nil)
-}
-
-// VerifyWithJWK verifies the JWS message using the specified JWK
-func VerifyWithJWK(buf []byte, key jwk.Key) (payload []byte, err error) {
-	var rawkey interface{}
-	if err := key.Raw(&rawkey); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize jwk.Key`)
-	}
-
-	payload, err = Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), rawkey)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to verify message")
-	}
-	return payload, nil
-}
-
-// VerifyWithJWKSet verifies the JWS message using JWK key set.
-// By default it will only pick up keys that have the "use" key
-// set to either "sig" or "enc", but you can override it by
-// providing a keyaccept function.
-func VerifyWithJWKSet(buf []byte, keyset *jwk.Set, keyaccept JWKAcceptFunc) ([]byte, error) {
-	if keyaccept == nil {
-		keyaccept = DefaultJWKAcceptor
-	}
-
-	for _, key := range keyset.Keys {
-		if !keyaccept(key) {
-			continue
-		}
-
-		payload, err := VerifyWithJWK(buf, key)
-		if err == nil {
-			return payload, nil
-		}
-	}
-
-	// refs #140, #141
-	//
-	// We should not be Wrap()'ing the error here, because of various
-	// reasons -- but the fundamental one is that the only value we can get
-	// here is the "last error" seen in the above loop, when the symptom
-	// that we want to report is that none of the keys worked.
-	//
-	// Here, we just return that fact, and we do not rely on the value of
-	// previous errors.
-	return nil, errors.New("failed to verify with any of the keys")
 }
 
 // This is an "optimized" ioutil.ReadAll(). It will attempt to read
@@ -381,12 +319,33 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
-//
-// Parse will be removed in v1.1.0.
-// v1.1.0 will introduce `ParseReader(io.Reader)`. Use that instead.
-func Parse(src io.Reader) (m *Message, err error) {
+func Parse(src []byte) (*Message, error) {
+	for i := 0; i < len(src); i++ {
+		r := rune(src[i])
+		if r >= utf8.RuneSelf {
+			r, _ = utf8.DecodeRune(src)
+		}
+		if !unicode.IsSpace(r) {
+			if r == '{' {
+				return parseJSON(src)
+			}
+			return parseCompact(src)
+		}
+	}
+	return nil, errors.New("invalid byte sequence")
+}
+
+// Parse parses contents from the given source and creates a jws.Message
+// struct. The input can be in either compact or full JSON serialization.
+func ParseString(src string) (*Message, error) {
+	return Parse([]byte(src))
+}
+
+// Parse parses contents from the given source and creates a jws.Message
+// struct. The input can be in either compact or full JSON serialization.
+func ParseReader(src io.Reader) (*Message, error) {
 	if data, ok := readAll(src); ok {
-		return ParseBytes(data)
+		return Parse(data)
 	}
 
 	rdr := bufio.NewReader(src)
@@ -408,12 +367,12 @@ func Parse(src io.Reader) (m *Message, err error) {
 
 	var parser func(io.Reader) (*Message, error)
 	if first == '{' {
-		parser = parseJSON
+		parser = parseJSONReader
 	} else {
-		parser = parseCompact
+		parser = parseCompactReader
 	}
 
-	m, err = parser(rdr)
+	m, err := parser(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse jws message`)
 	}
@@ -421,35 +380,7 @@ func Parse(src io.Reader) (m *Message, err error) {
 	return m, nil
 }
 
-// ParseString is the same as Parse, but take in a string
-//
-// ParseString will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)`. Use `Parse([]byte(s))` instead.
-func ParseString(s string) (*Message, error) {
-	return ParseBytes([]byte(s))
-}
-
-// ParseBytes is the same as Parse, but take byte sequence.
-//
-// ParseBytes will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)`. Use that instead.
-func ParseBytes(s []byte) (*Message, error) {
-	for i := 0; i < len(s); i++ {
-		r := rune(s[i])
-		if r >= utf8.RuneSelf {
-			r, _ = utf8.DecodeRune(s)
-		}
-		if !unicode.IsSpace(r) {
-			if r == '{' {
-				return parseJSONBytes(s)
-			}
-			return parseCompactBytes(s)
-		}
-	}
-	return nil, errors.New("invalid byte sequence")
-}
-
-func parseJSON(src io.Reader) (result *Message, err error) {
+func parseJSONReader(src io.Reader) (result *Message, err error) {
 	var m Message
 	if err := json.NewDecoder(src).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
@@ -457,7 +388,7 @@ func parseJSON(src io.Reader) (result *Message, err error) {
 	return &m, nil
 }
 
-func parseJSONBytes(data []byte) (result *Message, err error) {
+func parseJSON(data []byte) (result *Message, err error) {
 	var m Message
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
@@ -467,9 +398,29 @@ func parseJSONBytes(data []byte) (result *Message, err error) {
 
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
+func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
+	parts := bytes.Split(src, []byte("."))
+	if len(parts) < 3 {
+		return nil, nil, nil, errors.New(`invalid number of segments`)
+	}
+	return parts[0], parts[1], parts[2], nil
+}
+
+// SplitCompactString splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
+func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
+	parts := strings.Split(src, ".")
+	if len(parts) < 3 {
+		return nil, nil, nil, errors.New(`invalid number of segments`)
+	}
+	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
+}
+
+// SplitCompactReader splits a JWT and returns its three parts
+// separately: protected headers, payload and signature.
+func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	if data, ok := readAll(rdr); ok {
-		return SplitCompactBytes(data)
+		return SplitCompact(data)
 	}
 
 	var protected []byte
@@ -535,27 +486,17 @@ func SplitCompact(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	return protected, payload, signature, nil
 }
 
-// SplitCompactBytes splits a JWT and returns its three parts
-// separately: protected headers, payload and signature.
-func SplitCompactBytes(data []byte) ([]byte, []byte, []byte, error) {
-	parts := bytes.Split(data, []byte("."))
-	if len(parts) < 3 {
-		return nil, nil, nil, errors.New(`invalid number of segments`)
-	}
-	return parts[0], parts[1], parts[2], nil
-}
-
-// parseCompact parses a JWS value serialized via compact serialization.
-func parseCompact(rdr io.Reader) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompact(rdr)
+// parseCompactReader parses a JWS value serialized via compact serialization.
+func parseCompactReader(rdr io.Reader) (m *Message, err error) {
+	protected, payload, signature, err := SplitCompactReader(rdr)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}
 	return parse(protected, payload, signature)
 }
 
-func parseCompactBytes(data []byte) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompactBytes(data)
+func parseCompact(data []byte) (m *Message, err error) {
+	protected, payload, signature, err := SplitCompact(data)
 	if err != nil {
 		return nil, errors.Wrap(err, `invalid compact serialization format`)
 	}
@@ -568,8 +509,8 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		return nil, errors.Wrap(err, `failed to decode protected headers`)
 	}
 
-	var hdr stdHeaders
-	if err := json.Unmarshal(decodedHeader, &hdr); err != nil {
+	hdr := NewHeaders()
+	if err := json.Unmarshal(decodedHeader, hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
 
@@ -586,7 +527,7 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	var msg Message
 	msg.payload = decodedPayload
 	msg.signatures = append(msg.signatures, &Signature{
-		protected: &hdr,
+		protected: hdr,
 		signature: decodedSignature,
 	})
 	return &msg, nil

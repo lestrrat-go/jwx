@@ -6,7 +6,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/lestrrat-go/option"
 )
 
@@ -31,29 +30,36 @@ type parseOption struct {
 }
 
 func newParseOption(n interface{}, v interface{}) ParseOption {
-	return &parseOption{Option: option.New(n, v)}
+	return &parseOption{option.New(n, v)}
 }
 
-func (o *parseOption) isParseOption() {}
+func (*parseOption) parseOption()    {}
+func (*parseOption) readFileOption() {}
 
+// ParseOption describes an Option that can be passed to `Parse()`.
+// ParseOption also implements ReadFileOption, therefore it may be
+// safely pass them to `jwt.ReadFile()`
 type ParseOption interface {
-	Option
-	isParseOption()
+	ReadFileOption
+	parseOption()
 }
 
 type validateOption struct {
-	Option
+	ParseOption
 }
 
 func newValidateOption(n interface{}, v interface{}) ValidateOption {
-	return &validateOption{Option: option.New(n, v)}
+	return &validateOption{newParseOption(n, v)}
 }
 
-func (o *validateOption) isValidateOption() {}
+func (*validateOption) validateOption() {}
 
+// ValidateOption describes an Option that can be passed to Validate().
+// ValidateOption also implements ParseOption, therefore it may be
+// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
 type ValidateOption interface {
-	Option
-	isValidateOption()
+	ParseOption
+	validateOption()
 }
 
 type VerifyParameters interface {
@@ -88,7 +94,7 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // using one of the keys in the given key set. The key to be used
 // is chosen by matching the Key ID of the JWT and the ID of the
 // given keys.
-func WithKeySet(set *jwk.Set) ParseOption {
+func WithKeySet(set jwk.Set) ParseOption {
 	return newParseOption(identKeySet{}, set)
 }
 
@@ -104,15 +110,6 @@ func UseDefaultKey(value bool) ParseOption {
 // JWT tokens.
 func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
-}
-
-// WithOpenIDClaims is passed to the various JWT parsing functions, and
-// specifies that it should use an instance of `openid.Token` as the
-// destination to store the parsed results.
-//
-// This is exactly equivalent to specifying `jwt.WithToken(openid.New())`
-func WithOpenIDClaims() ParseOption {
-	return WithToken(openid.New())
 }
 
 // WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
@@ -159,7 +156,7 @@ func WithJwtID(s string) ValidateOption {
 }
 
 // WithAudience specifies that expected audience value.
-// Verify will return true if one of the values in the `aud` element
+// `Validate()` will return true if one of the values in the `aud` element
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
 func WithAudience(s string) ValidateOption {

@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -205,7 +207,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 		{
 			Name: "JSON (Pretty)",
-			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyJSONFormat(true)) },
+			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyFormat(true)) },
 			Expected: `{
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
@@ -234,7 +236,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				}
 
 				if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
-					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyJSONFormat(true))
+					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyFormat(true))
 					t.Logf("%s", jsonbuf)
 					return
 				}
@@ -466,11 +468,11 @@ func Test_GHIssue207(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			webKeys, err := jwk.ParseString(tc.Key)
-			if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 				return
 			}
-			webKey := webKeys.Keys[0]
+
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
 			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
 				return
@@ -596,11 +598,11 @@ func TestDecodePredefined_Direct(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
-			webKeys, err := jwk.ParseString(tc.Key)
-			if !assert.NoError(t, err, `jwk.ParseString should succeed`) {
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 				return
 			}
-			webKey := webKeys.Keys[0]
+
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
 			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
 				return
@@ -658,6 +660,25 @@ func TestGHIssue230(t *testing.T) {
 	}
 
 	if !assert.Equal(t, msg, msg2, `data -> msg -> compact -> msg2 produces msg == msg2`) {
+		t.Logf("msg -> %#v", msg)
+		t.Logf("msg2 -> %#v", msg2)
+		return
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
+	t.Parallel()
+
+	f, err := ioutil.TempFile("", "test-read-file-*.jwe")
+	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "%s", s)
+
+	if _, err := jwe.ReadFile(f.Name()); !assert.NoError(t, err, `jwe.ReadFile should succeed`) {
 		return
 	}
 }

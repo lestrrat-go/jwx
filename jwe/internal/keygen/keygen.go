@@ -9,10 +9,9 @@ import (
 
 	"golang.org/x/crypto/curve25519"
 
-	"github.com/lestrrat-go/jwx/buffer"
-	"github.com/lestrrat-go/jwx/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
@@ -167,11 +166,11 @@ func (k ByteWithECPublicKey) Populate(h Setter) error {
 // HeaderPopulate populates the header with the required AES GCM
 // parameters ('iv' and 'tag')
 func (k ByteWithIVAndTag) Populate(h Setter) error {
-	if err := h.Set("iv", buffer.Buffer(k.IV)); err != nil {
+	if err := h.Set("iv", k.IV); err != nil {
 		return errors.Wrap(err, "failed to write header")
 	}
 
-	if err := h.Set("tag", buffer.Buffer(k.Tag)); err != nil {
+	if err := h.Set("tag", k.Tag); err != nil {
 		return errors.Wrap(err, "failed to write header")
 	}
 
@@ -185,7 +184,7 @@ func (k ByteWithSaltAndCount) Populate(h Setter) error {
 		return errors.Wrap(err, "failed to write header")
 	}
 
-	if err := h.Set("p2s", buffer.Buffer(k.Salt)); err != nil {
+	if err := h.Set("p2s", k.Salt); err != nil {
 		return errors.Wrap(err, "failed to write header")
 	}
 

@@ -8,6 +8,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+func Encode(src []byte) []byte {
+	enc := base64.RawURLEncoding
+	dst := make([]byte, enc.EncodedLen(len(src)))
+	enc.Encode(dst, src)
+	return dst
+}
+
 func EncodeToStringStd(src []byte) string {
 	return base64.StdEncoding.EncodeToString(src)
 }

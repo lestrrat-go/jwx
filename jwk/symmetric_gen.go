@@ -8,12 +8,13 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
-	"strconv"
+	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -39,19 +40,18 @@ type symmetricKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type symmetricSymmetricKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xoctets                 *string           `json:"k,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
+func NewSymmetricKey() SymmetricKey {
+	return newSymmetricKey()
+}
+
+func newSymmetricKey() *symmetricKey {
+	return &symmetricKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h symmetricKey) KeyType() jwa.KeyType {
@@ -118,8 +118,9 @@ func (h *symmetricKey) X509URL() string {
 	return ""
 }
 
-func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *symmetricKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OctetSeq})
@@ -153,13 +154,7 @@ func (h *symmetricKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *symmetricKey) PrivateParams() map[string]interface{} {
@@ -167,6 +162,8 @@ func (h *symmetricKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *symmetricKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -199,7 +196,7 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -222,6 +219,8 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *symmetricKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -304,99 +303,189 @@ func (h *symmetricKey) Set(name string, value interface{}) error {
 	return nil
 }
 
+func (k *symmetricKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case SymmetricOctetsKey:
+		k.octets = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
+	}
+	return nil
+}
+
+func (k *symmetricKey) Clone() (Key, error) {
+	return cloneKey(k)
+}
+
 func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
-	var proxy symmetricSymmetricKeyMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal symmetricKey`)
-	}
-	if proxy.XkeyType != jwa.OctetSeq {
-		return errors.Errorf(`invalid kty value for SymmetricKey (%s)`, proxy.XkeyType)
-	}
-	h.algorithm = proxy.Xalgorithm
-	h.keyID = proxy.XkeyID
-	h.keyUsage = proxy.XkeyUsage
-	h.keyops = proxy.Xkeyops
-	if proxy.Xoctets == nil {
-		return errors.New(`required field k is missing`)
-	}
-	if h.octets = nil; proxy.Xoctets != nil {
-		decoded, err := base64.DecodeString(*(proxy.Xoctets))
+	h.algorithm = nil
+	h.keyID = nil
+	h.keyUsage = nil
+	h.keyops = nil
+	h.octets = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to decode base64 value for octets`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		h.octets = decoded
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case KeyTypeKey:
+				val, err := json.ReadNextStringToken(dec)
+				if err != nil {
+					return errors.Wrap(err, `error reading token`)
+				}
+				if val != jwa.OctetSeq.String() {
+					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+				}
+			case AlgorithmKey:
+				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+				}
+			case KeyIDKey:
+				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+				}
+			case KeyUsageKey:
+				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyUsageKey)
+				}
+			case KeyOpsKey:
+				var decoded KeyOperationList
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyOpsKey)
+				}
+				h.keyops = &decoded
+			case SymmetricOctetsKey:
+				if err := json.AssignNextBytesToken(&h.octets, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, SymmetricOctetsKey)
+				}
+			case X509CertChainKey:
+				var decoded CertificateChain
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+				}
+				h.x509CertChain = &decoded
+			case X509CertThumbprintKey:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+				}
+			case X509CertThumbprintS256Key:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+				}
+			case X509URLKey:
+				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateParams == nil {
+					h.privateParams = make(map[string]interface{})
+				}
+				h.privateParams[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	h.x509CertChain = proxy.Xx509CertChain
-	h.x509CertThumbprint = proxy.Xx509CertThumbprint
-	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
-	h.x509URL = proxy.Xx509URL
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
+	if h.octets == nil {
+		return errors.Errorf(`required field k is missing`)
 	}
-	delete(m, `kty`)
-	delete(m, AlgorithmKey)
-	delete(m, KeyIDKey)
-	delete(m, KeyUsageKey)
-	delete(m, KeyOpsKey)
-	delete(m, SymmetricOctetsKey)
-	delete(m, X509CertChainKey)
-	delete(m, X509CertThumbprintKey)
-	delete(m, X509CertThumbprintS256Key)
-	delete(m, X509URLKey)
-	h.privateParams = m
 	return nil
 }
 
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
-	var proxy symmetricSymmetricKeyMarshalProxy
-	proxy.XkeyType = jwa.OctetSeq
-	proxy.Xalgorithm = h.algorithm
-	proxy.XkeyID = h.keyID
-	proxy.XkeyUsage = h.keyUsage
-	proxy.Xkeyops = h.keyops
-	if len(h.octets) > 0 {
-		v := base64.EncodeToString(h.octets)
-		proxy.Xoctets = &v
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	fields := make([]string, 0, 9)
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	proxy.Xx509CertChain = h.x509CertChain
-	proxy.Xx509CertThumbprint = h.x509CertThumbprint
-	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
-	proxy.Xx509URL = h.x509URL
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
-	}
-	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateParams); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range h.privateParams {
-			keys = append(keys, k)
+
+	sort.Strings(fields)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	buf.WriteByte('{')
+	enc := json.NewEncoder(buf)
+	for i, f := range fields {
+		if i > 0 {
+			buf.WriteRune(',')
 		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
+		default:
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
 			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateParams[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
+			buf.Truncate(buf.Len() - 1)
 		}
-		fmt.Fprintf(&buf, `}`)
 	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
-	}
-	return json.Marshal(m)
+	buf.WriteByte('}')
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 

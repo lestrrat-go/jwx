@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"crypto"
-	"net/http"
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -15,33 +14,57 @@ type identHTTPClient struct{}
 type identThumbprintHash struct{}
 type identRefreshInterval struct{}
 type identMinRefreshInterval struct{}
-type identRefreshBackoff struct{}
+type identFetchBackoff struct{}
 
-// WithHTTPClient allows users to specify the "net/http".Client object that
-// is used when fetching *jwk.Set objects.
-//
-// For historical reasons this method is also used in `jwk.Fetch*` functions,
-// eventhough the return value is marked as an `AutoRefreshOption`
-func WithHTTPClient(cl *http.Client) AutoRefreshOption {
-	return &autoRefreshOption{
-		option.New(identHTTPClient{}, cl),
-	}
-}
-
-func WithThumbprintHash(h crypto.Hash) Option {
-	return option.New(identThumbprintHash{}, h)
+// AutoRefreshOption is a type of Option that can be passed to the
+// AutoRefresh object.
+type AutoRefreshOption interface {
+	Option
+	autoRefreshOption()
 }
 
 type autoRefreshOption struct {
 	Option
 }
 
-func (aro *autoRefreshOption) autoRefreshOption() bool {
-	return true
+func (*autoRefreshOption) autoRefreshOption() {}
+
+// FetchOption is a type of Option that can be passed to `jwk.Fetch()`
+// This type also implements the `AutoRefreshOption`, and thus can be
+// safely passed to `(*jwk.AutoRefresh).Configure()`
+type FetchOption interface {
+	AutoRefreshOption
+	fetchOption()
+}
+
+type fetchOption struct {
+	Option
+}
+
+func (*fetchOption) autoRefreshOption() {}
+func (*fetchOption) fetchOption()       {}
+
+// WithHTTPClient allows users to specify the "net/http".Client object that
+// is used when fetching jwk.Set objects.
+func WithHTTPClient(cl HTTPClient) FetchOption {
+	return &fetchOption{option.New(identHTTPClient{}, cl)}
+}
+
+// WithFetchBackoff specifies the backoff policy to use when
+// refreshing a JWKS from a remote server fails.
+//
+// This does not have any effect on initial `Fetch()`, or any of the `Refresh()` calls --
+// the backoff is applied ONLY on the background refreshing goroutine.
+func WithFetchBackoff(v backoff.Policy) FetchOption {
+	return &fetchOption{option.New(identFetchBackoff{}, v)}
+}
+
+func WithThumbprintHash(h crypto.Hash) Option {
+	return option.New(identThumbprintHash{}, h)
 }
 
 // WithRefreshInterval specifies the static interval between refreshes
-// of *jwk.Set objects controlled by jwk.AutoRefresh.
+// of jwk.Set objects controlled by jwk.AutoRefresh.
 //
 // Providing this option overrides the adaptive token refreshing based
 // on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
@@ -74,15 +97,5 @@ func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 	return &autoRefreshOption{
 		option.New(identMinRefreshInterval{}, d),
-	}
-}
-
-// WithRefreshRetryBackoff specifies the backoff policy to use when
-// refreshing a JWKS from a remote server fails. This does not have
-// any effect on initial `Fetch()`, or any of the `Refresh()` calls --
-// the backoff is applied ONLY on the background refreshing goroutine.
-func WithRefreshBackoff(v backoff.Policy) AutoRefreshOption {
-	return &autoRefreshOption{
-		option.New(identRefreshBackoff{}, v),
 	}
 }

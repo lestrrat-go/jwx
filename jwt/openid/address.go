@@ -1,7 +1,10 @@
 package openid
 
 import (
+	"strconv"
+
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 
 	"github.com/pkg/errors"
 )
@@ -200,14 +203,64 @@ func (t *AddressClaim) Accept(v interface{}) error {
 
 // MarshalJSON serializes the token in JSON format.
 func (t AddressClaim) MarshalJSON() ([]byte, error) {
-	var proxy addressClaimMarshalProxy
-	proxy.Xformatted = t.formatted
-	proxy.XstreetAddress = t.streetAddress
-	proxy.Xlocality = t.locality
-	proxy.Xregion = t.region
-	proxy.XpostalCode = t.postalCode
-	proxy.Xcountry = t.country
-	return json.Marshal(proxy)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+
+	buf.WriteByte('{')
+	prev := buf.Len()
+	if v := t.country; v != nil {
+		buf.WriteString(`"country":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	if v := t.formatted; v != nil {
+		if buf.Len() > prev {
+			buf.WriteByte(',')
+		}
+		prev = buf.Len()
+		buf.WriteString(`"formatted":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	if v := t.locality; v != nil {
+		if buf.Len() > prev {
+			buf.WriteByte(',')
+		}
+		prev = buf.Len()
+		buf.WriteString(`"locality":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	if v := t.postalCode; v != nil {
+		if buf.Len() > prev {
+			buf.WriteByte(',')
+		}
+		prev = buf.Len()
+		buf.WriteString(`"postal_code":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	if v := t.region; v != nil {
+		if buf.Len() > prev {
+			buf.WriteByte(',')
+		}
+		prev = buf.Len()
+		buf.WriteString(`"region":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	if v := t.streetAddress; v != nil {
+		if buf.Len() > prev {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(`"street_address":`)
+		buf.WriteString(strconv.Quote(*v))
+	}
+
+	buf.WriteByte('}')
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 // UnmarshalJSON deserializes data from a JSON data buffer into a AddressClaim

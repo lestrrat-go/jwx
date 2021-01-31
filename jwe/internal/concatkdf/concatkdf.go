@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/binary"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
@@ -16,10 +15,17 @@ type KDF struct {
 	z         []byte
 }
 
+func ndata(src []byte) []byte {
+	buf := make([]byte, 4+len(src))
+	binary.BigEndian.PutUint32(buf, uint32(len(src)))
+	copy(buf[4:], src)
+	return buf
+}
+
 func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
-	algbuf := buffer.Buffer(alg).NData()
-	apubuf := buffer.Buffer(apu).NData()
-	apvbuf := buffer.Buffer(apv).NData()
+	algbuf := ndata(alg)
+	apubuf := ndata(apu)
+	apvbuf := ndata(apv)
 
 	if pdebug.Enabled {
 		pdebug.Printf("alg          = %s", alg)

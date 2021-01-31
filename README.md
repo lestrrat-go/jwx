@@ -24,9 +24,19 @@ Because I was writing the server side (and the client side for testing), I neede
 
 So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
 
-## Notes for users of pre-1.0.0 release
+## Backwards Compatibility Notice
+
+### Users of github.com/lestrrat/go-jwx
+
+Uh, why are you using such an ancient version? You know that repository is archived for a reason, yeah? Please use the new version.
+
+### Pre-1.0.0 users
 
 The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
+
+### v1.0.x users
+
+The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
 
 # Packages
 
@@ -151,7 +161,25 @@ Supported content encryption algorithm:
 
 # Global Settings
 
-## Configuring JSON Parsing
+## Switching to a faster JSON library
+
+By default we use the standard library's `encoding/json` for all of our JSON needs.
+However, if performance for parsing/serializing JSON is really important to you, you might want to enable [github.com/goccy/go-json](https://github.com/goccy/go-sjon) by enabling the `jwx_goccy` tag.
+
+```shell
+% go build -tags jwx_goccy ...
+```
+
+[github.com/goccy/go-json](https://github.com/goccy/go-sjon) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it **IF** it breaks. Please note that that's a big "if".
+As of github.com/goccy/go-json@v0.3.3 I haven't see any problems, and I would say that it is mostly stable.
+
+However, it is a depdenency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
+If you know what you are doing, I highly recommend enabling this module -- all you need to do is to enable this tag.
+Disable the tag if you feel like it's not worth the hassle.
+
+And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-sjon) and **NOT** to this library.
+
+## Using json.Number
 
 If you want to parse numbers in the incoming JSON objects as json.Number
 instead of floats, you can use the following call to globally affect the behavior of JSON parsing.
@@ -191,3 +219,31 @@ Please try [discussions](./discussions) first.
 
 * Work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
 * Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
+* Lots of individual contributors have helped this project over the years. Thank each and everyone of you very much.
+
+# FAQ
+
+## I get a "no Go files in ..." error
+
+You are using Go in GOPATH mode. Short answer: use Go modules.
+
+[A slightly more elaborate version of the answer can be found in github.com/lestrrat-go/backoff FAQ](https://github.com/lestrrat-go/backoff#im-getting-package-githubcomlestrrat-gobackoffv2-no-go-files-in-gosrcgithubcomlestrrat-gobackoffv2)
+
+And no, I do not intend to support GOPATH mode as of 2021. There are ways to manually workaround it, but do not expect this library to do that for you.
+
+## Why don't you automatically infer the algorithm for `jws.Verify` ?
+
+Please read https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/. Despite this article's publish date, the original had been published sometime around 2015. It's a well known problem with JWS libraries.
+
+## Why did you change the API?
+
+Presumably you are asking this because your code broke when we bumped the version and broke backwards compatibility. Then the short answer is: "You wouldn't have had to worry about it if you were properly using go.mod"
+
+The longer answer is as follows: From time to time, we introduce API changes, because we learn of mistakes in our old ways.
+Maybe we used the wrong terminology. Maybe we made public something that should have been internal. Maybe we intended an API to be used one way, but it was confusing.
+
+So then we introduce API changes. Sorry if breaks your builds, but it's done because we deem it necessary.
+
+You should also know that we do not introduce API changes between micro versions.
+And on top of that, Go provides extremely good support for idempodent builds via Go modules.
+If you are in an environment where API changes disrupts your environment, you should definitely migrade to using Go modules now.

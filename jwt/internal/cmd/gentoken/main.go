@@ -375,12 +375,19 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nPrivateClaims() map[string]interface{}")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\nRemove(string) error")
+	if tt.pkg != "jwt" {
+		fmt.Fprintf(&buf, "\nClone() (jwt.Token, error)")
+	} else {
+		fmt.Fprintf(&buf, "\nClone() (Token, error)")
+	}
 	fmt.Fprintf(&buf, "\nIterate(context.Context) Iterator")
 	fmt.Fprintf(&buf, "\nWalk(context.Context, Visitor) error")
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
+	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
@@ -408,30 +415,14 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, ".\n// Convenience accessors are provided for these standard claims")
 	fmt.Fprintf(&buf, "\nfunc New() %s {", tt.ifName)
 	fmt.Fprintf(&buf, "\nreturn &%s{", tt.structName)
+	fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
 	fmt.Fprintf(&buf, "\nprivateClaims: make(map[string]interface{}),")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
-	fmt.Fprintf(&buf, "\nfunc (t *%s) Size() int {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar count int")
-	for _, field := range fields {
-		switch {
-		case field.IsList():
-			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", field.name)
-			fmt.Fprintf(&buf, "\ncount++")
-			fmt.Fprintf(&buf, "\n}")
-		case field.IsPointer():
-			fmt.Fprintf(&buf, "\nif t.%s != nil {", field.name)
-			fmt.Fprintf(&buf, "\ncount++")
-			fmt.Fprintf(&buf, "\n}")
-		}
-	}
-
-	fmt.Fprintf(&buf, "\ncount += len(t.privateClaims)")
-	fmt.Fprintf(&buf, "\nreturn count")
-	fmt.Fprintf(&buf, "\n}") // end func Size()
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -455,7 +446,23 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\n}") // end of Get
 
+	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) Remove(key string) error {")
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
+	fmt.Fprintf(&buf, "\nswitch key {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+		fmt.Fprintf(&buf, "\nt.%s = nil", f.name)
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\ndelete(t.privateClaims, key)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+	fmt.Fprintf(&buf, "\n}")
+
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		keyName := f.method + "Key"
@@ -518,6 +525,8 @@ func generateToken(tt tokenType) error {
 			fmt.Fprintf(&buf, "%s", f.PointerElem())
 		}
 		fmt.Fprintf(&buf, " {")
+		fmt.Fprintf(&buf, "\nt.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 
 		if f.hasGet {
 			fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
@@ -540,13 +549,16 @@ func generateToken(tt tokenType) error {
 	}
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) PrivateClaims() map[string]interface{} {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nreturn t.privateClaims")
 	fmt.Fprintf(&buf, "\n}")
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
-	fmt.Fprintf(&buf, "\ndefer close(ch)")
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) makePairs() []*ClaimPair {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\n\nvar pairs []*ClaimPair")
@@ -568,6 +580,161 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &ClaimPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn pairs")
+	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
+
+	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) UnmarshalJSON(buf []byte) error {")
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\nt.%s = nil", f.name)
+	}
+
+	fmt.Fprintf(&buf, "\ndec := json.NewDecoder(bytes.NewReader(buf))")
+	fmt.Fprintf(&buf, "\nLOOP:")
+	fmt.Fprintf(&buf, "\nfor {")
+	fmt.Fprintf(&buf, "\ntok, err := dec.Token()")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `error reading token`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nswitch tok := tok.(type) {")
+	fmt.Fprintf(&buf, "\ncase json.Delim:")
+	fmt.Fprintf(&buf, "\n// Assuming we're doing everything correctly, we should ONLY")
+	fmt.Fprintf(&buf, "\n// get either '{' or '}' here.")
+	fmt.Fprintf(&buf, "\nif tok == '}' { // End of object")
+	fmt.Fprintf(&buf, "\nbreak LOOP")
+	fmt.Fprintf(&buf, "\n} else if tok != '{' {")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`expected '{', but got '%%c'`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ncase string: // Objects can only have string keys")
+	fmt.Fprintf(&buf, "\nswitch tok {")
+
+	for _, f := range fields {
+		if f.typ == "string" {
+			fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
+			fmt.Fprintf(&buf, "\n}")
+		} else if f.typ == byteSliceType {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nif err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.name)
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+		} else if f.typ == "types.StringList" || strings.HasPrefix(f.typ, "[]") {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nt.%s = decoded", f.name)
+		} else {
+			name := f.method
+			fmt.Fprintf(&buf, "\ncase %sKey:", name)
+			if strings.HasPrefix(f.typ, "*") {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ[1:])
+			} else {
+				fmt.Fprintf(&buf, "\nvar decoded %s", f.typ)
+			}
+			fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+			fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			fmt.Fprintf(&buf, "\n}")
+			fmt.Fprintf(&buf, "\nt.%s = &decoded", f.name)
+		}
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nvar decoded interface{}")
+	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
+	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nt.privateClaims[tok] = decoded")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\nreturn nil")
+	fmt.Fprintf(&buf, "\n}")
+
+	var numericDateFields []tokenField
+	for _, field := range fields {
+		if field.typ == "types.NumericDate" {
+			numericDateFields = append(numericDateFields, field)
+		}
+	}
+
+	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	fmt.Fprintf(&buf, "\nt.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
+	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
+	fmt.Fprintf(&buf, "\ndefer cancel()")
+	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
+	fmt.Fprintf(&buf, "\nfields := make([]string, 0, %d)", len(fields))
+	fmt.Fprintf(&buf, "\nfor iter := t.Iterate(ctx); iter.Next(ctx); {")
+	fmt.Fprintf(&buf, "\npair := iter.Pair()")
+	fmt.Fprintf(&buf, "\nfields = append(fields, pair.Key.(string))")
+	fmt.Fprintf(&buf, "\ndata[pair.Key.(string)] = pair.Value")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n\nsort.Strings(fields)")
+	fmt.Fprintf(&buf, "\nbuf := pool.GetBytesBuffer()")
+	fmt.Fprintf(&buf, "\ndefer pool.ReleaseBytesBuffer(buf)")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('{')")
+	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(buf)")
+	fmt.Fprintf(&buf, "\nfor i, f := range fields {")
+	fmt.Fprintf(&buf, "\nif i > 0 {")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(f)")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
+	fmt.Fprintf(&buf, "\nv := data[f]")
+	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\ncase []byte:")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(base64.EncodeToString(v))")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	if lndf := len(numericDateFields); lndf > 0 {
+		fmt.Fprintf(&buf, "\ncase time.Time:")
+		fmt.Fprintf(&buf, "\nswitch f {")
+		fmt.Fprintf(&buf, "\ncase ")
+		for i, ndf := range numericDateFields {
+			fmt.Fprintf(&buf, "%sKey", ndf.method)
+			if i < lndf-1 {
+				fmt.Fprintf(&buf, ",")
+			}
+		}
+		fmt.Fprintf(&buf, ":")
+		fmt.Fprintf(&buf, "\nenc.Encode(v.Unix())")
+		fmt.Fprintf(&buf, "\ndefault:")
+		fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
+		fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
+		fmt.Fprintf(&buf, "\n}")
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nbuf.WriteByte('}')")
+	fmt.Fprintf(&buf, "\nret := make([]byte, buf.Len())")
+	fmt.Fprintf(&buf, "\ncopy(ret, buf.Bytes())")
+	fmt.Fprintf(&buf, "\nreturn ret, nil")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
+	fmt.Fprintf(&buf, "\npairs := t.makePairs()")
+	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair, len(pairs))")
+	fmt.Fprintf(&buf, "\ngo func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {")
+	fmt.Fprintf(&buf, "\ndefer close(ch)")
 	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
 	fmt.Fprintf(&buf, "\nselect {")
 	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
@@ -575,100 +742,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\ncase ch<-pair:")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
-
-	// JSON related stuff
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) UnmarshalJSON(buf []byte) error {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to unmarshal %s`)", tt.structName)
-	fmt.Fprintf(&buf, "\n}")
-
-	for _, f := range fields {
-		switch f.typ {
-		case byteSliceType:
-			// XXX encoding/json uses base64.StdEncoding, which require padding
-			// but we may or may not be dealing with padded base64's.
-			// The unmarshal proxy takes this into account, and grabs the value
-			// as strings so that we can do our own decoding magic
-			fmt.Fprintf(&buf, "\nif t.%[1]s = nil; proxy.X%[1]s != nil {", f.name)
-			fmt.Fprintf(&buf, "\ndecoded, err := base64.DecodeString(*(proxy.X%[1]s))", f.name)
-			fmt.Fprintf(&buf, "\nif err != nil {")
-			fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to decode base64 value for %s`)", f.name)
-			fmt.Fprintf(&buf, "\n}")
-			fmt.Fprintf(&buf, "\nt.%[1]s = decoded", f.name)
-			fmt.Fprintf(&buf, "\n}")
-		default:
-			fmt.Fprintf(&buf, "\nt.%[1]s = proxy.X%[1]s", f.name)
-		}
-	}
-
-	// Now for the fun part... It's quite silly, but we need to check if we
-	// have other parameters.
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf, &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrap(err, `failed to parse private parameters`)")
-	fmt.Fprintf(&buf, "\n}")
-	// Delete all known keys
-	for _, f := range fields {
-		keyName := f.method + "Key"
-		fmt.Fprintf(&buf, "\ndelete(m, %s)", keyName)
-	}
-
-	fmt.Fprintf(&buf, "\nt.privateClaims = m")
-	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
-	fmt.Fprintf(&buf, "\nvar proxy %sTokenMarshalProxy", tt.prefix)
-	for _, f := range fields {
-		switch f.typ {
-		case byteSliceType:
-			// XXX encoding/json uses base64.StdEncoding, which require padding
-			// but we may or may not be dealing with padded base64's.
-			// Before marshaling this value to JSON, we must first encode it
-			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", f.name)
-			fmt.Fprintf(&buf, "\nv := base64.EncodeToString(t.%s)", f.name)
-			fmt.Fprintf(&buf, "\nproxy.X%s = &v", f.name)
-			fmt.Fprintf(&buf, "\n}")
-		default:
-			fmt.Fprintf(&buf, "\nproxy.X%[1]s = t.%[1]s", f.name)
-		}
-	}
-
-	fmt.Fprintf(&buf, "\nvar buf bytes.Buffer")
-	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(&buf)")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(proxy); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode proxy to JSON`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nhasContent := buf.Len() > 3 // encoding/json always adds a newline, so \"{}\\n\" is the empty hash")
-	fmt.Fprintf(&buf, "\nif l := len(t.privateClaims); l> 0 {")
-	fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-2)")
-	fmt.Fprintf(&buf, "\nkeys := make([]string, 0, l)")
-	fmt.Fprintf(&buf, "\nfor k := range t.privateClaims {")
-	fmt.Fprintf(&buf, "\nkeys = append(keys, k)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nsort.Strings(keys)")
-	fmt.Fprintf(&buf, "\nfor i, k := range keys {")
-	fmt.Fprintf(&buf, "\nif hasContent || i > 0 {")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `,`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `%%s:`, strconv.Quote(k))")
-	fmt.Fprintf(&buf, "\nif err := enc.Encode(t.privateClaims[k]); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode private param %%s`, k)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfmt.Fprintf(&buf, `}`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nvar m map[string]interface{}")
-	fmt.Fprintf(&buf, "\nif err := json.Unmarshal(buf.Bytes(), &m); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nreturn json.Marshal(m)")
-	fmt.Fprintf(&buf, "\n}") // end of MarshalJSON
-
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
-	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair)")
-	fmt.Fprintf(&buf, "\ngo t.iterate(ctx, ch)")
+	fmt.Fprintf(&buf, "\n}(ctx, ch, pairs)")
 	fmt.Fprintf(&buf, "\nreturn mapiter.New(ch)")
 	fmt.Fprintf(&buf, "\n}")
 

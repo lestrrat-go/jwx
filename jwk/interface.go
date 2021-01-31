@@ -1,7 +1,10 @@
 package jwk
 
 import (
+	"context"
 	"crypto/x509"
+	"net/http"
+	"sync"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
@@ -38,10 +41,47 @@ const (
 	KeyOpDeriveBits KeyOperation = "deriveBits" // (derive bits not to be used as a key)
 )
 
-// Set is a convenience struct to allow generating and parsing
-// JWK sets as opposed to single JWKs
-type Set struct {
-	Keys []Key
+// Set represents JWKS object, a collection of jwk.Key objects.
+//
+// Sets can be safely converted to and from JSON using the standard
+// `"encoding/json".Marshal` and `"encoding/json".Unmarshal`. However,
+// if you do not know if the payload contains a single JWK or a JWK set,
+// consider using `jwk.Parse()` to always get a `jwk.Set` out of it.
+type Set interface {
+	// Add adds the specified key. If the key already exists in the set, it is
+	// not added.
+	Add(Key) bool
+
+	// Clear resets the list of keys associated with this set, emptying the
+	// internal list of `jwk.Key`s
+	Clear()
+
+	// Get returns the key at index `idx`. If the index is out of range,
+	// then the second return value is false.
+	Get(int) (Key, bool)
+
+	// Index returns the index where the given key exists, -1 otherwise
+	Index(Key) int
+
+	// Len returns the number of keys in the set
+	Len() int
+
+	// LookupKeyID returns the first key matching the given key id.
+	// The second return value is false if there are no keys matching the key id.
+	// The set *may* contain multiple keys with the same key id. If you
+	// need all of them, use `Iterate()`
+	LookupKeyID(string) (Key, bool)
+
+	// Remove removes the key from the set.
+	Remove(Key) bool
+
+	// Iterate creates an iterator to iterate through all keys in the set.
+	Iterate(context.Context) KeyIterator
+}
+
+type set struct {
+	keys []Key
+	mu   sync.RWMutex
 }
 
 type HeaderVisitor = iter.MapVisitor
@@ -51,11 +91,15 @@ type HeaderIterator = mapiter.Iterator
 type KeyPair = arrayiter.Pair
 type KeyIterator = arrayiter.Iterator
 
-type AutoRefreshOption interface {
-	Option
-	autoRefreshOptionMarker
+type PublicKeyer interface {
+	// PublicKey creates the corresponding PublicKey type for this object.
+	// All fields are copied onto the new public key, except for those that are not allowed.
+	// Returned value must not be the receiver itself.
+	PublicKey() (Key, error)
 }
 
-type autoRefreshOptionMarker interface {
-	autoRefreshOption() bool
+// HTTPClient specifies the minimum interface that is required for our JWK
+// fetching tools.
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
 }

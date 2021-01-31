@@ -1,0 +1,35 @@
+name: Benchmark
+on:
+  schedule:
+    - cron: '0 5 * * 1' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        json_backend: [ 'stdlib', 'goccy' ]
+        go: [ '1.15.x', '1.14.x' ]
+    name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Install Go stable version
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Benchmark (Stdlib)
+        run: |
+          cd bench && go test -bench . -benchmem
+      - name: Benchmark (Goccy)
+        run: |
+          cd bench && go test -tags jwx_goccy -bench . -benchmem

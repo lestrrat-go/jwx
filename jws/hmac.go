@@ -6,6 +6,7 @@ import (
 	"crypto/sha512"
 	"hash"
 
+	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
@@ -46,9 +47,9 @@ func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {
 }
 
 func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
-	hmackey, ok := key.([]byte)
-	if !ok {
-		return nil, errors.Errorf(`invalid key type %T. []byte is required`, key)
+	var hmackey []byte
+	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
+		return nil, errors.Wrapf(err, `invalid key type %T. []byte is required`, key)
 	}
 
 	if len(hmackey) == 0 {

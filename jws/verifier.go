@@ -64,5 +64,5 @@ func NewVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, errors.Errorf(`unsupported signature algorithm %s`, alg)
+	return nil, errors.Errorf(`unsupported signature algorithm "%s"`, alg)
 }

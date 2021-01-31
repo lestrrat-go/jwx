@@ -5,6 +5,7 @@ package jwt
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 
@@ -16,41 +17,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ParseString calls Parse with the given string
-//
-// ParseString will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
-func ParseString(s string, options ...Option) (Token, error) {
+// ParseString calls Parse against a string
+func ParseString(s string, options ...ParseOption) (Token, error) {
 	return parseBytes([]byte(s), options...)
-}
-
-// ParseBytes calls Parse with the given byte sequence
-//
-// ParseBytes will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
-func ParseBytes(s []byte, options ...Option) (Token, error) {
-	return parseBytes(s, options...)
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
 // If the token is signed and you want to verify the payload matches the signature,
-// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(*jwk.Set) option.
+// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 //
 // If you also want to assert the validity of the JWT itself (i.e. expiration
-// and such), use the `Valid()` function on the returned token, or pass the
-// `WithValidation(true)` option. Validation options can also be passed to
+// and such), use the `Validate()` function on the returned token, or pass the
+// `WithValidate(true)` option. Validate options can also be passed to
 // `Parse`
 //
-// This function takes both ParseOption and Validate Option types:
+// This function takes both ParseOption and ValidateOption types:
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
-//
-// Parse will be removed in v1.1.0.
-// v1.1.0 will introduce `Parse([]byte)` and `ParseReader(io.Reader)`.
-func Parse(src io.Reader, options ...Option) (Token, error) {
+func Parse(s []byte, options ...ParseOption) (Token, error) {
+	return parseBytes(s, options...)
+}
+
+// ParseReader calls Parse against an io.Reader
+func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := ioutil.ReadAll(src)
 	if err != nil {
@@ -59,20 +51,27 @@ func Parse(src io.Reader, options ...Option) (Token, error) {
 	return parseBytes(data, options...)
 }
 
-func parseBytes(data []byte, options ...Option) (Token, error) {
+func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	var params VerifyParameters
-	var keyset *jwk.Set
+	var keyset jwk.Set
 	var useDefault bool
 	var token Token
 	var validate bool
+	var ok bool
 	for _, o := range options {
 		switch o.Ident() {
 		case identVerify{}:
 			params = o.Value().(VerifyParameters)
 		case identKeySet{}:
-			keyset = o.Value().(*jwk.Set)
+			keyset, ok = o.Value().(jwk.Set)
+			if !ok {
+				return nil, errors.Errorf(`invalid JWK set passed via WithKeySet() option (%T)`, o.Value())
+			}
 		case identToken{}:
-			token = o.Value().(Token)
+			token, ok = o.Value().(Token)
+			if !ok {
+				return nil, errors.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
+			}
 		case identDefault{}:
 			useDefault = o.Value().(bool)
 		case identValidate{}:
@@ -101,7 +100,7 @@ func parseBytes(data []byte, options ...Option) (Token, error) {
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...Option) (Token, error) {
+func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
 	var payload []byte
 	if verify {
 		// If verify is true, the data MUST be a valid jws message
@@ -114,8 +113,8 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		// 1. eyXXX.XXXX.XXXX
 		// 2. { "signatures": [ ... ] }
 		// 3. { "foo": "bar" }
-		if data[0] == '{' {
-			m, err := jws.ParseBytes(data)
+		if len(data) > 0 && data[0] == '{' {
+			m, err := jws.Parse(data)
 			if err == nil {
 				payload = m.Payload()
 			} else {
@@ -124,7 +123,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 			}
 		} else {
 			// Probably compact JWS
-			m, err := jws.ParseBytes(data)
+			m, err := jws.Parse(data)
 			if err != nil {
 				return nil, errors.Wrap(err, `invalid jws message`)
 			}
@@ -154,8 +153,8 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	return token, nil
 }
 
-func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
-	msg, err := jws.ParseBytes(data)
+func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
+	msg, err := jws.Parse(data)
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to parse token data`)
 	}
@@ -170,35 +169,26 @@ func lookupMatchingKey(data []byte, keyset *jwk.Set, useDefault bool) (jwa.Signa
 		}
 	}
 
-	var keys []jwk.Key
+	var key jwk.Key
+	var ok bool
 	if kid == "" {
-		keys = keyset.Keys
+		key, ok = keyset.Get(0)
+		if !ok {
+			return "", nil, errors.New(`empty keyset`)
+		}
 	} else {
-		keys = keyset.LookupKeyID(kid)
-	}
-	if len(keys) == 0 {
-		return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
+		key, ok = keyset.LookupKeyID(kid)
+		if !ok {
+			return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
+		}
 	}
 
 	var rawKey interface{}
-	if err := keys[0].Raw(&rawKey); err != nil {
+	if err := key.Raw(&rawKey); err != nil {
 		return "", nil, errors.Wrapf(err, `failed to construct raw key from keyset (key ID=%#v)`, kid)
 	}
 
 	return headers.Algorithm(), rawKey, nil
-}
-
-// ParseVerify is marked to be deprecated. Please use jwt.Parse
-// with appropriate options instead.
-//
-// ParseVerify a function that is similar to Parse(), but does not
-// allow for parsing without signature verification parameters.
-//
-// If you want to provide a *jwk.Set and allow the library to automatically
-// choose the key to use using the Key IDs, use the jwt.WithKeySet option
-// along with the jwt.Parse function.
-func ParseVerify(src io.Reader, alg jwa.SignatureAlgorithm, key interface{}) (Token, error) {
-	return Parse(src, WithVerify(alg, key))
 }
 
 // Sign is a convenience function to create a signed JWT token serialized in
@@ -243,4 +233,42 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 	}
 
 	return sign, nil
+}
+
+// Equal compares two JWT tokens. Do not use `reflect.Equal` or the like
+// to compare tokens as they will also compare extra detail such as
+// sync.Mutex objects used to control concurrent access.
+//
+// The comparison for values is currently done using a simple equality ("==").
+func Equal(t1, t2 Token) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	m1, err := t1.AsMap(ctx)
+	if err != nil {
+		return false
+	}
+
+	for iter := t2.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if m1[pair.Key.(string)] != pair.Value {
+			return false
+		}
+		delete(m1, pair.Key.(string))
+	}
+
+	return len(m1) == 0
+}
+
+func (t *stdToken) Clone() (Token, error) {
+	dst := New()
+
+	ctx := context.Background()
+	for iter := t.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		}
+	}
+	return dst, nil
 }

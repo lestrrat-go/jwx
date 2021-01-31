@@ -5,11 +5,12 @@ package jws
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sort"
-	"strconv"
+	"sync"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
@@ -31,6 +32,8 @@ const (
 
 // Headers describe a standard Header set.
 type Headers interface {
+	json.Marshaler
+	json.Unmarshaler
 	Algorithm() jwa.SignatureAlgorithm
 	ContentType() string
 	Critical() []string
@@ -43,10 +46,13 @@ type Headers interface {
 	X509CertThumbprintS256() string
 	X509URL() string
 	Iterate(ctx context.Context) Iterator
-	Walk(ctx context.Context, v Visitor) error
-	AsMap(ctx context.Context) (map[string]interface{}, error)
+	Walk(context.Context, Visitor) error
+	AsMap(context.Context) (map[string]interface{}, error)
+	Copy(context.Context, Headers) error
+	Merge(context.Context, Headers) (Headers, error)
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+	Remove(string) error
 
 	// PrivateParams returns the non-standard elements in the source structure
 	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
@@ -67,6 +73,7 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
 type standardHeadersMarshalProxy struct {
@@ -84,10 +91,14 @@ type standardHeadersMarshalProxy struct {
 }
 
 func NewHeaders() Headers {
-	return &stdHeaders{}
+	return &stdHeaders{
+		mu: &sync.RWMutex{},
+	}
 }
 
 func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm == nil {
 		return ""
 	}
@@ -95,6 +106,8 @@ func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
 }
 
 func (h *stdHeaders) ContentType() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.contentType == nil {
 		return ""
 	}
@@ -102,14 +115,20 @@ func (h *stdHeaders) ContentType() string {
 }
 
 func (h *stdHeaders) Critical() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.critical
 }
 
 func (h *stdHeaders) JWK() jwk.Key {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.jwk
 }
 
 func (h *stdHeaders) JWKSetURL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.jwkSetURL == nil {
 		return ""
 	}
@@ -117,6 +136,8 @@ func (h *stdHeaders) JWKSetURL() string {
 }
 
 func (h *stdHeaders) KeyID() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID == nil {
 		return ""
 	}
@@ -124,6 +145,8 @@ func (h *stdHeaders) KeyID() string {
 }
 
 func (h *stdHeaders) Type() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.typ == nil {
 		return ""
 	}
@@ -131,10 +154,14 @@ func (h *stdHeaders) Type() string {
 }
 
 func (h *stdHeaders) X509CertChain() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.x509CertChain
 }
 
 func (h *stdHeaders) X509CertThumbprint() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint == nil {
 		return ""
 	}
@@ -142,6 +169,8 @@ func (h *stdHeaders) X509CertThumbprint() string {
 }
 
 func (h *stdHeaders) X509CertThumbprintS256() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 == nil {
 		return ""
 	}
@@ -149,14 +178,17 @@ func (h *stdHeaders) X509CertThumbprintS256() string {
 }
 
 func (h *stdHeaders) X509URL() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL == nil {
 		return ""
 	}
 	return *(h.x509URL)
 }
 
-func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *stdHeaders) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	var pairs []*HeaderPair
 	if h.algorithm != nil {
 		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
@@ -194,20 +226,18 @@ func (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *stdHeaders) PrivateParams() map[string]interface{} {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.privateParams
 }
 
 func (h *stdHeaders) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -271,6 +301,8 @@ func (h *stdHeaders) Get(name string) (interface{}, bool) {
 }
 
 func (h *stdHeaders) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case AlgorithmKey:
 		var acceptor jwa.SignatureAlgorithm
@@ -348,95 +380,179 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 	return nil
 }
 
-func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
-	var proxy standardHeadersMarshalProxy
-	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal headers`)
+func (h *stdHeaders) Remove(key string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		h.algorithm = nil
+	case ContentTypeKey:
+		h.contentType = nil
+	case CriticalKey:
+		h.critical = nil
+	case JWKKey:
+		h.jwk = nil
+	case JWKSetURLKey:
+		h.jwkSetURL = nil
+	case KeyIDKey:
+		h.keyID = nil
+	case TypeKey:
+		h.typ = nil
+	case X509CertChainKey:
+		h.x509CertChain = nil
+	case X509CertThumbprintKey:
+		h.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		h.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		h.x509URL = nil
+	default:
+		delete(h.privateParams, key)
 	}
+	return nil
+}
 
+func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
+	h.algorithm = nil
+	h.contentType = nil
+	h.critical = nil
 	h.jwk = nil
-	if jwkField := proxy.Xjwk; len(jwkField) > 0 {
-		set, err := jwk.ParseBytes([]byte(proxy.Xjwk))
+	h.jwkSetURL = nil
+	h.keyID = nil
+	h.typ = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	dec := json.NewDecoder(bytes.NewReader(buf))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to parse jwk field`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		h.jwk = set.Keys[0]
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
+			}
+		case string: // Objects can only have string keys
+			switch tok {
+			case AlgorithmKey:
+				var decoded jwa.SignatureAlgorithm
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+				}
+				h.algorithm = &decoded
+			case ContentTypeKey:
+				if err := json.AssignNextStringToken(&h.contentType, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ContentTypeKey)
+				}
+			case CriticalKey:
+				var decoded []string
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, CriticalKey)
+				}
+				h.critical = decoded
+			case JWKKey:
+				var buf json.RawMessage
+				if err := dec.Decode(&buf); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JWKKey)
+				}
+				key, err := jwk.ParseKey(buf)
+				if err != nil {
+					return errors.Wrapf(err, `failed to parse JWK for key %s`, JWKKey)
+				}
+				h.jwk = key
+			case JWKSetURLKey:
+				if err := json.AssignNextStringToken(&h.jwkSetURL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, JWKSetURLKey)
+				}
+			case KeyIDKey:
+				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+				}
+			case TypeKey:
+				if err := json.AssignNextStringToken(&h.typ, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, TypeKey)
+				}
+			case X509CertChainKey:
+				var decoded []string
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+				}
+				h.x509CertChain = decoded
+			case X509CertThumbprintKey:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+				}
+			case X509CertThumbprintS256Key:
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+				}
+			case X509URLKey:
+				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+				}
+			default:
+				var decoded interface{}
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				}
+				if h.privateParams == nil {
+					h.privateParams = make(map[string]interface{})
+				}
+				h.privateParams[tok] = decoded
+			}
+		default:
+			return errors.Errorf(`invalid token %T`, tok)
+		}
 	}
-	h.algorithm = proxy.Xalgorithm
-	h.contentType = proxy.XcontentType
-	h.critical = proxy.Xcritical
-	h.jwkSetURL = proxy.XjwkSetURL
-	h.keyID = proxy.XkeyID
-	h.typ = proxy.Xtyp
-	h.x509CertChain = proxy.Xx509CertChain
-	h.x509CertThumbprint = proxy.Xx509CertThumbprint
-	h.x509CertThumbprintS256 = proxy.Xx509CertThumbprintS256
-	h.x509URL = proxy.Xx509URL
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf, &m); err != nil {
-		return errors.Wrap(err, `failed to parse privsate parameters`)
-	}
-	delete(m, AlgorithmKey)
-	delete(m, ContentTypeKey)
-	delete(m, CriticalKey)
-	delete(m, JWKKey)
-	delete(m, JWKSetURLKey)
-	delete(m, KeyIDKey)
-	delete(m, TypeKey)
-	delete(m, X509CertChainKey)
-	delete(m, X509CertThumbprintKey)
-	delete(m, X509CertThumbprintS256Key)
-	delete(m, X509URLKey)
-	h.privateParams = m
 	return nil
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {
-	var proxy standardHeadersMarshalProxy
-	if h.jwk != nil {
-		jwkbuf, err := json.Marshal(h.jwk)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to marshal jwk field`)
-		}
-		proxy.Xjwk = jwkbuf
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	data := make(map[string]interface{})
+	fields := make([]string, 0, 11)
+	for iter := h.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		fields = append(fields, pair.Key.(string))
+		data[pair.Key.(string)] = pair.Value
 	}
-	proxy.Xalgorithm = h.algorithm
-	proxy.XcontentType = h.contentType
-	proxy.Xcritical = h.critical
-	proxy.XjwkSetURL = h.jwkSetURL
-	proxy.XkeyID = h.keyID
-	proxy.Xtyp = h.typ
-	proxy.Xx509CertChain = h.x509CertChain
-	proxy.Xx509CertThumbprint = h.x509CertThumbprint
-	proxy.Xx509CertThumbprintS256 = h.x509CertThumbprintS256
-	proxy.Xx509URL = h.x509URL
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(proxy); err != nil {
-		return nil, errors.Wrap(err, `failed to encode proxy to JSON`)
-	}
-	hasContent := buf.Len() > 3 // encoding/json always adds a newline, so "{}\n" is the empty hash
-	if l := len(h.privateParams); l > 0 {
-		buf.Truncate(buf.Len() - 2)
-		keys := make([]string, 0, l)
-		for k := range h.privateParams {
-			keys = append(keys, k)
+
+	sort.Strings(fields)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	buf.WriteByte('{')
+	enc := json.NewEncoder(buf)
+	for i, f := range fields {
+		if i > 0 {
+			buf.WriteRune(',')
 		}
-		sort.Strings(keys)
-		for i, k := range keys {
-			if hasContent || i > 0 {
-				fmt.Fprintf(&buf, `,`)
+		buf.WriteRune('"')
+		buf.WriteString(f)
+		buf.WriteString(`":`)
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			buf.WriteRune('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteRune('"')
+		default:
+			if err := enc.Encode(v); err != nil {
+				errors.Errorf(`failed to encode value for field %s`, f)
 			}
-			fmt.Fprintf(&buf, `%s:`, strconv.Quote(k))
-			if err := enc.Encode(h.privateParams[k]); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode private param %s`, k)
-			}
+			buf.Truncate(buf.Len() - 1)
 		}
-		fmt.Fprintf(&buf, `}`)
 	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
-		return nil, errors.Wrap(err, `failed to do second pass unmarshal during MarshalJSON`)
-	}
-	return json.Marshal(m)
+	buf.WriteByte('}')
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }

@@ -1,6 +1,146 @@
 Changes
 =======
 
+v1.1.0
+  v1.1.0 is a release that attempts to fix as many of the quirky APIs
+  that survived the API breaking change of v0.9.x -> v1.0.0. This is
+  hopefully the last releases that change backwards compatibility
+  in a major way, at least for some time to come.
+
+  It is unfortunate that we need to introduce API changes, but we
+  keep learning how the library is being used and the pain points
+  of using this library. Most of the times these pain points are
+  things that we initially did not think about, which in turn
+  requires us to rethink of the API.
+
+  If you do not wish to spend the time fixing your usage, make sure
+  you have your go.mod set up to not automatically track the latest
+  changes.
+
+  However, if you do decide to use the latest version, we believe
+  the API is more uniform across packages, and generally is easier
+  to understand. We hope this library helps some of you out there.
+
+[BREAKING CHANGES]
+  * `jwk.Parse(io.Reader)`, `jws.Parse(io.Reader)`, `jwt.Parse(io.Reader)`, 
+    have all been changed to `Parse([]byte)`. To use an `io.Reader`,
+    use `ParseReader(io.Reader)`. `jwe.Parse` already took `[]byte`, so
+    has not been changed.
+
+    With this change, all four package `jwe`, `jwk`, `jws`, and `jwt` follow
+    the same API design, which should make things easier to navigate:
+
+      Parse([]byte)
+      ParseString(string)
+      ParseReader(io.Reader)
+
+  * `jwk.Set` is now an interface, not a struct. `jwk.Set` now has a
+    well-defined API to access and modify the `jwk.Key` objects that it holds.
+
+      Add(jwk.Key) bool
+      Clear()
+      Get(int) (jwk.Key, bool)
+      Index(jwk.Key) int
+      Len() int
+      LookupKeyID() (jwk.Key, bool) // Read the section about it below
+      Remove(jwk.Key) bool
+      Iterate(context.Context) KeyIterator
+
+  * `(jwk.Set).LookupKeyID()` no longer returns an array of `jwk.Key`.
+    Instead, only the first key matching the given key ID will be returned.
+    If you need to work with multiple keys, use `(jwk.Set).Iterate()` or
+    `(jwk.Set).Get()` to look for matching keys.
+
+  * `jwk.PublicKeyOf()` has been renamed to `jwk.PublicRawKeyOf()`,
+    which converts raw keys (e.g. `rsa.PrivateKey`) to their public
+    counter part (e.g. `rsa.PublicKey`)
+
+    `jwk.PublicKeyOf()` is now used to get the public counter part of
+    `jwk.Key` objects (e.g. `jwk.RSAPrivateKey` to `jwk.RSAPublicKey`)
+
+    `jwk.PublicSetOf()` has been added to get a new `jwk.Set` but with
+    all keys transformed to public keys via `jwk.PublicKeyOf()`
+
+  * `jwk.FetchXXXX` functions have been removed. `jwk.Fetch()` remains, but
+    it now takes `context.Context`, and doesn't support retrieving files
+    from the local file system. See `ReadFile()` for that.
+
+  * `jws.VerifyWithJKU()`, `jws.VerifyWithJWK()`, `jwk.VerifyWithJWKSet()`
+    have all been removed, but `jwk.VerifySet(jwk.Set)` has been added.
+
+  * `jws.SplitCompact(io.Reader)` has been changd to `jws.SplitCompact([]byte)`
+    Similar to `Parse()`, `SplitCompactReader(io.Reader)` and `SplitCompactString(string)`
+    have been added
+
+  * `jws.SignLiteral` has been removed.
+
+  * `jws.PayloadSigner` has been removed (but should not matter, because
+    this as internal-use only anyways)
+
+  * `jwe.WithPrettyJSONFormat` has been renamed to `jwe.WithPrettyFormat`
+
+  * `jwt.Verify` has been removed. Use `jwt.Parse()` aloing with the `jwt.WithVerify()`
+    option to perform signature verification. Validation of verified data
+    can be performed via `(jwt.Token).Validate()` method, which has been available
+    since v1.0.6
+
+  * Package `buffer` has been removed. This package should have been an internal
+    package to start with, but it was left because it had been incorporated
+    in the public API in our initial versions.
+
+  * `(jwk.Key).Get(jwk.X509CertChainKey)` no longer returns a `jwk.CertificateChain`.
+    Instead it returns a raw []*x509.Certificate.
+
+  * `(jwt.Token).Size() has been removed.
+
+  * `jwt.WithOpenIDClaims()` has been removed. Use `jwt.WithToken(openid.New())` instead.
+
+[New Features]
+  * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
+    `jwt.ReadFile(string)` have been added. In the future, we plan to introduce
+    a `WithFS` option so you can read from an arbitrary file system, but this cannot
+    be added while we keep go < 1.16 compatibility. If you want something like that,
+    you will need to put an adapter over the jwx for the time being.
+
+  * `(jwk.Key).PublicKey()` has been added. This method creates a corresponding
+    public key, with all fields (except those that shouldn't be) copied over.
+    This allows you to easily create a public key of a private key with the
+    same "kid" attribute.
+
+  * Both `jws.Verify` and `jws.Sign` methods can now handle `jwk.Key` objects, on
+    top of raw keys (e.g. rsa.PrivateKey). You no longer need to conver the
+    `jwk.Key` objects that you have in to raw keys before using these functions.
+
+  * `(jws.Header).Remove(string)`, `(jwk.Key).Remove(string)`, and
+    `(jwt.Token).Remove(string)` have been added. `jwe.Header` already had a `Remove()`
+    method, so it has not been changed.
+
+  * `(jwk.Key).Clone() has been added.
+
+[Miscellaneous]
+  * Default branch for the repository is now `main`.
+
+  * Options have been reworked. In most instances, option types should now reflect
+    better the contexts in which they can be used. For example, `jwk` now has
+    `AutoRefreshOption` and `FetchOption` instead of a single `Option`.
+
+  * JSON marshaling should be 10~30% faster by default (though they may take
+    more allocations to achieve this).
+
+    However, if performance is really bogging you down, you can try to enable
+    the optional module github.com/goccy/go-json by enabling the "jwx_goccy" tag
+
+      go build -tags jwx_goccy ...
+
+    In some cases you get an extra 40~50% performance improvement in serailization
+    https://github.com/lestrrat-go/jwx/pull/314#issue-560594020
+    https://github.com/lestrrat-go/jwx/pull/314#issuecomment-766343888
+
+  * Location for examples and benchmarks have changed: Now examples/ and bench/ 
+    are their respective locations, and they are each a standalone module,
+    so that in case we need extra imports (such as the case in examples)
+    they do not interfere with users who just want to include jwx in their projects.
+
 v1.0.8 15 Jan 2021
 [New features]
   * Fixed `jws.Message` and `jws.Signature` to be properly formatted when
@@ -13,8 +153,8 @@ v1.0.8 15 Jan 2021
     through one extra roundtrip of `json.Unmarshal`/`json.Marshal` to preserve
     compatible behavior. This *may* lead to slightly slower performance if
     you are performing `json.Marshal` over and over in very quick succession.
-		Please file an issue if you have real world cases where the change
-		causes problems for you.
+    Please file an issue if you have real world cases where the change
+    causes problems for you.
   * Added more examples in various places.
   * Tests runs have been sped up for the most oft used cases
 
@@ -73,15 +213,15 @@ v1.0.3 - 08 Jul 2020
 
 v1.0.2 - 07 May 2020
   * Since 1.0.0, we took some time to play the test coverage game.
-	  The coverage is around 30% better, and we _did_ uncover some
+    The coverage is around 30% better, and we _did_ uncover some
     inconsistencies in the API, which got promptly fixed.
     But I'm tired of the coverage game for the time being. PR's welcome!
   * Add jwk.AssignKeyID to automatically assign a `kid` field to a JWK
-	* Fix jwe.Encrypt / jwe.Decrypt to properly look at the `zip` field
+  * Fix jwe.Encrypt / jwe.Decrypt to properly look at the `zip` field
   * Change jwe.Message accessors to return []byte, not buffer.Buffer
 
 v1.0.1 - 04 May 2020
-	* Normalize all JWK serialization to use padding-less base64 encoding (#185)
+  * Normalize all JWK serialization to use padding-less base64 encoding (#185)
   * Fix edge case unmarshaling openid.AddressClaim within a openid.Token
   * Fix edge case unmarshaling jwe.Message
   * Export JWK key-specific constants, such as jwk.RSANKey, jwk.SymmetricOctetsKey, etc

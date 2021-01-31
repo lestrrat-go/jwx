@@ -116,7 +116,7 @@ func TestLowLevelParts_A128KW_A128CBCHS256(t *testing.T) {
 	}
 
 	if !assert.Equal(t, compactExpected, string(serialized), "compact serialization matches") {
-		serialized, err = JSON(msg, WithPrettyJSONFormat(true))
+		serialized, err = JSON(msg, WithPrettyFormat(true))
 		if !assert.NoError(t, err, "JSON serialization is successful") {
 			return
 		}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"testing"
@@ -50,11 +51,11 @@ func TestJWTParse(t *testing.T) {
 
 	t.Run("Parse (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(bytes.NewReader(signed))
+		t2, err := jwt.Parse(signed)
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
@@ -64,33 +65,33 @@ func TestJWTParse(t *testing.T) {
 		if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
-	t.Run("ParseBytes (no signature verification)", func(t *testing.T) {
+	t.Run("ParseReader (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.ParseBytes(signed)
+		t2, err := jwt.ParseReader(bytes.NewReader(signed))
 		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
 	t.Run("Parse (correct signature key)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &key.PublicKey))
+		t2, err := jwt.Parse(signed, jwt.WithVerify(alg, &key.PublicKey))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
-		if !assert.Equal(t, t1, t2, `t1 == t2`) {
+		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 			return
 		}
 	})
 	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
 		t.Parallel()
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(jwa.RS512, &key.PublicKey))
+		_, err := jwt.Parse(signed, jwt.WithVerify(jwa.RS512, &key.PublicKey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -99,7 +100,7 @@ func TestJWTParse(t *testing.T) {
 		t.Parallel()
 		pubkey := key.PublicKey
 		pubkey.E = 0 // bogus value
-		_, err := jwt.Parse(bytes.NewReader(signed), jwt.WithVerify(alg, &pubkey))
+		_, err := jwt.Parse(signed, jwt.WithVerify(alg, &pubkey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -125,42 +126,6 @@ func TestJWTParseVerify(t *testing.T) {
 		return
 	}
 
-	t.Run("ParseVerify(old API)", func(t *testing.T) {
-		t.Parallel()
-		t.Run("parse (no signature verification)", func(t *testing.T) {
-			t.Parallel()
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), "", nil)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (correct signature key)", func(t *testing.T) {
-			t.Parallel()
-			t2, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &key.PublicKey)
-			if !assert.NoError(t, err, `jwt.ParseVerify should succeed`) {
-				return
-			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
-			t.Parallel()
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), jwa.RS512, &key.PublicKey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-		t.Run("parse (wrong signature key)", func(t *testing.T) {
-			t.Parallel()
-			pubkey := key.PublicKey
-			pubkey.E = 0 // bogus value
-			_, err := jwt.ParseVerify(bytes.NewReader(signed), alg, &pubkey)
-			if !assert.Error(t, err, `jwt.ParseVerify should fail`) {
-				return
-			}
-		})
-	})
 	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
 		t.Parallel()
 		t.Run("Automatically pick a key from set", func(t *testing.T) {
@@ -171,11 +136,15 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 
 			pubkey.Set(jwk.KeyIDKey, kid)
-			t2, err := jwt.Parse(bytes.NewReader(signed), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			t2, err := jwt.Parse(signed, jwt.WithKeySet(set))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+
+			if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 				return
 			}
 		})
@@ -191,7 +160,10 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -208,11 +180,13 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			t2, err := jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}), jwt.UseDefaultKey(true))
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			t2, err := jwt.Parse(signedNoKid, jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
-			if !assert.Equal(t, t1, t2, `t1 == t2`) {
+			if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
 				return
 			}
 		})
@@ -233,7 +207,10 @@ func TestJWTParseVerify(t *testing.T) {
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
-			_, err = jwt.Parse(bytes.NewReader(signedNoKid), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey1, pubkey2}}), jwt.UseDefaultKey(true))
+			set := jwk.NewSet()
+			set.Add(pubkey1)
+			set.Add(pubkey2)
+			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set), jwt.UseDefaultKey(true))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -247,7 +224,7 @@ func TestJWTParseVerify(t *testing.T) {
 	t.Run("Check alg=none", func(t *testing.T) {
 		t.Parallel()
 		// Create a signed payload, but use alg=none
-		_, payload, signature, err := jws.SplitCompact(bytes.NewReader(signed))
+		_, payload, signature, err := jws.SplitCompact(signed)
 		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 			return
 		}
@@ -277,7 +254,9 @@ func TestJWTParseVerify(t *testing.T) {
 
 		pubkey.Set(jwk.KeyIDKey, kid)
 
-		_, err = jwt.Parse(bytes.NewReader(signedButNot), jwt.WithKeySet(&jwk.Set{Keys: []jwk.Key{pubkey}}))
+		set := jwk.NewSet()
+		set.Add(pubkey)
+		_, err = jwt.Parse(signedButNot, jwt.WithKeySet(set))
 		// This should fail
 		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
 			return
@@ -391,7 +370,7 @@ func TestGH52(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	const max = 1000
+	const max = 100
 	var wg sync.WaitGroup
 	wg.Add(max)
 	for i := 0; i < max; i++ {
@@ -442,12 +421,22 @@ func TestSignErrors(t *testing.T) {
 
 	tok := jwt.New()
 	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported signature algorithm BOGUS")
+	if !assert.Error(t, err) {
+		return
+	}
+
+	if !assert.Contains(t, err.Error(), `unsupported signature algorithm "BOGUS"`) {
+		return
+	}
 
 	_, err = jwt.Sign(tok, jwa.ES256, nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing private key")
+	if !assert.Error(t, err) {
+		return
+	}
+
+	if !assert.Contains(t, err.Error(), "missing private key") {
+		return
+	}
 }
 
 func TestSignJWK(t *testing.T) {
@@ -471,4 +460,27 @@ func TestSignJWK(t *testing.T) {
 
 	signatures := header.LookupSignature("test")
 	assert.Len(t, signatures, 1)
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	f, err := ioutil.TempFile("", "test-read-file-*.jwt")
+	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+		return
+	}
+	defer f.Close()
+
+	token := jwt.New()
+	token.Set(jwt.IssuerKey, `lestrrat`)
+	if !assert.NoError(t, json.NewEncoder(f).Encode(token), `json.NewEncoder.Encode should succeed`) {
+		return
+	}
+
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrat")); !assert.NoError(t, err, `jwt.ReadFile should succeed`) {
+		return
+	}
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat")); !assert.Error(t, err, `jwt.ReadFile should fail`) {
+		return
+	}
 }

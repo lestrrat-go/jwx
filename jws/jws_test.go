@@ -7,15 +7,16 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha512"
-	"encoding/base64"
+	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -26,18 +27,18 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
-func TestParse(t *testing.T) {
+func TestParseReader(t *testing.T) {
 	t.Parallel()
 	t.Run("Empty []byte", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.ParseBytes(nil)
+		_, err := jws.Parse(nil)
 		if !assert.Error(t, err, "Parsing an empty byte slice should result in an error") {
 			return
 		}
 	})
 	t.Run("Empty bytes.Buffer", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Parse(&bytes.Buffer{})
+		_, err := jws.ParseReader(&bytes.Buffer{})
 		if !assert.Error(t, err, "Parsing an empty buffer should result in an error") {
 			return
 		}
@@ -55,8 +56,8 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				// Force Parse() to choose un-optimized path by using bufio.NewReader
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				// Force ParseReader() to choose un-optimized path by using bufio.NewReader
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -74,7 +75,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -92,7 +93,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -110,7 +111,7 @@ func TestParse(t *testing.T) {
 		for _, useReader := range []bool{true, false} {
 			var err error
 			if useReader {
-				_, err = jws.Parse(bufio.NewReader(strings.NewReader(incoming)))
+				_, err = jws.ParseReader(bufio.NewReader(strings.NewReader(incoming)))
 			} else {
 				_, err = jws.ParseString(incoming)
 			}
@@ -121,21 +122,158 @@ func TestParse(t *testing.T) {
 	})
 }
 
-func TestRoundtrip(t *testing.T) {
-	t.Parallel()
-	payload := []byte("Lorem ipsum")
-	sharedkey := []byte("Avracadabra")
+func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
+	t.Helper()
 
-	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
-	for _, alg := range hmacAlgorithms {
-		alg := alg
-		t.Run("HMAC "+alg.String(), func(t *testing.T) {
+	signed, err := jws.Sign(payload, alg, signKey)
+	if !assert.NoError(t, err, "jws.Sign should succeed") {
+		return
+	}
+
+	parsers := map[string]func([]byte) (*jws.Message, error){
+		"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
+		"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
+		"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
+	}
+	for name, f := range parsers {
+		name := name
+		f := f
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			signed, err := jws.Sign(payload, alg, sharedkey)
-			if !assert.NoError(t, err, "Sign succeeds") {
+			m, err := f(signed)
+			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
 				return
 			}
 
+			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
+				return
+			}
+		})
+	}
+
+	for name, testKey := range keys {
+		name := name
+		testKey := testKey
+		t.Run(name, func(t *testing.T) {
+			verified, err := jws.Verify(signed, alg, testKey)
+			if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
+				return
+			}
+
+			if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
+				return
+			}
+		})
+	}
+}
+
+func TestRoundtrip(t *testing.T) {
+	t.Parallel()
+	payload := []byte("Lorem ipsum")
+
+	t.Run("HMAC", func(t *testing.T) {
+		t.Parallel()
+		sharedkey := []byte("Avracadabra")
+		jwkKey, _ := jwk.New(sharedkey)
+		keys := map[string]interface{}{
+			"[]byte":  sharedkey,
+			"jwk.Key": jwkKey,
+		}
+		hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+		for _, alg := range hmacAlgorithms {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, sharedkey, keys)
+			})
+		}
+	})
+	t.Run("ECDSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateEcdsaKey()
+		if !assert.NoError(t, err, "ECDSA key generated") {
+			return
+		}
+		jwkKey, _ := jwk.New(key.PublicKey)
+		keys := map[string]interface{}{
+			"Verify(ecdsa.PublicKey)":  key.PublicKey,
+			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
+			"Verify(jwk.Key)":          jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+	t.Run("RSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateRsaKey()
+		if !assert.NoError(t, err, "RSA key generated") {
+			return
+		}
+		jwkKey, _ := jwk.New(key.PublicKey)
+		keys := map[string]interface{}{
+			"Verify(rsa.PublicKey)":  key.PublicKey,
+			"Verify(*rsa.PublicKey)": &key.PublicKey,
+			"Verify(jwk.Key)":        jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+	t.Run("EdDSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateEd25519Key()
+		if !assert.NoError(t, err, "ed25519 key generated") {
+			return
+		}
+		pubkey := key.Public()
+		jwkKey, _ := jwk.New(pubkey)
+		keys := map[string]interface{}{
+			"Verify(ed25519.Public())":  pubkey,
+			"Verify(*ed25519.Public())": &pubkey,
+			"Verify(jwk.Key)":           jwkKey,
+		}
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA} {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				t.Parallel()
+				testRoundtrip(t, payload, alg, key, keys)
+			})
+		}
+	})
+}
+
+func TestSignMulti2(t *testing.T) {
+	sharedkey := []byte("Avracadabra")
+	payload := []byte("Lorem ipsum")
+	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+	var signed []byte
+	t.Run("Sign", func(t *testing.T) {
+		var options []jws.Option
+		for _, alg := range hmacAlgorithms {
+			signer, err := jws.NewSigner(alg)
+			if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
+				return
+			}
+			options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
+		}
+		var err error
+		signed, err = jws.SignMulti(payload, options...)
+		if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
+			return
+		}
+	})
+	for _, alg := range hmacAlgorithms {
+		alg := alg
+		t.Run("Verify "+alg.String(), func(t *testing.T) {
 			verified, err := jws.Verify(signed, alg, sharedkey)
 			if !assert.NoError(t, err, "Verify succeeded") {
 				return
@@ -145,128 +283,6 @@ func TestRoundtrip(t *testing.T) {
 				return
 			}
 		})
-	}
-	t.Run("HMAC SignMulti", func(t *testing.T) {
-		var signed []byte
-		t.Run("Sign", func(t *testing.T) {
-			var options []jws.Option
-			for _, alg := range hmacAlgorithms {
-				signer, err := jws.NewSigner(alg)
-				if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
-					return
-				}
-				options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
-			}
-			var err error
-			signed, err = jws.SignMulti(payload, options...)
-			if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
-				return
-			}
-		})
-		for _, alg := range hmacAlgorithms {
-			alg := alg
-			t.Run("Verify "+alg.String(), func(t *testing.T) {
-				verified, err := jws.Verify(signed, alg, sharedkey)
-				if !assert.NoError(t, err, "Verify succeeded") {
-					return
-				}
-
-				if !assert.Equal(t, payload, verified, "verified payload matches") {
-					return
-				}
-			})
-		}
-	})
-}
-
-func TestVerifyWithJWKSet(t *testing.T) {
-	payload := []byte("Hello, World!")
-	key, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, "RSA key generated") {
-		return
-	}
-
-	jwkKey, err := jwk.New(&key.PublicKey)
-	if !assert.NoError(t, err, "JWK public key generated") {
-		return
-	}
-	err = jwkKey.Set(jwk.AlgorithmKey, jwa.RS256)
-	if !assert.NoError(t, err, "Algorithm set successfully") {
-		return
-	}
-
-	buf, err := jws.Sign(payload, jwa.RS256, key)
-	if !assert.NoError(t, err, "Signature generated successfully") {
-		return
-	}
-
-	verified, err := jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey}}, nil)
-	if !assert.NoError(t, err, "Verify is successful") {
-		return
-	}
-	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
-		return
-	}
-
-	verified, err = jws.VerifyWithJWK(buf, jwkKey)
-	if !assert.NoError(t, err, "Verify is successful") {
-		return
-	}
-
-	if !assert.Equal(t, payload, verified, "Verified payload is the same") {
-		return
-	}
-
-	key2, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, "RSA key generated") {
-		return
-	}
-	jwkKey2, err := jwk.New(&key2.PublicKey)
-	if !assert.NoError(t, err, "JWK Public key generated") {
-		return
-	}
-	_, err = jws.VerifyWithJWKSet(buf, &jwk.Set{Keys: []jwk.Key{jwkKey2}}, nil)
-	if !assert.Error(t, err, "Verify with wrong key should fail") {
-		return
-	}
-}
-
-func TestRoundtrip_RSACompact(t *testing.T) {
-	payload := []byte("Hello, World!")
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-		key, err := jwxtest.GenerateRsaKey()
-		if !assert.NoError(t, err, "RSA key generated") {
-			return
-		}
-
-		buf, err := jws.Sign(payload, alg, key)
-		if !assert.NoError(t, err, "(%s) Signature generated successfully", alg) {
-			return
-		}
-
-		parsers := map[string]func([]byte) (*jws.Message, error){
-			"Parse(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.Parse(bufio.NewReader(bytes.NewReader(b))) },
-			"Parse(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
-		}
-		for name, f := range parsers {
-			m, err := f(buf)
-			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
-				return
-			}
-
-			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
-				return
-			}
-		}
-
-		verified, err := jws.Verify(buf, alg, &key.PublicKey)
-		if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
-			return
-		}
-
-		if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
-			return
-		}
 	}
 }
 
@@ -280,20 +296,13 @@ func TestEncode(t *testing.T) {
 		const hmacKey = `AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow`
 		const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 
-		hmacKeyDecoded := buffer.Buffer{}
-		err := hmacKeyDecoded.Base64Decode([]byte(hmacKey))
+		hmacKeyDecoded, err := base64.DecodeString(hmacKey)
 		if !assert.NoError(t, err, "HMAC base64 decoded successful") {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 
 		signingInput := bytes.Join(
 			[][]byte{
@@ -308,14 +317,11 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		signature, err := sign.Sign(signingInput, hmacKeyDecoded.Bytes())
+		signature, err := sign.Sign(signingInput, hmacKeyDecoded)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		sigbuf := base64.Encode(signature)
 
 		encoded := bytes.Join(
 			[][]byte{
@@ -328,7 +334,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -348,76 +354,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		if !assert.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded.Bytes()), "Verify succeeds") {
-			return
-		}
-	})
-	t.Run("HS256CompactLiteral", func(t *testing.T) {
-		t.Parallel()
-		const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
-		const jwksrc = `{
-"kty":"oct",
-"k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
-}`
-
-		hdrBytes := []byte(hdr)
-
-		hdrBuf, err := buffer.Buffer(hdr).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode protected header")
-		}
-		standardHeaders := jws.NewHeaders()
-		err = json.Unmarshal(hdrBytes, standardHeaders)
-		if err != nil {
-			t.Fatal("Failed to parse protected header")
-		}
-		alg := standardHeaders.Algorithm()
-
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode payload")
-		}
-
-		keys, _ := jwk.ParseString(jwksrc)
-		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
-			return
-		}
-		var jwsCompact []byte
-		jwsCompact, err = jws.SignLiteral([]byte(examplePayload), alg, key, hdrBytes)
-		if err != nil {
-			t.Fatal("Failed to sign message")
-		}
-
-		msg, err := jws.Parse(bytes.NewReader(jwsCompact))
-		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
-			return
-		}
-
-		signatures := msg.Signatures()
-		if !assert.Len(t, signatures, 1, `there should be exactly one signature`) {
-			return
-		}
-
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != alg {
-			t.Fatal("Algorithm in header does not match")
-		}
-
-		v, err := jws.NewVerifier(alg)
-		if !assert.NoError(t, err, "HmacVerify created") {
-			return
-		}
-
-		signingInput := bytes.Join(
-			[][]byte{
-				hdrBuf,
-				payload,
-			},
-			[]byte{'.'},
-		)
-
-		if !assert.NoError(t, v.Verify(signingInput, signatures[0].Signature(), key), "Verify succeeds") {
+		if !assert.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded), "Verify succeeds") {
 			return
 		}
 	})
@@ -443,12 +380,12 @@ func TestEncode(t *testing.T) {
 
 		alg := standardHeaders.Algorithm()
 
-		keys, err := jwk.ParseString(jwksrc)
+		jwkKey, err := jwk.ParseKey([]byte(jwksrc))
 		if err != nil {
 			t.Fatal("Failed to parse JWK")
 		}
 		var key interface{}
-		if !assert.NoError(t, keys.Keys[0].Raw(&key), `jwk.Raw should succeed`) {
+		if !assert.NoError(t, jwkKey.Raw(&key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte
@@ -458,27 +395,22 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with standard ecdsa library
-		_, _, jwsSignature, err := jws.SplitCompact(bytes.NewReader(jwsCompact))
+		_, _, jwsSignature, err := jws.SplitCompact(jwsCompact)
 		if err != nil {
 			t.Fatal("Failed to split compact JWT")
 		}
-		decodedJwsSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(jwsSignature)))
-		decodedLen, err := base64.RawURLEncoding.Decode(decodedJwsSignature, jwsSignature)
-		if err != nil {
-			t.Fatal("Failed to sign message")
+
+		decodedJwsSignature, err := base64.Decode(jwsSignature)
+		if !assert.NoError(t, err, `base64.Decode should succeed`) {
+			return
 		}
 		r, s := &big.Int{}, &big.Int{}
-		n := decodedLen / 2
+		n := len(decodedJwsSignature) / 2
 		r.SetBytes(decodedJwsSignature[:n])
 		s.SetBytes(decodedJwsSignature[n:])
-		signingHdr, err := buffer.Buffer(hdr).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode headers")
-		}
-		signingPayload, err := buffer.Buffer(jwsPayload).Base64Encode()
-		if err != nil {
-			t.Fatal("Failed to base64 encode payload")
-		}
+		signingHdr := base64.Encode(hdr)
+		signingPayload := base64.Encode(jwsPayload)
+
 		jwsSigningInput := bytes.Join(
 			[][]byte{
 				signingHdr,
@@ -493,8 +425,8 @@ func TestEncode(t *testing.T) {
 		}
 
 		// Verify with API library
-		publicKey, err := jwk.PublicKeyOf(key)
-		if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		publicKey, err := jwk.PublicRawKeyOf(key)
+		if !assert.NoError(t, err, `jwk.PublicRawKeyOf should succeed`) {
 			return
 		}
 		verifiedPayload, err := jws.Verify(jwsCompact, alg, publicKey)
@@ -534,15 +466,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -554,10 +479,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
+		sigbuf := base64.Encode(signature)
 
 		encoded := bytes.Join(
 			[][]byte{
@@ -571,7 +493,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -621,15 +543,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -641,7 +556,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
+		sigbuf := base64.Encode(signature)
 		if !assert.NoError(t, err, "base64 encode successful") {
 			return
 		}
@@ -658,7 +573,7 @@ func TestEncode(t *testing.T) {
 		// the output against a fixed expected outcome. We'll wave doing an
 		// exact match, and just try to verify using the signature
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -693,8 +608,7 @@ func TestEncode(t *testing.T) {
   }`
 		const examplePayload = `Example of Ed25519 signing`
 		const expected = `hgyY0il_MGCjP0JzlnLWG1PPOt7-09PGcvMg3AIbQR6dWbhijcNR4ki4iylGjg5BhVsPt9g7sVvpAr_MuM0KAg`
-		expectedDecoded := buffer.Buffer{}
-		err := expectedDecoded.Base64Decode([]byte(expected))
+		expectedDecoded, err := base64.Decode([]byte(expected))
 		if !assert.NoError(t, err, "Expected Signature decode successful") {
 			return
 		}
@@ -714,15 +628,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		hdrbuf, err := buffer.Buffer(hdr).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-		payload, err := buffer.Buffer(examplePayload).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		hdrbuf := base64.Encode([]byte(hdr))
+		payload := base64.Encode([]byte(examplePayload))
 		signingInput := bytes.Join(
 			[][]byte{
 				hdrbuf,
@@ -730,15 +637,12 @@ func TestEncode(t *testing.T) {
 			},
 			[]byte{'.'},
 		)
+
 		signature, err := signer.Sign(signingInput, rawkey)
 		if !assert.NoError(t, err, "PayloadSign is successful") {
 			return
 		}
-		sigbuf, err := buffer.Buffer(signature).Base64Encode()
-		if !assert.NoError(t, err, "base64 encode successful") {
-			return
-		}
-
+		sigbuf := base64.Encode(signature)
 		encoded := bytes.Join(
 			[][]byte{
 				signingInput,
@@ -751,7 +655,7 @@ func TestEncode(t *testing.T) {
 		// the output against a fixed expected outcome. We'll wave doing an
 		// exact match, and just try to verify using the signature
 
-		msg, err := jws.Parse(bytes.NewReader(encoded))
+		msg, err := jws.ParseReader(bytes.NewReader(encoded))
 		if !assert.NoError(t, err, "Parsing compact encoded serialization succeeds") {
 			return
 		}
@@ -773,7 +677,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, v.Verify(signingInput, signature, rawkey.Public()), "Verify succeeds") {
 			return
 		}
-		if !assert.Equal(t, signature, expectedDecoded.Bytes(), "signatures match") {
+		if !assert.Equal(t, signature, expectedDecoded, "signatures match") {
 			return
 		}
 	})
@@ -781,7 +685,7 @@ func TestEncode(t *testing.T) {
 		t.Parallel()
 		s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Parsing compact serialization") {
 			return
 		}
@@ -834,7 +738,7 @@ func TestEncode(t *testing.T) {
     ]
   }`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
 			return
 		}
@@ -866,7 +770,7 @@ func TestEncode(t *testing.T) {
 		// This protected header combination forces the parser/unmarshal to go trough the code path to populate and look for protected header fields.
 		// The signature is valid.
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Unmarshal complete json serialization") {
 			return
 		}
@@ -890,7 +794,7 @@ func TestEncode(t *testing.T) {
     "signature": "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
   }`
 
-		m, err := jws.Parse(strings.NewReader(s))
+		m, err := jws.ParseReader(strings.NewReader(s))
 		if !assert.NoError(t, err, "Parsing flattened json serialization") {
 			return
 		}
@@ -929,14 +833,17 @@ func TestEncode(t *testing.T) {
 					payload = append(payload, 'Y')
 				}
 
-				// Test using optimized and non-optimized path
-				for _, optimized := range []bool{true, false} {
+				// Test using bytes, reader optimized and non-optimized path
+				for _, method := range []int{0, 1, 2} {
 					var x, y, z []byte
 					var err error
-					if optimized {
-						x, y, z, err = jws.SplitCompact(bytes.NewReader(payload))
-					} else {
-						x, y, z, err = jws.SplitCompact(bufio.NewReader(bytes.NewReader(payload)))
+					switch method {
+					case 0: // bytes
+						x, y, z, err = jws.SplitCompact(payload)
+					case 1: // un-optimized io.Reader
+						x, y, z, err = jws.SplitCompactReader(bytes.NewReader(payload))
+					default: // optimized io.Reader
+						x, y, z, err = jws.SplitCompactReader(bufio.NewReader(bytes.NewReader(payload)))
 					}
 					if !assert.NoError(t, err, "SplitCompact should succeed") {
 						return
@@ -1001,7 +908,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 		return
 	}
 
-	protected, payload, signature, err := jws.SplitCompact(strings.NewReader(incoming))
+	protected, payload, signature, err := jws.SplitCompact([]byte(incoming))
 	if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
 		return
 	}
@@ -1011,8 +918,8 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	buf.WriteByte('.')
 	buf.Write(payload)
 
-	decodedSignature := make([]byte, base64.RawURLEncoding.DecodedLen(len(signature)))
-	if _, err := base64.RawURLEncoding.Decode(decodedSignature, signature); !assert.NoError(t, err, `decoding signature should succeed`) {
+	decodedSignature, err := base64.Decode(signature)
+	if !assert.NoError(t, err, `decoding signature should succeed`) {
 		return
 	}
 
@@ -1029,5 +936,109 @@ func TestGHIssue126(t *testing.T) {
 
 	if !assert.Equal(t, err.Error(), `failed to unmarshal JSON message: "payload" must be non-empty`) {
 		return
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	f, err := ioutil.TempFile("", "test-read-file-*.jws")
+	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "%s", exampleCompactSerialization)
+
+	if _, err := jws.ReadFile(f.Name()); !assert.NoError(t, err, `jws.ReadFile should succeed`) {
+		return
+	}
+}
+
+func TestVerifySet(t *testing.T) {
+	t.Parallel()
+	const payload = "Lorem ipsum"
+
+	makeSet := func(privkey jwk.Key) jwk.Set {
+		set := jwk.NewSet()
+		k1, _ := jwk.New([]byte("abracadavra"))
+		set.Add(k1)
+		k2, _ := jwk.New([]byte("opensasame"))
+		set.Add(k2)
+		pubkey, _ := jwk.PublicKeyOf(privkey)
+		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
+		set.Add(pubkey)
+		return set
+	}
+
+	for _, useJSON := range []bool{true, false} {
+		useJSON := useJSON
+		t.Run(fmt.Sprintf("useJSON=%t", useJSON), func(t *testing.T) {
+			t.Parallel()
+			t.Run(`match via "alg"`, func(t *testing.T) {
+				t.Parallel()
+				key, err := jwxtest.GenerateRsaJwk()
+				if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+					return
+				}
+
+				set := makeSet(key)
+				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+				if useJSON {
+					m, err := jws.Parse(signed)
+					if !assert.NoError(t, err, `jws.Parse should succeed`) {
+						return
+					}
+					signed, err = json.Marshal(m)
+					if !assert.NoError(t, err, `json.Marshal should succeed`) {
+						return
+					}
+				}
+
+				verified, err := jws.VerifySet(signed, set)
+				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+					return
+				}
+				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+			})
+			t.Run(`match via "kid"`, func(t *testing.T) {
+				t.Parallel()
+
+				key, err := jwxtest.GenerateRsaJwk()
+				if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+					return
+				}
+				key.Set(jwk.KeyIDKey, `mykey`)
+
+				set := makeSet(key)
+				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+				if useJSON {
+					m, err := jws.Parse(signed)
+					if !assert.NoError(t, err, `jws.Parse should succeed`) {
+						return
+					}
+					signed, err = json.Marshal(m)
+					if !assert.NoError(t, err, `json.Marshal should succeed`) {
+						return
+					}
+				}
+
+				verified, err := jws.VerifySet(signed, set)
+				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+					return
+				}
+				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+			})
+		})
 	}
 }

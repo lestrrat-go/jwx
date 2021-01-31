@@ -1,15 +1,14 @@
 package jwe
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwk"
 
-	"github.com/lestrrat-go/jwx/buffer"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/pdebug/v3"
@@ -28,21 +27,22 @@ func (r *stdRecipient) SetHeaders(h Headers) error {
 	return nil
 }
 
-func (r *stdRecipient) SetEncryptedKey(v interface{}) error {
-	return r.encryptedKey.Accept(v)
+func (r *stdRecipient) SetEncryptedKey(v []byte) error {
+	r.encryptedKey = v
+	return nil
 }
 
 func (r *stdRecipient) Headers() Headers {
 	return r.headers
 }
 
-func (r *stdRecipient) EncryptedKey() buffer.Buffer {
+func (r *stdRecipient) EncryptedKey() []byte {
 	return r.encryptedKey
 }
 
 type recipientMarshalProxy struct {
-	Headers      Headers       `json:"header"`
-	EncryptedKey buffer.Buffer `json:"encrypted_key"`
+	Headers      Headers `json:"header"`
+	EncryptedKey string  `json:"encrypted_key"`
 }
 
 func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
@@ -53,16 +53,31 @@ func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
 	}
 
 	r.headers = proxy.Headers
-	r.encryptedKey = proxy.EncryptedKey
+	decoded, err := base64.DecodeString(proxy.EncryptedKey)
+	if err != nil {
+		return errors.Wrap(err, `failed to decode "encrypted_key"`)
+	}
+	r.encryptedKey = decoded
 	return nil
 }
 
 func (r *stdRecipient) MarshalJSON() ([]byte, error) {
-	var proxy recipientMarshalProxy
-	proxy.Headers = r.headers
-	proxy.EncryptedKey = r.encryptedKey
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
-	return json.Marshal(proxy)
+	buf.WriteString(`{"header":`)
+	hdrbuf, err := r.headers.MarshalJSON()
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to marshal recipient header`)
+	}
+	buf.Write(hdrbuf)
+	buf.WriteString(`,"encrypted_key":"`)
+	buf.WriteString(base64.EncodeToString(r.encryptedKey))
+	buf.WriteString(`"}`)
+
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 // NewMessage creates a new message
@@ -71,31 +86,19 @@ func NewMessage() *Message {
 }
 
 func (m *Message) AuthenticatedData() []byte {
-	if m.authenticatedData == nil {
-		return nil
-	}
-	return m.authenticatedData.Bytes()
+	return m.authenticatedData
 }
 
 func (m *Message) CipherText() []byte {
-	if m.cipherText == nil {
-		return nil
-	}
-	return m.cipherText.Bytes()
+	return m.cipherText
 }
 
 func (m *Message) InitializationVector() []byte {
-	if m.initializationVector == nil {
-		return nil
-	}
-	return m.initializationVector.Bytes()
+	return m.initializationVector
 }
 
 func (m *Message) Tag() []byte {
-	if m.tag == nil {
-		return nil
-	}
-	return m.tag.Bytes()
+	return m.tag
 }
 
 func (m *Message) ProtectedHeaders() Headers {
@@ -127,23 +130,23 @@ const (
 func (m *Message) Set(k string, v interface{}) error {
 	switch k {
 	case AuthenticatedDataKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(v); err != nil {
-			return errors.Wrapf(err, `invalid value %T for %s key`, v, AuthenticatedDataKey)
+		buf, ok := v.([]byte)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, AuthenticatedDataKey)
 		}
-		m.authenticatedData = &acceptor
+		m.authenticatedData = buf
 	case CipherTextKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(v); err != nil {
-			return errors.Wrapf(err, `invalid value %T for %s key`, v, CipherTextKey)
+		buf, ok := v.([]byte)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, CipherTextKey)
 		}
-		m.cipherText = &acceptor
+		m.cipherText = buf
 	case InitializationVectorKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(v); err != nil {
-			return errors.Wrapf(err, `invalid value %T for %s key`, v, InitializationVectorKey)
+		buf, ok := v.([]byte)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, InitializationVectorKey)
 		}
-		m.initializationVector = &acceptor
+		m.initializationVector = buf
 	case ProtectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
@@ -157,11 +160,11 @@ func (m *Message) Set(k string, v interface{}) error {
 		}
 		m.recipients = cv
 	case TagKey:
-		var acceptor buffer.Buffer
-		if err := acceptor.Accept(v); err != nil {
-			return errors.Wrapf(err, `invalid value %T for %s key`, v, TagKey)
+		buf, ok := v.([]byte)
+		if !ok {
+			return errors.Errorf(`invalid value %T for %s key`, v, TagKey)
 		}
-		m.tag = &acceptor
+		m.tag = buf
 	case UnprotectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
@@ -178,41 +181,42 @@ func (m *Message) Set(k string, v interface{}) error {
 }
 
 type messageMarshalProxy struct {
-	AuthenticatedData    *buffer.Buffer    `json:"aad,omitempty"`
-	CipherText           *buffer.Buffer    `json:"ciphertext"`
-	InitializationVector *buffer.Buffer    `json:"iv,omitempty"`
+	AuthenticatedData    string            `json:"aad,omitempty"`
+	CipherText           string            `json:"ciphertext"`
+	InitializationVector string            `json:"iv,omitempty"`
 	ProtectedHeaders     json.RawMessage   `json:"protected"`
 	Recipients           []json.RawMessage `json:"recipients,omitempty"`
-	Tag                  *buffer.Buffer    `json:"tag,omitempty"`
+	Tag                  string            `json:"tag,omitempty"`
 	UnprotectedHeaders   Headers           `json:"unprotected,omitempty"`
 
 	// For flattened structure. Headers is NOT a Headers type,
 	// so that we can detect its presence by checking proxy.Headers != nil
 	Headers      json.RawMessage `json:"header,omitempty"`
-	EncryptedKey buffer.Buffer   `json:"encrypted_key,omitempty"`
+	EncryptedKey string          `json:"encrypted_key,omitempty"`
 }
 
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	fmt.Fprintf(&buf, `{`)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	enc := json.NewEncoder(buf)
+	fmt.Fprintf(buf, `{`)
 
 	var wrote bool
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, AuthenticatedDataKey)
+		fmt.Fprintf(buf, `%#v:`, AuthenticatedDataKey)
 		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, AuthenticatedDataKey)
 		}
 	}
 	if cipherText := m.CipherText(); len(cipherText) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, CipherTextKey)
+		fmt.Fprintf(buf, `%#v:`, CipherTextKey)
 		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, CipherTextKey)
 		}
@@ -220,10 +224,10 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 	if iv := m.InitializationVector(); len(iv) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, InitializationVectorKey)
+		fmt.Fprintf(buf, `%#v:`, InitializationVectorKey)
 		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, InitializationVectorKey)
 		}
@@ -237,30 +241,30 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 		if len(encodedHeaders) > 2 {
 			if wrote {
-				fmt.Fprintf(&buf, `,`)
+				fmt.Fprintf(buf, `,`)
 			}
 			wrote = true
-			fmt.Fprintf(&buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
+			fmt.Fprintf(buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
 		}
 	}
 
 	if recipients := m.Recipients(); len(recipients) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		if len(recipients) == 1 { // Use flattened format
-			fmt.Fprintf(&buf, `%#v:`, HeadersKey)
+			fmt.Fprintf(buf, `%#v:`, HeadersKey)
 			if err := enc.Encode(recipients[0].Headers()); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode %s field`, HeadersKey)
 			}
-			if ek := recipients[0].EncryptedKey(); ek.Len() > 0 {
-				fmt.Fprintf(&buf, `,%#v:`, EncryptedKeyKey)
-				if err := enc.Encode(ek); err != nil {
+			if ek := recipients[0].EncryptedKey(); len(ek) > 0 {
+				fmt.Fprintf(buf, `,%#v:`, EncryptedKeyKey)
+				if err := enc.Encode(base64.EncodeToString(ek)); err != nil {
 					return nil, errors.Wrapf(err, `failed to encode %s field`, EncryptedKeyKey)
 				}
 			}
 		} else {
-			fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
+			fmt.Fprintf(buf, `%#v:`, RecipientsKey)
 			if err := enc.Encode(recipients); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
 			}
@@ -269,9 +273,9 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 	if tag := m.Tag(); len(tag) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
-		fmt.Fprintf(&buf, `%#v:`, TagKey)
+		fmt.Fprintf(buf, `%#v:`, TagKey)
 		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
 		}
@@ -284,12 +288,14 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		}
 
 		if len(unprotected) > 2 {
-			fmt.Fprintf(&buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
+			fmt.Fprintf(buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
 		}
 	}
-	fmt.Fprintf(&buf, `}`)
+	fmt.Fprintf(buf, `}`)
 
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (m *Message) UnmarshalJSON(buf []byte) error {
@@ -323,8 +329,14 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			return errors.Wrap(err, `failed to set new headers`)
 		}
 
-		if err := recipient.SetEncryptedKey(proxy.EncryptedKey); err != nil {
-			return errors.Wrap(err, `failed to set encryption key`)
+		if v := proxy.EncryptedKey; len(v) > 0 {
+			buf, err := base64.DecodeString(v)
+			if err != nil {
+				return errors.Wrap(err, `failed to decode encrypted key`)
+			}
+			if err := recipient.SetEncryptedKey(buf); err != nil {
+				return errors.Wrap(err, `failed to set encrypted key`)
+			}
 		}
 
 		m.recipients = append(m.recipients, recipient)
@@ -339,11 +351,39 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 	}
 
-	m.authenticatedData = proxy.AuthenticatedData
-	m.cipherText = proxy.CipherText
-	m.initializationVector = proxy.InitializationVector
+	if src := proxy.AuthenticatedData; len(src) > 0 {
+		v, err := base64.DecodeString(src)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode "aad"`)
+		}
+		m.authenticatedData = v
+	}
+
+	if src := proxy.CipherText; len(src) > 0 {
+		v, err := base64.DecodeString(src)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode "ciphertext"`)
+		}
+		m.cipherText = v
+	}
+
+	if src := proxy.InitializationVector; len(src) > 0 {
+		v, err := base64.DecodeString(src)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode "iv"`)
+		}
+		m.initializationVector = v
+	}
+
+	if src := proxy.Tag; len(src) > 0 {
+		v, err := base64.DecodeString(src)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode "tag"`)
+		}
+		m.tag = v
+	}
+
 	m.protectedHeaders = h
-	m.tag = proxy.Tag
 	if !proxy.UnprotectedHeaders.(isZeroer).isZero() {
 		m.unprotectedHeaders = proxy.UnprotectedHeaders
 	}
@@ -357,7 +397,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	return nil
 }
 
-func (m *Message) makeDummyRecipient(enckeybuf buffer.Buffer, protected Headers) error {
+func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error {
 	// Recipients in this case should not contain the content encryption key,
 	// so move that out
 	hdrs, err := protected.Clone(context.TODO())
@@ -369,10 +409,15 @@ func (m *Message) makeDummyRecipient(enckeybuf buffer.Buffer, protected Headers)
 		return errors.Wrapf(err, "failed to remove %#v from public header", ContentEncryptionKey)
 	}
 
+	enckey, err := base64.DecodeString(enckeybuf)
+	if err != nil {
+		return errors.Wrap(err, `failed to decode encrypted key`)
+	}
+
 	if err := m.Set(RecipientsKey, []Recipient{
 		&stdRecipient{
 			headers:      hdrs,
-			encryptedKey: enckeybuf,
+			encryptedKey: enckey,
 		},
 	}); err != nil {
 		return errors.Wrapf(err, `failed to set %s`, RecipientsKey)
@@ -404,10 +449,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 	enc := m.protectedHeaders.ContentEncryption()
 	var aad []byte
 	if aadContainer := m.authenticatedData; aadContainer != nil {
-		aad, err = aadContainer.Base64Encode()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to base64 encode authenticated data for message decryption")
-		}
+		aad = base64.Encode(aadContainer)
 	}
 
 	computedAad, err := m.protectedHeaders.Encode()
@@ -415,15 +457,11 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		return nil, errors.Wrap(err, "failed to encode protected headers")
 	}
 
-	ciphertext := m.cipherText.Bytes()
-	iv := m.initializationVector.Bytes()
-	tag := m.tag.Bytes()
-
 	dec := NewDecrypter(alg, enc, key).
 		AuthenticatedData(aad).
 		ComputedAuthenticatedData(computedAad).
-		InitializationVector(iv).
-		Tag(tag)
+		InitializationVector(m.initializationVector).
+		Tag(m.tag)
 
 	var plaintext []byte
 	var lastError error
@@ -492,12 +530,12 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 				return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
 			}
 
-			if apu := h2.AgreementPartyUInfo(); apu.Len() > 0 {
-				dec.AgreementPartyUInfo(apu.Bytes())
+			if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
+				dec.AgreementPartyUInfo(apu)
 			}
 
-			if apv := h2.AgreementPartyVInfo(); apv.Len() > 0 {
-				dec.AgreementPartyVInfo(apv.Bytes())
+			if apv := h2.AgreementPartyVInfo(); len(apv) > 0 {
+				dec.AgreementPartyVInfo(apv)
 			}
 		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 			ivB64, ok := h2.Get(InitializationVectorKey)
@@ -516,12 +554,11 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if !ok {
 				return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
 			}
-			var iv, tag buffer.Buffer
-			err := iv.Base64Decode([]byte(ivB64Str))
+			iv, err := base64.DecodeString(ivB64Str)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
 			}
-			err = tag.Base64Decode([]byte(tagB64Str))
+			tag, err := base64.DecodeString(tagB64Str)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
 			}
@@ -545,8 +582,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			if !ok {
 				return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
 			}
-			var salt buffer.Buffer
-			err = salt.Base64Decode([]byte(saltB64Str))
+			salt, err := base64.DecodeString(saltB64Str)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to b64-decode 'salt'")
 			}
@@ -554,7 +590,7 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 			dec.KeyCount(int(countFlt))
 		}
 
-		plaintext, err = dec.Decrypt(recipient.EncryptedKey().Bytes(), ciphertext)
+		plaintext, err = dec.Decrypt(recipient.EncryptedKey(), m.cipherText)
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to decrypt`)
 			continue

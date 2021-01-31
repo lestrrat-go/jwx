@@ -12,21 +12,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AutoRefresh is a container that keeps track of *jwk.Set object by their source URLs.
-// The *jwk.Set objects are refreshed automatically behind the scenes.
+// AutoRefresh is a container that keeps track of jwk.Set object by their source URLs.
+// The jwk.Set objects are refreshed automatically behind the scenes.
 //
-// Before retrieving the *jwk.Set objects, the user must pre-register the
+// Before retrieving the jwk.Set objects, the user must pre-register the
 // URLs they intend to use by calling `Configure()`
 //
 //  ar := jwk.NewAutoRefresh(ctx)
 //  ar.Configure(url, options...)
 //
-// Once registered, you can call `Fetch()` to retrieve the *jwk.Set object.
+// Once registered, you can call `Fetch()` to retrieve the jwk.Set object.
 //
 // All JWKS objects that are retrieved via the auto-fetch mechanism should be
 // treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
-	cache        map[string]*Set
+	cache        map[string]Set
 	configureCh  chan struct{}
 	fetching     map[string]chan struct{}
 	muCache      sync.RWMutex
@@ -42,7 +42,7 @@ type target struct {
 
 	// The HTTP client to use. The user may opt to use a client which is
 	// aware of HTTP caching, or one that goes through a proxy
-	httpcl *http.Client
+	httpcl HTTPClient
 
 	// Interval between refreshes are calculated two ways.
 	// 1) You can set an explicit refresh interval by using WithRefreshInterval().
@@ -108,7 +108,7 @@ type resetTimerReq struct {
 // }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		cache:        make(map[string]*Set),
+		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
 		fetching:     make(map[string]chan struct{}),
 		registry:     make(map[string]*target),
@@ -118,7 +118,7 @@ func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	return af
 }
 
-func (af *AutoRefresh) getCached(url string) (*Set, bool) {
+func (af *AutoRefresh) getCached(url string) (Set, bool) {
 	af.muCache.RLock()
 	ks, ok := af.cache[url]
 	af.muCache.RUnlock()
@@ -136,7 +136,6 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 //
 //   ar.Configure(url, jwk.WithHTTPClient(...))
 //   ar.Configure(url, jwk.WithRefreshInterval(...))
-//
 // The the end result is that `url` is ONLY associated with the options
 // given in the second call to `Configure()`, i.e. `jwk.WithRefreshInterval`.
 // The other unspecified options, including the HTTP client, is set to
@@ -146,14 +145,14 @@ func (af *AutoRefresh) getCached(url string) (*Set, bool) {
 // not atomic (But changes should be felt "soon enough" for practical
 // purposes)
 func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
-	httpcl := http.DefaultClient
+	var httpcl HTTPClient = http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
 		switch option.Ident() {
-		case identRefreshBackoff{}:
+		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
 		case identRefreshInterval{}:
 			refreshInterval = option.Value().(time.Duration)
@@ -161,7 +160,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 		case identMinRefreshInterval{}:
 			minRefreshInterval = option.Value().(time.Duration)
 		case identHTTPClient{}:
-			httpcl = option.Value().(*http.Client)
+			httpcl = option.Value().(HTTPClient)
 		}
 	}
 
@@ -243,16 +242,21 @@ func (af *AutoRefresh) getRegistered(url string) (*target, bool) {
 	return t, ok
 }
 
+// Fetch returns a jwk.Set from the given url.
+//
 // If it has previously been fetched, then a cached value is returned.
+//
 // If this the first time `url` was requested, an HTTP request will be
-// sent, synchronously. Also, when accessed via multiple goroutines
-// concurrently, the first time around only one goroutine will be
-// allowed to perform  the initialization (HTTP fetch and cache population).
+// sent, synchronously.
+//
+// When accessed via multiple goroutines concurrently, and the cache
+// has not been populated yet, only the first goroutine is
+// allowed to perform the initialization (HTTP fetch and cache population).
 // All other goroutines will be blocked until the operation is completed.
 //
-// DO NOT modify the *jwk.Set object returned by this method, as the
+// DO NOT modify the jwk.Set object returned by this method, as the
 // objects are shared among all consumers and the backend goroutine
-func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) Fetch(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
 		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
@@ -266,10 +270,11 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (*Set, error) {
 }
 
 // Refresh is the same as Fetch(), except that HTTP fetching is done synchronously.
-// This is useful for when you want to force an HTTP fetch instead of waiting
+//
+// This is useful when you want to force an HTTP fetch instead of waiting
 // for the background goroutine to do it, for example when you want to
 // make sure the AutoRefresh cache is warmed up before starting your main loop
-func (af *AutoRefresh) Refresh(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) Refresh(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
 		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
@@ -277,7 +282,7 @@ func (af *AutoRefresh) Refresh(ctx context.Context, url string) (*Set, error) {
 	return af.refresh(ctx, url)
 }
 
-func (af *AutoRefresh) refresh(ctx context.Context, url string) (*Set, error) {
+func (af *AutoRefresh) refresh(ctx context.Context, url string) (Set, error) {
 	// To avoid a thundering herd, only one goroutine per url may enter into this
 	// initial fetch phase.
 	af.muFetching.Lock()
@@ -421,11 +426,6 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 }
 
 func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableBackoff bool) error {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to new request to remote JWK")
-	}
-
 	af.muRegistry.RLock()
 	t, ok := af.registry[url]
 	af.muRegistry.RUnlock()
@@ -435,61 +435,58 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	}
 
 	// In case the refresh fails due to errors in fetching/parsing the JWKS,
-	// we want to retry. Create a backoff object, and
-	var b backoff.Controller
+	// we want to retry. Create a backoff object,
+
+	options := []FetchOption{WithHTTPClient(t.httpcl)}
 	if enableBackoff {
-		b = t.backoff.Start(ctx)
-	} else {
-		b = backoff.Null().Start(ctx)
+		options = append(options, WithFetchBackoff(t.backoff))
 	}
-	var lastError error
-	for backoff.Continue(b) {
-		res, err := t.httpcl.Do(req.WithContext(ctx))
-		if err != nil {
-			lastError = errors.Wrap(err, "failed to fetch remote JWK")
-			continue
-		}
+
+	res, err := fetch(ctx, url, options...)
+	if err == nil {
 		defer res.Body.Close()
+		keyset, parseErr := ParseReader(res.Body)
+		if parseErr == nil {
+			// Got a new key set. replace the keyset in the target
+			af.muCache.Lock()
+			af.cache[url] = keyset
+			af.muCache.Unlock()
+			nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+			rtr := &resetTimerReq{
+				t: t,
+				d: nextInterval,
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case af.resetTimerCh <- rtr:
+			}
 
-		if res.StatusCode != http.StatusOK {
-			lastError = errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
-			continue
+			now := time.Now()
+			t.lastRefresh = now.Local()
+			t.nextRefresh = now.Add(nextInterval).Local()
+			return nil
 		}
-
-		keyset, err := Parse(res.Body)
-		if err != nil {
-			// We don't delete the old key. We persist the old key set, even if it may be stale.
-			// so the user has something to work with
-			// TODO: maybe this behavior should be customizable?
-			lastError = errors.Wrap(err, `failed to parse JWK`)
-			continue
-		}
-
-		lastError = nil
-		// Got a new key set. replace the keyset in the target
-		af.muCache.Lock()
-		af.cache[url] = keyset
-		af.muCache.Unlock()
-		nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-		af.resetTimerCh <- &resetTimerReq{
-			t: t,
-			d: nextInterval,
-		}
-		now := time.Now()
-		t.lastRefresh = now.Local()
-		t.nextRefresh = now.Add(nextInterval).Local()
-		break
+		err = parseErr
 	}
 
-	if lastError != nil {
-		// If we failed to get a single time, then queue another fetch in the future.
-		af.resetTimerCh <- &resetTimerReq{
-			t: t,
-			d: t.minRefreshInterval,
-		}
+	// We either failed to perform the HTTP GET, or we failed to parse the
+	// JWK set. Even in case of errors, we don't delete the old key.
+	// We persist the old key set, even if it may be stale so the user has something to work with
+	// TODO: maybe this behavior should be customizable?
+
+	// If we failed to get a single time, then queue another fetch in the future.
+	rtr := &resetTimerReq{
+		t: t,
+		d: t.minRefreshInterval,
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case af.resetTimerCh <- rtr:
 	}
 
-	return lastError
+	return err
 }
 
 func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration, minRefreshInterval time.Duration) time.Duration {
@@ -530,6 +527,9 @@ func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration
 	return minRefreshInterval
 }
 
+// TargetSnapshot is the structure returned by the Snapshot method.
+// It contains information about a url that has been configured
+// in AutoRefresh.
 type TargetSnapshot struct {
 	URL         string
 	NextRefresh time.Time

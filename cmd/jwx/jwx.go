@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -70,7 +71,7 @@ func doJWK() int {
 		return 1
 	}
 
-	key, err := jwk.Fetch(c.JWKLocation)
+	key, err := jwk.Fetch(context.TODO(), c.JWKLocation)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
@@ -87,8 +88,14 @@ func doJWK() int {
 	}
 
 	// TODO make it flexible
+	firstKey, ok := key.Get(0)
+	if !ok {
+		log.Printf("empty keyset")
+		return 0
+	}
+
 	var pubkey interface{}
-	if err := key.Keys[0].Raw(&pubkey); err != nil {
+	if err := firstKey.Raw(&pubkey); err != nil {
 		log.Printf("%s", err)
 		return 0
 	}
@@ -109,7 +116,7 @@ func doJWK() int {
 	var buf bytes.Buffer
 	src = io.TeeReader(src, &buf)
 
-	message, err := jws.Parse(src)
+	message, err := jws.ParseReader(src)
 	if err != nil {
 		log.Printf("%s", err)
 		return 0
