@@ -14,6 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwt/internal/types"
 	"github.com/pkg/errors"
 )
@@ -77,6 +78,8 @@ type Token interface {
 	PrivateClaims() map[string]interface{}
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
+	Remove(string) error
+	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
 	Walk(context.Context, Visitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
@@ -149,24 +152,6 @@ func New() Token {
 		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
 	}
-}
-
-// Size returns the number of valid claims stored in this token
-func (t *stdToken) Size() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	var count int
-	if len(t.audience) > 0 {
-		count++
-	}
-	if t.birthdate != nil {
-		count++
-	}
-	if t.address != nil {
-		count++
-	}
-	count += len(t.privateClaims)
-	return count
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
@@ -333,6 +318,68 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 		v, ok := t.privateClaims[name]
 		return v, ok
 	}
+}
+
+func (t *stdToken) Remove(key string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	switch key {
+	case AudienceKey:
+		t.audience = nil
+	case ExpirationKey:
+		t.expiration = nil
+	case IssuedAtKey:
+		t.issuedAt = nil
+	case IssuerKey:
+		t.issuer = nil
+	case JwtIDKey:
+		t.jwtID = nil
+	case NotBeforeKey:
+		t.notBefore = nil
+	case SubjectKey:
+		t.subject = nil
+	case NameKey:
+		t.name = nil
+	case GivenNameKey:
+		t.givenName = nil
+	case MiddleNameKey:
+		t.middleName = nil
+	case FamilyNameKey:
+		t.familyName = nil
+	case NicknameKey:
+		t.nickname = nil
+	case PreferredUsernameKey:
+		t.preferredUsername = nil
+	case ProfileKey:
+		t.profile = nil
+	case PictureKey:
+		t.picture = nil
+	case WebsiteKey:
+		t.website = nil
+	case EmailKey:
+		t.email = nil
+	case EmailVerifiedKey:
+		t.emailVerified = nil
+	case GenderKey:
+		t.gender = nil
+	case BirthdateKey:
+		t.birthdate = nil
+	case ZoneinfoKey:
+		t.zoneinfo = nil
+	case LocaleKey:
+		t.locale = nil
+	case PhoneNumberKey:
+		t.phoneNumber = nil
+	case PhoneNumberVerifiedKey:
+		t.phoneNumberVerified = nil
+	case AddressKey:
+		t.address = nil
+	case UpdatedAtKey:
+		t.updatedAt = nil
+	default:
+		delete(t.privateClaims, key)
+	}
+	return nil
 }
 
 func (t *stdToken) Set(name string, value interface{}) error {
@@ -745,10 +792,9 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
+func (t *stdToken) makePairs() []*ClaimPair {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	defer close(ch)
 
 	var pairs []*ClaimPair
 	if t.audience != nil {
@@ -858,13 +904,7 @@ func (t *stdToken) iterate(ctx context.Context, ch chan *ClaimPair) {
 	for k, v := range t.privateClaims {
 		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
@@ -1108,8 +1148,18 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 }
 
 func (t *stdToken) Iterate(ctx context.Context) Iterator {
-	ch := make(chan *ClaimPair)
-	go t.iterate(ctx, ch)
+	pairs := t.makePairs()
+	ch := make(chan *ClaimPair, len(pairs))
+	go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 

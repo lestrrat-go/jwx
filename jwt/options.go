@@ -6,7 +6,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/jwt/openid"
 	"github.com/lestrrat-go/option"
 )
 
@@ -111,15 +110,6 @@ func UseDefaultKey(value bool) ParseOption {
 // JWT tokens.
 func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
-}
-
-// WithOpenIDClaims is passed to the various JWT parsing functions, and
-// specifies that it should use an instance of `openid.Token` as the
-// destination to store the parsed results.
-//
-// This is exactly equivalent to specifying `jwt.WithToken(openid.New())`
-func WithOpenIDClaims() ParseOption {
-	return WithToken(openid.New())
 }
 
 // WithHeaders is passed to `Sign()` method, to allow specifying arbitrary

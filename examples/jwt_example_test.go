@@ -303,7 +303,7 @@ func ExampleJWT_OpenIDToken() {
 	}
 	fmt.Printf("%s\n", buf)
 
-	t2, err := jwt.Parse(buf, jwt.WithOpenIDClaims())
+	t2, err := jwt.Parse(buf, jwt.WithToken(openid.New()))
 	if err != nil {
 		fmt.Printf("failed to parse JSON: %s\n", err)
 		return
