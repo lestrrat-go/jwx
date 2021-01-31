@@ -160,7 +160,6 @@ func TestTokenMarshal(t *testing.T) {
 }
 
 func TestToken(t *testing.T) {
-	t.Parallel()
 	tok := jwt.New()
 
 	def := map[string]struct {
