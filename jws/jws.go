@@ -509,8 +509,8 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		return nil, errors.Wrap(err, `failed to decode protected headers`)
 	}
 
-	var hdr stdHeaders
-	if err := json.Unmarshal(decodedHeader, &hdr); err != nil {
+	hdr := NewHeaders()
+	if err := json.Unmarshal(decodedHeader, hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
 
@@ -527,7 +527,7 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	var msg Message
 	msg.payload = decodedPayload
 	msg.signatures = append(msg.signatures, &Signature{
-		protected: &hdr,
+		protected: hdr,
 		signature: decodedSignature,
 	})
 	return &msg, nil

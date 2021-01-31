@@ -287,8 +287,7 @@ func generateHeaders() error {
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {")
-	fmt.Fprintf(&buf, "\ndefer close(ch)")
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) makePairs() []*HeaderPair {")
 	fmt.Fprintf(&buf, "\nh.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	// NOTE: building up an array is *slow*?
@@ -305,13 +304,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
-	fmt.Fprintf(&buf, "\nselect {")
-	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
-	fmt.Fprintf(&buf, "\nreturn")
-	fmt.Fprintf(&buf, "\ncase ch<-pair:")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn pairs")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) PrivateParams() map[string]interface{} {")

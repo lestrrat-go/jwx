@@ -85,7 +85,7 @@ func Test_X5CHeader(t *testing.T) {
 					return
 				}
 
-				if !assert.Len(t, gotcerts.(jwk.CertificateChain).Get(), 1, `should have 1 cert`) {
+				if !assert.Len(t, gotcerts, 1, `should have 1 cert`) {
 					return
 				}
 			})
@@ -99,7 +99,7 @@ func Test_X5CHeader(t *testing.T) {
 					return
 				}
 
-				if !assert.Len(t, gotcerts.(jwk.CertificateChain).Get(), 3, `should have 3 certs`) {
+				if !assert.Len(t, gotcerts, 3, `should have 3 certs`) {
 					return
 				}
 			})
@@ -118,7 +118,7 @@ func Test_X5CHeader(t *testing.T) {
 					return
 				}
 
-				if !assert.Len(t, gotcerts.(jwk.CertificateChain).Get(), 3, `should have 3 certs`) {
+				if !assert.Len(t, gotcerts, 3, `should have 3 certs`) {
 					return
 				}
 			})

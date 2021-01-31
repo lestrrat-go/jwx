@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -199,24 +198,25 @@ type messageMarshalProxy struct {
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	fmt.Fprintf(&buf, `{`)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+	enc := json.NewEncoder(buf)
+	fmt.Fprintf(buf, `{`)
 
 	var wrote bool
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, AuthenticatedDataKey)
+		fmt.Fprintf(buf, `%#v:`, AuthenticatedDataKey)
 		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, AuthenticatedDataKey)
 		}
 	}
 	if cipherText := m.CipherText(); len(cipherText) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, CipherTextKey)
+		fmt.Fprintf(buf, `%#v:`, CipherTextKey)
 		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, CipherTextKey)
 		}
@@ -224,10 +224,10 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 	if iv := m.InitializationVector(); len(iv) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		wrote = true
-		fmt.Fprintf(&buf, `%#v:`, InitializationVectorKey)
+		fmt.Fprintf(buf, `%#v:`, InitializationVectorKey)
 		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, InitializationVectorKey)
 		}
@@ -241,30 +241,30 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 		if len(encodedHeaders) > 2 {
 			if wrote {
-				fmt.Fprintf(&buf, `,`)
+				fmt.Fprintf(buf, `,`)
 			}
 			wrote = true
-			fmt.Fprintf(&buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
+			fmt.Fprintf(buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
 		}
 	}
 
 	if recipients := m.Recipients(); len(recipients) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
 		if len(recipients) == 1 { // Use flattened format
-			fmt.Fprintf(&buf, `%#v:`, HeadersKey)
+			fmt.Fprintf(buf, `%#v:`, HeadersKey)
 			if err := enc.Encode(recipients[0].Headers()); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode %s field`, HeadersKey)
 			}
 			if ek := recipients[0].EncryptedKey(); len(ek) > 0 {
-				fmt.Fprintf(&buf, `,%#v:`, EncryptedKeyKey)
+				fmt.Fprintf(buf, `,%#v:`, EncryptedKeyKey)
 				if err := enc.Encode(base64.EncodeToString(ek)); err != nil {
 					return nil, errors.Wrapf(err, `failed to encode %s field`, EncryptedKeyKey)
 				}
 			}
 		} else {
-			fmt.Fprintf(&buf, `%#v:`, RecipientsKey)
+			fmt.Fprintf(buf, `%#v:`, RecipientsKey)
 			if err := enc.Encode(recipients); err != nil {
 				return nil, errors.Wrapf(err, `failed to encode %s field`, RecipientsKey)
 			}
@@ -273,9 +273,9 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 	if tag := m.Tag(); len(tag) > 0 {
 		if wrote {
-			fmt.Fprintf(&buf, `,`)
+			fmt.Fprintf(buf, `,`)
 		}
-		fmt.Fprintf(&buf, `%#v:`, TagKey)
+		fmt.Fprintf(buf, `%#v:`, TagKey)
 		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, errors.Wrapf(err, `failed to encode %s field`, TagKey)
 		}
@@ -288,12 +288,14 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		}
 
 		if len(unprotected) > 2 {
-			fmt.Fprintf(&buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
+			fmt.Fprintf(buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
 		}
 	}
-	fmt.Fprintf(&buf, `}`)
+	fmt.Fprintf(buf, `}`)
 
-	return buf.Bytes(), nil
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
 }
 
 func (m *Message) UnmarshalJSON(buf []byte) error {

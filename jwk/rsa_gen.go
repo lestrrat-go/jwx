@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -61,26 +62,18 @@ type rsaPrivateKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type rsaPrivateKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	Xd                      *string           `json:"d,omitempty"`
-	Xdp                     *string           `json:"dp,omitempty"`
-	Xdq                     *string           `json:"dq,omitempty"`
-	Xe                      *string           `json:"e,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xn                      *string           `json:"n,omitempty"`
-	Xp                      *string           `json:"p,omitempty"`
-	Xq                      *string           `json:"q,omitempty"`
-	Xqi                     *string           `json:"qi,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
+func NewRSAPrivateKey() RSAPrivateKey {
+	return newRSAPrivateKey()
+}
+
+func newRSAPrivateKey() *rsaPrivateKey {
+	return &rsaPrivateKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
@@ -175,8 +168,9 @@ func (h *rsaPrivateKey) X509URL() string {
 	return ""
 }
 
-func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *rsaPrivateKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
@@ -231,13 +225,7 @@ func (h *rsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
@@ -245,6 +233,8 @@ func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -312,7 +302,7 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -335,6 +325,8 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *rsaPrivateKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -457,6 +449,52 @@ func (h *rsaPrivateKey) Set(name string, value interface{}) error {
 		h.privateParams[name] = value
 	}
 	return nil
+}
+
+func (k *rsaPrivateKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case RSADKey:
+		k.d = nil
+	case RSADPKey:
+		k.dp = nil
+	case RSADQKey:
+		k.dq = nil
+	case RSAEKey:
+		k.e = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case RSANKey:
+		k.n = nil
+	case RSAPKey:
+		k.p = nil
+	case RSAQKey:
+		k.q = nil
+	case RSAQIKey:
+		k.qi = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
+	}
+	return nil
+}
+
+func (k *rsaPrivateKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
@@ -645,8 +683,18 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *rsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 
@@ -677,20 +725,18 @@ type rsaPublicKey struct {
 	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type rsaPublicKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType       `json:"kty"`
-	Xalgorithm              *string           `json:"alg,omitempty"`
-	Xe                      *string           `json:"e,omitempty"`
-	XkeyID                  *string           `json:"kid,omitempty"`
-	XkeyUsage               *string           `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList `json:"key_ops,omitempty"`
-	Xn                      *string           `json:"n,omitempty"`
-	Xx509CertChain          *CertificateChain `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string           `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string           `json:"x5t#S256,omitempty"`
-	Xx509URL                *string           `json:"x5u,omitempty"`
+func NewRSAPublicKey() RSAPublicKey {
+	return newRSAPublicKey()
+}
+
+func newRSAPublicKey() *rsaPublicKey {
+	return &rsaPublicKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h rsaPublicKey) KeyType() jwa.KeyType {
@@ -761,8 +807,9 @@ func (h *rsaPublicKey) X509URL() string {
 	return ""
 }
 
-func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *rsaPublicKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
@@ -799,13 +846,7 @@ func (h *rsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
@@ -813,6 +854,8 @@ func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -850,7 +893,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -873,6 +916,8 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *rsaPublicKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -959,6 +1004,40 @@ func (h *rsaPublicKey) Set(name string, value interface{}) error {
 		h.privateParams[name] = value
 	}
 	return nil
+}
+
+func (k *rsaPublicKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case RSAEKey:
+		k.e = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case RSANKey:
+		k.n = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	default:
+		delete(k.privateParams, key)
+	}
+	return nil
+}
+
+func (k *rsaPublicKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
@@ -1108,8 +1187,18 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *rsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 

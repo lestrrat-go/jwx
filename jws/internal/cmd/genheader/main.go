@@ -212,6 +212,7 @@ func generateHeaders() error {
 	// These are used to access a single element by key name
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\nRemove(string) error")
 
 	fmt.Fprintf(&buf, "\n\n// PrivateParams returns the non-standard elements in the source structure")
 	fmt.Fprintf(&buf, "\n// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
@@ -225,6 +226,7 @@ func generateHeaders() error {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.comment)
 	}
 	fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
+	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	// Proxy is used when unmarshaling headers
@@ -239,11 +241,15 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end type StandardHeaders
 
 	fmt.Fprintf(&buf, "\n\nfunc NewHeaders() Headers {")
-	fmt.Fprintf(&buf, "\nreturn &stdHeaders{}")
+	fmt.Fprintf(&buf, "\nreturn &stdHeaders{")
+	fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
+	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) %s() %s{", f.method, f.typ)
+		fmt.Fprintf(&buf, "\nh.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 		if fieldStorageTypeIsIndirect(f.typ) {
 			fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn %s", zeroval(f.typ))
@@ -257,9 +263,9 @@ func generateHeaders() error {
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) iterate(ctx context.Context, ch chan *HeaderPair) {")
-	fmt.Fprintf(&buf, "\ndefer close(ch)")
-
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) makePairs() []*HeaderPair {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\nvar pairs []*HeaderPair")
 	for _, f := range fields {
@@ -274,20 +280,18 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
-	fmt.Fprintf(&buf, "\nselect {")
-	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
-	fmt.Fprintf(&buf, "\nreturn")
-	fmt.Fprintf(&buf, "\ncase ch<-pair:")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn pairs")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) PrivateParams() map[string]interface{} {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nreturn h.privateParams")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Get(name string) (interface{}, bool) {")
+	fmt.Fprintf(&buf, "\nh.mu.RLock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -307,6 +311,8 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Set(name string, value interface{}) error {")
+	fmt.Fprintf(&buf, "\nh.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -337,6 +343,20 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
 	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Remove(key string) error {")
+	fmt.Fprintf(&buf, "\nh.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
+	fmt.Fprintf(&buf, "\nswitch key {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+		fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\ndelete(h.privateParams, key)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
 	for _, f := range fields {

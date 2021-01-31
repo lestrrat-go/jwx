@@ -19,10 +19,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	byteSliceType = "[]byte"
-)
-
 func main() {
 	if err := _main(); err != nil {
 		log.Printf("%s", err)
@@ -457,6 +453,9 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n// these objects can contain extra _arbitrary_ fields that users can")
 	fmt.Fprintf(&buf, "\n// specify, and there is no way of knowing what type they could be")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\n\n// Remove removes the field associated with the specified key.")
+	fmt.Fprintf(&buf, "\n// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.")
+	fmt.Fprintf(&buf, "\nRemove(string) error")
 	fmt.Fprintf(&buf, "\n\n// Raw creates the corresponding raw key. For example,")
 	fmt.Fprintf(&buf, "\n// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,")
 	fmt.Fprintf(&buf, "\n// and OctetSeq types create a []byte key.")
@@ -481,6 +480,8 @@ func generateGenericHeaders() error {
 	fmt.Fprintf(&buf, "\n// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
 	fmt.Fprintf(&buf, "\n// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead")
 	fmt.Fprintf(&buf, "\nPrivateParams() map[string]interface{}")
+	fmt.Fprintf(&buf, "\n\n// Clone creates a new instance of the same type")
+	fmt.Fprintf(&buf, "\nClone() (Key, error)")
 	fmt.Fprintf(&buf, "\n\nKeyType() jwa.KeyType")
 	for _, f := range standardHeaders {
 		fmt.Fprintf(&buf, "\n%s() ", f.method)
@@ -603,23 +604,17 @@ func generateHeader(kt keyType) error {
 			}
 		}
 		fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
+		fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 		fmt.Fprintf(&buf, "\n}")
 
-		// Proxy is used when unmarshaling headers
-		fmt.Fprintf(&buf, "\n\ntype %s%sMarshalProxy struct {", strings.ToLower(kt.prefix), ht.name)
-		fmt.Fprintf(&buf, "\nXkeyType jwa.KeyType `json:\"kty\"`")
-		for _, f := range ht.allHeaders {
-			switch f.typ {
-			case byteSliceType:
-				// XXX encoding/json uses base64.StdEncoding, which require padding
-				// but we may or may not be dealing with padded base64's.
-				// In order to let the proxy handle this correctly, we need to
-				// accept the values in JSON as strings, not []bytes
-				fmt.Fprintf(&buf, "\nX%s *string %s", f.name, f.Tag())
-			default:
-				fmt.Fprintf(&buf, "\nX%s %s %s", f.name, fieldStorageType(f.typ), f.Tag())
-			}
-		}
+		fmt.Fprintf(&buf, "\n\nfunc New%[1]s() %[1]s {", ifName)
+		fmt.Fprintf(&buf, "\nreturn new%s()", ifName)
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n\nfunc new%s() *%s {", ifName, structName)
+		fmt.Fprintf(&buf, "\nreturn &%s{", structName)
+		fmt.Fprintf(&buf, "\nmu: &sync.RWMutex{},")
+		fmt.Fprintf(&buf, "\nprivateParams: make(map[string]interface{}),")
+		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h %s) KeyType() jwa.KeyType {", structName)
@@ -655,10 +650,9 @@ func generateHeader(kt keyType) error {
 			fmt.Fprintf(&buf, "\n}") // func (h *stdHeaders) %s() %s
 		}
 
-		// Generate a function that iterates through all of the keys
-		// in this header.
-		fmt.Fprintf(&buf, "\n\nfunc (h *%s) iterate(ctx context.Context, ch chan *HeaderPair) {", structName)
-		fmt.Fprintf(&buf, "\ndefer close(ch)")
+		fmt.Fprintf(&buf, "\n\nfunc (h *%s) makePairs() []*HeaderPair {", structName)
+		fmt.Fprintf(&buf, "\nh.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 
 		// NOTE: building up an array is *slow*?
 		fmt.Fprintf(&buf, "\n\nvar pairs []*HeaderPair")
@@ -681,13 +675,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nfor k, v := range h.privateParams {")
 		fmt.Fprintf(&buf, "\npairs = append(pairs, &HeaderPair{Key: k, Value: v})")
 		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
-		fmt.Fprintf(&buf, "\nselect {")
-		fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
-		fmt.Fprintf(&buf, "\nreturn")
-		fmt.Fprintf(&buf, "\ncase ch<-pair:")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn pairs")
 		fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) PrivateParams() map[string]interface{} {", structName)
@@ -695,6 +683,8 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Get(name string) (interface{}, bool) {", structName)
+		fmt.Fprintf(&buf, "\nh.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer h.mu.RUnlock()")
 		fmt.Fprintf(&buf, "\nswitch name {")
 		fmt.Fprintf(&buf, "\ncase KeyTypeKey:")
 		fmt.Fprintf(&buf, "\nreturn h.KeyType(), true")
@@ -704,10 +694,13 @@ func generateHeader(kt keyType) error {
 			} else {
 				fmt.Fprintf(&buf, "\ncase %s%sKey:", kt.prefix, f.method)
 			}
+
 			fmt.Fprintf(&buf, "\nif h.%s == nil {", f.name)
 			fmt.Fprintf(&buf, "\nreturn nil, false")
 			fmt.Fprintf(&buf, "\n}")
-			if fieldStorageTypeIsIndirect(f.typ) {
+			if f.hasGet {
+				fmt.Fprintf(&buf, "\nreturn h.%s.Get(), true", f.name)
+			} else if fieldStorageTypeIsIndirect(f.typ) {
 				fmt.Fprintf(&buf, "\nreturn *(h.%s), true", f.name)
 			} else {
 				fmt.Fprintf(&buf, "\nreturn h.%s, true", f.name)
@@ -720,6 +713,8 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}") // func (h *%s) Get(name string) (interface{}, bool)
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", structName)
+		fmt.Fprintf(&buf, "\nh.mu.Lock()")
+		fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
 		fmt.Fprintf(&buf, "\nswitch name {")
 		fmt.Fprintf(&buf, "\ncase \"kty\":")
 		fmt.Fprintf(&buf, "\nreturn nil") // This is not great, but we just ignore it
@@ -788,6 +783,30 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}") // end switch name
 		fmt.Fprintf(&buf, "\nreturn nil")
 		fmt.Fprintf(&buf, "\n}") // end func (h *%s) Set(name string, value interface{})
+
+		fmt.Fprintf(&buf, "\n\nfunc (k *%s) Remove(key string) error {", structName)
+		fmt.Fprintf(&buf, "\nk.mu.Lock()")
+		fmt.Fprintf(&buf, "\ndefer k.mu.Unlock()")
+		fmt.Fprintf(&buf, "\nswitch key {")
+		for _, f := range ht.allHeaders {
+			var keyName string
+			if f.isStd {
+				keyName = f.method + "Key"
+			} else {
+				keyName = kt.prefix + f.method + "Key"
+			}
+			fmt.Fprintf(&buf, "\ncase %s:", keyName)
+			fmt.Fprintf(&buf, "\nk.%s = nil", f.name)
+		}
+		fmt.Fprintf(&buf, "\ndefault:")
+		fmt.Fprintf(&buf, "\ndelete(k.privateParams, key)")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\n\nfunc (k *%s) Clone() (Key, error) {", structName)
+		fmt.Fprintf(&buf, "\nreturn cloneKey(k)")
+		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", structName)
 		for _, f := range ht.allHeaders {
@@ -919,8 +938,18 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Iterate(ctx context.Context) HeaderIterator {", structName)
-		fmt.Fprintf(&buf, "\nch := make(chan *HeaderPair)")
-		fmt.Fprintf(&buf, "\ngo h.iterate(ctx, ch)")
+		fmt.Fprintf(&buf, "\npairs := h.makePairs()")
+		fmt.Fprintf(&buf, "\nch := make(chan *HeaderPair, len(pairs))")
+		fmt.Fprintf(&buf, "\ngo func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {")
+		fmt.Fprintf(&buf, "\ndefer close(ch)")
+		fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
+		fmt.Fprintf(&buf, "\nselect {")
+		fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
+		fmt.Fprintf(&buf, "\nreturn")
+		fmt.Fprintf(&buf, "\ncase ch<-pair:")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}(ctx, ch, pairs)")
 		fmt.Fprintf(&buf, "\nreturn mapiter.New(ch)")
 		fmt.Fprintf(&buf, "\n}")
 

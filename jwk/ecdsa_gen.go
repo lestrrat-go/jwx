@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -49,22 +50,18 @@ type ecdsaPrivateKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type ecdsaPrivateKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	Xd                      *string                     `json:"d,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
-	Xy                      *string                     `json:"y,omitempty"`
+func NewECDSAPrivateKey() ECDSAPrivateKey {
+	return newECDSAPrivateKey()
+}
+
+func newECDSAPrivateKey() *ecdsaPrivateKey {
+	return &ecdsaPrivateKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
@@ -146,8 +143,9 @@ func (h *ecdsaPrivateKey) Y() []byte {
 	return h.y
 }
 
-func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *ecdsaPrivateKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
@@ -190,13 +188,7 @@ func (h *ecdsaPrivateKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *ecdsaPrivateKey) PrivateParams() map[string]interface{} {
@@ -204,6 +196,8 @@ func (h *ecdsaPrivateKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -246,7 +240,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -274,6 +268,8 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -372,6 +368,44 @@ func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
 		h.privateParams[name] = value
 	}
 	return nil
+}
+
+func (k *ecdsaPrivateKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case ECDSACrvKey:
+		k.crv = nil
+	case ECDSADKey:
+		k.d = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case ECDSAXKey:
+		k.x = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	case ECDSAYKey:
+		k.y = nil
+	default:
+		delete(k.privateParams, key)
+	}
+	return nil
+}
+
+func (k *ecdsaPrivateKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
@@ -539,8 +573,18 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 
@@ -573,21 +617,18 @@ type ecdsaPublicKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]interface{}
+	mu                     *sync.RWMutex
 }
 
-type ecdsaPublicKeyMarshalProxy struct {
-	XkeyType                jwa.KeyType                 `json:"kty"`
-	Xalgorithm              *string                     `json:"alg,omitempty"`
-	Xcrv                    *jwa.EllipticCurveAlgorithm `json:"crv,omitempty"`
-	XkeyID                  *string                     `json:"kid,omitempty"`
-	XkeyUsage               *string                     `json:"use,omitempty"`
-	Xkeyops                 *KeyOperationList           `json:"key_ops,omitempty"`
-	Xx                      *string                     `json:"x,omitempty"`
-	Xx509CertChain          *CertificateChain           `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                     `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                     `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                     `json:"x5u,omitempty"`
-	Xy                      *string                     `json:"y,omitempty"`
+func NewECDSAPublicKey() ECDSAPublicKey {
+	return newECDSAPublicKey()
+}
+
+func newECDSAPublicKey() *ecdsaPublicKey {
+	return &ecdsaPublicKey{
+		mu:            &sync.RWMutex{},
+		privateParams: make(map[string]interface{}),
+	}
 }
 
 func (h ecdsaPublicKey) KeyType() jwa.KeyType {
@@ -665,8 +706,9 @@ func (h *ecdsaPublicKey) Y() []byte {
 	return h.y
 }
 
-func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
-	defer close(ch)
+func (h *ecdsaPublicKey) makePairs() []*HeaderPair {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	var pairs []*HeaderPair
 	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
@@ -706,13 +748,7 @@ func (h *ecdsaPublicKey) iterate(ctx context.Context, ch chan *HeaderPair) {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
-	for _, pair := range pairs {
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
-	}
+	return pairs
 }
 
 func (h *ecdsaPublicKey) PrivateParams() map[string]interface{} {
@@ -720,6 +756,8 @@ func (h *ecdsaPublicKey) PrivateParams() map[string]interface{} {
 }
 
 func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
 		return h.KeyType(), true
@@ -757,7 +795,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -785,6 +823,8 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 }
 
 func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	switch name {
 	case "kty":
 		return nil
@@ -877,6 +917,42 @@ func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
 		h.privateParams[name] = value
 	}
 	return nil
+}
+
+func (k *ecdsaPublicKey) Remove(key string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	switch key {
+	case AlgorithmKey:
+		k.algorithm = nil
+	case ECDSACrvKey:
+		k.crv = nil
+	case KeyIDKey:
+		k.keyID = nil
+	case KeyUsageKey:
+		k.keyUsage = nil
+	case KeyOpsKey:
+		k.keyops = nil
+	case ECDSAXKey:
+		k.x = nil
+	case X509CertChainKey:
+		k.x509CertChain = nil
+	case X509CertThumbprintKey:
+		k.x509CertThumbprint = nil
+	case X509CertThumbprintS256Key:
+		k.x509CertThumbprintS256 = nil
+	case X509URLKey:
+		k.x509URL = nil
+	case ECDSAYKey:
+		k.y = nil
+	default:
+		delete(k.privateParams, key)
+	}
+	return nil
+}
+
+func (k *ecdsaPublicKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
@@ -1036,8 +1112,18 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 }
 
 func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
-	ch := make(chan *HeaderPair)
-	go h.iterate(ctx, ch)
+	pairs := h.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
 	return mapiter.New(ch)
 }
 
