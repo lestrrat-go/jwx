@@ -1238,27 +1238,6 @@ func TestOKP(t *testing.T) {
 	})
 	t.Run("X25519", func(t *testing.T) {
 		t.Parallel()
-		t.Run("PrivateKey", func(t *testing.T) {
-			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPDKey: expectBase64(keyDef{
-					Method: "D",
-					Value:  "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
-				}),
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.X25519,
-				},
-			})
-		})
 		t.Run("PublicKey", func(t *testing.T) {
 			t.Parallel()
 			VerifyKey(t, map[string]keyDef{
@@ -1268,7 +1247,7 @@ func TestOKP(t *testing.T) {
 				},
 				jwk.OKPXKey: expectBase64(keyDef{
 					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+					Value:  "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
 				}),
 				jwk.OKPCrvKey: {
 					Method: "Crv",
