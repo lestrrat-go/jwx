@@ -45,7 +45,7 @@ func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, e
 		}
 	}
 	fmt.Fprintf(&buf, "]")
-	return assert.Fail(t, `key.Get("accessCount") should be one of %s (got %d)`, buf.String(), v)
+	return assert.Failf(t, `key.Get("accessCount") should be one of %s (got %d)`, buf.String(), v)
 }
 
 func TestAutoRefresh(t *testing.T) {
