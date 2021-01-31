@@ -240,7 +240,7 @@ func (h *ecdsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -402,6 +402,10 @@ func (k *ecdsaPrivateKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *ecdsaPrivateKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
@@ -791,7 +795,7 @@ func (h *ecdsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return *(h.x509CertChain), true
+		return h.x509CertChain.Get(), true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -945,6 +949,10 @@ func (k *ecdsaPublicKey) Remove(key string) error {
 		delete(k.privateParams, key)
 	}
 	return nil
+}
+
+func (k *ecdsaPublicKey) Clone() (Key, error) {
+	return cloneKey(k)
 }
 
 func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {

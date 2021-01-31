@@ -385,3 +385,32 @@ func AssignKeyID(key Key, options ...Option) error {
 
 	return nil
 }
+
+func cloneKey(src Key) (Key, error){
+	var dst Key
+	switch src.(type) {
+	case RSAPrivateKey:
+		dst = NewRSAPrivateKey()
+	case RSAPublicKey:
+		dst = NewRSAPublicKey()
+	case ECDSAPrivateKey:
+		dst = NewECDSAPrivateKey()
+	case ECDSAPublicKey:
+		dst = NewECDSAPublicKey()
+	case OKPPrivateKey:
+		dst = NewOKPPrivateKey()
+	case OKPPublicKey:
+		dst = NewOKPPublicKey()
+	case SymmetricKey:
+		dst = NewSymmetricKey()
+	}
+
+	ctx := context.Background()
+	for iter := src.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		}
+	}
+	return dst, nil
+}
