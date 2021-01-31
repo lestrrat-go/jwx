@@ -16,6 +16,7 @@ const (
 	tokenTime = 233431200
 )
 
+var zeroval reflect.Value
 var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
 func TestHeader(t *testing.T) {
@@ -162,34 +163,127 @@ func TestToken(t *testing.T) {
 	t.Parallel()
 	tok := jwt.New()
 
-	claims := map[string]interface{}{
-		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
-		jwt.ExpirationKey: expectedTokenTime,
-		jwt.IssuedAtKey:   expectedTokenTime,
-		jwt.IssuerKey:     "http://www.example.com",
-		jwt.JwtIDKey:      "e9bc097a-ce51-4036-9562-d2ade882db0d",
-		jwt.NotBeforeKey:  expectedTokenTime,
-		jwt.SubjectKey:    "unit test",
-		"myClaim":         "hello, world",
-	}
-	for key, value := range claims {
-		tok.Set(key, value)
+	def := map[string]struct {
+		Method string
+		Value  interface{}
+	}{
+		jwt.AudienceKey: {
+			Method: "Audience",
+			Value:  []string{"developers", "secops", "tac"},
+		},
+		jwt.ExpirationKey: {
+			Method: "Expiration",
+			Value:  expectedTokenTime,
+		},
+		jwt.IssuedAtKey: {
+			Method: "IssuedAt",
+			Value:  expectedTokenTime,
+		},
+		jwt.IssuerKey: {
+			Method: "Issuer",
+			Value:  "http://www.example.com",
+		},
+		jwt.JwtIDKey: {
+			Method: "JwtID",
+			Value:  "e9bc097a-ce51-4036-9562-d2ade882db0d",
+		},
+		jwt.NotBeforeKey: {
+			Method: "NotBefore",
+			Value:  expectedTokenTime,
+		},
+		jwt.SubjectKey: {
+			Method: "Subject",
+			Value:  "unit test",
+		},
+		"myClaim": {
+			Value: "hello, world",
+		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	t.Run("Set", func(t *testing.T) {
+		for k, kdef := range def {
+			if !assert.NoError(t, tok.Set(k, kdef.Value), `tok.Set(%s) should succeed`, k) {
+				return
+			}
+		}
+	})
+	t.Run("Get", func(t *testing.T) {
+		rv := reflect.ValueOf(tok)
+		for k, kdef := range def {
+			getval, ok := tok.Get(k)
+			if !assert.True(t, ok, `tok.Get(%s) should succeed`, k) {
+				return
+			}
 
-	for iter := tok.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-		t.Logf("%s -> %v", pair.Key, pair.Value)
-	}
+			if mname := kdef.Method; mname != "" {
+				method := rv.MethodByName(mname)
+				if !assert.NotEqual(t, zeroval, method, `method %s should not be zero value`, mname) {
+					return
+				}
 
-	m, err := tok.AsMap(ctx)
-	if !assert.NoError(t, err, `AsMap should succeed`) {
-		return
-	}
+				retvals := method.Call(nil)
+				if !assert.Len(t, retvals, 1, `should have exactly one return value`) {
+					return
+				}
 
-	if !assert.Equal(t, m, claims, "hash should match") {
-		return
-	}
+				if !assert.Equal(t, getval, retvals[0].Interface(), `values should match`) {
+					return
+				}
+			}
+		}
+	})
+	t.Run("Roundtrip", func(t *testing.T) {
+		buf, err := json.Marshal(tok)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		newtok, err := jwt.Parse(buf)
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+
+		m1, err := tok.AsMap(context.TODO())
+		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
+			return
+		}
+
+		m2, err := newtok.AsMap(context.TODO())
+		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, m1, m2, `tokens should match`) {
+			return
+		}
+	})
+	t.Run("Set/Remove", func(t *testing.T) {
+		ctx := context.TODO()
+
+		newtok, err := tok.Clone()
+		if !assert.NoError(t, err, `tok.Clone should succeed`) {
+			return
+		}
+
+		for iter := tok.Iterate(ctx); iter.Next(ctx); {
+			pair := iter.Pair()
+			newtok.Remove(pair.Key.(string))
+		}
+
+		m, err := newtok.AsMap(ctx)
+		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
+			return
+		}
+
+		if !assert.Len(t, m, 0, `toks should have 0 tok`) {
+			return
+		}
+
+		for iter := tok.Iterate(ctx); iter.Next(ctx); {
+			pair := iter.Pair()
+			if !assert.NoError(t, newtok.Set(pair.Key.(string), pair.Value), `newtok.Set should succeed`) {
+				return
+			}
+		}
+	})
 }

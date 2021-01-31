@@ -375,6 +375,12 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nPrivateClaims() map[string]interface{}")
 	fmt.Fprintf(&buf, "\nGet(string) (interface{}, bool)")
 	fmt.Fprintf(&buf, "\nSet(string, interface{}) error")
+	fmt.Fprintf(&buf, "\nRemove(string) error")
+	if tt.pkg != "jwt" {
+		fmt.Fprintf(&buf, "\nClone() (jwt.Token, error)")
+	} else {
+		fmt.Fprintf(&buf, "\nClone() (Token, error)")
+	}
 	fmt.Fprintf(&buf, "\nIterate(context.Context) Iterator")
 	fmt.Fprintf(&buf, "\nWalk(context.Context, Visitor) error")
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
@@ -414,27 +420,6 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\n// Size returns the number of valid claims stored in this token")
-	fmt.Fprintf(&buf, "\nfunc (t *%s) Size() int {", tt.structName)
-	fmt.Fprintf(&buf, "\nt.mu.RLock()")
-	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
-	fmt.Fprintf(&buf, "\nvar count int")
-	for _, field := range fields {
-		switch {
-		case field.IsList():
-			fmt.Fprintf(&buf, "\nif len(t.%s) > 0 {", field.name)
-			fmt.Fprintf(&buf, "\ncount++")
-			fmt.Fprintf(&buf, "\n}")
-		case field.IsPointer():
-			fmt.Fprintf(&buf, "\nif t.%s != nil {", field.name)
-			fmt.Fprintf(&buf, "\ncount++")
-			fmt.Fprintf(&buf, "\n}")
-		}
-	}
-
-	fmt.Fprintf(&buf, "\ncount += len(t.privateClaims)")
-	fmt.Fprintf(&buf, "\nreturn count")
-	fmt.Fprintf(&buf, "\n}") // end func Size()
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
@@ -460,6 +445,20 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn v, ok")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\n}") // end of Get
+
+	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) Remove(key string) error {")
+	fmt.Fprintf(&buf, "\nt.mu.Lock()")
+	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
+	fmt.Fprintf(&buf, "\nswitch key {")
+	for _, f := range fields {
+		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
+		fmt.Fprintf(&buf, "\nt.%s = nil", f.name)
+	}
+	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\ndelete(t.privateClaims, key)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn nil") // currently unused, but who knows
+	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.Lock()")
@@ -557,10 +556,9 @@ func generateToken(tt tokenType) error {
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) iterate(ctx context.Context, ch chan *ClaimPair) {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) makePairs() []*ClaimPair {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
-	fmt.Fprintf(&buf, "\ndefer close(ch)")
 
 	// NOTE: building up an array is *slow*?
 	fmt.Fprintf(&buf, "\n\nvar pairs []*ClaimPair")
@@ -582,13 +580,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &ClaimPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
-	fmt.Fprintf(&buf, "\nselect {")
-	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
-	fmt.Fprintf(&buf, "\nreturn")
-	fmt.Fprintf(&buf, "\ncase ch<-pair:")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nreturn pairs")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *stdToken) UnmarshalJSON(buf []byte) error {")
@@ -739,8 +731,18 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
-	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair)")
-	fmt.Fprintf(&buf, "\ngo t.iterate(ctx, ch)")
+	fmt.Fprintf(&buf, "\npairs := t.makePairs()")
+	fmt.Fprintf(&buf, "\nch := make(chan *ClaimPair, len(pairs))")
+	fmt.Fprintf(&buf, "\ngo func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {")
+	fmt.Fprintf(&buf, "\ndefer close(ch)")
+	fmt.Fprintf(&buf, "\nfor _, pair := range pairs {")
+	fmt.Fprintf(&buf, "\nselect {")
+	fmt.Fprintf(&buf, "\ncase <-ctx.Done():")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\ncase ch<-pair:")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}(ctx, ch, pairs)")
 	fmt.Fprintf(&buf, "\nreturn mapiter.New(ch)")
 	fmt.Fprintf(&buf, "\n}")
 

@@ -403,6 +403,8 @@ func cloneKey(src Key) (Key, error) {
 		dst = NewOKPPublicKey()
 	case SymmetricKey:
 		dst = NewSymmetricKey()
+	default:
+		return nil, errors.Errorf(`unknown key type %T`, src)
 	}
 
 	ctx := context.Background()

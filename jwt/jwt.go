@@ -259,3 +259,16 @@ func Equal(t1, t2 Token) bool {
 
 	return len(m1) == 0
 }
+
+func (t *stdToken) Clone() (Token, error) {
+	dst := New()
+
+	ctx := context.Background()
+	for iter := t.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		}
+	}
+	return dst, nil
+}

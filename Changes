@@ -91,6 +91,10 @@ v1.1.0
   * `(jwk.Key).Get(jwk.X509CertChainKey)` no longer returns a `jwk.CertificateChain`.
     Instead it returns a raw []*x509.Certificate.
 
+  * `(jwt.Token).Size() has been removed.
+
+  * `jwt.WithOpenIDClaims()` has been removed. Use `jwt.WithToken(openid.New())` instead.
+
 [New Features]
   * `jwe.ReadFile(string)`, `jwk.ReadFile(string)`, `jws.ReadFile(string)`, and
     `jwt.ReadFile(string)` have been added. In the future, we plan to introduce
@@ -111,7 +115,7 @@ v1.1.0
     `(jwt.Token).Remove(string)` have been added. `jwe.Header` already had a `Remove()`
     method, so it has not been changed.
 
-  * `(jwk.Key).Clone() has been added
+  * `(jwk.Key).Clone() has been added.
 
 [Miscellaneous]
   * Default branch for the repository is now `main`.
