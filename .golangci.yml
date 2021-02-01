@@ -26,6 +26,7 @@ linters:
     - gofumpt
     - gomnd
     - gosec
+    - ifshort
     - lll
     - makezero
     - nakedret
