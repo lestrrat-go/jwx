@@ -4,6 +4,7 @@
 package jwk
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -416,6 +417,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	s := NewSet()
 	if parsePEM {
+		src = bytes.TrimSpace(src)
 		for len(src) > 0 {
 			raw, rest, err := parsePEMEncodedRawKey(src)
 			if err != nil {
@@ -426,7 +428,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 				return nil, errors.Wrapf(err, `failed to create jwk.Key from %T`, raw)
 			}
 			s.Add(key)
-			src = rest
+			src = bytes.TrimSpace(rest)
 		}
 		return s, nil
 	}
