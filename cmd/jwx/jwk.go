@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,30 +11,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func getSource(c *cli.Context) (io.ReadCloser, error) {
-	var src io.ReadCloser
-	if c.Bool("stdin") {
-		src = io.NopCloser(os.Stdin)
-	} else {
-		file := c.Args().Get(0)
-		if file == "" {
-			return nil, errors.New(`filename required withot -stdin`)
-		}
-		f, err := os.Open(file)
-		if err != nil {
-			return nil, errors.Wrapf(err, `failed to open file %s`, file)
-		}
-		src = f
-	}
-	return src, nil
-}
-
 func makeJwkCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "jwk"
 	cmd.Usage = "Work with JWK and JWK sets"
 
-	// jwk pem ...
 	cmd.Subcommands = []*cli.Command{
 		makeJwkParseCmd(),
 		makeJwkFormatCmd(),
@@ -43,13 +23,40 @@ func makeJwkCmd() *cli.Command {
 	return &cmd
 }
 
+func dumpJWKSet(dst io.Writer, keyset jwk.Set, preserve bool) error {
+	if preserve || keyset.Len() != 1 {
+		if err := dumpJSON(os.Stdout, keyset); err != nil {
+			return errors.Wrap(err, `failed to marshal keyset into JSON format`)
+		}
+	} else {
+		key, _ := keyset.Get(0)
+		if err := dumpJSON(os.Stdout, key); err != nil {
+			return errors.Wrap(err, `failed to marshal key into JSON format`)
+		}
+	}
+	return nil
+}
+
 func makeJwkFormatCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "format"
 	cmd.Usage = "Format JWK"
 	cmd.Flags = []cli.Flag{
-		&cli.StringFlag{Name: "format", Value: "json"},
-		&cli.BoolFlag{Name: "stdin", Value: false},
+		&cli.StringFlag{
+			Name:  "format",
+			Value: "json",
+			Usage: "output format, json or pem",
+		},
+		&cli.BoolFlag{
+			Name:  "preserve-set",
+			Value: false,
+			Usage: "preserve JWK set format even if there is only one key",
+		},
+		&cli.BoolFlag{
+			Name:  "stdin",
+			Value: false,
+			Usage: "use stdin instead of reading from a file",
+		},
 	}
 
 	// jwx jwk format <file>
@@ -65,25 +72,22 @@ func makeJwkFormatCmd() *cli.Command {
 			return errors.Wrap(err, `failed to read data from source`)
 		}
 
-		key, err := jwk.ParseKey(buf)
+		keyset, err := jwk.Parse(buf)
 		if err != nil {
-			return errors.Wrap(err, `failed to parse key`)
+			return errors.Wrap(err, `failed to parse keyset`)
 		}
 
 		switch format := c.String("format"); format {
 		case "json":
-			buf, err = json.MarshalIndent(key, "", "  ")
-			if err != nil {
-				return errors.Wrap(err, `failed to format key in JSON format`)
-			}
+			return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
 		case "pem":
-			buf, err = jwk.Pem(key)
+			buf, err = jwk.Pem(keyset)
 			if err != nil {
 				return errors.Wrap(err, `failed to format key in PEM format`)
 			}
 		}
 
-		fmt.Printf("%s\n", buf)
+		fmt.Printf("%s", buf)
 		return nil
 	}
 	return &cmd
@@ -93,9 +97,23 @@ func makeJwkParseCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "parse"
 	cmd.Usage = "Parse JWK"
+	cmd.ArgsUsage = "[filename]"
 	cmd.Flags = []cli.Flag{
-		&cli.StringFlag{Name: "format", Value: "json"},
-		&cli.BoolFlag{Name: "stdin", Value: false},
+		&cli.StringFlag{
+			Name:  "format",
+			Value: "json",
+			Usage: "expected format, json or pem",
+		},
+		&cli.BoolFlag{
+			Name:  "preserve-set",
+			Value: false,
+			Usage: "preserve JWK set format even if there is only one key",
+		},
+		&cli.BoolFlag{
+			Name:  "stdin",
+			Value: false,
+			Usage: "use stdin instead of reading from a file",
+		},
 	}
 
 	// jwx jwk parse <file>
@@ -111,7 +129,7 @@ func makeJwkParseCmd() *cli.Command {
 			return errors.Wrap(err, `failed to read data from source`)
 		}
 
-		var options []jwk.ParseKeyOption
+		var options []jwk.ParseOption
 		switch format := c.String("format"); format {
 		case "json":
 		case "pem":
@@ -120,17 +138,12 @@ func makeJwkParseCmd() *cli.Command {
 			return errors.Errorf(`invalid format %s`, format)
 		}
 
-		key, err := jwk.ParseKey(buf, options...)
+		keyset, err := jwk.Parse(buf, options...)
 		if err != nil {
-			return errors.Wrap(err, `failed to parse key`)
+			return errors.Wrap(err, `failed to parse keyset`)
 		}
 
-		buf, err = json.Marshal(key)
-		if err != nil {
-			return errors.Wrap(err, `failed to marshal key into JSON format`)
-		}
-		fmt.Fprintf(os.Stdout, "%s\n", buf)
-		return nil
+		return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
 	}
 	return &cmd
 }
