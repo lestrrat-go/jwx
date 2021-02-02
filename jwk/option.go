@@ -55,7 +55,7 @@ type parseOption struct {
 	Option
 }
 
-func (*parseOption) parseOption() {}
+func (*parseOption) parseOption()    {}
 func (*parseOption) readFileOption() {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
