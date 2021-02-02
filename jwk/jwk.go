@@ -9,6 +9,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"io"
 	"net/http"
 
@@ -275,12 +277,78 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 	return nil
 }
 
+// parsePEMEncodedRawKey parses a key in PEM encoded ASN.1 DER format. It tires its
+// best to determine the key type, but when it just can't, it will return
+// an error
+func parsePEMEncodedRawKey(src []byte) (interface{}, error) {
+	block, _ := pem.Decode(src)
+	if block == nil {
+		return nil, errors.New(`failed to decode PEM data`)
+	}
+
+	switch block.Type {
+	// Handle the semi-obvious cases
+	case "RSA PRIVATE KEY":
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse PKCS1 private key`)
+		}
+		return key, nil
+	case "RSA PUBLIC KEY":
+		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse PKCS1 public key`)
+		}
+		return key, nil
+	case "EC PRIVATE KEY":
+		key, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse EC private key`)
+		}
+		return key, nil
+	case "PUBLIC KEY":
+		// XXX *could* return dsa.PublicKey
+		key, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse PKIX public key`)
+		}
+		return key, nil
+	case "PRIVATE KEY":
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
+		}
+		return key, nil
+	default:
+		return nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
+	}
+}
+
 // ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
 // report failure if you attempt to pass a JWK set. Only use this function
 // when you know that the data is a single JWK.
 //
+// Given a WithPEM(true) option, this function assumes that the given input
+// is PEM encoded ASN.1 DER format key.
+//
 // Note that a successful parsing does NOT necessarily guarantee a valid key.
-func ParseKey(data []byte) (Key, error) {
+func ParseKey(data []byte, options ...ParseKeyOption) (Key, error) {
+	var parsePEM bool
+	for _, option := range options {
+		switch option.Ident() {
+		case identPEM{}:
+			parsePEM = option.Value().(bool)
+		}
+	}
+
+	if parsePEM {
+		raw, err := parsePEMEncodedRawKey(data)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to parse PEM encoded key`)
+		}
+		return New(raw)
+	}
+
 	var hint struct {
 		Kty string          `json:"kty"`
 		D   json.RawMessage `json:"d"`
@@ -415,4 +483,48 @@ func cloneKey(src Key) (Key, error) {
 		}
 	}
 	return dst, nil
+}
+
+// Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
+// using either PKCS8 for private keys and PKIX for public keys.
+// If you need to encode using PKCS1 or SEC1, you must do it yourself.
+//
+// Currently only EC (including Ed25519) and RSA keys are supported.
+func Pem(key Key) ([]byte, error) {
+	typ, buf, err := asnEncode(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var block pem.Block
+	block.Type = typ
+	block.Bytes = buf
+	return pem.EncodeToMemory(&block), nil
+}
+
+func asnEncode(key Key) (string, []byte, error) {
+	switch key := key.(type) {
+	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
+		var rawkey interface{}
+		if err := key.Raw(&rawkey); err != nil {
+			return "", nil, errors.Wrap(err, `failed to get raw key from jwk.Key`)
+		}
+		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
+		if err != nil {
+			return "", nil, errors.Wrap(err, `failed to marshal PKCS8`)
+		}
+		return "PRIVATE KEY", buf, nil
+	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
+		var rawkey interface{}
+		if err := key.Raw(&rawkey); err != nil {
+			return "", nil, errors.Wrap(err, `failed to get raw key from jwk.Key`)
+		}
+		buf, err := x509.MarshalPKIXPublicKey(rawkey)
+		if err != nil {
+			return "", nil, errors.Wrap(err, `failed to marshal PKIX`)
+		}
+		return "PUBLIC KEY", buf, nil
+	default:
+		return "", nil, errors.Errorf(`unsupported key type %T`, key)
+	}
 }

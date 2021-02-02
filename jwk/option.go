@@ -15,6 +15,7 @@ type identThumbprintHash struct{}
 type identRefreshInterval struct{}
 type identMinRefreshInterval struct{}
 type identFetchBackoff struct{}
+type identPEM struct{}
 
 // AutoRefreshOption is a type of Option that can be passed to the
 // AutoRefresh object.
@@ -43,6 +44,18 @@ type fetchOption struct {
 
 func (*fetchOption) autoRefreshOption() {}
 func (*fetchOption) fetchOption()       {}
+
+// ParseKeyOption is a type of Option that can be passed to `jwk.ParseKey()`
+type ParseKeyOption interface {
+	Option
+	parseKeyOption()
+}
+
+type parseKeyOption struct {
+	Option
+}
+
+func (*parseKeyOption) parseKeyOption() {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
@@ -97,5 +110,12 @@ func WithRefreshInterval(d time.Duration) AutoRefreshOption {
 func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 	return &autoRefreshOption{
 		option.New(identMinRefreshInterval{}, d),
+	}
+}
+
+// WithPEM specifies that the input to `ParseKey()` is a PEM encoded key.
+func WithPEM(v bool) ParseKeyOption {
+	return &parseKeyOption{
+		option.New(identPEM{}, v),
 	}
 }
