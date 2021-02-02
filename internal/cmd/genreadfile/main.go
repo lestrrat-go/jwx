@@ -26,9 +26,9 @@ func main() {
 func _main() error {
 	definitions := []definition{
 		{
-			Package:    "jwk",
-			ReturnType: "Set",
-			Filename:   "jwk/io.go",
+			Package:      "jwk",
+			ReturnType:   "Set",
+			Filename:     "jwk/io.go",
 			ParseOptions: true,
 		},
 		{

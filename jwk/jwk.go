@@ -538,7 +538,7 @@ func Pem(v interface{}) ([]byte, error) {
 		key, _ := set.Get(i)
 		typ, buf, err := asnEncode(key)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to encode content for key %#d`, i)
+			return nil, errors.Wrapf(err, `failed to encode content for key #%d`, i)
 		}
 
 		var block pem.Block
