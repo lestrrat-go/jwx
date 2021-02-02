@@ -45,17 +45,18 @@ type fetchOption struct {
 func (*fetchOption) autoRefreshOption() {}
 func (*fetchOption) fetchOption()       {}
 
-// ParseKeyOption is a type of Option that can be passed to `jwk.ParseKey()`
-type ParseKeyOption interface {
-	Option
-	parseKeyOption()
+// ParseOption is a type of Option that can be passed to `jwk.Parse()`
+type ParseOption interface {
+	ReadFileOption
+	parseOption()
 }
 
-type parseKeyOption struct {
+type parseOption struct {
 	Option
 }
 
-func (*parseKeyOption) parseKeyOption() {}
+func (*parseOption) parseOption() {}
+func (*parseOption) readFileOption() {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
@@ -113,9 +114,9 @@ func WithMinRefreshInterval(d time.Duration) AutoRefreshOption {
 	}
 }
 
-// WithPEM specifies that the input to `ParseKey()` is a PEM encoded key.
-func WithPEM(v bool) ParseKeyOption {
-	return &parseKeyOption{
+// WithPEM specifies that the input to `Parse()` is a PEM encoded key.
+func WithPEM(v bool) ParseOption {
+	return &parseOption{
 		option.New(identPEM{}, v),
 	}
 }

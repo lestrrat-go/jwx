@@ -29,6 +29,7 @@ func _main() error {
 			Package:    "jwk",
 			ReturnType: "Set",
 			Filename:   "jwk/io.go",
+			ParseOptions: true,
 		},
 		{
 			Package:    "jws",

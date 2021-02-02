@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -280,10 +281,10 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 // parsePEMEncodedRawKey parses a key in PEM encoded ASN.1 DER format. It tires its
 // best to determine the key type, but when it just can't, it will return
 // an error
-func parsePEMEncodedRawKey(src []byte) (interface{}, error) {
-	block, _ := pem.Decode(src)
+func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
+	block, rest := pem.Decode(src)
 	if block == nil {
-		return nil, errors.New(`failed to decode PEM data`)
+		return nil, nil, errors.New(`failed to decode PEM data`)
 	}
 
 	switch block.Type {
@@ -291,36 +292,36 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, error) {
 	case "RSA PRIVATE KEY":
 		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse PKCS1 private key`)
+			return nil, nil, errors.Wrap(err, `failed to parse PKCS1 private key`)
 		}
-		return key, nil
+		return key, rest, nil
 	case "RSA PUBLIC KEY":
 		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse PKCS1 public key`)
+			return nil, nil, errors.Wrap(err, `failed to parse PKCS1 public key`)
 		}
-		return key, nil
+		return key, rest, nil
 	case "EC PRIVATE KEY":
 		key, err := x509.ParseECPrivateKey(block.Bytes)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse EC private key`)
+			return nil, nil, errors.Wrap(err, `failed to parse EC private key`)
 		}
-		return key, nil
+		return key, rest, nil
 	case "PUBLIC KEY":
 		// XXX *could* return dsa.PublicKey
 		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse PKIX public key`)
+			return nil, nil, errors.Wrap(err, `failed to parse PKIX public key`)
 		}
-		return key, nil
+		return key, rest, nil
 	case "PRIVATE KEY":
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
+			return nil, nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
 		}
-		return key, nil
+		return key, rest, nil
 	default:
-		return nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
+		return nil, nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
 	}
 }
 
@@ -332,7 +333,7 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, error) {
 // is PEM encoded ASN.1 DER format key.
 //
 // Note that a successful parsing does NOT necessarily guarantee a valid key.
-func ParseKey(data []byte, options ...ParseKeyOption) (Key, error) {
+func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	for _, option := range options {
 		switch option.Ident() {
@@ -342,7 +343,7 @@ func ParseKey(data []byte, options ...ParseKeyOption) (Key, error) {
 	}
 
 	if parsePEM {
-		raw, err := parsePEMEncodedRawKey(data)
+		raw, _, err := parsePEMEncodedRawKey(data)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to parse PEM encoded key`)
 		}
@@ -404,8 +405,32 @@ func ParseKey(data []byte, options ...ParseKeyOption) (Key, error) {
 // if a JWK(s) resource at a remote location contains a single JWK key or
 // a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
 // even if the data only contains a single JWK key
-func Parse(src []byte) (Set, error) {
+func Parse(src []byte, options ...ParseOption) (Set, error) {
+	var parsePEM bool
+	for _, option := range options {
+		switch option.Ident() {
+		case identPEM{}:
+			parsePEM = option.Value().(bool)
+		}
+	}
+
 	s := NewSet()
+	if parsePEM {
+		for len(src) > 0 {
+			raw, rest, err := parsePEMEncodedRawKey(src)
+			if err != nil {
+				return nil, errors.Wrap(err, `failed to parse PEM encoded key`)
+			}
+			key, err := New(raw)
+			if err != nil {
+				return nil, errors.Wrapf(err, `failed to create jwk.Key from %T`, raw)
+			}
+			s.Add(key)
+			src = rest
+		}
+		return s, nil
+	}
+
 	if err := json.Unmarshal(src, s); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal JWK set")
 	}
@@ -413,17 +438,20 @@ func Parse(src []byte) (Set, error) {
 }
 
 // ParseReader parses a JWK set from the incoming byte buffer.
-func ParseReader(src io.Reader) (Set, error) {
-	s := NewSet()
-	if err := json.NewDecoder(src).Decode(s); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal JWK set")
+func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
+	// meh, there's no way to tell if a stream has "ended" a single
+	// JWKs except when we encounter an EOF, so just... ReadAll
+	buf, err := ioutil.ReadAll(src)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to read from io.Reader`)
 	}
-	return s, nil
+
+	return Parse(buf, options...)
 }
 
 // ParseString parses a JWK set from the incoming string.
-func ParseString(s string) (Set, error) {
-	return Parse([]byte(s))
+func ParseString(s string, options ...ParseOption) (Set, error) {
+	return Parse([]byte(s), options...)
 }
 
 // AssignKeyID is a convenience function to automatically assign the "kid"
@@ -489,17 +517,36 @@ func cloneKey(src Key) (Key, error) {
 // using either PKCS8 for private keys and PKIX for public keys.
 // If you need to encode using PKCS1 or SEC1, you must do it yourself.
 //
-// Currently only EC (including Ed25519) and RSA keys are supported.
-func Pem(key Key) ([]byte, error) {
-	typ, buf, err := asnEncode(key)
-	if err != nil {
-		return nil, err
+// Argument must be of type jwk.Key or jwk.Set
+//
+// Currently only EC (including Ed25519) and RSA keys (and jwk.Set
+// comprised of these key types) are supported.
+func Pem(v interface{}) ([]byte, error) {
+	var set Set
+	switch v := v.(type) {
+	case Key:
+		set = NewSet()
+		set.Add(v)
+	case Set:
+		set = v
+	default:
+		return nil, errors.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
 	}
 
-	var block pem.Block
-	block.Type = typ
-	block.Bytes = buf
-	return pem.EncodeToMemory(&block), nil
+	var ret []byte
+	for i := 0; i < set.Len(); i++ {
+		key, _ := set.Get(i)
+		typ, buf, err := asnEncode(key)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to encode content for key %#d`, i)
+		}
+
+		var block pem.Block
+		block.Type = typ
+		block.Bytes = buf
+		ret = append(ret, pem.EncodeToMemory(&block)...)
+	}
+	return ret, nil
 }
 
 func asnEncode(key Key) (string, []byte, error) {
