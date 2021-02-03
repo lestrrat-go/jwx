@@ -30,7 +30,6 @@ func dumpJSON(dst io.Writer, v interface{}) error {
 		return errors.Wrap(err, `failed to serialize to JSON`)
 	}
 	dst.Write(buf)
-	dst.Write([]byte{'\n'})
 	return nil
 }
 
