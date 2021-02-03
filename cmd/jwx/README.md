@@ -2,6 +2,45 @@
 
 # jwx jwk
 
+## Generating a JWK
+
+You can generate random JWKs for RSA/EC/oct/OKP key types:
+
+```shell
+# output truncated for brevity
+% jwx jwk generate --type RSA --keysize 4096
+{
+  "d": "TGGiBzGzFEWQQPE32m...",
+  "dp": "LjsdUBxJhshSa7FEBP...",
+  "dq": "G4SPP5e5sp-k8iCEAa...",
+  "e": "AQAB",
+  "kty": "RSA",
+  "n": "lgy17ssrTVUFKxFq5gO...",
+  "p": "wEXZYzjrSbAn1bDpQpN...",
+  "q": "x8hEaDhNND9mOqHD_xH...",
+  "qi": "BVDWmgMEZ7QBC8ZSL9..."
+}
+
+% jwx jwk generate --type EC --curve P-521
+% jwx jwk generate --type oc --keysize 128
+% jwx jwk generate --type OKP --curve Ed25519
+```
+
+To include extra information in the key such as a key ID, use the `--template` option
+
+```shell
+# output truncated for brevity
+% jwx jwk generate --type EC --curve P-384 --template '{"kid":"mywesomekey"}'
+{
+  "crv": "P-384",
+  "d": "Q4JFCjI81uYC2T...",
+  "kid": "mywesomekey",
+  "kty": "EC",
+  "x": "cm6GYmhtjYLr_B...",
+  "y": "4_dIgUa68wytgg..."
+}
+```
+
 ## Parsing a JWK (JSON)
 
 You can parse and make sure that the a given JWK is well-formatted.
