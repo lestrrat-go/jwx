@@ -21,6 +21,20 @@ const (
 	A256GCM       ContentEncryptionAlgorithm = "A256GCM"       // AES-GCM (256)
 )
 
+var allContentEncryptionAlgorithms = []ContentEncryptionAlgorithm{
+	A128CBC_HS256,
+	A128GCM,
+	A192CBC_HS384,
+	A192GCM,
+	A256CBC_HS512,
+	A256GCM,
+}
+
+// ContentEncryptionAlgorithms returns a list of all available values for ContentEncryptionAlgorithm
+func ContentEncryptionAlgorithms() []ContentEncryptionAlgorithm {
+	return allContentEncryptionAlgorithms
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *ContentEncryptionAlgorithm) Accept(value interface{}) error {

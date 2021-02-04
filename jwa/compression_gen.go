@@ -17,6 +17,16 @@ const (
 	NoCompress CompressionAlgorithm = ""    // No compression
 )
 
+var allCompressionAlgorithms = []CompressionAlgorithm{
+	Deflate,
+	NoCompress,
+}
+
+// CompressionAlgorithms returns a list of all available values for CompressionAlgorithm
+func CompressionAlgorithms() []CompressionAlgorithm {
+	return allCompressionAlgorithms
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *CompressionAlgorithm) Accept(value interface{}) error {
