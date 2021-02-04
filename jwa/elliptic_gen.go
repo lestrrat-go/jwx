@@ -26,7 +26,6 @@ const (
 var allEllipticCurveAlgorithms = []EllipticCurveAlgorithm{
 	Ed25519,
 	Ed448,
-	InvalidEllipticCurve,
 	P256,
 	P384,
 	P521,

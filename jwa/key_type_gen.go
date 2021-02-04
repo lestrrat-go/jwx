@@ -22,7 +22,6 @@ const (
 
 var allKeyTypes = []KeyType{
 	EC,
-	InvalidKeyType,
 	OKP,
 	OctetSeq,
 	RSA,

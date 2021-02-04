@@ -397,14 +397,15 @@ func (t typ) Generate() error {
 
 	fmt.Fprintf(&buf, "\nvar all%[1]ss = []%s {", t.name, t.name)
 	for _, e := range t.elements {
-		fmt.Fprintf(&buf, "\n%s,", e.name)
+		if !e.invalid {
+			fmt.Fprintf(&buf, "\n%s,", e.name)
+		}
 	}
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n\n// %[1]ss returns a list of all available values for %[1]s", t.name)
 	fmt.Fprintf(&buf, "\nfunc %[1]ss() []%[1]s {", t.name)
 	fmt.Fprintf(&buf, "\nreturn all%ss", t.name)
 	fmt.Fprintf(&buf, "\n}")
-	
 
 	fmt.Fprintf(&buf, "\n\n// Accept is used when conversion from values given by")
 	fmt.Fprintf(&buf, "\n// outside sources (such as JSON payloads) is required")
