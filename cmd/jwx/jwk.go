@@ -18,6 +18,10 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+func init() {
+	topLevelCommands = append(topLevelCommands, makeJwkCmd())
+}
+
 func jwkSetFlag() cli.Flag {
 	return &cli.BoolFlag{
 		Name:  "set",
@@ -69,6 +73,7 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 				return errors.Wrap(err, `failed to marshal key into JSON format`)
 			}
 		}
+		return nil
 	}
 
 	return errors.Errorf(`invalid format %s`, format)
@@ -218,6 +223,10 @@ func makeJwkFormatCmd() *cli.Command {
 
 	// jwx jwk format <file>
 	cmd.Action = func(c *cli.Context) error {
+		if c.Args().Get(0) == "" {
+			cli.ShowCommandHelpAndExit(c, "format", 1)
+		}
+
 		src, err := getSource(c.Args().Get(0))
 		if err != nil {
 			return err

@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strings"
 
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
+
+var topLevelCommands []*cli.Command
 
 type dummyWriteCloser struct {
 	io.Writer
@@ -27,14 +32,23 @@ func outputFlag() cli.Flag {
 	}
 }
 
+func keyFlag(use string) cli.Flag {
+	return &cli.StringFlag{
+		Name:     "key",
+		Aliases:  []string{"k"},
+		Usage:    "`FILE` containing the key to " + use + " with",
+		Required: true,
+	}
+}
+
 func main() {
 	var app cli.App
-	app.Commands = []*cli.Command{
-		//		makeJweCmd(),
-		makeJwkCmd(),
-		makeJwsCmd(),
-	}
+	app.Commands = topLevelCommands
 	app.Usage = "Tools for various JWE/JWK/JWS/JWT operations"
+
+	sort.Slice(app.Commands, func(i, j int) bool {
+		return strings.Compare(app.Commands[i].Name, app.Commands[j].Name) < 0
+	})
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -84,4 +98,21 @@ func getOutput(filename string) (io.WriteCloser, error) {
 	}
 
 	return output, nil
+}
+
+func getKeyFile(keyfile, format string) (jwk.Set, error) {
+	var keyoptions []jwk.ReadFileOption
+	switch format {
+	case "json":
+	case "pem":
+		keyoptions = append(keyoptions, jwk.WithPEM(true))
+	default:
+		return nil, errors.Errorf(`invalid format %s`, format)
+	}
+	keyset, err := jwk.ReadFile(keyfile, keyoptions...)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to parse key`)
+	}
+
+	return keyset, nil
 }

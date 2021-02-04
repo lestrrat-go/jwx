@@ -17,20 +17,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func init() {
+	topLevelCommands = append(topLevelCommands, makeJwsCmd())
+}
+
 func jwsAlgorithmFlag(use string) cli.Flag {
 	return &cli.StringFlag{
 		Name:    "alg",
 		Aliases: []string{"a"},
 		Usage:   "algorithm `ALG` to use to " + use + " the message with",
-	}
-}
-
-func jwsKeyFlag(use string) cli.Flag {
-	return &cli.StringFlag{
-		Name:     "key",
-		Aliases:  []string{"k"},
-		Usage:    "`FILE` containing the key to " + use + " with",
-		Required: true,
 	}
 }
 
@@ -45,7 +40,7 @@ func jwsKeyFormatFlag() cli.Flag {
 func makeJwsCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "jws"
-	cmd.Usage = "Work with JWS"
+	cmd.Usage = "Work with JWS messages"
 
 	cmd.Subcommands = []*cli.Command{
 		makeJwsParseCmd(),
@@ -184,7 +179,7 @@ func makeJwsVerifyCmd() *cli.Command {
 `
 	cmd.Flags = []cli.Flag{
 		jwsAlgorithmFlag("verify"),
-		jwsKeyFlag("verify"),
+		keyFlag("verify"),
 		jwsKeyFormatFlag(),
 		&cli.BoolFlag{
 			Name:  "match-kid",
@@ -195,19 +190,9 @@ func makeJwsVerifyCmd() *cli.Command {
 
 	// jwx jws verify <file>
 	cmd.Action = func(c *cli.Context) error {
-		keyfile := c.String("key")
-
-		var keyoptions []jwk.ReadFileOption
-		switch format := c.String("key-format"); format {
-		case "json":
-		case "pem":
-			keyoptions = append(keyoptions, jwk.WithPEM(true))
-		default:
-			return errors.Errorf(`invalid format %s`, format)
-		}
-		keyset, err := jwk.ReadFile(keyfile, keyoptions...)
+		keyset, err := getKeyFile(c.String("key"), c.String("key-format"))
 		if err != nil {
-			return errors.Wrap(err, `failed to parse key`)
+			return err
 		}
 
 		keyset, err = jwk.PublicSetOf(keyset)
@@ -279,7 +264,7 @@ func makeJwsSignCmd() *cli.Command {
 `
 	cmd.Flags = []cli.Flag{
 		jwsAlgorithmFlag("sign"),
-		jwsKeyFlag("sign"),
+		keyFlag("sign"),
 		jwsKeyFormatFlag(),
 		&cli.StringFlag{
 			Name:  "header",
@@ -289,20 +274,9 @@ func makeJwsSignCmd() *cli.Command {
 
 	// jwx jws verify <file>
 	cmd.Action = func(c *cli.Context) error {
-		keyfile := c.String("key")
-
-		var keyoptions []jwk.ReadFileOption
-		switch format := c.String("key-format"); format {
-		case "json":
-		case "pem":
-			keyoptions = append(keyoptions, jwk.WithPEM(true))
-		default:
-			return errors.Errorf(`invalid format %s`, format)
-		}
-
-		keyset, err := jwk.ReadFile(keyfile, keyoptions...)
+		keyset, err := getKeyFile(c.String("key"), c.String("key-format"))
 		if err != nil {
-			return errors.Wrap(err, `failed to parse key`)
+			return err
 		}
 
 		if keyset.Len() != 1 {
