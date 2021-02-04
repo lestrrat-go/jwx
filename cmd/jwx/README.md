@@ -1,8 +1,36 @@
 # The `jwx` command line tool
 
+`jwx` command line tool performs set of common operations involving JSON Object Signing and Encryption (JOSE).
+
+I highly recommend [github.com/latchset/jose](https://github.com/latchset/jose) for the same purpose, but you might prefer to use `jwx` for its pure-Go implementation.
+
 # jwx jwk
 
-## Generating a JWK
+## jwx jwk generate
+
+Full form:
+
+```
+jwx jwk generate [options]
+```
+
+Short form:
+
+```
+jwx jwk gen [options]
+```
+
+### Options
+
+| Name       | Aliases | Description |
+|:------------|:---------|:-------------|
+| --type     | -t      | Type of JWK |
+| --keysize  | -s      | Number of bits for RSA keys. Number of bytes for oct keys |
+| --curve    | -c      | Elliptic curve type for EC or OKP keys |
+| --template | (none)  | Template to use to generate JWK. Must be a JSON object |
+| --set      | (none)  | Always output as JWK set |
+
+### Usage
 
 You can generate random JWKs for RSA/EC/oct/OKP key types:
 
@@ -41,7 +69,31 @@ To include extra information in the key such as a key ID, use the `--template` o
 }
 ```
 
-## Parsing a JWK (JSON)
+## jwx jwk format
+
+Full form
+
+```
+jwx jwk format [options] [FILE]
+```
+
+Short form
+
+```
+jwx jwk fmt [options] [FILE]
+```
+
+You may specify "-" as `FILE` to tell the command to read from STDIN.
+
+### Options
+
+| NAME     | aliases | description |
+|----------|---------|-------------|
+| --input-format  | -f (mnemonic: "from") | JWK input format (json/pem) |
+| --output-format | -t (mnemonic: "to")   | JWK input format (json/pem) |
+| --set           | (none)  | Always output as JWK set |
+
+### Usage (Parse JSON)
 
 You can parse and make sure that the a given JWK is well-formatted.
 
@@ -54,7 +106,7 @@ Given an unformatted key in file `ec.jwk`
 You can produce a pretty formatted key:
 
 ```shell
-% jwx jwk parse ec.jwk
+% jwx jwk format --input-format pem ec.jwk
 {
   "crv": "P-256",
   "d": "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk",
@@ -64,7 +116,7 @@ You can produce a pretty formatted key:
 }
 ```
 
-## Parsing a JWK (PEM)
+### Usage (Parse PEM)
 
 You can parse a ASN.1 DER format key, encoded in PEM.
 
@@ -82,7 +134,7 @@ yQjtQ8mbDOsiLLvh7wIDAQAB
 You can get the JSON representation by:
 
 ```shell
-% jwx jwk parse --format pem ec.pem
+% jwx jwk parse --input-format pem ec.pem
 {
   "crv": "P-256",
   "d": "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk",
@@ -91,8 +143,7 @@ You can get the JSON representation by:
   "y": "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI"
 }
 ```
-
-## Formatting a JWK
+## Usage (Format JSON to PEM)
 
 Formatting a JWK is equivalent to parsing, if the output format is `json`.
 However, if you specify the output format as `pem`, you can create PEM encoded ASN.1 DER format keys.
@@ -121,16 +172,61 @@ yQjtQ8mbDOsiLLvh7wIDAQAB
 
 # jwx jws
 
-## Verifying a JWS message (single key)
+## jwx jws parse
 
 ```
-jwx jws verify --alg [algorithm] --key [keyfile] <filename>
-jwx jws verify --alg [algorithm] --key [keyfile] --stdin
+jwx jws parse FILE
 ```
 
-### Example
+Parses the given JWS message, and prints out the content in a human-redable format.
 
-Suppose we have symmetric.jwk containing the following
+### Usage (Parse and inspect a JWS message)
+
+Given a JWS message stored in `foo.jws` as follows:
+
+```
+eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+```
+
+You can inspect the contents of the JWS message by issuing the following command
+
+```
+% jwx jws parse foo.jws
+Signature:                 "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+Protected Headers:         "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9"
+Decoded Protected Headers: {
+                             "alg": "HS256",
+                             "typ": "JWT"
+                           }
+Payload:                   {"iss":"joe",
+                            "exp":1300819380,
+                            "http://example.com/is_root":true}%   
+```
+
+## jwx jws verify
+
+```
+jwx jws verify [options] FILE
+```
+
+You may specify "-" as `FILE` to tell the command to read from STDIN.
+
+### Options
+
+| Name         | Aliases  | Description  |
+|:-------------|:---------|:-------------|
+| --alg        | -a       | Algorithm to use in single key mode |
+| --key        | -k       | File name that contains the key to use. May be a single JWK or JWK set |
+| --key-format | (none)   | Format of the store key (json/pem) |
+| --match-kid  | (none)   | If specified, attempts to verify using a key with a matching key ID ("kid") as the JWS |
+
+### Usage (Verify using specific algorithm)
+
+```
+jwx jws verify --alg [algorithm] --key [keyfile] FILE
+```
+
+Suppose we have `symmetric.jwk` containing the following:
 
 ```json
 {
@@ -145,9 +241,88 @@ And suppose we would like to verify the contents of the file `signed.jws`, whith
 eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
 ```
 
+Then the following command will verify the JWS message and display the decoded payload.
+
 ```shell
-% jwx jws verify --file signed.jws --key symmetric.jwk --alg HS256
+% jwx jws verify --key symmetric.jwk --alg HS256 signed.jws
 {"iss":"joe",
  "exp":1300819380,
  "http://example.com/is_root":true}
+```
+
+### Usage (Verify with matching key IDs)
+
+```
+jwx jws verify --key [keyfile] --match-kid FILE
+```
+
+Suupose we have `set.jwk` containing the following JWK set:
+
+```json
+{
+  "keys": [
+    {
+      "kty": "EC",
+      "kid": "otherkey",
+      "crv": "P-256",
+      "x": "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+      "y": "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+      "d": "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
+    },
+    {
+      "kty": "oct",
+      "kid": "mykey",
+			"alg": "HS256"
+      "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+    }
+  ]
+}
+```
+
+Notice that the second key contains *both* "kid" and "alg" fields set to a proper values.
+
+Then the following command will verify the JWS message and display the decoded payload.
+
+```shell
+% jwx jws verify --key set.jwk --match-kid signed.jws
+```
+
+## jwx jws sign
+
+Creates a signed JWS message in compact format from a key and payload.
+
+```
+jwx jws sign [command options] FILE
+```
+
+You may specify "-" as `FILE` to tell the command to read from STDIN.
+
+### Options
+
+| Name         | Aliases  | Description  |
+|:-------------|:---------|:-------------|
+| --alg        | -a       | Algorithm to use in single key mode |
+| --key        | -k       | File name that contains the key to use. May be a single JWK or JWK set |
+| --key-format | (none)   | Format of the store key (json/pem) |
+| --header     | (none)   | A string containing a template for additional header values. This must be a valid JSON object |
+
+### Usage (Signing a payload)
+
+Given a file `payload.txt` containing the following payload:
+
+```
+Hello, World!
+```
+
+And JWK stored in `ec.jwk` as follows:
+
+```
+{"kty":"EC","crv":"P-256","x":"SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74","y":"lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI","d":"0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"}
+```
+
+You can create a signed JWS in compact format by issuing the following command:
+
+```
+% jwx jws sign --key ec.jwk --alg ES256 payload.txt
+eyJhbGciOiJFUzI1NiJ9.SGVsbG8sIFdvcmxkIQo.SuzTiJ0yJmDkte-SyHQidvhKyHxXdQTM5iCOmURzB0pi4ySM8A303tcAZTa2TLnf9LUZ3yzPpQIyRMF2d8_5Lg
 ```

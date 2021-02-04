@@ -33,18 +33,17 @@ func dumpJSON(dst io.Writer, v interface{}) error {
 	return nil
 }
 
-func getSource(c *cli.Context) (io.ReadCloser, error) {
+func getSource(filename string) (io.ReadCloser, error) {
 	var src io.ReadCloser
-	if c.Bool("stdin") {
+	if filename == "-" {
 		src = io.NopCloser(os.Stdin)
 	} else {
-		file := c.Args().Get(0)
-		if file == "" {
-			return nil, errors.New(`filename required withot -stdin`)
+		if filename == "" {
+			return nil, errors.New(`filename required (use "-" to read from stdin)`)
 		}
-		f, err := os.Open(file)
+		f, err := os.Open(filename)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to open file %s`, file)
+			return nil, errors.Wrapf(err, `failed to open file %s`, filename)
 		}
 		src = f
 	}

@@ -26,7 +26,6 @@ func makeJwkCmd() *cli.Command {
 
 	cmd.Subcommands = []*cli.Command{
 		makeJwkGenerateCmd(),
-		makeJwkParseCmd(),
 		makeJwkFormatCmd(),
 	}
 	return &cmd
@@ -49,25 +48,29 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, preserve bool) error {
 func makeJwkGenerateCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "generate"
+	cmd.Aliases = []string{"gen"}
 	cmd.Usage = "Generate a new JWK private key"
 	cmd.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:     "type",
+			Aliases:  []string{"t"},
 			Usage:    "JWK type `TYPE` (RSA/EC/OKP/oct)",
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:  "curve",
-			Usage: "elliptic curve name `CURVE` (P-256/P-384/P-521) for ECDSA and OKP keys",
+			Name:    "curve",
+			Aliases: []string{"c"},
+			Usage:   "Elliptic curve name `CURVE` (P-256/P-384/P-521) for ECDSA and OKP keys",
 		},
 		&cli.StringFlag{
 			Name:  "template",
-			Usage: `extra values in the JWK as JSON object`,
+			Usage: `Extra values in the JWK as JSON object`,
 		},
 		&cli.IntFlag{
-			Name:  "keysize",
-			Usage: `keysize for RSA and oct keys`,
-			Value: 2048,
+			Name:    "keysize",
+			Aliases: []string{"s"},
+			Usage:   "Integer `SIZE` for RSA and oct key sizes",
+			Value:   2048,
 		},
 		&cli.BoolFlag{
 			Name:  "set",
@@ -165,85 +168,31 @@ func makeJwkGenerateCmd() *cli.Command {
 func makeJwkFormatCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "format"
+	cmd.Aliases = []string{"fmt"}
 	cmd.Usage = "Format JWK"
 	cmd.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  "format",
-			Value: "json",
-			Usage: "output format, json or pem",
+			Name:    "input-format",
+			Aliases: []string{"f"},
+			Value:   "json",
+			Usage:   "Input format `INPUT` (json/pem)",
+		},
+		&cli.StringFlag{
+			Name:    "output-format",
+			Aliases: []string{"t"},
+			Value:   "json",
+			Usage:   "Output format `OUTPUT` (json/pem)",
 		},
 		&cli.BoolFlag{
-			Name:  "preserve-set",
+			Name:  "set",
 			Value: false,
-			Usage: "preserve JWK set format even if there is only one key",
-		},
-		&cli.BoolFlag{
-			Name:  "stdin",
-			Value: false,
-			Usage: "use stdin instead of reading from a file",
+			Usage: "Always output in JWK set format",
 		},
 	}
 
 	// jwx jwk format <file>
 	cmd.Action = func(c *cli.Context) error {
-		src, err := getSource(c)
-		if err != nil {
-			return err
-		}
-		defer src.Close()
-
-		buf, err := ioutil.ReadAll(src)
-		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
-		}
-
-		keyset, err := jwk.Parse(buf)
-		if err != nil {
-			return errors.Wrap(err, `failed to parse keyset`)
-		}
-
-		switch format := c.String("format"); format {
-		case "json":
-			return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
-		case "pem":
-			buf, err = jwk.Pem(keyset)
-			if err != nil {
-				return errors.Wrap(err, `failed to format key in PEM format`)
-			}
-		}
-
-		fmt.Printf("%s", buf)
-		return nil
-	}
-	return &cmd
-}
-
-func makeJwkParseCmd() *cli.Command {
-	var cmd cli.Command
-	cmd.Name = "parse"
-	cmd.Usage = "Parse JWK"
-	cmd.ArgsUsage = "[filename]"
-	cmd.Flags = []cli.Flag{
-		&cli.StringFlag{
-			Name:  "format",
-			Value: "json",
-			Usage: "expected format, json or pem",
-		},
-		&cli.BoolFlag{
-			Name:  "preserve-set",
-			Value: false,
-			Usage: "preserve JWK set format even if there is only one key",
-		},
-		&cli.BoolFlag{
-			Name:  "stdin",
-			Value: false,
-			Usage: "use stdin instead of reading from a file",
-		},
-	}
-
-	// jwx jwk parse <file>
-	cmd.Action = func(c *cli.Context) error {
-		src, err := getSource(c)
+		src, err := getSource(c.Args().Get(0))
 		if err != nil {
 			return err
 		}
@@ -255,12 +204,12 @@ func makeJwkParseCmd() *cli.Command {
 		}
 
 		var options []jwk.ParseOption
-		switch format := c.String("format"); format {
+		switch format := c.String("input-format"); format {
 		case "json":
 		case "pem":
 			options = append(options, jwk.WithPEM(true))
 		default:
-			return errors.Errorf(`invalid format %s`, format)
+			return errors.Errorf(`invalid input format %s`, format)
 		}
 
 		keyset, err := jwk.Parse(buf, options...)
@@ -268,7 +217,19 @@ func makeJwkParseCmd() *cli.Command {
 			return errors.Wrap(err, `failed to parse keyset`)
 		}
 
-		return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
+		options = nil
+		switch format := c.String("output-format"); format {
+		case "json":
+			return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
+		case "pem":
+			buf, err = jwk.Pem(keyset)
+			if err != nil {
+				return errors.Wrap(err, `failed to format key in PEM format`)
+			}
+		}
+
+		fmt.Printf("%s", buf)
+		return nil
 	}
 	return &cmd
 }

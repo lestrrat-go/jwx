@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -31,17 +34,14 @@ func makeJwsParseCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "parse"
 	cmd.Usage = "Parse JWS mesage"
-	cmd.Flags = []cli.Flag{
-		&cli.BoolFlag{
-			Name:  "stdin",
-			Value: false,
-			Usage: "use stdin instead of reading from a file",
-		},
-	}
+	cmd.UsageText = `jwx jws parse [command options] FILE
 
+   Parse FILE and display information about a JWS message.
+   Use "-" as FILE to read from STDIN.
+`
 	// jwx jws parse <file>
 	cmd.Action = func(c *cli.Context) error {
-		src, err := getSource(c)
+		src, err := getSource(c.Args().Get(0))
 		if err != nil {
 			return err
 		}
@@ -52,17 +52,71 @@ func makeJwsParseCmd() *cli.Command {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
 				fmt.Printf("%s\n", err)
-				return errors.Wrap(err, `failed to verify message`)
+				return errors.Wrap(err, `failed to read message`)
 			}
 		}
 
-		m, err := jws.Parse(buf)
-		if err != nil {
-			return errors.Wrap(err, `failed to parse message`)
+		buf = bytes.TrimSpace(buf)
+		if len(buf) == 0 {
+			return errors.New(`empty buffer`)
 		}
 
-		if err := dumpJSON(os.Stdout, m); err != nil {
-			return errors.Wrap(err, `failed to marshal JSON`)
+		if buf[0] == '{' {
+			var m map[string]json.RawMessage
+			if err := json.Unmarshal(buf, &m); err != nil {
+				return errors.Wrap(err, `failed to unmarshal message`)
+			}
+		} else {
+			protected, payload, signature, err := jws.SplitCompact(buf)
+			if err != nil {
+				return errors.Wrap(err, `failed to split compact JWS message`)
+			}
+
+			decodedProtected, err := base64.Decode(protected)
+			if err != nil {
+				return errors.Wrap(err, `failed to base64 decode protected headers`)
+			}
+
+			var protectedMap map[string]interface{}
+			if err := json.Unmarshal(decodedProtected, &protectedMap); err != nil {
+				return errors.Wrap(err, `failed to decode protected headers`)
+			}
+
+			serializedProtected, err := json.MarshalIndent(protectedMap, "", "  ")
+			if err != nil {
+				return errors.Wrap(err, `failed to encode protected headers`)
+			}
+
+			decodedPayload, err := base64.Decode(payload)
+			if err != nil {
+				return errors.Wrap(err, `failed to base64 decode payload`)
+			}
+
+			fmt.Fprintf(os.Stdout, "Signature:                 %#v", string(signature))
+			fmt.Fprintf(os.Stdout, "\nProtected Headers:         %#v", string(protected))
+			fmt.Fprintf(os.Stdout, "\nDecoded Protected Headers:")
+			prefix := "                           "
+			scanner := bufio.NewScanner(bytes.NewReader(serializedProtected))
+			if scanner.Scan() {
+				txt := scanner.Text()
+				fmt.Fprintf(os.Stdout, " %s", txt)
+			}
+
+			for scanner.Scan() {
+				txt := scanner.Text()
+				fmt.Fprintf(os.Stdout, "\n%s%s", prefix, txt)
+			}
+
+			fmt.Fprintf(os.Stdout, "\nPayload:                  ")
+			scanner = bufio.NewScanner(bytes.NewReader(decodedPayload))
+			if scanner.Scan() {
+				txt := scanner.Text()
+				fmt.Fprintf(os.Stdout, " %s", txt)
+			}
+			for scanner.Scan() {
+				txt := scanner.Text()
+				fmt.Fprintf(os.Stdout, "\n%s%s", prefix, txt)
+			}
 		}
 		return nil
 	}
@@ -72,26 +126,53 @@ func makeJwsParseCmd() *cli.Command {
 func makeJwsVerifyCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "verify"
-	cmd.Usage = "Verify JWS mesage"
+	cmd.Aliases = []string{"ver"}
+	cmd.Usage = "Verify JWS messages."
+	cmd.UsageText = `jwx jws verify [command options] FILE
+
+   Parses a JWS message in FILE, and verifies using the specified method.
+   Use "-" as FILE to read from STDIN.
+
+   By default the user is responsible for providing the algorithm to
+   use to verify the signature. This is because we can not safely rely
+   on the "alg" field of the JWS message to deduce which key to use.
+   See https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+
+   The alternative is to match a key based on explicitly specified
+   key ID ("kid"). In this case the following conditions must be met
+   for a successful verification:
+
+     (1) JWS message must list the key ID that it expects
+     (2) At least one of the provided JWK must contain the same key ID
+     (3) The same key must also contain the "alg" field 
+
+   Therefore, the following key may be able to successfully verify
+   a JWS message using "--match-kid":
+
+     { "typ": "oct", "alg": "H256", "kid": "mykey", .... }
+
+   But the following two will never succeed because they lack
+   either "alg" or "kid"
+
+     { "typ": "oct", "kid": "mykey", .... }
+     { "typ": "oct", "alg": "H256",  .... }
+`
 	cmd.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  "alg",
-			Usage: "algorithm to use to verify message",
+			Name:    "alg",
+			Aliases: []string{"a"},
+			Usage:   "algorithm `ALG` to use to sign the message with",
 		},
 		&cli.StringFlag{
 			Name:     "key",
-			Usage:    "`FILE` containing the key to verify with",
+			Aliases:  []string{"k"},
+			Usage:    "`FILE` containing the key to verify with. May be a single JWK or a JWK set",
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:  "keyformat",
+			Name:  "key-format",
 			Usage: "specify key format, json or pem",
 			Value: "json",
-		},
-		&cli.BoolFlag{
-			Name:  "stdin",
-			Value: false,
-			Usage: "use stdin instead of reading from a file",
 		},
 		&cli.BoolFlag{
 			Name:  "match-kid",
@@ -105,7 +186,7 @@ func makeJwsVerifyCmd() *cli.Command {
 		keyfile := c.String("key")
 
 		var keyoptions []jwk.ReadFileOption
-		switch format := c.String("keyformat"); format {
+		switch format := c.String("key-format"); format {
 		case "json":
 		case "pem":
 			keyoptions = append(keyoptions, jwk.WithPEM(true))
@@ -117,7 +198,12 @@ func makeJwsVerifyCmd() *cli.Command {
 			return errors.Wrap(err, `failed to parse key`)
 		}
 
-		src, err := getSource(c)
+		keyset, err = jwk.PublicSetOf(keyset)
+		if err != nil {
+			return errors.Wrap(err, `failed to retrieve public key`)
+		}
+
+		src, err := getSource(c.Args().Get(0))
 		if err != nil {
 			return err
 		}
@@ -170,30 +256,35 @@ func makeJwsVerifyCmd() *cli.Command {
 func makeJwsSignCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "sign"
+	cmd.Aliases = []string{"sig"}
 	cmd.Usage = "Verify JWS mesage"
+	cmd.UsageText = `jwx jws sign [command options] FILE
+
+   Signs the payload in FILE and generates a JWS message in compact format.
+   Use "-" as FILE to read from STDIN.
+
+   Currently only single key signature mode is supported.
+`
 	cmd.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:  "alg",
-			Usage: "algorithm to use to sign the message with",
+			Name:    "alg",
+			Aliases: []string{"a"},
+			Usage:   "algorithm `ALG` to use to sign the message with",
 		},
 		&cli.StringFlag{
 			Name:     "key",
-			Usage:    "filename with the key to sign with",
+			Aliases:  []string{"k"},
+			Usage:    "`FILE` containing the key to sign with",
 			Required: true,
 		},
 		&cli.StringFlag{
-			Name:  "keyformat",
+			Name:  "key-format",
 			Usage: "specify key format, json or pem",
 			Value: "json",
 		},
 		&cli.StringFlag{
 			Name:  "header",
 			Usage: "header object to inject into JWS message protected header",
-		},
-		&cli.BoolFlag{
-			Name:  "stdin",
-			Value: false,
-			Usage: "use stdin instead of reading from a file",
 		},
 	}
 
@@ -202,7 +293,7 @@ func makeJwsSignCmd() *cli.Command {
 		keyfile := c.String("key")
 
 		var keyoptions []jwk.ReadFileOption
-		switch format := c.String("keyformat"); format {
+		switch format := c.String("key-format"); format {
 		case "json":
 		case "pem":
 			keyoptions = append(keyoptions, jwk.WithPEM(true))
@@ -220,7 +311,7 @@ func makeJwsSignCmd() *cli.Command {
 		}
 		key, _ := keyset.Get(0)
 
-		src, err := getSource(c)
+		src, err := getSource(c.Args().Get(0))
 		if err != nil {
 			return err
 		}
@@ -231,7 +322,7 @@ func makeJwsSignCmd() *cli.Command {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
 				fmt.Printf("%s\n", err)
-				return errors.Wrap(err, `failed to verify message`)
+				return errors.Wrap(err, `failed to sign message`)
 			}
 		}
 
