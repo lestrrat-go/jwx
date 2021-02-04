@@ -41,6 +41,14 @@ func keyFlag(use string) cli.Flag {
 	}
 }
 
+func keyFormatFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:  "key-format",
+		Usage: "JWK format: json or pem",
+		Value: "json",
+	}
+}
+
 func main() {
 	var app cli.App
 	app.Commands = topLevelCommands
@@ -107,7 +115,7 @@ func getKeyFile(keyfile, format string) (jwk.Set, error) {
 	case "pem":
 		keyoptions = append(keyoptions, jwk.WithPEM(true))
 	default:
-		return nil, errors.Errorf(`invalid format %s`, format)
+		return nil, errors.Errorf(`invalid JWK format "%s"`, format)
 	}
 	keyset, err := jwk.ReadFile(keyfile, keyoptions...)
 	if err != nil {

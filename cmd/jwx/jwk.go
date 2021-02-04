@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"os"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -35,6 +34,14 @@ func jwkOutputFormatFlag() cli.Flag {
 		Aliases: []string{"O"},
 		Value:   "json",
 		Usage:   "Output format `OUTPUT` (json/pem)",
+	}
+}
+
+func publicKeyFlag() cli.Flag {
+	return &cli.BoolFlag{
+		Name:    "public-key",
+		Aliases: []string{"p"},
+		Usage:   "Display public key version of the key",
 	}
 }
 
@@ -76,7 +83,7 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 		return nil
 	}
 
-	return errors.Errorf(`invalid format %s`, format)
+	return errors.Errorf(`invalid JWK format "%s"`, format)
 }
 
 func makeJwkGenerateCmd() *cli.Command {
@@ -106,6 +113,7 @@ func makeJwkGenerateCmd() *cli.Command {
 			Usage:   "Integer `SIZE` for RSA and oct key sizes",
 			Value:   2048,
 		},
+		publicKeyFlag(),
 		outputFlag(),
 		jwkOutputFormatFlag(),
 		jwkSetFlag(),
@@ -191,8 +199,16 @@ func makeJwkGenerateCmd() *cli.Command {
 			}
 		}
 
-		set := jwk.NewSet()
-		set.Add(key)
+		keyset := jwk.NewSet()
+		keyset.Add(key)
+
+		if c.Bool("public-key") {
+			pubks, err := jwk.PublicSetOf(keyset)
+			if err != nil {
+				return errors.Wrap(err, `failed to generate public keys`)
+			}
+			keyset = pubks
+		}
 
 		output, err := getOutput(c.String("output"))
 		if err != nil {
@@ -200,7 +216,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		}
 		defer output.Close()
 
-		return dumpJWKSet(output, set, c.String("output-format"), c.Bool("set"))
+		return dumpJWKSet(output, keyset, c.String("output-format"), c.Bool("set"))
 	}
 	return &cmd
 }
@@ -211,6 +227,7 @@ func makeJwkFormatCmd() *cli.Command {
 	cmd.Aliases = []string{"fmt"}
 	cmd.Usage = "Format JWK"
 	cmd.Flags = []cli.Flag{
+		publicKeyFlag(),
 		&cli.StringFlag{
 			Name:    "input-format",
 			Aliases: []string{"I"},
@@ -219,6 +236,7 @@ func makeJwkFormatCmd() *cli.Command {
 		},
 		jwkOutputFormatFlag(),
 		jwkSetFlag(),
+		outputFlag(),
 	}
 
 	// jwx jwk format <file>
@@ -252,7 +270,21 @@ func makeJwkFormatCmd() *cli.Command {
 			return errors.Wrap(err, `failed to parse keyset`)
 		}
 
-		return dumpJWKSet(os.Stdout, keyset, c.String("output-format"), c.Bool("set"))
+		output, err := getOutput(c.String("output"))
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+
+		if c.Bool("public-key") {
+			pubks, err := jwk.PublicSetOf(keyset)
+			if err != nil {
+				return errors.Wrap(err, `failed to generate public keys`)
+			}
+			keyset = pubks
+		}
+
+		return dumpJWKSet(output, keyset, c.String("output-format"), c.Bool("set"))
 	}
 	return &cmd
 }

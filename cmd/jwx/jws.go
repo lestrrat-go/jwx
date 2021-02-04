@@ -29,14 +29,6 @@ func jwsAlgorithmFlag(use string) cli.Flag {
 	}
 }
 
-func jwsKeyFormatFlag() cli.Flag {
-	return &cli.StringFlag{
-		Name:  "key-format",
-		Usage: "key format: json or pem",
-		Value: "json",
-	}
-}
-
 func makeJwsCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "jws"
@@ -71,7 +63,6 @@ func makeJwsParseCmd() *cli.Command {
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
-				fmt.Printf("%s\n", err)
 				return errors.Wrap(err, `failed to read message`)
 			}
 		}
@@ -180,12 +171,13 @@ func makeJwsVerifyCmd() *cli.Command {
 	cmd.Flags = []cli.Flag{
 		jwsAlgorithmFlag("verify"),
 		keyFlag("verify"),
-		jwsKeyFormatFlag(),
+		keyFormatFlag(),
 		&cli.BoolFlag{
 			Name:  "match-kid",
 			Value: false,
 			Usage: "instead of using alg, attempt to verify only if the key ID (kid) matches",
 		},
+		outputFlag(),
 	}
 
 	// jwx jws verify <file>
@@ -210,15 +202,20 @@ func makeJwsVerifyCmd() *cli.Command {
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
-				fmt.Printf("%s\n", err)
 				return errors.Wrap(err, `failed to verify message`)
 			}
 		}
 
+		output, err := getOutput(c.String("output"))
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+
 		if c.Bool("match-kid") {
 			payload, err := jws.VerifySet(buf, keyset)
 			if err == nil {
-				fmt.Printf("%s", payload)
+				fmt.Fprintf(output, "%s", payload)
 				return nil
 			}
 		} else {
@@ -238,10 +235,9 @@ func makeJwsVerifyCmd() *cli.Command {
 				key := pair.Value.(jwk.Key)
 				payload, err := jws.Verify(buf, alg, key)
 				if err == nil {
-					fmt.Printf("%s", payload)
+					fmt.Fprintf(output, "%s", payload)
 					return nil
 				}
-				fmt.Printf("err = %s\n", err)
 			}
 		}
 
@@ -265,11 +261,12 @@ func makeJwsSignCmd() *cli.Command {
 	cmd.Flags = []cli.Flag{
 		jwsAlgorithmFlag("sign"),
 		keyFlag("sign"),
-		jwsKeyFormatFlag(),
+		keyFormatFlag(),
 		&cli.StringFlag{
 			Name:  "header",
 			Usage: "header object to inject into JWS message protected header",
 		},
+		outputFlag(),
 	}
 
 	// jwx jws verify <file>
@@ -294,7 +291,6 @@ func makeJwsSignCmd() *cli.Command {
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
-				fmt.Printf("%s\n", err)
 				return errors.Wrap(err, `failed to sign message`)
 			}
 		}
@@ -322,7 +318,14 @@ func makeJwsSignCmd() *cli.Command {
 		if err != nil {
 			return errors.Wrap(err, `failed to sign payload`)
 		}
-		fmt.Fprintf(os.Stdout, "%s", signed)
+
+		output, err := getOutput(c.String("output"))
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+
+		fmt.Fprintf(output, "%s", signed)
 		return nil
 	}
 	return &cmd

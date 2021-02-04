@@ -426,6 +426,9 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 }
 
 // Decrypt decrypts the message using the specified algorithm and key
+//
+// `key` must be a private key in its "raw" format (i.e. something like
+// *rsa.PrivateKey, instead of jwk.Key)
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.FuncMarker()

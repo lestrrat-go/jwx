@@ -4,7 +4,11 @@
 
 I highly recommend [github.com/latchset/jose](https://github.com/latchset/jose) for the same purpose, but you might prefer to use `jwx` for its pure-Go implementation.
 
+All examples use the "full" name for command names and option names, but you can use the short forms interchangeably.
+
 # jwx jwk
+
+Work with JWKs
 
 ## jwx jwk generate
 
@@ -22,13 +26,15 @@ jwx jwk gen [options]
 
 ### Options
 
-| Name       | Aliases | Description |
-|:------------|:---------|:-------------|
-| --type     | -t      | Type of JWK |
-| --keysize  | -s      | Number of bits for RSA keys. Number of bytes for oct keys |
-| --curve    | -c      | Elliptic curve type for EC or OKP keys |
-| --template | (none)  | Template to use to generate JWK. Must be a JSON object |
-| --set      | (none)  | Always output as JWK set |
+| Name          | Aliases  | Description |
+|:--------------|:---------|:-------------|
+| --type        | -t       | Type of JWK |
+| --keysize     | -s       | Number of bits for RSA keys. Number of bytes for oct keys |
+| --curve       | -c       | Elliptic curve type for EC or OKP keys |
+| --template    | (none)   | Template to use to generate JWK. Must be a JSON object |
+| --set         | (none)   | Always output as JWK set |
+| --publick-key | -p       | Generate a public key |
+| --output      | -o       | Write output to file ("-" for STDOUT) |
 
 ### Usage
 
@@ -87,11 +93,33 @@ You may specify "-" as `FILE` to tell the command to read from STDIN.
 
 ### Options
 
-| NAME     | aliases | description |
-|----------|---------|-------------|
+| Name            | Aliases | Description |
+|-----------------|---------|-------------|
 | --input-format  | -I      | JWK input format (json/pem) |
 | --output-format | -O      | JWK output format (json/pem) |
 | --set           | (none)  | Always output as JWK set |
+| --publick-key   | -p      | Display the public key version of the input |
+| --output        | -o      | Write output to file ("-" for STDOUT) |
+
+### Usage (Produce public key of a private key)
+
+Given a private key in file `ec.jwk`
+
+```json
+{"kty":"EC","crv":"P-256","x":"SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74","y":"lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI","d":"0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"}
+```
+
+You can issue the following command to produce the public key of the above key:
+
+```
+% jwx jwk fmt --public-key ec.jwk
+{
+  "crv": "P-256",
+  "kty": "EC",
+  "x": "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+  "y": "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI"
+}
+```
 
 ### Usage (Parse JSON)
 
@@ -219,6 +247,7 @@ You may specify "-" as `FILE` to tell the command to read from STDIN.
 | --key        | -k       | File name that contains the key to use. May be a single JWK or JWK set |
 | --key-format | (none)   | Format of the store key (json/pem) |
 | --match-kid  | (none)   | If specified, attempts to verify using a key with a matching key ID ("kid") as the JWS |
+| --output     | -o      | Write output to file ("-" for STDOUT) |
 
 ### Usage (Verify using specific algorithm)
 
@@ -305,6 +334,7 @@ You may specify "-" as `FILE` to tell the command to read from STDIN.
 | --key        | -k       | File name that contains the key to use. May be a single JWK or JWK set |
 | --key-format | (none)   | Format of the store key (json/pem) |
 | --header     | (none)   | A string containing a template for additional header values. This must be a valid JSON object |
+| --output     | -o       | Write output to file ("-" for STDOUT) |
 
 ### Usage (Signing a payload)
 
@@ -326,3 +356,111 @@ You can create a signed JWS in compact format by issuing the following command:
 % jwx jws sign --key ec.jwk --alg ES256 payload.txt
 eyJhbGciOiJFUzI1NiJ9.SGVsbG8sIFdvcmxkIQo.SuzTiJ0yJmDkte-SyHQidvhKyHxXdQTM5iCOmURzB0pi4ySM8A303tcAZTa2TLnf9LUZ3yzPpQIyRMF2d8_5Lg
 ```
+
+# jwx jwe
+
+Work with JWE messages.
+
+## jwx jwe encrypt 
+
+Full form:
+
+```
+jwx jwe encrypt [options] FILE
+```
+
+Short form:
+
+```
+jwx jwe enc [options] FILE
+```
+
+### Options
+
+| Name                 | Aliases  | Description  |
+|:---------------------|:---------|:-------------|
+| --key                | -k       | JWK to encrypt with |
+| --key-format         | (none)   | JWK format: json or pem |
+| --key-encryption     | -K       | Key encryption algorithm name |
+| --content-encryption | -C       | Content encryption algorithm name |
+| --compress           | (none)   | Enable compression |
+| --output             | -o       | Write output to file ("-" for STDOUT) |
+
+### Usage (Encrypt a payload)
+
+Given a file `payload.txt` containing the following payload:
+
+```
+Hello, World!
+```
+
+And JWK stored in `ec.jwk` as follows (Note: a private key may be used as well):
+
+```
+{"kty":"EC","crv":"P-256","x":"SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74","y":"lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI"}
+```
+
+You can generate an encrypted JWE message with ECDH-ES key encryption and A256CBC-HS512 content encryption by issuing the following command:
+
+```
+% jwx jwe encrypt --key ec.jwk --key-encryption ECDH-ES --content-encryption A256CBC-HS512 payload.txt
+eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTI1NkNCQy1IUzUxMiIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6IllGeFZmTUZXQl9kcjhvUGgzWTdRMF9pYzllMjR5XzlleklPbG9WcjdHWVkiLCJ5Ijoiei1QZFB2cXdGU3A0ODYzbzRTWmQwSDdiVXhYUUJqckJ4bkxpaHduRVNKYyJ9fQ..MJFgvx7zMBzM47Is-brKXw.9UL2iAFuL4rjegaLhf3wPA.KGWzX-cmmGG1CQMMpQzyEncu64pkb6217HCFZfIynlE
+```
+
+## jwx jwe decrypt 
+
+Full form:
+
+```
+jwx jwe decrypt [options] FILE
+```
+
+Short form:
+
+```
+jwx jwe dec [options] FILE
+```
+
+### Options
+
+| Name                 | Aliases  | Description  |
+|:---------------------|:---------|:-------------|
+| --key                | -k       | JWK to encrypt with |
+| --key-format         | (none)   | JWK format: json or pem |
+| --key-encryption     | -K       | Key encryption algorithm name. If unspecified, we will try the algorithms in the message|
+| --output             | -o       | Write output to file ("-" for STDOUT) |
+
+### Usage (Decrypt a JWE message)
+
+Given a file `message.jwe` containing the following JWE message:
+
+```
+eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTI1NkNCQy1IUzUxMiIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6IllGeFZmTUZXQl9kcjhvUGgzWTdRMF9pYzllMjR5XzlleklPbG9WcjdHWVkiLCJ5Ijoiei1QZFB2cXdGU3A0ODYzbzRTWmQwSDdiVXhYUUJqckJ4bkxpaHduRVNKYyJ9fQ..MJFgvx7zMBzM47Is-brKXw.9UL2iAFuL4rjegaLhf3wPA.KGWzX-cmmGG1CQMMpQzyEncu64pkb6217HCFZfIynl
+```
+
+And a private key in `ec.jwk`:
+
+```
+{"kty":"EC","crv":"P-256","x":"SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74","y":"lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI","d":"0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"}
+```
+
+You can get the decrypted contents by issuing the following command:
+
+```
+% jwx jwe decrypt -k ec.jwk message.jwk
+Hello, World!
+```
+
+# jwx jwa
+
+List supported algorithms.
+
+### Options 
+
+| Name                 | Aliases  | Description  |
+|:---------------------|:---------|:-------------|
+| --key-type           | -k       | JWK key types |
+| --elliptic-curve     | -E       | Elliptic curve types |
+| --key-encryption     | -K       | Key encryption algorithms |
+| --content-encryption | -C       | Content encryption algorithms |
+| --signature          | -S       | Signature algorithms |
