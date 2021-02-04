@@ -89,8 +89,8 @@ You may specify "-" as `FILE` to tell the command to read from STDIN.
 
 | NAME     | aliases | description |
 |----------|---------|-------------|
-| --input-format  | -f (mnemonic: "from") | JWK input format (json/pem) |
-| --output-format | -t (mnemonic: "to")   | JWK input format (json/pem) |
+| --input-format  | -I      | JWK input format (json/pem) |
+| --output-format | -O      | JWK output format (json/pem) |
 | --set           | (none)  | Always output as JWK set |
 
 ### Usage (Parse JSON)

@@ -10,11 +10,29 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type dummyWriteCloser struct {
+	io.Writer
+}
+
+func (*dummyWriteCloser) Close() error {
+	return nil
+}
+
+func outputFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:    "output",
+		Aliases: []string{"o"},
+		Usage:   "Write output to `FILE`",
+		Value:   "-",
+	}
+}
+
 func main() {
 	var app cli.App
 	app.Commands = []*cli.Command{
-		makeJwsCmd(),
+		//		makeJweCmd(),
 		makeJwkCmd(),
+		makeJwsCmd(),
 	}
 	app.Usage = "Tools for various JWE/JWK/JWS/JWT operations"
 
@@ -50,4 +68,20 @@ func getSource(filename string) (io.ReadCloser, error) {
 	return src, nil
 }
 
+func getOutput(filename string) (io.WriteCloser, error) {
+	var output io.WriteCloser
+	switch filename {
+	case "-":
+		output = &dummyWriteCloser{os.Stdout}
+	case "":
+		return nil, errors.New(`output must be a file name, or "-" for STDOUT`)
+	default:
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to create file %s`, filename)
+		}
+		output = f
+	}
 
+	return output, nil
+}

@@ -17,6 +17,31 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func jwsAlgorithmFlag(use string) cli.Flag {
+	return &cli.StringFlag{
+		Name:    "alg",
+		Aliases: []string{"a"},
+		Usage:   "algorithm `ALG` to use to " + use + " the message with",
+	}
+}
+
+func jwsKeyFlag(use string) cli.Flag {
+	return &cli.StringFlag{
+		Name:     "key",
+		Aliases:  []string{"k"},
+		Usage:    "`FILE` containing the key to " + use + " with",
+		Required: true,
+	}
+}
+
+func jwsKeyFormatFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:  "key-format",
+		Usage: "key format: json or pem",
+		Value: "json",
+	}
+}
+
 func makeJwsCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "jws"
@@ -158,22 +183,9 @@ func makeJwsVerifyCmd() *cli.Command {
      { "typ": "oct", "alg": "H256",  .... }
 `
 	cmd.Flags = []cli.Flag{
-		&cli.StringFlag{
-			Name:    "alg",
-			Aliases: []string{"a"},
-			Usage:   "algorithm `ALG` to use to sign the message with",
-		},
-		&cli.StringFlag{
-			Name:     "key",
-			Aliases:  []string{"k"},
-			Usage:    "`FILE` containing the key to verify with. May be a single JWK or a JWK set",
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:  "key-format",
-			Usage: "specify key format, json or pem",
-			Value: "json",
-		},
+		jwsAlgorithmFlag("verify"),
+		jwsKeyFlag("verify"),
+		jwsKeyFormatFlag(),
 		&cli.BoolFlag{
 			Name:  "match-kid",
 			Value: false,
@@ -266,22 +278,9 @@ func makeJwsSignCmd() *cli.Command {
    Currently only single key signature mode is supported.
 `
 	cmd.Flags = []cli.Flag{
-		&cli.StringFlag{
-			Name:    "alg",
-			Aliases: []string{"a"},
-			Usage:   "algorithm `ALG` to use to sign the message with",
-		},
-		&cli.StringFlag{
-			Name:     "key",
-			Aliases:  []string{"k"},
-			Usage:    "`FILE` containing the key to sign with",
-			Required: true,
-		},
-		&cli.StringFlag{
-			Name:  "key-format",
-			Usage: "specify key format, json or pem",
-			Value: "json",
-		},
+		jwsAlgorithmFlag("sign"),
+		jwsKeyFlag("sign"),
+		jwsKeyFormatFlag(),
 		&cli.StringFlag{
 			Name:  "header",
 			Usage: "header object to inject into JWS message protected header",

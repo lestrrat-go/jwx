@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,6 +17,22 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )
+
+func jwkSetFlag() cli.Flag {
+	return &cli.BoolFlag{
+		Name:  "set",
+		Usage: "generate as a JWK set",
+	}
+}
+
+func jwkOutputFormatFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:    "output-format",
+		Aliases: []string{"O"},
+		Value:   "json",
+		Usage:   "Output format `OUTPUT` (json/pem)",
+	}
+}
 
 func makeJwkCmd() *cli.Command {
 	var cmd cli.Command
@@ -31,18 +46,32 @@ func makeJwkCmd() *cli.Command {
 	return &cmd
 }
 
-func dumpJWKSet(dst io.Writer, keyset jwk.Set, preserve bool) error {
-	if preserve || keyset.Len() != 1 {
-		if err := dumpJSON(os.Stdout, keyset); err != nil {
-			return errors.Wrap(err, `failed to marshal keyset into JSON format`)
+func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) error {
+	if format == "pem" {
+		buf, err := jwk.Pem(keyset)
+		if err != nil {
+			return errors.Wrap(err, `failed to format key in PEM format`)
 		}
-	} else {
-		key, _ := keyset.Get(0)
-		if err := dumpJSON(os.Stdout, key); err != nil {
-			return errors.Wrap(err, `failed to marshal key into JSON format`)
+		if _, err := dst.Write(buf); err != nil {
+			return errors.Wrap(err, `failed to write to destination`)
+		}
+		return nil
+	}
+
+	if format == "json" {
+		if preserve || keyset.Len() != 1 {
+			if err := dumpJSON(dst, keyset); err != nil {
+				return errors.Wrap(err, `failed to marshal keyset into JSON format`)
+			}
+		} else {
+			key, _ := keyset.Get(0)
+			if err := dumpJSON(dst, key); err != nil {
+				return errors.Wrap(err, `failed to marshal key into JSON format`)
+			}
 		}
 	}
-	return nil
+
+	return errors.Errorf(`invalid format %s`, format)
 }
 
 func makeJwkGenerateCmd() *cli.Command {
@@ -72,10 +101,9 @@ func makeJwkGenerateCmd() *cli.Command {
 			Usage:   "Integer `SIZE` for RSA and oct key sizes",
 			Value:   2048,
 		},
-		&cli.BoolFlag{
-			Name:  "set",
-			Usage: "generate as a JWK set",
-		},
+		outputFlag(),
+		jwkOutputFormatFlag(),
+		jwkSetFlag(),
 	}
 
 	cmd.Action = func(c *cli.Context) error {
@@ -160,7 +188,14 @@ func makeJwkGenerateCmd() *cli.Command {
 
 		set := jwk.NewSet()
 		set.Add(key)
-		return dumpJWKSet(os.Stdout, set, c.Bool("set"))
+
+		output, err := getOutput(c.String("output"))
+		if err != nil {
+			return err
+		}
+		defer output.Close()
+
+		return dumpJWKSet(output, set, c.String("output-format"), c.Bool("set"))
 	}
 	return &cmd
 }
@@ -173,21 +208,12 @@ func makeJwkFormatCmd() *cli.Command {
 	cmd.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    "input-format",
-			Aliases: []string{"f"},
+			Aliases: []string{"I"},
 			Value:   "json",
 			Usage:   "Input format `INPUT` (json/pem)",
 		},
-		&cli.StringFlag{
-			Name:    "output-format",
-			Aliases: []string{"t"},
-			Value:   "json",
-			Usage:   "Output format `OUTPUT` (json/pem)",
-		},
-		&cli.BoolFlag{
-			Name:  "set",
-			Value: false,
-			Usage: "Always output in JWK set format",
-		},
+		jwkOutputFormatFlag(),
+		jwkSetFlag(),
 	}
 
 	// jwx jwk format <file>
@@ -217,19 +243,7 @@ func makeJwkFormatCmd() *cli.Command {
 			return errors.Wrap(err, `failed to parse keyset`)
 		}
 
-		options = nil
-		switch format := c.String("output-format"); format {
-		case "json":
-			return dumpJWKSet(os.Stdout, keyset, c.Bool("preserve-set"))
-		case "pem":
-			buf, err = jwk.Pem(keyset)
-			if err != nil {
-				return errors.Wrap(err, `failed to format key in PEM format`)
-			}
-		}
-
-		fmt.Printf("%s", buf)
-		return nil
+		return dumpJWKSet(os.Stdout, keyset, c.String("output-format"), c.Bool("set"))
 	}
 	return &cmd
 }
