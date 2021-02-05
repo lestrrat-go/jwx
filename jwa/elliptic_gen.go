@@ -23,6 +23,21 @@ const (
 	X448                 EllipticCurveAlgorithm = "X448"
 )
 
+var allEllipticCurveAlgorithms = []EllipticCurveAlgorithm{
+	Ed25519,
+	Ed448,
+	P256,
+	P384,
+	P521,
+	X25519,
+	X448,
+}
+
+// EllipticCurveAlgorithms returns a list of all available values for EllipticCurveAlgorithm
+func EllipticCurveAlgorithms() []EllipticCurveAlgorithm {
+	return allEllipticCurveAlgorithms
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {

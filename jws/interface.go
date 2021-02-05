@@ -17,6 +17,36 @@ import (
 // signed payload with. You should only use this when you want to actually
 // programmatically view the contents of the full JWS payload.
 //
+// As of this version, there is one big incompatibility when using Message
+// objects to convert between compact and JSON representations.
+// The protected header is sometimes encoded differently from the original
+// message and the JSON serialization that we use in Go.
+//
+// For example, the protected header `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9`
+// decodes to
+//
+//   {"typ":"JWT",
+//     "alg":"HS256"}
+//
+// However, when we parse this into a message, we create a jws.Header object,
+// which, when we marshal into a JSON object again, becomes
+//
+//   {"typ":"JWT","alg":"HS256"}
+//
+// Notice that serialization lacks a line break and a space between `"JWT",`
+// and `"alg"`. This causes a problem when verifying the signatures AFTER
+// a compact JWS message has been unmarshaled into a jws.Message.
+//
+// jws.Verify() doesn't go through this step, and therefore this does not
+// manifest itself. However, you may see this discrepancy when you manually
+// go through these conversions, and/or use the `jwx` tool like so:
+//
+//   jwx jws parse message.jws | jwx jws verify --key somekey.jwk --stdin
+//
+// In this scenario, the first `jwx jws parse` outputs a parsed jws.Message
+// which is marshaled into JSON. At this point the message's protected
+// headers and the signatures don't match.
+//
 // To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
 	payload    []byte

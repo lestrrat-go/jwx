@@ -1,6 +1,6 @@
 # github.com/lestrrat-go/jwx ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx) [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=master)](http://codecov.io/github/lestrrat-go/jwx?branch=master)
 
-Implementation of various JWx technologies
+Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx technologies
 
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
@@ -37,6 +37,18 @@ The API has been reworked quite substantially between pre- and post 1.0.0 releas
 ### v1.0.x users
 
 The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
+
+# Command Line Tool
+
+Since v1.1.1 we have a command line tool `jwx` (*). With `jwx` you can create JWKs (from PEM files, even), sign and verify JWS message, encrypt and decrypt JWE messages, etc.
+
+(*) Okay, it existed since a long time ago, but it was never useful.
+
+## Installation
+
+```
+go install github.com/lestrrat-go/jwx/cmd/jwx
+```
 
 # Packages
 

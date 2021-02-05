@@ -1,159 +1,126 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
 )
 
+var topLevelCommands []*cli.Command
+
+type dummyWriteCloser struct {
+	io.Writer
+}
+
+func (*dummyWriteCloser) Close() error {
+	return nil
+}
+
+func outputFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:    "output",
+		Aliases: []string{"o"},
+		Usage:   "Write output to `FILE`",
+		Value:   "-",
+	}
+}
+
+func keyFlag(use string) cli.Flag {
+	return &cli.StringFlag{
+		Name:     "key",
+		Aliases:  []string{"k"},
+		Usage:    "`FILE` containing the key to " + use + " with",
+		Required: true,
+	}
+}
+
+func keyFormatFlag() cli.Flag {
+	return &cli.StringFlag{
+		Name:  "key-format",
+		Usage: "JWK format: json or pem",
+		Value: "json",
+	}
+}
+
 func main() {
-	os.Exit(_main())
+	var app cli.App
+	app.Commands = topLevelCommands
+	app.Usage = "Tools for various JWE/JWK/JWS/JWT operations"
+
+	sort.Slice(app.Commands, func(i, j int) bool {
+		return strings.Compare(app.Commands[i].Name, app.Commands[j].Name) < 0
+	})
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
 }
 
-type JWKConfig struct {
-	JWKLocation string
-	Payload     string
+func dumpJSON(dst io.Writer, v interface{}) error {
+	buf, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, `failed to serialize to JSON`)
+	}
+	dst.Write(buf)
+	return nil
 }
 
-type JWEConfig struct {
-	Algorithm string
-}
-
-func _main() int {
-	var f func() int
-
-	if len(os.Args) < 2 {
-		f = doHelp
+func getSource(filename string) (io.ReadCloser, error) {
+	var src io.ReadCloser
+	if filename == "-" {
+		src = io.NopCloser(os.Stdin)
 	} else {
-		switch os.Args[1] {
-		case "jwk":
-			f = doJWK
-		case "jwe":
-			f = doJWE
-		default:
-			f = doHelp
+		if filename == "" {
+			return nil, errors.New(`filename required (use "-" to read from stdin)`)
 		}
-
-		os.Args = os.Args[1:]
-	}
-	return f()
-}
-
-func doHelp() int {
-	fmt.Println(`jwx [command] [args]`)
-	return 0
-}
-
-func doJWE() int {
-	c := JWEConfig{}
-	flag.StringVar(&c.Algorithm, "alg", "", "Key encryption algorithm")
-	flag.Parse()
-
-	return 0
-}
-
-func doJWK() int {
-	c := JWKConfig{}
-	flag.StringVar(&c.JWKLocation, "jwk", "", "JWK location, either a local file or a URL")
-	flag.Parse()
-
-	if c.JWKLocation == "" {
-		fmt.Printf("-jwk must be specified\n")
-		return 1
-	}
-
-	key, err := jwk.Fetch(context.TODO(), c.JWKLocation)
-	if err != nil {
-		log.Printf("%s", err)
-		return 0
-	}
-
-	keybuf, err := json.MarshalIndent(key, "", "  ")
-	if err != nil {
-		log.Printf("%s", err)
-		return 0
-	}
-	log.Printf("=== JWK ===")
-	for _, l := range bytes.Split(keybuf, []byte{'\n'}) {
-		log.Printf("%s", l)
-	}
-
-	// TODO make it flexible
-	firstKey, ok := key.Get(0)
-	if !ok {
-		log.Printf("empty keyset")
-		return 0
-	}
-
-	var pubkey interface{}
-	if err := firstKey.Raw(&pubkey); err != nil {
-		log.Printf("%s", err)
-		return 0
-	}
-
-	var src io.Reader
-	if c.Payload == "" {
-		src = os.Stdin
-	} else {
-		f, err := os.Open(c.Payload)
+		f, err := os.Open(filename)
 		if err != nil {
-			log.Printf("%s", errors.Wrap(err, "failed to open file "+c.Payload))
-			return 1
+			return nil, errors.Wrapf(err, `failed to open file %s`, filename)
 		}
 		src = f
-		defer f.Close()
+	}
+	return src, nil
+}
+
+func getOutput(filename string) (io.WriteCloser, error) {
+	var output io.WriteCloser
+	switch filename {
+	case "-":
+		output = &dummyWriteCloser{os.Stdout}
+	case "":
+		return nil, errors.New(`output must be a file name, or "-" for STDOUT`)
+	default:
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to create file %s`, filename)
+		}
+		output = f
 	}
 
-	var buf bytes.Buffer
-	src = io.TeeReader(src, &buf)
+	return output, nil
+}
 
-	message, err := jws.ParseReader(src)
+func getKeyFile(keyfile, format string) (jwk.Set, error) {
+	var keyoptions []jwk.ReadFileOption
+	switch format {
+	case "json":
+	case "pem":
+		keyoptions = append(keyoptions, jwk.WithPEM(true))
+	default:
+		return nil, errors.Errorf(`invalid JWK format "%s"`, format)
+	}
+	keyset, err := jwk.ReadFile(keyfile, keyoptions...)
 	if err != nil {
-		log.Printf("%s", err)
-		return 0
+		return nil, errors.Wrap(err, `failed to parse key`)
 	}
 
-	log.Printf("=== Payload ===")
-	// See if this is JSON. if it is, display it nicely
-	m := map[string]interface{}{}
-	if err := json.Unmarshal(message.Payload(), &m); err == nil {
-		payloadbuf, err := json.MarshalIndent(m, "", "  ")
-		if err != nil {
-			log.Printf("%s", errors.Wrap(err, "failed to marshal payload"))
-			return 0
-		}
-		for _, l := range bytes.Split(payloadbuf, []byte{'\n'}) {
-			log.Printf("%s", l)
-		}
-	} else {
-		log.Printf("%s", message.Payload())
-	}
-
-	for i, sig := range message.Signatures() {
-		log.Printf("=== Signature %d ===", i)
-		sigbuf, err := json.MarshalIndent(sig, "", "  ")
-		if err != nil {
-			log.Printf("%s", errors.Wrap(err, "failed to marshal signature as JSON"))
-			return 0
-		}
-		for _, l := range bytes.Split(sigbuf, []byte{'\n'}) {
-			log.Printf("%s", l)
-		}
-
-		alg := sig.ProtectedHeaders().Algorithm()
-		if _, err := jws.Verify(buf.Bytes(), alg, pubkey); err == nil {
-			log.Printf("=== Verified with signature %d! ===", i)
-		}
-	}
-
-	return 1
+	return keyset, nil
 }

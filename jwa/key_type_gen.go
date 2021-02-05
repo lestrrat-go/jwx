@@ -20,6 +20,18 @@ const (
 	RSA            KeyType = "RSA" // RSA
 )
 
+var allKeyTypes = []KeyType{
+	EC,
+	OKP,
+	OctetSeq,
+	RSA,
+}
+
+// KeyTypes returns a list of all available values for KeyType
+func KeyTypes() []KeyType {
+	return allKeyTypes
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *KeyType) Accept(value interface{}) error {

@@ -32,6 +32,31 @@ const (
 	RSA_OAEP_256       KeyEncryptionAlgorithm = "RSA-OAEP-256"       // RSA-OAEP-SHA256
 )
 
+var allKeyEncryptionAlgorithms = []KeyEncryptionAlgorithm{
+	A128GCMKW,
+	A128KW,
+	A192GCMKW,
+	A192KW,
+	A256GCMKW,
+	A256KW,
+	DIRECT,
+	ECDH_ES,
+	ECDH_ES_A128KW,
+	ECDH_ES_A192KW,
+	ECDH_ES_A256KW,
+	PBES2_HS256_A128KW,
+	PBES2_HS384_A192KW,
+	PBES2_HS512_A256KW,
+	RSA1_5,
+	RSA_OAEP,
+	RSA_OAEP_256,
+}
+
+// KeyEncryptionAlgorithms returns a list of all available values for KeyEncryptionAlgorithm
+func KeyEncryptionAlgorithms() []KeyEncryptionAlgorithm {
+	return allKeyEncryptionAlgorithms
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *KeyEncryptionAlgorithm) Accept(value interface{}) error {

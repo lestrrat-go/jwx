@@ -1,6 +1,20 @@
 Changes
 =======
 
+v1.1.0 05 Feb 2021
+[New features]
+  * Command line tool `jwx` has ben completely reworked, and it is
+    now actually useful.
+
+  * JWKs can now be serialized into PEM files with ASN.1 DER format
+    data, which is useful when you need to work between JSON and PEM
+    data formats.
+
+  * Constants in jwa package now have can be listed via functions
+    in each category.
+
+  * jwe.Encrypt and jwe.Decrypt can now handle jwk.Key objects
+
 v1.1.0 31 Jan 2021
   v1.1.0 is a release that attempts to fix as many of the quirky APIs
   that survived the API breaking change of v0.9.x -> v1.0.0. This is

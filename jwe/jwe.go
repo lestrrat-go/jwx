@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
+	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
@@ -24,6 +25,8 @@ import (
 )
 
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
+//
+// `key` should be a public key, and it may be a raw key (e.g. rsa.PublicKey) or a jwk.Key
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.FuncMarker()
@@ -35,12 +38,21 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}
 
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var raw interface{}
+		if err := jwkKey.Raw(&raw); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve raw key out of %T`, key)
+		}
+
+		key = raw
+	}
+
 	var enc keyenc.Encrypter
 	switch keyalg {
 	case jwa.RSA1_5:
 		var pubkey rsa.PublicKey
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
+			return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
 		}
 
 		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, &pubkey)
@@ -50,7 +62,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var pubkey rsa.PublicKey
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
+			return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
 		}
 
 		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, &pubkey)
@@ -101,7 +113,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		default:
 			var pubkey ecdsa.PublicKey
 			if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-				return nil, errors.Errorf("failed to build %s key encrypter", keyalg)
+				return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
 			}
 			enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
 		}
@@ -146,7 +158,17 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 // Decrypt takes the key encryption algorithm and the corresponding
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
+//
+// `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
 func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var raw interface{}
+		if err := jwkKey.Raw(&raw); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+		}
+		key = raw
+	}
+
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")

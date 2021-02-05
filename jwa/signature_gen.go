@@ -29,6 +29,28 @@ const (
 	RS512       SignatureAlgorithm = "RS512" // RSASSA-PKCS-v1.5 using SHA-512
 )
 
+var allSignatureAlgorithms = []SignatureAlgorithm{
+	ES256,
+	ES384,
+	ES512,
+	EdDSA,
+	HS256,
+	HS384,
+	HS512,
+	NoSignature,
+	PS256,
+	PS384,
+	PS512,
+	RS256,
+	RS384,
+	RS512,
+}
+
+// SignatureAlgorithms returns a list of all available values for SignatureAlgorithm
+func SignatureAlgorithms() []SignatureAlgorithm {
+	return allSignatureAlgorithms
+}
+
 // Accept is used when conversion from values given by
 // outside sources (such as JSON payloads) is required
 func (v *SignatureAlgorithm) Accept(value interface{}) error {
