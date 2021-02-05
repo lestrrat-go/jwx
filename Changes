@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.1.0 05 Feb 2021
+v1.1.1 05 Feb 2021
 [New features]
   * Command line tool `jwx` has ben completely reworked, and it is
     now actually useful.
