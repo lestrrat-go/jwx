@@ -225,7 +225,7 @@ Please make sure to include tests that excercise the changes you made.
 
 ## Discussions / Usage
 
-Please try [discussions](./discussions) first.
+Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
 # Credits
 
