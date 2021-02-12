@@ -926,7 +926,7 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
 		fmt.Fprintf(&buf, "\ndefault:")
 		fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
-		fmt.Fprintf(&buf, "\nerrors.Errorf(`failed to encode value for field %%s`, f)")
+		fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to encode value for field %%s`, f)")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
 		fmt.Fprintf(&buf, "\n}")

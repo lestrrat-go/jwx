@@ -671,7 +671,7 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				errors.Errorf(`failed to encode value for field %s`, f)
+				return nil, errors.Wrapf(err, `failed to encode value for field %s`, f)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}
@@ -1175,7 +1175,7 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				errors.Errorf(`failed to encode value for field %s`, f)
+				return nil, errors.Wrapf(err, `failed to encode value for field %s`, f)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}
