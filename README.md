@@ -197,13 +197,44 @@ If you want to parse numbers in the incoming JSON objects as json.Number
 instead of floats, you can use the following call to globally affect the behavior of JSON parsing.
 
 ```go
-func init()
+func init() {
   jwx.DecoderSettings(jwx.WithUseNumber(true))
 }
 ```
 
 Do be aware that this has *global* effect. All code that calls in to `encoding/json`
 within `jwx` *will* use your settings.
+
+## Decode private fields to objects
+
+Packages within `github.com/lestrrat-go/jwx` parses known fields into pre-defined types,
+but for everything else (usually called private fields/headers/claims) are decoded into
+wharever `"encoding/json".Unmarshal` deems appropriate.
+
+For example, JSON objects are converted to `map[string]interface{}`, JSON arrays into
+`[]interface{}`, and so on.
+
+Sometimes you know beforehand that it makes sense for certain fields to be decoded into
+proper objects instead of generic maps or arrays. When you encounter this, you can use
+the `RegisterCustomField()` method in each of `jwe`, `jwk`, `jws`, and `jwt` packages.
+
+```go
+func init() {
+  jwt.RegisterCustomField(`x-foo-bar`, mypkg.FooBar{})
+}
+```
+
+This tells the decoder that when it encounters a JWT token with the field named
+`"x-foo-bar"`, it should be decoded to an instance of `mypkg.FooBar`. Then you can
+access this value by using `Get()`
+
+```go
+foobar, ok := token.Get(`x-foo-bar`)
+```
+
+Do be aware that this has *global* effect. In the above example, all JWT tokens containing
+the `"x-foo-bar"` key will decode in the same way. If you need this behavior from
+`jwe`, `jwk`, or `jws` packages, you need to do the same thing for each package.
 
 # Other related libraries:
 

@@ -1,6 +1,19 @@
 Changes
 =======
 
+v1.1.2
+[New features]
+  * `RegisterCustomField()` has been added, which allows users to
+    specify a private claim/field/header to decode into a particular
+    object of choice, instead of map[string]interface{} or []interface{} (#332, #333)
+
+[Bug fixes]
+  * Failures for `jwk.Key.MarshalJSON()` were not properly reported (#330, #331)
+
+[Miscellaneous]
+  * Dependencies for "github.com/goccy/go-json" has been upgraded to
+    v0.4.2
+
 v1.1.1 05 Feb 2021
 [New features]
   * Command line tool `jwx` has ben completely reworked, and it is
