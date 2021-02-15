@@ -429,11 +429,11 @@ func generateHeaders() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-		fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
-		fmt.Fprintf(&buf, "\nif err != nil {")
-		fmt.Fprintf(&buf, "\nreturn err")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
+	fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn err")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")

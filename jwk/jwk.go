@@ -601,4 +601,3 @@ func asnEncode(key Key) (string, []byte, error) {
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
-

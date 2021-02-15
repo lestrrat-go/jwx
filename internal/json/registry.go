@@ -43,11 +43,11 @@ func (r *Registry) Decode(dec *Decoder, name string) (interface{}, error) {
 			return nil, errors.Wrapf(err, `failed to decode field %s`, name)
 		}
 		return reflect.ValueOf(ptr).Elem().Interface(), nil
-	} else {
-		var decoded interface{}
-		if err := dec.Decode(&decoded); err != nil {
-			return nil, errors.Wrapf(err, `failed to decode field %s`, name)
-		}
-		return decoded, nil
 	}
+
+	var decoded interface{}
+	if err := dec.Decode(&decoded); err != nil {
+		return nil, errors.Wrapf(err, `failed to decode field %s`, name)
+	}
+	return decoded, nil
 }

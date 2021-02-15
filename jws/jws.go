@@ -556,4 +556,3 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
-
