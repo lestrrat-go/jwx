@@ -313,6 +313,10 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Set(name string, value interface{}) error {")
 	fmt.Fprintf(&buf, "\nh.mu.Lock()")
 	fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
+	fmt.Fprintf(&buf, "\nreturn h.setNoLock(name, value)")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) setNoLock(name string, value interface{}) error {")
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\ncase %sKey:", f.method)
@@ -342,7 +346,7 @@ func generateHeaders() error {
 	fmt.Fprintf(&buf, "\nh.privateParams[name] = value")
 	fmt.Fprintf(&buf, "\n}") // end switch name
 	fmt.Fprintf(&buf, "\nreturn nil")
-	fmt.Fprintf(&buf, "\n}") // end func (h *stdHeaders) Set(name string, value interface{})
+	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (h *stdHeaders) Remove(key string) error {")
 	fmt.Fprintf(&buf, "\nh.mu.Lock()")
@@ -425,14 +429,11 @@ func generateHeaders() error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nvar decoded interface{}")
-	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nif h.privateParams == nil {")
-	fmt.Fprintf(&buf, "\nh.privateParams = make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nh.privateParams[tok] = decoded")
+		fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+		fmt.Fprintf(&buf, "\nif err != nil {")
+		fmt.Fprintf(&buf, "\nreturn err")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
