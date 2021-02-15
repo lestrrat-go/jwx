@@ -10,9 +10,12 @@ package openid
 import (
 	"context"
 
+	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/pkg/errors"
 )
+
+var registry = json.NewRegistry()
 
 func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
@@ -25,4 +28,26 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 		}
 	}
 	return dst, nil
+}
+
+// RegisterCustomField allows users to specify that a private field
+// be decoded as an instance of the specified type. This option has
+// a global effect.
+//
+// For example, suppose you have a custom field `x-birthday`, which
+// you want to represent as a string formatted in RFC3339 in JSON,
+// but want it back as `time.Time`.
+//
+// In that case you would register a custom field as follows
+//
+//   jwt.RegisterCustomField(`x-birthday`, timeT)
+//
+// Then `token.Get("x-birthday")` will still return an `interface{}`,
+// but you can convert its type to `time.Time`
+//
+//   bdayif, _ := token.Get(`x-birthday`)
+//   bday := bdayif.(time.Time)
+//
+func RegisterCustomField(name string, object interface{}) {
+	registry.Register(name, object)
 }
