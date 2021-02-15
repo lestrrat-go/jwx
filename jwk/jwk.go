@@ -24,6 +24,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var registry = json.NewRegistry()
+
 // New creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
@@ -577,3 +579,26 @@ func asnEncode(key Key) (string, []byte, error) {
 		return "", nil, errors.Errorf(`unsupported key type %T`, key)
 	}
 }
+
+// RegisterCustomField allows users to specify that a private field
+// be decoded as an instance of the specified type. This option has
+// a global effect.
+//
+// For example, suppose you have a custom field `x-birthday`, which
+// you want to represent as a string formatted in RFC3339 in JSON,
+// but want it back as `time.Time`.
+//
+// In that case you would register a custom field as follows
+//
+//   jwk.RegisterCustomField(`x-birthday`, timeT)
+//
+// Then `key.Get("x-birthday")` will still return an `interface{}`,
+// but you can convert its type to `time.Time`
+//
+//   bdayif, _ := key.Get(`x-birthday`)
+//   bday := bdayif.(time.Time)
+//
+func RegisterCustomField(name string, object interface{}) {
+	registry.Register(name, object)
+}
+
