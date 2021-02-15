@@ -221,6 +221,10 @@ func (h *symmetricKey) Get(name string) (interface{}, bool) {
 func (h *symmetricKey) Set(name string, value interface{}) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	return h.setNoLock(name, value)
+}
+
+func (h *symmetricKey) setNoLock(name string, value interface{}) error {
 	switch name {
 	case "kty":
 		return nil
@@ -412,14 +416,11 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
 				}
 			default:
-				var decoded interface{}
-				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				decoded, err := registry.Decode(dec, tok)
+				if err != nil {
+					return err
 				}
-				if h.privateParams == nil {
-					h.privateParams = make(map[string]interface{})
-				}
-				h.privateParams[tok] = decoded
+				h.setNoLock(tok, decoded)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

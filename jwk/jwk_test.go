@@ -9,7 +9,9 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -1255,5 +1257,51 @@ func TestOKP(t *testing.T) {
 				},
 			})
 		})
+	})
+}
+
+func TestCustomField(t *testing.T) {
+	// XXX has global effect!!!
+	jwk.RegisterCustomField(`x-birthday`, time.Time{})
+	defer jwk.RegisterCustomField(`x-birthday`, nil)
+
+	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
+	bdaybytes, _ := expected.MarshalText() // RFC3339
+
+	var b strings.Builder
+	b.WriteString(`{"e":"AQAB", "kty":"RSA", "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw","x-birthday":"`)
+	b.Write(bdaybytes)
+	b.WriteString(`"}`)
+	src := b.String()
+
+	t.Run("jwk.ParseKey", func(t *testing.T) {
+		key, err := jwk.ParseKey([]byte(src))
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+			return
+		}
+
+		v, ok := key.Get(`x-birthday`)
+		if !assert.True(t, ok, `key.Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+	})
+	t.Run("json.Unmarshal", func(t *testing.T) {
+		key := jwk.NewRSAPublicKey()
+		if !assert.NoError(t, json.Unmarshal([]byte(src), key), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		v, ok := key.Get(`x-birthday`)
+		if !assert.True(t, ok, `key.Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
 	})
 }

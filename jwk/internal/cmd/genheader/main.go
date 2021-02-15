@@ -715,6 +715,10 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) Set(name string, value interface{}) error {", structName)
 		fmt.Fprintf(&buf, "\nh.mu.Lock()")
 		fmt.Fprintf(&buf, "\ndefer h.mu.Unlock()")
+		fmt.Fprintf(&buf, "\nreturn h.setNoLock(name, value)")
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\n\nfunc (h *%s) setNoLock(name string, value interface{}) error {", structName)
 		fmt.Fprintf(&buf, "\nswitch name {")
 		fmt.Fprintf(&buf, "\ncase \"kty\":")
 		fmt.Fprintf(&buf, "\nreturn nil") // This is not great, but we just ignore it
@@ -871,14 +875,11 @@ func generateHeader(kt keyType) error {
 			}
 		}
 		fmt.Fprintf(&buf, "\ndefault:")
-		fmt.Fprintf(&buf, "\nvar decoded interface{}")
-		fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
-		fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
+		fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+		fmt.Fprintf(&buf, "\nif err != nil {")
+		fmt.Fprintf(&buf, "\nreturn err")
 		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nif h.privateParams == nil {")
-		fmt.Fprintf(&buf, "\nh.privateParams = make(map[string]interface{})")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nh.privateParams[tok] = decoded")
+		fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\ndefault:")
 		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")

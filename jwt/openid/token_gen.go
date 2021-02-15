@@ -385,6 +385,10 @@ func (t *stdToken) Remove(key string) error {
 func (t *stdToken) Set(name string, value interface{}) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	return t.setNoLock(name, value)
+}
+
+func (t *stdToken) setNoLock(name string, value interface{}) error {
 	switch name {
 	case AudienceKey:
 		var acceptor types.StringList
@@ -1077,14 +1081,11 @@ LOOP:
 				}
 				t.updatedAt = &decoded
 			default:
-				var decoded interface{}
-				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode field %s`, tok)
+				decoded, err := registry.Decode(dec, tok)
+				if err != nil {
+					return err
 				}
-				if t.privateClaims == nil {
-					t.privateClaims = make(map[string]interface{})
-				}
-				t.privateClaims[tok] = decoded
+				t.setNoLock(tok, decoded)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

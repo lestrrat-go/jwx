@@ -463,6 +463,10 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) Set(name string, value interface{}) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.Lock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
+	fmt.Fprintf(&buf, "\nreturn t.setNoLock(name, value)")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) setNoLock(name string, value interface{}) error {", tt.structName)
 	fmt.Fprintf(&buf, "\nswitch name {")
 	for _, f := range fields {
 		keyName := f.method + "Key"
@@ -644,14 +648,11 @@ func generateToken(tt tokenType) error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nvar decoded interface{}")
-	fmt.Fprintf(&buf, "\nif err := dec.Decode(&decoded); err != nil {")
-	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `failed to decode field %%s`, tok)")
+	fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+	fmt.Fprintf(&buf, "\nif err != nil {")
+	fmt.Fprintf(&buf, "\nreturn err")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nif t.privateClaims == nil {")
-	fmt.Fprintf(&buf, "\nt.privateClaims = make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nt.privateClaims[tok] = decoded")
+	fmt.Fprintf(&buf, "\nt.setNoLock(tok, decoded)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")

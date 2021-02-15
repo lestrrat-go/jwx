@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -1041,4 +1042,63 @@ func TestVerifySet(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCustomField(t *testing.T) {
+	// XXX has global effect!!!
+	jws.RegisterCustomField(`x-birthday`, time.Time{})
+	defer jws.RegisterCustomField(`x-birthday`, nil)
+
+	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
+	bdaybytes, _ := expected.MarshalText() // RFC3339
+
+	payload := "Hello, World!"
+	privkey, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
+		return
+	}
+
+	hdrs := jws.NewHeaders()
+	hdrs.Set(`x-birthday`, string(bdaybytes))
+
+	signed, err := jws.Sign([]byte(payload), jwa.RS256, privkey, jws.WithHeaders(hdrs))
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	t.Run("jws.Parse + json.Unmarshal", func(t *testing.T) {
+		msg, err := jws.Parse(signed)
+		if !assert.NoError(t, err, `jws.Parse should succeed`) {
+			return
+		}
+
+		v, ok := msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
+		if !assert.True(t, ok, `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+
+		// Create JSON from jws.Message
+		buf, err := json.Marshal(msg)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		var msg2 jws.Message
+		if !assert.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		v, ok = msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
+		if !assert.True(t, ok, `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+	})
 }

@@ -21,6 +21,7 @@ func getEncryptCtx() *encryptCtx {
 }
 
 func releaseEncryptCtx(ctx *encryptCtx) {
+	ctx.protected = nil
 	ctx.contentEncrypter = nil
 	ctx.generator = nil
 	ctx.keyEncrypters = nil
@@ -48,14 +49,18 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 		pdebug.Printf("Encrypt: generated cek len = %d", len(cek))
 	}
 
-	protected := NewHeaders()
-	if err := protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
+	if e.protected == nil {
+		// shouldn't happen, but...
+		e.protected = NewHeaders()
+	}
+
+	if err := e.protected.Set(ContentEncryptionKey, e.contentEncrypter.Algorithm()); err != nil {
 		return nil, errors.Wrap(err, `failed to set "enc" in protected header`)
 	}
 
 	compression := e.compress
 	if compression != jwa.NoCompress {
-		if err := protected.Set(CompressionKey, compression); err != nil {
+		if err := e.protected.Set(CompressionKey, compression); err != nil {
 			return nil, errors.Wrap(err, `failed to set "zip" in protected header`)
 		}
 	}
@@ -106,14 +111,14 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := protected.Merge(context.TODO(), recipients[0].Headers())
+		h, err := e.protected.Merge(context.TODO(), recipients[0].Headers())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to merge protected headers")
 		}
-		protected = h
+		e.protected = h
 	}
 
-	aad, err := protected.Encode()
+	aad, err := e.protected.Encode()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 	}
@@ -155,7 +160,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	if err := msg.Set(InitializationVectorKey, iv); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
 	}
-	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
+	if err := msg.Set(ProtectedHeadersKey, e.protected); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
 	}
 	if err := msg.Set(RecipientsKey, recipients); err != nil {
