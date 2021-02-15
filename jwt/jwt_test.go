@@ -484,3 +484,49 @@ func TestReadFile(t *testing.T) {
 		return
 	}
 }
+
+func TestCustomField(t *testing.T) {
+	// XXX has global effect!!!
+	jwt.RegisterCustomField(`x-birthday`, time.Time{})
+	defer jwt.RegisterCustomField(`x-birthday`, nil)
+
+	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
+	bdaybytes, _ := expected.MarshalText() // RFC3339
+
+	var b strings.Builder
+	b.WriteString(`{"iss": "github.com/lesstrrat-go/jwx", "x-birthday": "`)
+	b.Write(bdaybytes)
+	b.WriteString(`"}`)
+	src := b.String()
+
+	t.Run("jwt.Parse", func(t *testing.T) {
+		token, err := jwt.Parse([]byte(src))
+		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			return
+		}
+
+		v, ok := token.Get(`x-birthday`)
+		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+	})
+	t.Run("json.Unmarshal", func(t *testing.T) {
+		token := jwt.New()
+		if !assert.NoError(t, json.Unmarshal([]byte(src), token), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		v, ok := token.Get(`x-birthday`)
+		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+	})
+}
