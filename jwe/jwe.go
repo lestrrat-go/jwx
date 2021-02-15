@@ -24,13 +24,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+var registry = json.NewRegistry()
+
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
-//
 // `key` should be a public key, and it may be a raw key (e.g. rsa.PublicKey) or a jwk.Key
-func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) ([]byte, error) {
+//
+// Encrypt currently does not support multi-recipient messages.
+func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.FuncMarker()
 		defer g.End()
+	}
+
+	var protected Headers
+	for _, option := range options {
+		switch option.Ident() {
+		case identProtectedHeader{}:
+			protected = option.Value().(Headers)
+		}
+	}
+	if protected == nil {
+		protected = NewHeaders()
 	}
 
 	contentcrypt, err := content_crypt.NewGeneric(contentalg)
@@ -140,6 +154,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	encctx := getEncryptCtx()
 	defer releaseEncryptCtx(encctx)
 
+	encctx.protected = protected
 	encctx.contentEncrypter = contentcrypt
 	encctx.generator = keygen.NewRandom(keysize)
 	encctx.keyEncrypters = []keyenc.Encrypter{enc}
@@ -269,4 +284,26 @@ func parseCompact(buf []byte) (*Message, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
 	return m, nil
+}
+
+// RegisterCustomField allows users to specify that a private field
+// be decoded as an instance of the specified type. This option has
+// a global effect.
+//
+// For example, suppose you have a custom field `x-birthday`, which
+// you want to represent as a string formatted in RFC3339 in JSON,
+// but want it back as `time.Time`.
+//
+// In that case you would register a custom field as follows
+//
+//   jwe.RegisterCustomField(`x-birthday`, timeT)
+//
+// Then `hdr.Get("x-birthday")` will still return an `interface{}`,
+// but you can convert its type to `time.Time`
+//
+//   bdayif, _ := hdr.Get(`x-birthday`)
+//   bday := bdayif.(time.Time)
+//
+func RegisterCustomField(name string, object interface{}) {
+	registry.Register(name, object)
 }

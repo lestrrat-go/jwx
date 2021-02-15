@@ -21,7 +21,25 @@ type stdRecipient struct {
 	encryptedKey []byte
 }
 
-// Message contains the entire encrypted JWE message
+// Message contains the entire encrypted JWE message. You should not
+// expect to use Message for anything other than inspecting the
+// state of an encrypted message. This is because encryption is
+// highly context sensitive, and once we parse the original payload
+// into an object, we may not always be able to recreate the exact
+// context in which the encryption happened.
+//
+// For example, it is totally valid for if the protected header's
+// integrity was calculated using a non-standard line breaks:
+//
+//    {"a dummy":
+//      "protected header"}
+//
+// Once parsed, though, we can only serialize the protected header as:
+//
+//    {"a dummy":"protected header"}
+//
+// which would obviously result in a contradicting integrity value
+// if we tried to re-calculate it from a parsed message.
 type Message struct {
 	authenticatedData    []byte
 	cipherText           []byte
@@ -40,6 +58,7 @@ type contentEncrypter interface {
 }
 
 type encryptCtx struct {
+	protected        Headers
 	contentEncrypter contentEncrypter
 	generator        keygen.Generator
 	keyEncrypters    []keyenc.Encrypter

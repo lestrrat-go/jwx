@@ -11,8 +11,10 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -681,4 +683,67 @@ func TestReadFile(t *testing.T) {
 	if _, err := jwe.ReadFile(f.Name()); !assert.NoError(t, err, `jwe.ReadFile should succeed`) {
 		return
 	}
+}
+
+func TestCustomField(t *testing.T) {
+	// XXX has global effect!!!
+	jwe.RegisterCustomField(`x-birthday`, time.Time{})
+	defer jwe.RegisterCustomField(`x-birthday`, nil)
+
+	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
+	bdaybytes, _ := expected.MarshalText() // RFC3339
+
+	plaintext := []byte("Hello, World!")
+	rsakey, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
+		return
+	}
+	pubkey, err := jwk.PublicKeyOf(rsakey)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf() should succeed`) {
+		return
+	}
+
+	protected := jwe.NewHeaders()
+	protected.Set(`x-birthday`, string(bdaybytes))
+
+	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, pubkey, jwa.A256GCM, jwa.NoCompress, jwe.WithProtectedHeaders(protected))
+	if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
+		return
+	}
+
+	t.Run("jwe.Parse + json.Unmarshal", func(t *testing.T) {
+		msg, err := jwe.Parse(encrypted)
+		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+			return
+		}
+
+		v, ok := msg.ProtectedHeaders().Get(`x-birthday`)
+		if !assert.True(t, ok, `msg.ProtectedHeaders().Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+
+		// Create JSON from jwe.Message
+		buf, err := json.Marshal(msg)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		var msg2 jwe.Message
+		if !assert.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		v, ok = msg2.ProtectedHeaders().Get(`x-birthday`)
+		if !assert.True(t, ok, `msg2.ProtectedHeaders().Get("x-birthday") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
+	})
 }
