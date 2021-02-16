@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.1.2
+v1.1.2 16 Feb 2021
 [New features]
   * `RegisterCustomField()` has been added, which allows users to
     specify a private claim/field/header to decode into a particular
@@ -11,6 +11,8 @@ v1.1.2
   * Failures for `jwk.Key.MarshalJSON()` were not properly reported (#330, #331)
 
 [Miscellaneous]
+  * `jwe.Encrypt()` now takes options. This should not matter unless you
+    were somehow depending on its method signature.
   * Dependencies for "github.com/goccy/go-json" has been upgraded to
     v0.4.2
 
