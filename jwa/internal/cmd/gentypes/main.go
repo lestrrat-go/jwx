@@ -132,6 +132,10 @@ func _main() error {
 					value: `P-521`,
 				},
 				{
+					name:  `Secp256k1`,
+					value: `secp256k1`,
+				},
+				{
 					name:  `Ed25519`,
 					value: `Ed25519`,
 				},
@@ -202,6 +206,11 @@ func _main() error {
 					name:    `ES512`,
 					value:   "ES512",
 					comment: `ECDSA using P-521 and SHA-512`,
+				},
+				{
+					name:    `ES256K`,
+					value:   "ES256K",
+					comment: `ECDSA using secp256k1 and SHA-256`,
 				},
 				{
 					name:    `EdDSA`,
