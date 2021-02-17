@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v3"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
@@ -37,6 +38,8 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 		crv = jwa.P384
 	case elliptic.P521():
 		crv = jwa.P521
+	case secp256k1.S256():
+		crv = jwa.Secp256k1
 	default:
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
@@ -71,6 +74,8 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 		crv = jwa.P384
 	case elliptic.P521():
 		crv = jwa.P521
+	case secp256k1.S256():
+		crv = jwa.Secp256k1
 	default:
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
@@ -88,6 +93,8 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 		curve = elliptic.P384()
 	case jwa.P521:
 		curve = elliptic.P521()
+	case jwa.Secp256k1:
+		curve = secp256k1.S256()
 	default:
 		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
 	}

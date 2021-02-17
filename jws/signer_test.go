@@ -69,7 +69,7 @@ func TestSignMulti(t *testing.T) {
 		return
 	}
 
-	dsakey, err := jwxtest.GenerateEcdsaKey()
+	dsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 	if !assert.NoError(t, err, "ECDSA key generated") {
 		return
 	}

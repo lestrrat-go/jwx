@@ -16,7 +16,7 @@ Supported key types:
 | kty | Curve                   | Go Key Type                                   |
 |:----|:------------------------|:----------------------------------------------|
 | RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
-| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
+| EC  | P-256<br>P-384<br>P-521<br>secp256k1 (1) | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
 | oct | N/A                     | []byte                                        |
 | OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
 |     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|

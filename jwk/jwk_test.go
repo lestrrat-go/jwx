@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rsa"
 	"fmt"
 	"reflect"
@@ -782,7 +781,7 @@ func TestPublicKeyOf(t *testing.T) {
 		return
 	}
 
-	ecdsakey, err := jwxtest.GenerateEcdsaKey()
+	ecdsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 	if !assert.NoError(t, err, `generating raw ECDSA key should succeed`) {
 		return
 	}
@@ -1142,12 +1141,12 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("Curve types", func(t *testing.T) {
-		crvs := []elliptic.Curve{elliptic.P256(), elliptic.P384(), elliptic.P521()}
+		crvs := []jwa.EllipticCurveAlgorithm{jwa.P256, jwa.P384, jwa.P521, jwa.Secp256k1}
 
 		for _, crv := range crvs {
 			crv := crv
-			t.Run(crv.Params().Name, func(t *testing.T) {
-				key, err := jwxtest.GenerateEcdsaKey()
+			t.Run(crv.String(), func(t *testing.T) {
+				key, err := jwxtest.GenerateEcdsaKey(crv)
 				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 					return
 				}

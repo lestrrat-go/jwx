@@ -19,6 +19,7 @@ const (
 	P256                 EllipticCurveAlgorithm = "P-256"
 	P384                 EllipticCurveAlgorithm = "P-384"
 	P521                 EllipticCurveAlgorithm = "P-521"
+	Secp256k1            EllipticCurveAlgorithm = "secp256k1"
 	X25519               EllipticCurveAlgorithm = "X25519"
 	X448                 EllipticCurveAlgorithm = "X448"
 )
@@ -29,6 +30,7 @@ var allEllipticCurveAlgorithms = []EllipticCurveAlgorithm{
 	P256,
 	P384,
 	P521,
+	Secp256k1,
 	X25519,
 	X448,
 }
@@ -57,7 +59,7 @@ func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
 		tmp = EllipticCurveAlgorithm(s)
 	}
 	switch tmp {
-	case Ed25519, Ed448, P256, P384, P521, X25519, X448:
+	case Ed25519, Ed448, P256, P384, P521, Secp256k1, X25519, X448:
 	default:
 		return errors.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
 	}

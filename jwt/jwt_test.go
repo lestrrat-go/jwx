@@ -361,7 +361,7 @@ func TestGH52(t *testing.T) {
 	}
 
 	t.Parallel()
-	priv, err := jwxtest.GenerateEcdsaKey()
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -414,7 +414,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 func TestSignErrors(t *testing.T) {
 	t.Parallel()
-	priv, err := jwxtest.GenerateEcdsaKey()
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
 	}

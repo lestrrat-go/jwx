@@ -7,6 +7,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/internal/keyconv"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
@@ -124,7 +125,7 @@ func TestKeyconv(t *testing.T) {
 		})
 	})
 	t.Run("ECDSA", func(t *testing.T) {
-		key, err := jwxtest.GenerateEcdsaKey()
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 		if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
 			return
 		}

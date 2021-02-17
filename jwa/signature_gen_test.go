@@ -47,6 +47,42 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`accept jwa constant ES256K`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.ES256K), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string ES256K`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept("ES256K"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for ES256K`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.SignatureAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "ES256K"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for ES256K`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "ES256K", jwa.ES256K.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`accept jwa constant ES384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
