@@ -191,7 +191,7 @@ func TestRoundtrip(t *testing.T) {
 	})
 	t.Run("ECDSA", func(t *testing.T) {
 		t.Parallel()
-		key, err := jwxtest.GenerateEcdsaKey()
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 		if !assert.NoError(t, err, "ECDSA key generated") {
 			return
 		}

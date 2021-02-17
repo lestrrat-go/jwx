@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v3"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -51,12 +52,26 @@ func GenerateRsaPublicJwk() (jwk.Key, error) {
 	return jwk.PublicKeyOf(key)
 }
 
-func GenerateEcdsaKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error) {
+	var curve elliptic.Curve
+	switch alg {
+	case jwa.P256:
+		curve = elliptic.P256()
+	case jwa.P384:
+		curve = elliptic.P384()
+	case jwa.P521:
+		curve = elliptic.P521()
+	case jwa.Secp256k1:
+		curve = secp256k1.S256()
+	default:
+		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
+	}
+
+	return ecdsa.GenerateKey(curve, rand.Reader)
 }
 
 func GenerateEcdsaJwk() (jwk.Key, error) {
-	key, err := GenerateEcdsaKey()
+	key, err := GenerateEcdsaKey(jwa.P521)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to generate ECDSA private key`)
 	}
