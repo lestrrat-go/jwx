@@ -3,7 +3,7 @@ module github.com/lestrrat-go/jwx
 go 1.13
 
 require (
-	github.com/goccy/go-json v0.4.2
+	github.com/goccy/go-json v0.4.6
 	github.com/lestrrat-go/backoff/v2 v2.0.7
 	github.com/lestrrat-go/codegen v1.0.0
 	github.com/lestrrat-go/httpcc v1.0.0
