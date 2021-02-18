@@ -86,7 +86,7 @@ Supported key types:
 | kty | Curve                   | Go Key Type                                   |
 |:----|:------------------------|:----------------------------------------------|
 | RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
-| EC  | P-256<br>P-384<br>P-521 | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
+| EC  | P-256<br>P-384<br>P-521<br>secp256k1 (1) | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
 | oct | N/A                     | []byte                                        |
 | OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
 |     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|
@@ -119,6 +119,7 @@ Supported signature algorithms:
 | ECDSA using P-256 and SHA-256           | YES        | jwa.ES256                |
 | ECDSA using P-384 and SHA-384           | YES        | jwa.ES384                |
 | ECDSA using P-521 and SHA-512           | YES        | jwa.ES512                |
+| ECDSA using secp256k1 and SHA-256 (1)   | YES        | jwa.ES256K               |
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
@@ -185,7 +186,7 @@ However, if performance for parsing/serializing JSON is really important to you,
 [github.com/goccy/go-json](https://github.com/goccy/go-sjon) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it **IF** it breaks. Please note that that's a big "if".
 As of github.com/goccy/go-json@v0.3.3 I haven't see any problems, and I would say that it is mostly stable.
 
-However, it is a depdenency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
+However, it is a dependency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
 If you know what you are doing, I highly recommend enabling this module -- all you need to do is to enable this tag.
 Disable the tag if you feel like it's not worth the hassle.
 
