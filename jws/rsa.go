@@ -74,7 +74,7 @@ func makeSignPSS(hash crypto.Hash) rsaSignFunc {
 			return nil, errors.Wrap(err, "failed to write payload using SignPSS")
 		}
 		return rsa.SignPSS(rand.Reader, key, hash, h.Sum(nil), &rsa.PSSOptions{
-			SaltLength: rsa.PSSSaltLengthAuto,
+			SaltLength: rsa.PSSSaltLengthEqualsHash,
 		})
 	}
 }
