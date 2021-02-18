@@ -196,3 +196,68 @@ func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 
 	return output.Bytes(), nil
 }
+
+// SignJws signs a message and returns its filename and
+// a cleanup function.
+// The caller is responsible for calling the cleanup
+// function and make sure all resources are released
+func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, compact bool) (string, func(), error) {
+	t.Helper()
+
+	cmdargs := []string{"jws", "sig", "-k", keyfile}
+	if compact {
+		cmdargs = append(cmdargs, "-c")
+	}
+
+	var pfile string
+	if len(payload) > 0 {
+		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
+		if perr != nil {
+			return "", nil, errors.Wrap(perr, `failed to write payload to file`)
+		}
+
+		cmdargs = append(cmdargs, "-I", fn)
+		pfile = fn
+		defer pcleanup()
+	}
+
+	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-sig-*.jws`)
+	if oerr != nil {
+		return "", nil, errors.Wrap(oerr, "failed to create temporary file")
+	}
+
+	cmdargs = append(cmdargs, "-o", ofile.Name())
+
+	if err := RunJoseCommand(ctx, t, cmdargs, nil, nil); err != nil {
+		defer ocleanup()
+		if pfile != "" {
+			jwxtest.DumpFile(t, pfile)
+		}
+		jwxtest.DumpFile(t, keyfile)
+		return "", nil, errors.Wrap(err, `failed to sign message`)
+	}
+
+	return ofile.Name(), ocleanup, nil
+}
+
+func VerifyJws(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte, error) {
+	t.Helper()
+
+	cmdargs := []string{"jws", "ver", "-i", cfile, "-k", kfile, "-O-"}
+	if pdebug.Enabled {
+		cbuf, _ := ioutil.ReadFile(cfile)
+		pdebug.Printf(`JWE message file contains "%s"`, cbuf)
+		kbuf, _ := ioutil.ReadFile(kfile)
+		pdebug.Printf(`JWK key file contains "%s"`, kbuf)
+	}
+
+	var output bytes.Buffer
+	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
+		jwxtest.DumpFile(t, cfile)
+		jwxtest.DumpFile(t, kfile)
+
+		return nil, errors.Wrap(err, `failed to decrypt message`)
+	}
+
+	return output.Bytes(), nil
+}
