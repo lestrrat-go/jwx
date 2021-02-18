@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
@@ -326,4 +327,46 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 	}
 
 	return WriteFile("jwx-test-*.jwe", bytes.NewReader(buf))
+}
+
+func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm, jwkfile string) ([]byte, error) {
+	key, err := ParseJwkFile(ctx, jwkfile)
+	if err != nil {
+		return nil, errors.Wrapf(err, `failed to parse keyfile %s`, file)
+	}
+
+	buf, err := ReadFile(file)
+	if err != nil {
+		return nil, errors.Wrapf(err, `failed to read from encrypted file %s`, file)
+	}
+
+	var rawkey, pubkey interface{}
+	if err := key.Raw(&rawkey); err != nil {
+		return nil, errors.Wrap(err, `failed to obtain raw key from JWK`)
+	}
+	pubkey = rawkey
+	switch tkey := rawkey.(type) {
+	case *ecdsa.PrivateKey:
+		pubkey = tkey.PublicKey
+	case *rsa.PrivateKey:
+		pubkey = tkey.PublicKey
+	case *ed25519.PrivateKey:
+		pubkey = tkey.Public()
+	}
+
+	return jws.Verify(buf, alg, pubkey)
+}
+
+func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm, keyfile string) (string, func(), error) {
+	key, err := ParseJwkFile(ctx, keyfile)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, `failed to parse keyfile %s`, keyfile)
+	}
+
+	buf, err := jws.Sign(payload, alg, key)
+	if err != nil {
+		return "", nil, errors.Wrap(err, `failed to sign payload`)
+	}
+
+	return WriteFile("jwx-test-*.jws", bytes.NewReader(buf))
 }
