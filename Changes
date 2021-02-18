@@ -3,6 +3,7 @@ Changes
 
 v1.1.2 16 Feb 2021
 [New features]
+  * Implemented ES256K signing (#337)
   * `RegisterCustomField()` has been added, which allows users to
     specify a private claim/field/header to decode into a particular
     object of choice, instead of map[string]interface{} or []interface{} (#332, #333)
@@ -14,7 +15,7 @@ v1.1.2 16 Feb 2021
   * `jwe.Encrypt()` now takes options. This should not matter unless you
     were somehow depending on its method signature.
   * Dependencies for "github.com/goccy/go-json" has been upgraded to
-    v0.4.2
+    v0.4.6
 
 v1.1.1 05 Feb 2021
 [New features]
