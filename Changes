@@ -6,6 +6,7 @@ v1.1.3
   * Implemented ES256K signing (#337)
 
 [Miscellaneous]
+  * Bump minimum required version to go1.15
   * Dependencies for "github.com/goccy/go-json" has been upgraded to
     v0.4.2
 
