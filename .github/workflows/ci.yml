@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         json_backend: [ 'stdlib', 'goccy' ]
-        go: [ '1.15.x', '1.14.x' ]
+        go: [ '1.16.x', '1.15.x' ]
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
