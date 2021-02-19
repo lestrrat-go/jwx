@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx/examples
 
-go 1.16
+go 1.15
 
 require (
 	github.com/cloudflare/circl v1.0.0

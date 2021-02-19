@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx/cmd/jwx
 
-go 1.16
+go 1.15
 
 require (
 	github.com/lestrrat-go/jwx v1.1.1-0.20210204233036-9593b54afe33
