@@ -66,5 +66,6 @@ func AllocECPointBuffer(v *big.Int, crv elliptic.Curve) []byte {
 	}
 
 	buf := getCrvFixedBuffer(inBytes)
-	return bigIntFillBytes(v, buf)
+	v.FillBytes(buf)
+	return buf
 }
