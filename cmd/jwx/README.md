@@ -56,7 +56,7 @@ You can generate random JWKs for RSA/EC/oct/OKP key types:
 }
 
 % jwx jwk generate --type EC --curve P-521
-% jwx jwk generate --type oc --keysize 128
+% jwx jwk generate --type oct --keysize 128
 % jwx jwk generate --type OKP --curve Ed25519
 ```
 
@@ -64,11 +64,11 @@ To include extra information in the key such as a key ID, use the `--template` o
 
 ```shell
 # output truncated for brevity
-% jwx jwk generate --type EC --curve P-384 --template '{"kid":"mywesomekey"}'
+% jwx jwk generate --type EC --curve P-384 --template '{"kid":"myawesomekey"}'
 {
   "crv": "P-384",
   "d": "Q4JFCjI81uYC2T...",
-  "kid": "mywesomekey",
+  "kid": "myawesomekey",
   "kty": "EC",
   "x": "cm6GYmhtjYLr_B...",
   "y": "4_dIgUa68wytgg..."
@@ -228,7 +228,7 @@ Decoded Protected Headers: {
                            }
 Payload:                   {"iss":"joe",
                             "exp":1300819380,
-                            "http://example.com/is_root":true}%   
+                            "http://example.com/is_root":true}
 ```
 
 ## jwx jws verify
@@ -301,7 +301,7 @@ Suupose we have `set.jwk` containing the following JWK set:
     {
       "kty": "oct",
       "kid": "mykey",
-			"alg": "HS256"
+      "alg": "HS256",
       "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
     }
   ]
