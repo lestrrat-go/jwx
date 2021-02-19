@@ -15,6 +15,7 @@ _test:
 
 test:
 	$(MAKE) -C examples _test
+	$(MAKE) -C bench _test
 	$(MAKE) _test TESOPTS=./...
 
 cover:
@@ -22,6 +23,7 @@ cover:
 
 cover-stdlib:
 	$(MAKE) -f $(PWD)/Makefile -C examples _test
+	$(MAKE) -f $(PWD)/Makefile -C bench _test
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
 	$(MAKE) _test TESTOPTS="-coverpkg=./... -coverprofile=coverage.out.tmp ./..."
 	@# This is NOT cheating. tools to generate code don't need to be
@@ -31,7 +33,7 @@ cover-stdlib:
 	@rm coverage.out.tmp
 
 cover-goccy:
-	$(MAKE) -f $(PWD)/Makefile -C eamples _test TESTOPTS="-tags jwx_goccy"
+	$(MAKE) -f $(PWD)/Makefile -C examples _test TESTOPTS="-tags jwx_goccy"
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test TESTOPTS="-tags jwx_goccy"
 	$(MAKE) _test TESTOPTS="-tags jwx_goccy -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
 	@# This is NOT cheating. tools to generate code don't need to be
@@ -44,11 +46,13 @@ smoke:
 
 smoke-stdlib:
 	$(MAKE) -f $(PWD)/Makefile -C examples _test
+	$(MAKE) -f $(PWD)/Makefile -C bench _test
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
 	$(MAKE) _test TESTOPTS="-short ./..."
 
 smoke-goccy:
-	$(MAKE) -f $(PWD)/Makefile -C eamples _test TESTOPTS="-tags jwx_goccy"
+	$(MAKE) -f $(PWD)/Makefile -C examples _test TESTOPTS="-tags jwx_goccy"
+	$(MAKE) -f $(PWD)/Makefile -C bench _test TESTOPTS="-tags jwx_goccy"
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test TESTOPTS="-tags jwx_goccy"
 	$(MAKE) _test TESOPTS="-short -tags jwx_goccy ./..."
 
