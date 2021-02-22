@@ -1,9 +1,10 @@
 Changes
 =======
 
-v1.1.3
+v1.1.3 22 Feb 2021
 [New features]
   * Implemented ES256K signing (#337)
+    This feature should be considered experimental
 
 [Miscellaneous]
   * Bump minimum required version to go1.15
