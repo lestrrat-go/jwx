@@ -23,10 +23,9 @@ cover-cmd:
 	$(MAKE) -f $(PWD)/Makefile -C examples TESTOPTS= test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C bench TESTOPTS= test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx TESTOPTS= test-cmd
-	@# This is NOT cheating. tools to generate code don't need to be
-	@# included in the final result. Also, we currently don't do
-	@# any active development on the jwx command
-	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" | grep -v "cmd/jwx/jwx.go" > coverage.out
+	@# This is NOT cheating. tools to generate code, and tools to
+	@# run tests don't need to be included in the final result.
+	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" > coverage.out
 	@rm coverage.out.tmp
 
 cover:
