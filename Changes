@@ -7,6 +7,8 @@ v1.1.4
 
      go build -tags jwx_es256k ...
 
+    Your program will still compile without this tag, but it will return
+    an error during runtime, when ES256K is encountered.
     This feature is still experimental.
 
 v1.1.3 22 Feb 2021
