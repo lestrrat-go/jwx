@@ -10,19 +10,19 @@ generate-%:
 realclean:
 	rm coverage.out
 
-_test:
-	go test -race $(TESTOPTS)
+test-cmd:
+	go test -v -race $(TESTOPTS)
 
 test:
-	$(MAKE) -C examples _test
-	$(MAKE) -C bench _test
-	$(MAKE) _test TESOPTS=./...
+	$(MAKE) test-cmd TESOPTS=./...
+	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
 
 cover-cmd:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test
-	$(MAKE) -f $(PWD)/Makefile -C bench _test
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
-	$(MAKE) _test 
+	$(MAKE) test-cmd 
+	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx test-cmd
 	@# This is NOT cheating. tools to generate code don't need to be
 	@# included in the final result. Also, we currently don't do
 	@# any active development on the jwx command
@@ -45,10 +45,10 @@ cover-all:
 	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
 
 smoke-cmd:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test
-	$(MAKE) -f $(PWD)/Makefile -C bench _test
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
-	$(MAKE) _test
+	$(MAKE) test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx test-cmd
 
 smoke:
 	$(MAKE) smoke-stdlib
@@ -60,10 +60,10 @@ smoke-goccy:
 	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy ./..."
 
 smoke-es256k:
-	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_256k ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_es256k ./..."
 
 smoke-all:
-	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy,jwx_256k ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy,jwx_es256k ./..."
 
 viewcover:
 	go tool cover -html=coverage.out
