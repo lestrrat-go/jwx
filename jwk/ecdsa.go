@@ -15,6 +15,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+func init() {
+	ecutil.RegisterCurve(elliptic.P256(), jwa.P256)
+	ecutil.RegisterCurve(elliptic.P384(), jwa.P384)
+	ecutil.RegisterCurve(elliptic.P521(), jwa.P521)
+}
+
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()

@@ -23,12 +23,6 @@ func RegisterCurve(crv elliptic.Curve, alg jwa.EllipticCurveAlgorithm) {
 	availableCrvs = append(availableCrvs, crv)
 }
 
-func init() {
-	RegisterCurve(elliptic.P256(), jwa.P256)
-	RegisterCurve(elliptic.P384(), jwa.P384)
-	RegisterCurve(elliptic.P521(), jwa.P521)
-}
-
 func IsAvailable(alg jwa.EllipticCurveAlgorithm) bool {
 	_, ok := algToCurve[alg]
 	return ok
