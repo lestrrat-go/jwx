@@ -26,7 +26,7 @@ jobs:
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-g, 'es256k', 'all'-
+            ${{ runner.os }}-go-
       - name: Install Go stable version
         if: matrix.go != 'tip'
         uses: actions/setup-go@v2
