@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        json_backend: [ 'stdlib', 'goccy' ]
+        json_backend: [ 'stdlib', 'goccy', 'es256k', 'all']
         go: [ '1.16.x', '1.15.x' ]
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
@@ -26,7 +26,7 @@ jobs:
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-g, 'es256k', 'all'-
       - name: Install Go stable version
         if: matrix.go != 'tip'
         uses: actions/setup-go@v2
@@ -47,10 +47,10 @@ jobs:
       - name: Test with coverage
         run: make cover-${{ matrix.json_backend }}
       - name: Upload code coverage to codecov
-        if: matrix.go == '1.15.x'
+        if: matrix.go == '1.16.x'
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
       - name: Check difference between generation code and commit code
         run: make check_diffs
-
+ 

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        json_backend: [ 'stdlib', 'goccy' ]
+        json_backend: [ 'stdlib', 'goccy', 'es256k', 'all' ]
         go: [ '1.16.x', '1.15.x' ]
     name: "Smoke [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
