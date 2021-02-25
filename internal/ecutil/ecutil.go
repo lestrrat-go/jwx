@@ -30,7 +30,7 @@ func init() {
 }
 
 func IsAvailable(alg jwa.EllipticCurveAlgorithm) bool {
-	_, ok := algToCurve[alg];
+	_, ok := algToCurve[alg]
 	return ok
 }
 
