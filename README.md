@@ -175,6 +175,17 @@ Supported content encryption algorithm:
 
 # Global Settings
 
+## Enabling ES256K
+
+Some algorithms are intentionally left out because they are not as common in the wild, and you may want to avoid compiling this extra information in.
+To enable these, you must explicitly provide a build tag.
+
+| Algorithm        | Build Tag  |
+|:-----------------|:-----------|
+| secp256k1/ES256K | jwx_es256k |
+
+If you do not provide these tags, the program will still compile, but it will return an error during runtime saying that these algorithms are not supported.
+
 ## Switching to a faster JSON library
 
 By default we use the standard library's `encoding/json` for all of our JSON needs.
