@@ -123,9 +123,10 @@ Supported signature algorithms:
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
-| EdDSA (1)                               | YES        | jwa.EdDSA                |
+| EdDSA (2)                               | YES        | jwa.EdDSA                |
 
 * Note 1: Experimental
+* Note 2: Experimental, and must be toggled using `-tags jwx_es256k` build tag
 
 ## JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
 

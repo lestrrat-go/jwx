@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.1.4
+[Miscellaneous]
+  * ES256K has been made non-default. You must enable it using a build tag
+
+     go build -tags jwx_es256k ...
+
 v1.1.3 22 Feb 2021
 [New features]
   * Implemented ES256K signing (#337)

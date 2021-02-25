@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/decred/dcrd/dcrec/secp256k1/v3"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
@@ -31,16 +30,9 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	copy(k.y, ybuf)
 
 	var crv jwa.EllipticCurveAlgorithm
-	switch rawKey.Curve {
-	case elliptic.P256():
-		crv = jwa.P256
-	case elliptic.P384():
-		crv = jwa.P384
-	case elliptic.P521():
-		crv = jwa.P521
-	case secp256k1.S256():
-		crv = jwa.Secp256k1
-	default:
+	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
+		crv = tmp
+	} else {
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
 	k.crv = &crv
@@ -67,16 +59,9 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	copy(k.d, dbuf)
 
 	var crv jwa.EllipticCurveAlgorithm
-	switch rawKey.Curve {
-	case elliptic.P256():
-		crv = jwa.P256
-	case elliptic.P384():
-		crv = jwa.P384
-	case elliptic.P521():
-		crv = jwa.P521
-	case secp256k1.S256():
-		crv = jwa.Secp256k1
-	default:
+	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
+		crv = tmp
+	} else {
 		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
 	k.crv = &crv
@@ -85,17 +70,10 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 }
 
 func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecdsa.PublicKey, error) {
-	var curve elliptic.Curve
-	switch alg {
-	case jwa.P256:
-		curve = elliptic.P256()
-	case jwa.P384:
-		curve = elliptic.P384()
-	case jwa.P521:
-		curve = elliptic.P521()
-	case jwa.Secp256k1:
-		curve = secp256k1.S256()
-	default:
+	var crv elliptic.Curve
+	if tmp, ok := ecutil.CurveForAlgorithm(alg); ok {
+		crv = tmp
+	} else {
 		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
 	}
 
@@ -103,7 +81,7 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	x.SetBytes(xbuf)
 	y.SetBytes(ybuf)
 
-	return &ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}, nil
+	return &ecdsa.PublicKey{Curve: crv, X: &x, Y: &y}, nil
 }
 
 // Raw returns the EC-DSA public key represented by this JWK
