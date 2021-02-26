@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 
@@ -209,24 +208,6 @@ func TestRoundtrip(t *testing.T) {
 				testRoundtrip(t, payload, alg, key, keys)
 			})
 		}
-	})
-	t.Run("ECDSA-256K", func(t *testing.T) {
-		if !ecutil.IsAvailable(jwa.Secp256k1) {
-			t.SkipNow()
-		}
-
-		t.Parallel()
-		key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1)
-		if !assert.NoError(t, err, "ECDSA key generated") {
-			return
-		}
-		jwkKey, _ := jwk.New(key.PublicKey)
-		keys := map[string]interface{}{
-			"Verify(ecdsa.PublicKey)":  key.PublicKey,
-			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
-			"Verify(jwk.Key)":          jwkKey,
-		}
-		testRoundtrip(t, payload, jwa.ES256K, key, keys)
 	})
 	t.Run("RSA", func(t *testing.T) {
 		t.Parallel()
