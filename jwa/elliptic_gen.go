@@ -19,7 +19,6 @@ const (
 	P256                 EllipticCurveAlgorithm = "P-256"
 	P384                 EllipticCurveAlgorithm = "P-384"
 	P521                 EllipticCurveAlgorithm = "P-521"
-	Secp256k1            EllipticCurveAlgorithm = "secp256k1"
 	X25519               EllipticCurveAlgorithm = "X25519"
 	X448                 EllipticCurveAlgorithm = "X448"
 )
