@@ -5,16 +5,14 @@ package jws_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestES256K(t *testing.T) {
-	if !ecutil.IsAvailable(jwa.Secp256k1) {
-		t.SkipNow()
-	}
+	payload := []byte("Hello, World!")
 
 	t.Parallel()
 	key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1)
