@@ -4,6 +4,8 @@ package jwa
 
 import (
 	"fmt"
+	"sort"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -30,27 +32,39 @@ const (
 	RS512       SignatureAlgorithm = "RS512" // RSASSA-PKCS-v1.5 using SHA-512
 )
 
-var allSignatureAlgorithms = []SignatureAlgorithm{
-	ES256,
-	ES256K,
-	ES384,
-	ES512,
-	EdDSA,
-	HS256,
-	HS384,
-	HS512,
-	NoSignature,
-	PS256,
-	PS384,
-	PS512,
-	RS256,
-	RS384,
-	RS512,
+var allSignatureAlgorithms = map[SignatureAlgorithm]struct{}{
+	ES256:       {},
+	ES256K:      {},
+	ES384:       {},
+	ES512:       {},
+	EdDSA:       {},
+	HS256:       {},
+	HS384:       {},
+	HS512:       {},
+	NoSignature: {},
+	PS256:       {},
+	PS384:       {},
+	PS512:       {},
+	RS256:       {},
+	RS384:       {},
+	RS512:       {},
 }
+
+var listSignatureAlgorithmOnce sync.Once
+var listSignatureAlgorithm []SignatureAlgorithm
 
 // SignatureAlgorithms returns a list of all available values for SignatureAlgorithm
 func SignatureAlgorithms() []SignatureAlgorithm {
-	return allSignatureAlgorithms
+	listSignatureAlgorithmOnce.Do(func() {
+		listSignatureAlgorithm = make([]SignatureAlgorithm, 0, len(allSignatureAlgorithms))
+		for v := range allSignatureAlgorithms {
+			listSignatureAlgorithm = append(listSignatureAlgorithm, v)
+		}
+		sort.Slice(listSignatureAlgorithm, func(i, j int) bool {
+			return string(listSignatureAlgorithm[i]) < string(listSignatureAlgorithm[j])
+		})
+	})
+	return listSignatureAlgorithm
 }
 
 // Accept is used when conversion from values given by
@@ -71,9 +85,7 @@ func (v *SignatureAlgorithm) Accept(value interface{}) error {
 		}
 		tmp = SignatureAlgorithm(s)
 	}
-	switch tmp {
-	case ES256, ES256K, ES384, ES512, EdDSA, HS256, HS384, HS512, NoSignature, PS256, PS384, PS512, RS256, RS384, RS512:
-	default:
+	if _, ok := allSignatureAlgorithms[tmp]; !ok {
 		return errors.Errorf(`invalid jwa.SignatureAlgorithm value`)
 	}
 

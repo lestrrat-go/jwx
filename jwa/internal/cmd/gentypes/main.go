@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
-	"golang.org/x/tools/imports"
 )
 
 func main() {
@@ -130,10 +130,6 @@ func _main() error {
 				{
 					name:  `P521`,
 					value: `P-521`,
-				},
-				{
-					name:  `Secp256k1`,
-					value: `secp256k1`,
 				},
 				{
 					name:  `Ed25519`,
@@ -404,16 +400,28 @@ func (t typ) Generate() error {
 	}
 	fmt.Fprintf(&buf, "\n)") // end const
 
-	fmt.Fprintf(&buf, "\nvar all%[1]ss = []%s {", t.name, t.name)
+	fmt.Fprintf(&buf, "\nvar all%[1]ss = map[%[1]s]struct{} {", t.name)
 	for _, e := range t.elements {
 		if !e.invalid {
-			fmt.Fprintf(&buf, "\n%s,", e.name)
+			fmt.Fprintf(&buf, "\n%s: {},", e.name)
 		}
 	}
 	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\n\nvar list%sOnce sync.Once", t.name)
+	fmt.Fprintf(&buf, "\nvar list%[1]s []%[1]s", t.name)
 	fmt.Fprintf(&buf, "\n\n// %[1]ss returns a list of all available values for %[1]s", t.name)
 	fmt.Fprintf(&buf, "\nfunc %[1]ss() []%[1]s {", t.name)
-	fmt.Fprintf(&buf, "\nreturn all%ss", t.name)
+	fmt.Fprintf(&buf, "\nlist%sOnce.Do(func() {", t.name)
+	fmt.Fprintf(&buf, "\nlist%[1]s = make([]%[1]s, 0, len(all%[1]ss))", t.name)
+	fmt.Fprintf(&buf, "\nfor v := range all%ss {", t.name)
+	fmt.Fprintf(&buf, "\nlist%[1]s = append(list%[1]s, v)", t.name)
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nsort.Slice(list%s, func(i, j int) bool {", t.name)
+	fmt.Fprintf(&buf, "\nreturn string(list%[1]s[i]) < string(list%[1]s[j])", t.name)
+	fmt.Fprintf(&buf, "\n})")
+	fmt.Fprintf(&buf, "\n})")
+	fmt.Fprintf(&buf, "\nreturn list%s", t.name)
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\n// Accept is used when conversion from values given by")
@@ -435,24 +443,7 @@ func (t typ) Generate() error {
 	fmt.Fprintf(&buf, "\ntmp = %s(s)", t.name)
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\nswitch tmp {")
-	fmt.Fprintf(&buf, "\ncase ")
-	valids := make([]element, 0, len(t.elements))
-	for _, e := range t.elements {
-		if e.invalid {
-			continue
-		}
-		valids = append(valids, e)
-	}
-
-	for i, e := range valids {
-		fmt.Fprintf(&buf, "%s", e.name)
-		if i < len(valids)-1 {
-			fmt.Fprintf(&buf, ", ")
-		}
-	}
-	fmt.Fprintf(&buf, ":")
-	fmt.Fprintf(&buf, "\ndefault:")
+	fmt.Fprintf(&buf, "\nif _, ok := all%ss[tmp]; !ok {", t.name)
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid jwa.%s value`)", t.name)
 	fmt.Fprintf(&buf, "\n}")
 
@@ -489,19 +480,12 @@ func (t typ) Generate() error {
 		fmt.Fprintf(&buf, "\n}")
 	}
 
-	formatted, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		os.Stdout.Write(buf.Bytes())
-		return errors.Wrap(err, `failed to format source`)
+	if err := codegen.WriteFile(t.filename, &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
+		}
+		return errors.Wrapf(err, `failed to write to %s`, t.filename)
 	}
-
-	f, err := os.Create(t.filename)
-	if err != nil {
-		return errors.Wrapf(err, `failed to create %s`, t.filename)
-	}
-	defer f.Close()
-	f.Write(formatted)
-
 	return nil
 }
 
@@ -619,19 +603,12 @@ func (t typ) GenerateTest() error {
 
 	fmt.Fprintf(&buf, "\n}")
 
-	formatted, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		os.Stdout.Write(buf.Bytes())
-		return errors.Wrap(err, `failed to format source`)
-	}
-
 	filename := strings.Replace(t.filename, "_gen.go", "_gen_test.go", 1)
-	f, err := os.Create(filename)
-	if err != nil {
-		return errors.Wrapf(err, `failed to create %s`, t.filename)
+	if err := codegen.WriteFile(filename, &buf, codegen.WithFormatCode(true)); err != nil {
+		if cfe, ok := err.(codegen.CodeFormatError); ok {
+			fmt.Fprint(os.Stderr, cfe.Source())
+		}
+		return errors.Wrapf(err, `failed to write to %s`, filename)
 	}
-	defer f.Close()
-	f.Write(formatted)
-
 	return nil
 }
