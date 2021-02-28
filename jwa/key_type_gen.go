@@ -4,6 +4,8 @@ package jwa
 
 import (
 	"fmt"
+	"sort"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -20,16 +22,28 @@ const (
 	RSA            KeyType = "RSA" // RSA
 )
 
-var allKeyTypes = []KeyType{
-	EC,
-	OKP,
-	OctetSeq,
-	RSA,
+var allKeyTypes = map[KeyType]struct{}{
+	EC:       {},
+	OKP:      {},
+	OctetSeq: {},
+	RSA:      {},
 }
+
+var listKeyTypeOnce sync.Once
+var listKeyType []KeyType
 
 // KeyTypes returns a list of all available values for KeyType
 func KeyTypes() []KeyType {
-	return allKeyTypes
+	listKeyTypeOnce.Do(func() {
+		listKeyType = make([]KeyType, 0, len(allKeyTypes))
+		for v := range allKeyTypes {
+			listKeyType = append(listKeyType, v)
+		}
+		sort.Slice(listKeyType, func(i, j int) bool {
+			return string(listKeyType[i]) < string(listKeyType[j])
+		})
+	})
+	return listKeyType
 }
 
 // Accept is used when conversion from values given by
@@ -50,9 +64,7 @@ func (v *KeyType) Accept(value interface{}) error {
 		}
 		tmp = KeyType(s)
 	}
-	switch tmp {
-	case EC, OKP, OctetSeq, RSA:
-	default:
+	if _, ok := allKeyTypes[tmp]; !ok {
 		return errors.Errorf(`invalid jwa.KeyType value`)
 	}
 

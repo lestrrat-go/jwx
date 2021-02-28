@@ -123,9 +123,10 @@ Supported signature algorithms:
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
-| EdDSA (1)                               | YES        | jwa.EdDSA                |
+| EdDSA (2)                               | YES        | jwa.EdDSA                |
 
 * Note 1: Experimental
+* Note 2: Experimental, and must be toggled using `-tags jwx_es256k` build tag
 
 ## JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
 
@@ -173,6 +174,17 @@ Supported content encryption algorithm:
 | AES-GCM (256)               | YES        | jwa.A256GCM              |
 
 # Global Settings
+
+## Enabling ES256K
+
+Some algorithms are intentionally left out because they are not as common in the wild, and you may want to avoid compiling this extra information in.
+To enable these, you must explicitly provide a build tag.
+
+| Algorithm        | Build Tag  |
+|:-----------------|:-----------|
+| secp256k1/ES256K | jwx_es256k |
+
+If you do not provide these tags, the program will still compile, but it will return an error during runtime saying that these algorithms are not supported.
 
 ## Switching to a faster JSON library
 

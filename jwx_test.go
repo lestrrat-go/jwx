@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -18,8 +19,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestJSONEngine(t *testing.T) {
+func TestShowBuildInfo(t *testing.T) {
 	t.Logf("Running tests using JSON backend => %s\n", json.Engine())
+	t.Logf("Available elliptic curves:")
+	for _, alg := range ecutil.AvailableAlgorithms() {
+		t.Logf("  %s", alg)
+	}
 }
 
 type jsonUnmarshalWrapper struct {

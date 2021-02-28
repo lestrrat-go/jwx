@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -1141,12 +1142,10 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("Curve types", func(t *testing.T) {
-		crvs := []jwa.EllipticCurveAlgorithm{jwa.P256, jwa.P384, jwa.P521, jwa.Secp256k1}
-
-		for _, crv := range crvs {
-			crv := crv
-			t.Run(crv.String(), func(t *testing.T) {
-				key, err := jwxtest.GenerateEcdsaKey(crv)
+		for _, alg := range ecutil.AvailableAlgorithms() {
+			alg := alg
+			t.Run(alg.String(), func(t *testing.T) {
+				key, err := jwxtest.GenerateEcdsaKey(alg)
 				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 					return
 				}

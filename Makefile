@@ -10,51 +10,59 @@ generate-%:
 realclean:
 	rm coverage.out
 
-_test:
-	go test -race $(TESTOPTS)
+test-cmd:
+	go test -v -race $(TESTOPTS)
 
 test:
-	$(MAKE) -C examples _test
-	$(MAKE) -C bench _test
-	$(MAKE) _test TESOPTS=./...
+	$(MAKE) test-cmd TESOPTS=./...
+	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+
+cover-cmd:
+	$(MAKE) test-cmd 
+	$(MAKE) -f $(PWD)/Makefile -C examples TESTOPTS= test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench TESTOPTS= test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx TESTOPTS= test-cmd
+	@# This is NOT cheating. tools to generate code, and tools to
+	@# run tests don't need to be included in the final result.
+	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" > coverage.out
+	@rm coverage.out.tmp
 
 cover:
 	$(MAKE) cover-stdlib
 
 cover-stdlib:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test
-	$(MAKE) -f $(PWD)/Makefile -C bench _test
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
-	$(MAKE) _test TESTOPTS="-coverpkg=./... -coverprofile=coverage.out.tmp ./..."
-	@# This is NOT cheating. tools to generate code don't need to be
-	@# included in the final result. Also, we currently don't do
-	@# any active development on the jwx command
-	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" | grep -v "cmd/jwx/jwx.go" > coverage.out
-	@rm coverage.out.tmp
+	$(MAKE) cover-cmd TESTOPTS="-coverpkg=./... -coverprofile=coverage.out.tmp ./..."
 
 cover-goccy:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test TESTOPTS="-tags jwx_goccy"
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test TESTOPTS="-tags jwx_goccy"
-	$(MAKE) _test TESTOPTS="-tags jwx_goccy -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
-	@# This is NOT cheating. tools to generate code don't need to be
-	@# included in the final result
-	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" | grep -v "cmd/jwx/jwx.go" > coverage.out
-	@rm coverage.out.tmp
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+
+cover-es256k:
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_es256k -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+
+cover-all:
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+
+smoke-cmd:
+	$(MAKE) test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx test-cmd
 
 smoke:
 	$(MAKE) smoke-stdlib
 
 smoke-stdlib:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test
-	$(MAKE) -f $(PWD)/Makefile -C bench _test
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test
-	$(MAKE) _test TESTOPTS="-short ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-short ./..."
 
 smoke-goccy:
-	$(MAKE) -f $(PWD)/Makefile -C examples _test TESTOPTS="-tags jwx_goccy"
-	$(MAKE) -f $(PWD)/Makefile -C bench _test TESTOPTS="-tags jwx_goccy"
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx _test TESTOPTS="-tags jwx_goccy"
-	$(MAKE) _test TESOPTS="-short -tags jwx_goccy ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy ./..."
+
+smoke-es256k:
+	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_es256k ./..."
+
+smoke-all:
+	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy,jwx_es256k ./..."
 
 viewcover:
 	go tool cover -html=coverage.out
@@ -69,6 +77,10 @@ imports:
 	goimports -w ./
 
 tidy:
+	$(MAKE) tidy-cmd
+	$(MAKE) -f $(PWD)/Makefile -C examples tidy-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench tidy-cmd
+	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx tidy-cmd
+
+tidy-cmd:
 	go mod tidy
-	cd examples && go mod tidy && cd ..
-	cd bench && go mod tidy && cd ..
