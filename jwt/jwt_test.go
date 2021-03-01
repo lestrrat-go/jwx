@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -541,7 +542,7 @@ func TestParseRequest(t *testing.T) {
 
 	tok := jwt.New()
 	tok.Set(jwt.IssuerKey, u)
-	tok.Set(jwt.IssuedAtKey, time.Now())
+	tok.Set(jwt.IssuedAtKey, time.Now().Round(0))
 
 	signed, _ := jwt.Sign(tok, jwa.ES256, privkey)
 
@@ -552,7 +553,7 @@ func TestParseRequest(t *testing.T) {
 		Error   bool
 	}{
 		{
-			Name: "Token in header (w/o options)",
+			Name: "Token in Authorization header (w/o options)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
 				req.Header.Add("Authorization", "Bearer "+string(signed))
@@ -561,6 +562,58 @@ func TestParseRequest(t *testing.T) {
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
 			},
+		},
+		{
+			Name: "Token in Authorization header but we specified another header key",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Token in x-authroization header (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("x-authorization", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in access_token form field (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, u, nil)
+				// for whatever reason, I can't populate req.Body and get this to work
+				// so populating req.Form directly instead
+				req.Form = url.Values{}
+				req.Form.Add("access_token", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in access_token form field (w/o option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, u, nil)
+				// for whatever reason, I can't populate req.Body and get this to work
+				// so populating req.Form directly instead
+				req.Form = url.Values{}
+				req.Form.Add("access_token", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
 		},
 	}
 
