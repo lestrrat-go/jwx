@@ -29,8 +29,8 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 	return ParseString(v, options...)
 }
 
-// ParseValues parses a JWT stored in a url.Value.
-func ParseValues(values url.Values, name string, options ...ParseOption) (Token, error) {
+// ParseForm parses a JWT stored in a url.Value.
+func ParseForm(values url.Values, name string, options ...ParseOption) (Token, error) {
 	v := strings.TrimSpace(values.Get(name))
 	if v == "" {
 		return nil, errors.Errorf(`empty value (%s)`, name)
@@ -83,7 +83,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	}
 
 	for _, formkey := range formkeys {
-		if tok, err := ParseValues(req.Form, formkey, parseOptions...); err == nil {
+		if tok, err := ParseForm(req.Form, formkey, parseOptions...); err == nil {
 			return tok, nil
 		}
 	}

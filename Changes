@@ -3,7 +3,7 @@ Changes
 
 v1.1.4
 [New features]
-  * jwt.ParseRequest, jwt.ParseHeader, jwt.ParseValues have been added.
+  * jwt.ParseRequest, jwt.ParseHeader, jwt.ParseForm have been added.
     They are convenience functions to parse JWTs out of a HTTP request.
 
 [Miscellaneous]
