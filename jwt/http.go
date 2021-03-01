@@ -40,14 +40,19 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 }
 
 // ParseRequest searches a http.Request object for a JWT token.
-// By default, "Authorization" header will always be searched.
+//
+// Specifying WithHeaderKey() will tell it to search under a specific
+// header key. Specifying WithFormKey() will tell it to search under
+// a specific form field.
+//
+// By default, "Authorization" header will be searched.
 //
 // If WithHeaderKey() is used, you must explicitly re-enable searching for "Authorization" header.
 //
 //   # searches for "Authorization"
 //   jwthttp.ParseRequest(req)
 //
-//   # searches for "x-my-token"
+//   # searches for "x-my-token" ONLY.
 //   jwthttp.ParseRequest(req, http.WithHeaderKey("x-my-token"))
 //
 //   # searches for "Authorization" AND "x-my-token"
