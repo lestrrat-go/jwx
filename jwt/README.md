@@ -3,11 +3,11 @@
 Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
 * Convenience methods for oft-used keys ("aud", "sub", "iss", etc)
+* Convenience functions to exstract/parse from http.Request, http.Header, url.Values
 * Ability to Get/Set arbitrary keys
 * Conversion to and from JSON
 * Generate signed tokens
 * Verify signed tokens
-
 
 # SYNOPSIS
 
