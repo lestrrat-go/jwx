@@ -558,9 +558,9 @@ func TestParseRequest(t *testing.T) {
 				return httptest.NewRequest(http.MethodGet, u, nil)
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, 
-					jwt.WithHeaderKey("Authorization"), 
-					jwt.WithHeaderKey("x-authorization"), 
+				return jwt.ParseRequest(req,
+					jwt.WithHeaderKey("Authorization"),
+					jwt.WithHeaderKey("x-authorization"),
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
 					jwt.WithVerify(jwa.ES256, pubkey))
