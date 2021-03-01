@@ -6,6 +6,8 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -529,4 +531,54 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestParseRequest(t *testing.T) {
+	const u = "https://github.com/lestrrat-gow/jwx/jwt"
+
+	privkey, _ := jwxtest.GenerateEcdsaJwk()
+	pubkey, _ := jwk.PublicKeyOf(privkey)
+
+	tok := jwt.New()
+	tok.Set(jwt.IssuerKey, u)
+	tok.Set(jwt.IssuedAtKey, time.Now())
+
+	signed, _ := jwt.Sign(tok, jwa.ES256, privkey)
+
+	testcases := []struct {
+		Name    string
+		Request func() *http.Request
+		Parse   func(*http.Request) (jwt.Token, error)
+		Error   bool
+	}{
+		{
+			Name: "Token in header (w/o options)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := tc.Parse(tc.Request())
+			if tc.Error {
+				assert.Error(t, err, `tc.Parse should fail`)
+				return
+			}
+
+			if !assert.NoError(t, err, `tc.Parse should succeed`) {
+				return
+			}
+
+			if !assert.True(t, jwt.Equal(tok, got), `tokens should match`) {
+				return
+			}
+		})
+	}
 }

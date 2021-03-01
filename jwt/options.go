@@ -11,8 +11,8 @@ import (
 
 type Option = option.Interface
 
-// HTTPParseOption describes an Option that can be passed to `ParseRequest()`.
-type HTTPParseOption interface {
+// ParseRequestOption describes an Option that can be passed to `ParseRequest()`.
+type ParseRequestOption interface {
 	ParseOption
 	httpParseOption()
 }
@@ -192,7 +192,7 @@ func WithClaimValue(name string, v interface{}) ValidateOption {
 //
 // While the type system allows this option to be passed to jwt.Parse() directly,
 // doing so will have no effect. Only use it for HTTP request parsing functions
-func WithHeaderKey(v string) HTTPParseOption {
+func WithHeaderKey(v string) ParseRequestOption {
 	return &httpParseOption{newParseOption(identHeaderKey{}, v)}
 }
 
@@ -200,6 +200,6 @@ func WithHeaderKey(v string) HTTPParseOption {
 //
 // While the type system allows this option to be passed to jwt.Parse() directly,
 // doing so will have no effect. Only use it for HTTP request parsing functions
-func WithFormKey(v string) HTTPParseOption {
+func WithFormKey(v string) ParseRequestOption {
 	return &httpParseOption{newParseOption(identFormKey{}, v)}
 }

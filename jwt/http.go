@@ -52,7 +52,7 @@ func ParseValues(values url.Values, name string, options ...ParseOption) (Token,
 //
 //   # searches for "Authorization" AND "x-my-token"
 //   jwthttp.ParseRequest(req, http.WithHeaderKey("Authorization"), http.WithHeaderKey("x-my-token"))
-func ParseRequest(req *http.Request, options ...HTTPParseOption) (Token, error) {
+func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var hdrkeys []string
 	var formkeys []string
 	var parseOptions []ParseOption
