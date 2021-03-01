@@ -630,6 +630,14 @@ func TestParseRequest(t *testing.T) {
 			}
 
 			if !assert.True(t, jwt.Equal(tok, got), `tokens should match`) {
+				{
+					buf, _ := json.MarshalIndent(tok, "", "  ")
+					t.Logf("expected: %s", buf)
+				}
+				{
+					buf, _ := json.MarshalIndent(got, "", "  ")
+					t.Logf("got: %s", buf)
+				}
 				return
 			}
 		})
