@@ -272,12 +272,12 @@ func Equal(t1, t2 Token) bool {
 		v2 := pair.Value
 		switch tmp := v1.(type) {
 		case time.Time:
-			tmp = tmp.Round(0).Round(time.Second)
 			tmp2, ok := v2.(time.Time)
 			if !ok {
 				return false
 			}
-			tmp2 = tmp2.Round(0).Round(time.Second)
+			tmp = tmp.Round(0).Truncate(time.Second)
+			tmp2 = tmp2.Round(0).Truncate(time.Second)
 			if !tmp.Equal(tmp2) {
 				return false
 			}
