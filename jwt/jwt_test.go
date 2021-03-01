@@ -6,6 +6,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -529,4 +532,140 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestParseRequest(t *testing.T) {
+	const u = "https://github.com/lestrrat-gow/jwx/jwt"
+
+	privkey, _ := jwxtest.GenerateEcdsaJwk()
+	pubkey, _ := jwk.PublicKeyOf(privkey)
+
+	tok := jwt.New()
+	tok.Set(jwt.IssuerKey, u)
+	tok.Set(jwt.IssuedAtKey, time.Now().Round(0))
+
+	signed, _ := jwt.Sign(tok, jwa.ES256, privkey)
+
+	testcases := []struct {
+		Name    string
+		Request func() *http.Request
+		Parse   func(*http.Request) (jwt.Token, error)
+		Error   bool
+	}{
+		{
+			Name: "Token not present (w/ multiple options)",
+			Request: func() *http.Request {
+				return httptest.NewRequest(http.MethodGet, u, nil)
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req,
+					jwt.WithHeaderKey("Authorization"),
+					jwt.WithHeaderKey("x-authorization"),
+					jwt.WithFormKey("access_token"),
+					jwt.WithFormKey("token"),
+					jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Token not present (w/o options)",
+			Request: func() *http.Request {
+				return httptest.NewRequest(http.MethodGet, u, nil)
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Token in Authorization header (w/o options)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in Authorization header but we specified another header key",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Token in x-authorization header (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("x-authorization", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in access_token form field (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, u, nil)
+				// for whatever reason, I can't populate req.Body and get this to work
+				// so populating req.Form directly instead
+				req.Form = url.Values{}
+				req.Form.Add("access_token", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in access_token form field (w/o option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, u, nil)
+				// for whatever reason, I can't populate req.Body and get this to work
+				// so populating req.Form directly instead
+				req.Form = url.Values{}
+				req.Form.Add("access_token", string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := tc.Parse(tc.Request())
+			if tc.Error {
+				assert.Error(t, err, `tc.Parse should fail`)
+				return
+			}
+
+			if !assert.NoError(t, err, `tc.Parse should succeed`) {
+				return
+			}
+
+			if !assert.True(t, jwt.Equal(tok, got), `tokens should match`) {
+				{
+					buf, _ := json.MarshalIndent(tok, "", "  ")
+					t.Logf("expected: %s", buf)
+				}
+				{
+					buf, _ := json.MarshalIndent(got, "", "  ")
+					t.Logf("got: %s", buf)
+				}
+				return
+			}
+		})
+	}
 }

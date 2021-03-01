@@ -2,7 +2,14 @@ Changes
 =======
 
 v1.1.4
+[New features]
+  * jwt.ParseRequest, jwt.ParseHeader, jwt.ParseForm have been added.
+    They are convenience functions to parse JWTs out of a HTTP request.
+
 [Miscellaneous]
+  * Fix jwt.Equals() so that comparison between values containing time.Time
+    actually work
+
   * ES256K has been made non-default. You must enable it using a build tag
 
      go build -tags jwx_es256k ...

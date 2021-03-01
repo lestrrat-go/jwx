@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 
@@ -241,10 +242,23 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 // to compare tokens as they will also compare extra detail such as
 // sync.Mutex objects used to control concurrent access.
 //
-// The comparison for values is currently done using a simple equality ("==").
+// The comparison for values is currently done using a simple equality ("=="),
+// except for time.Time, which uses time.Equal after dropping the monotonic
+// clock and truncating the values to 1 second accuracy.
+//
+// if both t1 and t2 are nil, returns true
 func Equal(t1, t2 Token) bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if t1 == nil && t2 == nil {
+		return true
+	}
+
+	// we already checked for t1 == t2 == nil, so safe to do this
+	if t1 == nil || t2 == nil {
+		return false
+	}
 
 	m1, err := t1.AsMap(ctx)
 	if err != nil {
@@ -253,8 +267,24 @@ func Equal(t1, t2 Token) bool {
 
 	for iter := t2.Iterate(ctx); iter.Next(ctx); {
 		pair := iter.Pair()
-		if m1[pair.Key.(string)] != pair.Value {
-			return false
+
+		v1 := m1[pair.Key.(string)]
+		v2 := pair.Value
+		switch tmp := v1.(type) {
+		case time.Time:
+			tmp2, ok := v2.(time.Time)
+			if !ok {
+				return false
+			}
+			tmp = tmp.Round(0).Truncate(time.Second)
+			tmp2 = tmp2.Round(0).Truncate(time.Second)
+			if !tmp.Equal(tmp2) {
+				return false
+			}
+		default:
+			if v1 != v2 {
+				return false
+			}
 		}
 		delete(m1, pair.Key.(string))
 	}

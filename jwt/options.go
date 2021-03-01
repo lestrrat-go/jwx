@@ -11,6 +11,55 @@ import (
 
 type Option = option.Interface
 
+// ParseRequestOption describes an Option that can be passed to `ParseRequest()`.
+type ParseRequestOption interface {
+	ParseOption
+	httpParseOption()
+}
+
+type httpParseOption struct {
+	ParseOption
+}
+
+func (*httpParseOption) httpParseOption() {}
+
+// ParseOption describes an Option that can be passed to `Parse()`.
+// ParseOption also implements ReadFileOption, therefore it may be
+// safely pass them to `jwt.ReadFile()`
+type ParseOption interface {
+	ReadFileOption
+	parseOption()
+}
+
+type parseOption struct {
+	Option
+}
+
+func newParseOption(n interface{}, v interface{}) ParseOption {
+	return &parseOption{option.New(n, v)}
+}
+
+func (*parseOption) parseOption()    {}
+func (*parseOption) readFileOption() {}
+
+// ValidateOption describes an Option that can be passed to Validate().
+// ValidateOption also implements ParseOption, therefore it may be
+// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
+type ValidateOption interface {
+	ParseOption
+	validateOption()
+}
+
+type validateOption struct {
+	ParseOption
+}
+
+func newValidateOption(n interface{}, v interface{}) ValidateOption {
+	return &validateOption{newParseOption(n, v)}
+}
+
+func (*validateOption) validateOption() {}
+
 type identAcceptableSkew struct{}
 type identAudience struct{}
 type identClaim struct{}
@@ -25,42 +74,8 @@ type identToken struct{}
 type identValidate struct{}
 type identVerify struct{}
 
-type parseOption struct {
-	Option
-}
-
-func newParseOption(n interface{}, v interface{}) ParseOption {
-	return &parseOption{option.New(n, v)}
-}
-
-func (*parseOption) parseOption()    {}
-func (*parseOption) readFileOption() {}
-
-// ParseOption describes an Option that can be passed to `Parse()`.
-// ParseOption also implements ReadFileOption, therefore it may be
-// safely pass them to `jwt.ReadFile()`
-type ParseOption interface {
-	ReadFileOption
-	parseOption()
-}
-
-type validateOption struct {
-	ParseOption
-}
-
-func newValidateOption(n interface{}, v interface{}) ValidateOption {
-	return &validateOption{newParseOption(n, v)}
-}
-
-func (*validateOption) validateOption() {}
-
-// ValidateOption describes an Option that can be passed to Validate().
-// ValidateOption also implements ParseOption, therefore it may be
-// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
-type ValidateOption interface {
-	ParseOption
-	validateOption()
-}
+type identHeaderKey struct{}
+type identFormKey struct{}
 
 type VerifyParameters interface {
 	Algorithm() jwa.SignatureAlgorithm
@@ -171,4 +186,20 @@ type claimValue struct {
 // WithClaimValue specifies that expected any claim value.
 func WithClaimValue(name string, v interface{}) ValidateOption {
 	return newValidateOption(identClaim{}, claimValue{name, v})
+}
+
+// WithHeaderKey is used to specify header keys to search for tokens.
+//
+// While the type system allows this option to be passed to jwt.Parse() directly,
+// doing so will have no effect. Only use it for HTTP request parsing functions
+func WithHeaderKey(v string) ParseRequestOption {
+	return &httpParseOption{newParseOption(identHeaderKey{}, v)}
+}
+
+// WithFormKey is used to specify header keys to search for tokens.
+//
+// While the type system allows this option to be passed to jwt.Parse() directly,
+// doing so will have no effect. Only use it for HTTP request parsing functions
+func WithFormKey(v string) ParseRequestOption {
+	return &httpParseOption{newParseOption(identFormKey{}, v)}
 }
