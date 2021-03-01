@@ -244,7 +244,7 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 //
 // The comparison for values is currently done using a simple equality ("=="),
 // except for time.Time, which uses time.Equal after dropping the monotonic
-// clock and rounding the values up to 1 second accuracy.
+// clock and truncating the values to 1 second accuracy.
 //
 // if both t1 and t2 are nil, returns true
 func Equal(t1, t2 Token) bool {
