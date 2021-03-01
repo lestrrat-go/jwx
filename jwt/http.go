@@ -39,7 +39,7 @@ func ParseValues(values url.Values, name string, options ...ParseOption) (Token,
 	return ParseString(v, options...)
 }
 
-// ParseRequest searches a http.Request object for a JWT token. 
+// ParseRequest searches a http.Request object for a JWT token.
 // By default, "Authorization" header will always be searched.
 //
 // If WithHeaderKey() is used, you must explicitly re-enable searching for "Authorization" header.
