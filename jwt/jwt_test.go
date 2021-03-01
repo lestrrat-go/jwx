@@ -576,7 +576,7 @@ func TestParseRequest(t *testing.T) {
 			Error: true,
 		},
 		{
-			Name: "Token in x-authroization header (w/ option)",
+			Name: "Token in x-authorization header (w/ option)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
 				req.Header.Add("x-authorization", string(signed))
@@ -618,6 +618,7 @@ func TestParseRequest(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			got, err := tc.Parse(tc.Request())
 			if tc.Error {
