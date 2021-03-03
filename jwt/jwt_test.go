@@ -465,6 +465,28 @@ func TestSignJWK(t *testing.T) {
 	assert.Len(t, signatures, 1)
 }
 
+func TestSignWithTypHeader(t *testing.T) {
+	t.Parallel()
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	t1 := jwt.New()
+	hdrs := jws.NewHeaders()
+	hdrs.Set(`typ`, `custom-typ`)
+
+	signed, err := jwt.Sign(t1, jwa.RS256, key, jwt.WithHeaders(hdrs))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	msg, err := jws.Parse(signed)
+	if !assert.Equal(t, `custom-typ`, msg.Signatures()[0].ProtectedHeaders().Type(), `jwt.WithHeaders option sholud allow setting "typ" header field`) {
+		return
+	}
+}
+
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
