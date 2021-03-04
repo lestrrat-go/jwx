@@ -227,9 +227,12 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 		hdr = jws.NewHeaders()
 	}
 
-	if err := hdr.Set(`typ`, `JWT`); err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
+	if _, ok := hdr.Get(`typ`); !ok {
+		if err := hdr.Set(`typ`, `JWT`); err != nil {
+			return nil, errors.Wrap(err, `failed to sign payload`)
+		}
 	}
+
 	sign, err := jws.Sign(buf, alg, key, jws.WithHeaders(hdr))
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to sign payload`)
