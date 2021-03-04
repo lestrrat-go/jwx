@@ -332,6 +332,12 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 			return nil, nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
 		}
 		return key, rest, nil
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, `failed to parse certificate`)
+		}
+		return cert.PublicKey, rest, nil
 	default:
 		return nil, nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
 	}
