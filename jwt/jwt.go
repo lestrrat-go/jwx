@@ -229,7 +229,7 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Optio
 
 	if _, ok := hdr.Get(`typ`); !ok {
 		if err := hdr.Set(`typ`, `JWT`); err != nil {
-			return nil, errors.Wrap(err, `failed to sign payload`)
+			return nil, errors.Wrap(err, `failed to set typ field`)
 		}
 	}
 
