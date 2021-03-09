@@ -488,6 +488,9 @@ func TestSignTyp(t *testing.T) {
 			return
 		}
 		got, err := getJWTHeaders(signed)
+		if !assert.NoError(t, err) {
+			return
+		}
 		if !assert.Equal(t, `JWT`, got.Type(), `"typ" header parameter should be set to JWT`) {
 			return
 		}
@@ -503,6 +506,9 @@ func TestSignTyp(t *testing.T) {
 			return
 		}
 		got, err := getJWTHeaders(signed)
+		if !assert.NoError(t, err) {
+			return
+		}
 		if !assert.Equal(t, `custom-typ`, got.Type(), `"typ" header parameter should be set to the custom value`) {
 			return
 		}
