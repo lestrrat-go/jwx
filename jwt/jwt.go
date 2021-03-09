@@ -208,7 +208,8 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 // the type of key you provided, otherwise an error is returned.
 //
 // The protected header will also automatically have the `typ` field set
-// to the literal value `JWT`.
+// to the literal value `JWT`, unless you provide a custom value for it
+// by jwt.WithHeaders option.
 func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
 	var hdr jws.Headers
 	for _, o := range options {
