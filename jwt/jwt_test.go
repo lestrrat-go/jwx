@@ -465,6 +465,56 @@ func TestSignJWK(t *testing.T) {
 	assert.Len(t, signatures, 1)
 }
 
+func getJWTHeaders(jwt []byte) (jws.Headers, error) {
+	msg, err := jws.Parse(jwt)
+	if err != nil {
+		return nil, err
+	}
+	return msg.Signatures()[0].ProtectedHeaders(), nil
+}
+
+func TestSignTyp(t *testing.T) {
+	t.Parallel()
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	t.Run(`"typ" header parameter should be set to JWT by default`, func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+		signed, err := jwt.Sign(t1, jwa.RS256, key)
+		if !assert.NoError(t, err) {
+			return
+		}
+		got, err := getJWTHeaders(signed)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Equal(t, `JWT`, got.Type(), `"typ" header parameter should be set to JWT`) {
+			return
+		}
+	})
+
+	t.Run(`"typ" header parameter should be customizable by WithHeaders`, func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+		hdrs := jws.NewHeaders()
+		hdrs.Set(`typ`, `custom-typ`)
+		signed, err := jwt.Sign(t1, jwa.RS256, key, jwt.WithHeaders(hdrs))
+		if !assert.NoError(t, err) {
+			return
+		}
+		got, err := getJWTHeaders(signed)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.Equal(t, `custom-typ`, got.Type(), `"typ" header parameter should be set to the custom value`) {
+			return
+		}
+	})
+}
+
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
