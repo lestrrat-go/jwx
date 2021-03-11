@@ -1,7 +1,10 @@
 Changes
 =======
 
-v1.1.5
+v1.1.5 12 Mar 2021
+  This is a security fix release. The JWT validation could be skipped
+  for empty values. Upgrade recommended
+
 [Bug fixes]
   * JWT validation could be skipped for empty fields (#352).
   * Allow setting JWT "typ" fields to any value (#351).
