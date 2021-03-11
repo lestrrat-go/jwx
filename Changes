@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.1.5
+[Bug fixes]
+  * JWT validation could be skipped for empty fields.
+
 v1.1.4 02 Mar 2021
 [New features]
   * jwt.ParseRequest, jwt.ParseHeader, jwt.ParseForm have been added.
