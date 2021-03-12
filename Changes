@@ -5,9 +5,12 @@ v1.1.5 12 Mar 2021
   This is a security fix release. The JWT validation could be skipped
   for empty values. Upgrade recommended
 
-[Bug fixes]
+[Security Fix]
   * JWT validation could be skipped for empty fields (#352).
+
+[Bug fixes]
   * Allow setting JWT "typ" fields to any value (#351).
+  * Remove stray replace directive in cmd/jwx/go.mod (#349)
 
 v1.1.4 02 Mar 2021
 [New features]
