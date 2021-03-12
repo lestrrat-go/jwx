@@ -270,6 +270,19 @@ func TestJWTParseVerify(t *testing.T) {
 func TestValidateClaims(t *testing.T) {
 	t.Parallel()
 	// GitHub issue #37: tokens are invalid in the second they are created (because Now() is not after IssuedAt())
+	t.Run("Empty fields", func(t *testing.T) {
+		token := jwt.New()
+
+		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate shold fail`) {
+			return
+		}
+		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate shold fail`) {
+			return
+		}
+		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate shold fail`) {
+			return
+		}
+	})
 	t.Run(jwt.IssuedAtKey+"+skew", func(t *testing.T) {
 		t.Parallel()
 		token := jwt.New()

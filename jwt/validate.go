@@ -49,21 +49,21 @@ func Validate(t Token, options ...ValidateOption) error {
 
 	// check for iss
 	if len(issuer) > 0 {
-		if v := t.Issuer(); v != "" && v != issuer {
+		if v := t.Issuer(); v != issuer {
 			return errors.New(`iss not satisfied`)
 		}
 	}
 
 	// check for jti
 	if len(jwtid) > 0 {
-		if v := t.JwtID(); v != "" && v != jwtid {
+		if v := t.JwtID(); v != jwtid {
 			return errors.New(`jti not satisfied`)
 		}
 	}
 
 	// check for sub
 	if len(subject) > 0 {
-		if v := t.Subject(); v != "" && v != subject {
+		if v := t.Subject(); v != subject {
 			return errors.New(`sub not satisfied`)
 		}
 	}
