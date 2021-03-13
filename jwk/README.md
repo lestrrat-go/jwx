@@ -1,6 +1,8 @@
 # github.com/lestrrat-go/jwx/jwk [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
 
-# Create a JWK from the Raw key
+# SYNOPSIS
+
+## Create a JWK from the Raw key
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
 
@@ -23,9 +25,6 @@ Supported key types:
 
 * Note 1: Experimental
 * Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
-
-# SYNOPSIS
-
 ## Parse a JWK or a JWK set
 
 ```go
