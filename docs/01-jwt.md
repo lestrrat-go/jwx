@@ -9,10 +9,10 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse a JWT](#parse-a-jwt)
   * [Parse a JWT from file](#parse-a-jwt-from-file)
   * [Parse a JWT from a *http.Request](#parse-a-jwt-from-a-httprequest)
-* [Verification](#verification)
+* [Verification](#jwt-verification)
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
-* [Validation](#validation)
+* [Validation](#jwt-validation)
 
 
 ---
@@ -67,7 +67,7 @@ token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.With
 // Looks under "Authorization" header and "access_token" form field
 token, err := jwt.ParseRequest(req, jwt.WithFormKey("access_token"))
 ```
-# Verification
+# JWT Verification
 
 ## Parse and Verify a JWT (with single key)
 
@@ -92,7 +92,7 @@ token, _ := jwt.Parse(src, jwt.WithKeySet(keyset))
 The above example will correctly verify the message if the jwk.Set specified by the variable `keyset` contains a key that matches
 the key ID in the JWS message.
 
-# Validation
+# JWT Validation
 
 To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the `jwt.Validate()` function.
 
