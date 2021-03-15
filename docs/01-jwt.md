@@ -2,6 +2,19 @@
 
 In this document we describe how to work with JWT using `github.com/lestrrat-go/jwx/jwt`
 
+* [Terminology](#terminology)
+  * [Verification](#verification)
+  * [Validation](#validation)
+* [Parsing](#parsing)
+  * [Parse a JWT](#parse-a-jwt)
+  * [Parse a JWT from file](#parse-a-jwt-from-file)
+  * [Parse a JWT from a *http.Request](#parse-a-jwt-from-a-httprequest)
+* [Verification](#verification)
+  * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
+  * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
+* [Validation](#validation)
+
+
 ---
 
 # Terminology
@@ -80,8 +93,6 @@ The above example will correctly verify the message if the jwk.Set specified by 
 the key ID in the JWS message.
 
 # Validation
-
-## Validate a JWT
 
 To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the `jwt.Validate()` function.
 
