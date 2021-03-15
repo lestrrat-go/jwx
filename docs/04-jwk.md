@@ -2,6 +2,23 @@
 
 In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/jwk`
 
+* [Terminology](#terminology)
+  * [JWK / Key](#jwk--key)
+  * [JWK Set / Set](#jwk-set--set)
+  * [Raw Key](#raw-key)
+* [Parsing](#parsing)
+  * [Parse a set](#parse-a-set)
+  * [Parse a key](#parse-a-key)
+  * [Parse a key or set in PEM format](#parse-a-key-or-set-in-pem-format)
+  * [Parse a key from a file](#parse-a-key-from-a-file)
+  * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
+* [Construction](#contstruction)
+  * [Using jwk.New()](#using-jwknew)
+  * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
+  * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
+* [Setting values to fields](#setting-values-to-fields)
+# [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+
 ---
 
 # Terminology
@@ -70,7 +87,9 @@ keyset, _ := jwk.Fetch(ctx, url)
 
 If you are going to be using this key repeatedly in a long running process, consider using `jwk.AutoRefresh` described elsewhere in this document.
 
-# Using jwk.New()
+# Construction
+
+## Using jwk.New()
 
 Users can create a new key from scratch using `jwk.New()`.
 
@@ -92,7 +111,7 @@ It automatically creates the appropriate underlying key based on the given argum
 
 One common mistake we see is users using `jwk.New()` to construct a key from a []byte variable containing the raw JSON format JWK.
 
-```
+```go
 // THIS IS WRONG!
 buf, _ := ioutil.ReadFile(`key.json`) // os.ReadFile in go 1.16+
 key, _ := jwk.New(buf) // ALWAYS creates a symmetric key
@@ -101,18 +120,18 @@ key, _ := jwk.New(buf) // ALWAYS creates a symmetric key
 `jwk.New()` is used to create a new key from a known, *raw key* type. To process a yet-to-be-parsed
 JWK, use `jwk.Parse()` or `jwk.ReadFile()`
 
-```
+```go
 // Parse a buffer containing a JSON JWK
 buf, _ := ioutil.ReadFile(`key.json`) // os.ReadFile in go 1.16+
 key, _ := jwk.Parse(buf)
 ```
 
-```
+```go
 // Read a file, parse it as JSON
 key, _ := jwk.ParseFile(`key.json`)
 ```
 
-# Generate a specific key type from scratch
+## Construct a specific key type from scratch
 
 Each of Symmetric, RSA, ECDSA, OKP key types have corresponding constructors to create an empty instance.
 These keys are completely empty, so if you tried using them without initialization, it will not work.
@@ -127,9 +146,25 @@ key := jwk.NewOKPPrivateKey()
 key := jwk.NewOKPPublicKey()
 ```
 
-# Generate a specific key type from a raw key
+For advanced users: Once you obtain these "empty" objects, you *can* use `json.Unmarshal()` to parse the JWK.
 
-If you have a raw key that you know the type of, you can create an empty instance, and then import values using the `FromRaw()` method.
+```
+// OK
+key := jwk.NewRSAPrivateKey()
+if err := json.Unmarshal(src, key); err != nil {
+  return errors.New(`failed to unmarshal RSA key`)
+}
+
+// NOT OK
+var key jwk.Key // we can't do this because we don't know where to store the data
+if err := json.Unmarshal(src, &key); err !+ nil {
+  ...
+}
+```
+
+## Construct a specific key type from a raw key
+
+`jwk.New()` already does this, but if for some reason you would like to initialize an already existing `jwk.Key`, you can use the `FromRaw()` method.
 
 ```go
 privkey, err := rsa.GenerateKey(...)
@@ -138,7 +173,7 @@ key := jwk.NewRSAPrivateKey()
 err := key.FromRaw(privkey)
 ```
 
-# Setting other fields
+## Setting values to fields
 
 Using `jwk.New()` or `FromRaw()` allows you to populate the fields that are required to do perform the computations, but there are other fields that you may want to populate in a key. These fields can all be set using the `Set()` method.
 
@@ -153,7 +188,7 @@ key.Set(jwk.KeyIDKey, `my-awesome-key`)
 key.Set(`my-custom-field`, `unbelievable-value`)
 ```
 
-# Auto-refreshing a JWK
+# Auto-refreshing remote keys
 
 Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
 For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
@@ -166,19 +201,19 @@ In such cases you would need to refetch the JWK periodically, which is a pain.
 First, set up the `jwk.AutoRefresh` object.
 You need to pass it a `context.Context` object to control the lifecycle of the background fetching goroutine.
 
-```
+```go
 ar := jwk.NewAutoRefresh(ctx)
 ```
 
 Next you need to tell `jwk.AutoRefresh` which URLs to keep updating. For this, we use the `Configure()` method. `jwk.AutoRefresh` will use the information found in the HTTP headers (`Cache-Control` and `Expires`) or the default interval to determine when to fetch the key next time.
 
-```
+```go
 ar.Configure(`https://example.com/certs/pubkeys.json`)
 ```
 
 And lastly, when you are about to use the key, load it from the `jwk.AutoRefresh` object.
 
-```
+```go
 keyset, _ := ar.Configure(ctx, `https://example.com/certs/pubkeys.json`)
 ```
 
