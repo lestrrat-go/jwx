@@ -12,7 +12,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Parse a key or set in PEM format](#parse-a-key-or-set-in-pem-format)
   * [Parse a key from a file](#parse-a-key-from-a-file)
   * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
-* [Construction](#contstruction)
+* [Construction](#construction)
   * [Using jwk.New()](#using-jwknew)
   * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
