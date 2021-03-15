@@ -33,7 +33,7 @@ In order to perform verification/validation, please see the methods described el
 
 To parsea JWT stored in a file, use `jwt.ReadFile()`. `jwt.ReadFile()` accepts the same options as `jwt.Parse()`.
 
-```
+```go
 token, _ := jwt.ReadFile(`token.json`)
 ```
 
