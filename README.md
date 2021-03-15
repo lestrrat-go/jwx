@@ -50,6 +50,10 @@ Since v1.1.1 we have a command line tool `jwx` (*). With `jwx` you can create JW
 go install github.com/lestrrat-go/jwx/cmd/jwx
 ```
 
+# How-to style documentation
+
+If you want to look for ways to do X, you may have an easier time navigating through the [documentation here](./docs)
+
 # Packages
 
 ## JWA [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwa.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwa)
