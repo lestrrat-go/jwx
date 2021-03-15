@@ -17,7 +17,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
 * [Setting values to fields](#setting-values-to-fields)
-# [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+* [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
 
 ---
 
