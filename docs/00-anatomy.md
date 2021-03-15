@@ -54,7 +54,8 @@ RFC7516 describes JWE which is used to encrypt data. Similar to JWS, JWE describ
 And again, similar to JWS, JWE can encode data into two different formats, one of which consists of 5 base64 encoded strings concatenated by a single period ("."). The other format takes the form of a JSON object.
 
 ```
-# An example of JWE message eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTE5MkdDTSIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6IndMckhLNnBTLXZzdmhQZUNfNTN0ZWpxYzZIZUFsMllRWDRmY1hPNGV1bmciLCJ5IjoiV2V3bFdKazJ4QWJYSXE3WFJ6aVlZa2lxMjJfOF9TQ0VsbTA1Vm1iUGhFWSJ9fQ..7UTcbVpz-Ed1Q0wq.sneVfeTeAvzZNSMGpQ.JNo1BbDaKB-Q1mWaBNmdow
+# An example of JWE message
+eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTE5MkdDTSIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6IndMckhLNnBTLXZzdmhQZUNfNTN0ZWpxYzZIZUFsMllRWDRmY1hPNGV1bmciLCJ5IjoiV2V3bFdKazJ4QWJYSXE3WFJ6aVlZa2lxMjJfOF9TQ0VsbTA1Vm1iUGhFWSJ9fQ..7UTcbVpz-Ed1Q0wq.sneVfeTeAvzZNSMGpQ.JNo1BbDaKB-Q1mWaBNmdow
 ```
 
 JWE is implemented in github.com/lestrrat-go/jwe package. This package provides tools to encrypt payload into JWE messages, and tools to decrypt them.
@@ -80,7 +81,7 @@ JWK is implemented in github.com/lestrrat-go/jwx/jwk package. This package provi
 
 ## Documentation for github.com/lestrrat-go/jwx/jwk)
 
-* [FAQ-style HOW-TOs](./doc/04-jwk.md)
+* [FAQ-style HOW-TOs](./04-jwk.md)
 * [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
 
 # JWA - RFC7518
