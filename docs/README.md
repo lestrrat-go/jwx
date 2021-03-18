@@ -8,6 +8,6 @@ Technical details: The code and command invocations in the following article was
 
 * [Anatomy of JOSE](./00-anatomy.md)
 * [Working with JWT](./01-jwt.md)
-* Working with JWS (TODO)
+* [Working with JWS](./02-jws.md)
 * Working with JWE (TODO)
 * [Working with JWK](./04-jwk.md)
