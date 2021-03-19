@@ -10,9 +10,9 @@ Javascript Object Signing and Encryption is mainly comprised of specifications t
 
 * [RFC 7515 - JSON Web Signature (JWS)](https://tools.ietf.org/html/rfc7515)
 * [RFC 7516 - JSON Web Encryption (JWE)](https://tools.ietf.org/html/rfc7516)
-* [RFC 7517 - JSON Web Key (JWS)](https://tools.ietf.org/html/rfc7517)
-* [RFC 7518 - JSON Web Algorithms (JWS)](https://tools.ietf.org/html/rfc7518)
-* [RFC 7519 - JSON Web Token (JWS)](https://tools.ietf.org/html/rfc7519)
+* [RFC 7517 - JSON Web Key (JWK)](https://tools.ietf.org/html/rfc7517)
+* [RFC 7518 - JSON Web Algorithms (JWA)](https://tools.ietf.org/html/rfc7518)
+* [RFC 7519 - JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 
 As there are many RFCs involved, at first it could be daunting. But here is a breakdown for beginners.
 
