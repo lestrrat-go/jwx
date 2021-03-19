@@ -9,7 +9,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
-* [Using a custom signing/verification algorithm](#using-a-customg-signing-verification-algorithm)
+* [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
 
 # Parsing
 
