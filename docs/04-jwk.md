@@ -32,8 +32,8 @@ Used to describe a JWK key, possibly of typeRSA, ECDSA, OKP, or Symmetric.
 A "jwk" resource on the web can either contain a single JWK or an array of multiple JWKs.
 The latter is called a JWK Set.
 
-It is impossible to know what the resource contains beforehand, so functions like `jwk.Parse()`
-and `jwk.ReadFile()` returns a `jwk.Set` by default.
+It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse)
+and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ReadFile) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Set) by default.
 
 ## Raw Key
 
@@ -45,7 +45,7 @@ and so forth
 
 ## Parse a set
 
-If you have a key set, or are unsure if the source is a set or a single key, you should use `jwk.Parse()`
+If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse)
 
 ```go
 keyset, _ := jwk.Parse(src)
@@ -53,7 +53,7 @@ keyset, _ := jwk.Parse(src)
 
 ## Parse a key
 
-If you are sure that the source only contains a single key, you can use `jwk.ParseKey()`
+If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ParseKey)
 
 ```go
 key, _ := jwk.ParseKey(src)
@@ -61,7 +61,7 @@ key, _ := jwk.ParseKey(src)
 
 ## Parse a key or a set in PEM format
 
-Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the `jwk.WithPEM()` option.
+Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#WithPEM) option.
 
 ```go
 keyset, _ := jwk.Parse(srcSet, jwk.WithPEM(true))
@@ -71,7 +71,7 @@ key, _ := jwk.ParseKey(src, jwk.WithPEM(true))
 
 ## Parse a key from a file
 
-To parse keys stored in a file, `jwk.ReadFile()` can be used. It accepts the same options as `jwk.Parse()`
+To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ReadFile) can be used. It accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse)
 
 ```go
 keyset, _ := jwk.ReadFile(filename)
@@ -79,23 +79,23 @@ keyset, _ := jwk.ReadFile(filename)
 
 ## Parse a key from a remote resource
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use `jwk.Fetch()`
+To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Fetch)
 
 ```go
 keyset, _ := jwk.Fetch(ctx, url)
 ```
 
-If you are going to be using this key repeatedly in a long running process, consider using `jwk.AutoRefresh` described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) described elsewhere in this document.
 
 # Construction
 
 ## Using jwk.New()
 
-Users can create a new key from scratch using `jwk.New()`.
+Users can create a new key from scratch using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New).
 
-`jwk.New()` requires the raw key as its argument.
+[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) requires the raw key as its argument.
 There are other ways to creating keys from a raw key, but they require knowing its type in advance.
-Use `jwk.New()` when you have a key type which you do not know its underlying type in advance.
+Use [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
 
@@ -109,7 +109,7 @@ It automatically creates the appropriate underlying key based on the given argum
 | x25519.PrivateKey | OKP Private Key | |
 | x25519.PubliKey | OKP Public Key | |
 
-One common mistake we see is users using `jwk.New()` to construct a key from a []byte variable containing the raw JSON format JWK.
+One common mistake we see is users using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) to construct a key from a []byte variable containing the raw JSON format JWK.
 
 ```go
 // THIS IS WRONG!
@@ -117,8 +117,8 @@ buf, _ := ioutil.ReadFile(`key.json`) // os.ReadFile in go 1.16+
 key, _ := jwk.New(buf) // ALWAYS creates a symmetric key
 ```
 
-`jwk.New()` is used to create a new key from a known, *raw key* type. To process a yet-to-be-parsed
-JWK, use `jwk.Parse()` or `jwk.ReadFile()`
+[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) is used to create a new key from a known, *raw key* type. To process a yet-to-be-parsed
+JWK, use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse) or [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ReadFile)
 
 ```go
 // Parse a buffer containing a JSON JWK
@@ -164,7 +164,7 @@ if err := json.Unmarshal(src, &key); err !+ nil {
 
 ## Construct a specific key type from a raw key
 
-`jwk.New()` already does this, but if for some reason you would like to initialize an already existing `jwk.Key`, you can use the `FromRaw()` method.
+[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) already does this, but if for some reason you would like to initialize an already existing [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Key), you can use the [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#FromRaw) method.
 
 ```go
 privkey, err := rsa.GenerateKey(...)
@@ -175,11 +175,11 @@ err := key.FromRaw(privkey)
 
 ## Setting values to fields
 
-Using `jwk.New()` or `FromRaw()` allows you to populate the fields that are required to do perform the computations, but there are other fields that you may want to populate in a key. These fields can all be set using the `Set()` method.
+Using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#New) or [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#FromRaw) allows you to populate the fields that are required to do perform the computations, but there are other fields that you may want to populate in a key. These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Set) method.
 
-The `Set()` method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
+The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
 
-`Set()` may not alter the Key Type (`kty`) field of a key.
+[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Set) may not alter the Key Type (`kty`) field of a key.
 
 the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
 
@@ -193,25 +193,25 @@ key.Set(`my-custom-field`, `unbelievable-value`)
 Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
 For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
 
-Normally, you should be able to simply fetch the JWK using `jwk.Fetch()`, but keys are usually expired and rotated due to security reasons.
+Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Fetch), but keys are usually expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/jwk` provides the `jwk.AutoRefresh` tool to do this for you.
+`github.com/lestrrat-go/jwx/jwk` provides the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) tool to do this for you.
 
-First, set up the `jwk.AutoRefresh` object.
+First, set up the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) object.
 You need to pass it a `context.Context` object to control the lifecycle of the background fetching goroutine.
 
 ```go
 ar := jwk.NewAutoRefresh(ctx)
 ```
 
-Next you need to tell `jwk.AutoRefresh` which URLs to keep updating. For this, we use the `Configure()` method. `jwk.AutoRefresh` will use the information found in the HTTP headers (`Cache-Control` and `Expires`) or the default interval to determine when to fetch the key next time.
+Next you need to tell [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) which URLs to keep updating. For this, we use the `Configure()` method. [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) will use the information found in the HTTP headers (`Cache-Control` and `Expires`) or the default interval to determine when to fetch the key next time.
 
 ```go
 ar.Configure(`https://example.com/certs/pubkeys.json`)
 ```
 
-And lastly, when you are about to use the key, load it from the `jwk.AutoRefresh` object.
+And lastly, when you are about to use the key, load it from the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) object.
 
 ```go
 keyset, _ := ar.Configure(ctx, `https://example.com/certs/pubkeys.json`)
