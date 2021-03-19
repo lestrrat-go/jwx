@@ -34,6 +34,11 @@ While they are referenced from RFC7519, the standardized message formats for sig
 
 As a side note, many libraries bundle these signature/encryption features into one JWT package, and API becomes tightly coupled with the JWT, which I find confusing and hard to fix/extend- which is part of the reason why JWX was born.
 
+## Documentation for `github.com/lestrrat-go/jwx/jwt`
+
+* [FAQ-style HOW-TOs](./01-jwt.md)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
+
 # JWS - RFC7515
 
 RFC7515 describes JWS, which is used to sign payloads. The format is not necessarily for JWTs: it can sign any arbitrary piece of data.
@@ -47,6 +52,11 @@ eyJhbGciOiJFUzI1NiJ9.SGVsbG8sIFdvcmxkCg.3q5N5JyFphiJolUZuBuUZhuWDfmLDR__rZe3lnua
 
 JWS is implemented in github.com/lestrrat-go/jwx/jws package. This package provides ways to sign arbitrary payload into JWS message, and ways to verify them.
 
+## Documentation for `github.com/lestrrat-go/jwx/jws`
+
+* [FAQ-style HOW-TOs](./02-jws.md)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
+
 # JWE - RFC7516
 
 RFC7516 describes JWE which is used to encrypt data. Similar to JWS, JWE describes the standardized format to encrypt any arbitrary data, not just JWTs.
@@ -59,6 +69,10 @@ eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTE5MkdDTSIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6
 ```
 
 JWE is implemented in github.com/lestrrat-go/jwe package. This package provides tools to encrypt payload into JWE messages, and tools to decrypt them.
+
+## Documentation for `github.com/lestrrat-go/jwx/jwe`
+
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
 
 # JWK - RFC7517
 
@@ -79,7 +93,7 @@ JWKs describe formats to describe keys, such as RSA keys, Elliptic Curve keys, s
 
 JWK is implemented in github.com/lestrrat-go/jwx/jwk package. This package provides ways to generate, read, and manipulate JWKs, convert them to and from raw key formats (e.g. "crypto/rsa".PrivateKey to JWK and vice versa). It can also work with PEM-encoded keys.
 
-## Documentation for github.com/lestrrat-go/jwx/jwk)
+## Documentation for `github.com/lestrrat-go/jwx/jwk`
 
 * [FAQ-style HOW-TOs](./04-jwk.md)
 * [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
