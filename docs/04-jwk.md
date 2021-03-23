@@ -18,6 +18,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
 * [Setting values to fields](#setting-values-to-fields)
 * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+* [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
 ---
 
@@ -221,3 +222,28 @@ Now keyset will always be "reasonably" new.
 By "reasonably" we mean that we cannot guarantee that the keys will be refreshed immediately after it has been rotated in the remote source. But it should be close enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
 
 If re-fetching the keyset fails, a cached version will be returned from the previous successful fetch upon calling `(jwk.AutoRefresh).Fetch()`.
+
+# Converting a jwk.Key to a raw key
+
+As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc) as "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/jwk#Raw) method.
+
+```go
+key, _ := jwk.ParseKey(src)
+
+var raw interface{}
+if err := key.Raw(&raw); err != nil {
+  ...
+}
+```
+
+In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Key) represents.
+If `key` represents an RSA key, it will contain either a `rsa.PublicKey` or `rsa.PrivateKey`. If it represents an ECDSA key, an `ecdsa.PublicKey`, or `ecdsa.PrivateKey`, etc.
+
+If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ParseRawKey)
+
+```go
+var raw interface{}
+if err := jwk.ParseRawKey(src, &raw); err != nil {
+  ...
+}
+```
