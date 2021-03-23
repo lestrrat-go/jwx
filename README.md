@@ -10,6 +10,17 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 | [jws](https://github.com/lestrrat-go/jwx/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
 | [jwe](https://github.com/lestrrat-go/jwx/tree/main/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 
+# Index
+
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx)
+  * HTML version of what you can see using `go doc` command
+* [How-to style documentation](./docs)
+  * How to JWx That? Documentation by example.
+* Overview of this package
+  * Read on for more gory details.
+
+# Description
+
 ## Why?
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
