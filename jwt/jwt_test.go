@@ -48,9 +48,11 @@ func TestJWTParse(t *testing.T) {
 	}
 	t1 := jwt.New()
 	signed, err := jwt.Sign(t1, alg, key)
-	if err != nil {
-		t.Fatal("Failed to sign JWT")
+	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
+		return
 	}
+
+	t.Logf("%s", signed)
 
 	t.Run("Parse (no signature verification)", func(t *testing.T) {
 		t.Parallel()
