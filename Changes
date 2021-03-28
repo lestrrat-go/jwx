@@ -1,6 +1,17 @@
 Changes
 =======
 
+v1.1.6 28 Mar 2021
+[Bug fixes]
+  * When an object (e.g. JWT) has a null value and `AsMap()` is called,
+    `github.com/lestrrat-go/iter` would panic.
+    This should be fixed in `github.com/lestrrat-go/iter@v1.0.1` and
+    the dependency has been updated accordingly
+
+[Miscellaneous]
+  * Added How-to style docs under `docs/`
+  * github.com/goccy/go-json dependency has been updated to v0.4.8
+
 v1.1.5 12 Mar 2021
   This is a security fix release. The JWT validation could be skipped
   for empty values. Upgrade recommended
