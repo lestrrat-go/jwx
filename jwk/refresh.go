@@ -151,6 +151,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
@@ -387,7 +388,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 				continue
 			}
 
-			req := recv.Interface().(*resetTimerReq)
+			req := recv.Interface().(*resetTimerReq) //nolint:forcetypeassert
 			t := req.t
 			d := req.d
 			if !t.timer.Stop() {

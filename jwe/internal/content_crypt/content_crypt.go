@@ -1,4 +1,4 @@
-package content_crypt
+package content_crypt //nolint:golint
 
 import (
 	"github.com/lestrrat-go/jwx/jwa"

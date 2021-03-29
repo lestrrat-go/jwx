@@ -40,13 +40,14 @@ type stdRecipient struct {
 //
 // which would obviously result in a contradicting integrity value
 // if we tried to re-calculate it from a parsed message.
+//nolint:govet
 type Message struct {
 	authenticatedData    []byte
 	cipherText           []byte
 	initializationVector []byte
-	protectedHeaders     Headers
-	recipients           []Recipient
 	tag                  []byte
+	recipients           []Recipient
+	protectedHeaders     Headers
 	unprotectedHeaders   Headers
 }
 
@@ -57,11 +58,12 @@ type contentEncrypter interface {
 	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
 }
 
+//nolint:govet
 type encryptCtx struct {
+	keyEncrypters    []keyenc.Encrypter
 	protected        Headers
 	contentEncrypter contentEncrypter
 	generator        keygen.Generator
-	keyEncrypters    []keyenc.Encrypter
 	compress         jwa.CompressionAlgorithm
 }
 

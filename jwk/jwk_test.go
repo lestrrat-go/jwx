@@ -32,9 +32,9 @@ var certChainSrc = []string{
 }
 
 type keyDef struct {
-	Method   string
 	Expected interface{}
 	Value    interface{}
+	Method   string
 }
 
 var commonDef map[string]keyDef
@@ -572,9 +572,9 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	tests := []struct {
+		generate func(string, string) (jwk.Key, error)
 		use      string
 		keyID    string
-		generate func(string, string) (jwk.Key, error)
 	}{
 		{
 			use:      "enc",

@@ -130,8 +130,8 @@ func TestOpenIDClaims(t *testing.T) {
 	var base = []struct {
 		Value    interface{}
 		Expected func(interface{}) interface{}
-		Key      string
 		Check    func(openid.Token)
+		Key      string
 	}{
 		{
 			Key:   openid.AudienceKey,
@@ -399,8 +399,8 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	type openidTokTestCase struct {
-		Name  string
 		Token openid.Token
+		Name  string
 	}
 	var tokens []openidTokTestCase
 

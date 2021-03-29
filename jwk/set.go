@@ -166,7 +166,7 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 
 	for iter := s.Iterate(context.TODO()); iter.Next(context.TODO()); {
 		pair := iter.Pair()
-		key := pair.Value.(Key)
+		key := pair.Value.(Key) //nolint:forcetypeassert
 		if key.KeyID() == kid {
 			return key, true
 		}

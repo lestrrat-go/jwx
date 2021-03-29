@@ -5,10 +5,12 @@ linters-settings:
     enable-all: true
     disable:
       - shadow
+      - fieldalignment
 
 linters:
   enable-all: true
   disable:
+    - cyclop
     - dupl
     - exhaustive
     - exhaustivestruct
@@ -26,6 +28,7 @@ linters:
     - gofumpt
     - gomnd
     - gosec
+    - govet
     - ifshort
     - lll
     - makezero
@@ -48,7 +51,7 @@ issues:
     - path: /*.go
       text: "don't use an underscore in package name"
       linters:
-        - golint
+        - revive
     - path: /main.go
       linters:
         - errcheck
@@ -58,6 +61,7 @@ issues:
     - path: /*_test.go
       linters:
         - errcheck
+        - forcetypeassert
     - path: /*_example_test.go
       linters:
         - forbidigo
