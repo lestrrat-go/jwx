@@ -31,6 +31,7 @@ func _main() error {
 		return err
 	}
 
+	//nolint:revive
 	if err := generateHeaders(); err != nil {
 		return err
 	}

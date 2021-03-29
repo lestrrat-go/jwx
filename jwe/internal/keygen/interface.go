@@ -22,10 +22,10 @@ type Random struct {
 
 // EcdhesKeyGenerate generates keys using ECDH-ES algorithm / EC-DSA curve
 type Ecdhes struct {
+	pubkey    *ecdsa.PublicKey
+	keysize   int
 	algorithm jwa.KeyEncryptionAlgorithm
 	enc       jwa.ContentEncryptionAlgorithm
-	keysize   int
-	pubkey    *ecdsa.PublicKey
 }
 
 // X25519KeyGenerate generates keys using ECDH-ES algorithm / X25519 curve

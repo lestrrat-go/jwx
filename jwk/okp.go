@@ -43,12 +43,12 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PrivateKey:
 		k.d = rawKey.Seed()
-		k.x = rawKey.Public().(ed25519.PublicKey)
+		k.x = rawKey.Public().(ed25519.PublicKey) //nolint:forcetypeassert
 		crv = jwa.Ed25519
 		k.crv = &crv
 	case x25519.PrivateKey:
 		k.d = rawKey.Seed()
-		k.x = rawKey.Public().(x25519.PublicKey)
+		k.x = rawKey.Public().(x25519.PublicKey) //nolint:forcetypeassert
 		crv = jwa.X25519
 		k.crv = &crv
 	default:

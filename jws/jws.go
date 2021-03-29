@@ -82,6 +82,7 @@ func (s *payloadSigner) PublicHeader() Headers {
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
 	var hdrs Headers
 	for _, o := range options {
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identHeaders{}:
 			hdrs = o.Value().(Headers)
@@ -187,6 +188,7 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	//nolint:forcetypeassert
 	for iter := set.Iterate(ctx); iter.Next(ctx); {
 		pair := iter.Pair()
 		key := pair.Value.(jwk.Key)
@@ -428,8 +430,8 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	var protected []byte
 	var payload []byte
 	var signature []byte
-	var periods int = 0
-	var state int = 0
+	var periods int
+	var state int
 
 	buf := make([]byte, 4096)
 	var sofar []byte

@@ -81,8 +81,8 @@ type rsaSignFunc func([]byte, *rsa.PrivateKey) ([]byte, error)
 
 // RSASigner uses crypto/rsa to sign the payloads.
 type RSASigner struct {
-	alg  jwa.SignatureAlgorithm
 	sign rsaSignFunc
+	alg  jwa.SignatureAlgorithm
 }
 
 type ecdsaSignFunc func([]byte, *ecdsa.PrivateKey) ([]byte, error)

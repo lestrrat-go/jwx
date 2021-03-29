@@ -226,6 +226,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	var httpcl HTTPClient = http.DefaultClient
 	bo := backoff.Null()
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
 			httpcl = option.Value().(HTTPClient)
@@ -339,6 +340,7 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
@@ -411,6 +413,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
@@ -468,6 +471,7 @@ func AssignKeyID(key Key, options ...Option) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			hash = option.Value().(crypto.Hash)

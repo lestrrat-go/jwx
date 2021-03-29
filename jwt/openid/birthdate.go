@@ -79,7 +79,7 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 			return errors.New(`failed to parse birthdate year`)
 		}
 		if year > 0 {
-			var v int = int(year)
+			var v = int(year)
 			tmp.year = &v
 		}
 
@@ -88,7 +88,7 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 			return errors.New(`failed to parse birthdate month`)
 		}
 		if month > 0 {
-			var v int = int(month)
+			var v = int(month)
 			tmp.month = &v
 		}
 
@@ -97,7 +97,7 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 			return errors.New(`failed to parse birthdate day`)
 		}
 		if day > 0 {
-			var v int = int(day)
+			var v = int(day)
 			tmp.day = &v
 		}
 

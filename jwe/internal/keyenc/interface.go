@@ -26,30 +26,30 @@ type Decrypter interface {
 
 type Noop struct {
 	alg       jwa.KeyEncryptionAlgorithm
-	sharedkey []byte
 	keyID     string
+	sharedkey []byte
 }
 
 // AES encrypts content encryption keys using AES key wrap.
 // Contrary to what the name implies, it also decrypt encrypted keys
 type AES struct {
 	alg       jwa.KeyEncryptionAlgorithm
-	sharedkey []byte
 	keyID     string
+	sharedkey []byte
 }
 
 // AESGCM encrypts content encryption keys using AES-GCM key wrap.
 type AESGCMEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
-	sharedkey []byte
 	keyID     string
+	sharedkey []byte
 }
 
 // ECDHESEncrypt encrypts content encryption keys using ECDH-ES.
 type ECDHESEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
-	generator keygen.Generator
 	keyID     string
+	generator keygen.Generator
 }
 
 // ECDHESDecrypt decrypts keys using ECDH-ES.
@@ -97,8 +97,8 @@ type DirectDecrypt struct {
 // PBES2Encrypt encrypts keys with PBES2 / PBKDF2 password
 type PBES2Encrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
-	password  []byte
 	hashFunc  func() hash.Hash
 	keylen    int
 	keyID     string
+	password  []byte
 }

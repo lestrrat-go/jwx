@@ -62,6 +62,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	var validate bool
 	var ok bool
 	for _, o := range options {
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identVerify{}:
 			params = o.Value().(VerifyParameters)
@@ -213,6 +214,7 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
 	var hdr jws.Headers
 	for _, o := range options {
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identHeaders{}:
 			hdr = o.Value().(jws.Headers)

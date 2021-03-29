@@ -38,6 +38,7 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 
 	var protected Headers
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identProtectedHeader{}:
 			protected = option.Value().(Headers)

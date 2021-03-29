@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//nolint:golint
+//nolint:revive,golint
 func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected ...int) bool {
 	t.Helper()
 

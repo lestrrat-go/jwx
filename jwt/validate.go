@@ -28,6 +28,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	var skew time.Duration
 	claimValues := make(map[string]interface{})
 	for _, o := range options {
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identClock{}:
 			clock = o.Value().(Clock)

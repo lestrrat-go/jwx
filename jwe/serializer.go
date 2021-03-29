@@ -80,6 +80,7 @@ func Compact(m *Message, _ ...SerializerOption) ([]byte, error) {
 func JSON(m *Message, options ...SerializerOption) ([]byte, error) {
 	var pretty bool
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPrettyFormat{}:
 			pretty = option.Value().(bool)

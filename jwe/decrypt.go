@@ -23,22 +23,23 @@ import (
 
 // Decrypter is responsible for taking various components to decrypt a message.
 // its operation is not concurrency safe. You must provide locking yourself
+//nolint:govet
 type Decrypter struct {
 	aad         []byte
 	apu         []byte
 	apv         []byte
-	cipher      content_crypt.Cipher
 	computedAad []byte
-	ctalg       jwa.ContentEncryptionAlgorithm
 	iv          []byte
-	keyalg      jwa.KeyEncryptionAlgorithm
-	keycount    int
 	keyiv       []byte
 	keysalt     []byte
 	keytag      []byte
+	tag         []byte
 	privkey     interface{}
 	pubkey      interface{}
-	tag         []byte
+	ctalg       jwa.ContentEncryptionAlgorithm
+	keyalg      jwa.KeyEncryptionAlgorithm
+	cipher      content_crypt.Cipher
+	keycount    int
 }
 
 // NewDecrypter Creates a new Decrypter instance. You must supply the

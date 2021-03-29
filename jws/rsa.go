@@ -15,9 +15,9 @@ var rsaVerifyFuncs = map[jwa.SignatureAlgorithm]rsaVerifyFunc{}
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]struct {
-		Hash       crypto.Hash
 		SignFunc   func(crypto.Hash) rsaSignFunc
 		VerifyFunc func(crypto.Hash) rsaVerifyFunc
+		Hash       crypto.Hash
 	}{
 		jwa.RS256: {
 			Hash:       crypto.SHA256,

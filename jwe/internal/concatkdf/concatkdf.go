@@ -10,9 +10,9 @@ import (
 
 type KDF struct {
 	buf       []byte
-	hash      crypto.Hash
 	otherinfo []byte
 	z         []byte
+	hash      crypto.Hash
 }
 
 func ndata(src []byte) []byte {

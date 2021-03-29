@@ -612,9 +612,9 @@ func TestParseRequest(t *testing.T) {
 	signed, _ := jwt.Sign(tok, jwa.ES256, privkey)
 
 	testcases := []struct {
-		Name    string
 		Request func() *http.Request
 		Parse   func(*http.Request) (jwt.Token, error)
+		Name    string
 		Error   bool
 	}{
 		{

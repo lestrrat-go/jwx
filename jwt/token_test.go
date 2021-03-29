@@ -163,8 +163,8 @@ func TestToken(t *testing.T) {
 	tok := jwt.New()
 
 	def := map[string]struct {
-		Method string
 		Value  interface{}
+		Method string
 	}{
 		jwt.AudienceKey: {
 			Method: "Audience",
