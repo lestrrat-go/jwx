@@ -17,6 +17,9 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
+	if rawKey.D == nil {
+		return errors.Errorf(`invalid rsa.PrivateKey`)
+	}
 	k.d = rawKey.D.Bytes()
 	if len(rawKey.Primes) < 2 {
 		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
@@ -53,6 +56,9 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
+	if rawKey.N == nil {
+		return errors.Errorf(`invalid rsa.PublicKey`)
+	}
 	k.n = rawKey.N.Bytes()
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))
