@@ -14,6 +14,7 @@ import (
 	"encoding/pem"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -25,6 +26,13 @@ import (
 )
 
 var registry = json.NewRegistry()
+
+func bigIntToBytes(n *big.Int) ([]byte, error) {
+	if n == nil {
+		return nil, errors.New(`invalid *big.Int value`)
+	}
+	return n.Bytes(), nil
+}
 
 // New creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //

@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -1027,6 +1028,16 @@ func TestRSA(t *testing.T) {
 				Value:  "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
 			}),
 		})
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []rsa.PublicKey{
+				{},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
+			}
+		})
 	})
 	t.Run("Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -1068,6 +1079,31 @@ func TestRSA(t *testing.T) {
 				Value:  "GyM_p6JrXySiz1toFgKbWV-JdI3jQ4ypu9rbMWx3rQJBfmt0FoYzgUIZEVFEcOqwemRN81zoDAaa-Bk0KWNGDjJHZDdDmFhW3AN7lI-puxk_mHZGJ11rxyR8O55XLSe3SPmRfKwZI6yU24ZxvQKFYItdldUKGzO6Ia6zTKhAVRU",
 			}),
 		})
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []rsa.PrivateKey{
+				{}, // Missing D
+				{ // Missing primes
+					D: &big.Int{},
+				},
+				{ // Missing Primes[0]
+					D:      &big.Int{},
+					Primes: []*big.Int{nil, {}},
+				},
+				{ // Missing Primes[1]
+					D:      &big.Int{},
+					Primes: []*big.Int{{}, nil},
+				},
+				{ // Missing PrivateKey.N
+					D:      &big.Int{},
+					Primes: []*big.Int{{}, {}},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for empty key`) {
+					return
+				}
+			}
+		})
 	})
 	t.Run("Thumbprint", func(t *testing.T) {
 		expected := []byte{55, 54, 203, 177, 120, 124, 184, 48, 156, 119, 238,
@@ -1098,6 +1134,31 @@ func TestRSA(t *testing.T) {
 
 func TestECDSA(t *testing.T) {
 	t.Run("PrivateKey", func(t *testing.T) {
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []ecdsa.PrivateKey{
+				{},
+				{ // Missing PublicKey
+					D: &big.Int{},
+				},
+				{ // Missing PublicKey.X
+					D: &big.Int{},
+					PublicKey: ecdsa.PublicKey{
+						Y: &big.Int{},
+					},
+				},
+				{ // Missing PublicKey.Y
+					D: &big.Int{},
+					PublicKey: ecdsa.PublicKey{
+						X: &big.Int{},
+					},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
+			}
+		})
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
@@ -1122,6 +1183,22 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("PublicKey", func(t *testing.T) {
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []ecdsa.PublicKey{
+				{},
+				{ // Missing X
+					Y: &big.Int{},
+				},
+				{ // Missing Y
+					X: &big.Int{},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
+			}
+		})
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",

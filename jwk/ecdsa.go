@@ -25,6 +25,14 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
+	if rawKey.X == nil {
+		return errors.Errorf(`invalid ecdsa.PublicKey`)
+	}
+
+	if rawKey.Y == nil {
+		return errors.Errorf(`invalid ecdsa.PublicKey`)
+	}
+
 	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
 	ybuf := ecutil.AllocECPointBuffer(rawKey.Y, rawKey.Curve)
 	defer ecutil.ReleaseECPointBuffer(xbuf)
@@ -50,8 +58,18 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
-	ybuf := ecutil.AllocECPointBuffer(rawKey.Y, rawKey.Curve)
+	if rawKey.PublicKey.X == nil {
+		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+	}
+	if rawKey.PublicKey.Y == nil {
+		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+	}
+	if rawKey.D == nil {
+		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+	}
+
+	xbuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.X, rawKey.Curve)
+	ybuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.Y, rawKey.Curve)
 	dbuf := ecutil.AllocECPointBuffer(rawKey.D, rawKey.Curve)
 	defer ecutil.ReleaseECPointBuffer(xbuf)
 	defer ecutil.ReleaseECPointBuffer(ybuf)
