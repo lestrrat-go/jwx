@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -1028,9 +1029,13 @@ func TestRSA(t *testing.T) {
 			}),
 		})
 		t.Run("New", func(t *testing.T) {
-			_, err := jwk.New(rsa.PublicKey{})
-			if !assert.Error(t, err, `jwk.New should fail for empty key`) {
-				return
+			for _, raw := range []rsa.PublicKey{
+				rsa.PublicKey{},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
 			}
 		})
 	})
@@ -1075,9 +1080,28 @@ func TestRSA(t *testing.T) {
 			}),
 		})
 		t.Run("New", func(t *testing.T) {
-			_, err := jwk.New(rsa.PrivateKey{})
-			if !assert.Error(t, err, `jwk.New should fail for empty key`) {
-				return
+			for _, raw := range []rsa.PrivateKey{
+				rsa.PrivateKey{}, // Missing D
+				rsa.PrivateKey{ // Missing primes
+					D: &big.Int{},
+				},
+				rsa.PrivateKey{ // Missing Primes[0]
+					D:      &big.Int{},
+					Primes: []*big.Int{nil, {}},
+				},
+				rsa.PrivateKey{ // Missing Primes[1]
+					D:      &big.Int{},
+					Primes: []*big.Int{{}, nil},
+				},
+				rsa.PrivateKey{ // Missing PrivateKey.N
+					D:      &big.Int{},
+					Primes: []*big.Int{{}, {}},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for empty key`) {
+					return
+				}
 			}
 		})
 	})
@@ -1110,6 +1134,31 @@ func TestRSA(t *testing.T) {
 
 func TestECDSA(t *testing.T) {
 	t.Run("PrivateKey", func(t *testing.T) {
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []ecdsa.PrivateKey{
+				ecdsa.PrivateKey{},
+				ecdsa.PrivateKey{ // Missing PublicKey
+					D: &big.Int{},
+				},
+				ecdsa.PrivateKey{ // Missing PublicKey.X
+					D: &big.Int{},
+					PublicKey: ecdsa.PublicKey{
+						Y: &big.Int{},
+					},
+				},
+				ecdsa.PrivateKey{ // Missing PublicKey.Y
+					D: &big.Int{},
+					PublicKey: ecdsa.PublicKey{
+						X: &big.Int{},
+					},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
+			}
+		})
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
@@ -1134,6 +1183,22 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("PublicKey", func(t *testing.T) {
+		t.Run("New", func(t *testing.T) {
+			for _, raw := range []ecdsa.PublicKey{
+				ecdsa.PublicKey{},
+				ecdsa.PublicKey{ // Missing X
+					Y: &big.Int{},
+				},
+				ecdsa.PublicKey{ // Missing Y
+					X: &big.Int{},
+				},
+			} {
+				_, err := jwk.New(raw)
+				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+					return
+				}
+			}
+		})
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
