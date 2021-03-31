@@ -32,7 +32,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 		return errors.Wrap(err, `invalid rsa.PrivateKey`)
 	}
 	k.p = p
-		
+
 	q, err := bigIntToBytes(rawKey.Primes[1])
 	if err != nil {
 		return errors.Wrap(err, `invalid rsa.PrivateKey`)
