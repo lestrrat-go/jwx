@@ -8,7 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        json_backend: [ 'stdlib', 'goccy' ]
         go: [ '1.16.x', '1.15.x' ]
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
@@ -27,9 +26,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Benchmark (Stdlib)
+      - name: Benchmark
         run: |
-          cd bench && go test -bench . -benchmem
-      - name: Benchmark (Goccy)
-        run: |
-          cd bench && go test -tags jwx_goccy -bench . -benchmem
+          cd bench && make stdlib && make goccy && make benchstat
