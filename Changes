@@ -2,6 +2,10 @@ Changes
 =======
 
 v1.1.7
+[New features]
+  * `jwk.New` `jwk.Parse`, `jwk.ParseKey` can now take a Certificate in
+    ANS.1 DER format in PEM encoding to create a JWK.
+
 [Bug fixes]
   * Protect `jwk.New()` from invalid RSA/ECDSA keys (#360, #361)
 
