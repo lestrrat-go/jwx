@@ -332,6 +332,12 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 			return nil, nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
 		}
 		return key, rest, nil
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, `failed to parse certificate`)
+		}
+		return cert.PublicKey, rest, nil
 	default:
 		return nil, nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
 	}
@@ -344,7 +350,10 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 // Given a WithPEM(true) option, this function assumes that the given input
 // is PEM encoded ASN.1 DER format key.
 //
-// Note that a successful parsing does NOT necessarily guarantee a valid key.
+// Note that a successful parsing of any type of key does NOT necessarily
+// guarantee a valid key. For example, no checks against expiration dates
+// are performed for certificate expiration, no checks against missing
+// parameters are performed, etc.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	for _, option := range options {
@@ -411,13 +420,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // call `json.Unmarshal` against an empty set created by `jwk.NewSet()`
 // to parse a JSON buffer into a `jwk.Set`.
 //
-// If you know for sure that you have a single key, you could also
-// use `jwk.ParseKey()`.
-//
 // This method exists because many times the user does not know before hand
 // if a JWK(s) resource at a remote location contains a single JWK key or
 // a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
 // even if the data only contains a single JWK key
+//
+// If you are looking for more information on how JWKs are parsed, or if
+// you know for sure that you have a single key, please see the documentation
+// for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
 	for _, option := range options {
