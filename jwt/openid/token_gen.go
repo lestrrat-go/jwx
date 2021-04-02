@@ -115,35 +115,6 @@ type stdToken struct {
 	privateClaims       map[string]interface{}
 }
 
-type openidTokenMarshalProxy struct {
-	Xaudience            types.StringList   `json:"aud,omitempty"`
-	Xexpiration          *types.NumericDate `json:"exp,omitempty"`
-	XissuedAt            *types.NumericDate `json:"iat,omitempty"`
-	Xissuer              *string            `json:"iss,omitempty"`
-	XjwtID               *string            `json:"jti,omitempty"`
-	XnotBefore           *types.NumericDate `json:"nbf,omitempty"`
-	Xsubject             *string            `json:"sub,omitempty"`
-	Xname                *string            `json:"name,omitempty"`
-	XgivenName           *string            `json:"given_name,omitempty"`
-	XmiddleName          *string            `json:"middle_name,omitempty"`
-	XfamilyName          *string            `json:"family_name,omitempty"`
-	Xnickname            *string            `json:"nickname,omitempty"`
-	XpreferredUsername   *string            `json:"preferred_username,omitempty"`
-	Xprofile             *string            `json:"profile,omitempty"`
-	Xpicture             *string            `json:"picture,omitempty"`
-	Xwebsite             *string            `json:"website,omitempty"`
-	Xemail               *string            `json:"email,omitempty"`
-	XemailVerified       *bool              `json:"email_verified,omitempty"`
-	Xgender              *string            `json:"gender,omitempty"`
-	Xbirthdate           *BirthdateClaim    `json:"birthdate,omitempty"`
-	Xzoneinfo            *string            `json:"zoneinfo,omitempty"`
-	Xlocale              *string            `json:"locale,omitempty"`
-	XphoneNumber         *string            `json:"phone_number,omitempty"`
-	XphoneNumberVerified *bool              `json:"phone_number_verified,omitempty"`
-	Xaddress             *AddressClaim      `json:"address,omitempty"`
-	XupdatedAt           *types.NumericDate `json:"updated_at,omitempty"`
-}
-
 // New creates a standard token, with minimal knowledge of
 // possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf", "sub", "name", "given_name", "middle_name", "family_name", "nickname", "preferred_username", "profile", "picture", "website", "email", "email_verified", "gender", "birthdate", "zoneinfo", "locale", "phone_number", "phone_number_verified", "address" and "updated_at".
 // Convenience accessors are provided for these standard claims

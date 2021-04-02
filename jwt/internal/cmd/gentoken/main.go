@@ -107,7 +107,6 @@ type tokenType struct {
 	structName string
 	ifName     string
 	pkg        string
-	prefix     string
 	claims     []tokenField
 }
 
@@ -186,7 +185,6 @@ func init() {
 
 	tokens = []tokenType{
 		{
-			prefix:     "std",
 			pkg:        "jwt",
 			filename:   "token_gen.go",
 			ifName:     "Token",
@@ -194,7 +192,6 @@ func init() {
 			claims:     stdFields,
 		},
 		{
-			prefix:     "openid",
 			pkg:        "openid",
 			filename:   "openid/token_gen.go",
 			ifName:     "Token",
@@ -393,13 +390,6 @@ func generateToken(tt tokenType) error {
 	}
 	fmt.Fprintf(&buf, "\nprivateClaims map[string]interface{}")
 	fmt.Fprintf(&buf, "\n}") // end type Token
-
-	// Proxy is used when unmarshaling headers
-	fmt.Fprintf(&buf, "\n\ntype %sTokenMarshalProxy struct {", tt.prefix)
-	for _, f := range fields {
-		fmt.Fprintf(&buf, "\nX%s %s `%s`", f.name, fieldStorageType(f.typ), f.Tag())
-	}
-	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\n// New creates a standard token, with minimal knowledge of")
 	fmt.Fprintf(&buf, "\n// possible claims. Standard claims include")
