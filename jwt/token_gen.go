@@ -69,16 +69,6 @@ type stdToken struct {
 	privateClaims map[string]interface{}
 }
 
-type stdTokenMarshalProxy struct {
-	Xaudience   types.StringList   `json:"aud,omitempty"`
-	Xexpiration *types.NumericDate `json:"exp,omitempty"`
-	XissuedAt   *types.NumericDate `json:"iat,omitempty"`
-	Xissuer     *string            `json:"iss,omitempty"`
-	XjwtID      *string            `json:"jti,omitempty"`
-	XnotBefore  *types.NumericDate `json:"nbf,omitempty"`
-	Xsubject    *string            `json:"sub,omitempty"`
-}
-
 // New creates a standard token, with minimal knowledge of
 // possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf" and "sub".
 // Convenience accessors are provided for these standard claims
