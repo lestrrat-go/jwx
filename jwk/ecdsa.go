@@ -9,7 +9,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/internal/blackmagic"
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
