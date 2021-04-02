@@ -1,16 +1,18 @@
 Changes
 =======
 
-v1.1.7
+v1.1.7 2 Apr 2021
 [New features]
   * `jwk.New` `jwk.Parse`, `jwk.ParseKey` can now take a Certificate in
-    ANS.1 DER format in PEM encoding to create a JWK.
+    ASN.1 DER format in PEM encoding to create a JWK.
 
 [Bug fixes]
   * Protect `jwk.New()` from invalid RSA/ECDSA keys (#360, #361)
 
 [Miscellaneous]
   * Removed "internal/blackmagic" and separated it to its own repository.
+  * Removed unused "marshal proxy" objects in jwt
+  * Added FAQ in `jwt` package
 
 v1.1.6 28 Mar 2021
 [Bug fixes]
