@@ -144,7 +144,7 @@ if err := json.Unmarshal(data, &token1); err != nil { // so you can't do this
    ...
 }
 
-// But you _can_ do this, and I _want_ you to do this so the object is properly initialized
+// But you _can_ do this, and we _want_ you to do this so the object is properly initialized
 token2 = jwt.New()
 if err := json.Unmarshal(data, &token2); err != nil { // actually, in practice you should use jwt.Parse()
    ....
@@ -153,9 +153,9 @@ if err := json.Unmarshal(data, &token2); err != nil { // actually, in practice y
 
 ### But why does it need to be initialized?
 
-There are several reasons, but one of the reasons is that I'm using a sync.Mutex to avoid races. I want this to be properly initialized.
+There are several reasons, but one of the reasons is that I'm using a sync.Mutex to avoid races. We want this to be properly initialized.
 
-The other reason is that I support custom claims out of the box. The `map[string]interface{}` container is initialized during new. This is important when checking for equality using reflect-y methods (akin to `reflect.DeepEqual`), because if you allowed zero values, you could end up with "empty" tokens, that actually differ. Consider the following:
+The other reason is that we support custom claims out of the box. The `map[string]interface{}` container is initialized during new. This is important when checking for equality using reflect-y methods (akin to `reflect.DeepEqual`), because if you allowed zero values, you could end up with "empty" tokens, that actually differ. Consider the following:
 
 ```go
 // assume jwt.Token was s struct, not an interface
@@ -203,12 +203,13 @@ type stdToken struct {
 }
 ```
 
-This is fine for me, but I doubted that users would want to do. This is a subtle difference, but cluttering up the API with slight variations of the same type (i.e. pointers vs non-pointers) seemed like a bad idea to me.
+This is fine for us, but we doubt that this would be something users would want to do.
+This is a subtle difference, but cluttering up the API with slight variations of the same type (i.e. pointers vs non-pointers) seemed like a bad idea to us.
 
 ```go
 token.Issuer = &issuer // want to avoid this
 
-token.Set(jwt.IssuerKey, "foobar") // so this is what I picked
+token.Set(jwt.IssuerKey, "foobar") // so this is what we picked
 ```
 
 This way users no longer need to care how the data is internally stored.
