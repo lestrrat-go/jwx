@@ -9,6 +9,9 @@ v1.1.7
 [Bug fixes]
   * Protect `jwk.New()` from invalid RSA/ECDSA keys (#360, #361)
 
+[Miscellaneous]
+  * Removed "internal/blackmagic" and separated it to its own repository.
+
 v1.1.6 28 Mar 2021
 [Bug fixes]
   * When an object (e.g. JWT) has a null value and `AsMap()` is called,

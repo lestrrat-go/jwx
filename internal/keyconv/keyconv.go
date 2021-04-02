@@ -5,7 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 
-	"github.com/lestrrat-go/jwx/internal/blackmagic"
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ed25519"

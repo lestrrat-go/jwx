@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"math/big"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/internal/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
