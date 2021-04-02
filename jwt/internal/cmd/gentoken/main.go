@@ -185,7 +185,6 @@ func init() {
 
 	tokens = []tokenType{
 		{
-			prefix:     "std",
 			pkg:        "jwt",
 			filename:   "token_gen.go",
 			ifName:     "Token",
@@ -193,7 +192,6 @@ func init() {
 			claims:     stdFields,
 		},
 		{
-			prefix:     "openid",
 			pkg:        "openid",
 			filename:   "openid/token_gen.go",
 			ifName:     "Token",
