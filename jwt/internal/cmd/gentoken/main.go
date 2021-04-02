@@ -107,7 +107,6 @@ type tokenType struct {
 	structName string
 	ifName     string
 	pkg        string
-	prefix     string
 	claims     []tokenField
 }
 
