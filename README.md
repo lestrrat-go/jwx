@@ -270,8 +270,8 @@ the `"x-foo-bar"` key will decode in the same way. If you need this behavior fro
 
 * https://github.com/dgrijalva/jwt-go
 * https://github.com/square/go-jose
-* https://github.com/coreos/oidc
-* https://golang.org/x/oauth2
+* https://github.com/coreos/go-oidc
+* https://pkg.go.dev/golang.org/x/oauth2
 
 # Contributions
 
