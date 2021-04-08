@@ -326,7 +326,7 @@ func TestUnmarshal(t *testing.T) {
 				t.Set("aud", "foo")
 				return t
 			},
-			ExpectedJSON: `{"aud":["foo"]}`,
+			ExpectedJSON: `{"aud":"foo"}`,
 		},
 		{
 			Title:  "multiple aud's",
@@ -736,19 +736,43 @@ func TestParseRequest(t *testing.T) {
 }
 
 func TestGHIssue368(t *testing.T) {
-	tok := jwt.New()
-	_ = tok.Set(jwt.AudienceKey, "hello")
+	t.Parallel()
+	t.Run("Single Key", func(t *testing.T) {
+		t.Parallel()
+		tok := jwt.New()
+		_ = tok.Set(jwt.AudienceKey, "hello")
 
-	buf, err := json.MarshalIndent(tok, "", "  ")
-	if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-		return
-	}
+		buf, err := json.MarshalIndent(tok, "", "  ")
+		if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+			return
+		}
 
-	const expected = `{
+		const expected = `{
   "aud": "hello"
 }`
 
-	if !assert.Equal(t, expected, string(buf), `output should match`) {
-		return
-	}
+		if !assert.Equal(t, expected, string(buf), `output should match`) {
+			return
+		}
+	})
+	t.Run("Multiple Keys", func(t *testing.T) {
+		tok := jwt.New()
+		_ = tok.Set(jwt.AudienceKey, []string{"hello", "world"})
+
+		buf, err := json.MarshalIndent(tok, "", "  ")
+		if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+			return
+		}
+
+		const expected = `{
+  "aud": [
+    "hello",
+    "world"
+  ]
+}`
+
+		if !assert.Equal(t, expected, string(buf), `output should match`) {
+			return
+		}
+	})
 }
