@@ -228,8 +228,8 @@ func ExampleJWT_Token() {
 	// OUTPUT:
 	// {
 	//   "aud": [
-  //     "Golang Users"
-  //   ],
+	//     "Golang Users"
+	//   ],
 	//   "iat": 233431200,
 	//   "privateClaimKey": "Hello, World!",
 	//   "sub": "https://github.com/lestrrat-go/jwx/jwt"
@@ -322,8 +322,8 @@ func ExampleJWT_OpenIDToken() {
 	//     "street_address": "芝公園 4-2-8"
 	//   },
 	//   "aud": [
-  //     "Golang Users"
-  //   ],
+	//     "Golang Users"
+	//   ],
 	//   "iat": 233431200,
 	//   "privateClaimKey": "Hello, World!",
 	//   "sub": "https://github.com/lestrrat-go/jwx/jwt"
