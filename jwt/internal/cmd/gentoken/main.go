@@ -688,7 +688,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nswitch f {")
 	fmt.Fprintf(&buf, "\ncase AudienceKey:")
 	fmt.Fprintf(&buf, "\nvar val interface{}")
-	fmt.Fprintf(&buf, "\nif v := data[f].([]string); len(v) == 1 {")
+	fmt.Fprintf(&buf, "\nif v := data[f].([]string); len(v) == 1 && atomic.LoadUint32(&flattenAudience) == 1 {")
 	fmt.Fprintf(&buf, "\nval = v[0]")
 	fmt.Fprintf(&buf, "\n} else {")
 	fmt.Fprintf(&buf, "\nval = data[f]")

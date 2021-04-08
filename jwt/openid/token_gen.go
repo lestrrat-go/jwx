@@ -7,6 +7,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -1093,7 +1094,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		switch f {
 		case AudienceKey:
 			var val interface{}
-			if v := data[f].([]string); len(v) == 1 {
+			if v := data[f].([]string); len(v) == 1 && atomic.LoadUint32(&flattenAudience) == 1 {
 				val = v[0]
 			} else {
 				val = data[f]
