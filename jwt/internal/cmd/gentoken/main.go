@@ -687,13 +687,9 @@ func generateToken(tt tokenType) error {
 	// Handle cases that need specialized handling
 	fmt.Fprintf(&buf, "\nswitch f {")
 	fmt.Fprintf(&buf, "\ncase AudienceKey:")
-	fmt.Fprintf(&buf, "\nvar val interface{}")
-	fmt.Fprintf(&buf, "\nif v := data[f].([]string); len(v) == 1 && atomic.LoadUint32(&flattenAudience) == 1 {")
-	fmt.Fprintf(&buf, "\nval = v[0]")
-	fmt.Fprintf(&buf, "\n} else {")
-	fmt.Fprintf(&buf, "\nval = data[f]")
+	fmt.Fprintf(&buf, "\nif err := json.EncodeAudience(enc, data[f].([]string)); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode \"aud\"`)")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nenc.Encode(val)")
 	fmt.Fprintf(&buf, "\ncontinue")
 	if lndf := len(numericDateFields); lndf > 0 {
 		fmt.Fprintf(&buf, "\ncase ")

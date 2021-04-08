@@ -19,16 +19,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Flatten the "aud" entry to a string if there's only one entry.
-// In jwx < 1.1.8 we just dumped everything as an array of strings,
-// but apparently AWS Cognito doesn't handle this well.
-//
-// So now we have the ability to dump "aud" as a string if there's
-// only one entry, but we need to retain the old behavior so that
-// we don't accidentally break somebody else's code. (e.g. messing
-// up how signatures are calculated)
-var flattenAudience uint32
-
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
@@ -39,13 +29,13 @@ func Settings(options ...GlobalOption) {
 		}
 	}
 
-	v := atomic.LoadUint32(&flattenAudience)
+	v := atomic.LoadUint32(&json.FlattenAudience)
 	if (v == 1) != flattenAudienceBool {
 		var newVal uint32
 		if flattenAudienceBool {
 			newVal = 1
 		}
-		atomic.CompareAndSwapUint32(&flattenAudience, v, newVal)
+		atomic.CompareAndSwapUint32(&json.FlattenAudience, v, newVal)
 	}
 }
 

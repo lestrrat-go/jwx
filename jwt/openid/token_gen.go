@@ -7,7 +7,6 @@ import (
 	"context"
 	"sort"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -1093,13 +1092,9 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteString(`":`)
 		switch f {
 		case AudienceKey:
-			var val interface{}
-			if v := data[f].([]string); len(v) == 1 && atomic.LoadUint32(&flattenAudience) == 1 {
-				val = v[0]
-			} else {
-				val = data[f]
+			if err := json.EncodeAudience(enc, data[f].([]string)); err != nil {
+				return nil, errors.Wrap(err, `failed to encode "aud"`)
 			}
-			enc.Encode(val)
 			continue
 		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
 			enc.Encode(data[f].(time.Time).Unix())
