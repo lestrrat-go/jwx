@@ -734,3 +734,21 @@ func TestParseRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestGHIssue368(t *testing.T) {
+	tok := jwt.New()
+	_ = tok.Set(jwt.AudienceKey, "hello")
+
+	buf, err := json.MarshalIndent(tok, "", "  ")
+	if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+		return
+	}
+
+	const expected = `{
+  "aud": "hello"
+}`
+
+	if !assert.Equal(t, expected, string(buf), `output should match`) {
+		return
+	}
+}
