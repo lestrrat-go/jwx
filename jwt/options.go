@@ -222,6 +222,10 @@ func WithFormKey(v string) ParseRequestOption {
 //
 // This is sometimes important when a JWT consumer does not understand that
 // the "aud" claim can actually take the form of an array of strings.
+//
+// The default value is `false`, which means that "aud" claims are always
+// rendered as a arrays of strings. This setting has a global effect,
+// and will change the behavior for all JWT serialization.
 func WithFlattenAudience(v bool) GlobalOption {
 	return &globalOption{option.New(identFlattenAudience{}, v)}
 }
