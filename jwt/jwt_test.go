@@ -754,16 +754,16 @@ func TestGHIssue368(t *testing.T) {
 
 				var expected string
 				if flatten {
-				expected = `{
+					expected = `{
   "aud": "hello"
 }`
 				} else {
-				expected = `{
+					expected = `{
   "aud": [
     "hello"
   ]
 }`
-	}
+				}
 
 				if !assert.Equal(t, expected, string(buf), `output should match`) {
 					return

@@ -22,6 +22,8 @@ import (
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
+
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identFlattenAudience{}:

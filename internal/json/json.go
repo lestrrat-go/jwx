@@ -57,8 +57,8 @@ func AssignNextStringToken(dst **string, dec *Decoder) error {
 	return nil
 }
 
-// Flag to specify if we should flatten the "aud" entry to a string
-// when there's only one entry.
+// FlattenAudience is a flag to specify if we should flatten the "aud"
+// entry to a string when there's only one entry.
 // In jwx < 1.1.8 we just dumped everything as an array of strings,
 // but apparently AWS Cognito doesn't handle this well.
 //
