@@ -1090,22 +1090,22 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteRune('"')
 		buf.WriteString(f)
 		buf.WriteString(`":`)
+		switch f {
+		case AudienceKey:
+			if err := json.EncodeAudience(enc, data[f].([]string)); err != nil {
+				return nil, errors.Wrap(err, `failed to encode "aud"`)
+			}
+			continue
+		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
+			enc.Encode(data[f].(time.Time).Unix())
+			continue
+		}
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
 			buf.WriteRune('"')
 			buf.WriteString(base64.EncodeToString(v))
 			buf.WriteRune('"')
-		case time.Time:
-			switch f {
-			case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
-				enc.Encode(v.Unix())
-			default:
-				if err := enc.Encode(v); err != nil {
-					return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
-				}
-				buf.Truncate(buf.Len() - 1)
-			}
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, errors.Wrapf(err, `failed to marshal field %s`, f)

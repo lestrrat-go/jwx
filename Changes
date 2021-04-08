@@ -1,6 +1,22 @@
 Changes
 =======
 
+v1.1.8 (not yet released)
+[New features]
+  * `jwt.Settings()` and `jwt.WithFlattenAudience(bool)` has been added
+    to control how the "aud" claim is serialized into JSON. When this
+    is enabled, all JWTs with a single "aud" claim will serialize
+    the field as a single string, instead of an array of strings with
+    a single element, i.e.:
+
+    // jwt.WithFlattenAudience(true)
+    {"aud": "foo"}
+
+    // jwt.WithFlattenAudience(false)
+    {"aud": ["foo"]}
+
+    This setting has a global effect.
+
 v1.1.7 2 Apr 2021
 [New features]
   * `jwk.New` `jwk.Parse`, `jwk.ParseKey` can now take a Certificate in

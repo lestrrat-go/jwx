@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"sync/atomic"
 	"time"
 
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -17,6 +18,28 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 )
+
+// Settings controls global settings that are specific to JWTs.
+func Settings(options ...GlobalOption) {
+	var flattenAudienceBool bool
+
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identFlattenAudience{}:
+			flattenAudienceBool = option.Value().(bool)
+		}
+	}
+
+	v := atomic.LoadUint32(&json.FlattenAudience)
+	if (v == 1) != flattenAudienceBool {
+		var newVal uint32
+		if flattenAudienceBool {
+			newVal = 1
+		}
+		atomic.CompareAndSwapUint32(&json.FlattenAudience, v, newVal)
+	}
+}
 
 var registry = json.NewRegistry()
 

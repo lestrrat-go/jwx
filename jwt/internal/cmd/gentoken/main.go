@@ -683,15 +683,15 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
 	fmt.Fprintf(&buf, "\nbuf.WriteString(f)")
 	fmt.Fprintf(&buf, "\nbuf.WriteString(`\":`)")
-	fmt.Fprintf(&buf, "\nv := data[f]")
-	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
-	fmt.Fprintf(&buf, "\ncase []byte:")
-	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
-	fmt.Fprintf(&buf, "\nbuf.WriteString(base64.EncodeToString(v))")
-	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+
+	// Handle cases that need specialized handling
+	fmt.Fprintf(&buf, "\nswitch f {")
+	fmt.Fprintf(&buf, "\ncase AudienceKey:")
+	fmt.Fprintf(&buf, "\nif err := json.EncodeAudience(enc, data[f].([]string)); err != nil {")
+	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode \"aud\"`)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ncontinue")
 	if lndf := len(numericDateFields); lndf > 0 {
-		fmt.Fprintf(&buf, "\ncase time.Time:")
-		fmt.Fprintf(&buf, "\nswitch f {")
 		fmt.Fprintf(&buf, "\ncase ")
 		for i, ndf := range numericDateFields {
 			fmt.Fprintf(&buf, "%sKey", ndf.method)
@@ -700,14 +700,17 @@ func generateToken(tt tokenType) error {
 			}
 		}
 		fmt.Fprintf(&buf, ":")
-		fmt.Fprintf(&buf, "\nenc.Encode(v.Unix())")
-		fmt.Fprintf(&buf, "\ndefault:")
-		fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
-		fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
-		fmt.Fprintf(&buf, "\n}")
-		fmt.Fprintf(&buf, "\nbuf.Truncate(buf.Len()-1)")
-		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nenc.Encode(data[f].(time.Time).Unix())")
+		fmt.Fprintf(&buf, "\ncontinue")
 	}
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\nv := data[f]")
+	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\ncase []byte:")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
+	fmt.Fprintf(&buf, "\nbuf.WriteString(base64.EncodeToString(v))")
+	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nif err := enc.Encode(v); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")

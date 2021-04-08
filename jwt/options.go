@@ -11,6 +11,18 @@ import (
 
 type Option = option.Interface
 
+// GlobalOption describes an Option that can be passed to `Settings()`.
+type GlobalOption interface {
+	Option
+	globalOption()
+}
+
+type globalOption struct {
+	Option
+}
+
+func (*globalOption) globalOption() {}
+
 // ParseRequestOption describes an Option that can be passed to `ParseRequest()`.
 type ParseRequestOption interface {
 	ParseOption
@@ -65,6 +77,7 @@ type identAudience struct{}
 type identClaim struct{}
 type identClock struct{}
 type identDefault struct{}
+type identFlattenAudience struct{}
 type identHeaders struct{}
 type identIssuer struct{}
 type identJwtid struct{}
@@ -202,4 +215,17 @@ func WithHeaderKey(v string) ParseRequestOption {
 // doing so will have no effect. Only use it for HTTP request parsing functions
 func WithFormKey(v string) ParseRequestOption {
 	return &httpParseOption{newParseOption(identFormKey{}, v)}
+}
+
+// WithFlattenAudience specifies if the "aud" claim should be flattened
+// to a single string upon the token being serialized to JSON.
+//
+// This is sometimes important when a JWT consumer does not understand that
+// the "aud" claim can actually take the form of an array of strings.
+//
+// The default value is `false`, which means that "aud" claims are always
+// rendered as a arrays of strings. This setting has a global effect,
+// and will change the behavior for all JWT serialization.
+func WithFlattenAudience(v bool) GlobalOption {
+	return &globalOption{option.New(identFlattenAudience{}, v)}
 }

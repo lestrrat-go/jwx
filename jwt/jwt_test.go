@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -731,6 +732,63 @@ func TestParseRequest(t *testing.T) {
 				}
 				return
 			}
+		})
+	}
+}
+
+func TestGHIssue368(t *testing.T) {
+	// DO NOT RUN THIS IN PARALLEL
+	for _, flatten := range []bool{true, false} {
+		flatten := flatten
+		t.Run(fmt.Sprintf("Test serialization (WithFlattenAudience(%t))", flatten), func(t *testing.T) {
+			jwt.Settings(jwt.WithFlattenAudience(flatten))
+
+			t.Run("Single Key", func(t *testing.T) {
+				tok := jwt.New()
+				_ = tok.Set(jwt.AudienceKey, "hello")
+
+				buf, err := json.MarshalIndent(tok, "", "  ")
+				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+					return
+				}
+
+				var expected string
+				if flatten {
+					expected = `{
+  "aud": "hello"
+}`
+				} else {
+					expected = `{
+  "aud": [
+    "hello"
+  ]
+}`
+				}
+
+				if !assert.Equal(t, expected, string(buf), `output should match`) {
+					return
+				}
+			})
+			t.Run("Multiple Keys", func(t *testing.T) {
+				tok := jwt.New()
+				_ = tok.Set(jwt.AudienceKey, []string{"hello", "world"})
+
+				buf, err := json.MarshalIndent(tok, "", "  ")
+				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+					return
+				}
+
+				const expected = `{
+  "aud": [
+    "hello",
+    "world"
+  ]
+}`
+
+				if !assert.Equal(t, expected, string(buf), `output should match`) {
+					return
+				}
+			})
 		})
 	}
 }

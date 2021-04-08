@@ -14,7 +14,7 @@ test-cmd:
 	go test -v -race $(TESTOPTS)
 
 test:
-	$(MAKE) test-cmd TESOPTS=./...
+	$(MAKE) TESTOPTS=./... test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
 
