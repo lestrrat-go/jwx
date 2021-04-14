@@ -147,7 +147,7 @@ func WithHeaders(hdrs jws.Headers) ParseOption {
 }
 
 // WithValidate is passed to `Parse()` method to denote that the
-// validation of the JWT token should be performed after a successful]
+// validation of the JWT token should be performed after a successful
 // parsing of the incoming payload.
 func WithValidate(b bool) ParseOption {
 	return newParseOption(identValidate{}, b)
