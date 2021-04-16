@@ -319,4 +319,4 @@ So then we introduce API changes. Sorry if breaks your builds, but it's done bec
 
 You should also know that we do not introduce API changes between micro versions.
 And on top of that, Go provides extremely good support for idempodent builds via Go modules.
-If you are in an environment where API changes disrupts your environment, you should definitely migrade to using Go modules now.
+If you are in an environment where API changes disrupts your environment, you should definitely migrate to using Go modules now.
