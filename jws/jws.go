@@ -126,9 +126,6 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 
 	result.payload = payload
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
 	result.signatures = make([]*Signature, 0, len(signers))
 	for i, signer := range signers {
 		protected := signer.ProtectedHeader()
