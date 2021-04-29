@@ -1,10 +1,14 @@
 Changes
 =======
 
-v1.1.8 (not yet released)
+v1.2.0 (not yet released)
 [Security Fix]
-  * jwt.Verify had inproperly used the Algorithm() header when `jwt.WithKeySet()`
+  * `jwt.Verify` had inproperly used the Algorithm() header when `jwt.WithKeySet()`
     option was used. This has been fixed.
+
+    As a side effect, `jwt.WithKeySet()` requires that all valid keys contain a
+    valid "alg" field. Without this we cannot safely choose a key to use.
+    This is an INCOMPATIBLE behavior.
 
 [New features]
   * `jwt.Settings()` and `jwt.WithFlattenAudience(bool)` has been added
