@@ -2,6 +2,10 @@ Changes
 =======
 
 v1.1.8 (not yet released)
+[Security Fix]
+  * jwt.Verify had inproperly used the Algorithm() header when `jwt.WithKeySet()`
+    option was used. This has been fixed.
+
 [New features]
   * `jwt.Settings()` and `jwt.WithFlattenAudience(bool)` has been added
     to control how the "aud" claim is serialized into JSON. When this
@@ -16,6 +20,8 @@ v1.1.8 (not yet released)
     {"aud": ["foo"]}
 
     This setting has a global effect.
+
+[Buf fixes]
   * jwt.Validate now returns true if the value in `nbf` field is exactly
     the same as what the clock returns (e.g. token.nbf == time.Now())
 
