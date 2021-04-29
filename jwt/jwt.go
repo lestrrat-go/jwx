@@ -215,7 +215,12 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 		return "", nil, errors.Wrapf(err, `failed to construct raw key from keyset (key ID=%#v)`, kid)
 	}
 
-	return headers.Algorithm(), rawKey, nil
+	var alg jwa.SignatureAlgorithm
+	if err := alg.Accept(key.Algorithm()); err != nil {
+		return "", nil, errors.Wrapf(err, `invalid signatre algorithm %s`, key.Algorithm())
+	}
+
+	return alg, rawKey, nil
 }
 
 // Sign is a convenience function to create a signed JWT token serialized in
