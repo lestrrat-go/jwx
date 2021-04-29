@@ -191,6 +191,20 @@ Supported content encryption algorithm:
 
 # Global Settings
 
+## Allowing single element in 'aud' field
+
+When you marshal `"github.com/lestrrat-go/jwx/jwt".Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
+
+To workaround these problematic parsers, you may use the `jwt.Settings()` function.
+
+```go
+func init() {
+  jwt.Settings(jwt.WithFlattenAurience(true))
+}
+```
+
+The above call will force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has global effect.
+
 ## Enabling ES256K
 
 Some algorithms are intentionally left out because they are not as common in the wild, and you may want to avoid compiling this extra information in.
