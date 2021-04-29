@@ -84,21 +84,49 @@ func TestGHIssue10(t *testing.T) {
 		tm := time.Now().Add(72 * time.Hour)
 		t1.Set(jwt.NotBeforeKey, tm)
 
-		// This should fail, because nbf is the future
-		if !assert.Error(t, jwt.Validate(t1), "token.Validate should fail") {
-			return
+		testcases := []struct {
+			Name    string
+			Options []jwt.ValidateOption
+			Error   bool
+		}{
+			{ // This should fail, because nbf is the future
+				Name:  `'nbf' is less than current time`,
+				Error: true,
+			},
+			{ // This should succeed, because we have given reaaaaaaly big skew
+				Name: `skew is large enough`,
+				Options: []jwt.ValidateOption{
+					jwt.WithAcceptableSkew(73 * time.Hour),
+				},
+			},
+			{ // This should succeed, because we have given a time
+				// that is well enough into the future
+				Name: `clock is set to after time in nbf`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Hour) })),
+				},
+			},
+			{ // This should succeed, the time == NotBefore time
+				// Note, this may fail if you are return a monotonic clock
+				Name: `clock is set to the same time as nbf`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm })),
+				},
+			},
 		}
-
-		// This should succeed, because we have given reaaaaaaly big skew
-		// that is well enough to get us accepted
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithAcceptableSkew(73*time.Hour)), "token.Validate should succeed") {
-			return
-		}
-
-		// This should succeed, because we have given a time
-		// that is well enough into the future
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Hour) }))), "token.Validate should succeed") {
-			return
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				if tc.Error {
+					if !assert.Error(t, jwt.Validate(t1, tc.Options...), "token.Validate should fail") {
+						return
+					}
+				} else {
+					if !assert.NoError(t, jwt.Validate(t1, tc.Options...), "token.Validate should succeed") {
+						return
+					}
+				}
+			})
 		}
 	})
 	t.Run(jwt.ExpirationKey, func(t *testing.T) {
