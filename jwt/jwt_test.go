@@ -792,3 +792,36 @@ func TestGHIssue368(t *testing.T) {
 		})
 	}
 }
+
+func TestGH375(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+	key.Set(jwk.KeyIDKey, `test`)
+
+	token := jwt.New()
+	token.Set(jwt.IssuerKey, `foobar`)
+
+	signAlg := jwa.RS512
+	signed, err := jwt.Sign(token, signAlg, key)
+	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
+		return
+	}
+
+	verifyKey, err := jwk.PublicKeyOf(key)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		return
+	}
+
+	verifyKey.Set(jwk.KeyIDKey, `test`)
+	verifyKey.Set(jwk.AlgorithmKey, jwa.RS256) // != jwa.RS512
+
+	ks := jwk.NewSet()
+	ks.Add(verifyKey)
+
+	_, err = jwt.Parse(signed, jwt.WithKeySet(ks))
+	if !assert.Error(t, err, `jwt.Parse should fail`) {
+		return
+	}
+}
