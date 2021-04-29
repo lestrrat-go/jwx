@@ -68,11 +68,14 @@ func ExampleJWT_ParseWithJWKS() {
 				return
 			}
 
-			// Remember, the key must have the proper "kid"
+			// Remember, the key must have the proper "kid", and "alg"
+			pubKey.Set(jwk.AlgorithmKey, jwa.RS256)
 			pubKey.Set(jwk.KeyIDKey, "mykey")
 
 			// For demonstration purposes, we also create a bogus key
 			bogusKey := jwk.NewSymmetricKey()
+			bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature)
+			bogusKey.Set(jwk.KeyIDKey, "otherkey")
 
 			// This key set contains two keys, the first one is the correct one
 			keyset = jwk.NewSet()
@@ -136,6 +139,7 @@ func ExampleJWT_ParseWithJWKS() {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
 			}
+			pubKey.Set(jwk.AlgorithmKey, jwa.RS256)
 
 			// This JWKS can *only* have 1 key.
 			keyset = jwk.NewSet()
