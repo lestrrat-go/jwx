@@ -122,6 +122,11 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // using one of the keys in the given key set. The key to be used
 // is chosen by matching the Key ID of the JWT and the ID of the
 // given keys.
+//
+// When using this option, keys MUST have a properly 'alg' field
+// set. This is because we need to know the exact algorithm that
+// you (the user) wants to use to verify the token. We do NOT
+// trust the token's headers, because they can easily be tampered with.
 func WithKeySet(set jwk.Set) ParseOption {
 	return newParseOption(identKeySet{}, set)
 }
