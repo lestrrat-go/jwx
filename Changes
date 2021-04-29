@@ -1,15 +1,24 @@
 Changes
 =======
 
-v1.2.0 (not yet released)
-[Security Fix]
-  * `jwt.Verify` had inproperly used the Algorithm() header when `jwt.WithKeySet()`
-    option was used. This has been fixed.
+v1.2.0 30 Apr 2021
 
-    As a side effect, `jwt.WithKeySet()` requires that all valid keys contain a
-    valid "alg" field. Without this we cannot safely choose a key to use.
-    This is an INCOMPATIBLE behavior, but as this has security impact, we think
-    it should be changed in this minor release.
+This is a security fix release with minor incompatibilities from earlier version
+with regards to the behavior of `jwt.Verify()` function
+
+[Security Fix]
+  * `jwt.Verify()` had improperly used the `"alg"` header from the JWS message
+    when `jwt.WithKeySet()` option was used (potentially allowing exploits
+    described in https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/.
+    This has been fixed by ONLY trusting the keys that you provide and
+    using the `"alg"` header from the keys themselves. (#375, #381)
+
+    As a side effect, `jwt.WithKeySet()` requires that all applicable keys
+    to contain a valid `"alg"` header. Without this we cannot safely choose a key to use,
+    and hence verification will fail.
+
+    The requirement for the `"alg"` header on keys is an INCOMPATIBLE behavior.
+    This may break existing code, if the key does not already have an `"alg"` header.
 
 [New features]
   * `jwt.Settings()` and `jwt.WithFlattenAudience(bool)` has been added
@@ -30,7 +39,7 @@ v1.2.0 (not yet released)
   * jwt.Validate now returns true if the value in `nbf` field is exactly
     the same as what the clock returns (e.g. token.nbf == time.Now())
 
-v1.1.7 2 Apr 2021
+v1.1.7 02 Apr 2021
 [New features]
   * `jwk.New` `jwk.Parse`, `jwk.ParseKey` can now take a Certificate in
     ASN.1 DER format in PEM encoding to create a JWK.
