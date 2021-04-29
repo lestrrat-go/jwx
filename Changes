@@ -16,6 +16,8 @@ v1.1.8 (not yet released)
     {"aud": ["foo"]}
 
     This setting has a global effect.
+  * jwt.Validate now returns true if the value in `nbf` field is exactly
+    the same as what the clock returns (e.g. token.nbf == time.Now())
 
 v1.1.7 2 Apr 2021
 [New features]

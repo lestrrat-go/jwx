@@ -106,7 +106,7 @@ func Validate(t Token, options ...ValidateOption) error {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew
-		if !now.After(ttv.Add(-1 * skew)) {
+		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
 			return errors.New(`nbf not satisfied`)
 		}
 	}
