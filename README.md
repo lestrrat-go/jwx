@@ -195,11 +195,27 @@ Supported content encryption algorithm:
 
 When you marshal `"github.com/lestrrat-go/jwx/jwt".Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
 
-To workaround these problematic parsers, you may use the `jwt.Settings()` function.
+The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/issues/368)).
+
+```
+{
+  "aud": ["foo"],
+  ...
+}
+```
+
+```
+{
+  "aud": "foo",
+  ...
+}
+```
+
+To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option.
 
 ```go
 func init() {
-  jwt.Settings(jwt.WithFlattenAurience(true))
+  jwt.Settings(jwt.WithFlattenAudience(true))
 }
 ```
 
