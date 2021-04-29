@@ -8,7 +8,8 @@ v1.2.0 (not yet released)
 
     As a side effect, `jwt.WithKeySet()` requires that all valid keys contain a
     valid "alg" field. Without this we cannot safely choose a key to use.
-    This is an INCOMPATIBLE behavior.
+    This is an INCOMPATIBLE behavior, but as this has security impact, we think
+    it should be changed in this minor release.
 
 [New features]
   * `jwt.Settings()` and `jwt.WithFlattenAudience(bool)` has been added
