@@ -141,6 +141,7 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 
+			pubkey.Set(jwk.AlgorithmKey, alg)
 			pubkey.Set(jwk.KeyIDKey, kid)
 
 			set := jwk.NewSet()
@@ -181,6 +182,7 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 
+			pubkey.Set(jwk.AlgorithmKey, alg)
 			pubkey.Set(jwk.KeyIDKey, kid)
 			signedNoKid, err := jwt.Sign(t1, alg, key)
 			if err != nil {
