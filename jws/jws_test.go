@@ -1074,6 +1074,7 @@ func TestVerifySet(t *testing.T) {
 		k2, _ := jwk.New([]byte("opensasame"))
 		set.Add(k2)
 		pubkey, _ := jwk.PublicKeyOf(privkey)
+		pubkey.Set(jwk.KeyIDKey, `mykey`)
 		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
 		set.Add(pubkey)
 		return set
@@ -1106,11 +1107,18 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.VerifySet(signed, set)
+				verified, keyUsed, err := jws.VerifySet(signed, set)
 				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+				expectedKey, ok := set.Get(2)
+				if !assert.True(t, ok, `set.Get(2) should succeed`) {
+					return
+				}
+				if !assert.Equal(t, expectedKey, keyUsed, `key used should match`) {
 					return
 				}
 			})
@@ -1139,11 +1147,18 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.VerifySet(signed, set)
+				verified, keyUsed, err := jws.VerifySet(signed, set)
 				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+				expectedKey, ok := set.Get(2)
+				if !assert.True(t, ok, `set.Get(2) should succeed`) {
+					return
+				}
+				if !assert.Equal(t, expectedKey, keyUsed, `key used should match`) {
 					return
 				}
 			})

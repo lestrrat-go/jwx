@@ -332,6 +332,9 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 }
 
 // VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
+// Upon successful completion, returns the signed payload, the key used to
+// verify, and a nil error. Otherwise returns nil for the former two, and
+// an error.
 //
 // In order for `VerifySet()` to use a key in the given set, the
 // `jwk.Key` object must have a valid "alg" field, and it also must
@@ -359,10 +362,10 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 			continue
 		}
 
-		return buf, nil
+		return buf, key, nil
 	}
 
-	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
+	return nil, nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
 }
 
 func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {

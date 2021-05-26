@@ -1,6 +1,16 @@
 Changes
 =======
 
+v2.0.0 (maybe) UNRELEASED
+
+Changes in this section are NOT finalized. You may choose to use it in your
+code, but DO NOT assume that these changes will stay as is, let alone at all.
+
+[BREAKING CHANGES]
+  * `jws.VerifySet()` now returns the key that was used to verify the payload.
+    This way you will know which key to use for further processing, such as
+    checking the thumbprint of said key.
+
 v1.2.17 12 Jan 2022
 [Miscellaneous]
   * Re-release v1.2.16 as v1.2.17 because of an error in the release process.
