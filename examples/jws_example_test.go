@@ -45,7 +45,7 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// Up to this point, you probably will replace with a simple jwk.Fetch()
 
 	// Now verify using the set.
-	if _, err := jws.VerifySet(signed, set); err != nil {
+	if _, _, err := jws.VerifySet(signed, set); err != nil {
 		fmt.Printf("Failed to verify using jwk.Set!: %s", err)
 	}
 
