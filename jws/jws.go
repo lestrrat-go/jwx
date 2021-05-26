@@ -174,6 +174,9 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 }
 
 // VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
+// Upon successful completion, returns the signed payload, the key used to
+// verify, and a nil error. Otherwise returns nil for the former two, and
+// an error.
 //
 // In order for `VerifySet()` to use a key in the given set, the
 // `jwk.Key` object must have a valid "alg" field, and it also must
@@ -181,7 +184,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, er
 //
 // Furthermore if the JWS signature asks for a spefici "kid", the
 // `jwk.Key` must have the same "kid" as the signature.
-func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
+func VerifySet(buf []byte, set jwk.Set) ([]byte, jwk.Key, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -202,10 +205,10 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 			continue
 		}
 
-		return buf, nil
+		return buf, key, nil
 	}
 
-	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
+	return nil, nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
 }
 
 func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
