@@ -84,6 +84,7 @@ type identJwtid struct{}
 type identKeySet struct{}
 type identSubject struct{}
 type identToken struct{}
+type identTypedClaim struct{}
 type identValidate struct{}
 type identVerify struct{}
 
@@ -233,4 +234,19 @@ func WithFormKey(v string) ParseRequestOption {
 // and will change the behavior for all JWT serialization.
 func WithFlattenAudience(v bool) GlobalOption {
 	return &globalOption{option.New(identFlattenAudience{}, v)}
+}
+
+type typedClaimPair struct {
+	Name  string
+	Value interface{}
+}
+
+// WithTypedClaim allows a private claim to be parsed into the object type of
+// your choice. It works much like the RegisterCustomField, but the effect
+// is only applicable to the jwt.Parse function call which recieves this option.
+//
+// Providing this option will slightly slow down the decoding process, so be careful
+// if you are decoding a large number of tokens
+func WithTypedClaim(name string, object interface{}) ParseOption {
+	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
 }

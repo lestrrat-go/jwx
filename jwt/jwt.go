@@ -125,6 +125,11 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	return parse(token, data, false, "", nil, validate, options...)
 }
 
+type tokenWithParseCtx interface {
+	parseCtx() *parseCtx
+	setParseCtx(*parseCtx)
+}
+
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
 func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
@@ -161,6 +166,35 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	if token == nil {
 		token = New()
 	}
+
+	var typedClaims map[string]interface{}
+	for _, option := range options {
+		switch option.Ident() {
+		case identTypedClaim{}:
+			pair := option.Value().(typedClaimPair)
+			if typedClaims == nil {
+				typedClaims = make(map[string]interface{})
+			}
+			typedClaims[pair.Name] = pair.Value
+		}
+	}
+
+	if pcToken, ok := token.(tokenWithParseCtx); ok {
+		if len(typedClaims) > 0 {
+			pc := &parseCtx{
+				registry: json.NewRegistry(),
+			}
+			pcToken.setParseCtx(pc)
+			for name, obj := range typedClaims {
+				pc.registry.Register(name, obj)
+			}
+		}
+
+		if pcToken.parseCtx() != nil {
+			defer func() { pcToken.setParseCtx(nil) }()
+		}
+	}
+
 	if err := json.Unmarshal(payload, token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}

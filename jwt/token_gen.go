@@ -57,8 +57,12 @@ type Token interface {
 	Walk(context.Context, Visitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
 }
+type parseCtx struct {
+	registry *json.Registry
+}
 type stdToken struct {
 	mu            *sync.RWMutex
+	pc            *parseCtx          // per-object context for parsing
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -159,6 +163,18 @@ func (t *stdToken) Set(name string, value interface{}) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.setNoLock(name, value)
+}
+
+func (t *stdToken) parseCtx() *parseCtx {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.pc
+}
+
+func (t *stdToken) setParseCtx(v *parseCtx) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.pc = v
 }
 
 func (t *stdToken) setNoLock(name string, value interface{}) error {
@@ -391,11 +407,25 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
 				}
 			default:
-				decoded, err := registry.Decode(dec, tok)
-				if err != nil {
-					return err
+				registries := make([]*json.Registry, 0, 2)
+				if pc := t.pc; pc != nil {
+					registries = append(registries, pc.registry)
 				}
-				t.setNoLock(tok, decoded)
+				registries = append(registries, registry)
+				var lastError error
+				for _, reg := range registries {
+					decoded, err := reg.Decode(dec, tok)
+					if err != nil {
+						lastError = err
+						continue
+					}
+					lastError = nil
+					t.setNoLock(tok, decoded)
+					break
+				}
+				if lastError != nil {
+					return errors.Wrapf(err, `could not decode field %s`, tok)
+				}
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)
