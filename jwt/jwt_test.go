@@ -23,6 +23,7 @@ import (
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /* This is commented out, because it is intended to cause compilation errors */
@@ -826,4 +827,101 @@ func TestGH375(t *testing.T) {
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
 	}
+}
+
+type Claim struct {
+	Foo string
+	Bar int
+}
+
+func TestJWTParseWithTypedClaim(t *testing.T) {
+	// Arrange
+	require := require.New(t)
+
+	key, err := jwxtest.GenerateRsaKey()
+
+	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
+	token0 := jwt.New()
+	token0.Set("typed-claim", claim0)
+
+	signed, err := jwt.Sign(token0, jwa.RS256, key)
+	require.NoError(err)
+
+	// Act
+	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("typed-claim", Claim{}))
+
+	// Assert
+	require.NoError(err)
+
+	claimInterface, ok := token1.Get("typed-claim")
+	require.True(ok)
+
+	_, ok = claimInterface.(*Claim)
+	require.False(ok)
+	claim1, ok := claimInterface.(Claim)
+	require.True(ok)
+	require.Equal(claim1, claim0)
+}
+
+func TestJWTParseWithTypedClaim_RawMessage(t *testing.T) {
+	// Arrange
+	require := require.New(t)
+
+	key, err := jwxtest.GenerateRsaKey()
+	require.NoError(err)
+
+	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
+	token0 := jwt.New()
+	token0.Set("typed-claim", claim0)
+
+	signed, err := jwt.Sign(token0, jwa.RS256, key)
+	require.NoError(err)
+
+	// Act
+	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("typed-claim", json.RawMessage{}))
+
+	// Assert
+	require.NoError(err)
+
+	claimInterface, ok := token1.Get("typed-claim")
+	require.True(ok)
+
+	_, ok = claimInterface.(*json.RawMessage)
+	require.False(ok)
+	claimRaw, ok := claimInterface.(json.RawMessage)
+	require.True(ok)
+
+	var claim1 Claim
+	err = json.Unmarshal(claimRaw, &claim1)
+	require.NoError(err)
+
+	require.Equal(claim1, claim0)
+}
+
+func TestJWTParseWithTypedClaim_FieldNameEqualToPrivateClaimName(t *testing.T) {
+	// Arrange
+	require := require.New(t)
+
+	key, err := jwxtest.GenerateRsaKey()
+	require.NoError(err)
+
+	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
+	token0 := jwt.New()
+	token0.Set("Foo", claim0)
+
+	signed, err := jwt.Sign(token0, jwa.RS256, key)
+	require.NoError(err)
+
+	// Act
+	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("Foo", Claim{}))
+
+	// Assert
+	require.NoError(err)
+
+	claimInterface, ok := token1.Get("Foo")
+	require.True(ok)
+
+	claim1, ok := claimInterface.(Claim)
+	require.True(ok)
+	require.Equal(claim1, claim0)
 }
