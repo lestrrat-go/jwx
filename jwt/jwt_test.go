@@ -17,13 +17,13 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 /* This is commented out, because it is intended to cause compilation errors */
@@ -835,93 +835,82 @@ type Claim struct {
 }
 
 func TestJWTParseWithTypedClaim(t *testing.T) {
-	// Arrange
-	require := require.New(t)
+	testcases := []struct {
+		Name        string
+		Options     []jwt.ParseOption
+		PostProcess func(*testing.T, interface{}) (*Claim, error)
+	}{
+		{
+			Name:    "Basic",
+			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", Claim{})},
+			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+				t.Helper()
+				v, ok := claim.(Claim)
+				if !ok {
+					return nil, errors.Errorf(`claim value should be of type "Claim", but got %T`, claim)
+				}
+				return &v, nil
+			},
+		},
+		{
+			Name:    "json.RawMessage",
+			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", json.RawMessage{})},
+			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+				t.Helper()
+				v, ok := claim.(json.RawMessage)
+				if !ok {
+					return nil, errors.Errorf(`claim value should be of type "json.RawMessage", but got %T`, claim)
+				}
 
+				var c Claim
+				if err := json.Unmarshal(v, &c); err != nil {
+					return nil, errors.Wrap(err, `json.Unmarshal failed`)
+				}
+
+				return &c, nil
+			},
+		},
+	}
+
+	expected := &Claim{Foo: "Foo", Bar: 0xdeadbeef}
 	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+		return
+	}
 
-	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
-	token0 := jwt.New()
-	token0.Set("typed-claim", claim0)
+	var signed []byte
+	{
+		token := jwt.New()
+		if !assert.NoError(t, token.Set("typed-claim", expected), `expected.Set should succeed`) {
+			return
+		}
+		v, err := jwt.Sign(token, jwa.RS256, key)
+		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+			return
+		}
+		signed = v
+	}
 
-	signed, err := jwt.Sign(token0, jwa.RS256, key)
-	require.NoError(err)
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := jwt.Parse(signed, tc.Options...)
+			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+				return
+			}
 
-	// Act
-	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("typed-claim", Claim{}))
+			v, ok := got.Get("typed-claim")
+			if !assert.True(t, ok, `got.Get() should succeed`) {
+				return
+			}
+			claim, err := tc.PostProcess(t, v)
+			if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
+				return
+			}
 
-	// Assert
-	require.NoError(err)
-
-	claimInterface, ok := token1.Get("typed-claim")
-	require.True(ok)
-
-	_, ok = claimInterface.(*Claim)
-	require.False(ok)
-	claim1, ok := claimInterface.(Claim)
-	require.True(ok)
-	require.Equal(claim1, claim0)
-}
-
-func TestJWTParseWithTypedClaim_RawMessage(t *testing.T) {
-	// Arrange
-	require := require.New(t)
-
-	key, err := jwxtest.GenerateRsaKey()
-	require.NoError(err)
-
-	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
-	token0 := jwt.New()
-	token0.Set("typed-claim", claim0)
-
-	signed, err := jwt.Sign(token0, jwa.RS256, key)
-	require.NoError(err)
-
-	// Act
-	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("typed-claim", json.RawMessage{}))
-
-	// Assert
-	require.NoError(err)
-
-	claimInterface, ok := token1.Get("typed-claim")
-	require.True(ok)
-
-	_, ok = claimInterface.(*json.RawMessage)
-	require.False(ok)
-	claimRaw, ok := claimInterface.(json.RawMessage)
-	require.True(ok)
-
-	var claim1 Claim
-	err = json.Unmarshal(claimRaw, &claim1)
-	require.NoError(err)
-
-	require.Equal(claim1, claim0)
-}
-
-func TestJWTParseWithTypedClaim_FieldNameEqualToPrivateClaimName(t *testing.T) {
-	// Arrange
-	require := require.New(t)
-
-	key, err := jwxtest.GenerateRsaKey()
-	require.NoError(err)
-
-	claim0 := Claim{Foo: "Foo", Bar: 0xdeadbeef}
-	token0 := jwt.New()
-	token0.Set("Foo", claim0)
-
-	signed, err := jwt.Sign(token0, jwa.RS256, key)
-	require.NoError(err)
-
-	// Act
-	token1, err := jwt.Parse(signed, jwt.WithTypedClaim("Foo", Claim{}))
-
-	// Assert
-	require.NoError(err)
-
-	claimInterface, ok := token1.Get("Foo")
-	require.True(ok)
-
-	claim1, ok := claimInterface.(Claim)
-	require.True(ok)
-	require.Equal(claim1, claim0)
+			if !assert.Equal(t, claim, expected, `claim should match expected value`) {
+				return
+			}
+		})
+	}
 }
