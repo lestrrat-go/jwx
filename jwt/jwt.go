@@ -168,6 +168,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	}
 
 	var typedClaims map[string]interface{}
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identTypedClaim{}:

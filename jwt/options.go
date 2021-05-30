@@ -243,10 +243,11 @@ type typedClaimPair struct {
 
 // WithTypedClaim allows a private claim to be parsed into the object type of
 // your choice. It works much like the RegisterCustomField, but the effect
-// is only applicable to the jwt.Parse function call which recieves this option.
+// is only applicable to the jwt.Parse function call which receives this option.
 //
-// Providing this option will slightly slow down the decoding process, so be careful
-// if you are decoding a large number of tokens
+// Providing this option will slightly slow down the decoding process as it needs
+// to consult multiple definitions sources (global and local), so be careful
+// if you are decoding a large number of tokens, as the effects will stack up.
 func WithTypedClaim(name string, object interface{}) ParseOption {
 	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
 }
