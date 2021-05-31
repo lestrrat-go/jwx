@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/lestrrat-go/jwx/internal/json"
 )
 
 // KeyUsageType is used to denote what this key should be used for
@@ -82,6 +83,7 @@ type Set interface {
 type set struct {
 	keys []Key
 	mu   sync.RWMutex
+	dc   DecodeCtx
 }
 
 type HeaderVisitor = iter.MapVisitor
@@ -102,4 +104,25 @@ type PublicKeyer interface {
 // fetching tools.
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
+}
+
+// DecodeCtx is an interface for objects that needs that extra something
+// when decoding JSON into an object.
+type DecodeCtx interface {
+	Registry() *json.Registry
+}
+
+// KeyWithDecodeCtx is used to differentiate objects that can carry extra
+// decoding hints and those who can't.
+type KeyWithDecodeCtx interface {
+	DecodeCtx() DecodeCtx
+	SetDecodeCtx(DecodeCtx)
+}
+
+type decodeCtx struct {
+	registry *json.Registry
+}
+
+func (c *decodeCtx) Registry() *json.Registry {
+	return c.registry
 }

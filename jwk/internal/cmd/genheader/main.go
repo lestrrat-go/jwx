@@ -606,6 +606,7 @@ func generateHeader(kt keyType) error {
 		}
 		fmt.Fprintf(&buf, "\nprivateParams map[string]interface{}")
 		fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
+		fmt.Fprintf(&buf, "\ndc DecodeCtx")
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc New%[1]s() %[1]s {", ifName)
@@ -813,6 +814,18 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\nreturn cloneKey(k)")
 		fmt.Fprintf(&buf, "\n}")
 
+		fmt.Fprintf(&buf, "\n\nfunc (k *%s) DecodeCtx() DecodeCtx {", structName)
+		fmt.Fprintf(&buf, "\nk.mu.RLock()")
+		fmt.Fprintf(&buf, "\ndefer k.mu.RUnlock()")
+		fmt.Fprintf(&buf, "\nreturn k.dc")
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\n\nfunc (k *%s) SetDecodeCtx(dc DecodeCtx) {", structName)
+		fmt.Fprintf(&buf, "\nk.mu.Lock()")
+		fmt.Fprintf(&buf, "\ndefer k.mu.Unlock()")
+		fmt.Fprintf(&buf, "\nk.dc = dc")
+		fmt.Fprintf(&buf, "\n}")
+
 		fmt.Fprintf(&buf, "\n\nfunc (h *%s) UnmarshalJSON(buf []byte) error {", structName)
 		for _, f := range ht.allHeaders {
 			fmt.Fprintf(&buf, "\nh.%s = nil", f.name)
@@ -876,11 +889,24 @@ func generateHeader(kt keyType) error {
 			}
 		}
 		fmt.Fprintf(&buf, "\ndefault:")
-		fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
-		fmt.Fprintf(&buf, "\nif err != nil {")
-		fmt.Fprintf(&buf, "\nreturn err")
-		fmt.Fprintf(&buf, "\n}")
+		// This looks like bad code, but we're unrolling things for maximum
+		// runtime efficiency
+		fmt.Fprintf(&buf, "\nif dc := h.dc; dc != nil {")
+		fmt.Fprintf(&buf, "\nif localReg := dc.Registry(); localReg != nil {")
+		fmt.Fprintf(&buf, "\ndecoded, err := localReg.Decode(dec, tok)")
+		fmt.Fprintf(&buf, "\nif err == nil {")
 		fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
+		fmt.Fprintf(&buf, "\ncontinue")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\n}")
+
+		fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+		fmt.Fprintf(&buf, "\nif err == nil {")
+		fmt.Fprintf(&buf, "\nh.setNoLock(tok, decoded)")
+		fmt.Fprintf(&buf, "\ncontinue")
+		fmt.Fprintf(&buf, "\n}")
+		fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `could not decode field %%s`, tok)")
 		fmt.Fprintf(&buf, "\n}")
 		fmt.Fprintf(&buf, "\ndefault:")
 		fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")

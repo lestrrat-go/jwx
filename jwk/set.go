@@ -142,15 +142,22 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		return errors.Wrap(err, `failed to unmarshal into Key (proxy)`)
 	}
 
+	var options []ParseOption
+	if dc := s.dc; dc != nil {
+		if localReg := dc.Registry(); localReg != nil {
+			options = append(options, withLocalRegistry(localReg))
+		}
+	}
+
 	if len(proxy.Keys) == 0 {
-		k, err := ParseKey(data)
+		k, err := ParseKey(data, options...)
 		if err != nil {
 			return errors.Wrap(err, `failed to unmarshal key from JSON headers`)
 		}
 		s.keys = append(s.keys, k)
 	} else {
 		for i, buf := range proxy.Keys {
-			k, err := ParseKey([]byte(buf))
+			k, err := ParseKey([]byte(buf), options...)
 			if err != nil {
 				return errors.Wrapf(err, `failed to unmarshal key #%d (total %d) from multi-key JWK set`, i+1, len(proxy.Keys))
 			}

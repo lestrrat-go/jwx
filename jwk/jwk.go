@@ -356,11 +356,18 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 // parameters are performed, etc.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
+	var localReg *json.Registry
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
@@ -407,6 +414,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
 
+	if dcKey, ok := key.(KeyWithDecodeCtx); ok {
+		if localReg != nil {
+			dc := &decodeCtx{registry: localReg}
+			dcKey.SetDecodeCtx(dc)
+			defer func() { dcKey.SetDecodeCtx(nil) }()
+		}
+	}
+
 	if err := json.Unmarshal(data, key); err != nil {
 		return nil, errors.Wrapf(err, `failed to unmarshal JSON into key (%T)`, key)
 	}
@@ -430,11 +445,18 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
+	var typedFields map[string]interface{}
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if typedFields == nil {
+				typedFields = make(map[string]interface{})
+			}
+			typedFields[pair.Name] = pair.Value
 		}
 	}
 

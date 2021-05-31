@@ -17,6 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -1432,5 +1433,95 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 
 	if !assert.Equal(t, 65537, pubkey.E, `value for E should amtch`) {
 		return
+	}
+}
+
+type typedField struct {
+	Foo string
+	Bar int
+}
+
+func TestTypedFields(t *testing.T) {
+	expected := &typedField{Foo: "Foo", Bar: 0xdeadbeef}
+	var keys []jwk.Key
+	{
+		k1, _ := jwxtest.GenerateRsaJwk()
+		k2, _ := jwxtest.GenerateEcdsaJwk()
+		k3, _ := jwxtest.GenerateSymmetricJwk()
+		k4, _ := jwxtest.GenerateEd25519Jwk()
+		keys = []jwk.Key{k1, k2, k3, k4}
+	}
+	for _, key := range keys {
+		key.Set("typed-field", expected)
+	}
+
+	testcases := []struct {
+		Name        string
+		Options     []jwk.ParseOption
+		PostProcess func(*testing.T, interface{}) (*typedField, error)
+	}{
+		{
+			Name:    "Basic",
+			Options: []jwk.ParseOption{jwk.WithTypedField("typed-field", typedField{})},
+			PostProcess: func(t *testing.T, field interface{}) (*typedField, error) {
+				t.Helper()
+				v, ok := field.(typedField)
+				if !ok {
+					return nil, errors.Errorf(`field value should be of type "typedField", but got %T`, field)
+				}
+				return &v, nil
+			},
+		},
+		{
+			Name:    "json.RawMessage",
+			Options: []jwk.ParseOption{jwk.WithTypedField("typed-field", json.RawMessage{})},
+			PostProcess: func(t *testing.T, field interface{}) (*typedField, error) {
+				t.Helper()
+				v, ok := field.(json.RawMessage)
+				if !ok {
+					return nil, errors.Errorf(`field value should be of type "json.RawMessage", but got %T`, field)
+				}
+
+				var c typedField
+				if err := json.Unmarshal(v, &c); err != nil {
+					return nil, errors.Wrap(err, `json.Unmarshal failed`)
+				}
+
+				return &c, nil
+			},
+		},
+	}
+
+	for _, key := range keys {
+		key := key
+		serialized, err := json.Marshal(key)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
+			for _, tc := range testcases {
+				tc := tc
+				t.Run(tc.Name, func(t *testing.T) {
+					got, err := jwk.ParseKey(serialized, tc.Options...)
+					if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+						return
+					}
+
+					v, ok := got.Get("typed-field")
+					if !assert.True(t, ok, `got.Get() should succeed`) {
+						return
+					}
+					field, err := tc.PostProcess(t, v)
+					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
+						return
+					}
+
+					if !assert.Equal(t, field, expected, `field should match expected value`) {
+						return
+					}
+				})
+			}
+		})
 	}
 }
