@@ -1524,4 +1524,48 @@ func TestTypedFields(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Set", func(t *testing.T) {
+		s := jwk.NewSet()
+		for _, key := range keys {
+			s.Add(key)
+		}
+
+		serialized, err := json.Marshal(s)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				got, err := jwk.Parse(serialized, tc.Options...)
+				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+					return
+				}
+
+				for iter := got.Iterate(ctx); iter.Next(ctx); {
+					pair := iter.Pair()
+					key, ok := pair.Value.(jwk.Key)
+
+					v, ok := key.Get("typed-field")
+					if !assert.True(t, ok, `key.Get() should succeed`) {
+						return
+					}
+					field, err := tc.PostProcess(t, v)
+					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
+						return
+					}
+
+					if !assert.Equal(t, field, expected, `field should match expected value`) {
+						return
+					}
+				}
+			})
+		}
+
+	})
 }

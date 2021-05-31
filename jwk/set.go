@@ -180,3 +180,15 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 	}
 	return nil, false
 }
+
+func (s *set) DecodeCtx() DecodeCtx {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.dc
+}
+
+func (s *set) SetDecodeCtx(dc DecodeCtx) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.dc = dc
+}
