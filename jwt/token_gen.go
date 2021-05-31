@@ -57,12 +57,17 @@ type Token interface {
 	Walk(context.Context, Visitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
 }
-type parseCtx struct {
+type decodeCtx struct {
 	registry *json.Registry
 }
+
+func (c *decodeCtx) Registry() *json.Registry {
+	return c.registry
+}
+
 type stdToken struct {
 	mu            *sync.RWMutex
-	pc            *parseCtx          // per-object context for parsing
+	dc            DecodeCtx          // per-object context for decoding
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -165,16 +170,16 @@ func (t *stdToken) Set(name string, value interface{}) error {
 	return t.setNoLock(name, value)
 }
 
-func (t *stdToken) parseCtx() *parseCtx {
+func (t *stdToken) DecodeCtx() DecodeCtx {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.pc
+	return t.dc
 }
 
-func (t *stdToken) setParseCtx(v *parseCtx) {
+func (t *stdToken) SetDecodeCtx(v DecodeCtx) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.pc = v
+	t.dc = v
 }
 
 func (t *stdToken) setNoLock(name string, value interface{}) error {
@@ -407,25 +412,21 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
 				}
 			default:
-				registries := make([]*json.Registry, 0, 2)
-				if pc := t.pc; pc != nil {
-					registries = append(registries, pc.registry)
-				}
-				registries = append(registries, registry)
-				var lastError error
-				for _, reg := range registries {
-					decoded, err := reg.Decode(dec, tok)
-					if err != nil {
-						lastError = err
-						continue
+				if dc := t.dc; dc != nil {
+					if localReg := dc.Registry(); localReg != nil {
+						decoded, err := localReg.Decode(dec, tok)
+						if err == nil {
+							t.setNoLock(tok, decoded)
+							continue
+						}
 					}
-					lastError = nil
+				}
+				decoded, err := registry.Decode(dec, tok)
+				if err == nil {
 					t.setNoLock(tok, decoded)
-					break
+					continue
 				}
-				if lastError != nil {
-					return errors.Wrapf(err, `could not decode field %s`, tok)
-				}
+				return errors.Wrapf(err, `could not decode field %s`, tok)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

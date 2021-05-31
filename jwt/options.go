@@ -248,6 +248,11 @@ type typedClaimPair struct {
 // Providing this option will slightly slow down the decoding process as it needs
 // to consult multiple definitions sources (global and local), so be careful
 // if you are decoding a large number of tokens, as the effects will stack up.
+//
+// This option will also NOT work unless the tokens themselves support such
+// parsing mechanism. For example, while tokens obtained from `jwt.New()` and
+// `openid.New()` will respect this option, if you provide your own custom
+// token type, it will need to implement the TokenWithDecodeCtx interface.
 func WithTypedClaim(name string, object interface{}) ParseOption {
 	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
 }

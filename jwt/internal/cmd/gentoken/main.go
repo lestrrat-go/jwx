@@ -384,13 +384,16 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\ntype parseCtx struct {")
+	fmt.Fprintf(&buf, "\ntype decodeCtx struct {")
 	fmt.Fprintf(&buf, "\nregistry *json.Registry")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n\nfunc(c *decodeCtx) Registry() *json.Registry {")
+	fmt.Fprintf(&buf, "\nreturn c.registry")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
 	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
-	fmt.Fprintf(&buf, "\npc *parseCtx // per-object context for parsing")
+	fmt.Fprintf(&buf, "\ndc DecodeCtx // per-object context for decoding")
 	for _, f := range fields {
 		fmt.Fprintf(&buf, "\n%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
 	}
@@ -462,16 +465,16 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nreturn t.setNoLock(name, value)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) parseCtx() *parseCtx {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) DecodeCtx() DecodeCtx {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
-	fmt.Fprintf(&buf, "\nreturn t.pc")
+	fmt.Fprintf(&buf, "\nreturn t.dc")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\n\nfunc (t *%s) setParseCtx(v *parseCtx) {", tt.structName)
+	fmt.Fprintf(&buf, "\n\nfunc (t *%s) SetDecodeCtx(v DecodeCtx) {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.Lock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.Unlock()")
-	fmt.Fprintf(&buf, "\nt.pc = v")
+	fmt.Fprintf(&buf, "\nt.dc = v")
 	fmt.Fprintf(&buf, "\n}")
 
 	fmt.Fprintf(&buf, "\n\nfunc (t *%s) setNoLock(name string, value interface{}) error {", tt.structName)
@@ -656,25 +659,24 @@ func generateToken(tt tokenType) error {
 		}
 	}
 	fmt.Fprintf(&buf, "\ndefault:")
-	fmt.Fprintf(&buf, "\nregistries := make([]*json.Registry, 0, 2)")
-	fmt.Fprintf(&buf, "\nif pc := t.pc; pc != nil {")
-	fmt.Fprintf(&buf, "\nregistries = append(registries, pc.registry)")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nregistries = append(registries, registry)")
-	fmt.Fprintf(&buf, "\nvar lastError error")
-	fmt.Fprintf(&buf, "\nfor _, reg := range registries {")
-	fmt.Fprintf(&buf, "\ndecoded, err := reg.Decode(dec, tok)")
-	fmt.Fprintf(&buf, "\nif err != nil {")
-	fmt.Fprintf(&buf, "\nlastError = err")
+	// This looks like bad code, but we're unrolling things for maximum
+	// runtime efficiency
+	fmt.Fprintf(&buf, "\nif dc := t.dc; dc != nil {")
+	fmt.Fprintf(&buf, "\nif localReg := dc.Registry(); localReg != nil {")
+	fmt.Fprintf(&buf, "\ndecoded, err := localReg.Decode(dec, tok)")
+	fmt.Fprintf(&buf, "\nif err == nil {")
+	fmt.Fprintf(&buf, "\nt.setNoLock(tok, decoded)")
 	fmt.Fprintf(&buf, "\ncontinue")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nlastError = nil")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n}")
+
+	fmt.Fprintf(&buf, "\ndecoded, err := registry.Decode(dec, tok)")
+	fmt.Fprintf(&buf, "\nif err == nil {")
 	fmt.Fprintf(&buf, "\nt.setNoLock(tok, decoded)")
-	fmt.Fprintf(&buf, "\nbreak")
+	fmt.Fprintf(&buf, "\ncontinue")
 	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\nif lastError != nil {")
 	fmt.Fprintf(&buf, "\nreturn errors.Wrapf(err, `could not decode field %%s`, tok)")
-	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndefault:")
 	fmt.Fprintf(&buf, "\nreturn errors.Errorf(`invalid token %%T`, tok)")
