@@ -12,4 +12,3 @@ type Visitor = iter.MapVisitor
 type VisitorFunc = iter.MapVisitorFunc
 type DecodeCtx = json.DecodeCtx
 type TokenWithDecodeCtx = json.DecodeCtxContainer
-

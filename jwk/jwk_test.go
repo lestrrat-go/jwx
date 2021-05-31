@@ -1549,8 +1549,7 @@ func TestTypedFields(t *testing.T) {
 
 				for iter := got.Iterate(ctx); iter.Next(ctx); {
 					pair := iter.Pair()
-					key, ok := pair.Value.(jwk.Key)
-
+					key, _ := pair.Value.(jwk.Key)
 					v, ok := key.Get("typed-field")
 					if !assert.True(t, ok, `key.Get() should succeed`) {
 						return
@@ -1566,6 +1565,5 @@ func TestTypedFields(t *testing.T) {
 				}
 			})
 		}
-
 	})
 }
