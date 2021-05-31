@@ -162,31 +162,25 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		token = New()
 	}
 
-	var typedClaims map[string]interface{}
+	var localReg *json.Registry
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identTypedClaim{}:
 			pair := option.Value().(typedClaimPair)
-			if typedClaims == nil {
-				typedClaims = make(map[string]interface{})
+			if localReg == nil {
+				localReg = json.NewRegistry()
 			}
-			typedClaims[pair.Name] = pair.Value
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
 	if pcToken, ok := token.(TokenWithDecodeCtx); ok {
-		if len(typedClaims) > 0 {
+		if localReg != nil {
 			pc := &decodeCtx{
-				registry: json.NewRegistry(),
+				registry: localReg,
 			}
 			pcToken.SetDecodeCtx(pc)
-			for name, obj := range typedClaims {
-				pc.registry.Register(name, obj)
-			}
-		}
-
-		if pcToken.DecodeCtx() != nil {
 			defer func() { pcToken.SetDecodeCtx(nil) }()
 		}
 	}
