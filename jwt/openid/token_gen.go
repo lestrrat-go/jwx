@@ -84,14 +84,6 @@ type Token interface {
 	Walk(context.Context, Visitor) error
 	AsMap(context.Context) (map[string]interface{}, error)
 }
-type decodeCtx struct {
-	registry *json.Registry
-}
-
-func (c *decodeCtx) Registry() *json.Registry {
-	return c.registry
-}
-
 type stdToken struct {
 	mu                  *sync.RWMutex
 	dc                  DecodeCtx          // per-object context for decoding

@@ -414,12 +414,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
 
-	if dcKey, ok := key.(KeyWithDecodeCtx); ok {
-		if localReg != nil {
-			dc := &decodeCtx{registry: localReg}
-			dcKey.SetDecodeCtx(dc)
-			defer func() { dcKey.SetDecodeCtx(nil) }()
+	if localReg != nil {
+		dcKey, ok := key.(KeyWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed claim was requested, but the key (%T) does not support DecodeCtx`, key)
 		}
+		dc := json.NewDecodeCtx(localReg)
+		dcKey.SetDecodeCtx(dc)
+		defer func() { dcKey.SetDecodeCtx(nil) }()
 	}
 
 	if err := json.Unmarshal(data, key); err != nil {

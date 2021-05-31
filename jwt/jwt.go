@@ -180,9 +180,7 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		if !ok {
 			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, token)
 		}
-		dc := &decodeCtx{
-			registry: localReg,
-		}
+		dc := json.NewDecodeCtx(localReg)
 		dcToken.SetDecodeCtx(dc)
 		defer func() { dcToken.SetDecodeCtx(nil) }()
 	}

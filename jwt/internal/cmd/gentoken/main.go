@@ -384,13 +384,6 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nAsMap(context.Context) (map[string]interface{}, error)")
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\ntype decodeCtx struct {")
-	fmt.Fprintf(&buf, "\nregistry *json.Registry")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nfunc(c *decodeCtx) Registry() *json.Registry {")
-	fmt.Fprintf(&buf, "\nreturn c.registry")
-	fmt.Fprintf(&buf, "\n}")
-
 	fmt.Fprintf(&buf, "\ntype %s struct {", tt.structName)
 	fmt.Fprintf(&buf, "\nmu *sync.RWMutex")
 	fmt.Fprintf(&buf, "\ndc DecodeCtx // per-object context for decoding")

@@ -106,23 +106,5 @@ type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-// DecodeCtx is an interface for objects that needs that extra something
-// when decoding JSON into an object.
-type DecodeCtx interface {
-	Registry() *json.Registry
-}
-
-// KeyWithDecodeCtx is used to differentiate objects that can carry extra
-// decoding hints and those who can't.
-type KeyWithDecodeCtx interface {
-	DecodeCtx() DecodeCtx
-	SetDecodeCtx(DecodeCtx)
-}
-
-type decodeCtx struct {
-	registry *json.Registry
-}
-
-func (c *decodeCtx) Registry() *json.Registry {
-	return c.registry
-}
+type DecodeCtx = json.DecodeCtx
+type KeyWithDecodeCtx = json.DecodeCtxContainer
