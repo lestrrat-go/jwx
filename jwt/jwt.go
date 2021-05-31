@@ -175,14 +175,16 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 		}
 	}
 
-	if pcToken, ok := token.(TokenWithDecodeCtx); ok {
-		if localReg != nil {
-			pc := &decodeCtx{
-				registry: localReg,
-			}
-			pcToken.SetDecodeCtx(pc)
-			defer func() { pcToken.SetDecodeCtx(nil) }()
+	if localReg != nil {
+		dcToken, ok := token.(TokenWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, token)
 		}
+		dc := &decodeCtx{
+			registry: localReg,
+		}
+		dcToken.SetDecodeCtx(dc)
+		defer func() { dcToken.SetDecodeCtx(nil) }()
 	}
 
 	if err := json.Unmarshal(payload, token); err != nil {
