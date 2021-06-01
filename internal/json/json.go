@@ -77,3 +77,29 @@ func EncodeAudience(enc *Encoder, aud []string) error {
 	}
 	return enc.Encode(val)
 }
+
+// DecodeCtx is an interface for objects that needs that extra something
+// when decoding JSON into an object.
+type DecodeCtx interface {
+	Registry() *Registry
+}
+
+// DecodeCtxContainer is used to differentiate objects that can carry extra
+// decoding hints and those who can't.
+type DecodeCtxContainer interface {
+	DecodeCtx() DecodeCtx
+	SetDecodeCtx(DecodeCtx)
+}
+
+// stock decodeCtx. should cover 80% of the cases
+type decodeCtx struct {
+	registry *Registry
+}
+
+func NewDecodeCtx(r *Registry) DecodeCtx {
+	return &decodeCtx{registry: r}
+}
+
+func (dc *decodeCtx) Registry() *Registry {
+	return dc.registry
+}

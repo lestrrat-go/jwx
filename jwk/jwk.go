@@ -356,11 +356,23 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 // parameters are performed, etc.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
+	var localReg *json.Registry
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identLocalRegistry{}:
+			// in reality you can only pass either withLocalRegistry or
+			// WithTypedField, but since withLocalRegistry is used only by us,
+			// we skip checking
+			localReg = option.Value().(*json.Registry)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
@@ -407,6 +419,16 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
 
+	if localReg != nil {
+		dcKey, ok := key.(KeyWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
+		}
+		dc := json.NewDecodeCtx(localReg)
+		dcKey.SetDecodeCtx(dc)
+		defer func() { dcKey.SetDecodeCtx(nil) }()
+	}
+
 	if err := json.Unmarshal(data, key); err != nil {
 		return nil, errors.Wrapf(err, `failed to unmarshal JSON into key (%T)`, key)
 	}
@@ -430,15 +452,23 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
+	var localReg *json.Registry
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identTypedField{}:
+			pair := option.Value().(typedFieldPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
 	s := NewSet()
+
 	if parsePEM {
 		src = bytes.TrimSpace(src)
 		for len(src) > 0 {
@@ -454,6 +484,16 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			src = bytes.TrimSpace(rest)
 		}
 		return s, nil
+	}
+
+	if localReg != nil {
+		dcKs, ok := s.(KeyWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
+		}
+		dc := json.NewDecodeCtx(localReg)
+		dcKs.SetDecodeCtx(dc)
+		defer func() { dcKs.SetDecodeCtx(nil) }()
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {

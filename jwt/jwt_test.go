@@ -17,6 +17,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -825,5 +826,91 @@ func TestGH375(t *testing.T) {
 	_, err = jwt.Parse(signed, jwt.WithKeySet(ks))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
+	}
+}
+
+type Claim struct {
+	Foo string
+	Bar int
+}
+
+func TestJWTParseWithTypedClaim(t *testing.T) {
+	testcases := []struct {
+		Name        string
+		Options     []jwt.ParseOption
+		PostProcess func(*testing.T, interface{}) (*Claim, error)
+	}{
+		{
+			Name:    "Basic",
+			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", Claim{})},
+			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+				t.Helper()
+				v, ok := claim.(Claim)
+				if !ok {
+					return nil, errors.Errorf(`claim value should be of type "Claim", but got %T`, claim)
+				}
+				return &v, nil
+			},
+		},
+		{
+			Name:    "json.RawMessage",
+			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", json.RawMessage{})},
+			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+				t.Helper()
+				v, ok := claim.(json.RawMessage)
+				if !ok {
+					return nil, errors.Errorf(`claim value should be of type "json.RawMessage", but got %T`, claim)
+				}
+
+				var c Claim
+				if err := json.Unmarshal(v, &c); err != nil {
+					return nil, errors.Wrap(err, `json.Unmarshal failed`)
+				}
+
+				return &c, nil
+			},
+		},
+	}
+
+	expected := &Claim{Foo: "Foo", Bar: 0xdeadbeef}
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+		return
+	}
+
+	var signed []byte
+	{
+		token := jwt.New()
+		if !assert.NoError(t, token.Set("typed-claim", expected), `expected.Set should succeed`) {
+			return
+		}
+		v, err := jwt.Sign(token, jwa.RS256, key)
+		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+			return
+		}
+		signed = v
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			got, err := jwt.Parse(signed, tc.Options...)
+			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+				return
+			}
+
+			v, ok := got.Get("typed-claim")
+			if !assert.True(t, ok, `got.Get() should succeed`) {
+				return
+			}
+			claim, err := tc.PostProcess(t, v)
+			if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, claim, expected, `claim should match expected value`) {
+				return
+			}
+		})
 	}
 }

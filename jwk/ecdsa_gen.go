@@ -51,6 +51,7 @@ type ecdsaPrivateKey struct {
 	y                      []byte
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
+	dc                     DecodeCtx
 }
 
 func NewECDSAPrivateKey() ECDSAPrivateKey {
@@ -412,6 +413,18 @@ func (k *ecdsaPrivateKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
+func (k *ecdsaPrivateKey) DecodeCtx() DecodeCtx {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	return k.dc
+}
+
+func (k *ecdsaPrivateKey) SetDecodeCtx(dc DecodeCtx) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.dc = dc
+}
+
 func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	h.algorithm = nil
 	h.crv = nil
@@ -506,11 +519,21 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, ECDSAYKey)
 				}
 			default:
-				decoded, err := registry.Decode(dec, tok)
-				if err != nil {
-					return err
+				if dc := h.dc; dc != nil {
+					if localReg := dc.Registry(); localReg != nil {
+						decoded, err := localReg.Decode(dec, tok)
+						if err == nil {
+							h.setNoLock(tok, decoded)
+							continue
+						}
+					}
 				}
-				h.setNoLock(tok, decoded)
+				decoded, err := registry.Decode(dec, tok)
+				if err == nil {
+					h.setNoLock(tok, decoded)
+					continue
+				}
+				return errors.Wrapf(err, `could not decode field %s`, tok)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)
@@ -619,6 +642,7 @@ type ecdsaPublicKey struct {
 	y                      []byte
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
+	dc                     DecodeCtx
 }
 
 func NewECDSAPublicKey() ECDSAPublicKey {
@@ -960,6 +984,18 @@ func (k *ecdsaPublicKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
+func (k *ecdsaPublicKey) DecodeCtx() DecodeCtx {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	return k.dc
+}
+
+func (k *ecdsaPublicKey) SetDecodeCtx(dc DecodeCtx) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.dc = dc
+}
+
 func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 	h.algorithm = nil
 	h.crv = nil
@@ -1049,11 +1085,21 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, ECDSAYKey)
 				}
 			default:
-				decoded, err := registry.Decode(dec, tok)
-				if err != nil {
-					return err
+				if dc := h.dc; dc != nil {
+					if localReg := dc.Registry(); localReg != nil {
+						decoded, err := localReg.Decode(dec, tok)
+						if err == nil {
+							h.setNoLock(tok, decoded)
+							continue
+						}
+					}
 				}
-				h.setNoLock(tok, decoded)
+				decoded, err := registry.Decode(dec, tok)
+				if err == nil {
+					h.setNoLock(tok, decoded)
+					continue
+				}
+				return errors.Wrapf(err, `could not decode field %s`, tok)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

@@ -59,6 +59,7 @@ type Token interface {
 }
 type stdToken struct {
 	mu            *sync.RWMutex
+	dc            DecodeCtx          // per-object context for decoding
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -159,6 +160,18 @@ func (t *stdToken) Set(name string, value interface{}) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.setNoLock(name, value)
+}
+
+func (t *stdToken) DecodeCtx() DecodeCtx {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.dc
+}
+
+func (t *stdToken) SetDecodeCtx(v DecodeCtx) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.dc = v
 }
 
 func (t *stdToken) setNoLock(name string, value interface{}) error {
@@ -391,11 +404,21 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
 				}
 			default:
-				decoded, err := registry.Decode(dec, tok)
-				if err != nil {
-					return err
+				if dc := t.dc; dc != nil {
+					if localReg := dc.Registry(); localReg != nil {
+						decoded, err := localReg.Decode(dec, tok)
+						if err == nil {
+							t.setNoLock(tok, decoded)
+							continue
+						}
+					}
 				}
-				t.setNoLock(tok, decoded)
+				decoded, err := registry.Decode(dec, tok)
+				if err == nil {
+					t.setNoLock(tok, decoded)
+					continue
+				}
+				return errors.Wrapf(err, `could not decode field %s`, tok)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)

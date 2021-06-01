@@ -161,6 +161,30 @@ func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, ke
 	if token == nil {
 		token = New()
 	}
+
+	var localReg *json.Registry
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identTypedClaim{}:
+			pair := option.Value().(typedClaimPair)
+			if localReg == nil {
+				localReg = json.NewRegistry()
+			}
+			localReg.Register(pair.Name, pair.Value)
+		}
+	}
+
+	if localReg != nil {
+		dcToken, ok := token.(TokenWithDecodeCtx)
+		if !ok {
+			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, token)
+		}
+		dc := json.NewDecodeCtx(localReg)
+		dcToken.SetDecodeCtx(dc)
+		defer func() { dcToken.SetDecodeCtx(nil) }()
+	}
+
 	if err := json.Unmarshal(payload, token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}

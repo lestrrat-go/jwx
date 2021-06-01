@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/lestrrat-go/jwx/internal/json"
 )
 
 // KeyUsageType is used to denote what this key should be used for
@@ -82,6 +83,7 @@ type Set interface {
 type set struct {
 	keys []Key
 	mu   sync.RWMutex
+	dc   DecodeCtx
 }
 
 type HeaderVisitor = iter.MapVisitor
@@ -103,3 +105,6 @@ type PublicKeyer interface {
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
+
+type DecodeCtx = json.DecodeCtx
+type KeyWithDecodeCtx = json.DecodeCtxContainer

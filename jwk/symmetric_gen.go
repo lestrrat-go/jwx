@@ -41,6 +41,7 @@ type symmetricKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
+	dc                     DecodeCtx
 }
 
 func NewSymmetricKey() SymmetricKey {
@@ -339,6 +340,18 @@ func (k *symmetricKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
+func (k *symmetricKey) DecodeCtx() DecodeCtx {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	return k.dc
+}
+
+func (k *symmetricKey) SetDecodeCtx(dc DecodeCtx) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.dc = dc
+}
+
 func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
 	h.algorithm = nil
 	h.keyID = nil
@@ -416,11 +429,21 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
 				}
 			default:
-				decoded, err := registry.Decode(dec, tok)
-				if err != nil {
-					return err
+				if dc := h.dc; dc != nil {
+					if localReg := dc.Registry(); localReg != nil {
+						decoded, err := localReg.Decode(dec, tok)
+						if err == nil {
+							h.setNoLock(tok, decoded)
+							continue
+						}
+					}
 				}
-				h.setNoLock(tok, decoded)
+				decoded, err := registry.Decode(dec, tok)
+				if err == nil {
+					h.setNoLock(tok, decoded)
+					continue
+				}
+				return errors.Wrapf(err, `could not decode field %s`, tok)
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)
