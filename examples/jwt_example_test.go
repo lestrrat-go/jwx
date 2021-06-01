@@ -152,7 +152,7 @@ func ExampleJWT_ParseWithJWKS() {
 				// Tell the parser that you want to use this keyset
 				jwt.WithKeySet(keyset),
 				// Tell the parser that you can trust this KeySet, and that
-				// yo uwant to use the sole key in it
+				// you want to use the sole key in it
 				jwt.UseDefaultKey(true),
 			)
 			if err != nil {
