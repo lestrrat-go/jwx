@@ -1,11 +1,12 @@
 Changes
 =======
 
-v1.2.1
+v1.2.1 02 Jun 2021
 [New features]
   * Option `jwt.WithTypedClaim()` and `jwk.WithTypedField()` have been added.
     They allow a per-object custom conversion from their JSON representation
     to a Go object, much like `RegisterCustomField`.
+
     The difference is that whereas `RegisterCustomField` has global effect,
     these typed fields only take effect in the call where the option was
     explicitly passed.
