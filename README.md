@@ -330,7 +330,7 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
 ### Echo
 
-Consider using [github.com/lestrrat-go/echo-middleware-jwx](github.com/lestrrat-go/echo-middleware-jwx), althoug as of this writing it has not been widely tested.
+Consider using [github.com/lestrrat-go/echo-middleware-jwx](github.com/lestrrat-go/echo-middleware-jwx), although as of this writing it has not been widely tested.
 
 ## I get a "no Go files in ..." error
 
