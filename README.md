@@ -326,6 +326,12 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
 # FAQ
 
+## I want to use this with a Web Framework
+
+### Echo
+
+Consider using [github.com/lestrrat-go/echo-middleware-jwx](github.com/lestrrat-go/echo-middleware-jwx), althoug as of this writing it has not been widely tested.
+
 ## I get a "no Go files in ..." error
 
 You are using Go in GOPATH mode. Short answer: use Go modules.
