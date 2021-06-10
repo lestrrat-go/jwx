@@ -135,11 +135,11 @@ Supported signature algorithms:
 | ECDSA using P-256 and SHA-256           | YES        | jwa.ES256                |
 | ECDSA using P-384 and SHA-384           | YES        | jwa.ES384                |
 | ECDSA using P-521 and SHA-512           | YES        | jwa.ES512                |
-| ECDSA using secp256k1 and SHA-256 (1)   | YES        | jwa.ES256K               |
+| ECDSA using secp256k1 and SHA-256 (2)   | YES        | jwa.ES256K               |
 | RSASSA-PSS using SHA256 and MGF1-SHA256 | YES        | jwa.PS256                |
 | RSASSA-PSS using SHA384 and MGF1-SHA384 | YES        | jwa.PS384                |
 | RSASSA-PSS using SHA512 and MGF1-SHA512 | YES        | jwa.PS512                |
-| EdDSA (2)                               | YES        | jwa.EdDSA                |
+| EdDSA (1)                               | YES        | jwa.EdDSA                |
 
 * Note 1: Experimental
 * Note 2: Experimental, and must be toggled using `-tags jwx_es256k` build tag
