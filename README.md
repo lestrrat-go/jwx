@@ -15,6 +15,7 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 * [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx)
   * HTML version of what you can see using `go doc` command
 * [How-to style documentation](./docs)
+  * Frequently asked questions.
   * How to JWx That? Documentation by example.
 * Overview of this package
   * Read on for more gory details.
@@ -63,7 +64,7 @@ go install github.com/lestrrat-go/jwx/cmd/jwx
 
 # How-to style documentation
 
-If you want to look for ways to do X, you may have an easier time navigating through the [documentation here](./docs)
+If you are looking for FAQs or want to look for ways to do X, you may have an easier time navigating through the [documentation here](./docs)
 
 # Packages
 
