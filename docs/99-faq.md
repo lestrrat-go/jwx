@@ -20,7 +20,7 @@ See ["Parse a key or set in PEM format"](./04-jwk.md#parse-a-key-or-set-in-pem-f
 
 ### 1. Your algorithm and key type do not match.
 
-Any given signature algorithm requires a particular type of key. If the pair is not setup correctly, the operation will fail. Below is a table of general algorithm to key type pair. Note that this table may not be updated regularly. Use common sense and search online to find out if one of the algorithms/key types we support is not listed in the table.
+Any given signature algorithm requires a particular type of key. If the pair is not setup correctly, the operation will fail. Below is a table of general algorithm to key type pair. Note that this table may not be updated regularly. Use common sense and search online to find out if the algorithm/key type you would like to use is not listed in the table.
 
 | Algorithm Family | Key Type  |
 |------------------|-----------|
