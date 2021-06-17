@@ -11,3 +11,4 @@ Technical details: The code and command invocations in the following article was
 * [Working with JWS](./02-jws.md)
 * Working with JWE (TODO)
 * [Working with JWK](./04-jwk.md)
+* [Frequently Asked Questions](./99-faq.md)
