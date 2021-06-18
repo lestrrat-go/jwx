@@ -215,7 +215,7 @@ ar.Configure(`https://example.com/certs/pubkeys.json`)
 And lastly, when you are about to use the key, load it from the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) object.
 
 ```go
-keyset, _ := ar.Configure(ctx, `https://example.com/certs/pubkeys.json`)
+keyset, _ := ar.Fetch(ctx, `https://example.com/certs/pubkeys.json`)
 ```
 
 Now keyset will always be "reasonably" new.
