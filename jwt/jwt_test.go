@@ -914,3 +914,41 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 		})
 	}
 }
+
+func TestGH393(t *testing.T) {
+	t.Run("Non-existent required claims", func(t *testing.T) {
+		tok := jwt.New()
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithRequiredClaim(jwt.IssuedAtKey)), `jwt.Validate should fail`) {
+			return
+		}
+	})
+	t.Run("iat - exp (5 secs) < WithMinDelta(10 secs)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+		tok.Set(jwt.IssuedAtKey, now)
+
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey)), `jwt.Validate should fail`) {
+			return
+		}
+	})
+	t.Run("iat - exp (5 secs) > WithMinDelta(10 secs)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+		tok.Set(jwt.IssuedAtKey, now)
+
+		if !assert.NoError(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should succeed`) {
+			return
+		}
+	})
+	t.Run("now - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set(jwt.IssuedAtKey, now)
+
+		if !assert.NoError(t, jwt.Validate(tok, jwt.WithMaxDelta(10*time.Second, "", jwt.IssuedAtKey), jwt.WithClock(jwt.ClockFunc(func() time.Time { return now.Add(5 * time.Second) }))), `jwt.Validate should succeed`) {
+			return
+		}
+	})
+}
