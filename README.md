@@ -325,35 +325,3 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 * Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
 * Lots of individual contributors have helped this project over the years. Thank each and everyone of you very much.
 
-# FAQ
-
-## I want to use this with a Web Framework
-
-### Echo
-
-Consider using [github.com/lestrrat-go/echo-middleware-jwx](github.com/lestrrat-go/echo-middleware-jwx), although as of this writing it has not been widely tested.
-
-## I get a "no Go files in ..." error
-
-You are using Go in GOPATH mode. Short answer: use Go modules.
-
-[A slightly more elaborate version of the answer can be found in github.com/lestrrat-go/backoff FAQ](https://github.com/lestrrat-go/backoff#im-getting-package-githubcomlestrrat-gobackoffv2-no-go-files-in-gosrcgithubcomlestrrat-gobackoffv2)
-
-And no, I do not intend to support GOPATH mode as of 2021. There are ways to manually workaround it, but do not expect this library to do that for you.
-
-## Why don't you automatically infer the algorithm for `jws.Verify` ?
-
-Please read https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/. Despite this article's publish date, the original had been published sometime around 2015. It's a well known problem with JWS libraries.
-
-## Why did you change the API?
-
-Presumably you are asking this because your code broke when we bumped the version and broke backwards compatibility. Then the short answer is: "You wouldn't have had to worry about it if you were properly using go.mod"
-
-The longer answer is as follows: From time to time, we introduce API changes, because we learn of mistakes in our old ways.
-Maybe we used the wrong terminology. Maybe we made public something that should have been internal. Maybe we intended an API to be used one way, but it was confusing.
-
-So then we introduce API changes. Sorry if breaks your builds, but it's done because we deem it necessary.
-
-You should also know that we do not introduce API changes between micro versions.
-And on top of that, Go provides extremely good support for idempodent builds via Go modules.
-If you are in an environment where API changes disrupts your environment, you should definitely migrate to using Go modules now.
