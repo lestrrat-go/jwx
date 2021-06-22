@@ -241,7 +241,7 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 
 	var alg jwa.SignatureAlgorithm
 	if err := alg.Accept(key.Algorithm()); err != nil {
-		return "", nil, errors.Wrapf(err, `invalid signatre algorithm %s`, key.Algorithm())
+		return "", nil, errors.Wrapf(err, `invalid signature algorithm %s`, key.Algorithm())
 	}
 
 	return alg, rawKey, nil
