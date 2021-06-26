@@ -922,6 +922,20 @@ func TestGH393(t *testing.T) {
 			return
 		}
 	})
+	t.Run("exp - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set(jwt.IssuedAtKey, now)
+		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithMaxDelta(2*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey)), `jwt.Validate should fail`) {
+			return
+		}
+
+		if !assert.NoError(t, jwt.Validate(tok, jwt.WithMaxDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey)), `jwt.Validate should succeed`) {
+			return
+		}
+	})
 	t.Run("iat - exp (5 secs) < WithMinDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
 		tok := jwt.New()
