@@ -82,7 +82,9 @@ type identHeaders struct{}
 type identIssuer struct{}
 type identJwtid struct{}
 type identKeySet struct{}
+type identRequiredClaim struct{}
 type identSubject struct{}
+type identTimeDelta struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
@@ -266,4 +268,63 @@ type typedClaimPair struct {
 // token type, it will need to implement the TokenWithDecodeCtx interface.
 func WithTypedClaim(name string, object interface{}) ParseOption {
 	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
+}
+
+// WithRequiredClaim specifies that the claim identified the given name
+// must exist in the token. Only the existence of the claim is checked:
+// the actual value associated with that field is not checked.
+func WithRequiredClaim(name string) ValidateOption {
+	return newValidateOption(identRequiredClaim{}, name)
+}
+
+type delta struct {
+	c1   string
+	c2   string
+	dur  time.Duration
+	less bool // if true, d =< c1 - c2. otherwise d >= c1 - c2
+}
+
+// WithMaxDelta specifies that given two claims `c1` and `c2` that represent time, the difference in
+// time.Duration must be less than equal to the value specified by `d`. If `c1` or `c2` is the
+// empty string, the current time (as computed by `time.Now` or the object passed via
+// `WithClock()`) is used for the comparison.
+//
+// `c1` and `c2` are also assumed to be required, therefore not providing either claim in the
+// token will result in an error.
+//
+// Because there is no way of reliably knowing how to parse private claims, we currently only
+// support `iat`, `exp`, and `nbf` claims.
+//
+// If the empty string is passed to c1 or c2, then the current time (as calculated by time.Now() or
+// the clock object provided via WithClock()) is used.
+//
+// For example, in order to specify that `exp` - `iat` < 10*time.Second, you would write
+//
+//    jwt.Validate(token, jwt.WithMaxDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
+//
+// If AcceptableSkew of 2 second is specified, the above will return valid for any value of
+// `exp` - `iat`  between 8 (10-2) and 12 (10+2).
+func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
+	return newValidateOption(identTimeDelta{}, delta{
+		c1:   c1,
+		c2:   c2,
+		dur:  dur,
+		less: true,
+	})
+}
+
+// WithMinDelta is almost exactly the same as WithMaxDelta, but force validation to fail if
+// the difference between time claims are less than dur.
+//
+// For example, in order to specify that `exp` - `iat` > 10*time.Second, you would write
+//
+//    jwt.Validate(token, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
+//
+func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
+	return newValidateOption(identTimeDelta{}, delta{
+		c1:   c1,
+		c2:   c2,
+		dur:  dur,
+		less: false,
+	})
 }
