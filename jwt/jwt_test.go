@@ -965,6 +965,26 @@ func TestGH393(t *testing.T) {
 			return
 		}
 	})
+	t.Run("invalid claim name (c1)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set("foo", now)
+		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, "foo"), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should fail`) {
+			return
+		}
+	})
+	t.Run("invalid claim name (c2)", func(t *testing.T) {
+		now := time.Now()
+		tok := jwt.New()
+		tok.Set(jwt.IssuedAtKey, now)
+		tok.Set("foo", now.Add(5*time.Second))
+
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, "foo", jwt.IssuedAtKey), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should fail`) {
+			return
+		}
+	})
 
 	// Following tests deviate a little from the original issue, but
 	// since they were added for the same issue, we just bundle the
