@@ -86,7 +86,7 @@ func ExampleJWT() {
 
 `jwt` package can work with token types other than the default one.
 For OpenID claims, use the token created by `openid.New()`, or
-use the `jwt.WithOpenIDClaims()`. If you need to use other specialized
+use the `jwt.WithToken(openid.New())`. If you need to use other specialized
 claims, use `jwt.WithToken()` to specify the exact token type
 
 ```go
@@ -114,13 +114,13 @@ func Example_openid() {
   }
   fmt.Printf("%s\n", buf)
 
-  t2, err := jwt.ParseBytes(buf, jwt.WithOpenIDClaims())
+  t2, err := jwt.ParseBytes(buf, jwt.WithToken(openid.New())
   if err != nil {
     fmt.Printf("failed to parse JSON: %s\n", err)
     return
   }
   if _, ok := t2.(openid.Token); !ok {
-    fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
+    fmt.Printf("using jwt.WithToken(openid.New()) creates an openid.Token instance")
     return
   }
 }

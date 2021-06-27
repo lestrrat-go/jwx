@@ -4,7 +4,7 @@
 // In order to use OpenID claims, you specify the token to use in the
 // jwt.Parse method
 //
-//    jwt.Parse(data, jwt.WithOpenIDClaims())
+//    jwt.Parse(data, jwt.WithToken(openid.New())
 package openid
 
 import (

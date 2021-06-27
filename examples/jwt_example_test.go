@@ -313,7 +313,7 @@ func ExampleJWT_OpenIDToken() {
 		return
 	}
 	if _, ok := t2.(openid.Token); !ok {
-		fmt.Printf("using jwt.WithOpenIDClaims() creates an openid.Token instance")
+		fmt.Printf("using jwt.WithToken(openid.New()) creates an openid.Token instance")
 		return
 	}
 	// OUTPUT:
