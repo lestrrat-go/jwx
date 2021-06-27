@@ -270,6 +270,9 @@ func WithTypedClaim(name string, object interface{}) ParseOption {
 	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
 }
 
+// WithRequiredClaim specifies that the claim identified the given name
+// must exist in the token. Only the existance of the claim is checked:
+// the actual value associated with that field is not checked.
 func WithRequiredClaim(name string) ValidateOption {
 	return newValidateOption(identRequiredClaim{}, name)
 }
@@ -282,7 +285,12 @@ type delta struct {
 }
 
 // WithMaxDelta specifies that given two claims `c1` and `c2` that represent time, the difference in
-// time.Duration must be less than equal to the value specified by `d`.
+// time.Duration must be less than equal to the value specified by `d`. If `c1` or `c2` is the
+// empty string, the current time (as computed by `time.Now` or the object passed via
+// `WithClock()`) is used for the comparison.
+//
+// `c1` and `c2` are also assumed to be required, therefore not providing either claim in the
+// token will result in an error.
 //
 // Because there is no way of reliably knowing how to parse private claims, we currently only
 // support `iat`, `exp`, and `nbf` claims.
@@ -306,7 +314,7 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 }
 
 // WithMinDelta is almost exactly the same as WithMaxDelta, but force validation to fail if
-// the difference between time claims are less than dur
+// the difference between time claims are less than dur.
 //
 // For example, in order to specify that `exp` - `iat` > 10*time.Second, you would write
 //
