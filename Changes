@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.2
+  * Options `jwt.WithMinDelta()`, `jwt.WithMaxDelta()` have been added.
+    These can be used to compare time-based fields in the JWT object.
+  * Option `jwt.WithRequiredClaim()` has been added. This can be used
+    to check that JWT contains the given claim.
+
 v1.2.1 02 Jun 2021
 [New features]
   * Option `jwt.WithTypedClaim()` and `jwk.WithTypedField()` have been added.
