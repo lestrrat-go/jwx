@@ -965,4 +965,21 @@ func TestGH393(t *testing.T) {
 			return
 		}
 	})
+
+	// Following tests deviate a little from the original issue, but
+	// since they were added for the same issue, we just bundle the
+	// tests together
+	t.Run(`WithRequiredClaim fails for non-existent claim`, func(t *testing.T) {
+		tok := jwt.New()
+		if !assert.Error(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
+			return
+		}
+	})
+	t.Run(`WithRequiredClaim succeeds for existing claim`, func(t *testing.T) {
+		tok := jwt.New()
+		tok.Set(`foo`, 1)
+		if !assert.NoError(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
+			return
+		}
+	})
 }
