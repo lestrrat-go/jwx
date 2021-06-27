@@ -271,7 +271,7 @@ func WithTypedClaim(name string, object interface{}) ParseOption {
 }
 
 // WithRequiredClaim specifies that the claim identified the given name
-// must exist in the token. Only the existance of the claim is checked:
+// must exist in the token. Only the existence of the claim is checked:
 // the actual value associated with that field is not checked.
 func WithRequiredClaim(name string) ValidateOption {
 	return newValidateOption(identRequiredClaim{}, name)
