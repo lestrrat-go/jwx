@@ -327,38 +327,6 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 //
 //   bdayif, _ := hdr.Get(`x-birthday`)
 //   bday := bdayif.(time.Time)
-//
-// For elements of headers, *the order of definition matters* when
-// verifying the encrypted content.
-//
-// Suppose we are expecting a JSON object `{"bar":1, "foo":2}`
-// in the protected header. Because we need to compute the AAD value
-// using these headers, they are usually normalized in alphabetical order.
-//
-// And since we need to compute back the AAD value after we have parsed the
-// JWE message, your custom type MUST serialize back to the same field order.
-//
-// As an example, configuring this library to parse the above JSON object
-// into the following struct will case `jwe.Decrypt` to fail:
-//
-//    type Thing struct {
-//      Foo int `json:"foo"`
-//      Bar int `json:"bar"`
-//    }
-//    jwe.RegisterCustomField(..., Thing{})
-//
-// This is because `Thing`'s JSON serialization will be rendered
-// by taking each of the fields in the order that they appear in
-// the struct definition, thereby creating a JSON that looks like
-// `{"foo":..., "bar":...}`. Notice that the order of keys are
-// different from the original JSON representation. The JSON keys
-// must be sorted.
-//
-// Therefore it is the caller's responsibility to make sure that
-// the either (1) the struct's fields are declared in alphabetical
-// order, or (2) provide a `MarshalJSON()` method in the custom type
-// such that the alphabetical order is guaranteed in resulting
-// JSON objects.
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
