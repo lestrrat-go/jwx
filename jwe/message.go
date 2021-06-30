@@ -446,9 +446,30 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 // to work 100% of the time, especially when it was obtained via jwe.Parse
 // instead of being constructed from scratch by this library.
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+	var ctx decryptCtx
+	ctx.alg = alg
+	ctx.key = key
+	ctx.msg = m
+
+	return doDecryptCtx(&ctx)
+}
+
+func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.FuncMarker()
 		defer g.End()
+	}
+
+	m := dctx.msg
+	alg := dctx.alg
+	key := dctx.key
+
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var raw interface{}
+		if err := jwkKey.Raw(&raw); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+		}
+		key = raw
 	}
 
 	var err error

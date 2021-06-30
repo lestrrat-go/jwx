@@ -171,27 +171,75 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	return Compact(msg)
 }
 
+// DecryptCtx is used internally when jwe.Decrypt is called. Regular users
+// should not have to touch this object, but if you need advanced handling
+// of messages, you might have to use it. Only use it when you really
+// understand how JWE processing works in this library.
+type DecryptCtx interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	SetAlgorithm(jwa.KeyEncryptionAlgorithm)
+	Key() interface{}
+	SetKey(interface{})
+	Message() *Message
+	SetMessage(*Message)
+}
+
+type decryptCtx struct {
+	alg jwa.KeyEncryptionAlgorithm
+	key interface{}
+	msg *Message
+}
+
+func (ctx *decryptCtx) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return ctx.alg
+}
+
+func (ctx *decryptCtx) SetAlgorithm(v jwa.KeyEncryptionAlgorithm) {
+	ctx.alg = v
+}
+
+func (ctx *decryptCtx) Key() interface{} {
+	return ctx.key
+}
+
+func (ctx *decryptCtx) SetKey(v interface{}) {
+	ctx.key = v
+}
+
+func (ctx *decryptCtx) Message() *Message {
+	return ctx.msg
+}
+
+func (ctx *decryptCtx) SetMessage(m *Message) {
+	ctx.msg = m
+}
+
+// PostParser is called right after the JWE message has been parsed but
+// before the actual decryption takes place during `jwe.Decrypt()`.
+type PostParser interface {
+	Do(DecryptCtx) error
+}
+
 // Decrypt takes the key encryption algorithm and the corresponding
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
 //
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
 func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
+	var ctx decryptCtx
+	ctx.key = key
+	ctx.alg = alg
+
 	var dst *Message
+	var postParse PostParser
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
 			dst = option.Value().(*Message)
+		case identPostParser{}:
+			postParse = option.Value().(PostParser)
 		}
-	}
-
-	if jwkKey, ok := key.(jwk.Key); ok {
-		var raw interface{}
-		if err := jwkKey.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
-		}
-		key = raw
 	}
 
 	msg, err := parseJSONOrCompact(buf, true)
@@ -199,12 +247,25 @@ func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, option
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
 	}
 
+	ctx.msg = msg
+	if postParse != nil {
+		if err := postParse.Do(&ctx); err != nil {
+			return nil, errors.Wrap(err, `failed to execute PostParser hook`)
+		}
+	}
+
+	payload, err := doDecryptCtx(&ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decrypt message`)
+	}
+
 	if dst != nil {
 		*dst = *msg
 		dst.rawProtectedHeaders = nil
 		dst.storeProtectedHeaders = false
 	}
-	return msg.Decrypt(alg, key)
+
+	return payload, nil
 }
 
 // Parse parses the JWE message into a Message object. The JWE message

@@ -8,6 +8,7 @@ import (
 
 type Option = option.Interface
 type identMessage struct{}
+type identPostParser struct{}
 type identPrettyFormat struct{}
 type identProtectedHeader struct{}
 
@@ -67,4 +68,11 @@ func WithProtectedHeaders(h Headers) EncryptOption {
 // slated to be deprecated in the next major version.
 func WithMessage(m *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, m)}
+}
+
+// WithPostParser specifies the handler to be called immediately
+// after the JWE message has been parsed, but before decryption
+// takes place.
+func WithPostParser(p PostParser) DecryptOption {
+	return &decryptOption{option.New(identPostParser{}, p)}
 }
