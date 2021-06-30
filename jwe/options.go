@@ -8,7 +8,6 @@ import (
 
 type Option = option.Interface
 type identMessage struct{}
-type identStoreProtectedHeaders struct{}
 type identPrettyFormat struct{}
 type identProtectedHeader struct{}
 
