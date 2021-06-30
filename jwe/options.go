@@ -7,8 +7,22 @@ import (
 )
 
 type Option = option.Interface
+type identMessage struct{}
+type identStoreProtectedHeaders struct{}
 type identPrettyFormat struct{}
 type identProtectedHeader struct{}
+
+type DecryptOption interface {
+	Option
+	decryptOption()
+}
+
+type decryptOption struct {
+	Option
+}
+
+func (*decryptOption) decryptOption() {}
+
 type SerializerOption interface {
 	Option
 	serializerOption()
@@ -42,4 +56,16 @@ func WithPrettyFormat(b bool) SerializerOption {
 func WithProtectedHeaders(h Headers) EncryptOption {
 	cloned, _ := h.Clone(context.Background())
 	return &encryptOption{option.New(identProtectedHeader{}, cloned)}
+}
+
+// WithMessage provides a message object to be populated by `jwe.Decrpt`
+// Using this option allows you to decrypt AND obtain the `jwe.Message`
+// in one go.
+//
+// Note that you should NOT be using the message object for anything other
+// than inspecting its contents. Particularly, do not expect the message
+// reliable when you call `Decrypt` on it. `(jwe.Message).Decrypt` is
+// slated to be deprecated in the next major version.
+func WithMessage(m *Message) DecryptOption {
+	return &decryptOption{option.New(identMessage{}, m)}
 }

@@ -176,7 +176,15 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 // The JWE message can be either compact or full JSON format.
 //
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
-func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
+	var dst *Message
+	for _, option := range options {
+		switch option.Ident() {
+		case identMessage{}:
+			dst = option.Value().(*Message)
+		}
+	}
+
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
@@ -185,26 +193,35 @@ func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byt
 		key = raw
 	}
 
-	msg, err := Parse(buf)
+	msg, err := parseJSONOrCompact(buf, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
 	}
 
+	if dst != nil {
+		*dst = *msg
+		dst.rawProtectedHeaders = nil
+		dst.storeProtectedHeaders = false
+	}
 	return msg.Decrypt(alg, key)
 }
 
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
 func Parse(buf []byte) (*Message, error) {
+	return parseJSONOrCompact(buf, false)
+}
+
+func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New("empty buffer")
 	}
 
 	if buf[0] == '{' {
-		return parseJSON(buf)
+		return parseJSON(buf, storeProtectedHeaders)
 	}
-	return parseCompact(buf)
+	return parseCompact(buf, storeProtectedHeaders)
 }
 
 // ParseString is the same as Parse, but takes a string.
@@ -221,15 +238,16 @@ func ParseReader(src io.Reader) (*Message, error) {
 	return Parse(buf)
 }
 
-func parseJSON(buf []byte) (*Message, error) {
+func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	m := NewMessage()
+	m.storeProtectedHeaders = storeProtectedHeaders
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse JSON")
 	}
 	return m, nil
 }
 
-func parseCompact(buf []byte) (*Message, error) {
+func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	if pdebug.Enabled {
 		pdebug.Printf("Parse(Compact): buf = '%s'", buf)
 	}
@@ -284,6 +302,11 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := m.Set(TagKey, tagbuf); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
+
+	if storeProtectedHeaders {
+		m.rawProtectedHeaders = parts[0]
+	}
+
 	return m, nil
 }
 
