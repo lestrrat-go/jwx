@@ -220,6 +220,12 @@ type PostParser interface {
 	Do(DecryptCtx) error
 }
 
+type PostParseFunc func(DecryptCtx) error
+
+func (fn PostParseFunc) Do(ctx DecryptCtx) error {
+	return fn(ctx)
+}
+
 // Decrypt takes the key encryption algorithm and the corresponding
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
