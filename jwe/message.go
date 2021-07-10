@@ -392,6 +392,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 
 	m.protectedHeaders = h
 	if m.storeProtectedHeaders {
+		// this is later used for decryption
 		m.rawProtectedHeaders = base64.Encode(protectedHeadersRaw)
 	}
 
@@ -496,6 +497,7 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	if len(m.rawProtectedHeaders) > 0 {
 		computedAad = m.rawProtectedHeaders
 	} else {
+		// this is probably not required once msg.Decrypt is deprecated
 		var err error
 		computedAad, err = m.protectedHeaders.Encode()
 		if err != nil {

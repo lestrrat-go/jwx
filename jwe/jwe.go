@@ -171,8 +171,10 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	return Compact(msg)
 }
 
-// DecryptCtx is used internally when jwe.Decrypt is called. Regular users
-// should not have to touch this object, but if you need advanced handling
+// DecryptCtx is used internally when jwe.Decrypt is called, and is
+// passed for hooks that you may pass into it.
+//
+// Regular users should not have to touch this object, but if you need advanced handling
 // of messages, you might have to use it. Only use it when you really
 // understand how JWE processing works in this library.
 type DecryptCtx interface {
@@ -214,12 +216,14 @@ func (ctx *decryptCtx) SetMessage(m *Message) {
 	ctx.msg = m
 }
 
-// PostParser is called right after the JWE message has been parsed but
+// PostParser is used in conjunction with jwe.WithPostParser(), and is
+// called right after the JWE message has been parsed but
 // before the actual decryption takes place during `jwe.Decrypt()`.
 type PostParser interface {
 	Do(DecryptCtx) error
 }
 
+// PostParseFunc is a PostParser that is represented by a single function
 type PostParseFunc func(DecryptCtx) error
 
 func (fn PostParseFunc) Do(ctx DecryptCtx) error {
@@ -372,6 +376,7 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	}
 
 	if storeProtectedHeaders {
+		// This is later used for decryption.
 		m.rawProtectedHeaders = parts[0]
 	}
 
