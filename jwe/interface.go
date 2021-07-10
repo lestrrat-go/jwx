@@ -49,6 +49,14 @@ type Message struct {
 	recipients           []Recipient
 	protectedHeaders     Headers
 	unprotectedHeaders   Headers
+
+	// These two fields below are not available for the public consumers of this object.
+	// rawProtectedHeaders stores the original protected header buffer
+	rawProtectedHeaders []byte
+	// storeProtectedHeaders is a hint to be used in UnmarshalJSON().
+	// When this flag is true, UnmarshalJSON() will populate the
+	// rawProtectedHeaders field
+	storeProtectedHeaders bool
 }
 
 // contentEncrypter encrypts the content using the content using the

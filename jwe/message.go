@@ -306,14 +306,21 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return errors.Wrap(err, `failed to unmashal JSON into message`)
 	}
 
-	var phstr string
-	if err := json.Unmarshal(proxy.ProtectedHeaders, &phstr); err != nil {
-		return errors.Wrap(err, `failed to unmarshal protected headers into string`)
+	// Get the string value
+	var protectedHeadersStr string
+	if err := json.Unmarshal(proxy.ProtectedHeaders, &protectedHeadersStr); err != nil {
+		return errors.Wrap(err, `failed to decode protected headers (1)`)
+	}
+
+	// It's now in _quoted_ base64 string. Decode it
+	protectedHeadersRaw, err := base64.DecodeString(protectedHeadersStr)
+	if err != nil {
+		return errors.Wrap(err, "failed to base64 decoded protected headers buffer")
 	}
 
 	h := NewHeaders()
-	if err := h.Decode([]byte(phstr)); err != nil {
-		return errors.Wrap(err, `failed to decode protected headers`)
+	if err := json.Unmarshal(protectedHeadersRaw, h); err != nil {
+		return errors.Wrap(err, `failed to decode protected headers (2)`)
 	}
 
 	// if this were a flattened message, we would see a "header" and "ciphertext"
@@ -384,6 +391,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	}
 
 	m.protectedHeaders = h
+	if m.storeProtectedHeaders {
+		// this is later used for decryption
+		m.rawProtectedHeaders = base64.Encode(protectedHeadersRaw)
+	}
+
 	if !proxy.UnprotectedHeaders.(isZeroer).isZero() {
 		m.unprotectedHeaders = proxy.UnprotectedHeaders
 	}
@@ -425,14 +437,40 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 	return nil
 }
 
-// Decrypt decrypts the message using the specified algorithm and key
+// Decrypt decrypts the message using the specified algorithm and key.
 //
 // `key` must be a private key in its "raw" format (i.e. something like
 // *rsa.PrivateKey, instead of jwk.Key)
+//
+// This method is marked for deprecation. It will be removed from the API
+// in the next major release. You should not rely on this method
+// to work 100% of the time, especially when it was obtained via jwe.Parse
+// instead of being constructed from scratch by this library.
 func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
+	var ctx decryptCtx
+	ctx.alg = alg
+	ctx.key = key
+	ctx.msg = m
+
+	return doDecryptCtx(&ctx)
+}
+
+func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	if pdebug.Enabled {
 		g := pdebug.FuncMarker()
 		defer g.End()
+	}
+
+	m := dctx.msg
+	alg := dctx.alg
+	key := dctx.key
+
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var raw interface{}
+		if err := jwkKey.Raw(&raw); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+		}
+		key = raw
 	}
 
 	var err error
@@ -455,9 +493,16 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 		aad = base64.Encode(aadContainer)
 	}
 
-	computedAad, err := m.protectedHeaders.Encode()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encode protected headers")
+	var computedAad []byte
+	if len(m.rawProtectedHeaders) > 0 {
+		computedAad = m.rawProtectedHeaders
+	} else {
+		// this is probably not required once msg.Decrypt is deprecated
+		var err error
+		computedAad, err = m.protectedHeaders.Encode()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode protected headers")
+		}
 	}
 
 	dec := NewDecrypter(alg, enc, key).

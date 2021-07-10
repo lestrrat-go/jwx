@@ -171,40 +171,129 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	return Compact(msg)
 }
 
+// DecryptCtx is used internally when jwe.Decrypt is called, and is
+// passed for hooks that you may pass into it.
+//
+// Regular users should not have to touch this object, but if you need advanced handling
+// of messages, you might have to use it. Only use it when you really
+// understand how JWE processing works in this library.
+type DecryptCtx interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	SetAlgorithm(jwa.KeyEncryptionAlgorithm)
+	Key() interface{}
+	SetKey(interface{})
+	Message() *Message
+	SetMessage(*Message)
+}
+
+type decryptCtx struct {
+	alg jwa.KeyEncryptionAlgorithm
+	key interface{}
+	msg *Message
+}
+
+func (ctx *decryptCtx) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return ctx.alg
+}
+
+func (ctx *decryptCtx) SetAlgorithm(v jwa.KeyEncryptionAlgorithm) {
+	ctx.alg = v
+}
+
+func (ctx *decryptCtx) Key() interface{} {
+	return ctx.key
+}
+
+func (ctx *decryptCtx) SetKey(v interface{}) {
+	ctx.key = v
+}
+
+func (ctx *decryptCtx) Message() *Message {
+	return ctx.msg
+}
+
+func (ctx *decryptCtx) SetMessage(m *Message) {
+	ctx.msg = m
+}
+
+// PostParser is used in conjunction with jwe.WithPostParser(), and is
+// called right after the JWE message has been parsed but
+// before the actual decryption takes place during `jwe.Decrypt()`.
+type PostParser interface {
+	Do(DecryptCtx) error
+}
+
+// PostParseFunc is a PostParser that is represented by a single function
+type PostParseFunc func(DecryptCtx) error
+
+func (fn PostParseFunc) Do(ctx DecryptCtx) error {
+	return fn(ctx)
+}
+
 // Decrypt takes the key encryption algorithm and the corresponding
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
 //
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
-func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
-	if jwkKey, ok := key.(jwk.Key); ok {
-		var raw interface{}
-		if err := jwkKey.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
+	var ctx decryptCtx
+	ctx.key = key
+	ctx.alg = alg
+
+	var dst *Message
+	var postParse PostParser
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identMessage{}:
+			dst = option.Value().(*Message)
+		case identPostParser{}:
+			postParse = option.Value().(PostParser)
 		}
-		key = raw
 	}
 
-	msg, err := Parse(buf)
+	msg, err := parseJSONOrCompact(buf, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
 	}
 
-	return msg.Decrypt(alg, key)
+	ctx.msg = msg
+	if postParse != nil {
+		if err := postParse.Do(&ctx); err != nil {
+			return nil, errors.Wrap(err, `failed to execute PostParser hook`)
+		}
+	}
+
+	payload, err := doDecryptCtx(&ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to decrypt message`)
+	}
+
+	if dst != nil {
+		*dst = *msg
+		dst.rawProtectedHeaders = nil
+		dst.storeProtectedHeaders = false
+	}
+
+	return payload, nil
 }
 
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
 func Parse(buf []byte) (*Message, error) {
+	return parseJSONOrCompact(buf, false)
+}
+
+func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New("empty buffer")
 	}
 
 	if buf[0] == '{' {
-		return parseJSON(buf)
+		return parseJSON(buf, storeProtectedHeaders)
 	}
-	return parseCompact(buf)
+	return parseCompact(buf, storeProtectedHeaders)
 }
 
 // ParseString is the same as Parse, but takes a string.
@@ -221,15 +310,16 @@ func ParseReader(src io.Reader) (*Message, error) {
 	return Parse(buf)
 }
 
-func parseJSON(buf []byte) (*Message, error) {
+func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	m := NewMessage()
+	m.storeProtectedHeaders = storeProtectedHeaders
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse JSON")
 	}
 	return m, nil
 }
 
-func parseCompact(buf []byte) (*Message, error) {
+func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	if pdebug.Enabled {
 		pdebug.Printf("Parse(Compact): buf = '%s'", buf)
 	}
@@ -284,6 +374,12 @@ func parseCompact(buf []byte) (*Message, error) {
 	if err := m.Set(TagKey, tagbuf); err != nil {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
+
+	if storeProtectedHeaders {
+		// This is later used for decryption.
+		m.rawProtectedHeaders = parts[0]
+	}
+
 	return m, nil
 }
 
@@ -304,38 +400,6 @@ func parseCompact(buf []byte) (*Message, error) {
 //
 //   bdayif, _ := hdr.Get(`x-birthday`)
 //   bday := bdayif.(time.Time)
-//
-// For elements of headers, *the order of definition matters* when
-// verifying the encrypted content.
-//
-// Suppose we are expecting a JSON object `{"bar":1, "foo":2}`
-// in the protected header. Because we need to compute the AAD value
-// using these headers, they are usually normalized in alphabetical order.
-//
-// And since we need to compute back the AAD value after we have parsed the
-// JWE message, your custom type MUST serialize back to the same field order.
-//
-// As an example, configuring this library to parse the above JSON object
-// into the following struct will case `jwe.Decrypt` to fail:
-//
-//    type Thing struct {
-//      Foo int `json:"foo"`
-//      Bar int `json:"bar"`
-//    }
-//    jwe.RegisterCustomField(..., Thing{})
-//
-// This is because `Thing`'s JSON serialization will be rendered
-// by taking each of the fields in the order that they appear in
-// the struct definition, thereby creating a JSON that looks like
-// `{"foo":..., "bar":...}`. Notice that the order of keys are
-// different from the original JSON representation. The JSON keys
-// must be sorted.
-//
-// Therefore it is the caller's responsibility to make sure that
-// the either (1) the struct's fields are declared in alphabetical
-// order, or (2) provide a `MarshalJSON()` method in the custom type
-// such that the alphabetical order is guaranteed in resulting
-// JSON objects.
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
