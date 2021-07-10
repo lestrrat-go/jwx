@@ -71,7 +71,7 @@ func ExampleJWE_ComplexDecrypt() {
 	// when you understand the inner workings of this code.
 
 	// In this example, the caller wants to determine the key to use by checking
-	// the value of a protected header. called `jwx-hints`.
+	// the value of a protected header called `jwx-hints`.
 
 	const payload = "Hello, World!"
 
@@ -97,26 +97,36 @@ func ExampleJWE_ComplexDecrypt() {
 		return
 	}
 
-	// Here we pass a nil key, because we will be determining the key to use later.
-	// The party responsible to determining the key is the jwe.PostParse hook.
+	// The party responsible to determining the key is the jwe.PostParser hook.
+	//
 	// Here we are using a function turned into an interface for brevity, but in real life
 	// I would personally recommend creating a real type for your specific needs
-	// instead of passing adhoc functions
+	// instead of passing adhoc functions. YMMV.
 	pp := func(ctx jwe.DecryptCtx) error {
 		msg := ctx.Message()
 		rawhint, _ := msg.ProtectedHeaders().Get(`jwx-hints`)
 		//nolint:forcetypeassert
-		hint := rawhint.(string)
-		switch hint {
-		case `foobar`:
-			// in real life you would look up the key or something.
-			// here we just assign the key to use.
+		hint, ok := rawhint.(string)
+		if ok && hint == `foobar` {
+			// This is where we are setting the key to be used.
+			//
+			// In real life you would look up the key or something.
+			// Here we just assign the key to use.
+			//
+			// You may opt to set both the algorithm and key here as well.
+			// BUT BE CAREFUL so that you don't accidentally create a
+			// vulnerability
 			ctx.SetKey(privkey)
-		default:
-			return errors.Errorf(`invalid value for jwx-hints: %s`, hint)
+			return nil
 		}
-		return nil
+
+		// If there were errors, just return it, and the whole jwe.Decrypt will fail.
+		return errors.Errorf(`invalid value for jwx-hints: %s`, rawhint)
 	}
+
+	// Calling jwe.Decrypt with the extra argument of jwe.WithPostParser().
+	// Here we pass a nil key to jwe.Decrypt, because the PostParser will be determining the key to use
+	// when its Do() method is called
 	decrypted, err := jwe.Decrypt(encrypted, jwa.RSA_OAEP, nil, jwe.WithPostParser(jwe.PostParseFunc(pp)))
 	if err != nil {
 		fmt.Printf("failed to decrypt message: %s\n", err)
