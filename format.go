@@ -56,7 +56,7 @@ func GuessFormat(payload []byte) FormatKind {
 		// Compact format. It's probably a JWS or JWE
 		sep := []byte{'.'} // I want to const this :/
 
-		// Note: this counts the number of occurrances of the
+		// Note: this counts the number of occurrences of the
 		// separator, but the RFC talks about the number of segments.
 		// number of '.' == segments - 1, so that's why we have 2 and 4 here
 		switch count := bytes.Count(payload, sep); count {
