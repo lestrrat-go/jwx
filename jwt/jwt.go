@@ -11,7 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/lestrrat-go/jwx"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/jwe"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -51,6 +53,11 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
+// This function can work with encrypted and/or signed tokens. Any combination
+// of JWS and JWE may be applied to the token, but this function will only
+// attempt to verify/decrypt up to 2 levels (i.e. JWS only, JWE only, JWS then
+// JWE, or JWE then JWS)
+//
 // If the token is signed and you want to verify the payload matches the signature,
 // you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
@@ -77,131 +84,139 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	return parseBytes(data, options...)
 }
 
+type parseCtx struct {
+	decryptParams DecryptParameters
+	verifyParams  VerifyParameters
+	keySet        jwk.Set
+	useDefault    bool
+	token         Token
+	validate      bool
+	validateOpts  []ValidateOption
+	localReg      *json.Registry
+}
+
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
-	var params VerifyParameters
-	var keyset jwk.Set
-	var useDefault bool
-	var token Token
-	var validate bool
-	var ok bool
+	var ctx parseCtx
 	for _, o := range options {
+		if v, ok := o.(ValidateOption); ok {
+			ctx.validateOpts = append(ctx.validateOpts, v)
+			continue
+		}
+
 		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identVerify{}:
-			params = o.Value().(VerifyParameters)
+			ctx.verifyParams = o.Value().(VerifyParameters)
+		case identDecrypt{}:
+			ctx.decryptParams = o.Value().(DecryptParameters)
 		case identKeySet{}:
-			keyset, ok = o.Value().(jwk.Set)
+			ks, ok := o.Value().(jwk.Set)
 			if !ok {
 				return nil, errors.Errorf(`invalid JWK set passed via WithKeySet() option (%T)`, o.Value())
 			}
+			ctx.keySet = ks
 		case identToken{}:
-			token, ok = o.Value().(Token)
+			token, ok := o.Value().(Token)
 			if !ok {
 				return nil, errors.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
 			}
+			ctx.token = token
 		case identDefault{}:
-			useDefault = o.Value().(bool)
+			ctx.useDefault = o.Value().(bool)
 		case identValidate{}:
-			validate = o.Value().(bool)
+			ctx.validate = o.Value().(bool)
+		case identTypedClaim{}:
+			pair := o.Value().(typedClaimPair)
+			if ctx.localReg == nil {
+				ctx.localReg = json.NewRegistry()
+			}
+			ctx.localReg.Register(pair.Name, pair.Value)
 		}
 	}
 
 	data = bytes.TrimSpace(data)
 
+	// TODO: This must be moved elsewhere
 	// If with matching kid is true, then look for the corresponding key in the
 	// given key set, by matching the "kid" key
-	if keyset != nil {
-		alg, key, err := lookupMatchingKey(data, keyset, useDefault)
+	if ks := ctx.keySet; ks != nil {
+		alg, key, err := lookupMatchingKey(data, ks, ctx.useDefault)
 		if err != nil {
 			return nil, errors.Wrap(err, `failed to find matching key for verification`)
 		}
-		return parse(token, data, true, alg, key, validate, options...)
+		ctx.verifyParams = &verifyParams{alg: alg, key: key}
 	}
-
-	if params != nil {
-		return parse(token, data, true, params.Algorithm(), params.Key(), validate, options...)
-	}
-
-	return parse(token, data, false, "", nil, validate, options...)
+	return parse(&ctx, data)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(token Token, data []byte, verify bool, alg jwa.SignatureAlgorithm, key interface{}, validate bool, options ...ParseOption) (Token, error) {
-	var payload []byte
-	if verify {
-		// If verify is true, the data MUST be a valid jws message
-		v, err := jws.Verify(data, alg, key)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to verify jws signature`)
-		}
-		payload = v
-	} else {
-		// 1. eyXXX.XXXX.XXXX
-		// 2. { "signatures": [ ... ] }
-		// 3. { "foo": "bar" }
-		if len(data) > 0 && data[0] == '{' {
-			m, err := jws.Parse(data)
-			if err == nil {
-				payload = m.Payload()
+func parse(ctx *parseCtx, data []byte) (Token, error) {
+	payload := data
+	const maxDecodeLevels = 2
+OUTER:
+	for i := 0; i < maxDecodeLevels; i++ {
+		switch kind := jwx.GuessFormat(payload); kind {
+		case jwx.JWT, jwx.UnknownFormat:
+			// for Unknown, we'll try our luck...
+			break OUTER
+		case jwx.JWS:
+			// For backwards compatibility, we must allow parsing the JWT
+			// without verifying its contents
+			if vp := ctx.verifyParams; vp != nil {
+				// If verify is true, the data MUST be a valid jws message
+				v, err := jws.Verify(payload, vp.Algorithm(), vp.Key())
+				if err != nil {
+					return nil, errors.Wrap(err, `failed to verify jws signature`)
+				}
+				payload = v
 			} else {
-				// It's JSON, but we don't have proper JWS fields.
-				payload = data
+				m, err := jws.Parse(data)
+				if err != nil {
+					return nil, errors.Wrap(err, `invalid jws message`)
+				}
+				payload = m.Payload()
 			}
-		} else {
-			// Probably compact JWS
-			m, err := jws.Parse(data)
+		case jwx.JWE:
+			dp := ctx.decryptParams
+			if dp == nil {
+				return nil, errors.Errorf(`jwt.Parse: cannot proceed with JWE encrypted payload without decryption parameters`)
+			}
+
+			v, err := jwe.Decrypt(data, dp.Algorithm(), dp.Key())
 			if err != nil {
-				return nil, errors.Wrap(err, `invalid jws message`)
+				return nil, errors.Wrap(err, `failed to decrypt payload`)
 			}
-			payload = m.Payload()
+			payload = v
+		default:
+			return nil, errors.Errorf(`unsupported format (layer: #%d)`, i+1)
 		}
 	}
 
-	if token == nil {
-		token = New()
+	if ctx.token == nil {
+		ctx.token = New()
 	}
 
-	var localReg *json.Registry
-	//nolint:forcetypeassert
-	for _, option := range options {
-		switch option.Ident() {
-		case identTypedClaim{}:
-			pair := option.Value().(typedClaimPair)
-			if localReg == nil {
-				localReg = json.NewRegistry()
-			}
-			localReg.Register(pair.Name, pair.Value)
-		}
-	}
-
-	if localReg != nil {
-		dcToken, ok := token.(TokenWithDecodeCtx)
+	if ctx.localReg != nil {
+		dcToken, ok := ctx.token.(TokenWithDecodeCtx)
 		if !ok {
-			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, token)
+			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
 		}
-		dc := json.NewDecodeCtx(localReg)
+		dc := json.NewDecodeCtx(ctx.localReg)
 		dcToken.SetDecodeCtx(dc)
 		defer func() { dcToken.SetDecodeCtx(nil) }()
 	}
 
-	if err := json.Unmarshal(payload, token); err != nil {
+	if err := json.Unmarshal(payload, ctx.token); err != nil {
 		return nil, errors.Wrap(err, `failed to parse token`)
 	}
 
-	if validate {
-		var vopts []ValidateOption
-		for _, o := range options {
-			if v, ok := o.(ValidateOption); ok {
-				vopts = append(vopts, v)
-			}
-		}
-
-		if err := Validate(token, vopts...); err != nil {
+	if ctx.validate {
+		if err := Validate(ctx.token, ctx.validateOpts...); err != nil {
 			return nil, err
 		}
 	}
-	return token, nil
+	return ctx.token, nil
 }
 
 func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {

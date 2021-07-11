@@ -76,6 +76,7 @@ type identAcceptableSkew struct{}
 type identAudience struct{}
 type identClaim struct{}
 type identClock struct{}
+type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
 type identHeaders struct{}
@@ -326,5 +327,30 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 		c2:   c2,
 		dur:  dur,
 		less: false,
+	})
+}
+
+type decryptParams struct {
+	alg jwa.KeyEncryptionAlgorithm
+	key interface{}
+}
+
+type DecryptParameters interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	Key() interface{}
+}
+
+func (dp *decryptParams) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return dp.alg
+}
+
+func (dp *decryptParams) Key() interface{} {
+	return dp.key
+}
+
+func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
+	return newParseOption(identDecrypt{}, &decryptParams{
+		alg: alg,
+		key: key,
 	})
 }
