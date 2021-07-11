@@ -1102,3 +1102,38 @@ func TestCustomField(t *testing.T) {
 		}
 	})
 }
+
+func TestWithMessage(t *testing.T) {
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, "jwxtest.Generate should succeed") {
+		return
+	}
+
+	const text = "hello, world"
+	signed, err := jws.Sign([]byte(text), jwa.RS256, key)
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	m := jws.NewMessage()
+	payload, err := jws.Verify(signed, jwa.RS256, key.PublicKey, jws.WithMessage(m))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, payload, []byte(text), `jws.Verify should produce the correct payload`) {
+		return
+	}
+
+	parsed, err := jws.Parse(signed)
+	if !assert.NoError(t, err, `jws.Parse should succeed`) {
+		return
+	}
+
+	// The result of using jws.WithMessage should match the result of jws.Parse
+	buf1, _ := json.Marshal(m)
+	buf2, _ := json.Marshal(parsed)
+
+	if !assert.Equal(t, buf1, buf2, `result of jws.PArse and jws.Verify(..., jws.WithMessage()) should match`) {
+		return
+	}
+}

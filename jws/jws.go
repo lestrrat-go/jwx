@@ -161,16 +161,25 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // `Verifier` in `verify` subpackage, and call `Verify` method on it.
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
-func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...VerifyOption) ([]byte, error) {
+	var dst *Message
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identMessage{}:
+			dst = option.Value().(*Message)
+		}
+	}
+
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New(`attempt to verify empty buffer`)
 	}
 
 	if buf[0] == '{' {
-		return verifyJSON(buf, alg, key)
+		return verifyJSON(buf, alg, key, dst)
 	}
-	return verifyCompact(buf, alg, key)
+	return verifyCompact(buf, alg, key, dst)
 }
 
 // VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
@@ -208,7 +217,7 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
 }
 
-func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message) ([]byte, error) {
 	verifier, err := NewVerifier(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
@@ -245,13 +254,16 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]b
 		buf.WriteString(payload)
 
 		if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
+			if dst != nil {
+				*dst = m
+			}
 			return m.payload, nil
 		}
 	}
 	return nil, errors.New(`could not verify with any of the signatures`)
 }
 
-func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, error) {
+func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message) ([]byte, error) {
 	protected, payload, signature, err := SplitCompact(signed)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
@@ -298,6 +310,18 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}) (
 	decodedPayload, err := base64.Decode(payload)
 	if err != nil {
 		return nil, errors.Wrap(err, `message verified, failed to decode payload`)
+	}
+
+	if dst != nil {
+		// Construct a new Message object
+		m := NewMessage()
+		m.SetPayload(decodedPayload)
+		sig := NewSignature()
+		sig.SetProtectedHeaders(hdr)
+		sig.SetSignature(decodedSignature)
+		m.AppendSignature(sig)
+
+		*dst = *m
 	}
 	return decodedPayload, nil
 }
