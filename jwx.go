@@ -1,4 +1,6 @@
 //go:generate go run internal/cmd/genreadfile/main.go
+//go:generate stringer -type=FormatKind
+//go:generate mv formatkind_string.go formatkind_string_gen.go
 
 // Package jwx contains tools that deal with the various JWx (JOSE)
 // technologies such as JWT, JWS, JWE, etc in Go.
@@ -24,7 +26,9 @@
 // You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
 package jwx
 
-import "github.com/lestrrat-go/jwx/internal/json"
+import (
+	"github.com/lestrrat-go/jwx/internal/json"
+)
 
 // DecoderSettings gives you a access to configure the "encoding/json".Decoder
 // used to decode JSON objects within the jwx framework.
