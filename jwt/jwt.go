@@ -88,11 +88,11 @@ type parseCtx struct {
 	decryptParams DecryptParameters
 	verifyParams  VerifyParameters
 	keySet        jwk.Set
-	useDefault    bool
 	token         Token
-	validate      bool
 	validateOpts  []ValidateOption
 	localReg      *json.Registry
+	useDefault    bool
+	validate      bool
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {

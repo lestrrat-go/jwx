@@ -63,7 +63,9 @@ func (s *jwsSerializer) Do(v interface{}) (interface{}, error) {
 	}
 
 	hdrs := jws.NewHeaders()
-	hdrs.Set(jws.ContentTypeKey, `JWT`)
+	if err := hdrs.Set(jws.ContentTypeKey, `JWT`); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.ContentTypeKey)
+	}
 	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
 }
 
@@ -89,7 +91,9 @@ func (s *jweSerializer) Do(v interface{}) (interface{}, error) {
 	}
 
 	hdrs := jwe.NewHeaders()
-	hdrs.Set(jwe.ContentTypeKey, `JWT`)
+	if err := hdrs.Set(jwe.ContentTypeKey, `JWT`); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.ContentTypeKey)
+	}
 	return jwe.Encrypt(payload, s.keyalg, s.key, s.contentalg, s.compressalg, jwe.WithProtectedHeaders(hdrs))
 }
 
