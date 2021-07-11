@@ -1060,6 +1060,7 @@ func TestNested(t *testing.T) {
 	t.Logf("%s", verified)
 
 	parsed, err := jwt.Parse(serialized,
+		jwt.WithPedantic(true),
 		jwt.WithVerify(jwa.RS256, key.PublicKey),
 		jwt.WithDecrypt(jwa.RSA_OAEP, key),
 	)

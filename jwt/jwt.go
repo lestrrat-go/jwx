@@ -91,6 +91,7 @@ type parseCtx struct {
 	token         Token
 	validateOpts  []ValidateOption
 	localReg      *json.Registry
+	pedantic      bool
 	useDefault    bool
 	validate      bool
 }
@@ -121,6 +122,8 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				return nil, errors.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
 			}
 			ctx.token = token
+		case identPedantic{}:
+			ctx.pedantic = o.Value().(bool)
 		case identDefault{}:
 			ctx.useDefault = o.Value().(bool)
 		case identValidate{}:
@@ -165,9 +168,30 @@ OUTER:
 			// without verifying its contents
 			if vp := ctx.verifyParams; vp != nil {
 				// If verify is true, the data MUST be a valid jws message
-				v, err := jws.Verify(payload, vp.Algorithm(), vp.Key())
+				var m *jws.Message
+				var verifyOpts []jws.VerifyOption
+				if ctx.pedantic {
+					m = jws.NewMessage()
+					verifyOpts = []jws.VerifyOption{jws.WithMessage(m)}
+				}
+				v, err := jws.Verify(payload, vp.Algorithm(), vp.Key(), verifyOpts...)
 				if err != nil {
 					return nil, errors.Wrap(err, `failed to verify jws signature`)
+				}
+
+				if ctx.pedantic {
+					var ctyOK bool
+				JWS_CTY_CHECK:
+					for _, sig := range m.Signatures() {
+						cty, ok := sig.ProtectedHeaders().Get(jws.ContentTypeKey)
+						if ok && cty == `JWT` {
+							ctyOK = true
+							break JWS_CTY_CHECK
+						}
+					}
+					if !ctyOK {
+						return nil, errors.New(`invalid JWS (missing "cty": "JWT")`)
+					}
 				}
 				payload = v
 			} else {
@@ -183,9 +207,23 @@ OUTER:
 				return nil, errors.Errorf(`jwt.Parse: cannot proceed with JWE encrypted payload without decryption parameters`)
 			}
 
-			v, err := jwe.Decrypt(data, dp.Algorithm(), dp.Key())
+			var m *jwe.Message
+			var decryptOpts []jwe.DecryptOption
+			if ctx.pedantic {
+				m = jwe.NewMessage()
+				decryptOpts = []jwe.DecryptOption{jwe.WithMessage(m)}
+			}
+
+			v, err := jwe.Decrypt(data, dp.Algorithm(), dp.Key(), decryptOpts...)
 			if err != nil {
 				return nil, errors.Wrap(err, `failed to decrypt payload`)
+			}
+
+			if ctx.pedantic {
+				cty, ok := m.ProtectedHeaders().Get(jwe.ContentTypeKey)
+				if !ok || cty != `JWT` {
+					return nil, errors.New(`invalid JWS (missing "cty": "JWT")`)
+				}
 			}
 			payload = v
 		default:

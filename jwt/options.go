@@ -83,6 +83,7 @@ type identHeaders struct{}
 type identIssuer struct{}
 type identJwtid struct{}
 type identKeySet struct{}
+type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
 type identTimeDelta struct{}
@@ -353,4 +354,8 @@ func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
 		alg: alg,
 		key: key,
 	})
+}
+
+func WithPedantic(v bool) ParseOption {
+	return newParseOption(identPedantic{}, v)
 }
