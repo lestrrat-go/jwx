@@ -26,6 +26,11 @@ v1.2.2
     process. The hook is called right after the JWE message has been parsed,
     but before the actual decryption has taken place.
 
+  JWS
+  * Option `jwe.WithMessage()` has been added. This allows the user to
+    obtain both the verified payload _and_ the raw `*jws.Message` in one
+    go when `jws.Verify()` is called
+
 v1.2.1 02 Jun 2021
 [New features]
   * Option `jwt.WithTypedClaim()` and `jwk.WithTypedField()` have been added.
