@@ -352,36 +352,7 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
 func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	var hdr jws.Headers
-	for _, o := range options {
-		//nolint:forcetypeassert
-		switch o.Ident() {
-		case identJwsHeaders{}:
-			hdr = o.Value().(jws.Headers)
-		}
-	}
-
-	buf, err := json.Marshal(t)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal token`)
-	}
-
-	if hdr == nil {
-		hdr = jws.NewHeaders()
-	}
-
-	if _, ok := hdr.Get(`typ`); !ok {
-		if err := hdr.Set(`typ`, `JWT`); err != nil {
-			return nil, errors.Wrap(err, `failed to set typ field`)
-		}
-	}
-
-	sign, err := jws.Sign(buf, alg, key, jws.WithHeaders(hdr))
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to sign payload`)
-	}
-
-	return sign, nil
+	return NewSerializer().Sign(alg, key, options...).Do(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like
