@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.2
+v1.2.2 13 Jul 2021
 [Deprecation notice]
   * `(jwe.Message).Decrypt()` will be removed from the API upon the next
     major release.
@@ -11,6 +11,9 @@ v1.2.2
     with the correct message contents when used along with `jwe.RegisterCustomField`
 
 [New features]
+  JWX
+  * Add GuessFormat() function to guess what the payload is.
+
   JWT
   * Options `jwt.WithMinDelta()`, `jwt.WithMaxDelta()` have been added.
     These can be used to compare time-based fields in the JWT object.
