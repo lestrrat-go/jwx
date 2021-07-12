@@ -86,7 +86,7 @@ func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 	var hdrs jws.Headers
 	for _, option := range s.options {
 		switch option.Ident() {
-		case identHeaders{}:
+		case identJwsHeaders{}:
 			hdrs = option.Value().(jws.Headers)
 		}
 	}
@@ -125,7 +125,7 @@ type jweSerializer struct {
 	key         interface{}
 	contentalg  jwa.ContentEncryptionAlgorithm
 	compressalg jwa.CompressionAlgorithm
-	options     []DecryptOption
+	options     []EncryptOption
 }
 
 func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error) {
@@ -137,13 +137,13 @@ func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 	var hdrs jwe.Headers
 	for _, option := range s.options {
 		switch option.Ident() {
-		case identHeaders{}:
+		case identJweHeaders{}:
 			hdrs = option.Value().(jwe.Headers)
 		}
 	}
 
 	if hdrs == nil {
-		hdrs = jws.NewHeaders()
+		hdrs = jwe.NewHeaders()
 	}
 
 	if ctx.Step() == 1 {
@@ -163,7 +163,7 @@ func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 	return jwe.Encrypt(payload, s.keyalg, s.key, s.contentalg, s.compressalg, jwe.WithProtectedHeaders(hdrs))
 }
 
-func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...DecryptOption) *Serializer {
+func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) *Serializer {
 	s.steps = append(s.steps, &jweSerializer{
 		keyalg:      keyalg,
 		key:         key,

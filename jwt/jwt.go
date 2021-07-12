@@ -353,7 +353,7 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignO
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
-		case identHeaders{}:
+		case identJwsHeaders{}:
 			hdr = o.Value().(jws.Headers)
 		}
 	}

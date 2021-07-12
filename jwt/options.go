@@ -192,7 +192,7 @@ func WithToken(t Token) ParseOption {
 // This option will be deprecated in the next major version. Use
 // jwt.WithJwsHeaders() instead.
 func WithHeaders(hdrs jws.Headers) SignOption {
-	return WithSignHeaders(hdrs)
+	return WithJwsHeaders(hdrs)
 }
 
 func WithJwsHeaders(hdrs jws.Headers) SignOption {
