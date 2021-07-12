@@ -72,7 +72,7 @@ func WithMessage(m *Message) DecryptOption {
 
 // WithPostParser specifies the handler to be called immediately
 // after the JWE message has been parsed, but before decryption
-// takes place.
+// takes place during `jwe.Decrypt`.
 //
 // This option exists to allow advanced users that require the use
 // of information stored in the JWE message to determine how the

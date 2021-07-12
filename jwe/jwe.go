@@ -216,20 +216,6 @@ func (ctx *decryptCtx) SetMessage(m *Message) {
 	ctx.msg = m
 }
 
-// PostParser is used in conjunction with jwe.WithPostParser(), and is
-// called right after the JWE message has been parsed but
-// before the actual decryption takes place during `jwe.Decrypt()`.
-type PostParser interface {
-	Do(DecryptCtx) error
-}
-
-// PostParseFunc is a PostParser that is represented by a single function
-type PostParseFunc func(DecryptCtx) error
-
-func (fn PostParseFunc) Do(ctx DecryptCtx) error {
-	return fn(ctx)
-}
-
 // Decrypt takes the key encryption algorithm and the corresponding
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
@@ -259,7 +245,7 @@ func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, option
 
 	ctx.msg = msg
 	if postParse != nil {
-		if err := postParse.Do(&ctx); err != nil {
+		if err := postParse.PostParse(&ctx); err != nil {
 			return nil, errors.Wrap(err, `failed to execute PostParser hook`)
 		}
 	}

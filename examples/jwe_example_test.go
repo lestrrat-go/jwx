@@ -101,7 +101,7 @@ func ExampleJWE_ComplexDecrypt() {
 	//
 	// Here we are using a function turned into an interface for brevity, but in real life
 	// I would personally recommend creating a real type for your specific needs
-	// instead of passing adhoc functions. YMMV.
+	// instead of passing adhoc closures. YMMV.
 	pp := func(ctx jwe.DecryptCtx) error {
 		msg := ctx.Message()
 		rawhint, _ := msg.ProtectedHeaders().Get(`jwx-hints`)
@@ -125,8 +125,8 @@ func ExampleJWE_ComplexDecrypt() {
 	}
 
 	// Calling jwe.Decrypt with the extra argument of jwe.WithPostParser().
-	// Here we pass a nil key to jwe.Decrypt, because the PostParser will be determining the key to use
-	// when its Do() method is called
+	// Here we pass a nil key to jwe.Decrypt, because the PostParser will be
+	// determining the key to use when its PostParse() method is called
 	decrypted, err := jwe.Decrypt(encrypted, jwa.RSA_OAEP, nil, jwe.WithPostParser(jwe.PostParseFunc(pp)))
 	if err != nil {
 		fmt.Printf("failed to decrypt message: %s\n", err)
