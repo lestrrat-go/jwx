@@ -415,3 +415,67 @@ func TestGHIssue230(t *testing.T) {
 		return
 	}
 }
+
+func TestGuessFormat(t *testing.T) {
+	testcases := []struct {
+		Name     string
+		Expected jwx.FormatKind
+		Source   []byte
+	}{
+		{
+			Name:     "Raw String",
+			Expected: jwx.UnknownFormat,
+			Source:   []byte(`Hello, World`),
+		},
+		{
+			Name:     "Random JSON Object",
+			Expected: jwx.UnknownFormat,
+			Source:   []byte(`{"random": "JSON"}`),
+		},
+		{
+			Name:     "Random JSON Array",
+			Expected: jwx.UnknownFormat,
+			Source:   []byte(`["random", "JSON"]`),
+		},
+		{
+			Name:     "Random Broken JSON",
+			Expected: jwx.UnknownFormat,
+			Source:   []byte(`{"aud": "foo", "x-customg": "extra semicolon after this string", }`),
+		},
+		{
+			Name:     "JWS",
+			Expected: jwx.JWS,
+			// from  https://tools.ietf.org/html/rfc7515#appendix-A.1
+			Source: []byte(`eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`),
+		},
+		{
+			Name:     "JWE",
+			Expected: jwx.JWE,
+			Source:   []byte(`eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`),
+		},
+		{
+			Name:     "JWK",
+			Expected: jwx.JWK,
+			Source:   []byte(`{"kty":"OKP","crv":"X25519","x":"3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"}`),
+		},
+		{
+			Name:     "JWKS",
+			Expected: jwx.JWKS,
+			Source:   []byte(`{"keys":[{"kty":"OKP","crv":"X25519","x":"3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"}]}`),
+		},
+		{
+			Name:     "JWT",
+			Expected: jwx.JWT,
+			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx"}`),
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			if !assert.Equal(t, jwx.GuessFormat(tc.Source), tc.Expected, `value of jwx.GuessFormat should match`) {
+				return
+			}
+		})
+	}
+}

@@ -16,6 +16,12 @@ v1.2.2
     These can be used to compare time-based fields in the JWT object.
   * Option `jwt.WithRequiredClaim()` has been added. This can be used
     to check that JWT contains the given claim.
+  * `jwt.Parse` now understands payloads that have been encrypted _and_ signed.
+    This is more in line with the RFC than the previous implementation, but
+    due to the fact that it requires a couple of extra unmarshaling, it may
+    add some amount of overhead.
+  * `jwt.Serializer` has been added as an easy wrapper to perform multiple
+     levels of serializations (e.g. apply JWS, then JWE)
 
   JWE
   * Option `jwe.WithMessage()` has been added. This allows the user to
@@ -30,6 +36,8 @@ v1.2.2
   * Option `jwe.WithMessage()` has been added. This allows the user to
     obtain both the verified payload _and_ the raw `*jws.Message` in one
     go when `jws.Verify()` is called
+  * Options to `jws.Sign()` are not of type `jws.SignOption`. There should be
+    no user-visible effects unless you were storing these somewhere.
 
 v1.2.1 02 Jun 2021
 [New features]

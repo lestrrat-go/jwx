@@ -79,7 +79,7 @@ func (s *payloadSigner) PublicHeader() Headers {
 // the type of key you provided, otherwise an error is returned.
 //
 // If you would like to pass custom headers, use the WithHeaders option.
-func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
+func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
 	var hdrs Headers
 	for _, o := range options {
 		//nolint:forcetypeassert

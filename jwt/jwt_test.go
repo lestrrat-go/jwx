@@ -17,6 +17,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -1002,4 +1003,60 @@ func TestGH393(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestNested(t *testing.T) {
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+		return
+	}
+
+	token := jwt.New()
+	token.Set(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`)
+
+	serialized, err := jwt.NewSerializer().
+		Sign(jwa.RS256, key).
+		Encrypt(jwa.RSA_OAEP, key.PublicKey, jwa.A256GCM, jwa.NoCompress).
+		Serialize(token)
+
+	if !assert.NoError(t, err, `jwt.NewSerializer should succeed`) {
+		return
+	}
+
+	// First layer should be JWE
+	jweMessage := jwe.NewMessage()
+	decrypted, err := jwe.Decrypt(serialized, jwa.RSA_OAEP, key, jwe.WithMessage(jweMessage))
+	if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
+		return
+	}
+
+	// The message should have cty = JWT
+	cty := jweMessage.ProtectedHeaders().ContentType()
+	if !assert.Equal(t, cty, `JWT`, `cty should be JWT`) {
+		return
+	}
+
+	// Second layer should JWS.
+	jwsMessage := jws.NewMessage()
+	verified, err := jws.Verify(decrypted, jwa.RS256, key.PublicKey, jws.WithMessage(jwsMessage))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+
+	typ := jwsMessage.Signatures()[0].ProtectedHeaders().Type()
+	if !assert.Equal(t, typ, `JWT`, `cty should be JWT`) {
+		return
+	}
+
+	t.Logf("%s", verified)
+
+	parsed, err := jwt.Parse(serialized,
+		jwt.WithPedantic(true),
+		jwt.WithVerify(jwa.RS256, key.PublicKey),
+		jwt.WithDecrypt(jwa.RSA_OAEP, key),
+	)
+	if !assert.NoError(t, err, `jwt.Parse with both decryption and verification should succeed`) {
+		return
+	}
+	_ = parsed
 }

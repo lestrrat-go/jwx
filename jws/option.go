@@ -19,10 +19,21 @@ func WithSigner(signer Signer, key interface{}, public, protected Headers) Optio
 	})
 }
 
+type SignOption interface {
+	Option
+	signOption()
+}
+
+type signOption struct {
+	Option
+}
+
+func (*signOption) signOption() {}
+
 // WithHeaders allows you to specify extra header values to include in the
 // final JWS message
-func WithHeaders(h Headers) Option {
-	return option.New(identHeaders{}, h)
+func WithHeaders(h Headers) SignOption {
+	return &signOption{option.New(identHeaders{}, h)}
 }
 
 // VerifyOption describes an option that can be passed to the jws.Verify function

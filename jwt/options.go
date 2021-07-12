@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/option"
@@ -54,6 +55,40 @@ func newParseOption(n interface{}, v interface{}) ParseOption {
 func (*parseOption) parseOption()    {}
 func (*parseOption) readFileOption() {}
 
+// SignOption describes an Option that can be passed to Sign() or
+// (jwt.Serializer).Sign
+type SignOption interface {
+	Option
+	signOption()
+}
+
+type signOption struct {
+	Option
+}
+
+func newSignOption(n interface{}, v interface{}) SignOption {
+	return &signOption{option.New(n, v)}
+}
+
+func (*signOption) signOption() {}
+
+// EncryptOption describes an Option that can be passed to Encrypt() or
+// (jwt.Serializer).Encrypt
+type EncryptOption interface {
+	Option
+	encryptOption()
+}
+
+type encryptOption struct {
+	Option
+}
+
+func newEncryptOption(n interface{}, v interface{}) EncryptOption {
+	return &encryptOption{option.New(n, v)}
+}
+
+func (*encryptOption) encryptOption() {}
+
 // ValidateOption describes an Option that can be passed to Validate().
 // ValidateOption also implements ParseOption, therefore it may be
 // safely passed to `Parse()` (and thus `jwt.ReadFile()`)
@@ -76,12 +111,15 @@ type identAcceptableSkew struct{}
 type identAudience struct{}
 type identClaim struct{}
 type identClock struct{}
+type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
-type identHeaders struct{}
 type identIssuer struct{}
+type identJweHeaders struct{}
+type identJwsHeaders struct{}
 type identJwtid struct{}
 type identKeySet struct{}
+type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
 type identTimeDelta struct{}
@@ -148,10 +186,27 @@ func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
 }
 
-// WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
+// WithHeaders is passed to `jwt.Sign()` function, to allow specifying arbitrary
 // header values to be included in the header section of the jws message
-func WithHeaders(hdrs jws.Headers) ParseOption {
-	return newParseOption(identHeaders{}, hdrs)
+//
+// This option will be deprecated in the next major version. Use
+// jwt.WithJwsHeaders() instead.
+func WithHeaders(hdrs jws.Headers) SignOption {
+	return WithJwsHeaders(hdrs)
+}
+
+// WithJwsHeaders is passed to `jwt.Sign()` function or
+// "jwt.Serializer".Sign() method, to allow specifying arbitrary
+// header values to be included in the header section of the JWE message
+func WithJwsHeaders(hdrs jws.Headers) SignOption {
+	return newSignOption(identJwsHeaders{}, hdrs)
+}
+
+// WithJweHeaders is passed to "jwt.Serializer".Encrypt() method to allow
+// specifying arbitrary header values to be included in the protected header
+// of the JWE message
+func WithJweHeaders(hdrs jwe.Headers) EncryptOption {
+	return newEncryptOption(identJweHeaders{}, hdrs)
 }
 
 // WithValidate is passed to `Parse()` method to denote that the
@@ -327,4 +382,37 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 		dur:  dur,
 		less: false,
 	})
+}
+
+type decryptParams struct {
+	alg jwa.KeyEncryptionAlgorithm
+	key interface{}
+}
+
+type DecryptParameters interface {
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	Key() interface{}
+}
+
+func (dp *decryptParams) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return dp.alg
+}
+
+func (dp *decryptParams) Key() interface{} {
+	return dp.key
+}
+
+// WithDecrypt allows users to specify parameters for decryption using
+// `jwe.Decrypt`. You must specify this if your JWT is encrypted.
+func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
+	return newParseOption(identDecrypt{}, &decryptParams{
+		alg: alg,
+		key: key,
+	})
+}
+
+// WithPedantic enables pedantic mode for parsing JWTs. Currently this only
+// applies to checking for the correct `typ` and/or `cty` when necessary.
+func WithPedantic(v bool) ParseOption {
+	return newParseOption(identPedantic{}, v)
 }
