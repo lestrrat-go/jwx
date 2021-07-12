@@ -186,7 +186,7 @@ func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
 }
 
-// WithSignHeaders is passed to `Sign()` method, to allow specifying arbitrary
+// WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
 // header values to be included in the header section of the jws message
 //
 // This option will be deprecated in the next major version. Use

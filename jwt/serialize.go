@@ -84,6 +84,7 @@ func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 	}
 
 	var hdrs jws.Headers
+	//nolint:forcetypeassert
 	for _, option := range s.options {
 		switch option.Ident() {
 		case identJwsHeaders{}:
@@ -135,6 +136,7 @@ func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 	}
 
 	var hdrs jwe.Headers
+	//nolint:forcetypeassert
 	for _, option := range s.options {
 		switch option.Ident() {
 		case identJweHeaders{}:

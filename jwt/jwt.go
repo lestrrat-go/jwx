@@ -22,6 +22,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const _jwt = `jwt`
+
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
@@ -203,12 +205,12 @@ OUTER:
 				// If its JWT+(JWE or JWS or...)+JWS, then cty should be JWT
 				for _, sig := range m.Signatures() {
 					hdrs := sig.ProtectedHeaders()
-					if strings.ToLower(hdrs.Type()) == `jwt` {
+					if strings.ToLower(hdrs.Type()) == _jwt {
 						payload = v
 						break OUTER
 					}
 
-					if strings.ToLower(hdrs.ContentType()) == `jwt` {
+					if strings.ToLower(hdrs.ContentType()) == _jwt {
 						expectNested = true
 						payload = v
 						continue OUTER
@@ -217,13 +219,14 @@ OUTER:
 
 				// Hmmm, it was a JWS and we got... nothing?
 				return nil, errors.Errorf(`expected "typ" or "cty" fields, neither could be found`)
-			} else {
-				m, err := jws.Parse(data)
-				if err != nil {
-					return nil, errors.Wrap(err, `invalid jws message`)
-				}
-				payload = m.Payload()
 			}
+
+			// No verification.
+			m, err := jws.Parse(data)
+			if err != nil {
+				return nil, errors.Wrap(err, `invalid jws message`)
+			}
+			payload = m.Payload()
 		case jwx.JWE:
 			dp := ctx.decryptParams
 			if dp == nil {
@@ -247,12 +250,12 @@ OUTER:
 				continue
 			}
 
-			if strings.ToLower(m.ProtectedHeaders().Type()) == `jwt` {
+			if strings.ToLower(m.ProtectedHeaders().Type()) == _jwt {
 				payload = v
 				break OUTER
 			}
 
-			if strings.ToLower(m.ProtectedHeaders().ContentType()) == `jwt` {
+			if strings.ToLower(m.ProtectedHeaders().ContentType()) == _jwt {
 				expectNested = true
 				payload = v
 				continue OUTER
