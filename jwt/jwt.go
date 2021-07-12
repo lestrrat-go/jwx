@@ -352,7 +352,7 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
 func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	return NewSerializer().Sign(alg, key, options...).Do(t)
+	return NewSerializer().Sign(alg, key, options...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like

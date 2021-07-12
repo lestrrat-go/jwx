@@ -1017,7 +1017,7 @@ func TestNested(t *testing.T) {
 	serialized, err := jwt.NewSerializer().
 		Sign(jwa.RS256, key).
 		Encrypt(jwa.RSA_OAEP, key.PublicKey, jwa.A256GCM, jwa.NoCompress).
-		Do(token)
+		Serialize(token)
 
 	if !assert.NoError(t, err, `jwt.NewSerializer should succeed`) {
 		return

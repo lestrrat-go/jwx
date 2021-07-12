@@ -29,7 +29,7 @@ func (ctx *serializeCtx) Nested() bool {
 }
 
 type SerializeStep interface {
-	Do(SerializeCtx, interface{}) (interface{}, error)
+	Serialize(SerializeCtx, interface{}) (interface{}, error)
 }
 
 // Serializer is a generic serializer for JWTs. Whereas other conveinience
@@ -46,19 +46,37 @@ type SerializeStep interface {
 //   serialized, err := jwt.NewSerialer().
 //      Sign(jwa.RS256, key).
 //      Encrypt(jwa.RSA_OAEP, key.PublicKey).
-//      Do(token)
+//      Serialize(token)
 //
+// The `jwt.Sign()` function is equivalent to
+//
+//   serialized, err := jwt.NewSerializer().
+//      Sign(...args...).
+//      Serialize(token)
 type Serializer struct {
 	steps []SerializeStep
 }
 
+// NewSerializer creates a new empty serializer.
 func NewSerializer() *Serializer {
 	return &Serializer{}
 }
 
+// Reset clears all of the registered steps.
+func (s *Serializer) Reset() *Serializer {
+	s.steps = nil
+	return s
+}
+
+// Step adds a new Step to the serialization process
+func (s *Serializer) Step(step SerializeStep) *Serializer {
+	s.steps = append(s.steps, step)
+	return s
+}
+
 type jsonSerializer struct{}
 
-func (jsonSerializer) Do(_ SerializeCtx, v interface{}) (interface{}, error) {
+func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, error) {
 	token, ok := v.(Token)
 	if !ok {
 		return nil, errors.Errorf(`invalid input: expected jwt.Token`)
@@ -107,7 +125,7 @@ type jwsSerializer struct {
 	options []SignOption
 }
 
-func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error) {
+func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, errors.New(`expected []byte as input`)
@@ -133,12 +151,11 @@ func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 }
 
 func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) *Serializer {
-	s.steps = append(s.steps, &jwsSerializer{
+	return s.Step(&jwsSerializer{
 		alg:     alg,
 		key:     key,
 		options: options,
 	})
-	return s
 }
 
 type jweSerializer struct {
@@ -149,7 +166,7 @@ type jweSerializer struct {
 	options     []EncryptOption
 }
 
-func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error) {
+func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, fmt.Errorf(`expected []byte as input`)
@@ -175,17 +192,16 @@ func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 }
 
 func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) *Serializer {
-	s.steps = append(s.steps, &jweSerializer{
+	return s.Step(&jweSerializer{
 		keyalg:      keyalg,
 		key:         key,
 		contentalg:  contentalg,
 		compressalg: compressalg,
 		options:     options,
 	})
-	return s
 }
 
-func (s *Serializer) Do(t Token) ([]byte, error) {
+func (s *Serializer) Serialize(t Token) ([]byte, error) {
 	steps := make([]SerializeStep, len(s.steps)+1)
 	steps[0] = jsonSerializer{}
 	for i, step := range s.steps {
@@ -197,7 +213,7 @@ func (s *Serializer) Do(t Token) ([]byte, error) {
 	var payload interface{} = t
 	for i, step := range steps {
 		ctx.step = i
-		v, err := step.Do(&ctx, payload)
+		v, err := step.Serialize(&ctx, payload)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to serialize token at step #%d`, i+1)
 		}
