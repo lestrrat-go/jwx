@@ -186,7 +186,7 @@ func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
 }
 
-// WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
+// WithHeaders is passed to `jwt.Sign()` function, to allow specifying arbitrary
 // header values to be included in the header section of the jws message
 //
 // This option will be deprecated in the next major version. Use
@@ -195,10 +195,16 @@ func WithHeaders(hdrs jws.Headers) SignOption {
 	return WithJwsHeaders(hdrs)
 }
 
+// WithJwsHeaders is passed to `jwt.Sign()` function or
+// "jwt.Serializer".Sign() method, to allow specifying arbitrary
+// header values to be included in the header section of the JWE message
 func WithJwsHeaders(hdrs jws.Headers) SignOption {
 	return newSignOption(identJwsHeaders{}, hdrs)
 }
 
+// WithJweHeaders is passed to "jwt.Serializer".Encrypt() method to allow
+// specifying arbitrary header values to be included in the protected header
+// of the JWE message
 func WithJweHeaders(hdrs jwe.Headers) EncryptOption {
 	return newEncryptOption(identJweHeaders{}, hdrs)
 }
