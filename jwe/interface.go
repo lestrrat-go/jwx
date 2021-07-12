@@ -85,3 +85,17 @@ type Visitor = iter.MapVisitor
 type VisitorFunc = iter.MapVisitorFunc
 type HeaderPair = mapiter.Pair
 type Iterator = mapiter.Iterator
+
+// PostParser is used in conjunction with jwe.WithPostParser().
+// This hook is called right after the JWE message has been parsed
+// but before the actual decryption takes place during `jwe.Decrypt()`.
+type PostParser interface {
+	PostParse(DecryptCtx) error
+}
+
+// PostParseFunc is a PostParser that is represented by a single function
+type PostParseFunc func(DecryptCtx) error
+
+func (fn PostParseFunc) PostParse(ctx DecryptCtx) error {
+	return fn(ctx)
+}

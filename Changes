@@ -31,6 +31,7 @@ v1.2.2
     has been added. This allows advanced users to hook into the `jwe.Decrypt()`
     process. The hook is called right after the JWE message has been parsed,
     but before the actual decryption has taken place.
+  * `(jwe.Message).Decrypt()` has been marked for deprecation in a next major release.
 
   JWS
   * Option `jwe.WithMessage()` has been added. This allows the user to
