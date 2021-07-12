@@ -13,6 +13,9 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
 * [Validation](#jwt-validation)
+* [Serialization](#jwt-serialization)
+  * [Serialize using JWS](#serialize-using-jws
+  * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
 
 
 ---
@@ -110,3 +113,31 @@ if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx`)) {
   return errors.New(`failed to validate token`)
 }
 ```
+
+# JWT Serialization
+
+## Serialize using JWS
+
+The `jwt` package provides a convenience function `jwt.Sign()` to serialize a token using JWS.
+
+```go
+token := jwt.New()
+token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`)
+
+serialized, err := jws.Sign(token, algorithm, key)
+```
+
+If you need even further customization, consider using the `jws` package directly.
+
+## Serialize using JWE and JWS
+
+The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors. For example, to encrypt a token using JWE, then use JWS to sign it, do the following:
+
+```go
+serizlied, err := jwt.NewSerializer().
+  Encrypt(keyEncryptionAlgorithm, keyEncryptionKey, contentEncryptionAlgorithm, compression).
+  Sign(signatureAlgorithm, signatureKey).
+  Serialize(token)
+```
+
+If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()`
