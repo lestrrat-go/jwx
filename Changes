@@ -36,6 +36,8 @@ v1.2.2
   * Option `jwe.WithMessage()` has been added. This allows the user to
     obtain both the verified payload _and_ the raw `*jws.Message` in one
     go when `jws.Verify()` is called
+  * Options to `jws.Sign()` are not of type `jws.SignOption`. There should be
+    no user-visible effects unless you were storing these somewhere.
 
 v1.2.1 02 Jun 2021
 [New features]

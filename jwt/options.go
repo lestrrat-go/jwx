@@ -402,6 +402,8 @@ func (dp *decryptParams) Key() interface{} {
 	return dp.key
 }
 
+// WithDecrypt allows users to specify parameters for decryption using
+// `jwe.Decrypt`. You must specify this if your JWT is encrypted.
 func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
 	return newParseOption(identDecrypt{}, &decryptParams{
 		alg: alg,
@@ -409,6 +411,8 @@ func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
 	})
 }
 
+// WithPedantic enables pedantic mode for parsing JWTs. Currently this only
+// applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
 	return newParseOption(identPedantic{}, v)
 }
