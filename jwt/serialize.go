@@ -71,6 +71,36 @@ func (jsonSerializer) Do(_ SerializeCtx, v interface{}) (interface{}, error) {
 	return buf, nil
 }
 
+type genericHeader interface {
+	Get(string) (interface{}, bool)
+	Set(string, interface{}) error
+}
+
+func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
+	// cty and typ are common between JWE/JWS, so we don't use
+	// the constants in jws/jwe package here
+	const typKey = `typ`
+	const ctyKey = `cty`
+
+	if ctx.Step() == 1 {
+		// We are executed immediately after json marshaling
+		if _, ok := hdrs.Get(typKey); !ok {
+			if err := hdrs.Set(typKey, `JWT`); err != nil {
+				return errors.Wrapf(err, `failed to set %s key to "JWT"`, typKey)
+			}
+		}
+	} else {
+		if ctx.Nested() {
+			// If this is part of a nested sequence, we should set cty = 'JWT'
+			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
+			if err := hdrs.Set(ctyKey, `JWT`); err != nil {
+				return errors.Wrapf(err, `failed to set %s key to "JWT"`, ctyKey)
+			}
+		}
+	}
+	return nil
+}
+
 type jwsSerializer struct {
 	alg     jwa.SignatureAlgorithm
 	key     interface{}
@@ -96,27 +126,17 @@ func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 		hdrs = jws.NewHeaders()
 	}
 
-	if ctx.Step() == 1 {
-		// We are executed immediately after json marshaling
-		if err := hdrs.Set(jws.TypeKey, `JWT`); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.TypeKey)
-		}
-	} else {
-		if ctx.Nested() {
-			// If this is part of a nested sequence, we should set cty = 'JWT'
-			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
-			if err := hdrs.Set(jws.ContentTypeKey, `JWT`); err != nil {
-				return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.ContentTypeKey)
-			}
-		}
+	if err := setTypeOrCty(ctx, hdrs); err != nil {
+		return nil, err // this is already wrapped
 	}
 	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
 }
 
 func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) *Serializer {
 	s.steps = append(s.steps, &jwsSerializer{
-		alg: alg,
-		key: key,
+		alg:     alg,
+		key:     key,
+		options: options,
 	})
 	return s
 }
@@ -148,19 +168,8 @@ func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error)
 		hdrs = jwe.NewHeaders()
 	}
 
-	if ctx.Step() == 1 {
-		// We are executed immediately after json marshaling
-		if err := hdrs.Set(jwe.TypeKey, `JWT`); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.TypeKey)
-		}
-	} else {
-		if ctx.Nested() {
-			// If this is part of a nested sequence, we should set cty = 'JWT'
-			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
-			if err := hdrs.Set(jwe.ContentTypeKey, `JWT`); err != nil {
-				return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.ContentTypeKey)
-			}
-		}
+	if err := setTypeOrCty(ctx, hdrs); err != nil {
+		return nil, err // this is already wrapped
 	}
 	return jwe.Encrypt(payload, s.keyalg, s.key, s.contentalg, s.compressalg, jwe.WithProtectedHeaders(hdrs))
 }
