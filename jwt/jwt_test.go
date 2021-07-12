@@ -1015,7 +1015,6 @@ func TestNested(t *testing.T) {
 	token.Set(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`)
 
 	serialized, err := jwt.NewSerializer().
-		JSON().
 		Sign(jwa.RS256, key).
 		Encrypt(jwa.RSA_OAEP, key.PublicKey, jwa.A256GCM, jwa.NoCompress).
 		Do(token)
@@ -1032,11 +1031,7 @@ func TestNested(t *testing.T) {
 	}
 
 	// The message should have cty = JWT
-	cty, ok := jweMessage.ProtectedHeaders().Get(jwe.ContentTypeKey)
-	if !assert.True(t, ok, `protected headers hould contain cty`) {
-		return
-	}
-
+	cty := jweMessage.ProtectedHeaders().ContentType()
 	if !assert.Equal(t, cty, `JWT`, `cty should be JWT`) {
 		return
 	}
@@ -1048,12 +1043,8 @@ func TestNested(t *testing.T) {
 		return
 	}
 
-	cty, ok = jwsMessage.Signatures()[0].ProtectedHeaders().Get(jws.ContentTypeKey)
-	if !assert.True(t, ok, `protected headers hould contain cty`) {
-		return
-	}
-
-	if !assert.Equal(t, cty, `JWT`, `cty should be JWT`) {
+	typ := jwsMessage.Signatures()[0].ProtectedHeaders().Type()
+	if !assert.Equal(t, typ, `JWT`, `cty should be JWT`) {
 		return
 	}
 

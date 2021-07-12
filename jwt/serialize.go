@@ -10,24 +10,44 @@ import (
 	"github.com/pkg/errors"
 )
 
+type SerializeCtx interface {
+	Step() int
+	Nested() bool
+}
+
+type serializeCtx struct {
+	step   int
+	nested bool
+}
+
+func (ctx *serializeCtx) Step() int {
+	return ctx.step
+}
+
+func (ctx *serializeCtx) Nested() bool {
+	return ctx.nested
+}
+
 type SerializeStep interface {
-	Do(interface{}) (interface{}, error)
+	Do(SerializeCtx, interface{}) (interface{}, error)
 }
 
 // Serializer is a generic serializer for JWTs. Whereas other conveinience
 // functions can only do one thing (such as generate a JWS signed JWT),
 // Using this construct you can serialize the token however you want.
 //
-// By default the serializer does not do anything. You must set up
-// each of the steps that the serializer converts the data.
+// By default the serializer only marshals the token into a JSON payload.
+// You must set up the rest of the steps that should be taken by the
+// serializer.
+//
 // For example, to marshal the token into JSON, then apply JWS and JWE
 // in that order, you would do:
 //
 //   serialized, err := jwt.NewSerialer().
-//      JSON().
 //      Sign(jwa.RS256, key).
 //      Encrypt(jwa.RSA_OAEP, key.PublicKey).
 //      Do(token)
+//
 type Serializer struct {
 	steps []SerializeStep
 }
@@ -38,38 +58,61 @@ func NewSerializer() *Serializer {
 
 type jsonSerializer struct{}
 
-func (jsonSerializer) Do(v interface{}) (interface{}, error) {
-	buf, err := json.Marshal(v)
+func (jsonSerializer) Do(_ SerializeCtx, v interface{}) (interface{}, error) {
+	token, ok := v.(Token)
+	if !ok {
+		return nil, errors.Errorf(`invalid input: expected jwt.Token`)
+	}
+
+	buf, err := json.Marshal(token)
 	if err != nil {
 		return nil, errors.Errorf(`failed to serialize as JSON`)
 	}
 	return buf, nil
 }
 
-func (s *Serializer) JSON() *Serializer {
-	s.steps = append(s.steps, &jsonSerializer{})
-	return s
-}
-
 type jwsSerializer struct {
-	alg jwa.SignatureAlgorithm
-	key interface{}
+	alg     jwa.SignatureAlgorithm
+	key     interface{}
+	options []SignOption
 }
 
-func (s *jwsSerializer) Do(v interface{}) (interface{}, error) {
+func (s *jwsSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, errors.New(`expected []byte as input`)
 	}
 
-	hdrs := jws.NewHeaders()
-	if err := hdrs.Set(jws.ContentTypeKey, `JWT`); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.ContentTypeKey)
+	var hdrs jws.Headers
+	for _, option := range s.options {
+		switch option.Ident() {
+		case identHeaders{}:
+			hdrs = option.Value().(jws.Headers)
+		}
+	}
+
+	if hdrs == nil {
+		hdrs = jws.NewHeaders()
+	}
+
+	if ctx.Step() == 1 {
+		// We are executed immediately after json marshaling
+		if err := hdrs.Set(jws.TypeKey, `JWT`); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.TypeKey)
+		}
+	} else {
+		if ctx.Nested() {
+			// If this is part of a nested sequence, we should set cty = 'JWT'
+			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
+			if err := hdrs.Set(jws.ContentTypeKey, `JWT`); err != nil {
+				return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jws.ContentTypeKey)
+			}
+		}
 	}
 	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
 }
 
-func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}) *Serializer {
+func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) *Serializer {
 	s.steps = append(s.steps, &jwsSerializer{
 		alg: alg,
 		key: key,
@@ -82,39 +125,68 @@ type jweSerializer struct {
 	key         interface{}
 	contentalg  jwa.ContentEncryptionAlgorithm
 	compressalg jwa.CompressionAlgorithm
+	options     []DecryptOption
 }
 
-func (s *jweSerializer) Do(v interface{}) (interface{}, error) {
+func (s *jweSerializer) Do(ctx SerializeCtx, v interface{}) (interface{}, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, fmt.Errorf(`expected []byte as input`)
 	}
 
-	hdrs := jwe.NewHeaders()
-	if err := hdrs.Set(jwe.ContentTypeKey, `JWT`); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.ContentTypeKey)
+	var hdrs jwe.Headers
+	for _, option := range s.options {
+		switch option.Ident() {
+		case identHeaders{}:
+			hdrs = option.Value().(jwe.Headers)
+		}
+	}
+
+	if hdrs == nil {
+		hdrs = jws.NewHeaders()
+	}
+
+	if ctx.Step() == 1 {
+		// We are executed immediately after json marshaling
+		if err := hdrs.Set(jwe.TypeKey, `JWT`); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.TypeKey)
+		}
+	} else {
+		if ctx.Nested() {
+			// If this is part of a nested sequence, we should set cty = 'JWT'
+			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
+			if err := hdrs.Set(jwe.ContentTypeKey, `JWT`); err != nil {
+				return nil, errors.Wrapf(err, `failed to set %s key to "JWT"`, jwe.ContentTypeKey)
+			}
+		}
 	}
 	return jwe.Encrypt(payload, s.keyalg, s.key, s.contentalg, s.compressalg, jwe.WithProtectedHeaders(hdrs))
 }
 
-func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) *Serializer {
+func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...DecryptOption) *Serializer {
 	s.steps = append(s.steps, &jweSerializer{
 		keyalg:      keyalg,
 		key:         key,
 		contentalg:  contentalg,
 		compressalg: compressalg,
+		options:     options,
 	})
 	return s
 }
 
 func (s *Serializer) Do(t Token) ([]byte, error) {
-	if len(s.steps) == 0 {
-		return nil, errors.New(`serializer setup incomplete: you must add steps to it`)
+	steps := make([]SerializeStep, len(s.steps)+1)
+	steps[0] = jsonSerializer{}
+	for i, step := range s.steps {
+		steps[i+1] = step
 	}
 
+	var ctx serializeCtx
+	ctx.nested = len(s.steps) > 1
 	var payload interface{} = t
-	for i, step := range s.steps {
-		v, err := step.Do(payload)
+	for i, step := range steps {
+		ctx.step = i
+		v, err := step.Do(&ctx, payload)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to serialize token at step #%d`, i+1)
 		}

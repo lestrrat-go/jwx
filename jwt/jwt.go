@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -157,11 +158,26 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 func parse(ctx *parseCtx, data []byte) (Token, error) {
 	payload := data
 	const maxDecodeLevels = 2
+
+	// If cty = `JWT`, we expect this to be a nested structure
+	var expectNested bool
+
 OUTER:
 	for i := 0; i < maxDecodeLevels; i++ {
 		switch kind := jwx.GuessFormat(payload); kind {
-		case jwx.JWT, jwx.UnknownFormat:
-			// for Unknown, we'll try our luck...
+		case jwx.JWT:
+			if ctx.pedantic {
+				if expectNested {
+					return nil, errors.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
+				}
+			}
+			break OUTER
+		case jwx.UnknownFormat:
+			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
+			// claim. We could be pedantic and reject these
+			if ctx.pedantic {
+				return nil, errors.Errorf(`invalid JWT`)
+			}
 			break OUTER
 		case jwx.JWS:
 			// For backwards compatibility, we must allow parsing the JWT
@@ -179,21 +195,28 @@ OUTER:
 					return nil, errors.Wrap(err, `failed to verify jws signature`)
 				}
 
-				if ctx.pedantic {
-					var ctyOK bool
-				JWS_CTY_CHECK:
-					for _, sig := range m.Signatures() {
-						cty, ok := sig.ProtectedHeaders().Get(jws.ContentTypeKey)
-						if ok && cty == `JWT` {
-							ctyOK = true
-							break JWS_CTY_CHECK
-						}
+				if !ctx.pedantic {
+					payload = v
+					continue
+				}
+				// This payload could be a JWT+JWS, in which case typ: JWT should be there
+				// If its JWT+(JWE or JWS or...)+JWS, then cty should be JWT
+				for _, sig := range m.Signatures() {
+					hdrs := sig.ProtectedHeaders()
+					if strings.ToLower(hdrs.Type()) == `jwt` {
+						payload = v
+						break OUTER
 					}
-					if !ctyOK {
-						return nil, errors.New(`invalid JWS (missing "cty": "JWT")`)
+
+					if strings.ToLower(hdrs.ContentType()) == `jwt` {
+						expectNested = true
+						payload = v
+						continue OUTER
 					}
 				}
-				payload = v
+
+				// Hmmm, it was a JWS and we got... nothing?
+				return nil, errors.Errorf(`expected "typ" or "cty" fields, neither could be found`)
 			} else {
 				m, err := jws.Parse(data)
 				if err != nil {
@@ -219,16 +242,25 @@ OUTER:
 				return nil, errors.Wrap(err, `failed to decrypt payload`)
 			}
 
-			if ctx.pedantic {
-				cty, ok := m.ProtectedHeaders().Get(jwe.ContentTypeKey)
-				if !ok || cty != `JWT` {
-					return nil, errors.New(`invalid JWS (missing "cty": "JWT")`)
-				}
+			if !ctx.pedantic {
+				payload = v
+				continue
 			}
-			payload = v
+
+			if strings.ToLower(m.ProtectedHeaders().Type()) == `jwt` {
+				payload = v
+				break OUTER
+			}
+
+			if strings.ToLower(m.ProtectedHeaders().ContentType()) == `jwt` {
+				expectNested = true
+				payload = v
+				continue OUTER
+			}
 		default:
 			return nil, errors.Errorf(`unsupported format (layer: #%d)`, i+1)
 		}
+		expectNested = false
 	}
 
 	if ctx.token == nil {
@@ -316,7 +348,7 @@ func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.Signat
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
-func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...Option) ([]byte, error) {
+func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
 	var hdr jws.Headers
 	for _, o := range options {
 		//nolint:forcetypeassert

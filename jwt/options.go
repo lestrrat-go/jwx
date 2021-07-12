@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/option"
@@ -54,6 +55,40 @@ func newParseOption(n interface{}, v interface{}) ParseOption {
 func (*parseOption) parseOption()    {}
 func (*parseOption) readFileOption() {}
 
+// SignOption describes an Option that can be passed to Sign() or
+// (jwt.Serializer).Sign
+type SignOption interface {
+	Option
+	signOption()
+}
+
+type signOption struct {
+	Option
+}
+
+func newSignOption(n interface{}, v interface{}) SignOption {
+	return &signOption{option.New(n, v)}
+}
+
+func (*signOption) signOption() {}
+
+// EncryptOption describes an Option that can be passed to Encrypt() or
+// (jwt.Serializer).Encrypt
+type EncryptOption interface {
+	Option
+	encryptOption()
+}
+
+type encryptOption struct {
+	Option
+}
+
+func newEncryptOption(n interface{}, v interface{}) EncryptOption {
+	return &encryptOption{option.New(n, v)}
+}
+
+func (*encryptOption) encryptOption() {}
+
 // ValidateOption describes an Option that can be passed to Validate().
 // ValidateOption also implements ParseOption, therefore it may be
 // safely passed to `Parse()` (and thus `jwt.ReadFile()`)
@@ -79,8 +114,9 @@ type identClock struct{}
 type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
-type identHeaders struct{}
 type identIssuer struct{}
+type identJweHeaders struct{}
+type identJwsHeaders struct{}
 type identJwtid struct{}
 type identKeySet struct{}
 type identPedantic struct{}
@@ -150,10 +186,21 @@ func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
 }
 
-// WithHeaders is passed to `Sign()` method, to allow specifying arbitrary
+// WithSignHeaders is passed to `Sign()` method, to allow specifying arbitrary
 // header values to be included in the header section of the jws message
-func WithHeaders(hdrs jws.Headers) ParseOption {
-	return newParseOption(identHeaders{}, hdrs)
+//
+// This option will be deprecated in the next major version. Use
+// jwt.WithJwsHeaders() instead.
+func WithHeaders(hdrs jws.Headers) SignOption {
+	return WithSignHeaders(hdrs)
+}
+
+func WithJwsHeaders(hdrs jws.Headers) SignOption {
+	return newSignOption(identJwsHeaders{}, hdrs)
+}
+
+func WithJweHeaders(hdrs jwe.Headers) EncryptOption {
+	return newEncryptOption(identJweHeaders{}, hdrs)
 }
 
 // WithValidate is passed to `Parse()` method to denote that the
