@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.4
+v1.2.4 15 Jul 2021
 [Bug fixes]
   * We had the same off-by-one in another place and jumped the gun on
     releasing a new version. At least we were making mistakes uniformally :/
