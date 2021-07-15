@@ -305,7 +305,7 @@ func makeJwsSignCmd() *cli.Command {
 			return errors.Errorf(`invalid alg %s`, givenalg)
 		}
 
-		var options []jws.Option
+		var options []jws.SignOption
 		if hdrbuf := c.String("header"); hdrbuf != "" {
 			h := jws.NewHeaders()
 			if err := json.Unmarshal([]byte(hdrbuf), h); err != nil {
