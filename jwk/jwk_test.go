@@ -1573,7 +1573,7 @@ func TestGH412(t *testing.T) {
 	base := jwk.NewSet()
 
 	const max = 5
-	kids := make([]string, max)
+	kids := make(map[string]struct{})
 	for i := 0; i < max; i++ {
 		k, err := jwxtest.GenerateRsaJwk()
 		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
@@ -1583,11 +1583,12 @@ func TestGH412(t *testing.T) {
 		kid := "key-" + strconv.Itoa(i)
 		k.Set(jwk.KeyIDKey, kid)
 		base.Add(k)
-		kids[i] = kid
+		kids[kid] = struct{}{}
 	}
 
 	for i := 0; i < max; i++ {
 		idx := i
+		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
 			set, err := base.Clone()
 			if !assert.NoError(t, err, `base.Clone() should succeed`) {
@@ -1606,9 +1607,18 @@ func TestGH412(t *testing.T) {
 			if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
 				return
 			}
+			t.Logf("deleted key %s", k.KeyID())
 
 			if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
 				return
+			}
+
+			expected := make(map[string]struct{})
+			for k := range kids {
+				if k == currentKid {
+					continue
+				}
+				expected[k] = struct{}{}
 			}
 
 			ctx := context.Background()
@@ -1618,6 +1628,12 @@ func TestGH412(t *testing.T) {
 				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
 					return
 				}
+				t.Logf("%s found", key.KeyID())
+				delete(expected, key.KeyID())
+			}
+
+			if !assert.Len(t, expected, 0, `expected map should be empty`) {
+				return
 			}
 		})
 	}
