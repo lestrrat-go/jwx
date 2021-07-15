@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1566,4 +1567,45 @@ func TestTypedFields(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestGH412(t *testing.T) {
+	set := jwk.NewSet()
+
+	const max = 5
+	for i := 0; i < max; i++ {
+		k, err := jwxtest.GenerateRsaJwk()
+		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
+			return
+		}
+
+		k.Set(jwk.KeyIDKey, strconv.Itoa(i))
+		set.Add(k)
+	}
+
+	if !assert.Equal(t, max, set.Len(), `set.Len should be %d`, max) {
+		return
+	}
+
+	k, ok := set.Get(max / 2)
+	if !assert.True(t, ok, `set.Get should succeed`) {
+		return
+	}
+
+	if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
+		return
+	}
+
+	ctx := context.Background()
+	for iter := set.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+		if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
+			return
+		}
+	}
 }

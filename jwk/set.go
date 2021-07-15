@@ -71,7 +71,7 @@ func (s *set) Remove(key Key) bool {
 			case len(s.keys) - 1:
 				s.keys = s.keys[:i-1]
 			default:
-				s.keys = append(s.keys[:i-1], s.keys[i+1:]...)
+				s.keys = append(s.keys[:i], s.keys[i+1:]...)
 			}
 			return true
 		}
