@@ -1599,4 +1599,13 @@ func TestGH412(t *testing.T) {
 	if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
 		return
 	}
+
+	ctx := context.Background()
+	for iter := set.Iterate(ctx); iter.Next(ctx); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+		if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
+			return
+		}
+	}
 }
