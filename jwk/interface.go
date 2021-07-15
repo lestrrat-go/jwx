@@ -78,6 +78,9 @@ type Set interface {
 
 	// Iterate creates an iterator to iterate through all keys in the set.
 	Iterate(context.Context) KeyIterator
+
+	// Clone create a new set with identical keys. Keys themselves are not cloned.
+	Clone() (Set, error)
 }
 
 type set struct {
