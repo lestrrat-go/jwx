@@ -151,7 +151,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	}
 
 	// check for exp
-	if tv := t.Expiration(); !tv.IsZero() {
+	if tv := t.Expiration(); !tv.IsZero() && tv.Unix() != 0 {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		if !now.Before(ttv.Add(skew)) {
@@ -160,7 +160,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	}
 
 	// check for iat
-	if tv := t.IssuedAt(); !tv.IsZero() {
+	if tv := t.IssuedAt(); !tv.IsZero() && tv.Unix() != 0 {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		if now.Before(ttv.Add(-1 * skew)) {
@@ -169,7 +169,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	}
 
 	// check for nbf
-	if tv := t.NotBefore(); !tv.IsZero() {
+	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		// now cannot be before t, so we check for now > t - skew
