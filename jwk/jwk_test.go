@@ -1570,42 +1570,71 @@ func TestTypedFields(t *testing.T) {
 }
 
 func TestGH412(t *testing.T) {
-	set := jwk.NewSet()
+	base := jwk.NewSet()
 
 	const max = 5
+	kids := make(map[string]struct{})
 	for i := 0; i < max; i++ {
 		k, err := jwxtest.GenerateRsaJwk()
 		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
 			return
 		}
 
-		k.Set(jwk.KeyIDKey, strconv.Itoa(i))
-		set.Add(k)
+		kid := "key-" + strconv.Itoa(i)
+		k.Set(jwk.KeyIDKey, kid)
+		base.Add(k)
+		kids[kid] = struct{}{}
 	}
 
-	if !assert.Equal(t, max, set.Len(), `set.Len should be %d`, max) {
-		return
-	}
+	for i := 0; i < max; i++ {
+		idx := i
+		currentKid := "key-" + strconv.Itoa(i)
+		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
+			set, err := base.Clone()
+			if !assert.NoError(t, err, `base.Clone() should succeed`) {
+				return
+			}
 
-	k, ok := set.Get(max / 2)
-	if !assert.True(t, ok, `set.Get should succeed`) {
-		return
-	}
+			if !assert.Equal(t, max, set.Len(), `set.Len should be %d`, max) {
+				return
+			}
 
-	if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
-		return
-	}
+			k, ok := set.Get(idx)
+			if !assert.True(t, ok, `set.Get should succeed`) {
+				return
+			}
 
-	if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
-		return
-	}
+			if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
+				return
+			}
+			t.Logf("deleted key %s", k.KeyID())
 
-	ctx := context.Background()
-	for iter := set.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-		key := pair.Value.(jwk.Key)
-		if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
-			return
-		}
+			if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
+				return
+			}
+
+			expected := make(map[string]struct{})
+			for k := range kids {
+				if k == currentKid {
+					continue
+				}
+				expected[k] = struct{}{}
+			}
+
+			ctx := context.Background()
+			for iter := set.Iterate(ctx); iter.Next(ctx); {
+				pair := iter.Pair()
+				key := pair.Value.(jwk.Key)
+				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
+					return
+				}
+				t.Logf("%s found", key.KeyID())
+				delete(expected, key.KeyID())
+			}
+
+			if !assert.Len(t, expected, 0, `expected map should be empty`) {
+				return
+			}
+		})
 	}
 }

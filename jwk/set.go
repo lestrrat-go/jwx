@@ -18,7 +18,7 @@ func (s *set) Get(idx int) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if idx >= 0 && idx < s.Len() {
+	if idx >= 0 && idx < len(s.keys) {
 		return s.keys[idx], true
 	}
 	return nil, false
@@ -69,7 +69,7 @@ func (s *set) Remove(key Key) bool {
 			case 0:
 				s.keys = s.keys[1:]
 			case len(s.keys) - 1:
-				s.keys = s.keys[:i-1]
+				s.keys = s.keys[:i]
 			default:
 				s.keys = append(s.keys[:i], s.keys[i+1:]...)
 			}
@@ -191,4 +191,18 @@ func (s *set) SetDecodeCtx(dc DecodeCtx) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.dc = dc
+}
+
+func (s *set) Clone() (Set, error) {
+	s2 := &set{}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	s2.keys = make([]Key, len(s.keys))
+
+	for i := 0; i < len(s.keys); i++ {
+		s2.keys[i] = s.keys[i]
+	}
+	return s2, nil
 }
