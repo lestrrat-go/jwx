@@ -160,6 +160,36 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 	})
+	t.Run("Unix zero times", func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+
+		tm := time.Unix(0, 0)
+
+		t1.Set(jwt.NotBeforeKey, tm)
+		t1.Set(jwt.IssuedAtKey, tm)
+		t1.Set(jwt.ExpirationKey, tm)
+
+		// This should pass because the unix zero times should be ignored
+		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
+			return
+		}
+	})
+	t.Run("Go zero times", func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+
+		tm := time.Time{}
+
+		t1.Set(jwt.NotBeforeKey, tm)
+		t1.Set(jwt.IssuedAtKey, tm)
+		t1.Set(jwt.ExpirationKey, tm)
+
+		// This should pass because the go zero times should be ignored
+		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
+			return
+		}
+	})
 	t.Run("Parse and validate", func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
