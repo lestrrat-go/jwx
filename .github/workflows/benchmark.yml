@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Install benchstat
         run: |
-          go install golang.org/x/perf/cmd/benchstat
+          go install golang.org/x/perf/cmd/benchstat@latest
       - name: Benchmark
         run: |
           cd bench && make stdlib && make goccy && make benchstat
