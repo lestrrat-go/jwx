@@ -239,12 +239,9 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	if len(m.payload) != 0 && detachedPayload != nil {
 		return nil, errors.New(`can't specify detached payload for JWS with payload`)
 	}
+
 	if detachedPayload != nil {
 		m.payload = detachedPayload
-	}
-
-	if detachedPayload != nil {
-
 	}
 
 	// Pre-compute the base64 encoded version of payload

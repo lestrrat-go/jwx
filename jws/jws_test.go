@@ -1235,7 +1235,7 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				payload, err := jws.Verify([]byte(tc.Input), jwa.HS256, key, tc.VerifyOptions...)
+				payload, err := jws.Verify(tc.Input, jwa.HS256, key, tc.VerifyOptions...)
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
