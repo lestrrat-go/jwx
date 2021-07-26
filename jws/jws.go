@@ -79,6 +79,11 @@ func (s *payloadSigner) PublicHeader() Headers {
 // the type of key you provided, otherwise an error is returned.
 //
 // If you would like to pass custom headers, use the WithHeaders option.
+//
+// If the headers contain "b64" field, then the boolean value for the field
+// is respected when creating the compact serialization form. That is,
+// if you specify a header with `{"b64": false}`, then the payload is
+// not base64 encoded.
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
 	var hdrs Headers
 	for _, o := range options {
@@ -163,11 +168,14 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // use `Parse` function to get `Message` object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...VerifyOption) ([]byte, error) {
 	var dst *Message
+	var detachedPayload []byte
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
 			dst = option.Value().(*Message)
+		case identDetachedPayload{}:
+			detachedPayload = option.Value().([]byte)
 		}
 	}
 
@@ -177,9 +185,9 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 	}
 
 	if buf[0] == '{' {
-		return verifyJSON(buf, alg, key, dst)
+		return verifyJSON(buf, alg, key, dst, detachedPayload)
 	}
-	return verifyCompact(buf, alg, key, dst)
+	return verifyCompact(buf, alg, key, dst, detachedPayload)
 }
 
 // VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
@@ -217,7 +225,7 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
 }
 
-func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message) ([]byte, error) {
+func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message, detachedPayload []byte) ([]byte, error) {
 	verifier, err := NewVerifier(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
@@ -228,8 +236,24 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 	}
 
+	if len(m.payload) != 0 && detachedPayload != nil {
+		return nil, errors.New(`can't specify detached payload for JWS with payload`)
+	}
+	if detachedPayload != nil {
+		m.payload = detachedPayload
+	}
+
+	if detachedPayload != nil {
+
+	}
+
 	// Pre-compute the base64 encoded version of payload
-	payload := base64.EncodeToString(m.payload)
+	var payload string
+	if m.b64 {
+		payload = base64.EncodeToString(m.payload)
+	} else {
+		payload = string(m.payload)
+	}
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
@@ -263,7 +287,23 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	return nil, errors.New(`could not verify with any of the signatures`)
 }
 
-func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message) ([]byte, error) {
+// get the value of b64 header field.
+// If the field does not exist, returns true (default)
+// Otherwise return the value specified by the header field.
+func getB64Value(hdr Headers) bool {
+	b64raw, ok := hdr.Get("b64")
+	if !ok {
+		return true // default
+	}
+
+	b64, ok := b64raw.(bool) // default
+	if !ok {
+		return false
+	}
+	return b64
+}
+
+func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message, detachedPayload []byte) ([]byte, error) {
 	protected, payload, signature, err := SplitCompact(signed)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
@@ -279,6 +319,9 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 
 	verifyBuf.Write(protected)
 	verifyBuf.WriteByte('.')
+	if len(payload) == 0 && detachedPayload != nil {
+		payload = detachedPayload
+	}
 	verifyBuf.Write(payload)
 
 	decodedSignature, err := base64.Decode(signature)
@@ -303,13 +346,22 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 			}
 		}
 	}
+
 	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
 	}
 
-	decodedPayload, err := base64.Decode(payload)
-	if err != nil {
-		return nil, errors.Wrap(err, `message verified, failed to decode payload`)
+	var decodedPayload []byte
+	if !getB64Value(hdr) { // it's not base64 encode
+		decodedPayload = payload
+	}
+
+	if decodedPayload == nil {
+		v, err := base64.Decode(payload)
+		if err != nil {
+			return nil, errors.Wrap(err, `message verified, failed to decode payload`)
+		}
+		decodedPayload = v
 	}
 
 	if dst != nil {

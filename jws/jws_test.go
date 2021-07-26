@@ -1137,3 +1137,118 @@ func TestWithMessage(t *testing.T) {
 		return
 	}
 }
+
+func TestRFC7797(t *testing.T) {
+	const keysrc = `{"kty":"oct",
+      "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+     }`
+	detached := []byte(`$.02`)
+
+	key, err := jwk.ParseKey([]byte(keysrc))
+	if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+		return
+	}
+
+	t.Run("Invalid payload when b64 = false", func(t *testing.T) {
+		const payload = `$.02`
+		hdrs := jws.NewHeaders()
+		hdrs.Set("b64", false)
+		hdrs.Set("crit", "b64")
+
+		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
+		if !assert.Error(t, err, `jws.Sign should fail`) {
+			return
+		}
+	})
+	t.Run("Roundtrip", func(t *testing.T) {
+		const payload = `hell0w0r1d`
+		hdrs := jws.NewHeaders()
+		hdrs.Set("b64", false)
+		hdrs.Set("crit", "b64")
+
+		signed, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
+		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+			return
+		}
+
+		verified, err := jws.Verify(signed, jwa.HS256, key)
+		if !assert.NoError(t, err, `jws.Verify should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+			return
+		}
+	})
+
+	t.Run("Verify", func(t *testing.T) {
+		testcases := []struct {
+			Name          string
+			Input         []byte
+			VerifyOptions []jws.VerifyOption
+			Error         bool
+		}{
+			{
+				Name: "JSON format",
+				Input: []byte(`{
+      "protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19",
+      "payload": "$.02",
+      "signature": "A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY"
+     }`),
+			},
+			{
+				Name: "JSON format (detached payload)",
+				VerifyOptions: []jws.VerifyOption{
+					jws.WithDetachedPayload(detached),
+				},
+				Input: []byte(`{
+      "protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19",
+      "signature": "A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY"
+     }`),
+			},
+			{
+				Name:  "JSON Format (b64 does not match)",
+				Error: true,
+				Input: []byte(`{
+					"signatures": [
+						{
+							"protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19",
+				      "signature": "A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY"
+						},
+						{
+							"protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6dHJ1ZSwiY3JpdCI6WyJiNjQiXX0", 
+							"signature": "6BjugbC8MfrT_yy5WxWVFZrEHVPDtpdsV9u-wbzQDV8"
+						}
+					],
+					"payload":"$.02"
+				}`),
+			},
+			{
+				Name:  "Compact (detached payload)",
+				Input: []byte(`eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY`),
+				VerifyOptions: []jws.VerifyOption{
+					jws.WithDetachedPayload(detached),
+				},
+			},
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				payload, err := jws.Verify([]byte(tc.Input), jwa.HS256, key, tc.VerifyOptions...)
+				if tc.Error {
+					if !assert.Error(t, err, `jws.Verify should fail`) {
+						return
+					}
+				} else {
+					if !assert.NoError(t, err, `jws.Verify should succeed`) {
+						return
+					}
+					if !assert.Equal(t, detached, payload, `payload should match`) {
+						return
+					}
+				}
+			})
+		}
+	})
+}

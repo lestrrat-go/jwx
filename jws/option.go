@@ -7,6 +7,7 @@ import (
 type Option = option.Interface
 
 type identPayloadSigner struct{}
+type identDetachedPayload struct{}
 type identHeaders struct{}
 type identMessage struct{}
 
@@ -52,4 +53,11 @@ func (*verifyOption) verifyOption() {}
 // a successful verification.
 func WithMessage(m *Message) VerifyOption {
 	return &verifyOption{option.New(identMessage{}, m)}
+}
+
+// WithDetachedPayload can be used to verify a JWS message with a
+// detached payload. If you have to verify using this option, you should
+// know exactly how and why this works.
+func WithDetachedPayload(v []byte) VerifyOption {
+	return &verifyOption{option.New(identDetachedPayload{}, v)}
 }
