@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -82,6 +83,9 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	if getB64Value(hdrs) {
 		buf.WriteString(base64.EncodeToString(payload))
 	} else {
+		if bytes.ContainsRune(payload, '.') {
+			return nil, nil, errors.New(`payload must not contain a "." when b64 = false`)
+		}
 		buf.Write(payload)
 	}
 
