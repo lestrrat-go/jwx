@@ -2,7 +2,6 @@ package jws
 
 import (
 	"context"
-	"strings"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
