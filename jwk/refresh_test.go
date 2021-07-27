@@ -259,12 +259,12 @@ func TestAutoRefresh(t *testing.T) {
 		defer srv.Close()
 
 		af := jwk.NewAutoRefresh(ctx)
-		bo := backoff.Constant(backoff.WithInterval(time.Minute))
+		bo := backoff.Constant(backoff.WithInterval(time.Second))
 		var errorHandled bool
 		eh := func(err error) {
 			errorHandled = true
 		}
-		af.Configure(srv.URL, jwk.WithFetchBackoff(bo), jwk.WithRefreshInterval(time.Second), jwk.WithFetchErrorHandler(eh))
+		af.Configure(srv.URL, jwk.WithFetchBackoff(bo), jwk.WithMinRefreshInterval(1), jwk.WithFetchErrorHandler(eh))
 
 		// First fetch should succeed
 		ks, err := af.Fetch(ctx, srv.URL)
