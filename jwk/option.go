@@ -16,6 +16,7 @@ type identThumbprintHash struct{}
 type identRefreshInterval struct{}
 type identMinRefreshInterval struct{}
 type identFetchBackoff struct{}
+type identFetchErrorHandler struct{}
 type identPEM struct{}
 type identTypedField struct{}
 type identLocalRegistry struct{}
@@ -74,6 +75,15 @@ func WithHTTPClient(cl HTTPClient) FetchOption {
 // the backoff is applied ONLY on the background refreshing goroutine.
 func WithFetchBackoff(v backoff.Policy) FetchOption {
 	return &fetchOption{option.New(identFetchBackoff{}, v)}
+}
+
+// WithFetchErrorHandler provides an error handling func to invoke
+// when fetching a JWKS encounters error.
+//
+// This is mainly useful in the background refreshing logic such that
+// errors encountered in the backoff loop can made visible externally.
+func WithFetchErrorHandler(f func(err error)) FetchOption {
+	return &fetchOption{option.New(identFetchErrorHandler{}, f)}
 }
 
 func WithThumbprintHash(h crypto.Hash) Option {

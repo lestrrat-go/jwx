@@ -40,6 +40,9 @@ type target struct {
 	// The backoff policy to use when fetching the JWKS fails
 	backoff backoff.Policy
 
+	// The error handling function to invoke when fetching encounters error
+	errHandler func(err error)
+
 	// The HTTP client to use. The user may opt to use a client which is
 	// aware of HTTP caching, or one that goes through a proxy
 	httpcl HTTPClient
@@ -148,6 +151,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	var httpcl HTTPClient = http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
+	var eh func(err error)
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
@@ -162,6 +166,8 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			minRefreshInterval = option.Value().(time.Duration)
 		case identHTTPClient{}:
 			httpcl = option.Value().(HTTPClient)
+		case identFetchErrorHandler{}:
+			eh = option.Value().(func(err error))
 		}
 	}
 
@@ -203,7 +209,8 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			// This is a placeholder timer so we can call Reset() on it later
 			// Make it sufficiently in the future so that we don't have bogus
 			// events firing
-			timer: time.NewTimer(24 * time.Hour),
+			timer:      time.NewTimer(24 * time.Hour),
+			errHandler: eh,
 		}
 		if hasRefreshInterval {
 			t.refreshInterval = &refreshInterval
@@ -441,6 +448,9 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	options := []FetchOption{WithHTTPClient(t.httpcl)}
 	if enableBackoff {
 		options = append(options, WithFetchBackoff(t.backoff))
+	}
+	if t.errHandler != nil {
+		options = append(options, WithFetchErrorHandler(t.errHandler))
 	}
 
 	res, err := fetch(ctx, url, options...)

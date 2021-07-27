@@ -232,6 +232,7 @@ func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, 
 
 func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
 	var httpcl HTTPClient = http.DefaultClient
+	var eh func(err error)
 	bo := backoff.Null()
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -240,11 +241,20 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 			httpcl = option.Value().(HTTPClient)
 		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
+		case identFetchErrorHandler{}:
+			eh = option.Value().(func(err error))
+		}
+	}
+
+	handle := func(err error) {
+		if eh != nil {
+			eh(err)
 		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlstring, nil)
 	if err != nil {
+		handle(err)
 		return nil, errors.Wrap(err, "failed to new request to remote JWK")
 	}
 
@@ -254,11 +264,13 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 		res, err := httpcl.Do(req)
 		if err != nil {
 			lastError = errors.Wrap(err, "failed to fetch remote JWK")
+			handle(lastError)
 			continue
 		}
 
 		if res.StatusCode != http.StatusOK {
 			lastError = errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
+			handle(lastError)
 			continue
 		}
 		return res, nil
@@ -269,6 +281,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	// a single request? or, <-ctx.Done() returned?
 	if lastError == nil {
 		lastError = errors.New(`fetching remote JWK did not complete`)
+		handle(lastError)
 	}
 	return nil, lastError
 }
