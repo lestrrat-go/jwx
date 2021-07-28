@@ -467,6 +467,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 			now := time.Now()
 			t.lastRefresh = now.Local()
 			t.nextRefresh = now.Add(nextInterval).Local()
+			t.lastError = nil
 			return nil
 		}
 		err = parseErr

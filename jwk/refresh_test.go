@@ -278,9 +278,27 @@ func TestRefreshSnapshot(t *testing.T) {
 	}
 
 	for target := range ar.Snapshot() {
-		if target.LastError != nil {
-			t.Errorf("%s last error = %v, wanted nil", target.URL, target.LastError)
-		}
+		assert.NoErrorf(t, target.LastError, "%s last error should be nil", target.URL)
 		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
+	}
+}
+
+func TestRefreshSnapshotWithErrors(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not allowed", http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	ar := jwk.NewAutoRefresh(ctx)
+	ar.Configure(srv.URL)
+
+	_, err := ar.Refresh(ctx, srv.URL)
+	assert.Error(t, err, "fetching jwks should fail with error")
+
+	for target := range ar.Snapshot() {
+		assert.Error(t, target.LastError, "last error in snapshot should not be nil")
 	}
 }
