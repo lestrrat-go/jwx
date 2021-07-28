@@ -230,56 +230,6 @@ func TestAutoRefresh(t *testing.T) {
 			return
 		}
 	})
-	t.Run("Fetch error handler", func(t *testing.T) {
-		t.Parallel()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			accessCount++
-			if accessCount > 1 {
-				http.Error(w, "not allowed", http.StatusForbidden)
-				return
-			}
-
-			key := map[string]interface{}{
-				"kty":         "EC",
-				"crv":         "P-256",
-				"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
-				"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-				"accessCount": accessCount,
-			}
-			hdrs := w.Header()
-			hdrs.Set(`Content-Type`, `application/json`)
-			hdrs.Set(`Cache-Control`, `max-age=1`)
-
-			json.NewEncoder(w).Encode(key)
-		}))
-		defer srv.Close()
-
-		af := jwk.NewAutoRefresh(ctx)
-		bo := backoff.Constant(backoff.WithInterval(time.Second))
-		var errorHandled bool
-		eh := func(err error) {
-			errorHandled = true
-		}
-		af.Configure(srv.URL, jwk.WithFetchBackoff(bo), jwk.WithMinRefreshInterval(1), jwk.WithFetchErrorHandler(eh))
-
-		// First fetch should succeed
-		ks, err := af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch (#1) should succeed`) {
-			return
-		}
-		if !checkAccessCount(t, ctx, ks, 1) {
-			return
-		}
-
-		// enough time for 1 refresh to have occurred
-		time.Sleep(2500 * time.Millisecond)
-
-		assert.Equal(t, true, errorHandled, `error from af.doRefreshRequest() should be handled`)
-	})
 }
 
 func TestRefreshSnapshot(t *testing.T) {
@@ -328,6 +278,9 @@ func TestRefreshSnapshot(t *testing.T) {
 	}
 
 	for target := range ar.Snapshot() {
+		if target.LastError != nil {
+			t.Errorf("%s last error = %v, wanted nil", target.URL, target.LastError)
+		}
 		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
 	}
 }

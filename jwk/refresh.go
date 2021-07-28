@@ -40,9 +40,6 @@ type target struct {
 	// The backoff policy to use when fetching the JWKS fails
 	backoff backoff.Policy
 
-	// The error handling function to invoke when fetching encounters error
-	errHandler func(err error)
-
 	// The HTTP client to use. The user may opt to use a client which is
 	// aware of HTTP caching, or one that goes through a proxy
 	httpcl HTTPClient
@@ -86,6 +83,7 @@ type target struct {
 	// for debugging, snapshoting
 	lastRefresh time.Time
 	nextRefresh time.Time
+	lastError   error
 }
 
 type resetTimerReq struct {
@@ -151,7 +149,6 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	var httpcl HTTPClient = http.DefaultClient
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
-	var eh func(err error)
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
@@ -166,8 +163,6 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			minRefreshInterval = option.Value().(time.Duration)
 		case identHTTPClient{}:
 			httpcl = option.Value().(HTTPClient)
-		case identFetchErrorHandler{}:
-			eh = option.Value().(func(err error))
 		}
 	}
 
@@ -209,8 +204,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			// This is a placeholder timer so we can call Reset() on it later
 			// Make it sufficiently in the future so that we don't have bogus
 			// events firing
-			timer:      time.NewTimer(24 * time.Hour),
-			errHandler: eh,
+			timer: time.NewTimer(24 * time.Hour),
 		}
 		if hasRefreshInterval {
 			t.refreshInterval = &refreshInterval
@@ -449,9 +443,6 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	if enableBackoff {
 		options = append(options, WithFetchBackoff(t.backoff))
 	}
-	if t.errHandler != nil {
-		options = append(options, WithFetchErrorHandler(t.errHandler))
-	}
 
 	res, err := fetch(ctx, url, options...)
 	if err == nil {
@@ -480,6 +471,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		}
 		err = parseErr
 	}
+	t.lastError = err
 
 	// We either failed to perform the HTTP GET, or we failed to parse the
 	// JWK set. Even in case of errors, we don't delete the old key.
@@ -545,6 +537,7 @@ type TargetSnapshot struct {
 	URL         string
 	NextRefresh time.Time
 	LastRefresh time.Time
+	LastError   error
 }
 
 func (af *AutoRefresh) Snapshot() <-chan TargetSnapshot {
@@ -555,6 +548,7 @@ func (af *AutoRefresh) Snapshot() <-chan TargetSnapshot {
 			URL:         url,
 			NextRefresh: t.nextRefresh,
 			LastRefresh: t.lastRefresh,
+			LastError:   t.lastError,
 		}
 	}
 	af.muRegistry.Unlock()
