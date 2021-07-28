@@ -51,6 +51,7 @@ import (
 type Message struct {
 	payload    []byte
 	signatures []*Signature
+	b64        bool // true if payload should be base64 encoded
 }
 
 type Signature struct {

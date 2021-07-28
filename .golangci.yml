@@ -36,6 +36,7 @@ linters:
     - nestif
     - nlreturn
     - paralleltest
+    - tagliatelle
     - testpackage
     - thelper
     - wrapcheck

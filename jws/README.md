@@ -1,12 +1,13 @@
 # github.com/lestrrat-go/jwx/jws [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
 
-Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515)
+Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515) and [RFC7797](https://tools.ietf.org/html/rfc7797)
 
 * Parse and generate compact or JSON serializations
 * Sign and verify arbitrary payload
 * Use any of the keys supported in [github.com/lestrrat-go/jwx/jwk](../jwk)
 * Add arbitrary fields in the JWS object
 * Ability to add/replace existing signature methods
+* Respect "b64" settings for RFC7797
 
 Examples are located in the examples directory ([jws_example_test.go](../examples/jws_example_test.go))
 

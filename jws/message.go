@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -79,7 +80,14 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 
 	buf.WriteString(base64.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(payload))
+	if getB64Value(hdrs) {
+		buf.WriteString(base64.EncodeToString(payload))
+	} else {
+		if bytes.ContainsRune(payload, '.') {
+			return nil, nil, errors.New(`payload must not contain a "." when b64 = false`)
+		}
+		buf.Write(payload)
+	}
 
 	signature, err := signer.Sign(buf.Bytes(), key)
 	if err != nil {
@@ -171,20 +179,9 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return errors.Wrap(err, `failed to unmarshal into temporary structure`)
 	}
 
-	// Everything in the proxy is base64 encoded, except for signatures.header
-	if len(proxy.Payload) == 0 {
-		return errors.New(`"payload" must be non-empty`)
-	}
-
-	buf, err := base64.DecodeString(proxy.Payload)
-	if err != nil {
-		return errors.Wrap(err, `failed to decode payload`)
-	}
-	m.payload = buf
-
 	if proxy.Signature != nil {
 		if len(proxy.Signatures) > 0 {
-			return errors.Wrap(err, `invalid format ("signatures" and "signature" keys cannot both be present)`)
+			return errors.New(`invalid format ("signatures" and "signature" keys cannot both be present)`)
 		}
 
 		var sigproxy signatureProxy
@@ -199,6 +196,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		proxy.Signatures = append(proxy.Signatures, &sigproxy)
 	}
 
+	b64 := true
 	for i, sigproxy := range proxy.Signatures {
 		var sig Signature
 
@@ -210,7 +208,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 
 		if len(sigproxy.Protected) > 0 {
-			buf, err = base64.DecodeString(sigproxy.Protected)
+			buf, err := base64.DecodeString(sigproxy.Protected)
 			if err != nil {
 				return errors.Wrapf(err, `failed to decode "protected" for signature #%d`, i+1)
 			}
@@ -218,19 +216,43 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			if err := json.Unmarshal(buf, sig.protected); err != nil {
 				return errors.Wrapf(err, `failed to unmarshal "protected" for signature #%d`, i+1)
 			}
+
+			if i == 0 {
+				b64 = getB64Value(sig.protected)
+			} else {
+				if b64 != getB64Value(sig.protected) {
+					return errors.Errorf(`b64 value must be the same for all signatures`)
+				}
+			}
 		}
 
 		if len(sigproxy.Signature) == 0 {
 			return errors.Errorf(`"signature" must be non-empty for signature #%d`, i+1)
 		}
 
-		buf, err = base64.DecodeString(sigproxy.Signature)
+		buf, err := base64.DecodeString(sigproxy.Signature)
 		if err != nil {
 			return errors.Wrapf(err, `failed to decode "signature" for signature #%d`, i+1)
 		}
 		sig.signature = buf
 		m.signatures = append(m.signatures, &sig)
 	}
+
+	if !b64 {
+		m.payload = []byte(proxy.Payload)
+	} else {
+		// Everything in the proxy is base64 encoded, except for signatures.header
+		if len(proxy.Payload) == 0 {
+			return errors.New(`"payload" must be non-empty`)
+		}
+
+		buf, err := base64.DecodeString(proxy.Payload)
+		if err != nil {
+			return errors.Wrap(err, `failed to decode payload`)
+		}
+		m.payload = buf
+	}
+	m.b64 = b64
 
 	return nil
 }

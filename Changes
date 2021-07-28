@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.5 (UNRELEASED)
+[New features]
+  * Implement RFC7797. The value of the header field `b64` changes
+    how the payload is treated in JWS
+  * Implement detached payloads for JWS
+
 v1.2.4 15 Jul 2021
 [Bug fixes]
   * We had the same off-by-one in another place and jumped the gun on
