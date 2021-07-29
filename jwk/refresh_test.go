@@ -281,3 +281,63 @@ func TestRefreshSnapshot(t *testing.T) {
 		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
 	}
 }
+
+func TestFetchErrorChannel(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		Name    string
+		Handler http.Handler
+	}{
+		{
+			Name: "non-200 response",
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusForbidden)
+			}),
+		},
+		{
+			Name: "invalid JWK",
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"empty": "nonthingness"}`))
+			}),
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			srv := httptest.NewServer(tc.Handler)
+			defer srv.Close()
+
+			ar := jwk.NewAutoRefresh(ctx)
+			ar.Configure(srv.URL, jwk.WithRefreshInterval(500*time.Millisecond))
+			ch := make(chan error, 256) // big buffer
+			ar.FetchErrorChannel(ch)
+			ar.Fetch(ctx, srv.URL)
+
+			timer := time.NewTimer(3 * time.Second)
+
+			select {
+			case <-ctx.Done():
+				t.Errorf(`ctx.Done before timer`)
+			case <-timer.C:
+			}
+
+			cancel() // forcefully end context, and thus the AutoRefresh
+
+			// timing issues can cause this to be non-deterministic...
+			// we'll say it's okay as long as we're in +/- 1 range
+			l := len(ch)
+			if !assert.True(t, l <= 7, "number of errors shold be less than or equal to 7 (%d)", l) {
+				return
+			}
+			if !assert.True(t, l >= 5, "number of errors shold be greather than or equal to 5 (%d)", l) {
+				return
+			}
+		})
+	}
+}
