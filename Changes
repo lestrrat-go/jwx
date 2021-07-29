@@ -6,6 +6,9 @@ v1.2.5 (UNRELEASED)
   * Implement RFC7797. The value of the header field `b64` changes
     how the payload is treated in JWS
   * Implement detached payloads for JWS
+  * Implement (jwk.AutoRefresh).ErrorSink() to register a channel
+    where you can receive errors from fetches and parses that occur during
+    JWK(s) retrieval.
 
 v1.2.4 15 Jul 2021
 [Bug fixes]

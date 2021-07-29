@@ -111,3 +111,8 @@ type HTTPClient interface {
 
 type DecodeCtx = json.DecodeCtx
 type KeyWithDecodeCtx = json.DecodeCtxContainer
+
+type AutoRefreshError struct {
+	Error error
+	URL   string
+}
