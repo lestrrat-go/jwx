@@ -315,7 +315,7 @@ func TestFetchErrorChannel(t *testing.T) {
 
 			ar := jwk.NewAutoRefresh(ctx)
 			ar.Configure(srv.URL, jwk.WithRefreshInterval(500*time.Millisecond))
-			ch := make(chan error, 256) // big buffer
+			ch := make(chan jwk.AutoRefreshFetchError, 256) // big buffer
 			ar.FetchErrorChannel(ch)
 			ar.Fetch(ctx, srv.URL)
 

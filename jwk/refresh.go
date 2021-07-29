@@ -26,8 +26,8 @@ import (
 // All JWKS objects that are retrieved via the auto-fetch mechanism should be
 // treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
-	errDst       chan error
-	errSink      chan error
+	errDst       chan AutoRefreshFetchError
+	errSink      chan AutoRefreshFetchError
 	cache        map[string]Set
 	configureCh  chan struct{}
 	fetching     map[string]chan struct{}
@@ -111,7 +111,7 @@ type resetTimerReq struct {
 // }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		errSink:      make(chan error, 1),
+		errSink:      make(chan AutoRefreshFetchError, 1),
 		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
 		fetching:     make(map[string]chan struct{}),
@@ -487,7 +487,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	// but take the extra mileage to not block regular processing.
 	if err != nil && af.errSink != nil {
 		select {
-		case af.errSink <- err:
+		case af.errSink <- AutoRefreshFetchError{Error: err, URL: url}:
 		default:
 			panic("af.errSink is not draining")
 		}
@@ -523,7 +523,7 @@ func (af *AutoRefresh) drainErrSink(ctx context.Context) {
 			af.muErrDst.Unlock()
 			if dst != nil {
 				// This will block if the user isn't properly draining the channel.
-				// It is the user's responsibility to draing it once the they
+				// It is the user's responsibility to drain it once they
 				// requested the errors to be streamed
 				dst <- err
 			}
@@ -531,7 +531,13 @@ func (af *AutoRefresh) drainErrSink(ctx context.Context) {
 	}
 }
 
-func (af *AutoRefresh) FetchErrorChannel(ch chan error) {
+// FetchErrorChannel sets a channel to receive JWK fetch errors, if any.
+// Only the errors that occurred *after* the channel was set  will be sent.
+// The user is responsible for properly draining the channel. If the channel
+// is not drained, the fetch operation will block on repeated errors.
+//
+// To disable, set a nil channel.
+func (af *AutoRefresh) FetchErrorChannel(ch chan AutoRefreshFetchError) {
 	af.muErrDst.Lock()
 	af.errDst = ch
 	af.muErrDst.Unlock()
