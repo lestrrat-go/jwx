@@ -484,7 +484,9 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 
 	// At this point if err != nil, we know that there was something wrong
 	// in either the fetching or the parsing. Send this error to be processed,
-	// but take the extra mileage to not block regular processing.
+	// but take the extra mileage to not block regular processing by
+	// sending the error to a "proxy" sink, and not directly at the user-specified sink
+	// (see drainErrSink)
 	if err != nil && af.errSink != nil {
 		select {
 		case af.errSink <- AutoRefreshError{Error: err, URL: url}:
