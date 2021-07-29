@@ -26,8 +26,8 @@ import (
 // All JWKS objects that are retrieved via the auto-fetch mechanism should be
 // treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
-	errDst       chan AutoRefreshFetchError
-	errSink      chan AutoRefreshFetchError
+	errDst       chan AutoRefreshError // user-specified error sink
+	errSink      chan AutoRefreshError // AutoRefresh's error sink
 	cache        map[string]Set
 	configureCh  chan struct{}
 	fetching     map[string]chan struct{}
@@ -111,7 +111,7 @@ type resetTimerReq struct {
 // }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		errSink:      make(chan AutoRefreshFetchError, 1),
+		errSink:      make(chan AutoRefreshError, 1),
 		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
 		fetching:     make(map[string]chan struct{}),
@@ -487,7 +487,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	// but take the extra mileage to not block regular processing.
 	if err != nil && af.errSink != nil {
 		select {
-		case af.errSink <- AutoRefreshFetchError{Error: err, URL: url}:
+		case af.errSink <- AutoRefreshError{Error: err, URL: url}:
 		default:
 			panic("af.errSink is not draining")
 		}
@@ -512,6 +512,8 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	return err
 }
 
+// drainErrSink is used proxy the errors that were sent to the main
+// error sink (af.errSink) to the user specified error sink
 func (af *AutoRefresh) drainErrSink(ctx context.Context) {
 	for {
 		select {
@@ -531,13 +533,14 @@ func (af *AutoRefresh) drainErrSink(ctx context.Context) {
 	}
 }
 
-// FetchErrorChannel sets a channel to receive JWK fetch errors, if any.
+// ErrorSink sets a channel to receive JWK fetch errors, if any.
 // Only the errors that occurred *after* the channel was set  will be sent.
+//
 // The user is responsible for properly draining the channel. If the channel
 // is not drained, the fetch operation will block on repeated errors.
 //
 // To disable, set a nil channel.
-func (af *AutoRefresh) FetchErrorChannel(ch chan AutoRefreshFetchError) {
+func (af *AutoRefresh) ErrorSink(ch chan AutoRefreshError) {
 	af.muErrDst.Lock()
 	af.errDst = ch
 	af.muErrDst.Unlock()

@@ -112,7 +112,7 @@ type HTTPClient interface {
 type DecodeCtx = json.DecodeCtx
 type KeyWithDecodeCtx = json.DecodeCtxContainer
 
-type AutoRefreshFetchError struct {
+type AutoRefreshError struct {
 	Error error
 	URL   string
 }
