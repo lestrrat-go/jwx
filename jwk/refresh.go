@@ -26,12 +26,11 @@ import (
 // All JWKS objects that are retrieved via the auto-fetch mechanism should be
 // treated read-only, as they are shared among the consumers and this object.
 type AutoRefresh struct {
-	errDst       chan AutoRefreshError // user-specified error sink
-	errSink      chan AutoRefreshError // AutoRefresh's error sink
+	errSink      chan AutoRefreshError
 	cache        map[string]Set
 	configureCh  chan struct{}
 	fetching     map[string]chan struct{}
-	muErrDst     sync.Mutex
+	muErrSink    sync.Mutex
 	muCache      sync.RWMutex
 	muFetching   sync.Mutex
 	muRegistry   sync.RWMutex
@@ -111,7 +110,6 @@ type resetTimerReq struct {
 // }
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
-		errSink:      make(chan AutoRefreshError, 1),
 		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
 		fetching:     make(map[string]chan struct{}),
@@ -119,7 +117,6 @@ func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 		resetTimerCh: make(chan *resetTimerReq),
 	}
 	go af.refreshLoop(ctx)
-	go af.drainErrSink(ctx)
 	return af
 }
 
@@ -485,13 +482,11 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	// At this point if err != nil, we know that there was something wrong
 	// in either the fetching or the parsing. Send this error to be processed,
 	// but take the extra mileage to not block regular processing by
-	// sending the error to a "proxy" sink, and not directly at the user-specified sink
-	// (see drainErrSink)
-	if err != nil && af.errSink != nil {
+	// discarding the error if we fail to send it through the channel
+	if err != nil {
 		select {
 		case af.errSink <- AutoRefreshError{Error: err, URL: url}:
 		default:
-			panic("af.errSink is not draining")
 		}
 	}
 
@@ -514,38 +509,17 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	return err
 }
 
-// drainErrSink is used proxy the errors that were sent to the main
-// error sink (af.errSink) to the user specified error sink
-func (af *AutoRefresh) drainErrSink(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case err := <-af.errSink:
-			af.muErrDst.Lock()
-			dst := af.errDst
-			af.muErrDst.Unlock()
-			if dst != nil {
-				// This will block if the user isn't properly draining the channel.
-				// It is the user's responsibility to drain it once they
-				// requested the errors to be streamed
-				dst <- err
-			}
-		}
-	}
-}
-
 // ErrorSink sets a channel to receive JWK fetch errors, if any.
 // Only the errors that occurred *after* the channel was set  will be sent.
 //
 // The user is responsible for properly draining the channel. If the channel
-// is not drained, the fetch operation will block on repeated errors.
+// is not drained properly, errors will be discarded.
 //
 // To disable, set a nil channel.
 func (af *AutoRefresh) ErrorSink(ch chan AutoRefreshError) {
-	af.muErrDst.Lock()
-	af.errDst = ch
-	af.muErrDst.Unlock()
+	af.muErrSink.Lock()
+	af.errSink = ch
+	af.muErrSink.Unlock()
 }
 
 func calculateRefreshDuration(res *http.Response, refreshInterval *time.Duration, minRefreshInterval time.Duration) time.Duration {
