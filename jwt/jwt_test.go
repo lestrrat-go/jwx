@@ -1060,3 +1060,22 @@ func TestNested(t *testing.T) {
 	}
 	_ = parsed
 }
+
+func TestRFC7797(t *testing.T) {
+	key, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+		return
+	}
+
+	hdrs := jws.NewHeaders()
+	hdrs.Set("b64", false)
+	hdrs.Set("crit", "b64")
+
+	token := jwt.New()
+	token.Set(jwt.AudienceKey, `foo`)
+
+	_, err = jwt.Sign(token, jwa.RS256, key, jwt.WithJwsHeaders(hdrs))
+	if !assert.Error(t, err, `jwt.Sign should fail`) {
+		return
+	}
+}

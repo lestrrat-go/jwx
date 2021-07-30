@@ -147,6 +147,16 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 	if err := setTypeOrCty(ctx, hdrs); err != nil {
 		return nil, err // this is already wrapped
 	}
+
+	// JWTs MUST NOT use b64 = false
+	// https://datatracker.ietf.org/doc/html/rfc7797#section-7
+	if v, ok := hdrs.Get("b64"); ok {
+		if bval, bok := v.(bool); bok {
+			if !bval { // b64 = false
+				return nil, errors.New(`b64 cannot be false for JWTs`)
+			}
+		}
+	}
 	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
 }
 
