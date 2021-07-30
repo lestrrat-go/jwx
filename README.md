@@ -7,7 +7,7 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 | [jwt](https://github.com/lestrrat-go/jwx/tree/main/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
 | [jwk](https://github.com/lestrrat-go/jwx/tree/main/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
 | [jwa](https://github.com/lestrrat-go/jwx/tree/main/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
-| [jws](https://github.com/lestrrat-go/jwx/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) |
+| [jws](https://github.com/lestrrat-go/jwx/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
 | [jwe](https://github.com/lestrrat-go/jwx/tree/main/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 
 # Index
@@ -113,7 +113,7 @@ Supported key types:
 
 ## JWS [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
 
-Package [github.com/lestrrat-go/jwx/jws](./jws) implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515)
+Package [github.com/lestrrat-go/jwx/jws](./jws) implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515), and [RFC7797](https://tools.ietf.org/html/rfc7797)
 
 * Parse and generate compact or JSON serializations
 * Sign and verify arbitrary payload
