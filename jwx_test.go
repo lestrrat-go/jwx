@@ -518,7 +518,6 @@ func TestFormat(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Expected, func(t *testing.T) {
-
 			if !assert.Equal(t, tc.Expected, tc.Value.String(), `stringification should match`) {
 				return
 			}
