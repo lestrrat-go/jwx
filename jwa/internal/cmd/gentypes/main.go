@@ -611,7 +611,14 @@ func (t typ) GenerateTest() error {
 	}
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\nfor _, v := range jwa.%ss() {", t.name)
-	fmt.Fprintf(&buf, "\nif _, ok := expected[v]; !assert.True(t, ok, `%%s is in the expected list`, v) {")
+	if t.name == "EllipticCurveAlgorithm" {
+		fmt.Fprintf(&buf, "\n// There is no good way to detect from a test if es256k (secp256k1)")
+		fmt.Fprintf(&buf, "\n// is supported, so just allow it")
+		fmt.Fprintf(&buf, "\nif v.String() == `secp256k1` {")
+		fmt.Fprintf(&buf, "\ncontinue")
+		fmt.Fprintf(&buf, "\n}")
+	}
+	fmt.Fprintf(&buf, "\nif _, ok := expected[v]; !assert.True(t, ok, `%%s should be in the expected list`, v) {")
 	fmt.Fprintf(&buf, "\nreturn")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ndelete(expected, v)")

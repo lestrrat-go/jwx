@@ -104,7 +104,7 @@ func TestCompressionAlgorithm(t *testing.T) {
 			jwa.NoCompress: {},
 		}
 		for _, v := range jwa.CompressionAlgorithms() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
 				return
 			}
 			delete(expected, v)

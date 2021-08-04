@@ -713,7 +713,7 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			jwa.RSA_OAEP_256:       {},
 		}
 		for _, v := range jwa.KeyEncryptionAlgorithms() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
 				return
 			}
 			delete(expected, v)

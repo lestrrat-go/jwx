@@ -296,7 +296,12 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 			jwa.X448:    {},
 		}
 		for _, v := range jwa.EllipticCurveAlgorithms() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+			// There is no good way to detect from a test if es256k (secp256k1)
+			// is supported, so just allow it
+			if v.String() == `secp256k1` {
+				continue
+			}
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
 				return
 			}
 			delete(expected, v)

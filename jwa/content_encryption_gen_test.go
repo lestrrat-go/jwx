@@ -252,7 +252,7 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			jwa.A256GCM:       {},
 		}
 		for _, v := range jwa.ContentEncryptionAlgorithms() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
 				return
 			}
 			delete(expected, v)

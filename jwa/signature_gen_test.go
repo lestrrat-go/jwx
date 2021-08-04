@@ -585,7 +585,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 			jwa.RS512:       {},
 		}
 		for _, v := range jwa.SignatureAlgorithms() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
 				return
 			}
 			delete(expected, v)
