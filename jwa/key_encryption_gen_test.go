@@ -691,4 +691,35 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			assert.False(t, jwa.RSA_OAEP_256.IsSymmetric(), `jwa.RSA_OAEP_256 should NOT be symmetric`)
 		})
 	})
+	t.Run(`check list of elements`, func(t *testing.T) {
+		t.Parallel()
+		var expected = map[jwa.KeyEncryptionAlgorithm]struct{}{
+			jwa.A128GCMKW:          {},
+			jwa.A128KW:             {},
+			jwa.A192GCMKW:          {},
+			jwa.A192KW:             {},
+			jwa.A256GCMKW:          {},
+			jwa.A256KW:             {},
+			jwa.DIRECT:             {},
+			jwa.ECDH_ES:            {},
+			jwa.ECDH_ES_A128KW:     {},
+			jwa.ECDH_ES_A192KW:     {},
+			jwa.ECDH_ES_A256KW:     {},
+			jwa.PBES2_HS256_A128KW: {},
+			jwa.PBES2_HS384_A192KW: {},
+			jwa.PBES2_HS512_A256KW: {},
+			jwa.RSA1_5:             {},
+			jwa.RSA_OAEP:           {},
+			jwa.RSA_OAEP_256:       {},
+		}
+		for _, v := range jwa.KeyEncryptionAlgorithms() {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s is in the expected list`, v) {
+				return
+			}
+			delete(expected, v)
+		}
+		if !assert.Len(t, expected, 0) {
+			return
+		}
+	})
 }

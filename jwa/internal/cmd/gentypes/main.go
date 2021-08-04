@@ -601,6 +601,26 @@ func (t typ) GenerateTest() error {
 		fmt.Fprintf(&buf, "\n})")
 	}
 
+	fmt.Fprintf(&buf, "\nt.Run(`check list of elements`, func(t *testing.T) {")
+	fmt.Fprintf(&buf, "\nt.Parallel()")
+	fmt.Fprintf(&buf, "\nvar expected = map[jwa.%s]struct{} {", t.name)
+	for _, e := range t.elements {
+		if !e.invalid {
+			fmt.Fprintf(&buf, "\njwa.%s: {},", e.name)
+		}
+	}
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nfor _, v := range jwa.%ss() {", t.name)
+	fmt.Fprintf(&buf, "\nif _, ok := expected[v]; !assert.True(t, ok, `%%s is in the expected list`, v) {")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\ndelete(expected, v)")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nif !assert.Len(t, expected, 0) {")
+	fmt.Fprintf(&buf, "\nreturn")
+	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\n})")
+
 	fmt.Fprintf(&buf, "\n}")
 
 	filename := strings.Replace(t.filename, "_gen.go", "_gen_test.go", 1)
