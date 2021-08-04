@@ -241,4 +241,24 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`check list of elements`, func(t *testing.T) {
+		t.Parallel()
+		var expected = map[jwa.ContentEncryptionAlgorithm]struct{}{
+			jwa.A128CBC_HS256: {},
+			jwa.A128GCM:       {},
+			jwa.A192CBC_HS384: {},
+			jwa.A192GCM:       {},
+			jwa.A256CBC_HS512: {},
+			jwa.A256GCM:       {},
+		}
+		for _, v := range jwa.ContentEncryptionAlgorithms() {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
+				return
+			}
+			delete(expected, v)
+		}
+		if !assert.Len(t, expected, 0) {
+			return
+		}
+	})
 }

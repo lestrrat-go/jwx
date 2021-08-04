@@ -97,4 +97,20 @@ func TestCompressionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`check list of elements`, func(t *testing.T) {
+		t.Parallel()
+		var expected = map[jwa.CompressionAlgorithm]struct{}{
+			jwa.Deflate:    {},
+			jwa.NoCompress: {},
+		}
+		for _, v := range jwa.CompressionAlgorithms() {
+			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
+				return
+			}
+			delete(expected, v)
+		}
+		if !assert.Len(t, expected, 0) {
+			return
+		}
+	})
 }

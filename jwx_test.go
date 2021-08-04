@@ -479,3 +479,48 @@ func TestGuessFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestFormat(t *testing.T) {
+	testcases := []struct {
+		Value    jwx.FormatKind
+		Expected string
+		Error    bool
+	}{
+		{
+			Value:    jwx.UnknownFormat,
+			Expected: "UnknownFormat",
+		},
+		{
+			Value:    jwx.JWE,
+			Expected: "JWE",
+		},
+		{
+			Value:    jwx.JWS,
+			Expected: "JWS",
+		},
+		{
+			Value:    jwx.JWK,
+			Expected: "JWK",
+		},
+		{
+			Value:    jwx.JWKS,
+			Expected: "JWKS",
+		},
+		{
+			Value:    jwx.JWT,
+			Expected: "JWT",
+		},
+		{
+			Value:    jwx.FormatKind(9999999),
+			Expected: "FormatKind(9999999)",
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Expected, func(t *testing.T) {
+			if !assert.Equal(t, tc.Expected, tc.Value.String(), `stringification should match`) {
+				return
+			}
+		})
+	}
+}
