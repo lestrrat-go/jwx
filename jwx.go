@@ -12,16 +12,12 @@
 //    JWT (https://tools.ietf.org/html/rfc7519)
 //
 // The primary focus of this library tool set is to implement the extremely
-// flexible OAuth2 / OpenID Connect protocols. There are many other libraries
-// out there that deal with all or parts of these JWx technologies:
+// flexible OAuth2 / OpenID Connect protocols.
 //
-//    https://github.com/dgrijalva/jwt-go
-//    https://github.com/square/go-jose
-//    https://github.com/coreos/oidc
-//    https://golang.org/x/oauth2
-//
-// This library exists because there was a need for a toolset that encompasses
-// the whole set of JWx technologies in a highly customizable manner, in one package.
+// Examples are stored in a separate Go module (to avoid adding
+// dependencies to this module), and thus does not appear in the
+// online documentation for this module.
+// You can find the examples in Github at https://github.com/lestrrat-go/jwx/examples
 //
 // You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
 package jwx
