@@ -433,16 +433,11 @@ LOOP:
 func (t stdToken) MarshalJSON() ([]byte, error) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
-	i := -1
-	for iter := t.Iterate(ctx); iter.Next(ctx); {
-		i++
-		pair := iter.Pair()
+	for i, pair := range t.makePairs() {
 		f := pair.Key.(string)
 		if i > 0 {
 			buf.WriteByte(',')
