@@ -784,7 +784,7 @@ func (t *stdToken) makePairs() []*ClaimPair {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	var pairs []*ClaimPair
+	pairs := make([]*ClaimPair, 0, 26)
 	if t.audience != nil {
 		v := t.audience.Get()
 		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
@@ -892,6 +892,9 @@ func (t *stdToken) makePairs() []*ClaimPair {
 	for k, v := range t.privateClaims {
 		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
 	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Key.(string) < pairs[j].Key.(string)
+	})
 	return pairs
 }
 
@@ -1091,22 +1094,12 @@ LOOP:
 func (t stdToken) MarshalJSON() ([]byte, error) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 26)
-	for iter := t.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
-	}
-
-	sort.Strings(fields)
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, pair := range t.makePairs() {
+		f := pair.Key.(string)
 		if i > 0 {
 			buf.WriteByte(',')
 		}
@@ -1115,16 +1108,15 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteString(`":`)
 		switch f {
 		case AudienceKey:
-			if err := json.EncodeAudience(enc, data[f].([]string)); err != nil {
+			if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {
 				return nil, errors.Wrap(err, `failed to encode "aud"`)
 			}
 			continue
 		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
-			enc.Encode(data[f].(time.Time).Unix())
+			enc.Encode(pair.Value.(time.Time).Unix())
 			continue
 		}
-		v := data[f]
-		switch v := v.(type) {
+		switch v := pair.Value.(type) {
 		case []byte:
 			buf.WriteRune('"')
 			buf.WriteString(base64.EncodeToString(v))

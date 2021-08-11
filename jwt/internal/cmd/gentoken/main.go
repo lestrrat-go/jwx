@@ -569,7 +569,7 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
 
 	// NOTE: building up an array is *slow*?
-	fmt.Fprintf(&buf, "\n\nvar pairs []*ClaimPair")
+	fmt.Fprintf(&buf, "\n\npairs := make([]*ClaimPair, 0, %d)", len(fields))
 	for _, f := range fields {
 		keyName := f.method + "Key"
 		fmt.Fprintf(&buf, "\nif t.%s != nil {", f.name)
@@ -588,6 +588,9 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\nfor k, v := range t.privateClaims {")
 	fmt.Fprintf(&buf, "\npairs = append(pairs, &ClaimPair{Key: k, Value: v})")
 	fmt.Fprintf(&buf, "\n}")
+	fmt.Fprintf(&buf, "\nsort.Slice(pairs, func(i, j int) bool {")
+	fmt.Fprintf(&buf, "\nreturn pairs[i].Key.(string) < pairs[j].Key.(string)")
+	fmt.Fprintf(&buf, "\n})")
 	fmt.Fprintf(&buf, "\nreturn pairs")
 	fmt.Fprintf(&buf, "\n}") // end of (h *stdHeaders) iterate(...)
 
@@ -689,21 +692,12 @@ func generateToken(tt tokenType) error {
 	fmt.Fprintf(&buf, "\n\nfunc (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
 	fmt.Fprintf(&buf, "\nt.mu.RLock()")
 	fmt.Fprintf(&buf, "\ndefer t.mu.RUnlock()")
-	fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
-	fmt.Fprintf(&buf, "\ndefer cancel()")
-	fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
-	fmt.Fprintf(&buf, "\nfields := make([]string, 0, %d)", len(fields))
-	fmt.Fprintf(&buf, "\nfor iter := t.Iterate(ctx); iter.Next(ctx); {")
-	fmt.Fprintf(&buf, "\npair := iter.Pair()")
-	fmt.Fprintf(&buf, "\nfields = append(fields, pair.Key.(string))")
-	fmt.Fprintf(&buf, "\ndata[pair.Key.(string)] = pair.Value")
-	fmt.Fprintf(&buf, "\n}")
-	fmt.Fprintf(&buf, "\n\nsort.Strings(fields)")
 	fmt.Fprintf(&buf, "\nbuf := pool.GetBytesBuffer()")
 	fmt.Fprintf(&buf, "\ndefer pool.ReleaseBytesBuffer(buf)")
 	fmt.Fprintf(&buf, "\nbuf.WriteByte('{')")
 	fmt.Fprintf(&buf, "\nenc := json.NewEncoder(buf)")
-	fmt.Fprintf(&buf, "\nfor i, f := range fields {")
+	fmt.Fprintf(&buf, "\nfor i, pair := range t.makePairs() {")
+	fmt.Fprintf(&buf, "\nf := pair.Key.(string)")
 	fmt.Fprintf(&buf, "\nif i > 0 {")
 	fmt.Fprintf(&buf, "\nbuf.WriteByte(',')")
 	fmt.Fprintf(&buf, "\n}")
@@ -714,7 +708,7 @@ func generateToken(tt tokenType) error {
 	// Handle cases that need specialized handling
 	fmt.Fprintf(&buf, "\nswitch f {")
 	fmt.Fprintf(&buf, "\ncase AudienceKey:")
-	fmt.Fprintf(&buf, "\nif err := json.EncodeAudience(enc, data[f].([]string)); err != nil {")
+	fmt.Fprintf(&buf, "\nif err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {")
 	fmt.Fprintf(&buf, "\nreturn nil, errors.Wrap(err, `failed to encode \"aud\"`)")
 	fmt.Fprintf(&buf, "\n}")
 	fmt.Fprintf(&buf, "\ncontinue")
@@ -727,13 +721,12 @@ func generateToken(tt tokenType) error {
 			}
 		}
 		fmt.Fprintf(&buf, ":")
-		fmt.Fprintf(&buf, "\nenc.Encode(data[f].(time.Time).Unix())")
+		fmt.Fprintf(&buf, "\nenc.Encode(pair.Value.(time.Time).Unix())")
 		fmt.Fprintf(&buf, "\ncontinue")
 	}
 	fmt.Fprintf(&buf, "\n}")
 
-	fmt.Fprintf(&buf, "\nv := data[f]")
-	fmt.Fprintf(&buf, "\nswitch v := v.(type) {")
+	fmt.Fprintf(&buf, "\nswitch v := pair.Value.(type) {")
 	fmt.Fprintf(&buf, "\ncase []byte:")
 	fmt.Fprintf(&buf, "\nbuf.WriteRune('\"')")
 	fmt.Fprintf(&buf, "\nbuf.WriteString(base64.EncodeToString(v))")
