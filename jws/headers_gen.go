@@ -226,6 +226,9 @@ func (h *stdHeaders) makePairs() []*HeaderPair {
 	for k, v := range h.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Key.(string) < pairs[j].Key.(string)
+	})
 	return pairs
 }
 
@@ -517,29 +520,18 @@ LOOP:
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 11)
-	for iter := h.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
-	}
-
-	sort.Strings(fields)
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, p := range h.makePairs() {
 		if i > 0 {
 			buf.WriteRune(',')
 		}
 		buf.WriteRune('"')
-		buf.WriteString(f)
+		buf.WriteString(p.Key.(string))
 		buf.WriteString(`":`)
-		v := data[f]
+		v := p.Value
 		switch v := v.(type) {
 		case []byte:
 			buf.WriteRune('"')
@@ -547,7 +539,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				errors.Errorf(`failed to encode value for field %s`, f)
+				errors.Errorf(`failed to encode value for field %s`, p.Key)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}
