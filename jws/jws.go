@@ -28,6 +28,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -64,6 +65,9 @@ func (s *payloadSigner) PublicHeader() Headers {
 	return s.public
 }
 
+var signers = make(map[jwa.SignatureAlgorithm]Signer)
+var muSigner = &sync.Mutex{}
+
 // Sign generates a signature for the given payload, and serializes
 // it in compact serialization format. In this format you may NOT use
 // multiple signers.
@@ -94,10 +98,18 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 		}
 	}
 
-	signer, err := NewSigner(alg)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to create signer`)
+	muSigner.Lock()
+	signer, ok := signers[alg]
+	if !ok {
+		v, err := NewSigner(alg)
+		if err != nil {
+			muSigner.Unlock()
+			return nil, errors.Wrap(err, `failed to create signer`)
+		}
+		signers[alg] = v
+		signer = v
 	}
+	muSigner.Unlock()
 
 	sig := &Signature{protected: hdrs}
 	_, signature, err := sig.Sign(payload, signer, key)
