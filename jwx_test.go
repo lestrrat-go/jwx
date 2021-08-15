@@ -464,6 +464,11 @@ func TestGuessFormat(t *testing.T) {
 			Source:   []byte(`{"keys":[{"kty":"OKP","crv":"X25519","x":"3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"}]}`),
 		},
 		{
+			Name:     "JWS (JSON)",
+			Expected: jwx.JWS,
+			Source:   []byte(`{"signatures": []}`),
+		},
+		{
 			Name:     "JWT",
 			Expected: jwx.JWT,
 			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx"}`),
@@ -473,7 +478,8 @@ func TestGuessFormat(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			if !assert.Equal(t, jwx.GuessFormat(tc.Source), tc.Expected, `value of jwx.GuessFormat should match`) {
+			got := jwx.GuessFormat(tc.Source)
+			if !assert.Equal(t, got, tc.Expected, `value of jwx.GuessFormat should match (%s != %s)`, got, tc.Expected) {
 				return
 			}
 		})
