@@ -1079,3 +1079,23 @@ func TestRFC7797(t *testing.T) {
 		return
 	}
 }
+
+func TestGH430(t *testing.T) {
+	t1 := jwt.New()
+	err := t1.Set("payload", map[string]interface{}{
+		"name": "someone",
+	})
+	if !assert.NoError(t, err, `t1.Set should succeed`) {
+		return
+	}
+
+	key := []byte("secret")
+	signed, err := jwt.Sign(t1, jwa.HS256, key)
+	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
+		return
+	}
+
+	if _, err = jwt.Parse(signed, jwt.WithVerify(jwa.HS256, key)); !assert.NoError(t, err, `jwt.Parse should succeed`) {
+		return
+	}
+}

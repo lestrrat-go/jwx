@@ -17,7 +17,7 @@ const (
 )
 
 type formatHint struct {
-	Payload    json.RawMessage `json:"payload"`    // Only in JWS
+	Signatures json.RawMessage `json:"signatures"` // Only in JWS
 	Ciphertext json.RawMessage `json:"ciphertext"` // Only in JWE
 	KeyType    json.RawMessage `json:"kty"`        // Only in JWK
 	Keys       json.RawMessage `json:"keys"`       // Only in JWKS
@@ -87,7 +87,7 @@ func GuessFormat(payload []byte) FormatKind {
 	if h.Ciphertext != nil {
 		return JWE
 	}
-	if h.Payload != nil {
+	if h.Signatures != nil {
 		return JWS
 	}
 	return UnknownFormat
