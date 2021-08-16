@@ -37,7 +37,7 @@ const (
 // func SetFoo(tok jwt.Token) error
 // func GetFoo(tok jwt.Token) (*Customtyp, error)
 //
-// Embedding jwt.Token into another struct is not recommended, becase
+// Embedding jwt.Token into another struct is not recommended, because
 // jwt.Token needs to handle private claims, and this really does not
 // work well when it is embedded in other structure
 type Token interface {

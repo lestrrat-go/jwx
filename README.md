@@ -315,6 +315,12 @@ For either bug reports or feature requests, failing tests are even better.
 
 Please make sure to include tests that excercise the changes you made.
 
+If you are editing auto-generated files (those files with the `_gen.go` prefix, please make sure that you do the following:
+
+1. Edit the generator, not the generated files (e.g. internal/cmd/genreadfile/main.go)
+2. Run `make generate` (or `go generate`) to generate the new code
+3. Commit _both_ the generator _and_ the generated files
+
 ## Discussions / Usage
 
 Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
