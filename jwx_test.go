@@ -466,7 +466,7 @@ func TestGuessFormat(t *testing.T) {
 		{
 			Name:     "JWS (JSON)",
 			Expected: jwx.JWS,
-			Source:   []byte(`{"signatures": []}`),
+			Source:   []byte(`{"signatures": [], "payload": ""}`),
 		},
 		{
 			Name:     "JWT",
