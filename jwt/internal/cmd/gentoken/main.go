@@ -361,7 +361,7 @@ func generateToken(tt tokenType) error {
 		fmt.Fprintf(&buf, "\n// like the following")
 		fmt.Fprintf(&buf, "\n//\n// func SetFoo(tok jwt.Token) error")
 		fmt.Fprintf(&buf, "\n// func GetFoo(tok jwt.Token) (*Customtyp, error)")
-		fmt.Fprintf(&buf, "\n//\n// Embedding jwt.Token into another struct is not recommended, becase")
+		fmt.Fprintf(&buf, "\n//\n// Embedding jwt.Token into another struct is not recommended, because")
 		fmt.Fprintf(&buf, "\n// jwt.Token needs to handle private claims, and this really does not")
 		fmt.Fprintf(&buf, "\n// work well when it is embedded in other structure")
 	}
