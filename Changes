@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.6 (NOT YET RELEASED)
+[Miscellaneous]
+  * `jwx.GuessFormat()` now requires the presense of both `payload` and
+    `signatures` keys for it to guess that a JSON object is a JWS message.
+  * Slightly enhance `jwt.Parse()` performance.
+
 v1.2.5 04 Aug 2021
 [New features]
   * Implement RFC7797. The value of the header field `b64` changes
