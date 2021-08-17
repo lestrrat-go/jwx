@@ -6,7 +6,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -31,23 +30,11 @@ func releaseEncryptCtx(ctx *encryptCtx) {
 
 // Encrypt takes the plaintext and encrypts into a JWE message.
 func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	bk, err := e.generator.Generate()
 	if err != nil {
-		if pdebug.Enabled {
-			pdebug.Printf("Failed to generate key: %s", err)
-		}
 		return nil, errors.Wrap(err, "failed to generate key")
 	}
 	cek := bk.Bytes()
-
-	if pdebug.Enabled {
-		pdebug.Printf("Encrypt: generated cek len = %d", len(cek))
-	}
 
 	if e.protected == nil {
 		// shouldn't happen, but...
@@ -82,9 +69,6 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 
 		enckey, err := enc.Encrypt(cek)
 		if err != nil {
-			if pdebug.Enabled {
-				pdebug.Printf("Failed to encrypt key: %s", err)
-			}
 			return nil, errors.Wrap(err, `failed to encrypt key`)
 		}
 		if enc.Algorithm() == jwa.ECDH_ES || enc.Algorithm() == jwa.DIRECT {
@@ -101,9 +85,6 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 			if err := hp.Populate(r.Headers()); err != nil {
 				return nil, errors.Wrap(err, "failed to populate")
 			}
-		}
-		if pdebug.Enabled {
-			pdebug.Printf("Encrypt: encrypted_key = %x (%d)", enckey.Bytes(), len(enckey.Bytes()))
 		}
 		recipients[i] = r
 	}
@@ -131,18 +112,7 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 	// ...on the other hand, there's only one content cipher.
 	iv, ciphertext, tag, err := e.contentEncrypter.Encrypt(cek, plaintext, aad)
 	if err != nil {
-		if pdebug.Enabled {
-			pdebug.Printf("Failed to encrypt: %s", err)
-		}
 		return nil, errors.Wrap(err, "failed to encrypt payload")
-	}
-
-	if pdebug.Enabled {
-		pdebug.Printf("Encrypt.Encrypt: cek        = %x (%d)", cek, len(cek))
-		pdebug.Printf("Encrypt.Encrypt: aad        = %x (%d)", aad, len(aad))
-		pdebug.Printf("Encrypt.Encrypt: ciphertext = %x (%d)", ciphertext, len(ciphertext))
-		pdebug.Printf("Encrypt.Encrypt: iv         = %x (%d)", iv, len(iv))
-		pdebug.Printf("Encrypt.Encrypt: tag        = %x (%d)", tag, len(tag))
 	}
 
 	msg := NewMessage()

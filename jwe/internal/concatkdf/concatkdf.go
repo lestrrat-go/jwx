@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/binary"
 
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -26,15 +25,6 @@ func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 	algbuf := ndata(alg)
 	apubuf := ndata(apu)
 	apvbuf := ndata(apv)
-
-	if pdebug.Enabled {
-		pdebug.Printf("alg          = %s", alg)
-		pdebug.Printf("algID   (%d) = %x", len(algbuf), algbuf)
-		pdebug.Printf("zBytes  (%d) = %x", len(Z), Z)
-		pdebug.Printf("apu     (%d) = %x", len(apubuf), apubuf)
-		pdebug.Printf("apv     (%d) = %x", len(apvbuf), apvbuf)
-		pdebug.Printf("pubinfo (%d) = %x", len(pubinfo), pubinfo)
-	}
 
 	concat := make([]byte, len(algbuf)+len(apubuf)+len(apvbuf)+len(pubinfo)+len(privinfo))
 	n := copy(concat, algbuf)

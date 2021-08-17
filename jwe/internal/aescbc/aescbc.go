@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -66,20 +65,9 @@ type Hmac struct {
 type BlockCipherFunc func([]byte) (cipher.Block, error)
 
 func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker().BindError(&err)
-		defer g.End()
-	}
 	keysize := len(key) / 2
 	ikey := key[:keysize]
 	ekey := key[keysize:]
-
-	if pdebug.Enabled {
-		pdebug.Printf("New: keysize               = %d", keysize)
-		pdebug.Printf("New: cek (key)             = %x (%d)\n", key, len(key))
-		pdebug.Printf("New: ikey                  = %x (%d)\n", ikey, len(ikey))
-		pdebug.Printf("New: ekey                  = %x (%d)\n", ekey, len(ekey))
-	}
 
 	bc, ciphererr := f(ekey)
 	if ciphererr != nil {
@@ -123,13 +111,6 @@ func (c Hmac) Overhead() int {
 }
 
 func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		pdebug.Printf("ComputeAuthTag: aad        = %x (%d)\n", aad, len(aad))
-		pdebug.Printf("ComputeAuthTag: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
-		pdebug.Printf("ComputeAuthTag: iv (nonce) = %x (%d)\n", nonce, len(nonce))
-		pdebug.Printf("ComputeAuthTag: integrity  = %x (%d)\n", c.integrityKey, len(c.integrityKey))
-	}
-
 	buf := make([]byte, len(aad)+len(nonce)+len(ciphertext)+8)
 	n := 0
 	n += copy(buf, aad)
@@ -142,10 +123,6 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to write ComputeAuthTag using Hmac")
 	}
 	s := h.Sum(nil)
-	if pdebug.Enabled {
-		pdebug.Printf("ComputeAuthTag: buf        = %x (%d)\n", buf, len(buf))
-		pdebug.Printf("ComputeAuthTag: computed   = %x (%d)\n", s[:c.tagsize], len(s[:c.tagsize]))
-	}
 	return s[:c.tagsize], nil
 }
 
@@ -186,21 +163,11 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	n := copy(out, ciphertext)
 	copy(out[n:], authtag)
 
-	if pdebug.Enabled {
-		pdebug.Printf("Seal: ciphertext = %x (%d)\n", ciphertext, len(ciphertext))
-		pdebug.Printf("Seal: authtag    = %x (%d)\n", authtag, len(authtag))
-		pdebug.Printf("Seal: ret        = %x (%d)\n", ret, len(ret))
-	}
 	return ret
 }
 
 // Open fulfills the crypto.AEAD interface
 func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	if len(ciphertext) < c.keysize {
 		return nil, errors.New("invalid ciphertext (too short)")
 	}
@@ -222,10 +189,6 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	}
 
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
-		if pdebug.Enabled {
-			pdebug.Printf("provided tag = %x\n", tag)
-			pdebug.Printf("expected tag = %x\n", expectedTag)
-		}
 		return nil, errors.New("invalid ciphertext (tag mismatch)")
 	}
 

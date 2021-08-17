@@ -17,7 +17,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -138,11 +137,6 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 }
 
 func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker().BindError(&err)
-		defer g.End()
-	}
-
 	cek, keyerr := d.DecryptKey(recipientKey)
 	if keyerr != nil {
 		err = errors.Wrap(keyerr, `failed to decrypt key`)
@@ -160,32 +154,18 @@ func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, 
 		computedAad = append(append(computedAad, '.'), d.aad...)
 	}
 
-	if pdebug.Enabled {
-		pdebug.Printf("Calling cipher.Decrypt (cipher = %T, cek len = %d)", cipher, len(cek))
-	}
-
 	plaintext, err = cipher.Decrypt(cek, d.iv, ciphertext, d.tag, computedAad)
 	if err != nil {
 		err = errors.Wrap(err, `failed to decrypt payload`)
 		return
 	}
 
-	if pdebug.Enabled {
-		pdebug.Printf("Successfully decrypted payload")
-	}
 	return plaintext, nil
 }
 
 func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		pdebug.Printf("Detected symmetric key algorithm %s", d.keyalg)
-	}
-
 	switch d.keyalg {
 	case jwa.DIRECT:
-		if pdebug.Enabled {
-			pdebug.Printf("Successfully decrypted symmetric key (key len = %d)", len(cek))
-		}
 		return cek, nil
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		var hashFunc func() hash.Hash
@@ -217,15 +197,8 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 			return nil, errors.Wrap(err, `failed to unwrap key`)
 		}
 
-		if pdebug.Enabled {
-			pdebug.Printf("cek len = %d", len(cek))
-			pdebug.Printf("Wrapped key len = %d", len(jek))
-		}
 		return jek, nil
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-		if pdebug.Enabled {
-			pdebug.Printf("cek len = %d", len(cek))
-		}
 		if len(d.keyiv) != 12 {
 			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
 		}
@@ -253,10 +226,6 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 }
 
 func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker().BindError(&err)
-		defer g.End()
-	}
 	if d.keyalg.IsSymmetric() {
 		var ok bool
 		cek, ok = d.privkey.([]byte)
@@ -275,10 +244,6 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 	cek, err = k.Decrypt(recipientKey)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decrypt key`)
-	}
-
-	if pdebug.Enabled {
-		pdebug.Printf("Successfully decrypted key")
 	}
 
 	return cek, nil

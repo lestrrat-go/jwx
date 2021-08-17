@@ -25,7 +25,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -309,11 +308,6 @@ func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
 }
 
 func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{}, keysize uint32) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*8)
 	zBytes, err := DeriveZ(privkey, pubkey)
@@ -331,11 +325,6 @@ func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{},
 
 // Decrypt decrypts the encrypted key using ECDH-ES
 func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	var algBytes []byte
 	var keysize uint32
 
@@ -349,10 +338,6 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to create content cipher for %s`, kw.contentalg)
 		}
-		if pdebug.Enabled {
-			pdebug.Printf("Using keysize (%d) from content cipher %s", c.KeySize(), kw.contentalg)
-		}
-
 		keysize = uint32(c.KeySize())
 		algBytes = []byte(kw.contentalg.String())
 	case jwa.ECDH_ES_A128KW:
@@ -372,9 +357,6 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 
 	// ECDH-ES does not wrap keys
 	if kw.keyalg == jwa.ECDH_ES {
-		if pdebug.Enabled {
-			pdebug.Printf("Skip unwrapping for ECHD-ES")
-		}
 		return key, nil
 	}
 
@@ -480,9 +462,6 @@ func (d RSAPKCS15Decrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // Decrypt decrypts the encrypted key using RSA PKCS1v1.5
 func (d RSAPKCS15Decrypt) Decrypt(enckey []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		pdebug.Printf("START PKCS.Decrypt")
-	}
 	// Hey, these notes and workarounds were stolen from go-jose
 	defer func() {
 		// DecryptPKCS1v15SessionKey sometimes panics on an invalid payload
@@ -548,9 +527,6 @@ func (d RSAOAEPDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 // Decrypt decrypts the encrypted key using RSA OAEP
 func (d RSAOAEPDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		pdebug.Printf("START OAEP.Decrypt")
-	}
 	var hash hash.Hash
 	switch d.alg {
 	case jwa.RSA_OAEP:
@@ -615,11 +591,6 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 }
 
 func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	if len(ciphertxt)%keywrapChunkLen != 0 {
 		return nil, errors.Errorf(`keyunwrap input must be %d byte blocks`, keywrapChunkLen)
 	}
@@ -650,11 +621,6 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	}
 
 	if subtle.ConstantTimeCompare(buffer[:keywrapChunkLen], keywrapDefaultIV) == 0 {
-		if pdebug.Enabled {
-			pdebug.Printf("buffer prefix does not match default iv")
-			pdebug.Printf("prefix  = %x", buffer[:keywrapChunkLen])
-			pdebug.Printf("default = %x", keywrapDefaultIV)
-		}
 		return nil, errors.New("key unwrap: failed to unwrap key")
 	}
 
