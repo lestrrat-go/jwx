@@ -21,7 +21,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -256,11 +255,6 @@ func ParseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 	key, err := jwk.ParseKey(buf)
 	if err != nil {
 		return nil, errors.Wrapf(err, `filed to parse JWK in key file %s`, file)
-	}
-
-	if pdebug.Enabled {
-		buf, _ := json.MarshalIndent(key, "", "  ")
-		pdebug.Printf("%s", buf)
 	}
 
 	return key, nil

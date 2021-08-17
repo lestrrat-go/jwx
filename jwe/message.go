@@ -11,7 +11,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -456,11 +455,6 @@ func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]by
 }
 
 func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	m := dctx.msg
 	alg := dctx.alg
 	key := dctx.key
@@ -481,9 +475,6 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	}
 	h, err = h.Merge(ctx, m.unprotectedHeaders)
 	if err != nil {
-		if pdebug.Enabled {
-			pdebug.Printf("failed to merge unprotected header")
-		}
 		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
 	}
 
@@ -527,11 +518,6 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	for _, recipient := range recipients {
 		// strategy: try each recipient. If we fail in one of the steps,
 		// keep looping because there might be another key with the same algo
-
-		if pdebug.Enabled {
-			pdebug.Printf("Attempting to check if we can decode for recipient (alg = %s)", recipient.Headers().Algorithm())
-		}
-
 		if recipient.Headers().Algorithm() != alg {
 			// algorithms don't match
 			continue
@@ -540,18 +526,12 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 		h2, err := h.Clone(ctx)
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to copy headers (1)`)
-			if pdebug.Enabled {
-				pdebug.Printf(`%s`, lastError)
-			}
 			continue
 		}
 
 		h2, err = h2.Merge(ctx, recipient.Headers())
 		if err != nil {
 			lastError = errors.Wrap(err, `failed to copy headers (2)`)
-			if pdebug.Enabled {
-				pdebug.Printf(`%s`, lastError)
-			}
 			continue
 		}
 
@@ -644,24 +624,10 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 			continue
 		}
 
-		if pdebug.Enabled {
-			pdebug.Printf("Successfully decrypted message (len %d). Checking for compression...", len(plaintext))
-		}
-
-		if h2.Compression() != jwa.Deflate {
-			if pdebug.Enabled {
-				pdebug.Printf("No compression handling necessary.")
-			}
-		} else {
-			if pdebug.Enabled {
-				pdebug.Printf("Uncompressing plaintext")
-			}
+		if h2.Compression() == jwa.Deflate {
 			buf, err := uncompress(plaintext)
 			if err != nil {
 				lastError = errors.Wrap(err, `failed to uncompress payload`)
-				if pdebug.Enabled {
-					pdebug.Printf(`%s`, lastError)
-				}
 				continue
 			}
 			plaintext = buf
