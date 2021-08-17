@@ -65,7 +65,24 @@ var birthdateRx = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})$`)
 // This method DOES NOT verify the correctness of a date.
 // Consumers should check for validity of dates such as Apr 31 et al
 func (b *BirthdateClaim) Accept(v interface{}) error {
+	b.year = nil
+	b.month = nil
+	b.day = nil
 	switch v := v.(type) {
+	case *BirthdateClaim:
+		if ptr := v.year; ptr != nil {
+			year := *ptr
+			b.year = &year
+		}
+		if ptr := v.month; ptr != nil {
+			month := *ptr
+			b.month = &month
+		}
+		if ptr := v.day; ptr != nil {
+			day := *ptr
+			b.day = &day
+		}
+		return nil
 	case string:
 		// yeah, yeah, regexp is slow. PR's welcome
 		indices := birthdateRx.FindStringSubmatchIndex(v)

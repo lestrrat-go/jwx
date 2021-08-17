@@ -527,6 +527,16 @@ func TestOpenIDClaims(t *testing.T) {
 				return
 			}
 		})
+		t.Run("Clone", func(t *testing.T) {
+			cloned, err := v.Clone()
+			if !assert.NoError(t, err, `v.Clone should succeed`) {
+				return
+			}
+
+			if !assert.True(t, jwt.Equal(v, cloned), `values should match`) {
+				return
+			}
+		})
 	})
 }
 
