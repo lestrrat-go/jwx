@@ -2,6 +2,7 @@ name: Benchmark
 on:
   schedule:
     - cron: '0 5 * * 1' 
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -27,6 +28,11 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Install benchstat
+        if: ${{ startsWith(matrix.go, '1.15' }}
+        run: |
+          go install golang.org/x/perf/cmd/benchstat
+      - name: Install benchstat
+        if: ${{ startsWith(matrix.go, '1.16' }}
         run: |
           go install golang.org/x/perf/cmd/benchstat@latest
       - name: Benchmark
