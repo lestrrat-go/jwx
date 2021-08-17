@@ -26,16 +26,20 @@ linters:
     - godox
     - goerr113
     - gofumpt
+    - golint #deprecated
     - gomnd
     - gosec
     - govet
+    - interfacer # deprecated
     - ifshort
     - lll
+    - maligned # deprecated
     - makezero
     - nakedret
     - nestif
     - nlreturn
     - paralleltest
+    - scopelint # deprecated
     - tagliatelle
     - testpackage
     - thelper
