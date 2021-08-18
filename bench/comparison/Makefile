@@ -1,8 +1,6 @@
 stdlib:
-	go test -bench . -benchmem -count 5 -timeout 60m | tee stdlib.txt
+	go test -bench . -benchmem | tee stdlib.txt
 
 goccy:
-	go test -bench . -benchmem -count 5 -timeout 60m -tags jwx_goccy | tee goccy.txt
+	go test -bench . -benchmem -tags jwx_goccy | tee goccy.txt
 
-benchstat:
-	benchstat -sort -delta stdlib.txt goccy.txt
