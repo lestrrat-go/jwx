@@ -16,12 +16,12 @@ test-cmd:
 test:
 	$(MAKE) TESTOPTS=./... test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench/performance test-cmd
 
 cover-cmd:
 	$(MAKE) test-cmd 
 	$(MAKE) -f $(PWD)/Makefile -C examples TESTOPTS= test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench TESTOPTS= test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench/performance TESTOPTS= test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx TESTOPTS= test-cmd
 	@# This is NOT cheating. tools to generate code, and tools to
 	@# run tests don't need to be included in the final result.
@@ -46,7 +46,7 @@ cover-all:
 smoke-cmd:
 	$(MAKE) test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench test-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench/performance test-cmd
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx test-cmd
 
 smoke:
@@ -79,7 +79,7 @@ imports:
 tidy:
 	$(MAKE) tidy-cmd
 	$(MAKE) -f $(PWD)/Makefile -C examples tidy-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench tidy-cmd
+	$(MAKE) -f $(PWD)/Makefile -C bench/performance tidy-cmd
 	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx tidy-cmd
 
 tidy-cmd:
