@@ -202,6 +202,8 @@ func TestJoseCompatibility(t *testing.T) {
 			{jwa.A256GCMKW, jwa.A256CBC_HS512},
 			{jwa.PBES2_HS256_A128KW, jwa.A128GCM},
 			{jwa.PBES2_HS256_A128KW, jwa.A128CBC_HS256},
+			{jwa.PBES2_HS384_A192KW, jwa.A192GCM},
+			{jwa.PBES2_HS384_A192KW, jwa.A192CBC_HS384},
 			{jwa.PBES2_HS512_A256KW, jwa.A256GCM},
 			{jwa.PBES2_HS512_A256KW, jwa.A256CBC_HS512},
 			{jwa.DIRECT, jwa.A128GCM},

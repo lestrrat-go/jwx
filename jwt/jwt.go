@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/lestrrat-go/jwx"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -365,9 +364,6 @@ func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignO
 //
 // if both t1 and t2 are nil, returns true
 func Equal(t1, t2 Token) bool {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	if t1 == nil && t2 == nil {
 		return true
 	}
@@ -377,36 +373,17 @@ func Equal(t1, t2 Token) bool {
 		return false
 	}
 
-	m1, err := t1.AsMap(ctx)
+	j1, err := json.Marshal(t1)
 	if err != nil {
 		return false
 	}
 
-	for iter := t2.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-
-		v1 := m1[pair.Key.(string)]
-		v2 := pair.Value
-		switch tmp := v1.(type) {
-		case time.Time:
-			tmp2, ok := v2.(time.Time)
-			if !ok {
-				return false
-			}
-			tmp = tmp.Round(0).Truncate(time.Second)
-			tmp2 = tmp2.Round(0).Truncate(time.Second)
-			if !tmp.Equal(tmp2) {
-				return false
-			}
-		default:
-			if v1 != v2 {
-				return false
-			}
-		}
-		delete(m1, pair.Key.(string))
+	j2, err := json.Marshal(t2)
+	if err != nil {
+		return false
 	}
 
-	return len(m1) == 0
+	return bytes.Equal(j1, j2)
 }
 
 func (t *stdToken) Clone() (Token, error) {

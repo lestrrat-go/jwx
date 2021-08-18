@@ -20,7 +20,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/x25519"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -31,11 +30,6 @@ var registry = json.NewRegistry()
 //
 // Encrypt currently does not support multi-recipient messages.
 func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) ([]byte, error) {
-	if pdebug.Enabled {
-		g := pdebug.FuncMarker()
-		defer g.End()
-	}
-
 	var protected Headers
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -142,16 +136,10 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		}
 		enc, _ = keyenc.NewNoop(keyalg, sharedkey)
 	default:
-		if pdebug.Enabled {
-			pdebug.Printf("Encrypt: unknown key encryption algorithm: %s", keyalg)
-		}
 		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
 	}
 
 	keysize := contentcrypt.KeySize()
-	if pdebug.Enabled {
-		pdebug.Printf("Encrypt: keysize = %d", keysize)
-	}
 	encctx := getEncryptCtx()
 	defer releaseEncryptCtx(encctx)
 
@@ -162,9 +150,6 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 	encctx.compress = compressalg
 	msg, err := encctx.Encrypt(payload)
 	if err != nil {
-		if pdebug.Enabled {
-			pdebug.Printf("Encrypt: failed to encrypt: %s", err)
-		}
 		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
 
@@ -306,9 +291,6 @@ func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 }
 
 func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
-	if pdebug.Enabled {
-		pdebug.Printf("Parse(Compact): buf = '%s'", buf)
-	}
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
 		return nil, errors.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
@@ -317,9 +299,6 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	hdrbuf, err := base64.Decode(parts[0])
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse first part of compact form`)
-	}
-	if pdebug.Enabled {
-		pdebug.Printf("hdrbuf = %s", hdrbuf)
 	}
 
 	protected := NewHeaders()

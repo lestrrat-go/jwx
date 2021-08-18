@@ -5,14 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/pdebug/v3"
 	"github.com/pkg/errors"
 )
 
@@ -158,13 +156,6 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 	t.Helper()
 
 	cmdargs := []string{"jwe", "dec", "-i", cfile, "-k", kfile}
-	if pdebug.Enabled {
-		cbuf, _ := ioutil.ReadFile(cfile)
-		pdebug.Printf(`JWE message file contains "%s"`, cbuf)
-		kbuf, _ := ioutil.ReadFile(kfile)
-		pdebug.Printf(`JWK key file contains "%s"`, kbuf)
-	}
-
 	var output bytes.Buffer
 	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
 		jwxtest.DumpFile(t, cfile)
@@ -244,13 +235,6 @@ func VerifyJws(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte, 
 	t.Helper()
 
 	cmdargs := []string{"jws", "ver", "-i", cfile, "-k", kfile, "-O-"}
-	if pdebug.Enabled {
-		cbuf, _ := ioutil.ReadFile(cfile)
-		pdebug.Printf(`JWE message file contains "%s"`, cbuf)
-		kbuf, _ := ioutil.ReadFile(kfile)
-		pdebug.Printf(`JWK key file contains "%s"`, kbuf)
-	}
-
 	var output bytes.Buffer
 	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
 		jwxtest.DumpFile(t, cfile)

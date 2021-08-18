@@ -1,11 +1,28 @@
-package x25519
+package x25519_test
 
 import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGenerateKey(t *testing.T) {
+	t.Run("x25519.GenerateKey(nil)", func(t *testing.T) {
+		_, _, err := x25519.GenerateKey(nil)
+		if !assert.NoError(t, err, `x25519.GenerateKey should work even if argument is nil`) {
+			return
+		}
+	})
+	t.Run("x25519.NewKeyFromSeed(wrongSeedLength)", func(t *testing.T) {
+		dummy := make([]byte, x25519.SeedSize-1)
+		_, err := x25519.NewKeyFromSeed(dummy)
+		if !assert.Error(t, err, `wrong seed size should result in error`) {
+			return
+		}
+	})
+}
 
 func TestNewKeyFromSeed(t *testing.T) {
 	// These test vectors are from RFC7748 Section 6.1
@@ -18,12 +35,12 @@ func TestNewKeyFromSeed(t *testing.T) {
 	if !assert.NoError(t, err, `alice seed decoded`) {
 		return
 	}
-	alicePriv, err := NewKeyFromSeed(alicePrivSeed)
+	alicePriv, err := x25519.NewKeyFromSeed(alicePrivSeed)
 	if !assert.NoError(t, err, `alice private key`) {
 		return
 	}
 
-	alicePub := alicePriv.Public().(PublicKey)
+	alicePub := alicePriv.Public().(x25519.PublicKey)
 	if !assert.Equal(t, hex.EncodeToString(alicePub), alicePubHex, `alice public key`) {
 		return
 	}
@@ -32,13 +49,26 @@ func TestNewKeyFromSeed(t *testing.T) {
 	if !assert.NoError(t, err, `bob seed decoded`) {
 		return
 	}
-	bobPriv, err := NewKeyFromSeed(bobPrivSeed)
+	bobPriv, err := x25519.NewKeyFromSeed(bobPrivSeed)
 	if !assert.NoError(t, err, `bob private key`) {
 		return
 	}
 
-	bobPub := bobPriv.Public().(PublicKey)
+	bobPub := bobPriv.Public().(x25519.PublicKey)
 	if !assert.Equal(t, hex.EncodeToString(bobPub), bobPubHex, `bob public key`) {
+		return
+	}
+
+	if !assert.True(t, bobPriv.Equal(bobPriv), `bobPriv should equal bobPriv`) {
+		return
+	}
+	if !assert.True(t, bobPub.Equal(bobPub), `bobPub should equal bobPub`) {
+		return
+	}
+	if !assert.False(t, bobPriv.Equal(bobPub), `bobPriv should NOT equal bobPub`) {
+		return
+	}
+	if !assert.False(t, bobPub.Equal(bobPriv), `bobPub should NOT equal bobPriv`) {
 		return
 	}
 }

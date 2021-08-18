@@ -3,6 +3,7 @@ package openid_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -527,6 +528,16 @@ func TestOpenIDClaims(t *testing.T) {
 				return
 			}
 		})
+		t.Run("Clone", func(t *testing.T) {
+			cloned, err := v.Clone()
+			if !assert.NoError(t, err, `v.Clone should succeed`) {
+				return
+			}
+
+			if !assert.True(t, jwt.Equal(v, cloned), `values should match`) {
+				return
+			}
+		})
 	})
 }
 
@@ -534,26 +545,101 @@ func TestBirthdateClaim(t *testing.T) {
 	t.Parallel()
 	t.Run("regular date", func(t *testing.T) {
 		t.Parallel()
-		const src = `"2015-11-04"`
-		var b openid.BirthdateClaim
-		if !assert.NoError(t, json.Unmarshal([]byte(src), &b), `json.Unmarshal should succeed`) {
-			return
+		testcases := []struct {
+			Source string
+			Year   int
+			Month  int
+			Day    int
+			Error  bool
+		}{
+			{
+				Source: `"2015-11-04"`,
+				Year:   2015,
+				Month:  11,
+				Day:    4,
+			},
+			{
+				Source: `"0009-09-09"`,
+				Year:   9,
+				Month:  9,
+				Day:    9,
+			},
+			{
+				Source: `{}`,
+				Error:  true,
+			},
+			{
+				Source: `"202X-01-01"`,
+				Error:  true,
+			},
+			{
+				Source: `"0000-01-01"`,
+				Error:  true,
+			},
+			{
+				Source: `"0001-00-01"`,
+				Error:  true,
+			},
+			{
+				Source: `"0001-01-00"`,
+				Error:  true,
+			},
 		}
 
-		if !assert.Equal(t, b.Year(), 2015, "year should match") {
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Source, func(t *testing.T) {
+				var b openid.BirthdateClaim
+				if tc.Error {
+					assert.Error(t, json.Unmarshal([]byte(tc.Source), &b), `json.Unmarshal should fail`)
+					return
+				}
+
+				if !assert.NoError(t, json.Unmarshal([]byte(tc.Source), &b), `json.Unmarshal should succeed`) {
+					return
+				}
+
+				if !assert.Equal(t, b.Year(), tc.Year, "year should match") {
+					return
+				}
+				if !assert.Equal(t, b.Month(), tc.Month, "month should match") {
+					return
+				}
+				if !assert.Equal(t, b.Day(), tc.Day, "day should match") {
+					return
+				}
+				serialized, err := json.Marshal(b)
+				if !assert.NoError(t, err, `json.Marshal should succeed`) {
+					return
+				}
+				if !assert.Equal(t, string(serialized), tc.Source, `serialized format should be the same`) {
+					return
+				}
+				stringified := b.String()
+				expectedString, _ := strconv.Unquote(tc.Source)
+				if !assert.Equal(t, stringified, expectedString, `stringified format should be the same`) {
+					return
+				}
+			})
+		}
+	})
+	t.Run("empty date", func(t *testing.T) {
+		t.Parallel()
+		var b openid.BirthdateClaim
+		if !assert.Equal(t, b.Year(), 0, "year should match") {
 			return
 		}
-		if !assert.Equal(t, b.Month(), 11, "month should match") {
+		if !assert.Equal(t, b.Month(), 0, "month should match") {
 			return
 		}
-		if !assert.Equal(t, b.Day(), 4, "day should match") {
+		if !assert.Equal(t, b.Day(), 0, "day should match") {
 			return
 		}
-		serialized, err := json.Marshal(b)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-		if !assert.Equal(t, string(serialized), src, `serialized format should be the same`) {
+	})
+	t.Run("invalid accept", func(t *testing.T) {
+		t.Parallel()
+		var b openid.BirthdateClaim
+		if !assert.Error(t, b.Accept(nil)) {
 			return
 		}
 	})
