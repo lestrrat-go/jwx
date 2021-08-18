@@ -353,7 +353,7 @@ type delta struct {
 // If the empty string is passed to c1 or c2, then the current time (as calculated by time.Now() or
 // the clock object provided via WithClock()) is used.
 //
-// For example, in order to specify that `exp` - `iat` < 10*time.Second, you would write
+// For example, in order to specify that `exp` - `iat` should be less than 10*time.Second, you would write
 //
 //    jwt.Validate(token, jwt.WithMaxDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
 //
@@ -371,9 +371,11 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 // WithMinDelta is almost exactly the same as WithMaxDelta, but force validation to fail if
 // the difference between time claims are less than dur.
 //
-// For example, in order to specify that `exp` - `iat` > 10*time.Second, you would write
+// For example, in order to specify that `exp` - `iat` should be greater than 10*time.Second, you would write
 //
 //    jwt.Validate(token, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
+//
+// The validation would fail if the difference is less than 10 seconds.
 //
 func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	return newValidateOption(identTimeDelta{}, delta{
