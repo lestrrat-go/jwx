@@ -617,7 +617,7 @@ func TestBirthdateClaim(t *testing.T) {
 				}
 				stringified := b.String()
 				expectedString, _ := strconv.Unquote(tc.Source)
-				if !assert.Equal(t, string(stringified), expectedString, `stringified format should be the same`) {
+				if !assert.Equal(t, stringified, expectedString, `stringified format should be the same`) {
 					return
 				}
 			})
