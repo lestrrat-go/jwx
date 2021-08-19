@@ -3,7 +3,7 @@
 package jwk
 
 import (
-	"github.com/decred/dcrd/dcrec/secp256k1/v3"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
 )
