@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/jwt [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
+# JWT [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
 
 Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
@@ -8,12 +8,13 @@ Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.i
 * Conversion to and from JSON
 * Generate signed tokens
 * Verify signed tokens
-
-# SYNOPSIS
+* Extra support for OpenID tokens via [github.com/lestrrat-go/jwx/jwt/openid](./jwt/openid)
 
 More examples are located in the examples directory ([jwt_example_test.go](../examples/jwt_example_test.go))
 
-# Verify a signed JWT
+# SYNOPSIS
+
+## Verify a signed JWT
 
 ```go
   token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
@@ -22,7 +23,7 @@ More examples are located in the examples directory ([jwt_example_test.go](../ex
   }
 ```
 
-# Token Usage
+## Token Usage
 
 ```go
 func ExampleJWT() {
@@ -82,7 +83,7 @@ func ExampleJWT() {
 }
 ```
 
-# OpenID Claims
+## OpenID Claims
 
 `jwt` package can work with token types other than the default one.
 For OpenID claims, use the token created by `openid.New()`, or

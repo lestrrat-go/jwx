@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/jws [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
+# JWS [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
 
 Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515) and [RFC7797](https://tools.ietf.org/html/rfc7797)
 
@@ -33,7 +33,9 @@ Supported signature algorithms:
 * Note 1: Experimental
 * Note 2: Experimental, and must be toggled using `-tags jwx_es256k` build tag
 
-# Sign and verify arbitrary data
+# SYNOPSIS
+
+## Sign and verify arbitrary data
 
 ```go
 import(
@@ -70,7 +72,7 @@ func main() {
 }
 ```
 
-# Programatically manipulate `jws.Message`
+## Programatically manipulate `jws.Message`
 
 ```go
 func ExampleMessage() {
