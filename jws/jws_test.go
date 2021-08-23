@@ -3,11 +3,13 @@ package jws_test
 import (
 	"bufio"
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha512"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"strings"
@@ -123,46 +125,93 @@ func TestParseReader(t *testing.T) {
 	})
 }
 
+type dummyCryptoSigner struct {
+	raw crypto.Signer
+}
+
+func (s *dummyCryptoSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	return s.raw.Sign(rand, digest, opts)
+}
+
+func (s *dummyCryptoSigner) Public() crypto.PublicKey {
+	return s.raw.Public()
+}
+
+var _ crypto.Signer = &dummyCryptoSigner{}
+
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
 	t.Helper()
 
-	signed, err := jws.Sign(payload, alg, signKey)
-	if !assert.NoError(t, err, "jws.Sign should succeed") {
+	jwkKey, err := jwk.New(signKey)
+	if !assert.NoError(t, err, `jwk.New should succeed`) {
 		return
 	}
-
-	parsers := map[string]func([]byte) (*jws.Message, error){
-		"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
-		"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
-		"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
+	signKeys := []struct {
+		Name string
+		Key  interface{}
+	}{
+		{
+			Name: "Raw Key",
+			Key:  signKey,
+		},
+		{
+			Name: "JWK Key",
+			Key:  jwkKey,
+		},
 	}
-	for name, f := range parsers {
-		name := name
-		f := f
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			m, err := f(signed)
-			if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
-				return
-			}
 
-			if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
-				return
-			}
+	if cs, ok := signKey.(crypto.Signer); ok && alg == jwa.EdDSA {
+		signKeys = append(signKeys, struct {
+			Name string
+			Key  interface{}
+		}{
+			Name: "crypto.Hash",
+			Key:  &dummyCryptoSigner{raw: cs},
 		})
 	}
 
-	for name, testKey := range keys {
-		name := name
-		testKey := testKey
-		t.Run(name, func(t *testing.T) {
-			verified, err := jws.Verify(signed, alg, testKey)
-			if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
+	for _, key := range signKeys {
+		key := key
+		t.Run(key.Name, func(t *testing.T) {
+			signed, err := jws.Sign(payload, alg, key.Key)
+			if !assert.NoError(t, err, "jws.Sign should succeed") {
 				return
 			}
 
-			if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
-				return
+			parsers := map[string]func([]byte) (*jws.Message, error){
+				"ParseReader(io.Reader)": func(b []byte) (*jws.Message, error) { return jws.ParseReader(bufio.NewReader(bytes.NewReader(b))) },
+				"Parse([]byte)":          func(b []byte) (*jws.Message, error) { return jws.Parse(b) },
+				"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
+			}
+			for name, f := range parsers {
+				name := name
+				f := f
+				t.Run(name, func(t *testing.T) {
+					t.Parallel()
+					m, err := f(signed)
+					if !assert.NoError(t, err, "(%s) %s is successful", alg, name) {
+						return
+					}
+
+					if !assert.Equal(t, payload, m.Payload(), "(%s) %s: Payload is decoded", alg, name) {
+						return
+					}
+				})
+			}
+
+			for name, testKey := range keys {
+				name := name
+				testKey := testKey
+				t.Run(name, func(t *testing.T) {
+					verified, err := jws.Verify(signed, alg, testKey)
+					if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
+						return
+					}
+
+					if !assert.Equal(t, payload, verified, "(%s) Verified payload is the same", alg) {
+						return
+					}
+				})
 			}
 		})
 	}

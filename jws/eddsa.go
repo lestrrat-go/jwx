@@ -1,7 +1,9 @@
 package jws
 
 import (
+	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -21,11 +23,19 @@ func (s EdDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	var privkey ed25519.PrivateKey
-	if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
-		return nil, errors.Wrapf(err, `failed to retrieve ed25519.PrivateKey out of %T`, key)
+	// The ed25519.PrivateKey object implements crypto.Signer, so we should
+	// simply accept a crypto.Signer here.
+	signer, ok := key.(crypto.Signer)
+	if !ok {
+		// This fallback exists for cases when jwk.Key was passed, or
+		// users gave us a pointer instead of non-pointer, etc.
+		var privkey ed25519.PrivateKey
+		if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve ed25519.PrivateKey out of %T`, key)
+		}
+		signer = privkey
 	}
-	return ed25519.Sign(privkey, payload), nil
+	return signer.Sign(rand.Reader, payload, crypto.Hash(0))
 }
 
 func newEdDSAVerifier() Verifier {
