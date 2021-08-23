@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/jwe [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
+# JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwe)
 
 Package jwe implements JWE as described in [RFC7516](https://tools.ietf.org/html/rfc7516)
 
@@ -43,7 +43,9 @@ Supported content encryption algorithm:
 | AES-GCM (192)               | YES        | jwa.A192GCM               |
 | AES-GCM (256)               | YES        | jwa.A256GCM               |
 
-# Encrypt data
+# SYNOPSIS
+
+## Encrypt data
 
 ```go
 func ExampleEncrypt() {
@@ -65,7 +67,7 @@ func ExampleEncrypt() {
 }
 ```
 
-# Decrypt data
+## Decrypt data
 
 ```go
 func ExampleDecrypt() {

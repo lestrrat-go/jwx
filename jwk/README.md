@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/jwk [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
+# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
 
