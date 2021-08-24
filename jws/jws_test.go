@@ -207,15 +207,13 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 			Key:  &dummyECDSACryptoSigner{raw: es},
 		})
 	} else if cs, ok := signKey.(crypto.Signer); ok {
-		if _, ok := cs.(*rsa.PrivateKey); !ok {
-			signKeys = append(signKeys, struct {
-				Name string
-				Key  interface{}
-			}{
-				Name: "crypto.Hash",
-				Key:  &dummyCryptoSigner{raw: cs},
-			})
-		}
+		signKeys = append(signKeys, struct {
+			Name string
+			Key  interface{}
+		}{
+			Name: "crypto.Hash",
+			Key:  &dummyCryptoSigner{raw: cs},
+		})
 	}
 
 	for _, key := range signKeys {

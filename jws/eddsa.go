@@ -10,15 +10,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type eddsaSigner struct{}
+
 func newEdDSASigner() Signer {
-	return &EdDSASigner{}
+	return &eddsaSigner{}
 }
 
-func (s EdDSASigner) Algorithm() jwa.SignatureAlgorithm {
+func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA
 }
 
-func (s EdDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
@@ -38,11 +40,13 @@ func (s EdDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	return signer.Sign(rand.Reader, payload, crypto.Hash(0))
 }
 
+type eddsaVerifier struct{}
+
 func newEdDSAVerifier() Verifier {
-	return &EdDSAVerifier{}
+	return &eddsaVerifier{}
 }
 
-func (v EdDSAVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
+func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
 	if key == nil {
 		return errors.New(`missing public key while verifying payload`)
 	}
