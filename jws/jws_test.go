@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -139,6 +140,43 @@ func (s *dummyCryptoSigner) Public() crypto.PublicKey {
 
 var _ crypto.Signer = &dummyCryptoSigner{}
 
+type dummyECDSACryptoSigner struct {
+	raw *ecdsa.PrivateKey
+}
+
+func (es *dummyECDSACryptoSigner) Public() crypto.PublicKey {
+	return es.raw.Public()
+}
+
+func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	// The implementation is the same as ecdsaCryptoSigner.
+	// This is just here to test the interface conversion
+	r, s, err := ecdsa.Sign(rand, es.raw, digest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
+	}
+
+	curveBits := es.raw.Curve.Params().BitSize
+	keyBytes := curveBits / 8
+	// Curve bits do not need to be a multiple of 8.
+	if curveBits%8 > 0 {
+		keyBytes++
+	}
+
+	rBytes := r.Bytes()
+	rBytesPadded := make([]byte, keyBytes)
+	copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+	sBytes := s.Bytes()
+	sBytesPadded := make([]byte, keyBytes)
+	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+	out := append(rBytesPadded, sBytesPadded...)
+	return out, nil
+}
+
+var _ crypto.Signer = &dummyECDSACryptoSigner{}
+
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
 	t.Helper()
 
@@ -160,14 +198,24 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 		},
 	}
 
-	if cs, ok := signKey.(crypto.Signer); ok && alg == jwa.EdDSA {
+	if es, ok := signKey.(*ecdsa.PrivateKey); ok {
 		signKeys = append(signKeys, struct {
 			Name string
 			Key  interface{}
 		}{
 			Name: "crypto.Hash",
-			Key:  &dummyCryptoSigner{raw: cs},
+			Key:  &dummyECDSACryptoSigner{raw: es},
 		})
+	} else if cs, ok := signKey.(crypto.Signer); ok {
+		if _, ok := cs.(*rsa.PrivateKey); !ok {
+			signKeys = append(signKeys, struct {
+				Name string
+				Key  interface{}
+			}{
+				Name: "crypto.Hash",
+				Key:  &dummyCryptoSigner{raw: cs},
+			})
+		}
 	}
 
 	for _, key := range signKeys {

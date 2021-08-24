@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 
@@ -86,7 +87,7 @@ type RSASigner struct {
 	alg  jwa.SignatureAlgorithm
 }
 
-type ecdsaSignFunc func([]byte, *ecdsa.PrivateKey) ([]byte, error)
+type ecdsaSignFunc func([]byte, crypto.Signer) ([]byte, error)
 
 // ECDSASigner uses crypto/ecdsa to sign the payloads.
 type ECDSASigner struct {
