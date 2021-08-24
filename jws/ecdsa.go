@@ -91,8 +91,8 @@ func newECDSACryptoSigner(key *ecdsa.PrivateKey, hash crypto.Hash) crypto.Signer
 	}
 }
 
-func (s *ecdsaCryptoSigner) Public() crypto.PublicKey {
-	return s.key.PublicKey
+func (cs *ecdsaCryptoSigner) Public() crypto.PublicKey {
+	return cs.key.PublicKey
 }
 
 func (cs *ecdsaCryptoSigner) Sign(seed io.Reader, digest []byte, _ crypto.SignerOpts) ([]byte, error) {

@@ -1,8 +1,6 @@
 package jws
 
 import (
-	"crypto"
-	"crypto/ecdsa"
 	"crypto/rsa"
 
 	"github.com/lestrrat-go/iter/mapiter"
@@ -87,14 +85,6 @@ type RSASigner struct {
 	alg  jwa.SignatureAlgorithm
 }
 
-type ecdsaSignFunc func([]byte, crypto.Signer) ([]byte, error)
-
-// ECDSASigner uses crypto/ecdsa to sign the payloads.
-type ECDSASigner struct {
-	alg  jwa.SignatureAlgorithm
-	sign ecdsaSignFunc
-}
-
 type hmacSignFunc func([]byte, []byte) ([]byte, error)
 
 // HMACSigner uses crypto/hmac to sign the payloads.
@@ -121,12 +111,6 @@ type rsaVerifyFunc func([]byte, []byte, *rsa.PublicKey) error
 
 type RSAVerifier struct {
 	verify rsaVerifyFunc
-}
-
-type ecdsaVerifyFunc func([]byte, []byte, *ecdsa.PublicKey) error
-
-type ECDSAVerifier struct {
-	verify ecdsaVerifyFunc
 }
 
 type HMACVerifier struct {
