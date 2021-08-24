@@ -1,9 +1,6 @@
 package jws
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
-
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -78,31 +75,12 @@ type Signer interface {
 	Algorithm() jwa.SignatureAlgorithm
 }
 
-type rsaSignFunc func([]byte, *rsa.PrivateKey) ([]byte, error)
-
-// RSASigner uses crypto/rsa to sign the payloads.
-type RSASigner struct {
-	sign rsaSignFunc
-	alg  jwa.SignatureAlgorithm
-}
-
-type ecdsaSignFunc func([]byte, *ecdsa.PrivateKey) ([]byte, error)
-
-// ECDSASigner uses crypto/ecdsa to sign the payloads.
-type ECDSASigner struct {
-	alg  jwa.SignatureAlgorithm
-	sign ecdsaSignFunc
-}
-
 type hmacSignFunc func([]byte, []byte) ([]byte, error)
 
 // HMACSigner uses crypto/hmac to sign the payloads.
 type HMACSigner struct {
 	alg  jwa.SignatureAlgorithm
 	sign hmacSignFunc
-}
-
-type EdDSASigner struct {
 }
 
 type Verifier interface {
@@ -116,21 +94,6 @@ type Verifier interface {
 	Verify(payload []byte, signature []byte, key interface{}) error
 }
 
-type rsaVerifyFunc func([]byte, []byte, *rsa.PublicKey) error
-
-type RSAVerifier struct {
-	verify rsaVerifyFunc
-}
-
-type ecdsaVerifyFunc func([]byte, []byte, *ecdsa.PublicKey) error
-
-type ECDSAVerifier struct {
-	verify ecdsaVerifyFunc
-}
-
 type HMACVerifier struct {
 	signer Signer
-}
-
-type EdDSAVerifier struct {
 }

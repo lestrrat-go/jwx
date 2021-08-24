@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"io"
 
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -11,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ecdsaSignFuncs = map[jwa.SignatureAlgorithm]ecdsaSignFunc{}
-var ecdsaVerifyFuncs = map[jwa.SignatureAlgorithm]ecdsaVerifyFunc{}
+var ecdsaSigners map[jwa.SignatureAlgorithm]*ecdsaSigner
+var ecdsaVerifiers map[jwa.SignatureAlgorithm]*ecdsaVerifier
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]crypto.Hash{
@@ -21,97 +22,119 @@ func init() {
 		jwa.ES512:  crypto.SHA512,
 		jwa.ES256K: crypto.SHA256,
 	}
+	ecdsaSigners = make(map[jwa.SignatureAlgorithm]*ecdsaSigner)
+	ecdsaVerifiers = make(map[jwa.SignatureAlgorithm]*ecdsaVerifier)
 
-	for alg, h := range algs {
-		ecdsaSignFuncs[alg] = makeECDSASignFunc(h)
-		ecdsaVerifyFuncs[alg] = makeECDSAVerifyFunc(h)
-	}
-}
-
-func makeECDSASignFunc(hash crypto.Hash) ecdsaSignFunc {
-	return func(payload []byte, key *ecdsa.PrivateKey) ([]byte, error) {
-		curveBits := key.Curve.Params().BitSize
-		keyBytes := curveBits / 8
-		// Curve bits do not need to be a multiple of 8.
-		if curveBits%8 > 0 {
-			keyBytes++
+	for alg, hash := range algs {
+		ecdsaSigners[alg] = &ecdsaSigner{
+			alg:  alg,
+			hash: hash,
 		}
-		h := hash.New()
-		if _, err := h.Write(payload); err != nil {
-			return nil, errors.Wrap(err, "failed to write payload using ecdsa")
+		ecdsaVerifiers[alg] = &ecdsaVerifier{
+			alg:  alg,
+			hash: hash,
 		}
-		r, s, err := ecdsa.Sign(rand.Reader, key, h.Sum(nil))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
-		}
-
-		rBytes := r.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
-		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-		sBytes := s.Bytes()
-		sBytesPadded := make([]byte, keyBytes)
-		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-		out := append(rBytesPadded, sBytesPadded...)
-		return out, nil
 	}
 }
 
 func newECDSASigner(alg jwa.SignatureAlgorithm) Signer {
-	return &ECDSASigner{
-		alg:  alg,
-		sign: ecdsaSignFuncs[alg], // we know this will succeed
-	}
+	return ecdsaSigners[alg]
 }
 
-func (s ECDSASigner) Algorithm() jwa.SignatureAlgorithm {
+// ecdsaSigners are immutable.
+type ecdsaSigner struct {
+	alg  jwa.SignatureAlgorithm
+	hash crypto.Hash
+}
+
+func (s ecdsaSigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
 
-func (s ECDSASigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+type ecdsaCryptoSigner struct {
+	key  *ecdsa.PrivateKey
+	hash crypto.Hash
+}
+
+func (s *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	var privkey ecdsa.PrivateKey
-	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
-		return nil, errors.Wrapf(err, `failed to retrieve ecdsa.PrivateKey out of %T`, key)
+	signer, ok := key.(crypto.Signer)
+	if ok {
+		// We support crypto.Signer, but we DON'T support
+		// ecdsa.PrivateKey as a crypto.Signer, because it encodes
+		// the result in ASN1 format.
+		if pk, ok := key.(*ecdsa.PrivateKey); ok {
+			signer = newECDSACryptoSigner(pk, s.hash)
+		}
+	} else {
+		var privkey ecdsa.PrivateKey
+		if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve ecdsa.PrivateKey out of %T`, key)
+		}
+		signer = newECDSACryptoSigner(&privkey, s.hash)
 	}
 
-	return s.sign(payload, &privkey)
+	h := s.hash.New()
+	if _, err := h.Write(payload); err != nil {
+		return nil, errors.Wrap(err, "failed to write payload using ecdsa")
+	}
+	return signer.Sign(rand.Reader, h.Sum(nil), s.hash)
 }
 
-func makeECDSAVerifyFunc(hash crypto.Hash) ecdsaVerifyFunc {
-	return func(payload []byte, signature []byte, key *ecdsa.PublicKey) error {
-		r := pool.GetBigInt()
-		s := pool.GetBigInt()
-		defer pool.ReleaseBigInt(r)
-		defer pool.ReleaseBigInt(s)
-
-		n := len(signature) / 2
-		r.SetBytes(signature[:n])
-		s.SetBytes(signature[n:])
-
-		h := hash.New()
-		if _, err := h.Write(payload); err != nil {
-			return errors.Wrap(err, "failed to write payload using ecdsa")
-		}
-
-		if !ecdsa.Verify(key, h.Sum(nil), r, s) {
-			return errors.New(`failed to verify signature using ecdsa`)
-		}
-		return nil
+func newECDSACryptoSigner(key *ecdsa.PrivateKey, hash crypto.Hash) crypto.Signer {
+	return &ecdsaCryptoSigner{
+		key:  key,
+		hash: hash,
 	}
+}
+
+func (cs *ecdsaCryptoSigner) Public() crypto.PublicKey {
+	return cs.key.PublicKey
+}
+
+func (cs *ecdsaCryptoSigner) Sign(seed io.Reader, digest []byte, _ crypto.SignerOpts) ([]byte, error) {
+	r, s, err := ecdsa.Sign(seed, cs.key, digest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
+	}
+
+	curveBits := cs.key.Curve.Params().BitSize
+	keyBytes := curveBits / 8
+	// Curve bits do not need to be a multiple of 8.
+	if curveBits%8 > 0 {
+		keyBytes++
+	}
+
+	rBytes := r.Bytes()
+	rBytesPadded := make([]byte, keyBytes)
+	copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+	sBytes := s.Bytes()
+	sBytesPadded := make([]byte, keyBytes)
+	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+	out := append(rBytesPadded, sBytesPadded...)
+	return out, nil
+}
+
+// ecdsaVerifiers are immutable.
+type ecdsaVerifier struct {
+	alg  jwa.SignatureAlgorithm
+	hash crypto.Hash
 }
 
 func newECDSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
-	return &ECDSAVerifier{
-		verify: ecdsaVerifyFuncs[alg], // we know this will succeed
-	}
+	return ecdsaVerifiers[alg]
 }
 
-func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
+func (v ecdsaVerifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.alg
+}
+
+func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
 	if key == nil {
 		return errors.New(`missing public key while verifying payload`)
 	}
@@ -121,5 +144,22 @@ func (v ECDSAVerifier) Verify(payload []byte, signature []byte, key interface{})
 		return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
 	}
 
-	return v.verify(payload, signature, &pubkey)
+	r := pool.GetBigInt()
+	s := pool.GetBigInt()
+	defer pool.ReleaseBigInt(r)
+	defer pool.ReleaseBigInt(s)
+
+	n := len(signature) / 2
+	r.SetBytes(signature[:n])
+	s.SetBytes(signature[n:])
+
+	h := v.hash.New()
+	if _, err := h.Write(payload); err != nil {
+		return errors.Wrap(err, "failed to write payload using ecdsa")
+	}
+
+	if !ecdsa.Verify(&pubkey, h.Sum(nil), r, s) {
+		return errors.New(`failed to verify signature using ecdsa`)
+	}
+	return nil
 }

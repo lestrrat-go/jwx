@@ -2,6 +2,9 @@ Changes
 =======
 
 v1.2.6 (NOT YET RELEASED)
+[New features]
+  * Support `crypto.Signer` keys for RSA, ECDSA, and EdDSA family
+    of signatures in `jws.Sign`
 [Miscellaneous]
   * `jwx.GuessFormat()` now requires the presense of both `payload` and
     `signatures` keys for it to guess that a JSON object is a JWS message.
