@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.6 (NOT YET RELEASED)
+v1.2.6 24 Aug 2021
 [New features]
   * Support `crypto.Signer` keys for RSA, ECDSA, and EdDSA family
     of signatures in `jws.Sign`
