@@ -22,7 +22,7 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 
 # Description
 
-## Why?
+## History
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
 the libraries that already exist seemed sufficient, but soon I realized that
@@ -35,6 +35,42 @@ For example, a certain library looks like it had most of JWS, JWE, JWK covered, 
 Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
 So here's `github.com/lestrrat-go/jwx`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
+
+## Why would I use this library?
+
+There are several other major Go modules that handle JWT and related data formats,
+so why should you use this library?
+
+From a purely functional perspective, the only major difference is this:
+Whereas most other projects only deal with what they seem necessary to handle
+JWTs, this module handles the entire spectrum of JWS, JWE, JWK, and JWT.
+
+That is, if you need to not only parse JWTs, but also to control JWKs, or
+if you need to handle payloads that are NOT JWTs, you should probably consider
+using this module.
+
+Next, from an implementation perspective, this module differs significantly
+from others in that it tries very hard to expose only the APIs, and not the
+internal data. For example, individual JWT claims are not accessible through
+struct field lookups. You need to use one of the getter methods.
+
+This is because this library takes the stance that the end user is fully capable
+and even willing to shoot themselves on the foot when presented with a lax
+API. By making sure that users do not have access to open structs, we can protect
+users from doing silly things like creating _incomplete_ structs, or access the
+structs concurrently without any protection. This structure also allows
+us to put extra smarts in the structs, such as doing the right thing when
+you want to parse / write custom fields (this module does not require the user
+to specify alternate structs to parse objects with custom fields)
+
+In the end I think it comes down to your usage pattern, and priorities.
+Some general guidelines that come to mind are:
+
+* If you want a single library to handle everything JWx, such as handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/main/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
+* If you want to honor all possible custom fields transparently, use this module.
+* If you want a standardized clean API, use this module.
+
+Otherwise, feel free to choose something else.
 
 ## Backwards Compatibility Notice
 
