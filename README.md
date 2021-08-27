@@ -72,35 +72,14 @@ Some general guidelines that come to mind are:
 
 Otherwise, feel free to choose something else.
 
-## Backwards Compatibility Notice
+# How to Use
 
-### Users of github.com/lestrrat/go-jwx
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
+* [How-to style documentation](./docs)
+* [Runnable Examples](./examples)
+* Test files.
 
-Uh, why are you using such an ancient version? You know that repository is archived for a reason, yeah? Please use the new version.
-
-### Pre-1.0.0 users
-
-The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
-
-### v1.0.x users
-
-The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
-
-# Command Line Tool
-
-Since v1.1.1 we have a command line tool `jwx` (*). With `jwx` you can create JWKs (from PEM files, even), sign and verify JWS message, encrypt and decrypt JWE messages, etc.
-
-(*) Okay, it existed since a long time ago, but it was never useful.
-
-## Installation
-
-```
-go install github.com/lestrrat-go/jwx/cmd/jwx
-```
-
-# How-to style documentation
-
-If you are looking for FAQs or want to look for ways to do X, you may have an easier time navigating through the [documentation here](./docs)
+(Depending on what you want to do, you will need navigate between multiple packages within this package)
 
 # Global Settings
 
@@ -209,12 +188,33 @@ Do be aware that this has *global* effect. In the above example, all JWT tokens 
 the `"x-foo-bar"` key will decode in the same way. If you need this behavior from
 `jwe`, `jwk`, or `jws` packages, you need to do the same thing for each package.
 
-# Other related libraries:
+# Command Line Tool
 
-* https://github.com/dgrijalva/jwt-go
-* https://github.com/square/go-jose
-* https://github.com/coreos/go-oidc
-* https://pkg.go.dev/golang.org/x/oauth2
+Since v1.1.1 we have a command line tool `jwx` (*). With `jwx` you can create JWKs (from PEM files, even), sign and verify JWS message, encrypt and decrypt JWE messages, etc.
+
+(*) Okay, it existed since a long time ago, but it was never useful.
+
+## Installation
+
+```
+go install github.com/lestrrat-go/jwx/cmd/jwx
+```
+
+# Caveats
+
+## Backwards Compatibility Notice
+
+### Users of github.com/lestrrat/go-jwx
+
+Uh, why are you using such an ancient version? You know that repository is archived for a reason, yeah? Please use the new version.
+
+### Pre-1.0.0 users
+
+The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
+
+### v1.0.x users
+
+The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
 
 # Contributions
 
