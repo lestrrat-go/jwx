@@ -7,7 +7,7 @@ Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html
   * Convert to and from raw key types (e.g. *rsa.PrivateKey)
 * Ability to keep a JWKS fresh.
 
-How-to style documentation can be found in the docs directory](../docs).
+How-to style documentation can be found in the [docs directory](../docs).
 
 Examples are located in the examples directory ([jwk_example_test.go](../examples/jwk_example_test.go))
 
