@@ -1,6 +1,6 @@
 # github.com/lestrrat-go/jwx ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx) [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=main)](http://codecov.io/github/lestrrat-go/jwx?branch=main)
 
-Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx technologies. Please click on the package names in the table below to find the synopsis/description for each package.
+Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx technologies.
 
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
@@ -9,6 +9,15 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 | [jwa](https://github.com/lestrrat-go/jwx/tree/main/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
 | [jws](https://github.com/lestrrat-go/jwx/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
 | [jwe](https://github.com/lestrrat-go/jwx/tree/main/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
+
+# How to Use
+
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
+* [How-to style documentation](./docs)
+* [Runnable Examples](./examples)
+* Test files.
+
+(Depending on what you want to do, you will need navigate between multiple packages within this package)
 
 # Description
 
@@ -61,15 +70,6 @@ Some general guidelines that come to mind are:
 * If you want a standardized clean API, use this module.
 
 Otherwise, feel free to choose something else.
-
-# How to Use
-
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
-* [How-to style documentation](./docs)
-* [Runnable Examples](./examples)
-* Test files.
-
-(Depending on what you want to do, you will need navigate between multiple packages within this package)
 
 # Command Line Tool
 
