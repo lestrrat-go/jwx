@@ -6,6 +6,8 @@ Package jwe implements JWE as described in [RFC7516](https://tools.ietf.org/html
 * Content compression and decompression
 * Add arbitrary fields in the JWE header object
 
+How-to style documentation can be found in the docs directory](../docs).
+
 Examples are located in the examples directory ([jwe_example_test.go](../examples/jwe_example_test.go))
 
 Supported key encryption algorithm:

@@ -9,6 +9,8 @@ Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html
 * Ability to add/replace existing signature methods
 * Respect "b64" settings for RFC7797
 
+How-to style documentation can be found in the docs directory](../docs).
+
 Examples are located in the examples directory ([jws_example_test.go](../examples/jws_example_test.go))
 
 Supported signature algorithms:
