@@ -15,9 +15,6 @@ Command line tool [jwx](./cmd/jwx) and libraries implementing various JWx techno
 * [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
 * [How-to style documentation](./docs)
 * [Runnable Examples](./examples)
-* Test files.
-
-(Depending on what you want to do, you will need navigate between multiple packages within this package)
 
 # Description
 
