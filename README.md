@@ -10,15 +10,11 @@ Various libraries implementing various JWx technologies. Please click on the pac
 | [jws](https://github.com/lestrrat-go/jwx/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
 | [jwe](https://github.com/lestrrat-go/jwx/tree/main/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 
-# Index
+# How to Use
 
-* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx)
-  * HTML version of what you can see using `go doc` command
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
 * [How-to style documentation](./docs)
-  * Frequently asked questions.
-  * How to JWx That? Documentation by example.
-* Overview of this package
-  * Read on for more gory details.
+* [Runnable Examples](./examples)
 
 # Description
 
@@ -66,127 +62,11 @@ to specify alternate structs to parse objects with custom fields)
 In the end I think it comes down to your usage pattern, and priorities.
 Some general guidelines that come to mind are:
 
-* If you want a single library to handle everything JWx, such as handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/main/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
+* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/main/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
 * If you want to honor all possible custom fields transparently, use this module.
 * If you want a standardized clean API, use this module.
 
 Otherwise, feel free to choose something else.
-
-# How to Use
-
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx)
-* [How-to style documentation](./docs)
-* [Runnable Examples](./examples)
-* Test files.
-
-(Depending on what you want to do, you will need navigate between multiple packages within this package)
-
-# Global Settings
-
-## Allowing single element in 'aud' field
-
-When you marshal `"github.com/lestrrat-go/jwx/jwt".Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
-
-The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/issues/368)).
-
-```
-{
-  "aud": ["foo"],
-  ...
-}
-```
-
-```
-{
-  "aud": "foo",
-  ...
-}
-```
-
-To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option.
-
-```go
-func init() {
-  jwt.Settings(jwt.WithFlattenAudience(true))
-}
-```
-
-The above call will force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has global effect.
-
-## Enabling ES256K
-
-Some algorithms are intentionally left out because they are not as common in the wild, and you may want to avoid compiling this extra information in.
-To enable these, you must explicitly provide a build tag.
-
-| Algorithm        | Build Tag  |
-|:-----------------|:-----------|
-| secp256k1/ES256K | jwx_es256k |
-
-If you do not provide these tags, the program will still compile, but it will return an error during runtime saying that these algorithms are not supported.
-
-## Switching to a faster JSON library
-
-By default we use the standard library's `encoding/json` for all of our JSON needs.
-However, if performance for parsing/serializing JSON is really important to you, you might want to enable [github.com/goccy/go-json](https://github.com/goccy/go-json) by enabling the `jwx_goccy` tag.
-
-```shell
-% go build -tags jwx_goccy ...
-```
-
-[github.com/goccy/go-json](https://github.com/goccy/go-json) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it **IF** it breaks. Please note that that's a big "if".
-As of github.com/goccy/go-json@v0.3.3 I haven't see any problems, and I would say that it is mostly stable.
-
-However, it is a dependency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
-If you know what you are doing, I highly recommend enabling this module -- all you need to do is to enable this tag.
-Disable the tag if you feel like it's not worth the hassle.
-
-And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
-
-## Using json.Number
-
-If you want to parse numbers in the incoming JSON objects as json.Number
-instead of floats, you can use the following call to globally affect the behavior of JSON parsing.
-
-```go
-func init() {
-  jwx.DecoderSettings(jwx.WithUseNumber(true))
-}
-```
-
-Do be aware that this has *global* effect. All code that calls in to `encoding/json`
-within `jwx` *will* use your settings.
-
-## Decode private fields to objects
-
-Packages within `github.com/lestrrat-go/jwx` parses known fields into pre-defined types,
-but for everything else (usually called private fields/headers/claims) are decoded into
-wharever `"encoding/json".Unmarshal` deems appropriate.
-
-For example, JSON objects are converted to `map[string]interface{}`, JSON arrays into
-`[]interface{}`, and so on.
-
-Sometimes you know beforehand that it makes sense for certain fields to be decoded into
-proper objects instead of generic maps or arrays. When you encounter this, you can use
-the `RegisterCustomField()` method in each of `jwe`, `jwk`, `jws`, and `jwt` packages.
-
-```go
-func init() {
-  jwt.RegisterCustomField(`x-foo-bar`, mypkg.FooBar{})
-}
-```
-
-This tells the decoder that when it encounters a JWT token with the field named
-`"x-foo-bar"`, it should be decoded to an instance of `mypkg.FooBar`. Then you can
-access this value by using `Get()`
-
-```go
-v, _ := token.Get(`x-foo-bar`)
-foobar := v.(mypkg.FooBar)
-```
-
-Do be aware that this has *global* effect. In the above example, all JWT tokens containing
-the `"x-foo-bar"` key will decode in the same way. If you need this behavior from
-`jwe`, `jwk`, or `jws` packages, you need to do the same thing for each package.
 
 # Command Line Tool
 

@@ -10,7 +10,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
-
+* [Enabling ES256K](#enabling-es256k)
 # Parsing
 
 ## Getting the payload from a JWS encoded buffer
@@ -85,3 +85,7 @@ generate your own verifier instance.
 jws.RegisterSigner(alg, signerFactory)
 jws.RegisterVerifier(alg, verifierFactory)
 ```
+
+# Enabling ES256K
+
+See [Enabling Optional Signature Methods](./20-global-settings.md#enabling-optional-signature-methods)
