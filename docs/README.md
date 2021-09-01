@@ -4,7 +4,6 @@ Here you will find bits and pieces of code explaining how to perform certain Jav
 
 Technical details: The code and command invocations in the following articles were tested and run using github.com/lestrrat-go/jwx@v1.1.5 on go 1.16, MacBook Pro (M1, 2020)
 
-# Index
 
 * [Anatomy of JOSE](./00-anatomy.md)
 * [Working with JWT](./01-jwt.md)
@@ -12,4 +11,5 @@ Technical details: The code and command invocations in the following articles we
 * Working with JWE (TODO)
 * [Working with JWK](./04-jwk.md)
 * [Architecture and Design](./10-design.md)
+* [Global Settings](./20-global-settings.md)
 * [Frequently Asked Questions](./99-faq.md)

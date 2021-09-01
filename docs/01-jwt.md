@@ -16,7 +16,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
 * [Serialization](#jwt-serialization)
   * [Serialize using JWS](#serialize-using-jws
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
-
+  * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
 
 ---
 
@@ -141,3 +141,35 @@ serizlied, err := jwt.NewSerializer().
 ```
 
 If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()`
+
+## Serialize the the `aud` field as a single string
+
+When you marshal `jwt.Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
+
+The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/issues/368)).
+
+```
+{
+  "aud": ["foo"],
+  ...
+}
+```
+
+```
+{
+  "aud": "foo",
+  ...
+}
+```
+
+To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option.
+
+```go
+func init() {
+  jwt.Settings(jwt.WithFlattenAudience(true))
+}
+```
+
+The above call will force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has global effect.
+
+
