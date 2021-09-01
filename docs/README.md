@@ -12,4 +12,5 @@ Technical details: The code and command invocations in the following articles we
 * [Working with JWK](./04-jwk.md)
 * [Architecture and Design](./10-design.md)
 * [Global Settings](./20-global-settings.md)
+* [Integrating With Frameworks](./21-frameworks.md)
 * [Frequently Asked Questions](./99-faq.md)
