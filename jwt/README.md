@@ -10,6 +10,8 @@ Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.i
 * Verify signed tokens
 * Extra support for OpenID tokens via [github.com/lestrrat-go/jwx/jwt/openid](./jwt/openid)
 
+How-to style documentation can be found in the [docs directory](../docs).
+
 More examples are located in the examples directory ([jwt_example_test.go](../examples/jwt_example_test.go))
 
 # SYNOPSIS
