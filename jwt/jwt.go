@@ -147,7 +147,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	if ks := ctx.keySet; ks != nil {
 		alg, key, err := lookupMatchingKey(data, ks, ctx.useDefault)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to find matching key for verification`)
+			return nil, errors.Wrap(err, `failed to find matching key for verification (did you remember to add "kid" and "alg" fields to your key and your JWT?)`)
 		}
 		ctx.verifyParams = &verifyParams{alg: alg, key: key}
 	}

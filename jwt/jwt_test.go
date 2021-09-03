@@ -608,7 +608,10 @@ func TestParseRequest(t *testing.T) {
 	const u = "https://github.com/lestrrat-gow/jwx/jwt"
 
 	privkey, _ := jwxtest.GenerateEcdsaJwk()
+	privkey.Set(jwk.AlgorithmKey, jwa.ES256)
+	privkey.Set(jwk.KeyIDKey, `my-awesome-key`)
 	pubkey, _ := jwk.PublicKeyOf(privkey)
+	pubkey.Set(jwk.AlgorithmKey, jwa.ES256)
 
 	tok := jwt.New()
 	tok.Set(jwt.IssuerKey, u)
@@ -648,7 +651,7 @@ func TestParseRequest(t *testing.T) {
 			Error: true,
 		},
 		{
-			Name: "Token in Authorization header (w/o options)",
+			Name: "Token in Authorization header (w/o extra options)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
 				req.Header.Add("Authorization", "Bearer "+string(signed))
@@ -656,6 +659,19 @@ func TestParseRequest(t *testing.T) {
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Token in Authorization header (w/o extra options, using jwk.Set)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				set := jwk.NewSet()
+				set.Add(pubkey)
+				return jwt.ParseRequest(req, jwt.WithKeySet(set))
 			},
 		},
 		{
