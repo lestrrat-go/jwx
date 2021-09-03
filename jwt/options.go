@@ -170,6 +170,9 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // set. This is because we need to know the exact algorithm that
 // you (the user) wants to use to verify the token. We do NOT
 // trust the token's headers, because they can easily be tampered with.
+//
+// If you have only one key in the set, and are sure you want to
+// use that key, you can use the `jwt.WithDefaultKey` option.
 func WithKeySet(set jwk.Set) ParseOption {
 	return newParseOption(identKeySet{}, set)
 }
