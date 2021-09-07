@@ -698,6 +698,18 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
+			Name: "Invalid token in x-authorization header",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("x-authorization", string(signed)+"foobarbaz")
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
 			Name: "Token in access_token form field (w/ option)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, u, nil)
@@ -726,6 +738,21 @@ func TestParseRequest(t *testing.T) {
 			},
 			Error: true,
 		},
+		{
+			Name: "Invalid token in access_token form field",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, u, nil)
+				// for whatever reason, I can't populate req.Body and get this to work
+				// so populating req.Form directly instead
+				req.Form = url.Values{}
+				req.Form.Add("access_token", string(signed)+"foobarbarz")
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey), jwt.WithFormKey("access_token"))
+			},
+			Error: true,
+		},
 	}
 
 	for _, tc := range testcases {
@@ -733,6 +760,7 @@ func TestParseRequest(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			got, err := tc.Parse(tc.Request())
 			if tc.Error {
+				t.Logf("%s", err)
 				assert.Error(t, err, `tc.Parse should fail`)
 				return
 			}
