@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/pkg/errors"
 )
 
@@ -75,10 +76,24 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		hdrkeys = append(hdrkeys, "Authorization")
 	}
 
+	mhdrs := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mhdrs)
+	mfrms := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mfrms)
+
 	for _, hdrkey := range hdrkeys {
-		if tok, err := ParseHeader(req.Header, hdrkey, parseOptions...); err == nil {
-			return tok, nil
+		// Check presence via a direct map lookup
+		if _, ok := req.Header[http.CanonicalHeaderKey(hdrkey)]; !ok {
+			// if non-existent, not error
+			continue
 		}
+
+		tok, err := ParseHeader(req.Header, hdrkey, parseOptions...)
+		if err != nil {
+			mhdrs[hdrkey] = err
+			continue
+		}
+		return tok, nil
 	}
 
 	if cl := req.ContentLength; cl > 0 {
@@ -88,9 +103,18 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	}
 
 	for _, formkey := range formkeys {
-		if tok, err := ParseForm(req.Form, formkey, parseOptions...); err == nil {
-			return tok, nil
+		// Check presence via a direct map lookup
+		if _, ok := req.Form[formkey]; !ok {
+			// if non-existent, not error
+			continue
 		}
+
+		tok, err := ParseForm(req.Form, formkey, parseOptions...)
+		if err != nil {
+			mfrms[formkey] = err
+			continue
+		}
+		return tok, nil
 	}
 
 	// Everything below is a preulde to error reporting.
@@ -111,12 +135,8 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	}
 
 	var b strings.Builder
-	b.WriteString(`failed to find token in any location of the request (tried: [header keys: `)
-	if triedHdrs.Len() == 0 {
-		b.WriteString(`"Authorization"`)
-	} else {
-		b.WriteString(triedHdrs.String())
-	}
+	b.WriteString(`failed to find a valid token in any location of the request (tried: [header keys: `)
+	b.WriteString(triedHdrs.String())
 	b.WriteByte(']')
 	if triedForms.Len() > 0 {
 		b.WriteString(", form keys: [")
@@ -125,5 +145,43 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	}
 	b.WriteByte(')')
 
+	lmhdrs := len(mhdrs)
+	lmfrms := len(mfrms)
+	if lmhdrs > 0 || lmfrms > 0 {
+		b.WriteString(". Additionally, errors were encountered during attempts to parse")
+
+		if lmhdrs > 0 {
+			b.WriteString(" headers: (")
+			count := 0
+			for hdrkey, err := range mhdrs {
+				if count > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString("[header key: ")
+				b.WriteString(strconv.Quote(hdrkey))
+				b.WriteString(", error: ")
+				b.WriteString(strconv.Quote(err.Error()))
+				b.WriteString("]")
+				count++
+			}
+			b.WriteString(")")
+		}
+
+		if lmfrms > 0 {
+			count := 0
+			b.WriteString(" forms: (")
+			for formkey, err := range mfrms {
+				if count > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString("[form key: ")
+				b.WriteString(strconv.Quote(formkey))
+				b.WriteString(", error: ")
+				b.WriteString(strconv.Quote(err.Error()))
+				b.WriteString("]")
+				count++
+			}
+		}
+	}
 	return nil, errors.New(b.String())
 }

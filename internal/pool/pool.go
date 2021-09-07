@@ -38,3 +38,21 @@ func GetBigInt() *big.Int {
 func ReleaseBigInt(i *big.Int) {
 	bigIntPool.Put(i.SetInt64(0))
 }
+
+var keyToErrorMapPool = sync.Pool{
+	New: allocKeyToErrorMap,
+}
+
+func allocKeyToErrorMap() interface{} {
+	return make(map[string]error)
+}
+
+func GetKeyToErrorMap() map[string]error {
+	return keyToErrorMapPool.Get().(map[string]error)
+}
+
+func ReleaseKeyToErrorMap(m map[string]error) {
+	for key := range m {
+		delete(m, key)
+	}
+}
