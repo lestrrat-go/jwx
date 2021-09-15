@@ -1,6 +1,9 @@
 package jwt_test
 
 import (
+	"errors"
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -254,5 +257,105 @@ func TestGHIssue10(t *testing.T) {
 		if !assert.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "")), "t1.Validate should fail") {
 			return
 		}
+	})
+}
+
+func TestValidateWithFuncs(t *testing.T) {
+	t.Parallel()
+	t.Run("interface{}", func(t *testing.T) {
+		t.Parallel()
+		err0 := errors.New("not a map")
+		err1 := errors.New("k does not exist")
+		err2 := errors.New("v is not v")
+		fn := func(c interface{}) (bool, error) {
+			m, ok := c.(map[string]interface{})
+			if !ok {
+				return false, err0
+			}
+			v, ok := m["k"]
+			if !ok {
+				return false, err1
+			}
+			if v != "v" {
+				return false, err2
+			}
+			return true, nil
+		}
+		t.Run("object is expected", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("object", map[string]interface{}{"k": "v"}))
+			assert.NoError(t, jwt.Validate(t1, jwt.WithValidateClaimFn("object", fn)))
+		})
+		t.Run("object does not exist", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("oobject", map[string]interface{}{"k": "v"}))
+			assert.EqualError(t, jwt.Validate(t1, jwt.WithValidateClaimFn("object", fn)), "object not satisfied")
+		})
+		t.Run(err0.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("object", map[interface{}]interface{}{"k": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidateClaimFn("object", fn)), err0)
+		})
+		t.Run(err1.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("object", map[string]interface{}{"kk": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidateClaimFn("object", fn)), err1)
+		})
+		t.Run(err2.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("object", map[string]interface{}{"k": "vv"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidateClaimFn("object", fn)), err2)
+		})
+	})
+
+	t.Run("string", func(t *testing.T) {
+		t.Parallel()
+		err := errors.New("not a valid email")
+		fn := func(c string) (bool, error) {
+			if strings.Count(c, "@") != 1 {
+				return false, err
+			}
+			return true, nil
+		}
+		t.Run("email is valid", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("email", "example@example.com"))
+			assert.NoError(t, jwt.Validate(t1, jwt.WithValidateClaimStringFn("email", fn)))
+		})
+		t.Run("invalid email", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("email", "invalid@@@example.com"))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidateClaimStringFn("email", fn)), err)
+		})
+	})
+
+	t.Run("float64", func(t *testing.T) {
+		t.Parallel()
+		err := errors.New("not pi")
+		fn := func(c float64) (bool, error) {
+			if c < 3.140 || 3.142 < c {
+				return false, err
+			}
+			return true, nil
+		}
+		t.Run("expected float64 value", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("pi", math.Pi))
+			assert.NoError(t, jwt.Validate(t1, jwt.WithValidateClaimFloat64Fn("pi", fn)))
+		})
+		t.Run("invalid float64 value", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("pi", 3.0))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidateClaimFloat64Fn("pi", fn)), err)
+		})
 	})
 }
