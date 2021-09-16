@@ -160,7 +160,7 @@ func PublicSetOf(v Set) (Set, error) {
 //
 // If `v` is a raw key, the key is first converted to a `jwk.Key`
 func PublicKeyOf(v interface{}) (Key, error) {
-	if pk, ok := v.(Key); ok {
+	if pk, ok := v.(PublicKeyer); ok {
 		return pk.PublicKey()
 	}
 
@@ -180,7 +180,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 // except when a []byte (e.g. symmetric key, ed25519 key) is passed to `v`.
 // In this case, the same []byte value is returned.
 func PublicRawKeyOf(v interface{}) (interface{}, error) {
-	if pk, ok := v.(Key); ok {
+	if pk, ok := v.(PublicKeyer); ok {
 		pubk, err := pk.PublicKey()
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to obtain public key from %T`, v)
