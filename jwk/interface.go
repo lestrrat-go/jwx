@@ -96,6 +96,7 @@ type HeaderIterator = mapiter.Iterator
 type KeyPair = arrayiter.Pair
 type KeyIterator = arrayiter.Iterator
 
+// PublicKeyer is a deprecated interface. This functionality has been merged with jwk.Key
 type PublicKeyer interface {
 	// PublicKey creates the corresponding PublicKey type for this object.
 	// All fields are copied onto the new public key, except for those that are not allowed.

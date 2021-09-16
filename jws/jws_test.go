@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -1346,4 +1348,108 @@ func TestRFC7797(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAlgorithmsForKey(t *testing.T) {
+	testcases := []struct {
+		Name     string
+		Key      interface{}
+		Expected []jwa.SignatureAlgorithm
+	}{
+		{
+			Name:     "Octet sequence",
+			Key:      []byte("hello"),
+			Expected: []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512},
+		},
+		{
+			Name:     "rsa.PublicKey",
+			Key:      rsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "*rsa.PublicKey",
+			Key:      &rsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "jwk.RSAPublicKey",
+			Key:      jwk.NewRSAPublicKey(),
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "ecdsa.PublicKey",
+			Key:      ecdsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "*ecdsa.PublicKey",
+			Key:      &ecdsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "jwk.ECDSAPublicKey",
+			Key:      jwk.NewECDSAPublicKey(),
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "rsa.PrivateKey",
+			Key:      rsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "*rsa.PrivateKey",
+			Key:      &rsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "jwk.RSAPrivateKey",
+			Key:      jwk.NewRSAPrivateKey(),
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "ecdsa.PrivateKey",
+			Key:      ecdsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "*ecdsa.PrivateKey",
+			Key:      &ecdsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "jwk.ECDSAPrivateKey",
+			Key:      jwk.NewECDSAPrivateKey(),
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "ed25519.PublicKey",
+			Key:      ed25519.PublicKey(nil),
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+		},
+		{
+			Name:     "x25519.PublicKey",
+			Key:      x25519.PublicKey(nil),
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		sort.Slice(tc.Expected, func(i, j int) bool {
+			return tc.Expected[i].String() < tc.Expected[j].String()
+		})
+		t.Run(tc.Name, func(t *testing.T) {
+			algs, err := jws.AlgorithmsForKey(tc.Key)
+			if !assert.NoError(t, err, `jws.AlgorithmsForKey should succeed`) {
+				return
+			}
+
+			sort.Slice(algs, func(i, j int) bool {
+				return algs[i].String() < algs[j].String()
+			})
+			if !assert.Equal(t, tc.Expected, algs, `results should match`) {
+				return
+			}
+		})
+	}
 }

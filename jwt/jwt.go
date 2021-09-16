@@ -86,15 +86,16 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 }
 
 type parseCtx struct {
-	decryptParams DecryptParameters
-	verifyParams  VerifyParameters
-	keySet        jwk.Set
-	token         Token
-	validateOpts  []ValidateOption
-	localReg      *json.Registry
-	pedantic      bool
-	useDefault    bool
-	validate      bool
+	decryptParams  DecryptParameters
+	verifyParams   VerifyParameters
+	keySet         jwk.Set
+	token          Token
+	validateOpts   []ValidateOption
+	localReg       *json.Registry
+	inferAlgorithm bool
+	pedantic       bool
+	useDefault     bool
+	validate       bool
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
@@ -135,22 +136,102 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				ctx.localReg = json.NewRegistry()
 			}
 			ctx.localReg.Register(pair.Name, pair.Value)
+		case identInferAlgorithmFromKey{}:
+			ctx.inferAlgorithm = o.Value().(bool)
 		}
 	}
 
 	data = bytes.TrimSpace(data)
 
-	// TODO: This must be moved elsewhere
-	// If with matching kid is true, then look for the corresponding key in the
-	// given key set, by matching the "kid" key
-	if ks := ctx.keySet; ks != nil {
-		alg, key, err := lookupMatchingKey(data, ks, ctx.useDefault)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to find matching key for verification (did you remember to add "kid" and "alg" fields to your key and your JWT?)`)
-		}
-		ctx.verifyParams = &verifyParams{alg: alg, key: key}
+	// We got a regular, just run with it
+	ks := ctx.keySet
+	if ks == nil {
+		return parse(&ctx, data)
 	}
-	return parse(&ctx, data)
+
+	// bail out early if we don't even have a key in the set
+	if ks.Len() == 0 {
+		return nil, errors.New(`empty keyset provided`)
+	}
+
+	// We have a key set. bummer. we may need to do shady things
+	// First we need to match `kid`s so we need to parse the JWS
+	msg, err := jws.Parse(data)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to parse token data as JWS message`)
+	}
+
+	// Find the kid. we need the kid, unless the user explicitly
+	// specified to use the "default" (the first and only) key in the set
+	headers := msg.Signatures()[0].ProtectedHeaders()
+	kid := headers.KeyID()
+	if kid == "" {
+		if !ctx.useDefault {
+			return nil, errors.New(`failed to find matching key: no key ID ("kid") specified in token`)
+		} else if ctx.useDefault && ks.Len() > 1 {
+			return nil, errors.New(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
+		}
+	}
+
+	var key jwk.Key
+	var ok bool
+	if kid == "" {
+		key, ok = ks.Get(0)
+		if !ok {
+			return nil, errors.New(`empty keyset`) // can't happen
+		}
+	} else {
+		key, ok = ks.LookupKeyID(kid)
+		if !ok {
+			return nil, errors.Errorf(`failed to find key with key ID %q in key set`, kid)
+		}
+	}
+
+	if v := key.Algorithm(); v != "" {
+		var alg jwa.SignatureAlgorithm
+		if err := alg.Accept(v); err != nil {
+			return nil, errors.Wrapf(err, `invalid signature algorithm %s`, key.Algorithm())
+		}
+
+		// Okay, we have a valid algorithm, go go
+		ctx.verifyParams = &verifyParams{alg: alg, key: key}
+		return parse(&ctx, data)
+	}
+
+	// If we got here, it means we were not able to find the correct algorithm
+	// from the matched key.
+	if !ctx.inferAlgorithm {
+		// But no, we will bail out if we were not explicitly told to do this
+		return nil, errors.New(`failed to find a matching key: "alg" field not provided in key, and algorithm inference disabled`)
+	}
+
+	// We need to first deduce the signature methods
+	// that we could use for the given key, and then keep trying until we
+	// find one that works
+	for iter := ks.Iterate(context.Background()); iter.Next(context.Background()); {
+		pair := iter.Pair()
+		key := pair.Value.(jwk.Key)
+		algs, err := jws.AlgorithmsForKey(key)
+		if err != nil {
+			return nil, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
+		}
+
+		for _, alg := range algs {
+			// bail out if the JWT has a `alg` field, and it doesn't match
+			if tokAlg := headers.Algorithm(); tokAlg != "" {
+				if tokAlg != alg {
+					continue
+				}
+			}
+
+			ctx.verifyParams = &verifyParams{alg: alg, key: key}
+			if tok, err := parse(&ctx, data); err == nil {
+				return tok, nil
+			}
+		}
+	}
+
+	return nil, errors.New(`failed to match any of the keys`)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
@@ -288,49 +369,6 @@ OUTER:
 		}
 	}
 	return ctx.token, nil
-}
-
-func lookupMatchingKey(data []byte, keyset jwk.Set, useDefault bool) (jwa.SignatureAlgorithm, interface{}, error) {
-	msg, err := jws.Parse(data)
-	if err != nil {
-		return "", nil, errors.Wrap(err, `failed to parse token data`)
-	}
-
-	headers := msg.Signatures()[0].ProtectedHeaders()
-	kid := headers.KeyID()
-	if kid == "" {
-		if !useDefault {
-			return "", nil, errors.New(`failed to find matching key: no key ID specified in token`)
-		} else if useDefault && keyset.Len() > 1 {
-			return "", nil, errors.New(`failed to find matching key: no key ID specified in token but multiple in key set`)
-		}
-	}
-
-	var key jwk.Key
-	var ok bool
-	if kid == "" {
-		key, ok = keyset.Get(0)
-		if !ok {
-			return "", nil, errors.New(`empty keyset`)
-		}
-	} else {
-		key, ok = keyset.LookupKeyID(kid)
-		if !ok {
-			return "", nil, errors.Errorf(`failed to find matching key for key ID %#v in key set`, kid)
-		}
-	}
-
-	var rawKey interface{}
-	if err := key.Raw(&rawKey); err != nil {
-		return "", nil, errors.Wrapf(err, `failed to construct raw key from keyset (key ID=%#v)`, kid)
-	}
-
-	var alg jwa.SignatureAlgorithm
-	if err := alg.Accept(key.Algorithm()); err != nil {
-		return "", nil, errors.Wrapf(err, `invalid signature algorithm %s`, key.Algorithm())
-	}
-
-	return alg, rawKey, nil
 }
 
 // Sign is a convenience function to create a signed JWT token serialized in

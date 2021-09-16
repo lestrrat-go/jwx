@@ -117,70 +117,180 @@ func TestJWTParse(t *testing.T) {
 
 func TestJWTParseVerify(t *testing.T) {
 	t.Parallel()
-	alg := jwa.RS256
-	key, err := jwxtest.GenerateRsaKey()
+
+	var keys []interface{}
+
+	keys = append(keys, []byte("abra cadabra"))
+
+	rsaPrivKey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
 		return
 	}
+	keys = append(keys, rsaPrivKey)
 
-	kid := "test-jwt-parse-verify-kid"
-	hdrs := jws.NewHeaders()
-	hdrs.Set(jws.KeyIDKey, kid)
-
-	t1 := jwt.New()
-
-	signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
-	if !assert.NoError(t, err, "token.Sign should succeed") {
-		return
+	for _, alg := range []jwa.EllipticCurveAlgorithm{jwa.P256, jwa.P384, jwa.P521} {
+		ecdsaPrivKey, err := jwxtest.GenerateEcdsaKey(alg)
+		if !assert.NoError(t, err, "jwxtest.GenerateEcdsaKey should succeed for %s", alg) {
+			return
+		}
+		keys = append(keys, ecdsaPrivKey)
 	}
 
-	t.Run("Parse (w/jwk.Set)", func(t *testing.T) {
-		t.Parallel()
-		t.Run("Automatically pick a key from set", func(t *testing.T) {
-			t.Parallel()
-			pubkey := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+	ed25519PrivKey, err := jwxtest.GenerateEd25519Key()
+	if !assert.NoError(t, err, `jwxtest.GenerateEd25519Key should succed`) {
+		return
+	}
+	keys = append(keys, ed25519PrivKey)
+
+	for _, key := range keys {
+		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
+			algs, err := jws.AlgorithmsForKey(key)
+			if !assert.NoError(t, err, `jwas.AlgorithmsForKey should succeed`) {
 				return
 			}
-
-			pubkey.Set(jwk.AlgorithmKey, alg)
-			pubkey.Set(jwk.KeyIDKey, kid)
-
-			set := jwk.NewSet()
-			set.Add(pubkey)
-			t2, err := jwt.Parse(signed, jwt.WithKeySet(set))
-			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
-				return
+			testcases := []struct {
+				SetAlgorithm   bool
+				SetKid         bool
+				InferAlgorithm bool
+				Error          bool
+			}{
+				{
+					SetAlgorithm:   true,
+					SetKid:         true,
+					InferAlgorithm: true,
+				},
+				{
+					SetAlgorithm:   true,
+					SetKid:         true,
+					InferAlgorithm: false,
+				},
+				{
+					SetAlgorithm:   true,
+					SetKid:         false,
+					InferAlgorithm: true,
+					Error:          true,
+				},
+				{
+					SetAlgorithm:   false,
+					SetKid:         true,
+					InferAlgorithm: true,
+				},
+				{
+					SetAlgorithm:   false,
+					SetKid:         true,
+					InferAlgorithm: false,
+					Error:          true,
+				},
+				{
+					SetAlgorithm:   false,
+					SetKid:         false,
+					InferAlgorithm: true,
+					Error:          true,
+				},
+				{
+					SetAlgorithm:   true,
+					SetKid:         false,
+					InferAlgorithm: false,
+					Error:          true,
+				},
+				{
+					SetAlgorithm:   false,
+					SetKid:         false,
+					InferAlgorithm: false,
+					Error:          true,
+				},
 			}
+			for _, alg := range algs {
+				for _, tc := range testcases {
+					tc := tc
+					t.Run(fmt.Sprintf("Algorithm=%s, SetAlgorithm=%t, SetKid=%t, InferAlgorithm=%t, Expect Error=%t", alg, tc.SetAlgorithm, tc.SetKid, tc.InferAlgorithm, tc.Error), func(t *testing.T) {
+						t.Parallel()
 
-			if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
-				return
+						const kid = "test-jwt-parse-verify-kid"
+						hdrs := jws.NewHeaders()
+						hdrs.Set(jws.KeyIDKey, kid)
+
+						t1 := jwt.New()
+						signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
+						if !assert.NoError(t, err, "token.Sign should succeed") {
+							return
+						}
+
+						pubkey, err := jwk.PublicKeyOf(key)
+						if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+							return
+						}
+
+						if tc.SetAlgorithm {
+							pubkey.Set(jwk.AlgorithmKey, alg)
+						}
+
+						if tc.SetKid {
+							pubkey.Set(jwk.KeyIDKey, kid)
+						}
+
+						set := jwk.NewSet()
+						set.Add(pubkey)
+
+						options := []jwt.ParseOption{jwt.WithKeySet(set)}
+						if tc.InferAlgorithm {
+							options = append(options, jwt.InferAlgorithmFromKey(true))
+						}
+						t2, err := jwt.Parse(signed, options...)
+
+						if tc.Error {
+							assert.Error(t, err, `jwt.Parse should fail`)
+							return
+						}
+
+						if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+							return
+						}
+
+						if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
+							return
+						}
+					})
+				}
 			}
 		})
-		t.Run("No kid should fail", func(t *testing.T) {
+	}
+	t.Run("Miscellaneous", func(t *testing.T) {
+		key, err := jwxtest.GenerateRsaKey()
+		if !assert.NoError(t, err, "RSA key generated") {
+			return
+		}
+		const alg = jwa.RS256
+		const kid = "my-very-special-key"
+		hdrs := jws.NewHeaders()
+		hdrs.Set(jws.KeyIDKey, kid)
+		t1 := jwt.New()
+		signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
+		if !assert.NoError(t, err, "token.Sign should succeed") {
+			return
+		}
+
+		t.Run("Alg does not match", func(t *testing.T) {
 			t.Parallel()
-			pubkey := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+			pubkey, err := jwk.PublicKeyOf(key)
+			if !assert.NoError(t, err) {
 				return
 			}
 
+			pubkey.Set(jwk.AlgorithmKey, jwa.HS256)
 			pubkey.Set(jwk.KeyIDKey, kid)
-			signedNoKid, err := jwt.Sign(t1, alg, key)
-			if err != nil {
-				t.Fatal("Failed to sign JWT")
-			}
-
 			set := jwk.NewSet()
 			set.Add(pubkey)
-			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set))
+
+			_, err = jwt.Parse(signed, jwt.WithKeySet(set), jwt.InferAlgorithmFromKey(true), jwt.UseDefaultKey(true))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
 		})
-		t.Run("Pick default key from set of 1", func(t *testing.T) {
+		t.Run("UseDefault with a key set with 1 key", func(t *testing.T) {
 			t.Parallel()
-			pubkey := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+			pubkey, err := jwk.PublicKeyOf(key)
+			if !assert.NoError(t, err) {
 				return
 			}
 
@@ -225,52 +335,51 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 		})
-	})
+		// This is a test to check if we allow alg: none in the protected header section.
+		// But in truth, since we delegate everything to jws.Verify anyways, it's really
+		// a test to see if jws.Verify returns an error if alg: none is specified in the
+		// header section. Move this test to jws if need be.
+		t.Run("Check alg=none", func(t *testing.T) {
+			t.Parallel()
+			// Create a signed payload, but use alg=none
+			_, payload, signature, err := jws.SplitCompact(signed)
+			if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
+				return
+			}
 
-	// This is a test to check if we allow alg: none in the protected header section.
-	// But in truth, since we delegate everything to jws.Verify anyways, it's really
-	// a test to see if jws.Verify returns an error if alg: none is specified in the
-	// header section. Move this test to jws if need be.
-	t.Run("Check alg=none", func(t *testing.T) {
-		t.Parallel()
-		// Create a signed payload, but use alg=none
-		_, payload, signature, err := jws.SplitCompact(signed)
-		if !assert.NoError(t, err, `jws.SplitCompact should succeed`) {
-			return
-		}
+			dummyHeader := jws.NewHeaders()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			for iter := hdrs.Iterate(ctx); iter.Next(ctx); {
+				pair := iter.Pair()
+				dummyHeader.Set(pair.Key.(string), pair.Value)
+			}
+			dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
 
-		dummyHeader := jws.NewHeaders()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		for iter := hdrs.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			dummyHeader.Set(pair.Key.(string), pair.Value)
-		}
-		dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
+			dummyMarshaled, err := json.Marshal(dummyHeader)
+			if !assert.NoError(t, err, `json.Marshal should succeed`) {
+				return
+			}
+			dummyEncoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(dummyMarshaled)))
+			base64.RawURLEncoding.Encode(dummyEncoded, dummyMarshaled)
 
-		dummyMarshaled, err := json.Marshal(dummyHeader)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-		dummyEncoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(dummyMarshaled)))
-		base64.RawURLEncoding.Encode(dummyEncoded, dummyMarshaled)
+			signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
 
-		signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
 
-		pubkey := jwk.NewRSAPublicKey()
-		if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
-			return
-		}
+			pubkey.Set(jwk.KeyIDKey, kid)
 
-		pubkey.Set(jwk.KeyIDKey, kid)
-
-		set := jwk.NewSet()
-		set.Add(pubkey)
-		_, err = jwt.Parse(signedButNot, jwt.WithKeySet(set))
-		// This should fail
-		if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
-			return
-		}
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			_, err = jwt.Parse(signedButNot, jwt.WithKeySet(set))
+			// This should fail
+			if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
+				return
+			}
+		})
 	})
 }
 

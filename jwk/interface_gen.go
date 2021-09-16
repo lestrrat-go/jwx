@@ -83,6 +83,12 @@ type Key interface {
 	Clone() (Key, error)
 
 	KeyType() jwa.KeyType
+
+	// PublicKey creates the corresponding PublicKey type for this object.
+	// All fields are copied onto the new public key, except for those that are not allowed.
+	//
+	// If the key is already a public key, it returns a new copy minus the disallowed fields as above.
+	PublicKey() (Key, error)
 	KeyUsage() string
 	KeyOps() KeyOperationList
 	Algorithm() string

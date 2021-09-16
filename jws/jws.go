@@ -24,8 +24,12 @@ package jws
 import (
 	"bufio"
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"sync"
 	"unicode"
@@ -646,4 +650,58 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 //
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
+}
+
+// Helpers for signature verification
+var rawKeyToKeyType = make(map[reflect.Type]jwa.KeyType)
+var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
+
+func init() {
+	rawKeyToKeyType[reflect.TypeOf([]byte(nil))] = jwa.OctetSeq
+	rawKeyToKeyType[reflect.TypeOf(ed25519.PublicKey(nil))] = jwa.OKP
+	rawKeyToKeyType[reflect.TypeOf(rsa.PublicKey{})] = jwa.RSA
+	rawKeyToKeyType[reflect.TypeOf((*rsa.PublicKey)(nil))] = jwa.RSA
+	rawKeyToKeyType[reflect.TypeOf(ecdsa.PublicKey{})] = jwa.EC
+	rawKeyToKeyType[reflect.TypeOf((*ecdsa.PublicKey)(nil))] = jwa.EC
+
+	addAlgorithmForKeyType(jwa.OKP, jwa.EdDSA)
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512} {
+		addAlgorithmForKeyType(jwa.OctetSeq, alg)
+	}
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.PS256, jwa.PS384, jwa.PS512, jwa.RS256, jwa.RS384, jwa.RS512} {
+		addAlgorithmForKeyType(jwa.RSA, alg)
+	}
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
+		addAlgorithmForKeyType(jwa.EC, alg)
+	}
+}
+
+func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
+	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
+}
+
+// AlgorithmsForKey returns the possible signature algorithms that can
+// be used for a given key
+func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
+	var kty jwa.KeyType
+	switch key := key.(type) {
+	case jwk.Key:
+		kty = key.KeyType()
+	case rsa.PublicKey, *rsa.PublicKey, rsa.PrivateKey, *rsa.PrivateKey:
+		kty = jwa.RSA
+	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
+		kty = jwa.EC
+	case ed25519.PublicKey, ed25519.PrivateKey:
+		kty = jwa.OKP
+	case []byte:
+		kty = jwa.OctetSeq
+	default:
+		return nil, errors.Errorf(`invalid key %T`, key)
+	}
+
+	algs, ok := keyTypeToAlgorithms[kty]
+	if !ok {
+		return nil, errors.Errorf(`invalid key type %q`, kty)
+	}
+	return algs, nil
 }
