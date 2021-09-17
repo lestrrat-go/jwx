@@ -118,7 +118,7 @@ func TestJWTParse(t *testing.T) {
 func TestJWTParseVerify(t *testing.T) {
 	t.Parallel()
 
-	var keys []interface{}
+	keys := make([]interface{}, 0, 6)
 
 	keys = append(keys, []byte("abra cadabra"))
 
@@ -144,6 +144,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 	for _, key := range keys {
 		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
+			t.Parallel()
 			algs, err := jws.AlgorithmsForKey(key)
 			if !assert.NoError(t, err, `jwas.AlgorithmsForKey should succeed`) {
 				return

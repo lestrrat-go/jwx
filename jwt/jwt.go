@@ -210,6 +210,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	// find one that works
 	for iter := ks.Iterate(context.Background()); iter.Next(context.Background()); {
 		pair := iter.Pair()
+		//nolint:forcetypeassert
 		key := pair.Value.(jwk.Key)
 		algs, err := jws.AlgorithmsForKey(key)
 		if err != nil {

@@ -173,7 +173,7 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // trust the token's headers, because they can easily be tampered with.
 //
 // However, there _is_ a workaround if you do understand the risks
-// of allowing a library to automatically choose a signature verfication strategy,
+// of allowing a library to automatically choose a signature verification strategy,
 // and you do not mind the verification process having to possibly
 // attempt using multiple times before succeeding to verify. See
 // `jwt.InferAlgorithmFromKey` option
