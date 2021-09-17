@@ -171,9 +171,12 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	for iter := s.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
-		key := pair.Value.(Key) //nolint:forcetypeassert
+	n := s.Len()
+	for i := 0; i < n; i++ {
+		key, ok := s.Get(i)
+		if !ok {
+			return nil, false
+		}
 		if key.KeyID() == kid {
 			return key, true
 		}

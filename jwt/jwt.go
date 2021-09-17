@@ -5,7 +5,6 @@ package jwt
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -389,9 +388,7 @@ func Equal(t1, t2 Token) bool {
 func (t *stdToken) Clone() (Token, error) {
 	dst := New()
 
-	ctx := context.Background()
-	for iter := t.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range t.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
 			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
 		}

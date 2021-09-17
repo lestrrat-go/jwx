@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -140,13 +139,12 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 }
 
 func makeECDSAPublicKey(v interface {
-	Iterate(context.Context) HeaderIterator
+	makePairs() []*HeaderPair
 }) (Key, error) {
 	newKey := NewECDSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
+	for _, pair := range v.makePairs() {
 		switch pair.Key {
 		case ECDSADKey:
 			continue

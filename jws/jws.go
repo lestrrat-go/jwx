@@ -24,7 +24,6 @@ package jws
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -220,13 +219,12 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 // Furthermore if the JWS signature asks for a spefici "kid", the
 // `jwk.Key` must have the same "kid" as the signature.
 func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	//nolint:forcetypeassert
-	for iter := set.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
-		key := pair.Value.(jwk.Key)
+	n := set.Len()
+	for i := 0; i < n; i++ {
+		key, ok := set.Get(i)
+		if !ok {
+			continue
+		}
 		if key.Algorithm() == "" { // algorithm is not
 			continue
 		}

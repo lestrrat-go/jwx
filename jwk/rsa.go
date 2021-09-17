@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"context"
 	"crypto"
 	"crypto/rsa"
 	"encoding/binary"
@@ -167,13 +166,12 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 }
 
 func makeRSAPublicKey(v interface {
-	Iterate(context.Context) HeaderIterator
+	makePairs() []*HeaderPair
 }) (Key, error) {
 	newKey := NewRSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
+	for _, pair := range v.makePairs() {
 		switch pair.Key {
 		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
 			continue
