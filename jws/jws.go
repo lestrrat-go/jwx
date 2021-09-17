@@ -40,6 +40,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/pool"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/pkg/errors"
 )
 
@@ -691,7 +692,7 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 		kty = jwa.RSA
 	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
 		kty = jwa.EC
-	case ed25519.PublicKey, ed25519.PrivateKey:
+	case ed25519.PublicKey, ed25519.PrivateKey, x25519.PublicKey, x25519.PrivateKey:
 		kty = jwa.OKP
 	case []byte:
 		kty = jwa.OctetSeq
