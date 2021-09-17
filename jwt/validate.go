@@ -53,9 +53,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	var deltas []delta
 	requiredMap := make(map[string]struct{})
 	claimValues := make(map[string]interface{})
-	claimFuncs := make(map[string]claimFn)
-	claimStringFuncs := make(map[string]claimStringFn)
-	claimFloat64Funcs := make(map[string]claimFloat64Fn)
+	claimValidators := make(map[string]ClaimValidator)
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
@@ -92,15 +90,9 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identClaim{}:
 			claim := o.Value().(claimValue)
 			claimValues[claim.name] = claim.value
-		case identValidateClaimFn{}:
-			pair := o.Value().(claimFnPair)
-			claimFuncs[pair.Name] = pair.Fn
-		case identValidateClaimStringFn{}:
-			pair := o.Value().(claimStringFnPair)
-			claimStringFuncs[pair.Name] = pair.Fn
-		case identValidateClaimFloat64Fn{}:
-			pair := o.Value().(claimFloat64FnPair)
-			claimFloat64Funcs[pair.Name] = pair.Fn
+		case identClaimValidator{}:
+			pair := o.Value().(claimValidatorPair)
+			claimValidators[pair.Name] = pair.Validator
 		}
 	}
 
@@ -196,53 +188,13 @@ func Validate(t Token, options ...ValidateOption) error {
 		}
 	}
 
-	for name, fn := range claimFuncs {
-		tv, ok := t.Get(name)
+	for name, validator := range claimValidators {
+		v, ok := t.Get(name)
 		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
+			return fmt.Errorf(`%v not satisfied`, name)
 		}
-		ok, err := fn(tv)
-		if err != nil {
+		if err := validator.Validate(v); err != nil {
 			return err
-		}
-		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
-		}
-	}
-
-	for name, fn := range claimStringFuncs {
-		tv, ok := t.Get(name)
-		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
-		}
-		tvv, ok := tv.(string)
-		if !ok {
-			return fmt.Errorf("invalid type for %v, want string but got %T", name, tv)
-		}
-		ok, err := fn(tvv)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
-		}
-	}
-
-	for name, fn := range claimFloat64Funcs {
-		tv, ok := t.Get(name)
-		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
-		}
-		tvv, ok := tv.(float64)
-		if !ok {
-			return fmt.Errorf("invalid type for %v, want float64 but got %T", name, tv)
-		}
-		ok, err := fn(tvv)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return fmt.Errorf("%v not satisfied", name)
 		}
 	}
 

@@ -123,9 +123,7 @@ type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
 type identTimeDelta struct{}
-type identValidateClaimFn struct{}
-type identValidateClaimStringFn struct{}
-type identValidateClaimFloat64Fn struct{}
+type identClaimValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
@@ -306,27 +304,6 @@ type typedClaimPair struct {
 	Value interface{}
 }
 
-type claimFn = func(interface{}) (bool, error)
-
-type claimFnPair struct {
-	Name string
-	Fn   claimFn
-}
-
-type claimStringFn = func(string) (bool, error)
-
-type claimStringFnPair struct {
-	Name string
-	Fn   claimStringFn
-}
-
-type claimFloat64Fn = func(float64) (bool, error)
-
-type claimFloat64FnPair struct {
-	Name string
-	Fn   claimFloat64Fn
-}
-
 // WithTypedClaim allows a private claim to be parsed into the object type of
 // your choice. It works much like the RegisterCustomField, but the effect
 // is only applicable to the jwt.Parse function call which receives this option.
@@ -415,41 +392,38 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	})
 }
 
-// WithValidateClaimFn validates the given name claim with specified func.
+// WithClaimValidator validates the given name claim with specified validator.
 //
 // For example, validate custom claim as object, you would write
 //
-//    jwt.Validate(token, jwt.WithValidateClaimFn("custom", func(c interface{}) (bool, error) {
+//    type validator func(interface{}) error
+//
+//    func (v validator) Validate(c interface{}) error {
+//      return v(c)
+//    }
+//
+//    jwt.Validate(token, jwt.WithClaimValidator("custom", validator(func(c interface{}) error {
 //      _, ok := c.(map[string]interface{})
-//      return ok, nil
-//    }))
+//      if !ok {
+//        return error.New("not a object")
+//      }
+//      return nil
+//    })))
 //
-func WithValidateClaimFn(name string, fn func(interface{}) (bool, error)) ValidateOption {
-	return newValidateOption(identValidateClaimFn{}, claimFnPair{Name: name, Fn: fn})
+func WithClaimValidator(name string, validator ClaimValidator) ValidateOption {
+	return newValidateOption(identClaimValidator{}, claimValidatorPair{Name: name, Validator: validator})
 }
 
-// WithValidateClaimStringFn validates the given name claim with specified func.
-//
-// For example, validate if the custom claim is starting with x, you would write
-//
-//    jwt.Validate(token, jwt.WithValidateClaimStringFn("custom", func(c string) (bool, error) {
-//      return strings.HasPrefix("x"), nil
-//    }))
-//
-func WithValidateClaimStringFn(name string, fn func(string) (bool, error)) ValidateOption {
-	return newValidateOption(identValidateClaimStringFn{}, claimStringFnPair{Name: name, Fn: fn})
+// ClaimValidator describes an interface for passing to WithClaimValidator.
+type ClaimValidator interface {
+	// Validate validates value of claim.
+	// If returns an error, the validation will fail.
+	Validate(interface{}) error
 }
 
-// WithValidateClaimFloat64Fn validates the given name claim with specified func.
-//
-// For example, validate if the custom claim is greater than 10, you would write
-//
-//    jwt.Validate(token, jwt.WithValidateClaimFloat64Fn("custom", func(c float64) (bool, error) {
-//      return 10 < int(c), nil
-//    }))
-//
-func WithValidateClaimFloat64Fn(name string, fn func(float64) (bool, error)) ValidateOption {
-	return newValidateOption(identValidateClaimFloat64Fn{}, claimFloat64FnPair{Name: name, Fn: fn})
+type claimValidatorPair struct {
+	Name      string
+	Validator ClaimValidator
 }
 
 type decryptParams struct {
