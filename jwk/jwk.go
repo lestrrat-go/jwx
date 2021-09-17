@@ -134,11 +134,15 @@ func New(key interface{}) (Key, error) {
 func PublicSetOf(v Set) (Set, error) {
 	newSet := NewSet()
 
-	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
-		pubKey, err := PublicKeyOf(pair.Value.(Key))
+	n := v.Len()
+	for i := 0; i < n; i++ {
+		k, ok := v.Get(i)
+		if !ok {
+			return nil, errors.New("key not found")
+		}
+		pubKey, err := PublicKeyOf(k)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to get public key of %T`, pair.Value)
+			return nil, errors.Wrapf(err, `failed to get public key of %T`, k)
 		}
 		newSet.Add(pubKey)
 	}
@@ -569,9 +573,7 @@ func cloneKey(src Key) (Key, error) {
 		return nil, errors.Errorf(`unknown key type %T`, src)
 	}
 
-	ctx := context.Background()
-	for iter := src.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range src.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
 			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
 		}

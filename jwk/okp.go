@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/ed25519"
 	"fmt"
@@ -117,13 +116,12 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 }
 
 func makeOKPPublicKey(v interface {
-	Iterate(context.Context) HeaderIterator
+	makePairs() []*HeaderPair
 }) (Key, error) {
 	newKey := NewOKPPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-		pair := iter.Pair()
+	for _, pair := range v.makePairs() {
 		switch pair.Key {
 		case OKPDKey:
 			continue

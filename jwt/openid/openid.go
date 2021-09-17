@@ -8,8 +8,6 @@
 package openid
 
 import (
-	"context"
-
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/pkg/errors"
@@ -20,9 +18,7 @@ var registry = json.NewRegistry()
 func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
-	ctx := context.Background()
-	for iter := t.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range t.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
 			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
 		}

@@ -35,8 +35,7 @@ func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) 
 }
 
 func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
-	for iter := h.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range h.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
 			return errors.Wrapf(err, `failed to set header`)
 		}

@@ -91,4 +91,6 @@ type Key interface {
 	X509CertChain() []*x509.Certificate
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
+
+	makePairs() []*HeaderPair
 }

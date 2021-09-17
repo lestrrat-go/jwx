@@ -665,12 +665,9 @@ LOOP:
 }
 
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 16)
-	for iter := h.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range h.makePairs() {
 		fields = append(fields, pair.Key.(string))
 		data[pair.Key.(string)] = pair.Value
 	}
@@ -1193,12 +1190,9 @@ LOOP:
 }
 
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 10)
-	for iter := h.Iterate(ctx); iter.Next(ctx); {
-		pair := iter.Pair()
+	for _, pair := range h.makePairs() {
 		fields = append(fields, pair.Key.(string))
 		data[pair.Key.(string)] = pair.Value
 	}

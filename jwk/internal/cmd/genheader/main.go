@@ -494,6 +494,7 @@ func generateGenericHeaders() error {
 			fmt.Fprintf(&buf, "%s", f.PointerElem())
 		}
 	}
+	fmt.Fprintf(&buf, "\n\nmakePairs() []*HeaderPair")
 	fmt.Fprintf(&buf, "\n}")
 
 	if err := codegen.WriteFile("interface_gen.go", &buf, codegen.WithFormatCode(true)); err != nil {
@@ -925,12 +926,9 @@ func generateHeader(kt keyType) error {
 		fmt.Fprintf(&buf, "\n}")
 
 		fmt.Fprintf(&buf, "\n\nfunc (h %s) MarshalJSON() ([]byte, error) {", structName)
-		fmt.Fprintf(&buf, "\nctx, cancel := context.WithCancel(context.Background())")
-		fmt.Fprintf(&buf, "\ndefer cancel()")
 		fmt.Fprintf(&buf, "\ndata := make(map[string]interface{})")
 		fmt.Fprintf(&buf, "\nfields := make([]string, 0, %d)", len(ht.allHeaders))
-		fmt.Fprintf(&buf, "\nfor iter := h.Iterate(ctx); iter.Next(ctx); {")
-		fmt.Fprintf(&buf, "\npair := iter.Pair()")
+		fmt.Fprintf(&buf, "\nfor _, pair := range h.makePairs() {")
 		fmt.Fprintf(&buf, "\nfields = append(fields, pair.Key.(string))")
 		fmt.Fprintf(&buf, "\ndata[pair.Key.(string)] = pair.Value")
 		fmt.Fprintf(&buf, "\n}")
