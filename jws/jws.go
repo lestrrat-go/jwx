@@ -682,7 +682,9 @@ func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 }
 
 // AlgorithmsForKey returns the possible signature algorithms that can
-// be used for a given key
+// be used for a given key. It only takes in consideration keys/algorithms
+// for verification purposes, as this is the only usage where one may need
+// dynamically figure out which method to use.
 func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 	var kty jwa.KeyType
 	switch key := key.(type) {
