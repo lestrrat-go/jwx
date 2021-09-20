@@ -5,6 +5,7 @@ package jwt
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"strings"
