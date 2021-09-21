@@ -768,6 +768,11 @@ func (h rsaPublicKey) KeyType() jwa.KeyType {
 func (h *rsaPublicKey) Algorithm() string {
 	if h.algorithm != nil {
 		return *(h.algorithm)
+	} else if len(h.X509CertChain()) > 0 {
+		cryptoAlg := h.X509CertChain()[0].SignatureAlgorithm
+		if alg, err := jwa.NewFromCrypto(cryptoAlg); err == nil {
+			return alg.String()
+		}
 	}
 	return ""
 }

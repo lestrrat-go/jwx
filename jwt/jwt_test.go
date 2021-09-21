@@ -225,6 +225,32 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 		})
+		t.Run("read alg from cert chain", func(t *testing.T) {
+			t.Parallel()
+			chain, err := jwxtest.GenerateX509CertificateChain(key)
+			if !assert.NoError(t, err, `failed to create cert chain`) {
+				return
+			}
+
+			pubkey := jwk.NewRSAPublicKey()
+			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+				return
+			}
+
+			pubkey.Set(jwk.AlgorithmKey, nil)
+			pubkey.Set(jwk.KeyIDKey, kid)
+			pubkey.Set(jwk.X509CertChainKey, chain)
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+			t2, err := jwt.Parse(signed, jwt.WithKeySet(set))
+			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
+				return
+			}
+			if !assert.True(t, jwt.Equal(t1, t2), `t1 == r2`) {
+				return
+			}
+		})
 	})
 
 	// This is a test to check if we allow alg: none in the protected header section.

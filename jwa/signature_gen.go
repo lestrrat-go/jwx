@@ -3,6 +3,7 @@
 package jwa
 
 import (
+	"crypto/x509"
 	"fmt"
 	"sort"
 	"sync"
@@ -50,6 +51,18 @@ var allSignatureAlgorithms = map[SignatureAlgorithm]struct{}{
 	RS512:       {},
 }
 
+var cryptoSignatureMap = map[x509.SignatureAlgorithm]SignatureAlgorithm {
+	x509.SHA256WithRSA: RS256,
+	x509.SHA384WithRSA: RS384,
+	x509.SHA512WithRSA: RS512,
+	x509.ECDSAWithSHA256: ES256,
+	x509.ECDSAWithSHA384: ES384,
+	x509.ECDSAWithSHA512: ES512,
+	x509.SHA256WithRSAPSS: PS256,
+	x509.SHA384WithRSAPSS: PS384,
+	x509.SHA512WithRSAPSS: PS512,
+}
+
 var listSignatureAlgorithmOnce sync.Once
 var listSignatureAlgorithm []SignatureAlgorithm
 
@@ -65,6 +78,14 @@ func SignatureAlgorithms() []SignatureAlgorithm {
 		})
 	})
 	return listSignatureAlgorithm
+}
+
+func NewFromCrypto(cryptoAlg x509.SignatureAlgorithm) (SignatureAlgorithm, error) {
+	if alg, ok := cryptoSignatureMap[cryptoAlg]; ok {
+		return alg, nil
+	} else {
+		return "", errors.Errorf(`unknown algorithm: %s`, cryptoAlg.String())
+	}
 }
 
 // Accept is used when conversion from values given by

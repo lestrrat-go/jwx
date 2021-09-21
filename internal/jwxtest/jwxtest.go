@@ -8,12 +8,16 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -21,6 +25,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/x25519"
+	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -61,6 +66,40 @@ func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error)
 	}
 
 	return ecdsa.GenerateKey(crv, rand.Reader)
+}
+
+func GenerateX509CertificateChain(key *rsa.PrivateKey) (jwk.CertificateChain, error) {
+	chain := jwk.CertificateChain{}
+
+	loc, err := time.LoadLocation("UTC")
+
+	if err != nil {
+		return chain, errors.Wrap(err, `failed to load time location`)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: time.Date(2020, time.January, 1, 0, 0, 0, 0, loc),
+		NotAfter: time.Date(2050, time.January, 1, 0, 0, 0, 0, loc),
+		KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		BasicConstraintsValid: true,
+	}
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+
+	if err != nil {
+		return chain, errors.Wrap(err, `failed to create certificate`)
+	}
+
+	certEnc := base64.Encode(derBytes)
+
+	if err = chain.Accept(string(certEnc)); err != nil {
+		return chain, errors.Wrap(err, `failed to accept certificate`)
+	}
+
+	return chain, nil
 }
 
 func GenerateEcdsaJwk() (jwk.Key, error) {
