@@ -114,6 +114,7 @@ type identClock struct{}
 type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
+type identInferAlgorithmFromKey struct{}
 type identIssuer struct{}
 type identJweHeaders struct{}
 type identJwsHeaders struct{}
@@ -171,6 +172,12 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 // you (the user) wants to use to verify the token. We do NOT
 // trust the token's headers, because they can easily be tampered with.
 //
+// However, there _is_ a workaround if you do understand the risks
+// of allowing a library to automatically choose a signature verification strategy,
+// and you do not mind the verification process having to possibly
+// attempt using multiple times before succeeding to verify. See
+// `jwt.InferAlgorithmFromKey` option
+//
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
 func WithKeySet(set jwk.Set) ParseOption {
@@ -180,7 +187,8 @@ func WithKeySet(set jwk.Set) ParseOption {
 // UseDefaultKey is used in conjunction with the option WithKeySet
 // to instruct the Parse method to default to the single key in a key
 // set when no Key ID is included in the JWT. If the key set contains
-// multiple keys then the behaviour is unchanged.
+// multiple keys then the default behavior is unchanged -- that is,
+// the since we can't determine the key to use, it returns an error.
 func UseDefaultKey(value bool) ParseOption {
 	return newParseOption(identDefault{}, value)
 }
@@ -422,4 +430,22 @@ func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
 // applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
 	return newParseOption(identPedantic{}, v)
+}
+
+// InferAlgorithmFromKey allows jwt.Parse to guess the signature algorithm
+// passed to `jws.Verify()`, in case the key you provided does not have a proper `alg` header.
+//
+// Compared to providing explicit `alg` from the key this is slower, and in
+// case our heuristics are wrong or outdated, may fail to verify the token.
+// Also, automatic detection of signature verification methods are always
+// more vulnerable for potential attack vectors.
+//
+// It is highly recommended that you fix your key to contain a proper `alg`
+// header field instead of resorting to using this option, but sometimes
+// it just needs to happen.
+//
+// Your JWT still need to have an `alg` field, and it must match one of the
+// candidates that we produce for your key
+func InferAlgorithmFromKey(v bool) ParseOption {
+	return newParseOption(identInferAlgorithmFromKey{}, v)
 }

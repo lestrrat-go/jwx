@@ -92,8 +92,23 @@ src := []byte{...}
 token, _ := jwt.Parse(src, jwt.WithKeySet(keyset))
 ```
 
-The above example will correctly verify the message if the jwk.Set specified by the variable `keyset` contains a key that matches
-the key ID in the JWS message.
+While the above example will correctly verify the message if the keys in jwk.Set have the "alg" field populated with a proper value, it will promptly return an error if the "alg" field is invalid (e.g. empty).
+
+This is because we default on the side of safety and require the "alg" field of the key to contain the actual algorithm.The general stance that we take when verifying JWTs is that we don't really trust what the values on the JWT (or actually, the JWS message) says, so we don't just use their `alg` value. This is why we require that users specify the `alg` field in the `jwt.WithVerify` option for single keys.
+
+When you using JWKS, one way to overcome this is to explicitly populate the value of "alg" field by hand prior to using the key.
+
+However, we realize this is cumbersome, and sometimes you just don't know what the algorithm used was.
+
+In such cases you can use the `jwt.InferAlgorithmFromKey()` option:
+
+```go
+token, _ := jwt.Parse(src, jwt.WithKeySet(keyset), jwt.InferAlgorithmFromKey(true))
+```
+
+This will tell `jwx` to use heuristics to deduce the algorithm used. It's a brute-force approach, and does not always provide the best performance, but it will try all possible algorithms available for a given key type until one of them matches. For example, for an RSA key (either raw key or `jwk.Key`) algorithms such as RS256, RS384, RS512, PS256, PS384, and PS512 are tried.
+
+In most cases use of this option would Just Work. However, this type of "try until something works" is not really recommended from a security perspective, and that is why the option is not enabled by default.
 
 # JWT Validation
 

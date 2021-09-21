@@ -436,6 +436,7 @@ func generateGenericHeaders() error {
 	for _, f := range standardHeaders {
 		o.L("%sKey = %s", f.method, strconv.Quote(f.key))
 	}
+
 	o.L(")") // end const
 
 	o.LL("// Key defines the minimal interface for each of the")
@@ -485,6 +486,10 @@ func generateGenericHeaders() error {
 	o.LL("// Clone creates a new instance of the same type")
 	o.L("Clone() (Key, error)")
 	o.LL("KeyType() jwa.KeyType")
+	o.LL("// PublicKey creates the corresponding PublicKey type for this object.")
+	o.L("// All fields are copied onto the new public key, except for those that are not allowed.")
+	o.L("//\n// If the key is already a public key, it returns a new copy minus the disallowed fields as above.")
+	o.L("PublicKey() (Key, error)")
 	for _, f := range standardHeaders {
 		o.L("%s() ", f.method)
 		if f.returnType != "" {

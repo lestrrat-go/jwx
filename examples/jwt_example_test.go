@@ -69,6 +69,7 @@ func ExampleJWT_ParseWithJWKS() {
 			}
 
 			// Remember, the key must have the proper "kid", and "alg"
+			// If your key does not have "alg", see jwt.InferAlgorithmFromKey()
 			pubKey.Set(jwk.AlgorithmKey, jwa.RS256)
 			pubKey.Set(jwk.KeyIDKey, "mykey")
 
@@ -92,6 +93,9 @@ func ExampleJWT_ParseWithJWKS() {
 				payload,
 				// Tell the parser that you want to use this keyset
 				jwt.WithKeySet(keyset),
+				// Uncomment the following option if you know your key does not have an "alg"
+				// field (which is apparently the case for Azure tokens)
+				// jwt.InferAlgorithmFromKey(true),
 			)
 			if err != nil {
 				fmt.Printf("failed to parse payload: %s\n", err)
