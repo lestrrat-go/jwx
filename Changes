@@ -15,6 +15,10 @@ v1.2.7 UNRELEASED
     default `jwt.Parse` mechanism is unchanged, and an explicit option
     has been added.
 
+[Miscellaneous]
+  * Make the error messages when `jwt.ParseRequest` fails a bit better.
+  * Moved around documentation within the repository
+
 v1.2.6 24 Aug 2021
 [New features]
   * Support `crypto.Signer` keys for RSA, ECDSA, and EdDSA family
