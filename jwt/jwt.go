@@ -144,50 +144,54 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 
 	data = bytes.TrimSpace(data)
 
-	// We got a regular, just run with it
 	ks := ctx.keySet
 	if ks == nil {
+		// No keyset, just parse
 		return parse(&ctx, data)
 	}
 
-	// bail out early if we don't even have a key in the set
+	// We have a key set. bummer. we may need to do shady things.
+	// Prepare yourself.
+
+	// Bail out early if we don't even have a key in the set
 	if ks.Len() == 0 {
 		return nil, errors.New(`empty keyset provided`)
 	}
 
-	// We have a key set. bummer. we may need to do shady things
 	// First we need to match `kid`s so we need to parse the JWS
 	msg, err := jws.Parse(data)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to parse token data as JWS message`)
 	}
 
+	var key jwk.Key
+
 	// Find the kid. we need the kid, unless the user explicitly
 	// specified to use the "default" (the first and only) key in the set
 	headers := msg.Signatures()[0].ProtectedHeaders()
 	kid := headers.KeyID()
 	if kid == "" {
+		// If the kid is NOT specified... ctx.useDefault needs to be true, and the
+		// JWKs must have exactly one key in it
 		if !ctx.useDefault {
 			return nil, errors.New(`failed to find matching key: no key ID ("kid") specified in token`)
 		} else if ctx.useDefault && ks.Len() > 1 {
 			return nil, errors.New(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
 		}
-	}
 
-	var key jwk.Key
-	var ok bool
-	if kid == "" {
-		key, ok = ks.Get(0)
-		if !ok {
-			return nil, errors.New(`empty keyset`) // can't happen
-		}
+		// if we got here, then useDefault == true AND there is exactly
+		// one key in the set.
+		key, _ = ks.Get(0)
 	} else {
-		key, ok = ks.LookupKeyID(kid)
+		// Otherwise we better be able to look up the key, baby.
+		v, ok := ks.LookupKeyID(kid)
 		if !ok {
 			return nil, errors.Errorf(`failed to find key with key ID %q in key set`, kid)
 		}
+		key = v
 	}
 
+	// Check fo the algorithm specified in the key
 	if v := key.Algorithm(); v != "" {
 		var alg jwa.SignatureAlgorithm
 		if err := alg.Accept(v); err != nil {
@@ -226,6 +230,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				}
 			}
 
+			// Yippeeeeeee! we found a key that matches both kid and alg!
 			ctx.verifyParams = &verifyParams{alg: alg, key: key}
 			if tok, err := parse(&ctx, data); err == nil {
 				return tok, nil

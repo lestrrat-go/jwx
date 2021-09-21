@@ -187,7 +187,8 @@ func WithKeySet(set jwk.Set) ParseOption {
 // UseDefaultKey is used in conjunction with the option WithKeySet
 // to instruct the Parse method to default to the single key in a key
 // set when no Key ID is included in the JWT. If the key set contains
-// multiple keys then the behaviour is unchanged.
+// multiple keys then the default behavior is unchanged -- that is,
+// the since we can't determine the key to use, it returns an error.
 func UseDefaultKey(value bool) ParseOption {
 	return newParseOption(identDefault{}, value)
 }
