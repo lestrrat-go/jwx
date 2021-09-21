@@ -1,6 +1,20 @@
 Changes
 =======
 
+v1.2.7 UNRELEASED
+[New features]
+  * `jwt.InferAlgorithmFromKey()` option is now available to "guess"
+    the algorithm used to verify the JWS signature on a JWT using
+    a JWKS (key set). This allows you to match JWKs that do not have
+    the `alg` field populated.
+
+    We understand that some providers do not provide the `alg` field,
+    which is a nuisance to users. But from a purely security minded PoV,
+    we don't think that this "try until something works" approach is a
+    good one, even if there are no known exploits. This is why the
+    default `jwt.Parse` mechanism is unchanged, and an explicit option
+    has been added.
+
 v1.2.6 24 Aug 2021
 [New features]
   * Support `crypto.Signer` keys for RSA, ECDSA, and EdDSA family
