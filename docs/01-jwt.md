@@ -92,8 +92,21 @@ src := []byte{...}
 token, _ := jwt.Parse(src, jwt.WithKeySet(keyset))
 ```
 
-The above example will correctly verify the message if the jwk.Set specified by the variable `keyset` contains a key that matches
-the key ID in the JWS message.
+While the above example will correctly verify the message if the keys in jwk.Set have the "alg" field populated with a proper value, it will promptly return an error if the "alg" field is invalid (e.g. empty).
+
+This is because we default on the side of safety and require the "alg" field of the key to contain the actual algorithm.
+
+One way to overcome this is to explicitly populate the value of "alg" field by hand prior to using the key. However, we realize this is cumbersom, and sometimes you just don't know what the algorithm used was.
+
+In such cases you can use the `jwt.InferAlgorithmFromKey()` option:
+
+```go
+token, _ := jwt.Parse(src, jwt.WithKeySet(keyset), jwt.InferAlgorithmFromKey(true))
+```
+
+This will tell `jwx` to use heuristics to deduce the algorithm used. It's a brute-force approach, and does not always provide the best performance, but it will try all possible algorithms available for a given key type until one of them matches.
+
+This type of "try until something works" is not really recommended from a security perspective, and that is why the option is not enabled by default.
 
 # JWT Validation
 
