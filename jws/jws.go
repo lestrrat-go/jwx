@@ -669,7 +669,7 @@ func init() {
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512} {
 		addAlgorithmForKeyType(jwa.OctetSeq, alg)
 	}
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.PS256, jwa.PS384, jwa.PS512, jwa.RS256, jwa.RS384, jwa.RS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
 		addAlgorithmForKeyType(jwa.RSA, alg)
 	}
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
