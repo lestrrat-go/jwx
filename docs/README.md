@@ -2,8 +2,7 @@
 
 Here you will find bits and pieces of code explaining how to perform certain Javascript Object Signing and Encryption (JOSE) operations using https://github.com/lestrrat-go/jwx for Go.
 
-Technical details: The code and command invocations in the following articles were tested and run using github.com/lestrrat-go/jwx@v1.1.5 on go 1.16, MacBook Pro (M1, 2020)
-
+If you would rather see code, try the [examples directory](../examples)
 
 * [Anatomy of JOSE](./00-anatomy.md)
 * [Working with JWT](./01-jwt.md)
