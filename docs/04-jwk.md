@@ -212,14 +212,17 @@ Next you need to tell [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat
 ar.Configure(`https://example.com/certs/pubkeys.json`)
 ```
 
-And lastly, when you are about to use the key, load it from the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) object.
+And lastly, each time you are about to use the key, load it from the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#AutoRefresh) object.
 
 ```go
 keyset, _ := ar.Fetch(ctx, `https://example.com/certs/pubkeys.json`)
 ```
 
-Now keyset will always be "reasonably" new.
+The returned `keyset` will always be "reasonably" new. It is important that you always call `ar.Fetch()` before using the `keyset` as this is where the refreshing occurs.
+
 By "reasonably" we mean that we cannot guarantee that the keys will be refreshed immediately after it has been rotated in the remote source. But it should be close enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
+
+
 
 If re-fetching the keyset fails, a cached version will be returned from the previous successful fetch upon calling `(jwk.AutoRefresh).Fetch()`.
 
