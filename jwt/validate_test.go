@@ -258,20 +258,15 @@ func TestGHIssue10(t *testing.T) {
 	})
 }
 
-type validateFn func(interface{}) error
-
-func (v validateFn) Validate(c interface{}) error {
-	return v(c)
-}
-
 func TestClaimValidator(t *testing.T) {
 	t.Parallel()
 	t.Run("interface{}", func(t *testing.T) {
 		t.Parallel()
-		err0 := errors.New("not a map")
+		const myClaim = "my-claim"
+		err0 := errors.New("not a map[string]interface{}")
 		err1 := errors.New("k does not exist")
 		err2 := errors.New("v is not v")
-		fn := validateFn(func(c interface{}) error {
+		v := jwt.NewSingleClaimValidator(myClaim, jwt.SingleClaimValidatorFunc(func(c interface{}) error {
 			m, ok := c.(map[string]interface{})
 			if !ok {
 				return err0
@@ -284,36 +279,36 @@ func TestClaimValidator(t *testing.T) {
 				return err2
 			}
 			return nil
-		})
-		t.Run("object is expected", func(t *testing.T) {
+		}))
+		t.Run("target claim is expected", func(t *testing.T) {
 			t.Parallel()
 			t1 := jwt.New()
-			assert.NoError(t, t1.Set("object", map[string]interface{}{"k": "v"}))
-			assert.NoError(t, jwt.Validate(t1, jwt.WithClaimValidator("object", fn)))
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "v"}))
+			assert.NoError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)))
 		})
-		t.Run("object does not exist", func(t *testing.T) {
+		t.Run("target claim does not exist", func(t *testing.T) {
 			t.Parallel()
 			t1 := jwt.New()
-			assert.NoError(t, t1.Set("oobject", map[string]interface{}{"k": "v"}))
-			assert.EqualError(t, jwt.Validate(t1, jwt.WithClaimValidator("object", fn)), "object not satisfied")
+			assert.NoError(t, t1.Set("other-claim", map[string]interface{}{"k": "v"}))
+			assert.EqualError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), "my-claim not satisfied")
 		})
 		t.Run(err0.Error(), func(t *testing.T) {
 			t.Parallel()
 			t1 := jwt.New()
-			assert.NoError(t, t1.Set("object", map[interface{}]interface{}{"k": "v"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimValidator("object", fn)), err0)
+			assert.NoError(t, t1.Set(myClaim, map[interface{}]interface{}{"k": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err0)
 		})
 		t.Run(err1.Error(), func(t *testing.T) {
 			t.Parallel()
 			t1 := jwt.New()
-			assert.NoError(t, t1.Set("object", map[string]interface{}{"kk": "v"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimValidator("object", fn)), err1)
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"not-k": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err1)
 		})
 		t.Run(err2.Error(), func(t *testing.T) {
 			t.Parallel()
 			t1 := jwt.New()
-			assert.NoError(t, t1.Set("object", map[string]interface{}{"k": "vv"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimValidator("object", fn)), err2)
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "not-v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err2)
 		})
 	})
 }

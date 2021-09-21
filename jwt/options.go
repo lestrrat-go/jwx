@@ -123,7 +123,7 @@ type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
 type identTimeDelta struct{}
-type identClaimValidator struct{}
+type identClaimsValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
@@ -392,38 +392,24 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	})
 }
 
-// WithClaimValidator validates the given name claim with specified validator.
+// WithClaimsValidator validates the token with the given ClaimsValidator.
 //
-// For example, validate custom claim as object, you would write
+// For example, in order to validate a custom claim value is 'my-claim-value', you would write
 //
-//    type validator func(interface{}) error
+//   v := jwt.NewSingleClaimValidator("my-claim", SingleClaimValidatorFunc(func(c interface{}) error ) {
+//       v, ok := c.(string)
+//       if !ok {
+//           return errors.New("invalid my-claim")
+//       }
+//       if v != "my-claim-value" {
+//           return errors.New("invalid my-claim")
+//       }
+//       return nil
+//   })
+//   err := jwt.Validate(token, jwt.WithClaimsValidator(jwt.NewSingleClaimValidator("my-claim", v)))
 //
-//    func (v validator) Validate(c interface{}) error {
-//      return v(c)
-//    }
-//
-//    jwt.Validate(token, jwt.WithClaimValidator("custom", validator(func(c interface{}) error {
-//      _, ok := c.(map[string]interface{})
-//      if !ok {
-//        return error.New("not a object")
-//      }
-//      return nil
-//    })))
-//
-func WithClaimValidator(name string, validator ClaimValidator) ValidateOption {
-	return newValidateOption(identClaimValidator{}, claimValidatorPair{Name: name, Validator: validator})
-}
-
-// ClaimValidator describes an interface for passing to WithClaimValidator.
-type ClaimValidator interface {
-	// Validate validates value of claim.
-	// If returns an error, the validation will fail.
-	Validate(interface{}) error
-}
-
-type claimValidatorPair struct {
-	Name      string
-	Validator ClaimValidator
+func WithClaimsValidator(v ClaimsValidator) ValidateOption {
+	return newValidateOption(identClaimsValidator{}, v)
 }
 
 type decryptParams struct {
