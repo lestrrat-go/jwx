@@ -230,26 +230,61 @@ func TestJWTParseVerify(t *testing.T) {
 							pubkey.Set(jwk.KeyIDKey, kid)
 						}
 
-						set := jwk.NewSet()
-						set.Add(pubkey)
+						// Permute on the location of the correct key, to check for possible
+						// cases where we loop too little or too much.
+						dummyKey, _ := jwk.New([]byte("abracadabra"))
+						for i := 0; i < 3; i++ {
+							var name string
+							set := jwk.NewSet()
+							switch i {
+							case 0:
+								name = "Lone key"
+								set.Add(pubkey)
+							case 1:
+								name = "Two keys, correct one at the end"
+								set.Add(dummyKey)
+								set.Add(pubkey)
+							case 2:
+								name = "Two keys, correct one at the beginning"
+								set.Add(pubkey)
+								set.Add(dummyKey)
+							case 3:
+								name = "Three keys, correct one at the end"
+								set.Add(dummyKey)
+								set.Add(dummyKey)
+								set.Add(pubkey)
+							case 4:
+								name = "Three keys, correct one at the middle"
+								set.Add(dummyKey)
+								set.Add(pubkey)
+								set.Add(dummyKey)
+							case 5:
+								name = "Three keys, correct one at the beginning"
+								set.Add(pubkey)
+								set.Add(dummyKey)
+								set.Add(dummyKey)
+							}
 
-						options := []jwt.ParseOption{jwt.WithKeySet(set)}
-						if tc.InferAlgorithm {
-							options = append(options, jwt.InferAlgorithmFromKey(true))
-						}
-						t2, err := jwt.Parse(signed, options...)
+							t.Run(name, func(t *testing.T) {
+								options := []jwt.ParseOption{jwt.WithKeySet(set)}
+								if tc.InferAlgorithm {
+									options = append(options, jwt.InferAlgorithmFromKey(true))
+								}
+								t2, err := jwt.Parse(signed, options...)
 
-						if tc.Error {
-							assert.Error(t, err, `jwt.Parse should fail`)
-							return
-						}
+								if tc.Error {
+									assert.Error(t, err, `jwt.Parse should fail`)
+									return
+								}
 
-						if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-							return
-						}
+								if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+									return
+								}
 
-						if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
-							return
+								if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
+									return
+								}
+							})
 						}
 					})
 				}
