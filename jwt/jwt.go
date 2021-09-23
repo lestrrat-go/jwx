@@ -157,8 +157,10 @@ const (
 )
 
 func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
-	// if we have a key set, use that
-	if ks := ctx.keySet; ks != nil {
+	// if we have a key set or a provider, use that
+	ks := ctx.keySet
+	p := ctx.keySetProvider
+	if ks != nil || p != nil {
 		return verifyJWSWithKeySet(ctx, payload)
 	}
 
