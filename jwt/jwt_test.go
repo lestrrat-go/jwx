@@ -342,6 +342,13 @@ func TestJWTParseVerify(t *testing.T) {
 			if !assert.True(t, jwt.Equal(t2, t3), `t2 == t3`) {
 				return
 			}
+
+			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+				return nil, errors.New(`dummy`)
+			})))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
 		})
 		t.Run("Alg does not match", func(t *testing.T) {
 			t.Parallel()
