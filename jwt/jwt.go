@@ -5,7 +5,6 @@ package jwt
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -213,10 +212,12 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	// We need to first deduce the signature methods
 	// that we could use for the given key, and then keep trying until we
 	// find one that works
-	for iter := ks.Iterate(context.Background()); iter.Next(context.Background()); {
-		pair := iter.Pair()
-		//nolint:forcetypeassert
-		key := pair.Value.(jwk.Key)
+	n := ks.Len()
+	for i := 0; i < n; i++ {
+		key, ok := ks.Get(i)
+		if !ok {
+			continue
+		}
 		algs, err := jws.AlgorithmsForKey(key)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
