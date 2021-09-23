@@ -342,7 +342,6 @@ func TestJWTParseVerify(t *testing.T) {
 			if !assert.True(t, jwt.Equal(t2, t3), `t2 == t3`) {
 				return
 			}
-
 		})
 		t.Run("Alg does not match", func(t *testing.T) {
 			t.Parallel()
