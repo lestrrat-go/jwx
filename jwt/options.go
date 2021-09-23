@@ -456,6 +456,10 @@ func InferAlgorithmFromKey(v bool) ParseOption {
 // KeySetProvider is an interface for objects that can choose the appropriate
 // jwk.Set to be used when verifying JWTs
 type KeySetProvider interface {
+	// KeySetFrom returns the jwk.Set to be used to verify the token.
+	// Keep in mind that the token at the point when the method is called is NOT VERIFIED.
+	// DO NOT trust the contents of the Token too much. For example, do not take the
+	// hint as to which signature algorithm to use from the token itself.
 	KeySetFrom(Token) (jwk.Set, error)
 }
 

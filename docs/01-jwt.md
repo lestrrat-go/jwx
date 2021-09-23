@@ -92,7 +92,20 @@ src := []byte{...}
 token, _ := jwt.Parse(src, jwt.WithKeySet(keyset))
 ```
 
-While the above example will correctly verify the message if the keys in jwk.Set have the "alg" field populated with a proper value, it will promptly return an error if the "alg" field is invalid (e.g. empty).
+Or, if you want to switch which `jwk.Set` to use depending on the contents of the unverified token, you can use the `jwt.WithKeySetProvider` option.
+
+```go
+provider := jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+  // choose which set you want to use by inspecting tok.
+  // Remeber that tok is UNVERIFIED at this point
+  ...
+  return keyset, nil
+})
+
+token, _ := jwt.Parse(src, jwt.WithKeySetProvider(provider))
+```
+
+While the above examples will correctly verify the message if the keys in jwk.Set have the "alg" field populated with a proper value, it will promptly return an error if the "alg" field is invalid (e.g. empty).
 
 This is because we default on the side of safety and require the "alg" field of the key to contain the actual algorithm.The general stance that we take when verifying JWTs is that we don't really trust what the values on the JWT (or actually, the JWS message) says, so we don't just use their `alg` value. This is why we require that users specify the `alg` field in the `jwt.WithVerify` option for single keys.
 
