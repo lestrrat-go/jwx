@@ -15,6 +15,15 @@ v1.2.7 UNRELEASED
     default `jwt.Parse` mechanism is unchanged, and an explicit option
     has been added.
 
+  * Types `jwt.KeySetProvider` and `jwk.KeySetProviderFunc` have been
+    added. Along with `jwt.WithKeySetProvider()` option, `jwt.Parse`
+    can now choose the `jwk.Set` to use for signature verification
+    dynamically using the UNVERFIEID token as a clue.
+
+    You should NOT trust the token information too much. For example,
+    DO NOT directly use values from the token as verificatin parameters
+    (such as the signature algorithm)
+
 [Miscellaneous]
   * Make the error messages when `jwt.ParseRequest` fails a bit better.
   * Moved around documentation within the repository
