@@ -306,6 +306,50 @@ func TestJWTParseVerify(t *testing.T) {
 			return
 		}
 
+		t.Run("Use KeySetProvider", func(t *testing.T) {
+			t.Parallel()
+			pubkey, _ := jwk.New(key.PublicKey)
+
+			pubkey.Set(jwk.AlgorithmKey, alg)
+			pubkey.Set(jwk.KeyIDKey, kid)
+
+			set := jwk.NewSet()
+			set.Add(pubkey)
+
+			t2, err := t1.Clone()
+			if !assert.NoError(t, err) {
+				return
+			}
+			if !assert.NoError(t, t2.Set(jwt.IssuerKey, "http://www.example.com")) {
+				return
+			}
+			signed, err := jwt.Sign(t2, alg, key, jwt.WithHeaders(hdrs))
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			t3, err := jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+				switch tok.Issuer() {
+				case "http://www.example.com":
+					return set, nil
+				}
+				return nil, fmt.Errorf("unknown issuer")
+			})))
+			if !assert.NoError(t, err, `jwt.Parse with key set func should succeed`) {
+				return
+			}
+
+			if !assert.True(t, jwt.Equal(t2, t3), `t2 == t3`) {
+				return
+			}
+
+			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+				return nil, errors.New(`dummy`)
+			})))
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		})
 		t.Run("Alg does not match", func(t *testing.T) {
 			t.Parallel()
 			pubkey, err := jwk.PublicKeyOf(key)
