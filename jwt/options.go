@@ -120,6 +120,7 @@ type identJweHeaders struct{}
 type identJwsHeaders struct{}
 type identJwtid struct{}
 type identKeySet struct{}
+type identKeySetProvider struct{}
 type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
@@ -180,6 +181,8 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 //
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
+//
+// If provided with WithKeySetProvider(), this option takes precedence.
 func WithKeySet(set jwk.Set) ParseOption {
 	return newParseOption(identKeySet{}, set)
 }
@@ -448,4 +451,26 @@ func WithPedantic(v bool) ParseOption {
 // candidates that we produce for your key
 func InferAlgorithmFromKey(v bool) ParseOption {
 	return newParseOption(identInferAlgorithmFromKey{}, v)
+}
+
+// KeySetProvider is an interface for objects that can choose the appropriate
+// jwk.Set to be used when verifying JWTs
+type KeySetProvider interface {
+	KeySetFrom(Token) (jwk.Set, error)
+}
+
+// KeySetProviderFunc is an implementation of KeySetProvider that is based
+// on a function.
+type KeySetProviderFunc func(Token) (jwk.Set, error)
+
+func (fn KeySetProviderFunc) KeySetFrom(t Token) (jwk.Set, error) {
+	return fn(t)
+}
+
+// WithKeySetProvider allows users to specify an object to choose which
+// jwk.Set to use for verification.
+//
+// If provided with WithKeySet(), WithKeySet() option takes precedence.
+func WithKeySetProvider(p KeySetProvider) ParseOption {
+	return newParseOption(identKeySetProvider{}, p)
 }
