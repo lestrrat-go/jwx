@@ -264,11 +264,6 @@ func WithAudience(s string) ValidateOption {
 	return WithValidator(ClaimContainsString(AudienceKey, s))
 }
 
-type claimValue struct {
-	name  string
-	value interface{}
-}
-
 // WithClaimValue specifies that expected any claim value.
 func WithClaimValue(name string, v interface{}) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
