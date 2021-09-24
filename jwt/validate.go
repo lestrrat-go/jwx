@@ -48,6 +48,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	var skew time.Duration
 	var deltas []delta
 	var validators = []Validator{
+		IsIssuedAtValid(),
 		IsExpirationValid(),
 		IsNbfValid(),
 	}
