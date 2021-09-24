@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -53,7 +54,9 @@ func Validate(t Token, options ...ValidateOption) error {
 	var deltas []delta
 	requiredMap := make(map[string]struct{})
 	claimValues := make(map[string]interface{})
-	var claimsValidators []Validator
+	var validators = []Validator{
+		ValidatorFunc(IsNbfValid),
+	}
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
@@ -91,7 +94,7 @@ func Validate(t Token, options ...ValidateOption) error {
 			claim := o.Value().(claimValue)
 			claimValues[claim.name] = claim.value
 		case identValidator{}:
-			claimsValidators = append(claimsValidators, o.Value().(Validator))
+			validators = append(validators, o.Value().(Validator))
 		}
 	}
 
@@ -171,24 +174,16 @@ func Validate(t Token, options ...ValidateOption) error {
 		}
 	}
 
-	// check for nbf
-	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		// now cannot be before t, so we check for now > t - skew
-		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
-			return errors.New(`nbf not satisfied`)
-		}
-	}
-
 	for name, expectedValue := range claimValues {
 		if v, ok := t.Get(name); !ok || v != expectedValue {
 			return fmt.Errorf(`%v not satisfied`, name)
 		}
 	}
 
-	for _, v := range claimsValidators {
-		if err := v.Validate(t); err != nil {
+	ctx := SetValidationCtxSkew(context.Background(), skew)
+	ctx = SetValidationCtxClock(ctx, clock)
+	for _, v := range validators {
+		if err := v.Validate(ctx, t); err != nil {
 			return err
 		}
 	}
@@ -198,11 +193,54 @@ func Validate(t Token, options ...ValidateOption) error {
 
 // Validator describes interface to validate Token.
 type Validator interface {
-	Validate(Token) error
+	Validate(context.Context, Token) error
 }
 
-type ValidatorFunc func(Token) error
+type ValidatorFunc func(context.Context, Token) error
 
-func (vf ValidatorFunc) Validate(tok Token) error {
-	return vf(tok)
+func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) error {
+	return vf(ctx, tok)
+}
+
+type identValidationCtxClock struct{}
+type identValidationCtxSkew struct{}
+
+func SetValidationCtxClock(ctx context.Context, cl Clock) context.Context {
+	return context.WithValue(ctx, identValidationCtxClock{}, cl)
+}
+
+// ValidationCtxClock returns the Clock object associated with
+// the current validation context. This value will always be available
+// during validation of tokens.
+func ValidationCtxClock(ctx context.Context) Clock {
+	return ctx.Value(identValidationCtxClock{}).(Clock)
+}
+
+func SetValidationCtxSkew(ctx context.Context, dur time.Duration) context.Context {
+	return context.WithValue(ctx, identValidationCtxSkew{}, dur)
+}
+
+func ValidationCtxSkew(ctx context.Context) time.Duration {
+	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
+}
+
+// IsNbfValid is one of the default validators that will be executed.
+// It does not need to be specified by users, but it exists as an
+// exported field so that you can check what it does.
+//
+// The supplied context.Context object must have the "clock" and "skew"
+// populated with appropriate values using SetValidationCtxClock() and
+// SetValidationCtxSkew()
+func IsNbfValid(ctx context.Context, t Token) error {
+	clock := ValidationCtxClock(ctx) // MUST be populated
+	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
+		now := clock.Now().Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
+		skew := ValidationCtxSkew(ctx) // MUST be populated
+		// now cannot be before t, so we check for now > t - skew
+		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
+			return errors.New(`nbf not satisfied`)
+		}
+	}
+	return nil
 }

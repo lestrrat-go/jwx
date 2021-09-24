@@ -1,6 +1,7 @@
 package jwt_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -262,7 +263,7 @@ func TestClaimValidator(t *testing.T) {
 	t.Parallel()
 	const myClaim = "my-claim"
 	err0 := errors.New(myClaim + " does not exist")
-	v := jwt.ValidatorFunc(func(tok jwt.Token) error {
+	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) error {
 		_, ok := tok.Get(myClaim)
 		if !ok {
 			return err0
