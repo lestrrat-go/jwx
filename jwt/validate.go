@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -45,17 +44,12 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
-	var issuer string
-	var subject string
-	var audience string
-	var jwtid string
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
 	var deltas []delta
-	requiredMap := make(map[string]struct{})
-	claimValues := make(map[string]interface{})
 	var validators = []Validator{
-		ValidatorFunc(IsNbfValid),
+		IsExpirationValid(),
+		IsNbfValid(),
 	}
 	for _, o := range options {
 		//nolint:forcetypeassert
@@ -65,15 +59,20 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
 		case identIssuer{}:
-			issuer = o.Value().(string)
+			// backcompat: can be replaced with jwt.ClaimValueIs(...)
+			validators = append(validators, ClaimValueIs(IssuerKey, o.Value().(string)))
 		case identSubject{}:
-			subject = o.Value().(string)
+			// backcompat: can be replaced with jwt.ClaimValueIs(...)
+			validators = append(validators, ClaimValueIs(SubjectKey, o.Value().(string)))
 		case identAudience{}:
-			audience = o.Value().(string)
+			// backcompat: can be replaced with jwt.HasAudience(...)
+			validators = append(validators, hasAudience(o.Value().(string)))
 		case identJwtid{}:
-			jwtid = o.Value().(string)
+			// backcompat: can be replaced with jwt.ClaimValueIs(...)
+			validators = append(validators, ClaimValueIs(JwtIDKey, o.Value().(string)))
 		case identRequiredClaim{}:
-			requiredMap[o.Value().(string)] = struct{}{}
+			// backcompat: can be replaced with jwt.IsRequired(...)
+			validators = append(validators, IsRequired(o.Value().(string)))
 		case identTimeDelta{}:
 			d := o.Value().(delta)
 			deltas = append(deltas, d)
@@ -81,26 +80,29 @@ func Validate(t Token, options ...ValidateOption) error {
 				if err := isSupportedTimeClaim(d.c1); err != nil {
 					return err
 				}
-				requiredMap[d.c1] = struct{}{}
+				validators = append(validators, IsRequired(d.c1))
 			}
 
 			if d.c2 != "" {
 				if err := isSupportedTimeClaim(d.c2); err != nil {
 					return err
 				}
-				requiredMap[d.c2] = struct{}{}
+				validators = append(validators, IsRequired(d.c2))
 			}
 		case identClaim{}:
+			// backcompat: can be replaced with jwt.ClaimValueIs(...)
 			claim := o.Value().(claimValue)
-			claimValues[claim.name] = claim.value
+			validators = append(validators, ClaimValueIs(claim.name, claim.value))
 		case identValidator{}:
 			validators = append(validators, o.Value().(Validator))
 		}
 	}
 
-	for c := range requiredMap {
-		if _, ok := t.Get(c); !ok {
-			return errors.Errorf(`required claim %s was not found`, c)
+	ctx := SetValidationCtxSkew(context.Background(), skew)
+	ctx = SetValidationCtxClock(ctx, clock)
+	for _, v := range validators {
+		if err := v.Validate(ctx, t); err != nil {
+			return err
 		}
 	}
 
@@ -118,73 +120,6 @@ func Validate(t Token, options ...ValidateOption) error {
 			if t1.Sub(t2) < delta.dur-skew {
 				return errors.Errorf(`delta between %s and %s is less than %s (skew %s)`, delta.c1, delta.c2, delta.dur, skew)
 			}
-		}
-	}
-
-	// check for iss
-	if len(issuer) > 0 {
-		if v := t.Issuer(); v != issuer {
-			return errors.New(`iss not satisfied`)
-		}
-	}
-
-	// check for jti
-	if len(jwtid) > 0 {
-		if v := t.JwtID(); v != jwtid {
-			return errors.New(`jti not satisfied`)
-		}
-	}
-
-	// check for sub
-	if len(subject) > 0 {
-		if v := t.Subject(); v != subject {
-			return errors.New(`sub not satisfied`)
-		}
-	}
-
-	// check for aud
-	if len(audience) > 0 {
-		var found bool
-		for _, v := range t.Audience() {
-			if v == audience {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.New(`aud not satisfied`)
-		}
-	}
-
-	// check for exp
-	if tv := t.Expiration(); !tv.IsZero() && tv.Unix() != 0 {
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		if !now.Before(ttv.Add(skew)) {
-			return errors.New(`exp not satisfied`)
-		}
-	}
-
-	// check for iat
-	if tv := t.IssuedAt(); !tv.IsZero() && tv.Unix() != 0 {
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		if now.Before(ttv.Add(-1 * skew)) {
-			return errors.New(`iat not satisfied`)
-		}
-	}
-
-	for name, expectedValue := range claimValues {
-		if v, ok := t.Get(name); !ok || v != expectedValue {
-			return fmt.Errorf(`%v not satisfied`, name)
-		}
-	}
-
-	ctx := SetValidationCtxSkew(context.Background(), skew)
-	ctx = SetValidationCtxClock(ctx, clock)
-	for _, v := range validators {
-		if err := v.Validate(ctx, t); err != nil {
-			return err
 		}
 	}
 
@@ -224,6 +159,40 @@ func ValidationCtxSkew(ctx context.Context) time.Duration {
 	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
 }
 
+func IsExpirationValid() Validator {
+	return ValidatorFunc(isExpirationValid)
+}
+
+func isExpirationValid(ctx context.Context, t Token) error {
+	if tv := t.Expiration(); !tv.IsZero() && tv.Unix() != 0 {
+		clock := ValidationCtxClock(ctx) // MUST be populated
+		now := clock.Now().Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
+		skew := ValidationCtxSkew(ctx) // MUST be populated
+		if !now.Before(ttv.Add(skew)) {
+			return errors.New(`exp not satisfied`)
+		}
+	}
+	return nil
+}
+
+func IsIssuedAtValid() Validator {
+	return ValidatorFunc(isIssuedAtValid)
+}
+
+func isIssuedAtValid(ctx context.Context, t Token) error {
+	if tv := t.IssuedAt(); !tv.IsZero() && tv.Unix() != 0 {
+		clock := ValidationCtxClock(ctx) // MUST be populated
+		now := clock.Now().Truncate(time.Second)
+		ttv := tv.Truncate(time.Second)
+		skew := ValidationCtxSkew(ctx) // MUST be populated
+		if now.Before(ttv.Add(-1 * skew)) {
+			return errors.New(`iat not satisfied`)
+		}
+	}
+	return nil
+}
+
 // IsNbfValid is one of the default validators that will be executed.
 // It does not need to be specified by users, but it exists as an
 // exported field so that you can check what it does.
@@ -231,9 +200,13 @@ func ValidationCtxSkew(ctx context.Context) time.Duration {
 // The supplied context.Context object must have the "clock" and "skew"
 // populated with appropriate values using SetValidationCtxClock() and
 // SetValidationCtxSkew()
-func IsNbfValid(ctx context.Context, t Token) error {
-	clock := ValidationCtxClock(ctx) // MUST be populated
+func IsNbfValid() Validator {
+	return ValidatorFunc(isNbfValid)
+}
+
+func isNbfValid(ctx context.Context, t Token) error {
 	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
+		clock := ValidationCtxClock(ctx) // MUST be populated
 		now := clock.Now().Truncate(time.Second)
 		ttv := tv.Truncate(time.Second)
 		skew := ValidationCtxSkew(ctx) // MUST be populated
@@ -241,6 +214,60 @@ func IsNbfValid(ctx context.Context, t Token) error {
 		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
 			return errors.New(`nbf not satisfied`)
 		}
+	}
+	return nil
+}
+
+func HasAudience(audience string) Validator {
+	return hasAudience(audience)
+}
+
+type hasAudience string
+
+func (audience hasAudience) Validate(_ context.Context, t Token) error {
+	var found bool
+	for _, v := range t.Audience() {
+		if v == string(audience) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.New(`aud not satisfied`)
+	}
+	return nil
+}
+
+type ClaimValue struct {
+	name  string
+	value interface{}
+}
+
+func ClaimValueIs(name string, value interface{}) Validator {
+	return &ClaimValue{name: name, value: value}
+}
+
+func (cv *ClaimValue) Validate(_ context.Context, t Token) error {
+	v, ok := t.Get(cv.name)
+	if !ok {
+		return errors.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name)
+	}
+	if v != cv.value {
+		return errors.Errorf(`%q not satisfied: values do not match`, cv.name)
+	}
+	return nil
+}
+
+func IsRequired(name string) Validator {
+	return isRequired(name)
+}
+
+type isRequired string
+
+func (ir isRequired) Validate(_ context.Context, t Token) error {
+	_, ok := t.Get(string(ir))
+	if !ok {
+		return errors.Errorf(`required claim %q was not found`, string(ir))
 	}
 	return nil
 }
