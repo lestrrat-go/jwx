@@ -248,19 +248,19 @@ func WithAcceptableSkew(dur time.Duration) ValidateOption {
 // WithIssuer specifies that expected issuer value. If not specified,
 // the value of issuer is not verified at all.
 func WithIssuer(s string) ValidateOption {
-	return newValidateOption(identIssuer{}, s)
+	return WithValidator(ClaimValueIs(IssuerKey, s))
 }
 
 // WithSubject specifies that expected subject value. If not specified,
 // the value of subject is not verified at all.
 func WithSubject(s string) ValidateOption {
-	return newValidateOption(identSubject{}, s)
+	return WithValidator(ClaimValueIs(SubjectKey, s))
 }
 
 // WithJwtID specifies that expected jti value. If not specified,
 // the value of jti is not verified at all.
 func WithJwtID(s string) ValidateOption {
-	return newValidateOption(identJwtid{}, s)
+	return WithValidator(ClaimValueIs(JwtIDKey, s))
 }
 
 // WithAudience specifies that expected audience value.
@@ -268,7 +268,7 @@ func WithJwtID(s string) ValidateOption {
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
 func WithAudience(s string) ValidateOption {
-	return newValidateOption(identAudience{}, s)
+	return WithValidator(ClaimContainsString(AudienceKey, s))
 }
 
 type claimValue struct {
@@ -346,7 +346,7 @@ func WithTypedClaim(name string, object interface{}) ParseOption {
 // must exist in the token. Only the existence of the claim is checked:
 // the actual value associated with that field is not checked.
 func WithRequiredClaim(name string) ValidateOption {
-	return newValidateOption(identRequiredClaim{}, name)
+	return WithValidator(IsRequired(name))
 }
 
 type delta struct {

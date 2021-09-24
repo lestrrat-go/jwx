@@ -58,18 +58,6 @@ func Validate(t Token, options ...ValidateOption) error {
 			clock = o.Value().(Clock)
 		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
-		case identIssuer{}:
-			// backcompat: can be replaced with jwt.ClaimValueIs(...)
-			validators = append(validators, ClaimValueIs(IssuerKey, o.Value().(string)))
-		case identSubject{}:
-			// backcompat: can be replaced with jwt.ClaimValueIs(...)
-			validators = append(validators, ClaimValueIs(SubjectKey, o.Value().(string)))
-		case identAudience{}:
-			// backcompat: can be replaced with jwt.HasAudience(...)
-			validators = append(validators, hasAudience(o.Value().(string)))
-		case identJwtid{}:
-			// backcompat: can be replaced with jwt.ClaimValueIs(...)
-			validators = append(validators, ClaimValueIs(JwtIDKey, o.Value().(string)))
 		case identRequiredClaim{}:
 			// backcompat: can be replaced with jwt.IsRequired(...)
 			validators = append(validators, IsRequired(o.Value().(string)))
@@ -246,22 +234,41 @@ func isNbfValid(ctx context.Context, t Token) error {
 	return nil
 }
 
-func HasAudience(audience string) Validator {
-	return hasAudience(audience)
+type claimContainsString struct {
+	name  string
+	value string
 }
 
-type hasAudience string
+// ClaimContainsString can be used to check if the claim called `name`, which is
+// expected to be a list of strings, contains `value`. Currently because of the
+// implementation this will probably only work for `aud` fields.
+func ClaimContainsString(name, value string) Validator {
+	return claimContainsString{
+		name:  name,
+		value: value,
+	}
+}
 
-func (audience hasAudience) Validate(_ context.Context, t Token) error {
+func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
+	v, ok := t.Get(ccs.name)
+	if !ok {
+		return errors.Errorf(`claim %q not found`, ccs.name)
+	}
+
+	list, ok := v.([]string)
+	if !ok {
+		return errors.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v)
+	}
+
 	var found bool
-	for _, v := range t.Audience() {
-		if v == string(audience) {
+	for _, v := range list {
+		if v == ccs.value {
 			found = true
 			break
 		}
 	}
 	if !found {
-		return errors.New(`aud not satisfied`)
+		return errors.Errorf(`%s not satisfied`, ccs.name)
 	}
 	return nil
 }
