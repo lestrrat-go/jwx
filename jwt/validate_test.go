@@ -1,6 +1,7 @@
 package jwt_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -254,5 +255,60 @@ func TestGHIssue10(t *testing.T) {
 		if !assert.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "")), "t1.Validate should fail") {
 			return
 		}
+	})
+}
+
+func TestClaimValidator(t *testing.T) {
+	t.Parallel()
+	t.Run("interface{}", func(t *testing.T) {
+		t.Parallel()
+		const myClaim = "my-claim"
+		err0 := errors.New("not a map[string]interface{}")
+		err1 := errors.New("k does not exist")
+		err2 := errors.New("v is not v")
+		v := jwt.NewSingleClaimValidator(myClaim, jwt.SingleClaimValidatorFunc(func(c interface{}) error {
+			m, ok := c.(map[string]interface{})
+			if !ok {
+				return err0
+			}
+			v, ok := m["k"]
+			if !ok {
+				return err1
+			}
+			if v != "v" {
+				return err2
+			}
+			return nil
+		}))
+		t.Run("target claim is expected", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "v"}))
+			assert.NoError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)))
+		})
+		t.Run("target claim does not exist", func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set("other-claim", map[string]interface{}{"k": "v"}))
+			assert.EqualError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), "my-claim not satisfied")
+		})
+		t.Run(err0.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set(myClaim, map[interface{}]interface{}{"k": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err0)
+		})
+		t.Run(err1.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"not-k": "v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err1)
+		})
+		t.Run(err2.Error(), func(t *testing.T) {
+			t.Parallel()
+			t1 := jwt.New()
+			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "not-v"}))
+			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err2)
+		})
 	})
 }

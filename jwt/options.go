@@ -125,6 +125,7 @@ type identPedantic struct{}
 type identRequiredClaim struct{}
 type identSubject struct{}
 type identTimeDelta struct{}
+type identClaimsValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
@@ -400,6 +401,26 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 		dur:  dur,
 		less: false,
 	})
+}
+
+// WithClaimsValidator validates the token with the given ClaimsValidator.
+//
+// For example, in order to validate a custom claim value is 'my-claim-value', you would write
+//
+//   v := jwt.NewSingleClaimValidator("my-claim", SingleClaimValidatorFunc(func(c interface{}) error ) {
+//       v, ok := c.(string)
+//       if !ok {
+//           return errors.New("invalid my-claim")
+//       }
+//       if v != "my-claim-value" {
+//           return errors.New("invalid my-claim")
+//       }
+//       return nil
+//   })
+//   err := jwt.Validate(token, jwt.WithClaimsValidator(jwt.NewSingleClaimValidator("my-claim", v)))
+//
+func WithClaimsValidator(v ClaimsValidator) ValidateOption {
+	return newValidateOption(identClaimsValidator{}, v)
 }
 
 type decryptParams struct {
