@@ -108,23 +108,16 @@ func newValidateOption(n interface{}, v interface{}) ValidateOption {
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
-type identAudience struct{}
-type identClaim struct{}
 type identClock struct{}
 type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
 type identInferAlgorithmFromKey struct{}
-type identIssuer struct{}
 type identJweHeaders struct{}
 type identJwsHeaders struct{}
-type identJwtid struct{}
 type identKeySet struct{}
 type identKeySetProvider struct{}
 type identPedantic struct{}
-type identRequiredClaim struct{}
-type identSubject struct{}
-type identTimeDelta struct{}
 type identValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
@@ -278,7 +271,7 @@ type claimValue struct {
 
 // WithClaimValue specifies that expected any claim value.
 func WithClaimValue(name string, v interface{}) ValidateOption {
-	return newValidateOption(identClaim{}, claimValue{name, v})
+	return WithValidator(ClaimValueIs(name, v))
 }
 
 // WithHeaderKey is used to specify header keys to search for tokens.
@@ -347,13 +340,6 @@ func WithTypedClaim(name string, object interface{}) ParseOption {
 // the actual value associated with that field is not checked.
 func WithRequiredClaim(name string) ValidateOption {
 	return WithValidator(IsRequired(name))
-}
-
-type delta struct {
-	c1   string
-	c2   string
-	dur  time.Duration
-	less bool // if true, d =< c1 - c2. otherwise d >= c1 - c2
 }
 
 // WithMaxDelta specifies that given two claims `c1` and `c2` that represent time, the difference in

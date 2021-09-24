@@ -58,13 +58,6 @@ func Validate(t Token, options ...ValidateOption) error {
 			clock = o.Value().(Clock)
 		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
-		case identRequiredClaim{}:
-			// backcompat: can be replaced with jwt.IsRequired(...)
-			validators = append(validators, IsRequired(o.Value().(string)))
-		case identClaim{}:
-			// backcompat: can be replaced with jwt.ClaimValueIs(...)
-			claim := o.Value().(claimValue)
-			validators = append(validators, ClaimValueIs(claim.name, claim.value))
 		case identValidator{}:
 			v := o.Value().(Validator)
 			switch v := v.(type) {
