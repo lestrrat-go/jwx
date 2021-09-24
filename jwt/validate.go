@@ -46,7 +46,6 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 func Validate(t Token, options ...ValidateOption) error {
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
-	var deltas []delta
 	var validators = []Validator{
 		IsIssuedAtValid(),
 		IsExpirationValid(),
@@ -74,28 +73,28 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identRequiredClaim{}:
 			// backcompat: can be replaced with jwt.IsRequired(...)
 			validators = append(validators, IsRequired(o.Value().(string)))
-		case identTimeDelta{}:
-			d := o.Value().(delta)
-			deltas = append(deltas, d)
-			if d.c1 != "" {
-				if err := isSupportedTimeClaim(d.c1); err != nil {
-					return err
-				}
-				validators = append(validators, IsRequired(d.c1))
-			}
-
-			if d.c2 != "" {
-				if err := isSupportedTimeClaim(d.c2); err != nil {
-					return err
-				}
-				validators = append(validators, IsRequired(d.c2))
-			}
 		case identClaim{}:
 			// backcompat: can be replaced with jwt.ClaimValueIs(...)
 			claim := o.Value().(claimValue)
 			validators = append(validators, ClaimValueIs(claim.name, claim.value))
 		case identValidator{}:
-			validators = append(validators, o.Value().(Validator))
+			v := o.Value().(Validator)
+			switch v := v.(type) {
+			case *isInTimeRange:
+				if v.c1 != "" {
+					if err := isSupportedTimeClaim(v.c1); err != nil {
+						return err
+					}
+					validators = append(validators, IsRequired(v.c1))
+				}
+				if v.c2 != "" {
+					if err := isSupportedTimeClaim(v.c2); err != nil {
+						return err
+					}
+					validators = append(validators, IsRequired(v.c2))
+				}
+			}
+			validators = append(validators, v)
 		}
 	}
 
@@ -107,23 +106,51 @@ func Validate(t Token, options ...ValidateOption) error {
 		}
 	}
 
-	for _, delta := range deltas {
-		// We don't check if the claims already exist, because we already did that
-		// by piggybacking on `required` check.
-		t1 := timeClaim(t, clock, delta.c1).Truncate(time.Second)
-		t2 := timeClaim(t, clock, delta.c2).Truncate(time.Second)
-		if delta.less { // t1 - t2 <= delta.dur
-			// t1 - t2 < delta.dur + skew
-			if t1.Sub(t2) > delta.dur+skew {
-				return errors.Errorf(`delta between %s and %s exceeds %s (skew %s)`, delta.c1, delta.c2, delta.dur, skew)
-			}
-		} else {
-			if t1.Sub(t2) < delta.dur-skew {
-				return errors.Errorf(`delta between %s and %s is less than %s (skew %s)`, delta.c1, delta.c2, delta.dur, skew)
-			}
+	return nil
+}
+
+type isInTimeRange struct {
+	c1   string
+	c2   string
+	dur  time.Duration
+	less bool // if true, d =< c1 - c2. otherwise d >= c1 - c2
+}
+
+func MaxDeltaIs(c1, c2 string, dur time.Duration) Validator {
+	return &isInTimeRange{
+		c1:   c1,
+		c2:   c2,
+		dur:  dur,
+		less: true,
+	}
+}
+
+func MinDeltaIs(c1, c2 string, dur time.Duration) Validator {
+	return &isInTimeRange{
+		c1:   c1,
+		c2:   c2,
+		dur:  dur,
+		less: false,
+	}
+}
+
+func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
+	clock := ValidationCtxClock(ctx) // MUST be populated
+	skew := ValidationCtxSkew(ctx)   // MUST be populated
+	// We don't check if the claims already exist, because we already did that
+	// by piggybacking on `required` check.
+	t1 := timeClaim(t, clock, iitr.c1).Truncate(time.Second)
+	t2 := timeClaim(t, clock, iitr.c2).Truncate(time.Second)
+	if iitr.less { // t1 - t2 <= iitr.dur
+		// t1 - t2 < iitr.dur + skew
+		if t1.Sub(t2) > iitr.dur+skew {
+			return errors.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+		}
+	} else {
+		if t1.Sub(t2) < iitr.dur-skew {
+			return errors.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 		}
 	}
-
 	return nil
 }
 

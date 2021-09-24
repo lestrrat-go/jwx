@@ -377,12 +377,7 @@ type delta struct {
 // If AcceptableSkew of 2 second is specified, the above will return valid for any value of
 // `exp` - `iat`  between 8 (10-2) and 12 (10+2).
 func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
-	return newValidateOption(identTimeDelta{}, delta{
-		c1:   c1,
-		c2:   c2,
-		dur:  dur,
-		less: true,
-	})
+	return WithValidator(MaxDeltaIs(c1, c2, dur))
 }
 
 // WithMinDelta is almost exactly the same as WithMaxDelta, but force validation to fail if
@@ -395,12 +390,7 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 // The validation would fail if the difference is less than 10 seconds.
 //
 func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
-	return newValidateOption(identTimeDelta{}, delta{
-		c1:   c1,
-		c2:   c2,
-		dur:  dur,
-		less: false,
-	})
+	return WithValidator(MinDeltaIs(c1, c2, dur))
 }
 
 // WithValidator validates the token with the given Validator.
