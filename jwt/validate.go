@@ -97,6 +97,7 @@ type isInTimeRange struct {
 	less bool // if true, d =< c1 - c2. otherwise d >= c1 - c2
 }
 
+// MaxDeltaIs implements the logic behind `WithMaxDelta()` option
 func MaxDeltaIs(c1, c2 string, dur time.Duration) Validator {
 	return &isInTimeRange{
 		c1:   c1,
@@ -106,6 +107,7 @@ func MaxDeltaIs(c1, c2 string, dur time.Duration) Validator {
 	}
 }
 
+// MinDeltaIs implements the logic behind `WithMinDelta()` option
 func MinDeltaIs(c1, c2 string, dur time.Duration) Validator {
 	return &isInTimeRange{
 		c1:   c1,
@@ -135,11 +137,13 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	return nil
 }
 
-// Validator describes interface to validate Token.
+// Validator describes interface to validate a Token.
 type Validator interface {
 	Validate(context.Context, Token) error
 }
 
+// ValidatorFunc is a type of Validator that does not have any
+// state, that is implemented as a function
 type ValidatorFunc func(context.Context, Token) error
 
 func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) error {
@@ -168,6 +172,13 @@ func ValidationCtxSkew(ctx context.Context) time.Duration {
 	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
 }
 
+// IsExpirationValid is one of the default validators that will be executed.
+// It does not need to be specified by users, but it exists as an
+// exported field so that you can check what it does.
+//
+// The supplied context.Context object must have the "clock" and "skew"
+// populated with appropriate values using SetValidationCtxClock() and
+// SetValidationCtxSkew()
 func IsExpirationValid() Validator {
 	return ValidatorFunc(isExpirationValid)
 }
@@ -185,6 +196,13 @@ func isExpirationValid(ctx context.Context, t Token) error {
 	return nil
 }
 
+// IsIssuedAtValid is one of the default validators that will be executed.
+// It does not need to be specified by users, but it exists as an
+// exported field so that you can check what it does.
+//
+// The supplied context.Context object must have the "clock" and "skew"
+// populated with appropriate values using SetValidationCtxClock() and
+// SetValidationCtxSkew()
 func IsIssuedAtValid() Validator {
 	return ValidatorFunc(isIssuedAtValid)
 }
@@ -266,16 +284,20 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 	return nil
 }
 
-type ClaimValue struct {
+type claimValueIs struct {
 	name  string
 	value interface{}
 }
 
+// ClaimValueIs creates a Validator that checks if the value of claim `name`
+// matches `value`. The comparison is done using a simple `==` comparison,
+// and therefore complex comparisons may fail using this code. If you
+// need to do more, use a custom Validator.
 func ClaimValueIs(name string, value interface{}) Validator {
-	return &ClaimValue{name: name, value: value}
+	return &claimValueIs{name: name, value: value}
 }
 
-func (cv *ClaimValue) Validate(_ context.Context, t Token) error {
+func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	v, ok := t.Get(cv.name)
 	if !ok {
 		return errors.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name)
@@ -286,6 +308,8 @@ func (cv *ClaimValue) Validate(_ context.Context, t Token) error {
 	return nil
 }
 
+// IsRequired creates a Validator that checks if the required claim `name`
+// exists in the token
 func IsRequired(name string) Validator {
 	return isRequired(name)
 }
