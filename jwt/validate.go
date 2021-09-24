@@ -53,7 +53,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	var deltas []delta
 	requiredMap := make(map[string]struct{})
 	claimValues := make(map[string]interface{})
-	var claimsValidators []ClaimsValidator
+	var claimsValidators []Validator
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
@@ -90,8 +90,8 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identClaim{}:
 			claim := o.Value().(claimValue)
 			claimValues[claim.name] = claim.value
-		case identClaimsValidator{}:
-			claimsValidators = append(claimsValidators, o.Value().(ClaimsValidator))
+		case identValidator{}:
+			claimsValidators = append(claimsValidators, o.Value().(Validator))
 		}
 	}
 
@@ -196,42 +196,13 @@ func Validate(t Token, options ...ValidateOption) error {
 	return nil
 }
 
-// ClaimsValidator describes interface to validate Token.
-type ClaimsValidator interface {
+// Validator describes interface to validate Token.
+type Validator interface {
 	Validate(Token) error
 }
 
-// SingleClaimValidator describes interface to validate a claim in Token.
-type SingleClaimValidator interface {
-	Validate(interface{}) error
-}
+type ValidatorFunc func(Token) error
 
-// SingleClaimValidatorFunc is a named type to wrap raw function as SingleClaimValidator.
-type SingleClaimValidatorFunc func(interface{}) error
-
-func (f SingleClaimValidatorFunc) Validate(c interface{}) error {
-	return f(c)
-}
-
-type singleClaimValidator struct {
-	name      string
-	validator SingleClaimValidator
-}
-
-func (scv *singleClaimValidator) Validate(tok Token) error {
-	v, ok := tok.Get(scv.name)
-	if !ok {
-		return fmt.Errorf("%s not satisfied", scv.name)
-	}
-	return scv.validator.Validate(v)
-}
-
-var (
-	_ ClaimsValidator      = (*singleClaimValidator)(nil)
-	_ SingleClaimValidator = (SingleClaimValidatorFunc)(nil)
-)
-
-// NewSingleClaimValidator takes name and SingleClaimValidator, and returns ClaimsValidator.
-func NewSingleClaimValidator(name string, v SingleClaimValidator) ClaimsValidator {
-	return &singleClaimValidator{name: name, validator: v}
+func (vf ValidatorFunc) Validate(tok Token) error {
+	return vf(tok)
 }

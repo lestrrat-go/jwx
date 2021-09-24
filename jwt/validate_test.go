@@ -260,55 +260,54 @@ func TestGHIssue10(t *testing.T) {
 
 func TestClaimValidator(t *testing.T) {
 	t.Parallel()
-	t.Run("interface{}", func(t *testing.T) {
-		t.Parallel()
-		const myClaim = "my-claim"
-		err0 := errors.New("not a map[string]interface{}")
-		err1 := errors.New("k does not exist")
-		err2 := errors.New("v is not v")
-		v := jwt.NewSingleClaimValidator(myClaim, jwt.SingleClaimValidatorFunc(func(c interface{}) error {
-			m, ok := c.(map[string]interface{})
-			if !ok {
-				return err0
-			}
-			v, ok := m["k"]
-			if !ok {
-				return err1
-			}
-			if v != "v" {
-				return err2
-			}
-			return nil
-		}))
-		t.Run("target claim is expected", func(t *testing.T) {
-			t.Parallel()
-			t1 := jwt.New()
-			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "v"}))
-			assert.NoError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)))
-		})
-		t.Run("target claim does not exist", func(t *testing.T) {
-			t.Parallel()
-			t1 := jwt.New()
-			assert.NoError(t, t1.Set("other-claim", map[string]interface{}{"k": "v"}))
-			assert.EqualError(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), "my-claim not satisfied")
-		})
-		t.Run(err0.Error(), func(t *testing.T) {
-			t.Parallel()
-			t1 := jwt.New()
-			assert.NoError(t, t1.Set(myClaim, map[interface{}]interface{}{"k": "v"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err0)
-		})
-		t.Run(err1.Error(), func(t *testing.T) {
-			t.Parallel()
-			t1 := jwt.New()
-			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"not-k": "v"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err1)
-		})
-		t.Run(err2.Error(), func(t *testing.T) {
-			t.Parallel()
-			t1 := jwt.New()
-			assert.NoError(t, t1.Set(myClaim, map[string]interface{}{"k": "not-v"}))
-			assert.ErrorIs(t, jwt.Validate(t1, jwt.WithClaimsValidator(v)), err2)
-		})
+	const myClaim = "my-claim"
+	err0 := errors.New(myClaim + " does not exist")
+	v := jwt.ValidatorFunc(func(tok jwt.Token) error {
+		_, ok := tok.Get(myClaim)
+		if !ok {
+			return err0
+		}
+		return nil
 	})
+
+	testcases := []struct {
+		Name      string
+		MakeToken func() jwt.Token
+		Error     error
+	}{
+		{
+			Name: "Successful validation",
+			MakeToken: func() jwt.Token {
+				t1 := jwt.New()
+				_ = t1.Set(myClaim, map[string]interface{}{"k": "v"})
+				return t1
+			},
+		},
+		{
+			Name: "Target claim does not exist",
+			MakeToken: func() jwt.Token {
+				t1 := jwt.New()
+				_ = t1.Set("other-claim", map[string]interface{}{"k": "v"})
+				return t1
+			},
+			Error: err0,
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			t1 := tc.MakeToken()
+			if err := tc.Error; err != nil {
+				if !assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidator(v)), err) {
+					return
+				}
+				return
+			}
+
+			if !assert.NoError(t, jwt.Validate(t1, jwt.WithValidator(v))) {
+				return
+			}
+		})
+	}
 }
