@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -108,23 +109,18 @@ func newValidateOption(n interface{}, v interface{}) ValidateOption {
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
-type identAudience struct{}
-type identClaim struct{}
 type identClock struct{}
+type identContext struct{}
 type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
 type identInferAlgorithmFromKey struct{}
-type identIssuer struct{}
 type identJweHeaders struct{}
 type identJwsHeaders struct{}
-type identJwtid struct{}
 type identKeySet struct{}
 type identKeySetProvider struct{}
 type identPedantic struct{}
-type identRequiredClaim struct{}
-type identSubject struct{}
-type identTimeDelta struct{}
+type identValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
@@ -247,19 +243,19 @@ func WithAcceptableSkew(dur time.Duration) ValidateOption {
 // WithIssuer specifies that expected issuer value. If not specified,
 // the value of issuer is not verified at all.
 func WithIssuer(s string) ValidateOption {
-	return newValidateOption(identIssuer{}, s)
+	return WithValidator(ClaimValueIs(IssuerKey, s))
 }
 
 // WithSubject specifies that expected subject value. If not specified,
 // the value of subject is not verified at all.
 func WithSubject(s string) ValidateOption {
-	return newValidateOption(identSubject{}, s)
+	return WithValidator(ClaimValueIs(SubjectKey, s))
 }
 
 // WithJwtID specifies that expected jti value. If not specified,
 // the value of jti is not verified at all.
 func WithJwtID(s string) ValidateOption {
-	return newValidateOption(identJwtid{}, s)
+	return WithValidator(ClaimValueIs(JwtIDKey, s))
 }
 
 // WithAudience specifies that expected audience value.
@@ -267,17 +263,12 @@ func WithJwtID(s string) ValidateOption {
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
 func WithAudience(s string) ValidateOption {
-	return newValidateOption(identAudience{}, s)
-}
-
-type claimValue struct {
-	name  string
-	value interface{}
+	return WithValidator(ClaimContainsString(AudienceKey, s))
 }
 
 // WithClaimValue specifies that expected any claim value.
 func WithClaimValue(name string, v interface{}) ValidateOption {
-	return newValidateOption(identClaim{}, claimValue{name, v})
+	return WithValidator(ClaimValueIs(name, v))
 }
 
 // WithHeaderKey is used to specify header keys to search for tokens.
@@ -345,14 +336,7 @@ func WithTypedClaim(name string, object interface{}) ParseOption {
 // must exist in the token. Only the existence of the claim is checked:
 // the actual value associated with that field is not checked.
 func WithRequiredClaim(name string) ValidateOption {
-	return newValidateOption(identRequiredClaim{}, name)
-}
-
-type delta struct {
-	c1   string
-	c2   string
-	dur  time.Duration
-	less bool // if true, d =< c1 - c2. otherwise d >= c1 - c2
+	return WithValidator(IsRequired(name))
 }
 
 // WithMaxDelta specifies that given two claims `c1` and `c2` that represent time, the difference in
@@ -376,12 +360,7 @@ type delta struct {
 // If AcceptableSkew of 2 second is specified, the above will return valid for any value of
 // `exp` - `iat`  between 8 (10-2) and 12 (10+2).
 func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
-	return newValidateOption(identTimeDelta{}, delta{
-		c1:   c1,
-		c2:   c2,
-		dur:  dur,
-		less: true,
-	})
+	return WithValidator(MaxDeltaIs(c1, c2, dur))
 }
 
 // WithMinDelta is almost exactly the same as WithMaxDelta, but force validation to fail if
@@ -394,12 +373,27 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 // The validation would fail if the difference is less than 10 seconds.
 //
 func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
-	return newValidateOption(identTimeDelta{}, delta{
-		c1:   c1,
-		c2:   c2,
-		dur:  dur,
-		less: false,
-	})
+	return WithValidator(MinDeltaIs(c1, c2, dur))
+}
+
+// WithValidator validates the token with the given Validator.
+//
+// For example, in order to validate a custom claim value is 'my-claim-value', you would write
+//
+//   v := jwt.NewSingleClaimValidator("my-claim", SingleClaimValidatorFunc(func(c interface{}) error ) {
+//       v, ok := c.(string)
+//       if !ok {
+//           return errors.New("invalid my-claim")
+//       }
+//       if v != "my-claim-value" {
+//           return errors.New("invalid my-claim")
+//       }
+//       return nil
+//   })
+//   err := jwt.Validate(token, jwt.WithValidator(jwt.NewSingleClaimValidator("my-claim", v)))
+//
+func WithValidator(v Validator) ValidateOption {
+	return newValidateOption(identValidator{}, v)
 }
 
 type decryptParams struct {
@@ -477,4 +471,14 @@ func (fn KeySetProviderFunc) KeySetFrom(t Token) (jwk.Set, error) {
 // If provided with WithKeySet(), WithKeySet() option takes precedence.
 func WithKeySetProvider(p KeySetProvider) ParseOption {
 	return newParseOption(identKeySetProvider{}, p)
+}
+
+// WithContext allows you to specify a context.Context object to be used
+// with `jwt.Validate()` option.
+//
+// Please be aware that in the next major release of this library,
+// `jwt.Validate()`'s signature will change to include an explicit
+// `context.Context` object.
+func WithContext(ctx context.Context) ValidateOption {
+	return newValidateOption(identContext{}, ctx)
 }

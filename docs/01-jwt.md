@@ -142,6 +142,20 @@ if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx`)) {
 }
 ```
 
+You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified
+
+```go
+validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+  if time.Now().Month() != 8 {
+		return fmt.Errorf(`tokens are only valid during August!`)
+  }
+  return nil
+})
+if err := jwt.Validate(token, jwt.WithValidator(validator)); err != nil {
+  ...
+}
+```
+
 # JWT Serialization
 
 ## Serialize using JWS

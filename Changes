@@ -23,10 +23,14 @@ v1.2.7 UNRELEASED
     You should NOT trust the token information too much. For example,
     DO NOT directly use values from the token as verificatin parameters
     (such as the signature algorithm)
+  * `jwt.WithValidator()` has been added to allow users pass in aribtrary
+    validation code to the `jwt.Validate()` method
 
 [Miscellaneous]
   * Make the error messages when `jwt.ParseRequest` fails a bit better.
   * Moved around documentation within the repository
+  * Validation logic for `jwt.Validate()` has been refactored to use the
+    new `jwt.Validator` mechanism
 
 v1.2.6 24 Aug 2021
 [New features]

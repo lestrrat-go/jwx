@@ -1,6 +1,8 @@
 package jwt_test
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -255,4 +257,58 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestClaimValidator(t *testing.T) {
+	t.Parallel()
+	const myClaim = "my-claim"
+	err0 := errors.New(myClaim + " does not exist")
+	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) error {
+		_, ok := tok.Get(myClaim)
+		if !ok {
+			return err0
+		}
+		return nil
+	})
+
+	testcases := []struct {
+		Name      string
+		MakeToken func() jwt.Token
+		Error     error
+	}{
+		{
+			Name: "Successful validation",
+			MakeToken: func() jwt.Token {
+				t1 := jwt.New()
+				_ = t1.Set(myClaim, map[string]interface{}{"k": "v"})
+				return t1
+			},
+		},
+		{
+			Name: "Target claim does not exist",
+			MakeToken: func() jwt.Token {
+				t1 := jwt.New()
+				_ = t1.Set("other-claim", map[string]interface{}{"k": "v"})
+				return t1
+			},
+			Error: err0,
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			t1 := tc.MakeToken()
+			if err := tc.Error; err != nil {
+				if !assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidator(v)), err) {
+					return
+				}
+				return
+			}
+
+			if !assert.NoError(t, jwt.Validate(t1, jwt.WithValidator(v))) {
+				return
+			}
+		})
+	}
 }
