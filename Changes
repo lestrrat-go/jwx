@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.7 UNRELEASED
+v1.2.7 26 Sep 2021
 [New features]
   * `jwt.InferAlgorithmFromKey()` option is now available to "guess"
     the algorithm used to verify the JWS signature on a JWT using
