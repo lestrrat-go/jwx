@@ -44,6 +44,7 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
+	ctx := context.Background()
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
 	var validators = []Validator{
@@ -58,6 +59,8 @@ func Validate(t Token, options ...ValidateOption) error {
 			clock = o.Value().(Clock)
 		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
+		case identContext{}:
+			ctx = o.Value().(context.Context)
 		case identValidator{}:
 			v := o.Value().(Validator)
 			switch v := v.(type) {
@@ -79,7 +82,7 @@ func Validate(t Token, options ...ValidateOption) error {
 		}
 	}
 
-	ctx := SetValidationCtxSkew(context.Background(), skew)
+	ctx = SetValidationCtxSkew(ctx, skew)
 	ctx = SetValidationCtxClock(ctx, clock)
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {

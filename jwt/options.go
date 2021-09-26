@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -109,6 +110,7 @@ func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
 type identClock struct{}
+type identContext struct{}
 type identDecrypt struct{}
 type identDefault struct{}
 type identFlattenAudience struct{}
@@ -469,4 +471,14 @@ func (fn KeySetProviderFunc) KeySetFrom(t Token) (jwk.Set, error) {
 // If provided with WithKeySet(), WithKeySet() option takes precedence.
 func WithKeySetProvider(p KeySetProvider) ParseOption {
 	return newParseOption(identKeySetProvider{}, p)
+}
+
+// WithContext allows you to specify a context.Context object to be used
+// with `jwt.Validate()` option.
+//
+// Please be aware that in the next major release of this library,
+// `jwt.Validate()`'s signature will change to include an explicit
+// `context.Context` object.
+func WithContext(ctx context.Context) ValidateOption {
+	return newValidateOption(identContext{}, ctx)
 }
