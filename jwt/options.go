@@ -378,19 +378,15 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 
 // WithValidator validates the token with the given Validator.
 //
-// For example, in order to validate a custom claim value is 'my-claim-value', you would write
+// For example, in order to validate tokens that are only valid during August, you would write
 //
-//   v := jwt.NewSingleClaimValidator("my-claim", SingleClaimValidatorFunc(func(c interface{}) error ) {
-//       v, ok := c.(string)
-//       if !ok {
-//           return errors.New("invalid my-claim")
-//       }
-//       if v != "my-claim-value" {
-//           return errors.New("invalid my-claim")
-//       }
-//       return nil
-//   })
-//   err := jwt.Validate(token, jwt.WithValidator(jwt.NewSingleClaimValidator("my-claim", v)))
+//    validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+//      if time.Now().Month() != 8 {
+//        return fmt.Errorf(`tokens are only valid during August!`)
+//      }
+//      return nil
+//    })
+//   err := jwt.Validate(token, jwt.WithValidator(validator))
 //
 func WithValidator(v Validator) ValidateOption {
 	return newValidateOption(identValidator{}, v)
