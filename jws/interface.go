@@ -50,6 +50,7 @@ type DecodeCtx interface {
 //
 // To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
+	dc         DecodeCtx
 	payload    []byte
 	signatures []*Signature
 	b64        bool // true if payload should be base64 encoded

@@ -256,9 +256,11 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	}
 
 	var m Message
+	m.SetDecodeCtx(collectRawCtx{})
 	if err := json.Unmarshal(signed, &m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 	}
+	m.SetDecodeCtx(nil)
 
 	if len(m.payload) != 0 && detachedPayload != nil {
 		return nil, errors.New(`can't specify detached payload for JWS with payload`)

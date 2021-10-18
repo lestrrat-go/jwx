@@ -81,7 +81,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		}
 
 		prt := NewHeaders()
-		prt.(*stdHeaders).SetDecodeCtx(collectRawCtx{})
+		prt.(*stdHeaders).SetDecodeCtx(s.DecodeCtx())
 		if err := json.Unmarshal(src, prt); err != nil {
 			return errors.Wrap(err, `failed to unmarshal protected headers`)
 		}
@@ -162,6 +162,14 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
+func (m *Message) SetDecodeCtx(dc DecodeCtx) {
+	m.dc = dc
+}
+
+func (m *Message) DecodeCtx() DecodeCtx {
+	return m.dc
+}
+
 // Payload returns the decoded payload
 func (m Message) Payload() []byte {
 	return m.payload
@@ -238,7 +246,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		m.signatures = make([]*Signature, len(mup.Signatures))
 		for i, rawsig := range mup.Signatures {
 			var sig Signature
-			sig.SetDecodeCtx(collectRawCtx{})
+			sig.SetDecodeCtx(m.DecodeCtx())
 			if err := json.Unmarshal(rawsig, &sig); err != nil {
 				return errors.Wrapf(err, `failed to unmarshal signature #%d`, i+1)
 			}
@@ -269,7 +277,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 				return errors.Wrap(err, `failed to base64 decode flattened protected headers`)
 			}
 			prt := NewHeaders()
-			prt.(*stdHeaders).SetDecodeCtx(collectRawCtx{})
+			prt.(*stdHeaders).SetDecodeCtx(m.DecodeCtx())
 			if err := json.Unmarshal(decoded, prt); err != nil {
 				return errors.Wrap(err, `failed to unmarshal flattened protected headers`)
 			}
