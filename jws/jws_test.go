@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"sort"
 	"strings"
@@ -1339,6 +1340,7 @@ func TestRFC7797(t *testing.T) {
 					}
 				} else {
 					if !assert.NoError(t, err, `jws.Verify should succeed`) {
+						log.Printf("%q", tc.Input)
 						return
 					}
 					if !assert.Equal(t, detached, payload, `payload should match`) {
@@ -1451,5 +1453,33 @@ func TestAlgorithmsForKey(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestGH485(t *testing.T) {
+	const payload = `eyJhIjoiYiJ9`
+	const protected = `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImNyaXQiOlsiZXhwIl0sImV4cCI6MCwiaXNzIjoiZm9vIiwibmJmIjowLCJpYXQiOjB9`
+	const signature = `qM0CdRcyR4hw03J2ThJDat3Af40U87wVCF3Tp3xsyOg`
+	const expected = `{"a":"b"}`
+	signed := fmt.Sprintf(`{
+    "payload": %q,
+    "signatures": [{"protected": %q, "signature": %q}]
+}`, payload, protected, signature)
+
+	verified, err := jws.Verify([]byte(signed), jwa.HS256, []byte("secret"))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
+		return
+	}
+
+	compact := strings.Join([]string{protected, payload, signature}, ".")
+	verified, err = jws.Verify([]byte(compact), jwa.HS256, []byte("secret"))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
+		return
 	}
 }
