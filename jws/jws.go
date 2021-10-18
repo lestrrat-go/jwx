@@ -257,6 +257,7 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 
 	var m Message
 	m.SetDecodeCtx(collectRawCtx{})
+	defer m.clearRaw()
 	if err := json.Unmarshal(signed, &m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 	}

@@ -162,6 +162,16 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
+func (m *Message) clearRaw() {
+	for _, sig := range m.signatures {
+		if protected := sig.protected; protected != nil {
+			if cr, ok := protected.(*stdHeaders); ok {
+				cr.raw = nil
+			}
+		}
+	}
+}
+
 func (m *Message) SetDecodeCtx(dc DecodeCtx) {
 	m.dc = dc
 }
@@ -243,7 +253,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			return errors.New(`required field "signatures" not present`)
 		}
 
-		m.signatures = make([]*Signature, len(mup.Signatures))
+		m.signatures = make([]*Signature, 0, len(mup.Signatures))
 		for i, rawsig := range mup.Signatures {
 			var sig Signature
 			sig.SetDecodeCtx(m.DecodeCtx())
@@ -262,7 +272,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 				}
 			}
 
-			m.signatures[i] = &sig
+			m.signatures = append(m.signatures, &sig)
 		}
 	} else { // .signature is present, it's a flattened structure
 		if len(mup.Signatures) != 0 {
