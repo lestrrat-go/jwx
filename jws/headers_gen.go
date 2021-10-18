@@ -77,6 +77,7 @@ type stdHeaders struct {
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
+	dc                     DecodeCtx
 	raw                    []byte // stores the raw version of the header so it can be used later
 }
 
@@ -174,6 +175,18 @@ func (h *stdHeaders) X509URL() string {
 		return ""
 	}
 	return *(h.x509URL)
+}
+
+func (h *stdHeaders) DecodeCtx() DecodeCtx {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.dc
+}
+
+func (h *stdHeaders) SetDecodeCtx(dc DecodeCtx) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.dc = dc
 }
 
 func (h *stdHeaders) Raw() []byte {
@@ -510,7 +523,12 @@ LOOP:
 			return errors.Errorf(`invalid token %T`, tok)
 		}
 	}
-	h.raw = buf
+
+	if dc := h.dc; dc != nil {
+		if dc.CollectRaw() {
+			h.raw = buf
+		}
+	}
 	return nil
 }
 

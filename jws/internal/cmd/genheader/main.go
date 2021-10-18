@@ -215,6 +215,7 @@ func generateHeaders() error {
 	}
 	o.L("privateParams map[string]interface{}")
 	o.L("mu *sync.RWMutex")
+	o.L("dc DecodeCtx")
 	o.L("raw []byte // stores the raw version of the header so it can be used later")
 	o.L("}") // end type StandardHeaders
 
@@ -238,6 +239,17 @@ func generateHeaders() error {
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
+
+	o.LL("func (h *stdHeaders) DecodeCtx() DecodeCtx{")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("return h.dc")
+	o.L("}")
+	o.LL("func (h *stdHeaders) SetDecodeCtx(dc DecodeCtx) {")
+	o.L("h.mu.Lock()")
+	o.L("defer h.mu.Unlock()")
+	o.L("h.dc = dc")
+	o.L("}")
 
 	// This has no lock because nothing can assign to it
 	o.LL("func (h *stdHeaders) Raw() []byte {")
@@ -425,8 +437,11 @@ func generateHeaders() error {
 	o.L("return errors.Errorf(`invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
-
+	o.LL("if dc := h.dc; dc != nil {")
+	o.L("if dc.CollectRaw() {")
 	o.L("h.raw = buf")
+	o.L("}")
+	o.L("}")
 	o.L("return nil")
 	o.L("}")
 
