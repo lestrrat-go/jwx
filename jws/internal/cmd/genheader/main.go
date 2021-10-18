@@ -219,7 +219,8 @@ func generateHeaders() error {
 	o.L("// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
 	o.L("// Use AsMap() to get a copy of the entire header instead")
 	o.L("PrivateParams() map[string]interface{}")
-
+	o.LL("//Raw returns the raw buffer that the Header was decoded from")
+	o.L("Raw() []byte")
 	o.L("}")
 
 	o.LL("type stdHeaders struct {")
@@ -228,17 +229,7 @@ func generateHeaders() error {
 	}
 	o.L("privateParams map[string]interface{}")
 	o.L("mu *sync.RWMutex")
-	o.L("}") // end type StandardHeaders
-
-	// Proxy is used when unmarshaling headers
-	o.LL("type standardHeadersMarshalProxy struct {")
-	for _, f := range fields {
-		if f.name == jwkKey {
-			o.L("X%s json.RawMessage %s", f.name, f.jsonTag)
-		} else {
-			o.L("X%s %s %s", f.name, fieldStorageType(f.typ), f.jsonTag)
-		}
-	}
+	o.L("raw []byte // stores the raw version of the header so it can be used later")
 	o.L("}") // end type StandardHeaders
 
 	o.LL("func NewHeaders() Headers {")
@@ -261,6 +252,11 @@ func generateHeaders() error {
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
+
+	// This has no lock because nothing can assign to it
+	o.LL("func (h *stdHeaders) Raw() []byte {")
+	o.L("return h.raw")
+	o.L("}")
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
@@ -444,6 +440,7 @@ func generateHeaders() error {
 	o.L("}")
 	o.L("}")
 
+	o.L("h.raw = buf")
 	o.L("return nil")
 	o.L("}")
 

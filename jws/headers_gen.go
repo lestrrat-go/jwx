@@ -58,6 +58,9 @@ type Headers interface {
 	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
 	// Use AsMap() to get a copy of the entire header instead
 	PrivateParams() map[string]interface{}
+
+	//Raw returns the raw buffer that the Header was decoded from
+	Raw() []byte
 }
 
 type stdHeaders struct {
@@ -74,20 +77,7 @@ type stdHeaders struct {
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-}
-
-type standardHeadersMarshalProxy struct {
-	Xalgorithm              *jwa.SignatureAlgorithm `json:"alg,omitempty"`
-	XcontentType            *string                 `json:"cty,omitempty"`
-	Xcritical               []string                `json:"crit,omitempty"`
-	Xjwk                    json.RawMessage         `json:"jwk,omitempty"`
-	XjwkSetURL              *string                 `json:"jku,omitempty"`
-	XkeyID                  *string                 `json:"kid,omitempty"`
-	Xtyp                    *string                 `json:"typ,omitempty"`
-	Xx509CertChain          []string                `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                 `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                 `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                 `json:"x5u,omitempty"`
+	raw                    []byte // stores the raw version of the header so it can be used later
 }
 
 func NewHeaders() Headers {
@@ -184,6 +174,10 @@ func (h *stdHeaders) X509URL() string {
 		return ""
 	}
 	return *(h.x509URL)
+}
+
+func (h *stdHeaders) Raw() []byte {
+	return h.raw
 }
 
 func (h *stdHeaders) makePairs() []*HeaderPair {
@@ -516,6 +510,7 @@ LOOP:
 			return errors.Errorf(`invalid token %T`, tok)
 		}
 	}
+	h.raw = buf
 	return nil
 }
 
