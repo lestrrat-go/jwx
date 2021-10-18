@@ -58,9 +58,6 @@ type Headers interface {
 	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
 	// Use AsMap() to get a copy of the entire header instead
 	PrivateParams() map[string]interface{}
-
-	//Raw returns the raw buffer that the Header was decoded from
-	Raw() []byte
 }
 
 type stdHeaders struct {
@@ -189,7 +186,7 @@ func (h *stdHeaders) SetDecodeCtx(dc DecodeCtx) {
 	h.dc = dc
 }
 
-func (h *stdHeaders) Raw() []byte {
+func (h *stdHeaders) rawBuffer() []byte {
 	return h.raw
 }
 

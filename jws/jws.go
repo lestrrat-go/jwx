@@ -290,9 +290,13 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 		}
 
 		var encodedProtectedHeader string
-		if raw := sig.protected.Raw(); raw != nil {
-			encodedProtectedHeader = base64.EncodeToString(raw)
-		} else {
+		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
+			if raw := rbp.rawBuffer(); raw != nil {
+				encodedProtectedHeader = base64.EncodeToString(raw)
+			}
+		}
+
+		if encodedProtectedHeader == "" {
 			protected, err := json.Marshal(sig.protected)
 			if err != nil {
 				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)

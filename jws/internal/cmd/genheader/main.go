@@ -205,8 +205,6 @@ func generateHeaders() error {
 	o.L("// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
 	o.L("// Use AsMap() to get a copy of the entire header instead")
 	o.L("PrivateParams() map[string]interface{}")
-	o.LL("//Raw returns the raw buffer that the Header was decoded from")
-	o.L("Raw() []byte")
 	o.L("}")
 
 	o.LL("type stdHeaders struct {")
@@ -252,7 +250,7 @@ func generateHeaders() error {
 	o.L("}")
 
 	// This has no lock because nothing can assign to it
-	o.LL("func (h *stdHeaders) Raw() []byte {")
+	o.LL("func (h *stdHeaders) rawBuffer() []byte {")
 	o.L("return h.raw")
 	o.L("}")
 

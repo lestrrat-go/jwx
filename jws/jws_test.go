@@ -842,7 +842,6 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		t.Logf("%#v", m)
 		if !assert.Len(t, m.Signatures(), 2, "There should be 2 signatures") {
 			return
 		}
@@ -1023,17 +1022,6 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	}
 
 	if !assert.NoError(t, v.Verify(buf.Bytes(), decodedSignature, rawkey), "Verify succeeds") {
-		return
-	}
-}
-
-func TestGHIssue126(t *testing.T) {
-	_, err := jws.Verify([]byte("{}"), jwa.ES384, nil)
-	if !assert.Error(t, err, "Verify should fail") {
-		return
-	}
-
-	if !assert.Equal(t, err.Error(), `failed to unmarshal JSON message: "payload" must be non-empty`) {
 		return
 	}
 }

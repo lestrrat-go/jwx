@@ -56,6 +56,7 @@ type Message struct {
 }
 
 type Signature struct {
+	dc        DecodeCtx
 	headers   Headers // Unprotected Headers
 	protected Headers // Protected Headers
 	signature []byte  // Signature
