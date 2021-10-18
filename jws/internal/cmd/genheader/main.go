@@ -31,7 +31,6 @@ type headerField struct {
 	key       string
 	comment   string
 	hasAccept bool
-	jsonTag   string
 }
 
 func (f headerField) IsPointer() bool {
@@ -67,8 +66,6 @@ func fieldStorageTypeIsIndirect(s string) bool {
 }
 
 func generateHeaders() error {
-	const jwkKey = "jwk"
-
 	fields := []headerField{
 		{
 			name:      `algorithm`,
@@ -77,7 +74,6 @@ func generateHeaders() error {
 			key:       `alg`,
 			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
 			hasAccept: true,
-			jsonTag:   "`" + `json:"alg,omitempty"` + "`",
 		},
 		{
 			name:    `contentType`,
@@ -85,7 +81,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `cty`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.10`,
-			jsonTag: "`" + `json:"cty,omitempty"` + "`",
 		},
 		{
 			name:    `critical`,
@@ -93,7 +88,6 @@ func generateHeaders() error {
 			typ:     `[]string`,
 			key:     `crit`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-			jsonTag: "`" + `json:"crit,omitempty"` + "`",
 		},
 		{
 			name:    `jwk`,
@@ -101,7 +95,6 @@ func generateHeaders() error {
 			typ:     `jwk.Key`,
 			key:     `jwk`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-			jsonTag: "`" + `json:"jwk,omitempty"` + "`",
 		},
 		{
 			name:    `jwkSetURL`,
@@ -109,7 +102,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `jku`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.2`,
-			jsonTag: "`" + `json:"jku,omitempty"` + "`",
 		},
 		{
 			name:    `keyID`,
@@ -117,7 +109,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `kid`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
-			jsonTag: "`" + `json:"kid,omitempty"` + "`",
 		},
 		{
 			name:    `typ`,
@@ -125,7 +116,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `typ`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
-			jsonTag: "`" + `json:"typ,omitempty"` + "`",
 		},
 		{
 			name:    `x509CertChain`,
@@ -133,7 +123,6 @@ func generateHeaders() error {
 			typ:     `[]string`,
 			key:     `x5c`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
-			jsonTag: "`" + `json:"x5c,omitempty"` + "`",
 		},
 		{
 			name:    `x509CertThumbprint`,
@@ -141,7 +130,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `x5t`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
-			jsonTag: "`" + `json:"x5t,omitempty"` + "`",
 		},
 		{
 			name:    `x509CertThumbprintS256`,
@@ -149,7 +137,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `x5t#S256`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
-			jsonTag: "`" + `json:"x5t#S256,omitempty"` + "`",
 		},
 		{
 			name:    `x509URL`,
@@ -157,7 +144,6 @@ func generateHeaders() error {
 			typ:     `string`,
 			key:     `x5u`,
 			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
-			jsonTag: "`" + `json:"x5u,omitempty"` + "`",
 		},
 	}
 
