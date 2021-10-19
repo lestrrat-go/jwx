@@ -162,6 +162,8 @@ func NewMessage() *Message {
 	return &Message{}
 }
 
+// Clears the internal raw buffer that was accumulated during
+// the verify phase
 func (m *Message) clearRaw() {
 	for _, sig := range m.signatures {
 		if protected := sig.protected; protected != nil {
@@ -228,6 +230,9 @@ func (m Message) LookupSignature(kid string) []*Signature {
 	return sigs
 }
 
+// This struct is used to first probe for the structure of the
+// incoming JSON object. We then decide how to parse it
+// from the fields that are populated.
 type messageUnmarshalProbe struct {
 	Payload    *string           `json:"payload"`
 	Signatures []json.RawMessage `json:"signatures,omitempty"`
