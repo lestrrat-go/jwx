@@ -256,9 +256,12 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	}
 
 	var m Message
+	m.SetDecodeCtx(collectRawCtx{})
+	defer m.clearRaw()
 	if err := json.Unmarshal(signed, &m); err != nil {
 		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
 	}
+	m.SetDecodeCtx(nil)
 
 	if len(m.payload) != 0 && detachedPayload != nil {
 		return nil, errors.New(`can't specify detached payload for JWS with payload`)
@@ -289,12 +292,23 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 			}
 		}
 
-		protected, err := json.Marshal(sig.protected)
-		if err != nil {
-			return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+		var encodedProtectedHeader string
+		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
+			if raw := rbp.rawBuffer(); raw != nil {
+				encodedProtectedHeader = base64.EncodeToString(raw)
+			}
 		}
 
-		buf.WriteString(base64.EncodeToString(protected))
+		if encodedProtectedHeader == "" {
+			protected, err := json.Marshal(sig.protected)
+			if err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
+			}
+
+			encodedProtectedHeader = base64.EncodeToString(protected)
+		}
+
+		buf.WriteString(encodedProtectedHeader)
 		buf.WriteByte('.')
 		buf.WriteString(payload)
 

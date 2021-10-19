@@ -841,7 +841,6 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		t.Logf("%#v", m)
 		if !assert.Len(t, m.Signatures(), 2, "There should be 2 signatures") {
 			return
 		}
@@ -1022,17 +1021,6 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	}
 
 	if !assert.NoError(t, v.Verify(buf.Bytes(), decodedSignature, rawkey), "Verify succeeds") {
-		return
-	}
-}
-
-func TestGHIssue126(t *testing.T) {
-	_, err := jws.Verify([]byte("{}"), jwa.ES384, nil)
-	if !assert.Error(t, err, "Verify should fail") {
-		return
-	}
-
-	if !assert.Equal(t, err.Error(), `failed to unmarshal JSON message: "payload" must be non-empty`) {
 		return
 	}
 }
@@ -1451,5 +1439,33 @@ func TestAlgorithmsForKey(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+func TestGH485(t *testing.T) {
+	const payload = `eyJhIjoiYiJ9`
+	const protected = `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImNyaXQiOlsiZXhwIl0sImV4cCI6MCwiaXNzIjoiZm9vIiwibmJmIjowLCJpYXQiOjB9`
+	const signature = `qM0CdRcyR4hw03J2ThJDat3Af40U87wVCF3Tp3xsyOg`
+	const expected = `{"a":"b"}`
+	signed := fmt.Sprintf(`{
+    "payload": %q,
+    "signatures": [{"protected": %q, "signature": %q}]
+}`, payload, protected, signature)
+
+	verified, err := jws.Verify([]byte(signed), jwa.HS256, []byte("secret"))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
+		return
+	}
+
+	compact := strings.Join([]string{protected, payload, signature}, ".")
+	verified, err = jws.Verify([]byte(compact), jwa.HS256, []byte("secret"))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
+		return
 	}
 }

@@ -74,20 +74,8 @@ type stdHeaders struct {
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-}
-
-type standardHeadersMarshalProxy struct {
-	Xalgorithm              *jwa.SignatureAlgorithm `json:"alg,omitempty"`
-	XcontentType            *string                 `json:"cty,omitempty"`
-	Xcritical               []string                `json:"crit,omitempty"`
-	Xjwk                    json.RawMessage         `json:"jwk,omitempty"`
-	XjwkSetURL              *string                 `json:"jku,omitempty"`
-	XkeyID                  *string                 `json:"kid,omitempty"`
-	Xtyp                    *string                 `json:"typ,omitempty"`
-	Xx509CertChain          []string                `json:"x5c,omitempty"`
-	Xx509CertThumbprint     *string                 `json:"x5t,omitempty"`
-	Xx509CertThumbprintS256 *string                 `json:"x5t#S256,omitempty"`
-	Xx509URL                *string                 `json:"x5u,omitempty"`
+	dc                     DecodeCtx
+	raw                    []byte // stores the raw version of the header so it can be used later
 }
 
 func NewHeaders() Headers {
@@ -184,6 +172,22 @@ func (h *stdHeaders) X509URL() string {
 		return ""
 	}
 	return *(h.x509URL)
+}
+
+func (h *stdHeaders) DecodeCtx() DecodeCtx {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.dc
+}
+
+func (h *stdHeaders) SetDecodeCtx(dc DecodeCtx) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.dc = dc
+}
+
+func (h *stdHeaders) rawBuffer() []byte {
+	return h.raw
 }
 
 func (h *stdHeaders) makePairs() []*HeaderPair {
@@ -514,6 +518,12 @@ LOOP:
 			}
 		default:
 			return errors.Errorf(`invalid token %T`, tok)
+		}
+	}
+
+	if dc := h.dc; dc != nil {
+		if dc.CollectRaw() {
+			h.raw = buf
 		}
 	}
 	return nil

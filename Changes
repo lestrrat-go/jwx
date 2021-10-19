@@ -1,6 +1,23 @@
 Changes
 =======
 
+v1.2.8 UNRELEASED
+  * `jws.Message`, `jws.Signature`, `jws.Headers` have been reworked
+    to allow JSON messages to be verified correctly. The problem can
+    be caused when protected headers are serialized one way (perhaps
+    `{"c":3","a":1,"b":2}` was used before being base64-encoded) but
+    the Go serialization differed from it (Go serializes in alphabetical
+    order: `{"a":1,"b":2,"c":3}`)
+
+    Messages serialized in compact form do NOT suffer from the
+    same problem.
+
+    This is close to fixes that went in v1.2.2. It boils down to the
+    fact that once deserialized, the JWS messages lose part of its
+    information (namely, the raw, original protected header value),
+    and neither users nor the developers of this library should
+    rely on it.
+
 v1.2.7 26 Sep 2021
 [New features]
   * `jwt.InferAlgorithmFromKey()` option is now available to "guess"
