@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"sort"
 	"strings"
@@ -1328,7 +1327,6 @@ func TestRFC7797(t *testing.T) {
 					}
 				} else {
 					if !assert.NoError(t, err, `jws.Verify should succeed`) {
-						log.Printf("%q", tc.Input)
 						return
 					}
 					if !assert.Equal(t, detached, payload, `payload should match`) {
