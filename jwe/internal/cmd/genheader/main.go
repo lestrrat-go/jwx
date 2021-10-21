@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
 )
@@ -21,41 +22,60 @@ func main() {
 }
 
 func _main() error {
-	return generateHeaders()
-}
-
-type headerField struct {
-	name      string
-	method    string
-	typ       string
-	key       string
-	comment   string
-	hasAccept bool
-}
-
-func (f headerField) IsPointer() bool {
-	return strings.HasPrefix(f.typ, "*")
-}
-
-func (f headerField) PointerElem() string {
-	return strings.TrimPrefix(f.typ, "*")
-}
-
-var zerovals = map[string]string{
-	"string":                 `""`,
-	"jwa.SignatureAlgorithm": `""`,
-	"[]string":               "0",
-}
-
-func zeroval(s string) string {
-	if strings.HasPrefix(s, "jwa.") && strings.HasSuffix(s, "Algorithm") {
-		s = "string"
+	codegen.RegisterZeroVal(`jwa.KeyEncryptionAlgorithm`, `""`)
+	codegen.RegisterZeroVal(`jwa.CompressionAlgorithm`, `jwa.NoCompress`)
+	codegen.RegisterZeroVal(`jwa.ContentEncryptionAlgorithm`, `""`)
+	var objectsFile = flag.String("objects", "objects.yml", "")
+	flag.Parse()
+	jsonSrc, err := yaml2json(*objectsFile)
+	if err != nil {
+		return err
 	}
 
-	if v, ok := zerovals[s]; ok {
-		return v
+	var object codegen.Object
+	if err := json.NewDecoder(bytes.NewReader(jsonSrc)).Decode(&object); err != nil {
+		return fmt.Errorf(`failed to decode %q: %w`, *objectsFile, err)
 	}
-	return "nil"
+
+	object.Organize()
+	return generateHeaders(&object)
+}
+
+func yaml2json(fn string) ([]byte, error) {
+	in, err := os.Open(fn)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to open %q: %w`, fn, err)
+	}
+	defer in.Close()
+
+	var v interface{}
+	if err := yaml.NewDecoder(in).Decode(&v); err != nil {
+		return nil, fmt.Errorf(`failed to decode %q: %w`, fn, err)
+	}
+
+	return json.Marshal(v)
+}
+
+func boolFromField(f codegen.Field, field string) (bool, error) {
+	v, ok := f.Extra(field)
+	if !ok {
+		return false, fmt.Errorf("%q does not exist in %q", field, f.Name(true))
+	}
+
+	b, ok := v.(bool)
+	if !ok {
+		return false, fmt.Errorf("%q should be a bool in %q", field, f.Name(true))
+	}
+	return b, nil
+}
+
+func fieldHasAccept(f codegen.Field) bool {
+	v, _ := boolFromField(f, "hasAccept")
+	return v
+}
+
+func PointerElem(f codegen.Field) string {
+	return strings.TrimPrefix(f.Type(), `*`)
 }
 
 func fieldStorageType(s string) string {
@@ -69,154 +89,16 @@ func fieldStorageTypeIsIndirect(s string) bool {
 	return !(s == "jwk.Key" || s == "jwk.ECDSAPublicKey" || strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`))
 }
 
-func generateHeaders() error {
-	fields := []headerField{
-		{
-			name:   `agreementPartyUInfo`,
-			method: `AgreementPartyUInfo`,
-			typ:    `[]byte`,
-			key:    `apu`,
-			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-		},
-		{
-			name:   `agreementPartyVInfo`,
-			method: `AgreementPartyVInfo`,
-			typ:    `[]byte`,
-			key:    `apv`,
-			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-		},
-		{
-			name:   `algorithm`,
-			method: `Algorithm`,
-			typ:    `jwa.KeyEncryptionAlgorithm`,
-			key:    `alg`,
-			//			comment:   `https://tools.ietf.org/html/rfc7515#section-4.1.1`,
-		},
-		{
-			name:   `compression`,
-			method: `Compression`,
-			typ:    `jwa.CompressionAlgorithm`,
-			key:    `zip`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-		},
-		{
-			name:   `contentEncryption`,
-			method: `ContentEncryption`,
-			typ:    `jwa.ContentEncryptionAlgorithm`,
-			key:    `enc`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-		},
-		{
-			name:   `contentType`,
-			method: `ContentType`,
-			typ:    `string`,
-			key:    `cty`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.10`,
-		},
-		{
-			name:   `critical`,
-			method: `Critical`,
-			typ:    `[]string`,
-			key:    `crit`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.11`,
-		},
-		{
-			name:   `ephemeralPublicKey`,
-			method: `EphemeralPublicKey`,
-			typ:    `jwk.Key`,
-			key:    `epk`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-		},
-		{
-			name:   `jwk`,
-			method: `JWK`,
-			typ:    `jwk.Key`,
-			key:    `jwk`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.3`,
-		},
-		{
-			name:   `jwkSetURL`,
-			method: `JWKSetURL`,
-			typ:    `string`,
-			key:    `jku`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.2`,
-		},
-		{
-			name:   `keyID`,
-			method: `KeyID`,
-			typ:    `string`,
-			key:    `kid`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.4`,
-		},
-		{
-			name:   `typ`,
-			method: `Type`,
-			typ:    `string`,
-			key:    `typ`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.9`,
-		},
-		{
-			name:   `x509CertChain`,
-			method: `X509CertChain`,
-			typ:    `[]string`,
-			key:    `x5c`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.6`,
-		},
-		{
-			name:   `x509CertThumbprint`,
-			method: `X509CertThumbprint`,
-			typ:    `string`,
-			key:    `x5t`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.7`,
-		},
-		{
-			name:   `x509CertThumbprintS256`,
-			method: `X509CertThumbprintS256`,
-			typ:    `string`,
-			key:    `x5t#S256`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.8`,
-		},
-		{
-			name:   `x509URL`,
-			method: `X509URL`,
-			typ:    `string`,
-			key:    `x5u`,
-			//			comment: `https://tools.ietf.org/html/rfc7515#section-4.1.5`,
-		},
-	}
-
-	sort.Slice(fields, func(i, j int) bool {
-		return fields[i].name < fields[j].name
-	})
-
+func generateHeaders(obj *codegen.Object) error {
 	var buf bytes.Buffer
 
 	o := codegen.NewOutput(&buf)
-	o.L("// This file is auto-generated by internal/cmd/genheaders/main.go. DO NOT EDIT")
+	o.L("// This file is auto-generated by jwe/internal/cmd/genheaders/main.go. DO NOT EDIT")
 	o.LL("package jwe")
 
-	o.LL("import (")
-	pkgs := []string{
-		"bytes",
-		"context",
-		"github.com/lestrrat-go/jwx/internal/json",
-		"fmt",
-		"sort",
-		"strconv",
-		"sync",
-		"github.com/lestrrat-go/jwx/buffer",
-		"github.com/lestrrat-go/jwx/jwa",
-		"github.com/lestrrat-go/jwx/jwk",
-		"github.com/pkg/errors",
-	}
-	for _, pkg := range pkgs {
-		o.L("%s", strconv.Quote(pkg))
-	}
-	o.L(")")
-
 	o.LL("const (")
-	for _, f := range fields {
-		o.L("%sKey = %s", f.method, strconv.Quote(f.key))
+	for _, f := range obj.Fields() {
+		o.L("%sKey = %q", f.Name(true), f.JSON())
 	}
 	o.L(")") // end const
 
@@ -225,8 +107,8 @@ func generateHeaders() error {
 	o.L("json.Marshaler")
 	o.L("json.Unmarshaler")
 	// These are the basic values that most jws have
-	for _, f := range fields {
-		o.L("%s() %s", f.method, f.typ) //PointerElem())
+	for _, f := range obj.Fields() {
+		o.L("%s() %s", f.GetterMethod(true), f.Type()) //PointerElem())
 	}
 
 	// These are used to iterate through all keys in a header
@@ -257,8 +139,12 @@ func generateHeaders() error {
 	o.L("}")
 
 	o.LL("type stdHeaders struct {")
-	for _, f := range fields {
-		o.L("%s %s // %s", f.name, fieldStorageType(f.typ), f.comment)
+	for _, f := range obj.Fields() {
+		if c := f.Comment(); c != "" {
+			o.L("%s %s // %s", f.Name(false), fieldStorageType(f.Type()), c)
+		} else {
+			o.L("%s %s", f.Name(false), fieldStorageType(f.Type()))
+		}
 	}
 	o.L("privateParams map[string]interface{}")
 	o.L("mu *sync.RWMutex")
@@ -271,17 +157,17 @@ func generateHeaders() error {
 	o.L("}")
 	o.L("}")
 
-	for _, f := range fields {
-		o.LL("func (h *stdHeaders) %s() %s{", f.method, f.typ)
+	for _, f := range obj.Fields() {
+		o.LL("func (h *stdHeaders) %s() %s{", f.GetterMethod(true), f.Type())
 		o.L("h.mu.RLock()")
 		o.L("defer h.mu.RUnlock()")
-		if !fieldStorageTypeIsIndirect(f.typ) {
-			o.L("return h.%s", f.name)
+		if !fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("return h.%s", f.Name(false))
 		} else {
-			o.L("if h.%s == nil {", f.name)
-			o.L("return %s", zeroval(f.typ))
+			o.L("if h.%s == nil {", f.Name(false))
+			o.L("return %s", codegen.ZeroVal(f.Type()))
 			o.L("}")
-			o.L("return *(h.%s)", f.name)
+			o.L("return *(h.%s)", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
@@ -293,12 +179,12 @@ func generateHeaders() error {
 	o.L("defer h.mu.RUnlock()")
 	// NOTE: building up an array is *slow*?
 	o.L("var pairs []*HeaderPair")
-	for _, f := range fields {
-		o.L("if h.%s != nil {", f.name)
-		if fieldStorageTypeIsIndirect(f.typ) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.method, f.name)
+	for _, f := range obj.Fields() {
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.Name(true), f.Name(false))
 		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.method, f.name)
+			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.Name(true), f.Name(false))
 		}
 		o.L("}")
 	}
@@ -318,15 +204,15 @@ func generateHeaders() error {
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
-	for _, f := range fields {
-		o.L("case %sKey:", f.method)
-		o.L("if h.%s == nil {", f.name)
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		o.L("if h.%s == nil {", f.Name(false))
 		o.L("return nil, false")
 		o.L("}")
-		if fieldStorageTypeIsIndirect(f.typ) {
-			o.L("return *(h.%s), true", f.name)
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("return *(h.%s), true", f.Name(false))
 		} else {
-			o.L("return h.%s, true", f.name)
+			o.L("return h.%s, true", f.Name(false))
 		}
 	}
 	o.L("default:")
@@ -343,32 +229,32 @@ func generateHeaders() error {
 
 	o.LL("func (h *stdHeaders) setNoLock(name string, value interface{}) error {")
 	o.L("switch name {")
-	for _, f := range fields {
-		o.L("case %sKey:", f.method)
-		if f.hasAccept {
-			o.L("var acceptor %s", f.PointerElem())
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		if fieldHasAccept(f) {
+			o.L("var acceptor %s", PointerElem(f))
 			o.L("if err := acceptor.Accept(value); err != nil {")
-			o.L("return errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.method)
+			o.L("return errors.Wrapf(err, `invalid value for %%s key`, %sKey)", f.Name(true))
 			o.L("}") // end if err := h.%s.Accept(value)
-			o.L("h.%s = &acceptor", f.name)
+			o.L("h.%s = &acceptor", f.Name(false))
 			o.L("return nil")
 		} else {
-			o.L("if v, ok := value.(%s); ok {", f.typ)
-			if f.name == "contentEncryption" {
+			o.L("if v, ok := value.(%s); ok {", f.Type())
+			if f.Name(false) == "contentEncryption" {
 				// check for non-empty string, because empty content encryption is just baaaaaad
 				o.L("if v == \"\" {")
-				o.L("return errors.New(`%#v field cannot be an empty string`)", f.key)
+				o.L("return errors.New(`%#v field cannot be an empty string`)", f.JSON())
 				o.L("}")
 			}
 
-			if fieldStorageTypeIsIndirect(f.typ) {
-				o.L("h.%s = &v", f.name)
+			if fieldStorageTypeIsIndirect(f.Type()) {
+				o.L("h.%s = &v", f.Name(false))
 			} else {
-				o.L("h.%s = v", f.name)
+				o.L("h.%s = v", f.Name(false))
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
-			o.L("return errors.Errorf(`invalid value for %%s key: %%T`, %sKey, value)", f.method)
+			o.L("return errors.Errorf(`invalid value for %%s key: %%T`, %sKey, value)", f.Name(true))
 		}
 	}
 	o.L("default:")
@@ -384,9 +270,9 @@ func generateHeaders() error {
 	o.L("h.mu.Lock()")
 	o.L("defer h.mu.Unlock()")
 	o.L("switch key {")
-	for _, f := range fields {
-		o.L("case %sKey:", f.method)
-		o.L("h.%s = nil", f.name)
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		o.L("h.%s = nil", f.Name(false))
 	}
 	o.L("default:")
 	o.L("delete(h.privateParams, key)")
@@ -395,8 +281,8 @@ func generateHeaders() error {
 	o.L("}")
 
 	o.LL("func (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
-	for _, f := range fields {
-		o.L("h.%s = nil", f.name)
+	for _, f := range obj.Fields() {
+		o.L("h.%s = nil", f.Name(false))
 	}
 
 	o.L("dec := json.NewDecoder(bytes.NewReader(buf))")
@@ -418,46 +304,42 @@ func generateHeaders() error {
 	o.L("case string: // Objects can only have string keys")
 	o.L("switch tok {")
 
-	for _, f := range fields {
-		if f.typ == "string" {
-			o.L("case %sKey:", f.method)
-			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.name)
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
+	for _, f := range obj.Fields() {
+		if f.Type() == "string" {
+			o.L("case %sKey:", f.Name(true))
+			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-		} else if f.typ == "[]byte" {
-			name := f.method
-			o.L("case %sKey:", name)
-			o.L("if err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.name)
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+		} else if f.Type() == "[]byte" {
+			o.L("case %sKey:", f.Name(true))
+			o.L("if err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.Name(false))
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-		} else if f.typ == "jwk.Key" {
-			name := f.method
-			o.L("case %sKey:", name)
+		} else if f.Type() == "jwk.Key" {
+			o.L("case %sKey:", f.Name(true))
 			o.L("var buf json.RawMessage")
 			o.L("if err := dec.Decode(&buf); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
 			o.L("key, err := jwk.ParseKey(buf)")
 			o.L("if err != nil {")
-			o.L("return errors.Wrapf(err, `failed to parse JWK for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to parse JWK for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-			o.L("h.%s = key", f.name)
-		} else if strings.HasPrefix(f.typ, "[]") {
-			name := f.method
-			o.L("case %sKey:", name)
-			o.L("var decoded %s", f.typ)
+			o.L("h.%s = key", f.Name(false))
+		} else if strings.HasPrefix(f.Type(), "[]") {
+			o.L("case %sKey:", f.Name(true))
+			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-			o.L("h.%s = decoded", f.name)
+			o.L("h.%s = decoded", f.Name(false))
 		} else {
-			name := f.method
-			o.L("case %sKey:", name)
-			o.L("var decoded %s", f.typ)
+			o.L("case %sKey:", f.Name(true))
+			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-			o.L("h.%s = &decoded", f.name)
+			o.L("h.%s = &decoded", f.Name(false))
 		}
 	}
 	o.L("default:")
@@ -477,7 +359,7 @@ func generateHeaders() error {
 
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("data := make(map[string]interface{})")
-	o.L("fields := make([]string, 0, %d)", len(fields))
+	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
 	o.L("for _, pair := range h.makePairs() {")
 	o.L("fields = append(fields, pair.Key.(string))")
 	o.L("data[pair.Key.(string)] = pair.Value")

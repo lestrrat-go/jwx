@@ -1,4 +1,4 @@
-//go:generate go run internal/cmd/genheader/main.go
+//go:generate ./gen.sh
 
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe
