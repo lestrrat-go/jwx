@@ -1,4 +1,4 @@
-//go:generate go run internal/cmd/genreadfile/main.go
+//go:generate ./gen.sh
 //go:generate stringer -type=FormatKind
 //go:generate mv formatkind_string.go formatkind_string_gen.go
 

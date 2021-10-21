@@ -13,10 +13,10 @@ import (
 const (
 	KeyTypeKey                = "kty"
 	KeyUsageKey               = "use"
-	KeyOpsKey                 = "key_ops"
+	KeyOpsKey                 = "keyOps"
 	AlgorithmKey              = "alg"
 	KeyIDKey                  = "kid"
-	X509URLKey                = "x5u"
+	X509URLKey                = "x58"
 	X509CertChainKey          = "x5c"
 	X509CertThumbprintKey     = "x5t"
 	X509CertThumbprintS256Key = "x5t#S256"

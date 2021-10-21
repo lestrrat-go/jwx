@@ -20,61 +20,61 @@ import (
 )
 
 const (
+	AddressKey             = "address"
 	AudienceKey            = "aud"
+	BirthdateKey           = "birthdate"
+	EmailKey               = "email"
+	EmailVerifiedKey       = "emailVerified"
 	ExpirationKey          = "exp"
+	FamilyNameKey          = "family_name"
+	GenderKey              = "gender"
+	GivenNameKey           = "given_name"
 	IssuedAtKey            = "iat"
 	IssuerKey              = "iss"
 	JwtIDKey               = "jti"
-	NotBeforeKey           = "nbf"
-	SubjectKey             = "sub"
-	NameKey                = "name"
-	GivenNameKey           = "given_name"
-	MiddleNameKey          = "middle_name"
-	FamilyNameKey          = "family_name"
-	NicknameKey            = "nickname"
-	PreferredUsernameKey   = "preferred_username"
-	ProfileKey             = "profile"
-	PictureKey             = "picture"
-	WebsiteKey             = "website"
-	EmailKey               = "email"
-	EmailVerifiedKey       = "email_verified"
-	GenderKey              = "gender"
-	BirthdateKey           = "birthdate"
-	ZoneinfoKey            = "zoneinfo"
 	LocaleKey              = "locale"
-	PhoneNumberKey         = "phone_number"
-	PhoneNumberVerifiedKey = "phone_number_verified"
-	AddressKey             = "address"
+	MiddleNameKey          = "middle_name"
+	NameKey                = "name"
+	NicknameKey            = "nikcname"
+	NotBeforeKey           = "nbf"
+	PhoneNumberKey         = "phoneNumber"
+	PhoneNumberVerifiedKey = "phoneNumberVerified"
+	PictureKey             = "picture"
+	PreferredUsernameKey   = "preferredUsername"
+	ProfileKey             = "profile"
+	SubjectKey             = "sub"
 	UpdatedAtKey           = "updated_at"
+	WebsiteKey             = "website"
+	ZoneinfoKey            = "zoneinfo"
 )
 
 type Token interface {
+	Address() *AddressClaim
 	Audience() []string
+	Birthdate() *BirthdateClaim
+	Email() string
+	EmailVerified() bool
 	Expiration() time.Time
+	FamilyName() string
+	Gender() string
+	GivenName() string
 	IssuedAt() time.Time
 	Issuer() string
 	JwtID() string
-	NotBefore() time.Time
-	Subject() string
-	Name() string
-	GivenName() string
-	MiddleName() string
-	FamilyName() string
-	Nickname() string
-	PreferredUsername() string
-	Profile() string
-	Picture() string
-	Website() string
-	Email() string
-	EmailVerified() bool
-	Gender() string
-	Birthdate() *BirthdateClaim
-	Zoneinfo() string
 	Locale() string
+	MiddleName() string
+	Name() string
+	Nickname() string
+	NotBefore() time.Time
 	PhoneNumber() string
 	PhoneNumberVerified() bool
-	Address() *AddressClaim
+	Picture() string
+	PreferredUsername() string
+	Profile() string
+	Subject() string
 	UpdatedAt() time.Time
+	Website() string
+	Zoneinfo() string
 	PrivateClaims() map[string]interface{}
 	Get(string) (interface{}, bool)
 	Set(string, interface{}) error
@@ -86,38 +86,38 @@ type Token interface {
 }
 type stdToken struct {
 	mu                  *sync.RWMutex
-	dc                  DecodeCtx          // per-object context for decoding
-	audience            types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	dc                  DecodeCtx // per-object context for decoding
+	address             *AddressClaim
+	audience            types.StringList // https://tools.ietf.org/html/rfc7519#section-4.1.3
+	birthdate           *BirthdateClaim
+	email               *string
+	emailVerified       *bool
 	expiration          *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
+	familyName          *string
+	gender              *string
+	givenName           *string
 	issuedAt            *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
 	issuer              *string            // https://tools.ietf.org/html/rfc7519#section-4.1.1
 	jwtID               *string            // https://tools.ietf.org/html/rfc7519#section-4.1.7
+	locale              *string
+	middleName          *string
+	name                *string
+	nickname            *string
 	notBefore           *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.5
-	subject             *string            // https://tools.ietf.org/html/rfc7519#section-4.1.2
-	name                *string            //
-	givenName           *string            //
-	middleName          *string            //
-	familyName          *string            //
-	nickname            *string            //
-	preferredUsername   *string            //
-	profile             *string            //
-	picture             *string            //
-	website             *string            //
-	email               *string            //
-	emailVerified       *bool              //
-	gender              *string            //
-	birthdate           *BirthdateClaim    //
-	zoneinfo            *string            //
-	locale              *string            //
-	phoneNumber         *string            //
-	phoneNumberVerified *bool              //
-	address             *AddressClaim      //
-	updatedAt           *types.NumericDate //
+	phoneNumber         *string
+	phoneNumberVerified *bool
+	picture             *string
+	preferredUsername   *string
+	profile             *string
+	subject             *string // https://tools.ietf.org/html/rfc7519#section-4.1.2
+	updatedAt           *types.NumericDate
+	website             *string
+	zoneinfo            *string
 	privateClaims       map[string]interface{}
 }
 
 // New creates a standard token, with minimal knowledge of
-// possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf", "sub", "name", "given_name", "middle_name", "family_name", "nickname", "preferred_username", "profile", "picture", "website", "email", "email_verified", "gender", "birthdate", "zoneinfo", "locale", "phone_number", "phone_number_verified", "address" and "updated_at".
+// possible claims. Standard claims include"address", "aud", "birthdate", "email", "emailVerified", "exp", "family_name", "gender", "given_name", "iat", "iss", "jti", "locale", "middle_name", "name", "nikcname", "nbf", "phoneNumber", "phoneNumberVerified", "picture", "preferredUsername", "profile", "sub", "updated_at", "website" and "zoneinfo".
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
@@ -130,17 +130,59 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	switch name {
+	case AddressKey:
+		if t.address == nil {
+			return nil, false
+		}
+		v := t.address
+		return v, true
 	case AudienceKey:
 		if t.audience == nil {
 			return nil, false
 		}
 		v := t.audience.Get()
 		return v, true
+	case BirthdateKey:
+		if t.birthdate == nil {
+			return nil, false
+		}
+		v := t.birthdate
+		return v, true
+	case EmailKey:
+		if t.email == nil {
+			return nil, false
+		}
+		v := *(t.email)
+		return v, true
+	case EmailVerifiedKey:
+		if t.emailVerified == nil {
+			return nil, false
+		}
+		v := *(t.emailVerified)
+		return v, true
 	case ExpirationKey:
 		if t.expiration == nil {
 			return nil, false
 		}
 		v := t.expiration.Get()
+		return v, true
+	case FamilyNameKey:
+		if t.familyName == nil {
+			return nil, false
+		}
+		v := *(t.familyName)
+		return v, true
+	case GenderKey:
+		if t.gender == nil {
+			return nil, false
+		}
+		v := *(t.gender)
+		return v, true
+	case GivenNameKey:
+		if t.givenName == nil {
+			return nil, false
+		}
+		v := *(t.givenName)
 		return v, true
 	case IssuedAtKey:
 		if t.issuedAt == nil {
@@ -160,29 +202,11 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 		}
 		v := *(t.jwtID)
 		return v, true
-	case NotBeforeKey:
-		if t.notBefore == nil {
+	case LocaleKey:
+		if t.locale == nil {
 			return nil, false
 		}
-		v := t.notBefore.Get()
-		return v, true
-	case SubjectKey:
-		if t.subject == nil {
-			return nil, false
-		}
-		v := *(t.subject)
-		return v, true
-	case NameKey:
-		if t.name == nil {
-			return nil, false
-		}
-		v := *(t.name)
-		return v, true
-	case GivenNameKey:
-		if t.givenName == nil {
-			return nil, false
-		}
-		v := *(t.givenName)
+		v := *(t.locale)
 		return v, true
 	case MiddleNameKey:
 		if t.middleName == nil {
@@ -190,11 +214,11 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 		}
 		v := *(t.middleName)
 		return v, true
-	case FamilyNameKey:
-		if t.familyName == nil {
+	case NameKey:
+		if t.name == nil {
 			return nil, false
 		}
-		v := *(t.familyName)
+		v := *(t.name)
 		return v, true
 	case NicknameKey:
 		if t.nickname == nil {
@@ -202,65 +226,11 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 		}
 		v := *(t.nickname)
 		return v, true
-	case PreferredUsernameKey:
-		if t.preferredUsername == nil {
+	case NotBeforeKey:
+		if t.notBefore == nil {
 			return nil, false
 		}
-		v := *(t.preferredUsername)
-		return v, true
-	case ProfileKey:
-		if t.profile == nil {
-			return nil, false
-		}
-		v := *(t.profile)
-		return v, true
-	case PictureKey:
-		if t.picture == nil {
-			return nil, false
-		}
-		v := *(t.picture)
-		return v, true
-	case WebsiteKey:
-		if t.website == nil {
-			return nil, false
-		}
-		v := *(t.website)
-		return v, true
-	case EmailKey:
-		if t.email == nil {
-			return nil, false
-		}
-		v := *(t.email)
-		return v, true
-	case EmailVerifiedKey:
-		if t.emailVerified == nil {
-			return nil, false
-		}
-		v := *(t.emailVerified)
-		return v, true
-	case GenderKey:
-		if t.gender == nil {
-			return nil, false
-		}
-		v := *(t.gender)
-		return v, true
-	case BirthdateKey:
-		if t.birthdate == nil {
-			return nil, false
-		}
-		v := t.birthdate
-		return v, true
-	case ZoneinfoKey:
-		if t.zoneinfo == nil {
-			return nil, false
-		}
-		v := *(t.zoneinfo)
-		return v, true
-	case LocaleKey:
-		if t.locale == nil {
-			return nil, false
-		}
-		v := *(t.locale)
+		v := t.notBefore.Get()
 		return v, true
 	case PhoneNumberKey:
 		if t.phoneNumber == nil {
@@ -274,17 +244,47 @@ func (t *stdToken) Get(name string) (interface{}, bool) {
 		}
 		v := *(t.phoneNumberVerified)
 		return v, true
-	case AddressKey:
-		if t.address == nil {
+	case PictureKey:
+		if t.picture == nil {
 			return nil, false
 		}
-		v := t.address
+		v := *(t.picture)
+		return v, true
+	case PreferredUsernameKey:
+		if t.preferredUsername == nil {
+			return nil, false
+		}
+		v := *(t.preferredUsername)
+		return v, true
+	case ProfileKey:
+		if t.profile == nil {
+			return nil, false
+		}
+		v := *(t.profile)
+		return v, true
+	case SubjectKey:
+		if t.subject == nil {
+			return nil, false
+		}
+		v := *(t.subject)
 		return v, true
 	case UpdatedAtKey:
 		if t.updatedAt == nil {
 			return nil, false
 		}
 		v := t.updatedAt.Get()
+		return v, true
+	case WebsiteKey:
+		if t.website == nil {
+			return nil, false
+		}
+		v := *(t.website)
+		return v, true
+	case ZoneinfoKey:
+		if t.zoneinfo == nil {
+			return nil, false
+		}
+		v := *(t.zoneinfo)
 		return v, true
 	default:
 		v, ok := t.privateClaims[name]
@@ -296,58 +296,58 @@ func (t *stdToken) Remove(key string) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	switch key {
+	case AddressKey:
+		t.address = nil
 	case AudienceKey:
 		t.audience = nil
+	case BirthdateKey:
+		t.birthdate = nil
+	case EmailKey:
+		t.email = nil
+	case EmailVerifiedKey:
+		t.emailVerified = nil
 	case ExpirationKey:
 		t.expiration = nil
+	case FamilyNameKey:
+		t.familyName = nil
+	case GenderKey:
+		t.gender = nil
+	case GivenNameKey:
+		t.givenName = nil
 	case IssuedAtKey:
 		t.issuedAt = nil
 	case IssuerKey:
 		t.issuer = nil
 	case JwtIDKey:
 		t.jwtID = nil
-	case NotBeforeKey:
-		t.notBefore = nil
-	case SubjectKey:
-		t.subject = nil
-	case NameKey:
-		t.name = nil
-	case GivenNameKey:
-		t.givenName = nil
-	case MiddleNameKey:
-		t.middleName = nil
-	case FamilyNameKey:
-		t.familyName = nil
-	case NicknameKey:
-		t.nickname = nil
-	case PreferredUsernameKey:
-		t.preferredUsername = nil
-	case ProfileKey:
-		t.profile = nil
-	case PictureKey:
-		t.picture = nil
-	case WebsiteKey:
-		t.website = nil
-	case EmailKey:
-		t.email = nil
-	case EmailVerifiedKey:
-		t.emailVerified = nil
-	case GenderKey:
-		t.gender = nil
-	case BirthdateKey:
-		t.birthdate = nil
-	case ZoneinfoKey:
-		t.zoneinfo = nil
 	case LocaleKey:
 		t.locale = nil
+	case MiddleNameKey:
+		t.middleName = nil
+	case NameKey:
+		t.name = nil
+	case NicknameKey:
+		t.nickname = nil
+	case NotBeforeKey:
+		t.notBefore = nil
 	case PhoneNumberKey:
 		t.phoneNumber = nil
 	case PhoneNumberVerifiedKey:
 		t.phoneNumberVerified = nil
-	case AddressKey:
-		t.address = nil
+	case PictureKey:
+		t.picture = nil
+	case PreferredUsernameKey:
+		t.preferredUsername = nil
+	case ProfileKey:
+		t.profile = nil
+	case SubjectKey:
+		t.subject = nil
 	case UpdatedAtKey:
 		t.updatedAt = nil
+	case WebsiteKey:
+		t.website = nil
+	case ZoneinfoKey:
+		t.zoneinfo = nil
 	default:
 		delete(t.privateClaims, key)
 	}
@@ -374,6 +374,13 @@ func (t *stdToken) SetDecodeCtx(v DecodeCtx) {
 
 func (t *stdToken) setNoLock(name string, value interface{}) error {
 	switch name {
+	case AddressKey:
+		var acceptor AddressClaim
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, AddressKey)
+		}
+		t.address = &acceptor
+		return nil
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
@@ -381,6 +388,25 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		}
 		t.audience = acceptor
 		return nil
+	case BirthdateKey:
+		var acceptor BirthdateClaim
+		if err := acceptor.Accept(value); err != nil {
+			return errors.Wrapf(err, `invalid value for %s key`, BirthdateKey)
+		}
+		t.birthdate = &acceptor
+		return nil
+	case EmailKey:
+		if v, ok := value.(string); ok {
+			t.email = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, EmailKey, value)
+	case EmailVerifiedKey:
+		if v, ok := value.(bool); ok {
+			t.emailVerified = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
@@ -388,6 +414,24 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		}
 		t.expiration = &acceptor
 		return nil
+	case FamilyNameKey:
+		if v, ok := value.(string); ok {
+			t.familyName = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
+	case GenderKey:
+		if v, ok := value.(string); ok {
+			t.gender = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, GenderKey, value)
+	case GivenNameKey:
+		if v, ok := value.(string); ok {
+			t.givenName = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
@@ -407,6 +451,30 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
+	case LocaleKey:
+		if v, ok := value.(string); ok {
+			t.locale = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
+	case MiddleNameKey:
+		if v, ok := value.(string); ok {
+			t.middleName = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
+	case NameKey:
+		if v, ok := value.(string); ok {
+			t.name = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, NameKey, value)
+	case NicknameKey:
+		if v, ok := value.(string); ok {
+			t.nickname = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
 	case NotBeforeKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
@@ -414,103 +482,6 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		}
 		t.notBefore = &acceptor
 		return nil
-	case SubjectKey:
-		if v, ok := value.(string); ok {
-			t.subject = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
-	case NameKey:
-		if v, ok := value.(string); ok {
-			t.name = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, NameKey, value)
-	case GivenNameKey:
-		if v, ok := value.(string); ok {
-			t.givenName = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
-	case MiddleNameKey:
-		if v, ok := value.(string); ok {
-			t.middleName = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
-	case FamilyNameKey:
-		if v, ok := value.(string); ok {
-			t.familyName = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
-	case NicknameKey:
-		if v, ok := value.(string); ok {
-			t.nickname = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
-	case PreferredUsernameKey:
-		if v, ok := value.(string); ok {
-			t.preferredUsername = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
-	case ProfileKey:
-		if v, ok := value.(string); ok {
-			t.profile = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
-	case PictureKey:
-		if v, ok := value.(string); ok {
-			t.picture = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, PictureKey, value)
-	case WebsiteKey:
-		if v, ok := value.(string); ok {
-			t.website = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
-	case EmailKey:
-		if v, ok := value.(string); ok {
-			t.email = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, EmailKey, value)
-	case EmailVerifiedKey:
-		if v, ok := value.(bool); ok {
-			t.emailVerified = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
-	case GenderKey:
-		if v, ok := value.(string); ok {
-			t.gender = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, GenderKey, value)
-	case BirthdateKey:
-		var acceptor BirthdateClaim
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, BirthdateKey)
-		}
-		t.birthdate = &acceptor
-		return nil
-	case ZoneinfoKey:
-		if v, ok := value.(string); ok {
-			t.zoneinfo = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
-	case LocaleKey:
-		if v, ok := value.(string); ok {
-			t.locale = &v
-			return nil
-		}
-		return errors.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
 	case PhoneNumberKey:
 		if v, ok := value.(string); ok {
 			t.phoneNumber = &v
@@ -523,13 +494,30 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			return nil
 		}
 		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
-	case AddressKey:
-		var acceptor AddressClaim
-		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AddressKey)
+	case PictureKey:
+		if v, ok := value.(string); ok {
+			t.picture = &v
+			return nil
 		}
-		t.address = &acceptor
-		return nil
+		return errors.Errorf(`invalid value for %s key: %T`, PictureKey, value)
+	case PreferredUsernameKey:
+		if v, ok := value.(string); ok {
+			t.preferredUsername = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
+	case ProfileKey:
+		if v, ok := value.(string); ok {
+			t.profile = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
+	case SubjectKey:
+		if v, ok := value.(string); ok {
+			t.subject = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	case UpdatedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
@@ -537,6 +525,18 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		}
 		t.updatedAt = &acceptor
 		return nil
+	case WebsiteKey:
+		if v, ok := value.(string); ok {
+			t.website = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
+	case ZoneinfoKey:
+		if v, ok := value.(string); ok {
+			t.zoneinfo = &v
+			return nil
+		}
+		return errors.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
 	default:
 		if t.privateClaims == nil {
 			t.privateClaims = map[string]interface{}{}
@@ -544,6 +544,12 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		t.privateClaims[name] = value
 	}
 	return nil
+}
+
+func (t *stdToken) Address() *AddressClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.address
 }
 
 func (t *stdToken) Audience() []string {
@@ -555,6 +561,30 @@ func (t *stdToken) Audience() []string {
 	return nil
 }
 
+func (t *stdToken) Birthdate() *BirthdateClaim {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.birthdate
+}
+
+func (t *stdToken) Email() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.email != nil {
+		return *(t.email)
+	}
+	return ""
+}
+
+func (t *stdToken) EmailVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.emailVerified != nil {
+		return *(t.emailVerified)
+	}
+	return false
+}
+
 func (t *stdToken) Expiration() time.Time {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -562,6 +592,33 @@ func (t *stdToken) Expiration() time.Time {
 		return t.expiration.Get()
 	}
 	return time.Time{}
+}
+
+func (t *stdToken) FamilyName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.familyName != nil {
+		return *(t.familyName)
+	}
+	return ""
+}
+
+func (t *stdToken) Gender() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.gender != nil {
+		return *(t.gender)
+	}
+	return ""
+}
+
+func (t *stdToken) GivenName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.givenName != nil {
+		return *(t.givenName)
+	}
+	return ""
 }
 
 func (t *stdToken) IssuedAt() time.Time {
@@ -591,38 +648,11 @@ func (t *stdToken) JwtID() string {
 	return ""
 }
 
-func (t *stdToken) NotBefore() time.Time {
+func (t *stdToken) Locale() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	if t.notBefore != nil {
-		return t.notBefore.Get()
-	}
-	return time.Time{}
-}
-
-func (t *stdToken) Subject() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.subject != nil {
-		return *(t.subject)
-	}
-	return ""
-}
-
-func (t *stdToken) Name() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.name != nil {
-		return *(t.name)
-	}
-	return ""
-}
-
-func (t *stdToken) GivenName() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.givenName != nil {
-		return *(t.givenName)
+	if t.locale != nil {
+		return *(t.locale)
 	}
 	return ""
 }
@@ -636,11 +666,11 @@ func (t *stdToken) MiddleName() string {
 	return ""
 }
 
-func (t *stdToken) FamilyName() string {
+func (t *stdToken) Name() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	if t.familyName != nil {
-		return *(t.familyName)
+	if t.name != nil {
+		return *(t.name)
 	}
 	return ""
 }
@@ -650,6 +680,42 @@ func (t *stdToken) Nickname() string {
 	defer t.mu.RUnlock()
 	if t.nickname != nil {
 		return *(t.nickname)
+	}
+	return ""
+}
+
+func (t *stdToken) NotBefore() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.notBefore != nil {
+		return t.notBefore.Get()
+	}
+	return time.Time{}
+}
+
+func (t *stdToken) PhoneNumber() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.phoneNumber != nil {
+		return *(t.phoneNumber)
+	}
+	return ""
+}
+
+func (t *stdToken) PhoneNumberVerified() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.phoneNumberVerified != nil {
+		return *(t.phoneNumberVerified)
+	}
+	return false
+}
+
+func (t *stdToken) Picture() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.picture != nil {
+		return *(t.picture)
 	}
 	return ""
 }
@@ -672,13 +738,22 @@ func (t *stdToken) Profile() string {
 	return ""
 }
 
-func (t *stdToken) Picture() string {
+func (t *stdToken) Subject() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	if t.picture != nil {
-		return *(t.picture)
+	if t.subject != nil {
+		return *(t.subject)
 	}
 	return ""
+}
+
+func (t *stdToken) UpdatedAt() time.Time {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.updatedAt != nil {
+		return t.updatedAt.Get()
+	}
+	return time.Time{}
 }
 
 func (t *stdToken) Website() string {
@@ -690,39 +765,6 @@ func (t *stdToken) Website() string {
 	return ""
 }
 
-func (t *stdToken) Email() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.email != nil {
-		return *(t.email)
-	}
-	return ""
-}
-
-func (t *stdToken) EmailVerified() bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.emailVerified != nil {
-		return *(t.emailVerified)
-	}
-	return false
-}
-
-func (t *stdToken) Gender() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.gender != nil {
-		return *(t.gender)
-	}
-	return ""
-}
-
-func (t *stdToken) Birthdate() *BirthdateClaim {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.birthdate
-}
-
 func (t *stdToken) Zoneinfo() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -730,48 +772,6 @@ func (t *stdToken) Zoneinfo() string {
 		return *(t.zoneinfo)
 	}
 	return ""
-}
-
-func (t *stdToken) Locale() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.locale != nil {
-		return *(t.locale)
-	}
-	return ""
-}
-
-func (t *stdToken) PhoneNumber() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.phoneNumber != nil {
-		return *(t.phoneNumber)
-	}
-	return ""
-}
-
-func (t *stdToken) PhoneNumberVerified() bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.phoneNumberVerified != nil {
-		return *(t.phoneNumberVerified)
-	}
-	return false
-}
-
-func (t *stdToken) Address() *AddressClaim {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.address
-}
-
-func (t *stdToken) UpdatedAt() time.Time {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if t.updatedAt != nil {
-		return t.updatedAt.Get()
-	}
-	return time.Time{}
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {
@@ -785,13 +785,41 @@ func (t *stdToken) makePairs() []*ClaimPair {
 	defer t.mu.RUnlock()
 
 	pairs := make([]*ClaimPair, 0, 26)
+	if t.address != nil {
+		v := t.address
+		pairs = append(pairs, &ClaimPair{Key: AddressKey, Value: v})
+	}
 	if t.audience != nil {
 		v := t.audience.Get()
 		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
 	}
+	if t.birthdate != nil {
+		v := t.birthdate
+		pairs = append(pairs, &ClaimPair{Key: BirthdateKey, Value: v})
+	}
+	if t.email != nil {
+		v := *(t.email)
+		pairs = append(pairs, &ClaimPair{Key: EmailKey, Value: v})
+	}
+	if t.emailVerified != nil {
+		v := *(t.emailVerified)
+		pairs = append(pairs, &ClaimPair{Key: EmailVerifiedKey, Value: v})
+	}
 	if t.expiration != nil {
 		v := t.expiration.Get()
 		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
+	}
+	if t.familyName != nil {
+		v := *(t.familyName)
+		pairs = append(pairs, &ClaimPair{Key: FamilyNameKey, Value: v})
+	}
+	if t.gender != nil {
+		v := *(t.gender)
+		pairs = append(pairs, &ClaimPair{Key: GenderKey, Value: v})
+	}
+	if t.givenName != nil {
+		v := *(t.givenName)
+		pairs = append(pairs, &ClaimPair{Key: GivenNameKey, Value: v})
 	}
 	if t.issuedAt != nil {
 		v := t.issuedAt.Get()
@@ -805,73 +833,25 @@ func (t *stdToken) makePairs() []*ClaimPair {
 		v := *(t.jwtID)
 		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
 	}
-	if t.notBefore != nil {
-		v := t.notBefore.Get()
-		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
-	}
-	if t.subject != nil {
-		v := *(t.subject)
-		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
-	}
-	if t.name != nil {
-		v := *(t.name)
-		pairs = append(pairs, &ClaimPair{Key: NameKey, Value: v})
-	}
-	if t.givenName != nil {
-		v := *(t.givenName)
-		pairs = append(pairs, &ClaimPair{Key: GivenNameKey, Value: v})
+	if t.locale != nil {
+		v := *(t.locale)
+		pairs = append(pairs, &ClaimPair{Key: LocaleKey, Value: v})
 	}
 	if t.middleName != nil {
 		v := *(t.middleName)
 		pairs = append(pairs, &ClaimPair{Key: MiddleNameKey, Value: v})
 	}
-	if t.familyName != nil {
-		v := *(t.familyName)
-		pairs = append(pairs, &ClaimPair{Key: FamilyNameKey, Value: v})
+	if t.name != nil {
+		v := *(t.name)
+		pairs = append(pairs, &ClaimPair{Key: NameKey, Value: v})
 	}
 	if t.nickname != nil {
 		v := *(t.nickname)
 		pairs = append(pairs, &ClaimPair{Key: NicknameKey, Value: v})
 	}
-	if t.preferredUsername != nil {
-		v := *(t.preferredUsername)
-		pairs = append(pairs, &ClaimPair{Key: PreferredUsernameKey, Value: v})
-	}
-	if t.profile != nil {
-		v := *(t.profile)
-		pairs = append(pairs, &ClaimPair{Key: ProfileKey, Value: v})
-	}
-	if t.picture != nil {
-		v := *(t.picture)
-		pairs = append(pairs, &ClaimPair{Key: PictureKey, Value: v})
-	}
-	if t.website != nil {
-		v := *(t.website)
-		pairs = append(pairs, &ClaimPair{Key: WebsiteKey, Value: v})
-	}
-	if t.email != nil {
-		v := *(t.email)
-		pairs = append(pairs, &ClaimPair{Key: EmailKey, Value: v})
-	}
-	if t.emailVerified != nil {
-		v := *(t.emailVerified)
-		pairs = append(pairs, &ClaimPair{Key: EmailVerifiedKey, Value: v})
-	}
-	if t.gender != nil {
-		v := *(t.gender)
-		pairs = append(pairs, &ClaimPair{Key: GenderKey, Value: v})
-	}
-	if t.birthdate != nil {
-		v := t.birthdate
-		pairs = append(pairs, &ClaimPair{Key: BirthdateKey, Value: v})
-	}
-	if t.zoneinfo != nil {
-		v := *(t.zoneinfo)
-		pairs = append(pairs, &ClaimPair{Key: ZoneinfoKey, Value: v})
-	}
-	if t.locale != nil {
-		v := *(t.locale)
-		pairs = append(pairs, &ClaimPair{Key: LocaleKey, Value: v})
+	if t.notBefore != nil {
+		v := t.notBefore.Get()
+		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
 	}
 	if t.phoneNumber != nil {
 		v := *(t.phoneNumber)
@@ -881,13 +861,33 @@ func (t *stdToken) makePairs() []*ClaimPair {
 		v := *(t.phoneNumberVerified)
 		pairs = append(pairs, &ClaimPair{Key: PhoneNumberVerifiedKey, Value: v})
 	}
-	if t.address != nil {
-		v := t.address
-		pairs = append(pairs, &ClaimPair{Key: AddressKey, Value: v})
+	if t.picture != nil {
+		v := *(t.picture)
+		pairs = append(pairs, &ClaimPair{Key: PictureKey, Value: v})
+	}
+	if t.preferredUsername != nil {
+		v := *(t.preferredUsername)
+		pairs = append(pairs, &ClaimPair{Key: PreferredUsernameKey, Value: v})
+	}
+	if t.profile != nil {
+		v := *(t.profile)
+		pairs = append(pairs, &ClaimPair{Key: ProfileKey, Value: v})
+	}
+	if t.subject != nil {
+		v := *(t.subject)
+		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
 	}
 	if t.updatedAt != nil {
 		v := t.updatedAt.Get()
 		pairs = append(pairs, &ClaimPair{Key: UpdatedAtKey, Value: v})
+	}
+	if t.website != nil {
+		v := *(t.website)
+		pairs = append(pairs, &ClaimPair{Key: WebsiteKey, Value: v})
+	}
+	if t.zoneinfo != nil {
+		v := *(t.zoneinfo)
+		pairs = append(pairs, &ClaimPair{Key: ZoneinfoKey, Value: v})
 	}
 	for k, v := range t.privateClaims {
 		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
@@ -901,32 +901,32 @@ func (t *stdToken) makePairs() []*ClaimPair {
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.address = nil
 	t.audience = nil
+	t.birthdate = nil
+	t.email = nil
+	t.emailVerified = nil
 	t.expiration = nil
+	t.familyName = nil
+	t.gender = nil
+	t.givenName = nil
 	t.issuedAt = nil
 	t.issuer = nil
 	t.jwtID = nil
-	t.notBefore = nil
-	t.subject = nil
-	t.name = nil
-	t.givenName = nil
-	t.middleName = nil
-	t.familyName = nil
-	t.nickname = nil
-	t.preferredUsername = nil
-	t.profile = nil
-	t.picture = nil
-	t.website = nil
-	t.email = nil
-	t.emailVerified = nil
-	t.gender = nil
-	t.birthdate = nil
-	t.zoneinfo = nil
 	t.locale = nil
+	t.middleName = nil
+	t.name = nil
+	t.nickname = nil
+	t.notBefore = nil
 	t.phoneNumber = nil
 	t.phoneNumberVerified = nil
-	t.address = nil
+	t.picture = nil
+	t.preferredUsername = nil
+	t.profile = nil
+	t.subject = nil
 	t.updatedAt = nil
+	t.website = nil
+	t.zoneinfo = nil
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {
@@ -945,18 +945,52 @@ LOOP:
 			}
 		case string: // Objects can only have string keys
 			switch tok {
+			case AddressKey:
+				var decoded AddressClaim
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, AddressKey)
+				}
+				t.address = &decoded
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
 				}
 				t.audience = decoded
+			case BirthdateKey:
+				var decoded BirthdateClaim
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, BirthdateKey)
+				}
+				t.birthdate = &decoded
+			case EmailKey:
+				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, EmailKey)
+				}
+			case EmailVerifiedKey:
+				var decoded bool
+				if err := dec.Decode(&decoded); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, EmailVerifiedKey)
+				}
+				t.emailVerified = &decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
 				}
 				t.expiration = &decoded
+			case FamilyNameKey:
+				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, FamilyNameKey)
+				}
+			case GenderKey:
+				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, GenderKey)
+				}
+			case GivenNameKey:
+				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, GivenNameKey)
+				}
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
@@ -971,80 +1005,28 @@ LOOP:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
 				}
+			case LocaleKey:
+				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, LocaleKey)
+				}
+			case MiddleNameKey:
+				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, MiddleNameKey)
+				}
+			case NameKey:
+				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NameKey)
+				}
+			case NicknameKey:
+				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, NicknameKey)
+				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
 				}
 				t.notBefore = &decoded
-			case SubjectKey:
-				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
-				}
-			case NameKey:
-				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NameKey)
-				}
-			case GivenNameKey:
-				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, GivenNameKey)
-				}
-			case MiddleNameKey:
-				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, MiddleNameKey)
-				}
-			case FamilyNameKey:
-				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, FamilyNameKey)
-				}
-			case NicknameKey:
-				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NicknameKey)
-				}
-			case PreferredUsernameKey:
-				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PreferredUsernameKey)
-				}
-			case ProfileKey:
-				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ProfileKey)
-				}
-			case PictureKey:
-				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PictureKey)
-				}
-			case WebsiteKey:
-				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, WebsiteKey)
-				}
-			case EmailKey:
-				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, EmailKey)
-				}
-			case EmailVerifiedKey:
-				var decoded bool
-				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, EmailVerifiedKey)
-				}
-				t.emailVerified = &decoded
-			case GenderKey:
-				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, GenderKey)
-				}
-			case BirthdateKey:
-				var decoded BirthdateClaim
-				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, BirthdateKey)
-				}
-				t.birthdate = &decoded
-			case ZoneinfoKey:
-				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ZoneinfoKey)
-				}
-			case LocaleKey:
-				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, LocaleKey)
-				}
 			case PhoneNumberKey:
 				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberKey)
@@ -1055,18 +1037,36 @@ LOOP:
 					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberVerifiedKey)
 				}
 				t.phoneNumberVerified = &decoded
-			case AddressKey:
-				var decoded AddressClaim
-				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AddressKey)
+			case PictureKey:
+				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PictureKey)
 				}
-				t.address = &decoded
+			case PreferredUsernameKey:
+				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, PreferredUsernameKey)
+				}
+			case ProfileKey:
+				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ProfileKey)
+				}
+			case SubjectKey:
+				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
+				}
 			case UpdatedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, UpdatedAtKey)
 				}
 				t.updatedAt = &decoded
+			case WebsiteKey:
+				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, WebsiteKey)
+				}
+			case ZoneinfoKey:
+				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %s`, ZoneinfoKey)
+				}
 			default:
 				if dc := t.dc; dc != nil {
 					if localReg := dc.Registry(); localReg != nil {

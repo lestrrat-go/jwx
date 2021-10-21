@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-json"
+	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
 	"github.com/pkg/errors"
 )
@@ -23,70 +26,145 @@ func main() {
 	}
 }
 
-var tokens []tokenType
-
 func _main() error {
-	for _, t := range tokens {
-		if err := generateToken(t); err != nil {
-			return errors.Wrapf(err, `failed to generate token file %s`, t.filename)
+	var objectsFile = flag.String("objects", "objects.yml", "")
+	flag.Parse()
+	jsonSrc, err := yaml2json(*objectsFile)
+	if err != nil {
+		return err
+	}
+
+	var def struct {
+		CommonFields codegen.FieldList `json:"common_fields"`
+		Objects      []*codegen.Object `json:"objects"`
+	}
+	if err := json.NewDecoder(bytes.NewReader(jsonSrc)).Decode(&def); err != nil {
+		return fmt.Errorf(`failed to decode %q: %w`, *objectsFile, err)
+	}
+
+	for _, object := range def.Objects {
+		for _, f := range def.CommonFields {
+			object.AddField(f)
+		}
+		object.Organize()
+	}
+
+	for _, object := range def.Objects {
+		if err := generateToken(object); err != nil {
+			return errors.Wrapf(err, `failed to generate token file %s`, objectFilename(object))
 		}
 	}
+
 	return nil
 }
 
-type tokenField struct {
-	name       string
-	method     string
-	returnType string
-	key        string
-	typ        string
-	Comment    string
-	elemtyp    string
-	tag        string
-	isList     bool
-	hasAccept  bool
-	hasGet     bool
-	noDeref    bool
-}
-
-func (t tokenField) Tag() string {
-	if len(t.tag) > 0 {
-		return t.tag
+func boolFromField(f codegen.Field, field string) (bool, error) {
+	v, ok := f.Extra(field)
+	if !ok {
+		return false, fmt.Errorf("%q does not exist in %q", field, f.Name(true))
 	}
 
-	return `json:"` + t.key + `,omitempty"`
-}
-
-func (t tokenField) IsList() bool {
-	return t.isList || strings.HasPrefix(t.typ, `[]`)
-}
-
-func (t tokenField) ListElem() string {
-	if t.elemtyp != "" {
-		return t.elemtyp
+	b, ok := v.(bool)
+	if !ok {
+		return false, fmt.Errorf("%q should be a bool in %q", field, f.Name(true))
 	}
-	return strings.TrimPrefix(t.typ, `[]`)
+	return b, nil
 }
 
-func (t tokenField) IsPointer() bool {
-	return strings.HasPrefix(t.typ, `*`)
+func stringFromField(f codegen.Field, field string) (string, error) {
+	v, ok := f.Extra(field)
+	if !ok {
+		return "", fmt.Errorf("%q does not exist in %q", field, f.Name(true))
+	}
+
+	s, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("%q should be a string in %q", field, f.Name(true))
+	}
+	return s, nil
 }
 
-func (t tokenField) PointerElem() string {
-	return strings.TrimPrefix(t.typ, `*`)
+func fieldNoDeref(f codegen.Field) bool {
+	v, _ := boolFromField(f, "noDeref")
+	return v
 }
 
-var zerovals = map[string]string{
-	`string`:    `""`,
-	`time.Time`: `time.Time{}`,
-	`bool`:      `false`,
+func fieldHasGet(f codegen.Field) bool {
+	v, _ := boolFromField(f, "hasGet")
+	return v
 }
 
-func zeroval(s string) string {
-	if v, ok := zerovals[s]; ok {
+func fieldHasAccept(f codegen.Field) bool {
+	v, _ := boolFromField(f, "hasAccept")
+	return v
+}
+
+func fieldGetterReturnValue(f codegen.Field) string {
+	if v, err := stringFromField(f, `getter_return_value`); err == nil {
 		return v
 	}
-	return `nil`
+
+	return f.Type()
+}
+
+func stringFromObject(o *codegen.Object, field string) (string, error) {
+	v, ok := o.Extra(field)
+	if !ok {
+		return "", fmt.Errorf("%q does not exist in %q", field, o.Name(true))
+	}
+
+	s, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("%q should be a string in %q", field, o.Name(true))
+	}
+	return s, nil
+}
+
+func objectFilename(o *codegen.Object) string {
+	v, err := stringFromObject(o, `filename`)
+	if err != nil {
+		panic(err.Error())
+	}
+	return v
+}
+
+func objectPackage(o *codegen.Object) string {
+	v, err := stringFromObject(o, `package`)
+	if err != nil {
+		panic(err.Error())
+	}
+	return v
+}
+
+func objectInterface(o *codegen.Object) string {
+	v, err := stringFromObject(o, `interface`)
+	if err != nil {
+		panic(err.Error())
+	}
+	return v
+}
+
+func yaml2json(fn string) ([]byte, error) {
+	in, err := os.Open(fn)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to open %q: %w`, fn, err)
+	}
+	defer in.Close()
+
+	var v interface{}
+	if err := yaml.NewDecoder(in).Decode(&v); err != nil {
+		return nil, fmt.Errorf(`failed to decode %q: %w`, fn, err)
+	}
+
+	return json.Marshal(v)
+}
+
+func IsPointer(f codegen.Field) bool {
+	return strings.HasPrefix(f.Type(), `*`)
+}
+
+func PointerElem(f codegen.Field) string {
+	return strings.TrimPrefix(f.Type(), `*`)
 }
 
 func fieldStorageType(s string) string {
@@ -100,261 +178,22 @@ func fieldStorageTypeIsIndirect(s string) bool {
 	return !(strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`) || strings.HasSuffix(s, `List`))
 }
 
-var stdFields []tokenField
-
-type tokenType struct {
-	filename   string
-	structName string
-	ifName     string
-	pkg        string
-	claims     []tokenField
-}
-
-func init() {
-	stdFields = []tokenField{
-		{
-			name:       "audience",
-			method:     "Audience",
-			returnType: "[]string",
-			key:        "aud",
-			typ:        "types.StringList",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.3`,
-			isList:     true,
-			hasAccept:  true,
-			hasGet:     true,
-			elemtyp:    `string`,
-		},
-		{
-			name:       "expiration",
-			method:     "Expiration",
-			returnType: "time.Time",
-			key:        "exp",
-			typ:        "types.NumericDate",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.4`,
-			hasAccept:  true,
-			hasGet:     true,
-			noDeref:    true,
-		},
-		{
-			name:       "issuedAt",
-			method:     "IssuedAt",
-			returnType: "time.Time",
-			key:        "iat",
-			typ:        "types.NumericDate",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.6`,
-			hasAccept:  true,
-			hasGet:     true,
-			noDeref:    true,
-		},
-		{
-			name:       "issuer",
-			method:     "Issuer",
-			returnType: "string",
-			key:        "iss",
-			typ:        "string",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.1`,
-		},
-		{
-			name:       "jwtID",
-			method:     "JwtID",
-			returnType: "string",
-			key:        "jti",
-			typ:        "string",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.7`,
-		},
-		{
-			name:       "notBefore",
-			method:     "NotBefore",
-			returnType: "time.Time",
-			key:        "nbf",
-			typ:        "types.NumericDate",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.5`,
-			hasAccept:  true,
-			hasGet:     true,
-			noDeref:    true,
-		},
-		{
-			name:       "subject",
-			method:     "Subject",
-			returnType: "string",
-			key:        "sub",
-			typ:        "string",
-			Comment:    `https://tools.ietf.org/html/rfc7519#section-4.1.2`,
-		},
-	}
-
-	tokens = []tokenType{
-		{
-			pkg:        "jwt",
-			filename:   "token_gen.go",
-			ifName:     "Token",
-			structName: "stdToken",
-			claims:     stdFields,
-		},
-		{
-			pkg:        "openid",
-			filename:   "openid/token_gen.go",
-			ifName:     "Token",
-			structName: "stdToken",
-			claims: append(stdFields, []tokenField{
-				{
-					name:       "name",
-					method:     "Name",
-					returnType: "string",
-					typ:        "string",
-					key:        "name",
-				},
-				{
-					name:       "givenName",
-					method:     "GivenName",
-					returnType: "string",
-					typ:        "string",
-					key:        "given_name",
-				},
-				{
-					name:       "middleName",
-					method:     "MiddleName",
-					returnType: "string",
-					typ:        "string",
-					key:        "middle_name",
-				},
-				{
-					name:       "familyName",
-					method:     "FamilyName",
-					returnType: "string",
-					typ:        "string",
-					key:        "family_name",
-				},
-				{
-					name:       "nickname",
-					method:     "Nickname",
-					returnType: "string",
-					typ:        "string",
-					key:        "nickname",
-				},
-				{
-					name:       "preferredUsername",
-					method:     "PreferredUsername",
-					returnType: "string",
-					typ:        "string",
-					key:        "preferred_username",
-				},
-				{
-					name:       "profile",
-					method:     "Profile",
-					returnType: "string",
-					typ:        "string",
-					key:        "profile",
-				},
-				{
-					name:       "picture",
-					method:     "Picture",
-					returnType: "string",
-					typ:        "string",
-					key:        "picture",
-				},
-				{
-					name:       "website",
-					method:     "Website",
-					returnType: "string",
-					typ:        "string",
-					key:        "website",
-				},
-				{
-					name:       "email",
-					method:     "Email",
-					returnType: "string",
-					typ:        "string",
-					key:        "email",
-				},
-				{
-					name:       "emailVerified",
-					method:     "EmailVerified",
-					returnType: "bool",
-					typ:        "bool",
-					key:        "email_verified",
-				},
-				{
-					name:       "gender",
-					method:     "Gender",
-					returnType: "string",
-					typ:        "string",
-					key:        "gender",
-				},
-				{
-					name:       "birthdate",
-					method:     "Birthdate",
-					returnType: "*BirthdateClaim",
-					typ:        "*BirthdateClaim",
-					key:        "birthdate",
-					hasAccept:  true,
-				},
-				{
-					name:       "zoneinfo",
-					method:     "Zoneinfo",
-					returnType: "string",
-					typ:        "string",
-					key:        "zoneinfo",
-				},
-				{
-					name:       "locale",
-					method:     "Locale",
-					returnType: "string",
-					typ:        "string",
-					key:        "locale",
-				},
-				{
-					name:       "phoneNumber",
-					method:     "PhoneNumber",
-					returnType: "string",
-					typ:        "string",
-					key:        "phone_number",
-				},
-				{
-					name:       "phoneNumberVerified",
-					method:     "PhoneNumberVerified",
-					returnType: "bool",
-					typ:        "bool",
-					key:        "phone_number_verified",
-				},
-				{
-					name:       "address",
-					method:     "Address",
-					returnType: "*AddressClaim",
-					typ:        "*AddressClaim",
-					key:        "address",
-					hasAccept:  true,
-				},
-				{
-					name:       "updatedAt",
-					method:     "UpdatedAt",
-					returnType: "time.Time",
-					typ:        "types.NumericDate",
-					key:        "updated_at",
-					hasGet:     true,
-					hasAccept:  true,
-				},
-			}...),
-		},
-	}
-}
-
-func generateToken(tt tokenType) error {
+func generateToken(obj *codegen.Object) error {
 	var buf bytes.Buffer
-
-	var fields = tt.claims
 
 	o := codegen.NewOutput(&buf)
 	o.L("// This file is auto-generated by jwt/internal/cmd/gentoken/main.go. DO NOT EDIT")
-	o.LL("package %s", tt.pkg)
+	o.LL("package %s", objectPackage(obj))
+
+	var fields = obj.Fields()
 
 	o.LL("const (")
 	for _, f := range fields {
-		o.L("%sKey = %s", f.method, strconv.Quote(f.key))
+		o.L("%sKey = %s", f.Name(true), strconv.Quote(f.JSON()))
 	}
 	o.L(")") // end const
 
-	if tt.pkg == "jwt" && tt.structName == "stdToken" {
+	if objectPackage(obj) == "jwt" && obj.Name(false) == "stdToken" {
 		o.LL("// Token represents a generic JWT token.")
 		o.L("// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")
 		o.L("// methods but their types are not taken into consideration at all. If you have non-standard")
@@ -367,15 +206,15 @@ func generateToken(tt tokenType) error {
 		o.L("// work well when it is embedded in other structure")
 	}
 
-	o.L("type %s interface {", tt.ifName)
+	o.L("type %s interface {", objectInterface(obj))
 	for _, field := range fields {
-		o.L("%s() %s", field.method, field.returnType)
+		o.L("%s() %s", field.GetterMethod(true), fieldGetterReturnValue(field))
 	}
 	o.L("PrivateClaims() map[string]interface{}")
 	o.L("Get(string) (interface{}, bool)")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
-	if tt.pkg != "jwt" {
+	if objectPackage(obj) != "jwt" {
 		o.L("Clone() (jwt.Token, error)")
 	} else {
 		o.L("Clone() (Token, error)")
@@ -385,11 +224,15 @@ func generateToken(tt tokenType) error {
 	o.L("AsMap(context.Context) (map[string]interface{}, error)")
 	o.L("}")
 
-	o.L("type %s struct {", tt.structName)
+	o.L("type %s struct {", obj.Name(false))
 	o.L("mu *sync.RWMutex")
 	o.L("dc DecodeCtx // per-object context for decoding")
 	for _, f := range fields {
-		o.L("%s %s // %s", f.name, fieldStorageType(f.typ), f.Comment)
+		if c := f.Comment(); c != "" {
+			o.L("%s %s // %s", f.Name(false), fieldStorageType(f.Type()), c)
+		} else {
+			o.L("%s %s", f.Name(false), fieldStorageType(f.Type()))
+		}
 	}
 	o.L("privateClaims map[string]interface{}")
 	o.L("}") // end type Token
@@ -397,7 +240,7 @@ func generateToken(tt tokenType) error {
 	o.LL("// New creates a standard token, with minimal knowledge of")
 	o.L("// possible claims. Standard claims include")
 	for i, field := range fields {
-		o.R("%s", strconv.Quote(field.key))
+		o.R("%s", strconv.Quote(field.JSON()))
 		switch {
 		case i < len(fields)-2:
 			o.R(", ")
@@ -405,30 +248,31 @@ func generateToken(tt tokenType) error {
 			o.R(" and ")
 		}
 	}
+
 	o.R(".\n// Convenience accessors are provided for these standard claims")
-	o.L("func New() %s {", tt.ifName)
-	o.L("return &%s{", tt.structName)
+	o.L("func New() %s {", objectInterface(obj))
+	o.L("return &%s{", obj.Name(false))
 	o.L("mu: &sync.RWMutex{},")
 	o.L("privateClaims: make(map[string]interface{}),")
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", tt.structName)
+	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("switch name {")
 	for _, f := range fields {
-		o.L("case %sKey:", f.method)
-		o.L("if t.%s == nil {", f.name)
+		o.L("case %sKey:", f.Name(true))
+		o.L("if t.%s == nil {", f.Name(false))
 		o.L("return nil, false")
 		o.L("}")
-		if f.hasGet {
-			o.L("v := t.%s.Get()", f.name)
+		if fieldHasGet(f) {
+			o.L("v := t.%s.Get()", f.Name(false))
 		} else {
-			if fieldStorageTypeIsIndirect(f.typ) {
-				o.L("v := *(t.%s)", f.name)
+			if fieldStorageTypeIsIndirect(f.Type()) {
+				o.L("v := *(t.%s)", f.Name(false))
 			} else {
-				o.L("v := t.%s", f.name)
+				o.L("v := t.%s", f.Name(false))
 			}
 		}
 		o.L("return v, true")
@@ -444,8 +288,8 @@ func generateToken(tt tokenType) error {
 	o.L("defer t.mu.Unlock()")
 	o.L("switch key {")
 	for _, f := range fields {
-		o.L("case %sKey:", f.method)
-		o.L("t.%s = nil", f.name)
+		o.L("case %sKey:", f.Name(true))
+		o.L("t.%s = nil", f.Name(false))
 	}
 	o.L("default:")
 	o.L("delete(t.privateClaims, key)")
@@ -453,30 +297,30 @@ func generateToken(tt tokenType) error {
 	o.L("return nil") // currently unused, but who knows
 	o.L("}")
 
-	o.LL("func (t *%s) Set(name string, value interface{}) error {", tt.structName)
+	o.LL("func (t *%s) Set(name string, value interface{}) error {", obj.Name(false))
 	o.L("t.mu.Lock()")
 	o.L("defer t.mu.Unlock()")
 	o.L("return t.setNoLock(name, value)")
 	o.L("}")
 
-	o.LL("func (t *%s) DecodeCtx() DecodeCtx {", tt.structName)
+	o.LL("func (t *%s) DecodeCtx() DecodeCtx {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("return t.dc")
 	o.L("}")
 
-	o.LL("func (t *%s) SetDecodeCtx(v DecodeCtx) {", tt.structName)
+	o.LL("func (t *%s) SetDecodeCtx(v DecodeCtx) {", obj.Name(false))
 	o.L("t.mu.Lock()")
 	o.L("defer t.mu.Unlock()")
 	o.L("t.dc = v")
 	o.L("}")
 
-	o.LL("func (t *%s) setNoLock(name string, value interface{}) error {", tt.structName)
+	o.LL("func (t *%s) setNoLock(name string, value interface{}) error {", obj.Name(false))
 	o.L("switch name {")
 	for _, f := range fields {
-		keyName := f.method + "Key"
+		keyName := f.Name(true) + "Key"
 		o.L("case %s:", keyName)
-		if f.name == `algorithm` {
+		if f.Name(false) == `algorithm` {
 			o.L("switch v := value.(type) {")
 			o.L("case string:")
 			o.L("t.algorithm = &v")
@@ -487,28 +331,28 @@ func generateToken(tt tokenType) error {
 			o.L("return errors.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
 			o.L("}")
 			o.L("return nil")
-		} else if f.hasAccept {
-			if f.IsPointer() {
-				o.L("var acceptor %s", strings.TrimPrefix(f.typ, "*"))
+		} else if fieldHasAccept(f) {
+			if IsPointer(f) {
+				o.L("var acceptor %s", strings.TrimPrefix(f.Type(), "*"))
 			} else {
-				o.L("var acceptor %s", f.typ)
+				o.L("var acceptor %s", f.Type())
 			}
 
 			o.L("if err := acceptor.Accept(value); err != nil {")
 			o.L("return errors.Wrapf(err, `invalid value for %%s key`, %s)", keyName)
 			o.L("}") // end if err := t.%s.Accept(value)
-			if fieldStorageTypeIsIndirect(f.typ) || f.IsPointer() {
-				o.L("t.%s = &acceptor", f.name)
+			if fieldStorageTypeIsIndirect(f.Type()) || IsPointer(f) {
+				o.L("t.%s = &acceptor", f.Name(false))
 			} else {
-				o.L("t.%s = acceptor", f.name)
+				o.L("t.%s = acceptor", f.Name(false))
 			}
 			o.L("return nil")
 		} else {
-			o.L("if v, ok := value.(%s); ok {", f.typ)
-			if fieldStorageTypeIsIndirect(f.typ) {
-				o.L("t.%s = &v", f.name)
+			o.L("if v, ok := value.(%s); ok {", f.Type())
+			if fieldStorageTypeIsIndirect(f.Type()) {
+				o.L("t.%s = &v", f.Name(false))
 			} else {
-				o.L("t.%s = v", f.name)
+				o.L("t.%s = v", f.Name(false))
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
@@ -525,39 +369,39 @@ func generateToken(tt tokenType) error {
 	o.L("}") // end func (t *%s) Set(name string, value interface{})
 
 	for _, f := range fields {
-		o.LL("func (t *%s) %s() ", tt.structName, f.method)
-		if f.returnType != "" {
-			o.R("%s", f.returnType)
-		} else if f.IsPointer() && f.noDeref {
-			o.R("%s", f.typ)
+		o.LL("func (t *%s) %s() ", obj.Name(false), f.GetterMethod(true))
+		if rv := fieldGetterReturnValue(f); rv != "" {
+			o.R("%s", rv)
+		} else if IsPointer(f) && fieldNoDeref(f) {
+			o.R("%s", f.Type())
 		} else {
-			o.R("%s", f.PointerElem())
+			o.R("%s", PointerElem(f))
 		}
 		o.R(" {")
 		o.L("t.mu.RLock()")
 		o.L("defer t.mu.RUnlock()")
 
-		if f.hasGet {
-			o.L("if t.%s != nil {", f.name)
-			o.L("return t.%s.Get()", f.name)
+		if fieldHasGet(f) {
+			o.L("if t.%s != nil {", f.Name(false))
+			o.L("return t.%s.Get()", f.Name(false))
 			o.L("}")
-			o.L("return %s", zeroval(f.returnType))
-		} else if !f.IsPointer() {
-			if fieldStorageTypeIsIndirect(f.typ) {
-				o.L("if t.%s != nil {", f.name)
-				o.L("return *(t.%s)", f.name)
+			o.L("return %s", codegen.ZeroVal(fieldGetterReturnValue(f)))
+		} else if !IsPointer(f) {
+			if fieldStorageTypeIsIndirect(f.Type()) {
+				o.L("if t.%s != nil {", f.Name(false))
+				o.L("return *(t.%s)", f.Name(false))
 				o.L("}")
-				o.L("return %s", zeroval(f.returnType))
+				o.L("return %s", codegen.ZeroVal(fieldGetterReturnValue(f)))
 			} else {
-				o.L("return t.%s", f.name)
+				o.L("return t.%s", f.Name(false))
 			}
 		} else {
-			o.L("return t.%s", f.name)
+			o.L("return t.%s", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
 
-	o.LL("func (t *%s) PrivateClaims() map[string]interface{} {", tt.structName)
+	o.LL("func (t *%s) PrivateClaims() map[string]interface{} {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("return t.privateClaims")
@@ -565,22 +409,22 @@ func generateToken(tt tokenType) error {
 
 	// Generate a function that iterates through all of the keys
 	// in this header.
-	o.LL("func (t *%s) makePairs() []*ClaimPair {", tt.structName)
+	o.LL("func (t *%s) makePairs() []*ClaimPair {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 
 	// NOTE: building up an array is *slow*?
 	o.LL("pairs := make([]*ClaimPair, 0, %d)", len(fields))
 	for _, f := range fields {
-		keyName := f.method + "Key"
-		o.L("if t.%s != nil {", f.name)
-		if f.hasGet {
-			o.L("v := t.%s.Get()", f.name)
+		keyName := f.Name(true) + "Key"
+		o.L("if t.%s != nil {", f.Name(false))
+		if fieldHasGet(f) {
+			o.L("v := t.%s.Get()", f.Name(false))
 		} else {
-			if fieldStorageTypeIsIndirect(f.typ) {
-				o.L("v := *(t.%s)", f.name)
+			if fieldStorageTypeIsIndirect(f.Type()) {
+				o.L("v := *(t.%s)", f.Name(false))
 			} else {
-				o.L("v := t.%s", f.name)
+				o.L("v := t.%s", f.Name(false))
 			}
 		}
 		o.L("pairs = append(pairs, &ClaimPair{Key: %s, Value: v})", keyName)
@@ -599,7 +443,7 @@ func generateToken(tt tokenType) error {
 	o.L("t.mu.Lock()")
 	o.L("defer t.mu.Unlock()")
 	for _, f := range fields {
-		o.L("t.%s = nil", f.name)
+		o.L("t.%s = nil", f.Name(false))
 	}
 
 	o.L("dec := json.NewDecoder(bytes.NewReader(buf))")
@@ -622,37 +466,34 @@ func generateToken(tt tokenType) error {
 	o.L("switch tok {")
 
 	for _, f := range fields {
-		if f.typ == "string" {
-			o.L("case %sKey:", f.method)
-			o.L("if err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.name)
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.method)
+		if f.Type() == "string" {
+			o.L("case %sKey:", f.Name(true))
+			o.L("if err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.Name(false))
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-		} else if f.typ == byteSliceType {
-			name := f.method
-			o.L("case %sKey:", name)
-			o.L("if err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.name)
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+		} else if f.Type() == byteSliceType {
+			o.L("case %sKey:", f.Name(true))
+			o.L("if err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.Name(false))
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-		} else if f.typ == "types.StringList" || strings.HasPrefix(f.typ, "[]") {
-			name := f.method
-			o.L("case %sKey:", name)
-			o.L("var decoded %s", f.typ)
+		} else if f.Type() == "types.StringList" || strings.HasPrefix(f.Type(), "[]") {
+			o.L("case %sKey:", f.Name(true))
+			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-			o.L("t.%s = decoded", f.name)
+			o.L("t.%s = decoded", f.Name(false))
 		} else {
-			name := f.method
-			o.L("case %sKey:", name)
-			if strings.HasPrefix(f.typ, "*") {
-				o.L("var decoded %s", f.typ[1:])
+			o.L("case %sKey:", f.Name(true))
+			if IsPointer(f) {
+				o.L("var decoded %s", PointerElem(f))
 			} else {
-				o.L("var decoded %s", f.typ)
+				o.L("var decoded %s", f.Type())
 			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
-			o.L("t.%s = &decoded", f.name)
+			o.L("t.%s = &decoded", f.Name(false))
 		}
 	}
 	o.L("default:")
@@ -683,14 +524,14 @@ func generateToken(tt tokenType) error {
 	o.L("return nil")
 	o.L("}")
 
-	var numericDateFields []tokenField
+	var numericDateFields []codegen.Field
 	for _, field := range fields {
-		if field.typ == "types.NumericDate" {
+		if field.Type() == "types.NumericDate" {
 			numericDateFields = append(numericDateFields, field)
 		}
 	}
 
-	o.LL("func (t %s) MarshalJSON() ([]byte, error) {", tt.structName)
+	o.LL("func (t %s) MarshalJSON() ([]byte, error) {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("buf := pool.GetBytesBuffer()")
@@ -716,7 +557,7 @@ func generateToken(tt tokenType) error {
 	if lndf := len(numericDateFields); lndf > 0 {
 		o.L("case ")
 		for i, ndf := range numericDateFields {
-			o.R("%sKey", ndf.method)
+			o.R("%sKey", ndf.Name(true))
 			if i < lndf-1 {
 				o.R(",")
 			}
@@ -745,7 +586,7 @@ func generateToken(tt tokenType) error {
 	o.L("return ret, nil")
 	o.L("}")
 
-	o.LL("func (t *%s) Iterate(ctx context.Context) Iterator {", tt.structName)
+	o.LL("func (t *%s) Iterate(ctx context.Context) Iterator {", obj.Name(false))
 	o.L("pairs := t.makePairs()")
 	o.L("ch := make(chan *ClaimPair, len(pairs))")
 	o.L("go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {")
@@ -761,19 +602,19 @@ func generateToken(tt tokenType) error {
 	o.L("return mapiter.New(ch)")
 	o.L("}")
 
-	o.LL("func (t *%s) Walk(ctx context.Context, visitor Visitor) error {", tt.structName)
+	o.LL("func (t *%s) Walk(ctx context.Context, visitor Visitor) error {", obj.Name(false))
 	o.L("return iter.WalkMap(ctx, t, visitor)")
 	o.L("}")
 
-	o.LL("func (t *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", tt.structName)
+	o.LL("func (t *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", obj.Name(false))
 	o.L("return iter.AsMap(ctx, t)")
 	o.L("}")
 
-	if err := o.WriteFile(tt.filename, codegen.WithFormatCode(true)); err != nil {
+	if err := o.WriteFile(objectFilename(obj), codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, tt.filename)
+		return errors.Wrapf(err, `failed to write to %s`, objectFilename(obj))
 	}
 	return nil
 }
