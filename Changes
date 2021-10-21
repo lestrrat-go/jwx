@@ -1,7 +1,8 @@
 Changes
 =======
 
-v1.2.8 UNRELEASED
+v1.2.8 21 Oct 2021
+[Miscellaneous]
   * `jws.Message`, `jws.Signature`, `jws.Headers` have been reworked
     to allow JSON messages to be verified correctly. The problem can
     be caused when protected headers are serialized one way (perhaps
@@ -17,6 +18,9 @@ v1.2.8 UNRELEASED
     information (namely, the raw, original protected header value),
     and neither users nor the developers of this library should
     rely on it.
+
+  * Code generation has be refactored. The main go.mod should now
+    have slightly less dependencies.
 
 v1.2.7 26 Sep 2021
 [New features]
