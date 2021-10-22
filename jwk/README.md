@@ -260,7 +260,7 @@ func main() {
     // jwk.Key, which can't be used as the first argument to json.Unmarshal
     //
     // In this case, use jwk.Parse()
-    fromJsonKey, err := jwk.ParseBytes(jsonbuf)
+    fromJsonKey, err := jwk.Parse(jsonbuf)
     if err != nil {
       log.Printf("failed to parse json: %s", err)
       return

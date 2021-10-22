@@ -80,7 +80,7 @@ func TestJWTParse(t *testing.T) {
 	t.Run("ParseReader (no signature verification)", func(t *testing.T) {
 		t.Parallel()
 		t2, err := jwt.ParseReader(bytes.NewReader(signed))
-		if !assert.NoError(t, err, `jwt.ParseBytes should succeed`) {
+		if !assert.NoError(t, err, `jwt.ParseReader should succeed`) {
 			return
 		}
 		if !assert.True(t, jwt.Equal(t1, t2), `t1 == t2`) {
