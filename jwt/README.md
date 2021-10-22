@@ -19,7 +19,7 @@ More examples are located in the examples directory ([jwt_example_test.go](../ex
 ## Verify a signed JWT
 
 ```go
-  token, err := jwt.Parse(bytes.NewReader(payload), jwt.WithKeySet(keyset))
+  token, err := jwt.Parse(payload, jwt.WithKeySet(keyset))
   if err != nil {
     fmt.Printf("failed to parse payload: %s\n", err)
   }
