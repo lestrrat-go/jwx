@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.9 UNRELEASED
+v1.2.9 26 Oct 2021
 [Bug fixes]
   * Parsing `key_ops` for JWKs which was broken in v1.2.8 has been fixed.
 
