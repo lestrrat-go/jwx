@@ -84,7 +84,6 @@ func _main() error {
 		return err
 	}
 	for _, kt := range def.KeyTypes {
-		log.Printf("%s", kt.Filename)
 		if err := generateKeyType(kt); err != nil {
 			return fmt.Errorf(`failed to generate key type %s: %w`, kt.Prefix, err)
 		}

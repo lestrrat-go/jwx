@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.2.9 UNRELEASED
+[Bug fixes]
+  * Parsing `key_ops` for JWKs which was broken in v1.2.8 has been fixed.
+
 v1.2.8 21 Oct 2021
 [Miscellaneous]
   * `jws.Message`, `jws.Signature`, `jws.Headers` have been reworked

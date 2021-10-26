@@ -13,7 +13,7 @@ import (
 const (
 	KeyTypeKey                = "kty"
 	KeyUsageKey               = "use"
-	KeyOpsKey                 = "keyOps"
+	KeyOpsKey                 = "key_ops"
 	AlgorithmKey              = "alg"
 	KeyIDKey                  = "kid"
 	X509URLKey                = "x58"

@@ -5,6 +5,7 @@ std_fields:
     is_std: true
   - name: keyOps
     type: KeyOperationList
+    json: key_ops
     hasAccept: true
     is_std: true
     comment: https://tools.ietf.org/html/rfc7517#section-4.3
