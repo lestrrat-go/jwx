@@ -644,3 +644,33 @@ func TestBirthdateClaim(t *testing.T) {
 		}
 	})
 }
+
+func TestKeys(t *testing.T) {
+	at := assert.New(t)
+	at.Equal(`address`, openid.AddressKey)
+	at.Equal(`aud`, openid.AudienceKey)
+	at.Equal(`birthdate`, openid.BirthdateKey)
+	at.Equal(`email`, openid.EmailKey)
+	at.Equal(`email_verified`, openid.EmailVerifiedKey)
+	at.Equal(`exp`, openid.ExpirationKey)
+	at.Equal(`family_name`, openid.FamilyNameKey)
+	at.Equal(`gender`, openid.GenderKey)
+	at.Equal(`given_name`, openid.GivenNameKey)
+	at.Equal(`iat`, openid.IssuedAtKey)
+	at.Equal(`iss`, openid.IssuerKey)
+	at.Equal(`jti`, openid.JwtIDKey)
+	at.Equal(`locale`, openid.LocaleKey)
+	at.Equal(`middle_name`, openid.MiddleNameKey)
+	at.Equal(`name`, openid.NameKey)
+	at.Equal(`nickname`, openid.NicknameKey)
+	at.Equal(`nbf`, openid.NotBeforeKey)
+	at.Equal(`phone_number`, openid.PhoneNumberKey)
+	at.Equal(`phone_number_verified`, openid.PhoneNumberVerifiedKey)
+	at.Equal(`picture`, openid.PictureKey)
+	at.Equal(`preferred_username`, openid.PreferredUsernameKey)
+	at.Equal(`profile`, openid.ProfileKey)
+	at.Equal(`sub`, openid.SubjectKey)
+	at.Equal(`updated_at`, openid.UpdatedAtKey)
+	at.Equal(`website`, openid.WebsiteKey)
+	at.Equal(`zoneinfo`, openid.ZoneinfoKey)
+}
