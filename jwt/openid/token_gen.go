@@ -24,7 +24,7 @@ const (
 	AudienceKey            = "aud"
 	BirthdateKey           = "birthdate"
 	EmailKey               = "email"
-	EmailVerifiedKey       = "emailVerified"
+	EmailVerifiedKey       = "email_verified"
 	ExpirationKey          = "exp"
 	FamilyNameKey          = "family_name"
 	GenderKey              = "gender"
@@ -35,12 +35,12 @@ const (
 	LocaleKey              = "locale"
 	MiddleNameKey          = "middle_name"
 	NameKey                = "name"
-	NicknameKey            = "nikcname"
+	NicknameKey            = "nickname"
 	NotBeforeKey           = "nbf"
-	PhoneNumberKey         = "phoneNumber"
-	PhoneNumberVerifiedKey = "phoneNumberVerified"
+	PhoneNumberKey         = "phone_number"
+	PhoneNumberVerifiedKey = "phone_number_verified"
 	PictureKey             = "picture"
-	PreferredUsernameKey   = "preferredUsername"
+	PreferredUsernameKey   = "preferred_username"
 	ProfileKey             = "profile"
 	SubjectKey             = "sub"
 	UpdatedAtKey           = "updated_at"
@@ -117,7 +117,7 @@ type stdToken struct {
 }
 
 // New creates a standard token, with minimal knowledge of
-// possible claims. Standard claims include"address", "aud", "birthdate", "email", "emailVerified", "exp", "family_name", "gender", "given_name", "iat", "iss", "jti", "locale", "middle_name", "name", "nikcname", "nbf", "phoneNumber", "phoneNumberVerified", "picture", "preferredUsername", "profile", "sub", "updated_at", "website" and "zoneinfo".
+// possible claims. Standard claims include"address", "aud", "birthdate", "email", "email_verified", "exp", "family_name", "gender", "given_name", "iat", "iss", "jti", "locale", "middle_name", "name", "nickname", "nbf", "phone_number", "phone_number_verified", "picture", "preferred_username", "profile", "sub", "updated_at", "website" and "zoneinfo".
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{

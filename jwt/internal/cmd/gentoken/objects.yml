@@ -58,15 +58,16 @@ objects:
       - name: familyName
         json: family_name
       - name: nickname
-        json: nikcname
+        json: nickname
       - name: preferredUsername
-        key: preferred_username
+        json: preferred_username
       - name: profile
       - name: picture
       - name: website
       - name: email
       - name: emailVerified
         type: bool
+        json: email_verified
       - name: gender
       - name: birthdate
         type: "*BirthdateClaim"
@@ -74,8 +75,10 @@ objects:
       - name: zoneinfo
       - name: locale
       - name: phoneNumber
+        json: phone_number
       - name: phoneNumberVerified
         type: bool
+        json: phone_number_verified
       - name: address
         type: "*AddressClaim"
         hasAccept: true
