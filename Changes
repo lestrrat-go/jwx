@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.10 09 Nov 2021
+[Bug fixes]
+  * Parsing OpenID claims were not working for some fields.
+    This was caused by the same problem as the problem fixed in v1.2.9.
+    Proper tests have been added.
+
 v1.2.9 26 Oct 2021
 [Bug fixes]
   * Parsing `key_ops` for JWKs which was broken in v1.2.8 has been fixed.
