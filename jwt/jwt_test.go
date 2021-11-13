@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -1330,5 +1333,56 @@ func TestGH430(t *testing.T) {
 
 	if _, err = jwt.Parse(signed, jwt.WithVerify(jwa.HS256, key)); !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return
+	}
+}
+
+func TestBenHigginsByPassRegression(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	// Test if an access token JSON payload parses when provided directly
+	//
+	// The JSON below is slightly modified example payload from:
+	// https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token.html
+
+	// Case 1: add "aud", and adjust exp to be valid
+	// Case 2: do not add "aud", adjust exp
+
+	exp := strconv.Itoa(int(time.Now().Unix()) + 1000)
+	const tmpl = `{%s
+    "sub": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "device_key": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "cognito:groups": ["admin"],
+    "token_use": "access",
+    "scope": "aws.cognito.signin.user.admin",
+    "auth_time": 1562190524,
+    "iss": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_example",
+    "exp": %s,
+    "iat": 1562190524,
+    "origin_jti": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "jti": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "client_id": "57cbishk4j24pabc1234567890",
+    "username": "janedoe@example.com"
+  }`
+
+	testcases := [][]byte{
+		[]byte(fmt.Sprintf(tmpl, `"aud": ["test"],`, exp)),
+		[]byte(fmt.Sprintf(tmpl, ``, exp)),
+	}
+
+	for _, tc := range testcases {
+		for _, pedantic := range []bool{true, false} {
+			_, err = jwt.Parse(
+				tc,
+				jwt.WithValidate(true),
+				jwt.WithPedantic(pedantic),
+				jwt.WithVerify(jwa.RS256, &key.PublicKey),
+			)
+			t.Logf("%s", err)
+			if !assert.Error(t, err, `jwt.Parse should fail`) {
+				return
+			}
+		}
 	}
 }
