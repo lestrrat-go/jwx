@@ -164,6 +164,7 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		return verifyJWSWithKeySet(ctx, payload)
 	}
 
+	// We can't proceed without verification parameters
 	vp := ctx.verifyParams
 	if vp == nil {
 		return nil, _JwsVerifySkipped, nil
@@ -319,12 +320,25 @@ OUTER:
 					return nil, errors.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
 				}
 			}
+
+			if !ctx.skipVerification {
+				if _, _, err := verifyJWS(ctx, payload); err != nil {
+					return nil, err
+				}
+			}
+
 			break OUTER
 		case jwx.UnknownFormat:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these
 			if ctx.pedantic {
 				return nil, errors.Errorf(`invalid JWT`)
+			}
+
+			if !ctx.skipVerification {
+				if _, _, err := verifyJWS(ctx, payload); err != nil {
+					return nil, err
+				}
 			}
 			break OUTER
 		case jwx.JWS:
