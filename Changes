@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.11 UNRELEASED
+v1.2.11 14 Nov 2021
 [Security Fix]
   * It was reported that since v1.2.6, it was possible to craft
     a special JSON object to bypass JWT verification via `jwt.Parse`.
