@@ -183,10 +183,12 @@ func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 	if ks == nil { // the caller should have checked ctx.keySet || ctx.keySetProvider
 		if p := ctx.keySetProvider; p != nil {
 			// "trust" the payload, and parse it so that the provider can do its thing
+			ctx.skipVerification = true
 			tok, err := parse(ctx, msg.Payload())
 			if err != nil {
 				return nil, _JwsVerifyInvalid, err
 			}
+			ctx.skipVerification = false
 
 			v, err := p.KeySetFrom(tok)
 			if err != nil {
@@ -321,9 +323,12 @@ OUTER:
 				}
 			}
 
-			if !ctx.skipVerification {
-				if _, _, err := verifyJWS(ctx, payload); err != nil {
-					return nil, err
+			if i == 0 {
+				// We were NOT enveloped in other formats
+				if !ctx.skipVerification {
+					if _, _, err := verifyJWS(ctx, payload); err != nil {
+						return nil, err
+					}
 				}
 			}
 
@@ -335,9 +340,12 @@ OUTER:
 				return nil, errors.Errorf(`invalid JWT`)
 			}
 
-			if !ctx.skipVerification {
-				if _, _, err := verifyJWS(ctx, payload); err != nil {
-					return nil, err
+			if i == 0 {
+				// We were NOT enveloped in other formats
+				if !ctx.skipVerification {
+					if _, _, err := verifyJWS(ctx, payload); err != nil {
+						return nil, err
+					}
 				}
 			}
 			break OUTER
