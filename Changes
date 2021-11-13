@@ -1,6 +1,13 @@
 Changes
 =======
 
+v1.2.11 UNRELEASED
+[Security Fix]
+  * Since v1.2.6, it was possible to craft a special JSON object to
+    bypass JWT verification via `jwt.Parse`.
+    If you relied on this module to perform all the verification,
+    upgrade is strongly recommended
+
 v1.2.10 09 Nov 2021
 [Bug fixes]
   * Parsing OpenID claims were not working for some fields.
