@@ -1233,8 +1233,10 @@ func TestGH393(t *testing.T) {
 		}
 	})
 	t.Run(`WithRequiredClaim succeeds for existing claim`, func(t *testing.T) {
-		tok := jwt.New()
-		tok.Set(`foo`, 1)
+		tok, err := jwt.NewWith(jwt.WithClaim(`foo`, 1))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 		if !assert.NoError(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
 			return
 		}
@@ -1247,8 +1249,12 @@ func TestNested(t *testing.T) {
 		return
 	}
 
-	token := jwt.New()
-	token.Set(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`)
+	token, err := jwt.NewWith(
+		jwt.WithClaim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`),
+	)
+	if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		return
+	}
 
 	serialized, err := jwt.NewSerializer().
 		Sign(jwa.RS256, key).

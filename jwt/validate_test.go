@@ -15,8 +15,10 @@ func TestGHIssue10(t *testing.T) {
 	t.Parallel()
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
+		t1, err := jwt.NewWith(jwt.WithClaim(jwt.IssuerKey, "github.com/lestrrat-go/jwx"))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should succeed, because WithIssuer is not provided in the
 		// optional parameters
@@ -59,10 +61,9 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		err := t1.Set(jwt.AudienceKey, []string{"foo", "bar", "baz"})
-		if err != nil {
-			t.Fatalf("Failed to set audience claim: %s", err.Error())
+		t1, err := jwt.NewWith(jwt.WithClaim(jwt.AudienceKey, []string{"foo", "bar", "baz"}))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
 		}
 
 		// This should succeed, because WithAudience is not provided in the
@@ -99,8 +100,10 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
+		t1, err := jwt.NewWith(jwt.WithClaim(jwt.SubjectKey, "github.com/lestrrat-go/jwx"))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should succeed, because WithSubject is not provided in the
 		// optional parameters
@@ -119,11 +122,14 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
 
 		// NotBefore is set to future date
 		tm := time.Now().Add(72 * time.Hour)
-		t1.Set(jwt.NotBeforeKey, tm)
+
+		t1, err := jwt.NewWith(jwt.WithClaim(jwt.NotBeforeKey, tm))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		testcases := []struct {
 			Name    string
@@ -182,14 +188,17 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.ExpirationKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
 
-		// issuedat = 1 Hr before current time
 		tm := time.Now()
-		t1.Set(jwt.IssuedAtKey, tm.Add(-1*time.Hour))
-
-		// valid for 2 minutes only from IssuedAt
-		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
+		t1, err := jwt.NewWith(
+			// issuedat = 1 Hr before current time
+			jwt.WithClaim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)),
+			// valid for 2 minutes only from IssuedAt
+			jwt.WithClaim(jwt.ExpirationKey, tm.Add(-58*time.Minute)),
+		)
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should fail, because exp is set in the past
 		t.Run("exp set in the past", func(t *testing.T) {
@@ -231,13 +240,15 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Unix zero times", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
 		tm := time.Unix(0, 0)
-
-		t1.Set(jwt.NotBeforeKey, tm)
-		t1.Set(jwt.IssuedAtKey, tm)
-		t1.Set(jwt.ExpirationKey, tm)
+		t1, err := jwt.NewWith(
+			jwt.WithClaim(jwt.NotBeforeKey, tm),
+			jwt.WithClaim(jwt.IssuedAtKey, tm),
+			jwt.WithClaim(jwt.ExpirationKey, tm),
+		)
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should pass because the unix zero times should be ignored
 		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
@@ -246,13 +257,15 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Go zero times", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
 		tm := time.Time{}
-
-		t1.Set(jwt.NotBeforeKey, tm)
-		t1.Set(jwt.IssuedAtKey, tm)
-		t1.Set(jwt.ExpirationKey, tm)
+		t1, err := jwt.NewWith(
+			jwt.WithClaim(jwt.NotBeforeKey, tm),
+			jwt.WithClaim(jwt.IssuedAtKey, tm),
+			jwt.WithClaim(jwt.ExpirationKey, tm),
+		)
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should pass because the go zero times should be ignored
 		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
@@ -261,14 +274,16 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Parse and validate", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
-		// issuedat = 1 Hr before current time
 		tm := time.Now()
-		t1.Set(jwt.IssuedAtKey, tm.Add(-1*time.Hour))
-
-		// valid for 2 minutes only from IssuedAt
-		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
+		t1, err := jwt.NewWith(
+			// issuedat = 1 Hr before current time
+			jwt.WithClaim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)),
+			// valid for 2 minutes only from IssuedAt
+			jwt.WithClaim(jwt.ExpirationKey, tm.Add(-58*time.Minute)),
+		)
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		buf, err := json.Marshal(t1)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
@@ -300,8 +315,10 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("any claim value", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set("email", "email@example.com")
+		t1, err := jwt.NewWith(jwt.WithClaim("email", "email@example.com"))
+		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			return
+		}
 
 		// This should succeed, because WithClaimValue("email", "xxx") is not provided in the
 		// optional parameters
