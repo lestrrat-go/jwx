@@ -15,8 +15,10 @@ func TestGHIssue10(t *testing.T) {
 	t.Parallel()
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t.Parallel()
-		t1, err := jwt.NewWith(jwt.WithClaim(jwt.IssuerKey, "github.com/lestrrat-go/jwx"))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.IssuerKey, "github.com/lestrrat-go/jwx").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -61,8 +63,10 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
 		t.Parallel()
-		t1, err := jwt.NewWith(jwt.WithClaim(jwt.AudienceKey, []string{"foo", "bar", "baz"}))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.AudienceKey, []string{"foo", "bar", "baz"}).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -100,8 +104,10 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
-		t1, err := jwt.NewWith(jwt.WithClaim(jwt.SubjectKey, "github.com/lestrrat-go/jwx"))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -126,8 +132,10 @@ func TestGHIssue10(t *testing.T) {
 		// NotBefore is set to future date
 		tm := time.Now().Add(72 * time.Hour)
 
-		t1, err := jwt.NewWith(jwt.WithClaim(jwt.NotBeforeKey, tm))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -190,13 +198,13 @@ func TestGHIssue10(t *testing.T) {
 		t.Parallel()
 
 		tm := time.Now()
-		t1, err := jwt.NewWith(
+		t1, err := jwt.NewBuilder().
 			// issuedat = 1 Hr before current time
-			jwt.WithClaim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)),
+			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
 			// valid for 2 minutes only from IssuedAt
-			jwt.WithClaim(jwt.ExpirationKey, tm.Add(-58*time.Minute)),
-		)
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -241,12 +249,12 @@ func TestGHIssue10(t *testing.T) {
 	t.Run("Unix zero times", func(t *testing.T) {
 		t.Parallel()
 		tm := time.Unix(0, 0)
-		t1, err := jwt.NewWith(
-			jwt.WithClaim(jwt.NotBeforeKey, tm),
-			jwt.WithClaim(jwt.IssuedAtKey, tm),
-			jwt.WithClaim(jwt.ExpirationKey, tm),
-		)
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Claim(jwt.IssuedAtKey, tm).
+			Claim(jwt.ExpirationKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -258,12 +266,12 @@ func TestGHIssue10(t *testing.T) {
 	t.Run("Go zero times", func(t *testing.T) {
 		t.Parallel()
 		tm := time.Time{}
-		t1, err := jwt.NewWith(
-			jwt.WithClaim(jwt.NotBeforeKey, tm),
-			jwt.WithClaim(jwt.IssuedAtKey, tm),
-			jwt.WithClaim(jwt.ExpirationKey, tm),
-		)
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Claim(jwt.IssuedAtKey, tm).
+			Claim(jwt.ExpirationKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -275,13 +283,13 @@ func TestGHIssue10(t *testing.T) {
 	t.Run("Parse and validate", func(t *testing.T) {
 		t.Parallel()
 		tm := time.Now()
-		t1, err := jwt.NewWith(
+		t1, err := jwt.NewBuilder().
 			// issuedat = 1 Hr before current time
-			jwt.WithClaim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)),
+			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
 			// valid for 2 minutes only from IssuedAt
-			jwt.WithClaim(jwt.ExpirationKey, tm.Add(-58*time.Minute)),
-		)
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
@@ -315,8 +323,10 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("any claim value", func(t *testing.T) {
 		t.Parallel()
-		t1, err := jwt.NewWith(jwt.WithClaim("email", "email@example.com"))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		t1, err := jwt.NewBuilder().
+			Claim("email", "email@example.com").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 

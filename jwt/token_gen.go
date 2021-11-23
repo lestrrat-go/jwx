@@ -80,22 +80,6 @@ func New() Token {
 	}
 }
 
-// NewWith is a convenience function to combine creating a token using jwt.New
-// and assigning initial claims using jwt.Set
-func NewWith(options ...ConstructorOption) (Token, error) {
-	tok := New()
-	for _, option := range options {
-		switch option.Ident() {
-		case identConstructorClaim{}:
-			pair := option.Value().(*claimPair)
-			if err := tok.Set(pair.Name, pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set claim %q`, pair.Name)
-			}
-		}
-	}
-	return tok, nil
-}
-
 func (t *stdToken) Get(name string) (interface{}, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

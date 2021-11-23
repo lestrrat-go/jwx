@@ -1233,8 +1233,10 @@ func TestGH393(t *testing.T) {
 		}
 	})
 	t.Run(`WithRequiredClaim succeeds for existing claim`, func(t *testing.T) {
-		tok, err := jwt.NewWith(jwt.WithClaim(`foo`, 1))
-		if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+		tok, err := jwt.NewBuilder().
+			Claim(`foo`, 1).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
 		}
 		if !assert.NoError(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
@@ -1249,10 +1251,10 @@ func TestNested(t *testing.T) {
 		return
 	}
 
-	token, err := jwt.NewWith(
-		jwt.WithClaim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`),
-	)
-	if !assert.NoError(t, err, `jwt.NewWith should succeed`) {
+	token, err := jwt.NewBuilder().
+		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`).
+		Build()
+	if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 		return
 	}
 
