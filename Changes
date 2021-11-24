@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.12 UNRELEASED
+[New Features]
+  * `jwk.Set` can now parse private parameters. For example, after parsing
+    `{"foo": "bar", "keys": [...]}`, users can get to the value of `"foo"`
+     by calling `set.Field("foo")`
+
 v1.2.11 14 Nov 2021
 [Security Fix]
   * It was reported that since v1.2.6, it was possible to craft

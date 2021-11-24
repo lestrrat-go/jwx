@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -1652,4 +1653,65 @@ func TestGH491(t *testing.T) {
 	if !assert.Equal(t, jwk.KeyOperationList{jwk.KeyOpDeriveKey}, ops, `k.KeyOps should match`) {
 		return
 	}
+}
+
+func TestSetWithPrivateParams(t *testing.T) {
+	k1, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+	k2, err := jwxtest.GenerateEcdsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`) {
+		return
+	}
+	k3, err := jwxtest.GenerateSymmetricJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`) {
+		return
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString(`{"renewal_kid":"foo","keys":[`)
+	enc := json.NewEncoder(&buf)
+	_ = enc.Encode(k1)
+	buf.WriteByte(',')
+	_ = enc.Encode(k2)
+	buf.WriteByte(',')
+	_ = enc.Encode(k3)
+	buf.WriteString(`]}`)
+
+	var check = func(t *testing.T, buf []byte) bool {
+		set, err := jwk.Parse(buf)
+		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+			return false
+		}
+
+		if !assert.Equal(t, 3, set.Len(), `set.Len() should be 3`) {
+			return false
+		}
+
+		v, ok := set.Field(`renewal_kid`)
+		if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
+			return false
+		}
+
+		if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
+			return false
+		}
+		return true
+	}
+
+	t.Run("Check original buffer", func(t *testing.T) {
+		check(t, buf.Bytes())
+	})
+	t.Run("Check serialized", func(t *testing.T) {
+		set, err := jwk.Parse(buf.Bytes())
+		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+			return
+		}
+		js, err := json.MarshalIndent(set, "", "  ")
+		if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+			return
+		}
+		check(t, js)
+	})
 }

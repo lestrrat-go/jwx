@@ -1,7 +1,10 @@
 package jwk
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"sort"
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -11,7 +14,17 @@ import (
 
 // NewSet creates and empty `jwk.Set` object
 func NewSet() Set {
-	return &set{}
+	return &set{
+		privateParams: make(map[string]interface{}),
+	}
+}
+
+func (s *set) Field(n string) (interface{}, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	v, ok := s.privateParams[n]
+	return v, ok
 }
 
 func (s *set) Get(idx int) (Key, bool) {
@@ -117,16 +130,34 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 	enc := json.NewEncoder(buf)
 
-	buf.WriteString(`{"keys":[`)
-	for i, k := range s.keys {
+	fields := []string{`keys`}
+	for k := range s.privateParams {
+		fields = append(fields, k)
+	}
+	sort.Strings(fields)
+
+	buf.WriteByte('{')
+	for i, field := range fields {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		if err := enc.Encode(k); err != nil {
-			return nil, errors.Wrapf(err, `failed to marshal key #%d`, i)
+		fmt.Fprintf(buf, `%q:`, field)
+		if field != `keys` {
+			enc.Encode(s.privateParams[field])
+		} else {
+			buf.WriteByte('[')
+			for j, k := range s.keys {
+				if j > 0 {
+					buf.WriteByte(',')
+				}
+				if err := enc.Encode(k); err != nil {
+					return nil, errors.Wrapf(err, `failed to marshal key #%d`, i)
+				}
+			}
+			buf.WriteByte(']')
 		}
 	}
-	buf.WriteString("]}")
+	buf.WriteByte('}')
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -137,10 +168,8 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var proxy keySetMarshalProxy
-	if err := json.Unmarshal(data, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshal into Key (proxy)`)
-	}
+	s.privateParams = make(map[string]interface{})
+	s.keys = nil
 
 	var options []ParseOption
 	if dc := s.dc; dc != nil {
@@ -149,20 +178,61 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	if len(proxy.Keys) == 0 {
-		k, err := ParseKey(data, options...)
+	var sawKeysField bool
+	dec := json.NewDecoder(bytes.NewReader(data))
+LOOP:
+	for {
+		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `failed to unmarshal key from JSON headers`)
+			return errors.Wrap(err, `error reading token`)
 		}
-		s.keys = append(s.keys, k)
-	} else {
-		for i, buf := range proxy.Keys {
-			k, err := ParseKey([]byte(buf), options...)
-			if err != nil {
-				return errors.Wrapf(err, `failed to unmarshal key #%d (total %d) from multi-key JWK set`, i+1, len(proxy.Keys))
+
+		switch tok := tok.(type) {
+		case json.Delim:
+			// Assuming we're doing everything correctly, we should ONLY
+			// get either '{' or '}' here.
+			if tok == '}' { // End of object
+				break LOOP
+			} else if tok != '{' {
+				return errors.Errorf(`expected '{', but got '%c'`, tok)
 			}
-			s.keys = append(s.keys, k)
+		case string:
+			switch tok {
+			case "keys":
+				sawKeysField = true
+				var list []json.RawMessage
+				if err := dec.Decode(&list); err != nil {
+					return errors.Wrap(err, `failed to decode "keys"`)
+				}
+
+				for i, keysrc := range list {
+					key, err := ParseKey(keysrc, options...)
+					if err != nil {
+						return errors.Wrapf(err, `failed to code key #%d in "keys"`, i)
+					}
+					s.keys = append(s.keys, key)
+				}
+			default:
+				var v interface{}
+				if err := dec.Decode(&v); err != nil {
+					return errors.Wrapf(err, `failed to decode value for key %q`, tok)
+				}
+				s.privateParams[tok] = v
+			}
 		}
+	}
+
+	// This is really silly, but we can only detect the
+	// lack of the "keys" field after going through the
+	// entire object once
+	// Not checking for len(s.keys) == 0, because it could be
+	// an empty key set
+	if !sawKeysField {
+		key, err := ParseKey(data, options...)
+		if err != nil {
+			return errors.Wrapf(err, `failed to parse sole key in key set`)
+		}
+		s.keys = append(s.keys, key)
 	}
 	return nil
 }

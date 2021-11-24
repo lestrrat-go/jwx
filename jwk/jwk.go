@@ -466,7 +466,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // call `json.Unmarshal` against an empty set created by `jwk.NewSet()`
 // to parse a JSON buffer into a `jwk.Set`.
 //
-// This method exists because many times the user does not know before hand
+// This function exists because many times the user does not know before hand
 // if a JWK(s) resource at a remote location contains a single JWK key or
 // a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
 // even if the data only contains a single JWK key
