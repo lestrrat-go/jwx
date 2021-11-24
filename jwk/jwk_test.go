@@ -1679,25 +1679,24 @@ func TestSetWithPrivateParams(t *testing.T) {
 	_ = enc.Encode(k3)
 	buf.WriteString(`]}`)
 
-	var check = func(t *testing.T, buf []byte) bool {
+	var check = func(t *testing.T, buf []byte) {
 		set, err := jwk.Parse(buf)
 		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-			return false
+			return
 		}
 
 		if !assert.Equal(t, 3, set.Len(), `set.Len() should be 3`) {
-			return false
+			return
 		}
 
 		v, ok := set.Field(`renewal_kid`)
 		if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
-			return false
+			return
 		}
 
 		if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
-			return false
+			return
 		}
-		return true
 	}
 
 	t.Run("Check original buffer", func(t *testing.T) {

@@ -118,10 +118,6 @@ func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
 	}
 }
 
-type keySetMarshalProxy struct {
-	Keys []json.RawMessage `json:"keys"`
-}
-
 func (s *set) MarshalJSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -143,7 +139,9 @@ func (s *set) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(buf, `%q:`, field)
 		if field != `keys` {
-			enc.Encode(s.privateParams[field])
+			if err := enc.Encode(s.privateParams[field]); err != nil {
+				return nil, errors.Wrapf(err, `failed to marshal field %q`, field)
+			}
 		} else {
 			buf.WriteByte('[')
 			for j, k := range s.keys {
