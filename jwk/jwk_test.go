@@ -1669,48 +1669,104 @@ func TestSetWithPrivateParams(t *testing.T) {
 		return
 	}
 
-	var buf bytes.Buffer
-	buf.WriteString(`{"renewal_kid":"foo","keys":[`)
-	enc := json.NewEncoder(&buf)
-	_ = enc.Encode(k1)
-	buf.WriteByte(',')
-	_ = enc.Encode(k2)
-	buf.WriteByte(',')
-	_ = enc.Encode(k3)
-	buf.WriteString(`]}`)
+	t.Run("JWK instead of JWKS", func(t *testing.T) {
+		var buf bytes.Buffer
+		_ = k1.Set(`renewal_kid`, "foo")
+		_ = json.NewEncoder(&buf).Encode(k1)
 
-	var check = func(t *testing.T, buf []byte) {
-		set, err := jwk.Parse(buf)
-		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-			return
+		var check = func(t *testing.T, buf []byte) {
+			set, err := jwk.Parse(buf)
+			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, 1, set.Len(), `set.Len() should be 1`) {
+				return
+			}
+
+			v, ok := set.Field(`renewal_kid`)
+			if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
+				return
+			}
+
+			if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
+				return
+			}
+
+			key, ok := set.Get(0)
+			if !assert.True(t, ok, `set.Get(0) should return ok = true`) {
+				return
+			}
+
+			v, ok = key.Get(`renewal_kid`)
+			if !assert.True(t, ok, `key.Get("renewal_kid") should return ok = true`) {
+				return
+			}
+
+			if !assert.Equal(t, `foo`, v, `key.Get("renewal_kid") should return "foo"`) {
+				return
+			}
 		}
 
-		if !assert.Equal(t, 3, set.Len(), `set.Len() should be 3`) {
-			return
-		}
-
-		v, ok := set.Field(`renewal_kid`)
-		if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
-			return
-		}
-
-		if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
-			return
-		}
-	}
-
-	t.Run("Check original buffer", func(t *testing.T) {
-		check(t, buf.Bytes())
+		t.Run("Check original buffer", func(t *testing.T) {
+			check(t, buf.Bytes())
+		})
+		t.Run("Check serialized", func(t *testing.T) {
+			set, err := jwk.Parse(buf.Bytes())
+			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+				return
+			}
+			js, err := json.MarshalIndent(set, "", "  ")
+			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+				return
+			}
+			check(t, js)
+		})
 	})
-	t.Run("Check serialized", func(t *testing.T) {
-		set, err := jwk.Parse(buf.Bytes())
-		if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-			return
+	t.Run("JWKS with multiple keys", func(t *testing.T) {
+		var buf bytes.Buffer
+		buf.WriteString(`{"renewal_kid":"foo","keys":[`)
+		enc := json.NewEncoder(&buf)
+		_ = enc.Encode(k1)
+		buf.WriteByte(',')
+		_ = enc.Encode(k2)
+		buf.WriteByte(',')
+		_ = enc.Encode(k3)
+		buf.WriteString(`]}`)
+
+		var check = func(t *testing.T, buf []byte) {
+			set, err := jwk.Parse(buf)
+			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, 3, set.Len(), `set.Len() should be 3`) {
+				return
+			}
+
+			v, ok := set.Field(`renewal_kid`)
+			if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
+				return
+			}
+
+			if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
+				return
+			}
 		}
-		js, err := json.MarshalIndent(set, "", "  ")
-		if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-			return
-		}
-		check(t, js)
+
+		t.Run("Check original buffer", func(t *testing.T) {
+			check(t, buf.Bytes())
+		})
+		t.Run("Check serialized", func(t *testing.T) {
+			set, err := jwk.Parse(buf.Bytes())
+			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
+				return
+			}
+			js, err := json.MarshalIndent(set, "", "  ")
+			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+				return
+			}
+			check(t, js)
+		})
 	})
 }
