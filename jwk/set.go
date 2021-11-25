@@ -19,6 +19,23 @@ func NewSet() Set {
 	}
 }
 
+func (s *set) Set(n string, v interface{}) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if n == `keys` {
+		vl, ok := v.([]Key)
+		if !ok {
+			return errors.Errorf(`value for field "keys" must be []jwk.Key`)
+		}
+		s.keys = vl
+		return nil
+	}
+
+	s.privateParams[n] = v
+	return nil
+}
+
 func (s *set) Field(n string) (interface{}, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

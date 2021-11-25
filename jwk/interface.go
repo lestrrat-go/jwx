@@ -57,10 +57,13 @@ const (
 type Set interface {
 	// Add adds the specified key. If the key already exists in the set, it is
 	// not added.
+	// This method will be renamed to `AddKey(Key)` in a future major release.
 	Add(Key) bool
 
 	// Clear resets the list of keys associated with this set, emptying the
 	// internal list of `jwk.Key`s
+	// This method will be changed in the future to clear all contents in the
+	// `jwk.Set` instead of just the keys.
 	Clear()
 
 	// Get returns the key at index `idx`. If the index is out of range,
@@ -69,11 +72,23 @@ type Set interface {
 	Get(int) (Key, bool)
 
 	// Field returns the value of a private field in the key set.
+	//
 	// For the purposes of a key set, any field other than the "keys" field is
-	// considered to be a private field.
+	// considered to be a private field. In other words, you cannot use this
+	// method to directly access the list of keys in the set
+	//
 	// This method will be renamed to `Get(string)` in a future major release.
 	Field(string) (interface{}, bool)
 
+	// Set sets the value of a single field.
+	//
+	// This method, which takes an `interface{}`, exists because
+	// these objects can contain extra _arbitrary_ fields that users can
+	// specify, and there is no way of knowing what type they could be.
+	Set(string, interface{}) error
+
+	// Remove removes the field associated with the specified key.
+	// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.
 	// Index returns the index where the given key exists, -1 otherwise
 	Index(Key) int
 

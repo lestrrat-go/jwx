@@ -1769,4 +1769,37 @@ func TestSetWithPrivateParams(t *testing.T) {
 			check(t, js)
 		})
 	})
+	t.Run("Set private parameters", func(t *testing.T) {
+		set := jwk.NewSet()
+		if !assert.NoError(t, set.Set(`renewal_kid`, `foo`), `set.Set should succeed`) {
+			return
+		}
+
+		v, ok := set.Field(`renewal_kid`)
+		if !assert.True(t, ok, `set.Get("renewal_kid") should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
+			return
+		}
+
+		if !assert.Error(t, set.Set(`keys`, []string{"foo"}), `set.Set should fail`) {
+			return
+		}
+
+		k, err := jwk.New([]byte("foobar"))
+		if !assert.NoError(t, err, `jwk.New should succeed`) {
+			return
+		}
+		keys := []jwk.Key{k}
+
+		if !assert.NoError(t, set.Set(`keys`, keys), `set.Set should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, set.Len(), 1, `set should have 1 key`) {
+			return
+		}
+	})
 }
