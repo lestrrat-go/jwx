@@ -12,11 +12,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+const keysKey = `keys` // appease linter
+
 // NewSet creates and empty `jwk.Set` object
 func NewSet() Set {
 	return &set{
 		privateParams: make(map[string]interface{}),
 	}
+}
+
+func (s *set) Set(n string, v interface{}) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if n == keysKey {
+		vl, ok := v.([]Key)
+		if !ok {
+			return errors.Errorf(`value for field "keys" must be []jwk.Key`)
+		}
+		s.keys = vl
+		return nil
+	}
+
+	s.privateParams[n] = v
+	return nil
 }
 
 func (s *set) Field(n string) (interface{}, bool) {
@@ -126,7 +145,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 	enc := json.NewEncoder(buf)
 
-	fields := []string{`keys`}
+	fields := []string{keysKey}
 	for k := range s.privateParams {
 		fields = append(fields, k)
 	}
@@ -138,7 +157,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 			buf.WriteByte(',')
 		}
 		fmt.Fprintf(buf, `%q:`, field)
-		if field != `keys` {
+		if field != keysKey {
 			if err := enc.Encode(s.privateParams[field]); err != nil {
 				return nil, errors.Wrapf(err, `failed to marshal field %q`, field)
 			}
