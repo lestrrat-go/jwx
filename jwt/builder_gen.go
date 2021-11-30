@@ -2,7 +2,11 @@
 
 package jwt
 
-import "github.com/pkg/errors"
+import (
+	"time"
+
+	"github.com/pkg/errors"
+)
 
 type Builder struct {
 	claims []*ClaimPair
@@ -15,6 +19,34 @@ func NewBuilder() *Builder {
 func (b *Builder) Claim(name string, value interface{}) *Builder {
 	b.claims = append(b.claims, &ClaimPair{Key: name, Value: value})
 	return b
+}
+
+func (b *Builder) Audience(v []string) *Builder {
+	return b.Claim(AudienceKey, v)
+}
+
+func (b *Builder) Expiration(v time.Time) *Builder {
+	return b.Claim(ExpirationKey, v)
+}
+
+func (b *Builder) IssuedAt(v time.Time) *Builder {
+	return b.Claim(IssuedAtKey, v)
+}
+
+func (b *Builder) Issuer(v string) *Builder {
+	return b.Claim(IssuerKey, v)
+}
+
+func (b *Builder) JwtID(v string) *Builder {
+	return b.Claim(JwtIDKey, v)
+}
+
+func (b *Builder) NotBefore(v time.Time) *Builder {
+	return b.Claim(NotBeforeKey, v)
+}
+
+func (b *Builder) Subject(v string) *Builder {
+	return b.Claim(SubjectKey, v)
 }
 
 func (b *Builder) Build() (Token, error) {

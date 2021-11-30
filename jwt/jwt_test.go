@@ -1011,7 +1011,7 @@ func TestGHIssue368(t *testing.T) {
 			})
 			t.Run("Multiple Keys", func(t *testing.T) {
 				tok, err := jwt.NewBuilder().
-					Claim(jwt.AudienceKey, []string{"hello", "world"}).
+					Audience([]string{"hello", "world"}).
 					Build()
 				if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 					return
@@ -1045,7 +1045,7 @@ func TestGH375(t *testing.T) {
 	key.Set(jwk.KeyIDKey, `test`)
 
 	token, err := jwt.NewBuilder().
-		Claim(jwt.IssuerKey, `foobar`).
+		Issuer(`foobar`).
 		Build()
 	if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 		return
@@ -1170,8 +1170,8 @@ func TestGH393(t *testing.T) {
 	t.Run("exp - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
-			Claim(jwt.IssuedAtKey, now).
-			Claim(jwt.ExpirationKey, now.Add(5*time.Second)).
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1188,8 +1188,8 @@ func TestGH393(t *testing.T) {
 	t.Run("iat - exp (5 secs) < WithMinDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
-			Claim(jwt.ExpirationKey, now.Add(5*time.Second)).
-			Claim(jwt.IssuedAtKey, now).
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1202,8 +1202,8 @@ func TestGH393(t *testing.T) {
 	t.Run("iat - exp (5 secs) > WithMinDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
-			Claim(jwt.ExpirationKey, now.Add(5*time.Second)).
-			Claim(jwt.IssuedAtKey, now).
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1216,7 +1216,7 @@ func TestGH393(t *testing.T) {
 	t.Run("now - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
-			Claim(jwt.IssuedAtKey, now).
+			IssuedAt(now).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1230,7 +1230,7 @@ func TestGH393(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
 			Claim("foo", now).
-			Claim(jwt.ExpirationKey, now.Add(5*time.Second)).
+			Expiration(now.Add(5 * time.Second)).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1243,8 +1243,8 @@ func TestGH393(t *testing.T) {
 	t.Run("invalid claim name (c2)", func(t *testing.T) {
 		now := time.Now()
 		tok, err := jwt.NewBuilder().
-			Claim(jwt.IssuedAtKey, now).
 			Claim("foo", now.Add(5*time.Second)).
+			IssuedAt(now).
 			Build()
 		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 			return
@@ -1284,7 +1284,7 @@ func TestNested(t *testing.T) {
 	}
 
 	token, err := jwt.NewBuilder().
-		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`).
+		Issuer(`https://github.com/lestrrat-go/jwx`).
 		Build()
 	if !assert.NoError(t, err, `jwt.Builder should succeed`) {
 		return
