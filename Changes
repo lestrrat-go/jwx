@@ -1,11 +1,12 @@
 Changes
 =======
 
-v1.2.12 UNRELEASED
+v1.2.12 01 Dec 2021
 [New Features]
   * `jwk.Set` can now parse private parameters. For example, after parsing
-    `{"foo": "bar", "keys": [...]}`, users can get to the value of `"foo"`
-     by calling `set.Field("foo")`
+    a JWKS serialized as `{"foo": "bar", "keys": [...]}`, users can get to
+    the value of `"foo"` by calling `set.Field("foo")`
+  * `jwk.Set` now has `Set()` method to set field values.
 
 v1.2.11 14 Nov 2021
 [Security Fix]
