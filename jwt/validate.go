@@ -22,7 +22,7 @@ func isSupportedTimeClaim(c string) error {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
 		return nil
 	}
-	return errors.Errorf(`unsupported time claim %s`, strconv.Quote(c))
+	return NewValidationError(errors.Errorf(`unsupported time claim %s`, strconv.Quote(c)))
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
@@ -130,18 +130,58 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	if iitr.less { // t1 - t2 <= iitr.dur
 		// t1 - t2 < iitr.dur + skew
 		if t1.Sub(t2) > iitr.dur+skew {
-			return errors.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+			return NewValidationError(errors.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
 		}
 	} else {
 		if t1.Sub(t2) < iitr.dur-skew {
-			return errors.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+			return NewValidationError(errors.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
 		}
 	}
 	return nil
 }
 
+type ValidationError interface {
+	error
+	isValidationError()
+}
+
+func NewValidationError(err error) ValidationError {
+	return &validationError{error: err}
+}
+
+// This is a generic validation error.
+type validationError struct {
+	error
+}
+
+func (validationError) isValidationError() {}
+
+var errTokenExpired = NewValidationError(errors.New(`exp not satisfied`))
+var errInvalidIssuedAt = NewValidationError(errors.New(`iat not satisfied`))
+var errTokenNotYetValid = NewValidationError(errors.New(`nbf not satisfied`))
+
+// ErrTokenExpired returns the immutable error used when `exp` claim
+// is not satisfied
+func ErrTokenExpired() error {
+	return errTokenExpired
+}
+
+// ErrInvalidIssuedAt returns the immutable error used when `iat` claim
+// is not satisfied
+func ErrInvalidIssuedAt() error {
+	return errInvalidIssuedAt
+}
+
+func ErrTokenNotYetValid() error {
+	return errTokenNotYetValid
+}
+
 // Validator describes interface to validate a Token.
 type Validator interface {
+	// Validate should return an error if a required conditions is not met.
+	// This method will be changed in the next major release to return
+	// jwt.ValidationError instead of error to force users to return
+	// a validation error even for user-specified validators
 	Validate(context.Context, Token) error
 }
 
@@ -193,7 +233,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 		ttv := tv.Truncate(time.Second)
 		skew := ValidationCtxSkew(ctx) // MUST be populated
 		if !now.Before(ttv.Add(skew)) {
-			return errors.New(`exp not satisfied`)
+			return ErrTokenExpired()
 		}
 	}
 	return nil
@@ -217,7 +257,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 		ttv := tv.Truncate(time.Second)
 		skew := ValidationCtxSkew(ctx) // MUST be populated
 		if now.Before(ttv.Add(-1 * skew)) {
-			return errors.New(`iat not satisfied`)
+			return ErrInvalidIssuedAt()
 		}
 	}
 	return nil
@@ -242,7 +282,7 @@ func isNbfValid(ctx context.Context, t Token) error {
 		skew := ValidationCtxSkew(ctx) // MUST be populated
 		// now cannot be before t, so we check for now > t - skew
 		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
-			return errors.New(`nbf not satisfied`)
+			return ErrTokenNotYetValid()
 		}
 	}
 	return nil
@@ -263,15 +303,30 @@ func ClaimContainsString(name, value string) Validator {
 	}
 }
 
+// IsValidationError returns true if the error is a validation error
+func IsValidationError(err error) bool {
+	switch err {
+	case errTokenExpired, errTokenNotYetValid, errInvalidIssuedAt:
+		return true
+	default:
+		switch err.(type) {
+		case *validationError:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
 func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 	v, ok := t.Get(ccs.name)
 	if !ok {
-		return errors.Errorf(`claim %q not found`, ccs.name)
+		return NewValidationError(errors.Errorf(`claim %q not found`, ccs.name))
 	}
 
 	list, ok := v.([]string)
 	if !ok {
-		return errors.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v)
+		return NewValidationError(errors.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
 	}
 
 	var found bool
@@ -282,7 +337,7 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 		}
 	}
 	if !found {
-		return errors.Errorf(`%s not satisfied`, ccs.name)
+		return NewValidationError(errors.Errorf(`%s not satisfied`, ccs.name))
 	}
 	return nil
 }
@@ -303,10 +358,10 @@ func ClaimValueIs(name string, value interface{}) Validator {
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	v, ok := t.Get(cv.name)
 	if !ok {
-		return errors.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name)
+		return NewValidationError(errors.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
 	}
 	if v != cv.value {
-		return errors.Errorf(`%q not satisfied: values do not match`, cv.name)
+		return NewValidationError(errors.Errorf(`%q not satisfied: values do not match`, cv.name))
 	}
 	return nil
 }
@@ -322,7 +377,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	_, ok := t.Get(string(ir))
 	if !ok {
-		return errors.Errorf(`required claim %q was not found`, string(ir))
+		return NewValidationError(errors.Errorf(`required claim %q was not found`, string(ir)))
 	}
 	return nil
 }
