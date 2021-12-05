@@ -13,6 +13,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
 * [Validation](#jwt-validation)
+  * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
   * [Serialize using JWS](#serialize-using-jws
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
@@ -142,17 +143,39 @@ if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx`)) {
 }
 ```
 
-You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified
+You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
 
 ```go
 validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
   if time.Now().Month() != 8 {
-		return fmt.Errorf(`tokens are only valid during August!`)
+    return jwt.NewValidationError(errors.New(`tokens are only valid during August!`))
   }
   return nil
 })
 if err := jwt.Validate(token, jwt.WithValidator(validator)); err != nil {
   ...
+}
+```
+
+## Detecting error types
+
+If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. To do this, you can use the function `jwt.IsValidationError()`. To further differentiate between specific errors, you can use `errors.Is()`:
+
+```go
+token, err := jwt.Parse(src, jwt.WithValidat(true))
+if err != nil {
+  if jwt.IsValidationError(err) {
+    switch {
+    case errors.Is(err, jwt.ErrTokenExpired()):
+      ...
+    case errors.Is(err, jwt.ErrTokenNotYetValid()):
+      ...
+    case errors.Is(err, jwt.ErrInvalidIssuedAt()):
+      ...
+    default:
+      ...
+    }
+  }
 }
 ```
 

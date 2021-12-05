@@ -33,6 +33,30 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 	})
+	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+		t1.Set(jwt.IssuedAtKey, time.Now().Add(365*24*time.Second))
+
+		t.Run(`iat too far in the past`, func(t *testing.T) {
+			err := jwt.Validate(t1)
+			if !assert.Error(t, err, `jwt.Validate should fail`) {
+				return
+			}
+
+			if !assert.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`) {
+				return
+			}
+
+			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
+				return
+			}
+
+			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+				return
+			}
+		})
+	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
@@ -43,20 +67,36 @@ func TestGHIssue10(t *testing.T) {
 
 		// This should succeed, because WithAudience is not provided in the
 		// optional parameters
-		err = jwt.Validate(t1)
-		if err != nil {
-			t.Fatalf("Error verifying claim: %s", err.Error())
-		}
+		t.Run("`aud` check disabled", func(t *testing.T) {
+			t.Parallel()
+			if !assert.NoError(t, jwt.Validate(t1), `jwt.Validate should succeed`) {
+				return
+			}
+		})
 
 		// This should succeed, because WithAudience is provided, and its
 		// value matches one of the audience values
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithAudience("baz")), "token.Validate should succeed") {
-			return
-		}
+		t.Run("`aud` contains `baz`", func(t *testing.T) {
+			t.Parallel()
+			if !assert.NoError(t, jwt.Validate(t1, jwt.WithAudience("baz")), "jwt.Validate should succeed") {
+				return
+			}
+		})
 
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithAudience("poop")), "token.Validate should fail") {
-			return
-		}
+		t.Run("check `aud` contains `poop`", func(t *testing.T) {
+			t.Parallel()
+			err := jwt.Validate(t1, jwt.WithAudience("poop"))
+			if !assert.Error(t, err, "token.Validate should fail") {
+				return
+			}
+			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
+				return
+			}
+			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+				return
+			}
+		})
+
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
@@ -120,7 +160,17 @@ func TestGHIssue10(t *testing.T) {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				if tc.Error {
-					if !assert.Error(t, jwt.Validate(t1, tc.Options...), "token.Validate should fail") {
+					err := jwt.Validate(t1, tc.Options...)
+					if !assert.Error(t, err, "token.Validate should fail") {
+						return
+					}
+					if !assert.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`) {
+						return
+					}
+					if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpierd`) {
+						return
+					}
+					if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
 						return
 					}
 				} else {
@@ -143,24 +193,42 @@ func TestGHIssue10(t *testing.T) {
 		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
 
 		// This should fail, because exp is set in the past
-		if !assert.Error(t, jwt.Validate(t1), "token.Validate should fail") {
-			return
-		}
-
+		t.Run("exp set in the past", func(t *testing.T) {
+			t.Parallel()
+			err := jwt.Validate(t1)
+			if !assert.Error(t, err, "token.Validate should fail") {
+				return
+			}
+			if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`) {
+				return
+			}
+			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
+				return
+			}
+			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+				return
+			}
+		})
 		// This should succeed, because we have given big skew
 		// that is well enough to get us accepted
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithAcceptableSkew(time.Hour)), "token.Validate should succeed (1)") {
-			return
-		}
+		t.Run("exp is set in the past, but acceptable skew is large", func(t *testing.T) {
+			t.Parallel()
+			if !assert.NoError(t, jwt.Validate(t1, jwt.WithAcceptableSkew(time.Hour)), "token.Validate should succeed (1)") {
+				return
+			}
+		})
 
 		// This should succeed, because we have given a time
 		// that is well enough into the past
-		clock := jwt.ClockFunc(func() time.Time {
-			return tm.Add(-59 * time.Minute)
+		t.Run("exp is set in the past, but clock is also set in the past", func(t *testing.T) {
+			t.Parallel()
+			clock := jwt.ClockFunc(func() time.Time {
+				return tm.Add(-59 * time.Minute)
+			})
+			if !assert.NoError(t, jwt.Validate(t1, jwt.WithClock(clock)), "token.Validate should succeed (2)") {
+				return
+			}
 		})
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithClock(clock)), "token.Validate should succeed (2)") {
-			return
-		}
 	})
 	t.Run("Unix zero times", func(t *testing.T) {
 		t.Parallel()
