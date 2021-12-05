@@ -96,7 +96,6 @@ func TestGHIssue10(t *testing.T) {
 				return
 			}
 		})
-
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()

@@ -154,7 +154,7 @@ type validationError struct {
 	error
 }
 
-func (_ validationError) isValidationError() {}
+func (validationError) isValidationError() {}
 
 var errTokenExpired = NewValidationError(errors.New(`exp not satisfied`))
 var errInvalidIssuedAt = NewValidationError(errors.New(`iat not satisfied`))
