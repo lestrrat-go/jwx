@@ -19,30 +19,44 @@ func TestGHIssue10(t *testing.T) {
 		ClaimName  string
 		ClaimValue string
 		OptionFunc func(string) jwt.ValidateOption
+		BuildFunc  func(v string) (jwt.Token, error)
 	}{
 		{
 			ClaimName:  jwt.IssuerKey,
 			ClaimValue: `github.com/lestrrat-go/jwx`,
 			OptionFunc: jwt.WithIssuer,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					Issuer(v).
+					Build()
+			},
 		},
 		{
 			ClaimName:  jwt.JwtIDKey,
 			ClaimValue: `my-sepcial-key`,
 			OptionFunc: jwt.WithJwtID,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					JwtID(v).
+					Build()
+			},
 		},
 		{
 			ClaimName:  jwt.SubjectKey,
 			ClaimValue: `very important subject`,
 			OptionFunc: jwt.WithSubject,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					Subject(v).
+					Build()
+			},
 		},
 	}
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.ClaimName, func(t *testing.T) {
 			t.Parallel()
-			t1, err := jwt.NewBuilder().
-				Claim(tc.ClaimName, tc.ClaimValue).
-				Build()
+			t1, err := tc.BuildFunc(tc.ClaimValue)
 			if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 				return
 			}
