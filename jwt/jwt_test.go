@@ -472,13 +472,13 @@ func TestValidateClaims(t *testing.T) {
 	t.Run("Empty fields", func(t *testing.T) {
 		token := jwt.New()
 
-		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`) {
 			return
 		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`) {
 			return
 		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`) {
 			return
 		}
 	})

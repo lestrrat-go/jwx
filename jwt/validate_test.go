@@ -13,30 +13,56 @@ import (
 
 func TestGHIssue10(t *testing.T) {
 	t.Parallel()
-	t.Run(jwt.IssuerKey, func(t *testing.T) {
-		t.Parallel()
-		t1, err := jwt.NewBuilder().
-			Claim(jwt.IssuerKey, "github.com/lestrrat-go/jwx").
-			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
 
-		// This should succeed, because WithIssuer is not provided in the
-		// optional parameters
-		if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
-			return
-		}
+	// Simple string claims
+	testcases := []struct {
+		ClaimName  string
+		ClaimValue string
+		OptionFunc func(string) jwt.ValidateOption
+	}{
+		{
+			ClaimName:  jwt.IssuerKey,
+			ClaimValue: `github.com/lestrrat-go/jwx`,
+			OptionFunc: jwt.WithIssuer,
+		},
+		{
+			ClaimName:  jwt.JwtIDKey,
+			ClaimValue: `my-sepcial-key`,
+			OptionFunc: jwt.WithJwtID,
+		},
+		{
+			ClaimName:  jwt.SubjectKey,
+			ClaimValue: `very important subject`,
+			OptionFunc: jwt.WithSubject,
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.ClaimName, func(t *testing.T) {
+			t.Parallel()
+			t1, err := jwt.NewBuilder().
+				Claim(tc.ClaimName, tc.ClaimValue).
+				Build()
+			if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+				return
+			}
 
-		// This should succeed, because WithIssuer is provided with same value
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "t1.Validate should succeed") {
-			return
-		}
+			// This should succeed, because validation option (tc.OptionFunc)
+			// is not provided in the optional parameters
+			if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
+				return
+			}
 
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail") {
-			return
-		}
-	})
+			// This should succeed, because the option is provided with same value
+			if !assert.NoError(t, jwt.Validate(t1, tc.OptionFunc(tc.ClaimValue)), "t1.Validate should succeed") {
+				return
+			}
+
+			if !assert.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail") {
+				return
+			}
+		})
+	}
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
