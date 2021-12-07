@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.13 [UNRELEASED]
+v1.2.13 07 Dec 2021
 [New Features]
   * `jwt` package now has a `Builder` that may make it easier to programmatically
     create a JWT for some users. 
