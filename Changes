@@ -1,6 +1,14 @@
 Changes
 =======
 
+v1.2.13 [UNRELEASED]
+[New Features]
+  * `jwt` package now has a `Builder` that may make it easier to programmatically
+    create a JWT for some users. 
+  * `jwt` errors now can be distinguished between validation errors and others.
+    Use `jwt.IsValidationError()` to check if it's a validation error, and then
+    use `errors.Is()` to check if it's one of the known (oft-used) errors
+
 v1.2.12 01 Dec 2021
 [New Features]
   * `jwk.Set` can now parse private parameters. For example, after parsing
