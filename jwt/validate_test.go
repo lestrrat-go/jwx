@@ -13,26 +13,70 @@ import (
 
 func TestGHIssue10(t *testing.T) {
 	t.Parallel()
-	t.Run(jwt.IssuerKey, func(t *testing.T) {
-		t.Parallel()
-		t1 := jwt.New()
-		t1.Set(jwt.IssuerKey, "github.com/lestrrat-go/jwx")
 
-		// This should succeed, because WithIssuer is not provided in the
-		// optional parameters
-		if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
-			return
-		}
+	// Simple string claims
+	testcases := []struct {
+		ClaimName  string
+		ClaimValue string
+		OptionFunc func(string) jwt.ValidateOption
+		BuildFunc  func(v string) (jwt.Token, error)
+	}{
+		{
+			ClaimName:  jwt.IssuerKey,
+			ClaimValue: `github.com/lestrrat-go/jwx`,
+			OptionFunc: jwt.WithIssuer,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					Issuer(v).
+					Build()
+			},
+		},
+		{
+			ClaimName:  jwt.JwtIDKey,
+			ClaimValue: `my-sepcial-key`,
+			OptionFunc: jwt.WithJwtID,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					JwtID(v).
+					Build()
+			},
+		},
+		{
+			ClaimName:  jwt.SubjectKey,
+			ClaimValue: `very important subject`,
+			OptionFunc: jwt.WithSubject,
+			BuildFunc: func(v string) (jwt.Token, error) {
+				return jwt.NewBuilder().
+					Subject(v).
+					Build()
+			},
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.ClaimName, func(t *testing.T) {
+			t.Parallel()
+			t1, err := tc.BuildFunc(tc.ClaimValue)
+			if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+				return
+			}
 
-		// This should succeed, because WithIssuer is provided with same value
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "t1.Validate should succeed") {
-			return
-		}
+			// This should succeed, because validation option (tc.OptionFunc)
+			// is not provided in the optional parameters
+			if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
+				return
+			}
 
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail") {
-			return
-		}
-	})
+			// This should succeed, because the option is provided with same value
+			if !assert.NoError(t, jwt.Validate(t1, tc.OptionFunc(tc.ClaimValue)), "t1.Validate should succeed") {
+				return
+			}
+
+			if !assert.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail") {
+				return
+			}
+		})
+	}
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
@@ -59,10 +103,11 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		err := t1.Set(jwt.AudienceKey, []string{"foo", "bar", "baz"})
-		if err != nil {
-			t.Fatalf("Failed to set audience claim: %s", err.Error())
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.AudienceKey, []string{"foo", "bar", "baz"}).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
 		}
 
 		// This should succeed, because WithAudience is not provided in the
@@ -99,8 +144,12 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set(jwt.SubjectKey, "github.com/lestrrat-go/jwx")
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		// This should succeed, because WithSubject is not provided in the
 		// optional parameters
@@ -119,11 +168,16 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
 
 		// NotBefore is set to future date
 		tm := time.Now().Add(72 * time.Hour)
-		t1.Set(jwt.NotBeforeKey, tm)
+
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		testcases := []struct {
 			Name    string
@@ -182,14 +236,17 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.ExpirationKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
 
-		// issuedat = 1 Hr before current time
 		tm := time.Now()
-		t1.Set(jwt.IssuedAtKey, tm.Add(-1*time.Hour))
-
-		// valid for 2 minutes only from IssuedAt
-		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
+		t1, err := jwt.NewBuilder().
+			// issuedat = 1 Hr before current time
+			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
+			// valid for 2 minutes only from IssuedAt
+			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		// This should fail, because exp is set in the past
 		t.Run("exp set in the past", func(t *testing.T) {
@@ -231,13 +288,15 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Unix zero times", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
 		tm := time.Unix(0, 0)
-
-		t1.Set(jwt.NotBeforeKey, tm)
-		t1.Set(jwt.IssuedAtKey, tm)
-		t1.Set(jwt.ExpirationKey, tm)
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Claim(jwt.IssuedAtKey, tm).
+			Claim(jwt.ExpirationKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		// This should pass because the unix zero times should be ignored
 		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
@@ -246,13 +305,15 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Go zero times", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
 		tm := time.Time{}
-
-		t1.Set(jwt.NotBeforeKey, tm)
-		t1.Set(jwt.IssuedAtKey, tm)
-		t1.Set(jwt.ExpirationKey, tm)
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.NotBeforeKey, tm).
+			Claim(jwt.IssuedAtKey, tm).
+			Claim(jwt.ExpirationKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		// This should pass because the go zero times should be ignored
 		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
@@ -261,14 +322,16 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("Parse and validate", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-
-		// issuedat = 1 Hr before current time
 		tm := time.Now()
-		t1.Set(jwt.IssuedAtKey, tm.Add(-1*time.Hour))
-
-		// valid for 2 minutes only from IssuedAt
-		t1.Set(jwt.ExpirationKey, tm.Add(-58*time.Minute))
+		t1, err := jwt.NewBuilder().
+			// issuedat = 1 Hr before current time
+			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
+			// valid for 2 minutes only from IssuedAt
+			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		buf, err := json.Marshal(t1)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
@@ -300,8 +363,12 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run("any claim value", func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set("email", "email@example.com")
+		t1, err := jwt.NewBuilder().
+			Claim("email", "email@example.com").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
 
 		// This should succeed, because WithClaimValue("email", "xxx") is not provided in the
 		// optional parameters

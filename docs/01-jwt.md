@@ -9,6 +9,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse a JWT](#parse-a-jwt)
   * [Parse a JWT from file](#parse-a-jwt-from-file)
   * [Parse a JWT from a *http.Request](#parse-a-jwt-from-a-httprequest)
+* [Programmatically Creating a JWT](#programmatically-creating-a-jwt)
 * [Verification](#jwt-verification)
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
@@ -71,6 +72,59 @@ token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.With
 // Looks under "Authorization" header and "access_token" form field
 token, err := jwt.ParseRequest(req, jwt.WithFormKey("access_token"))
 ```
+
+# Programmatically Creating a JWT
+
+## Using `jwt.New`
+
+The most straight
+
+```go
+token := jwt.New()
+_ = token.Set(name, value)
+```
+
+If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
+
+## Using the Builder
+
+Since v1.2.12, the `jwt` package comes with a builder, which you can use to initialize a JWT token in (almost) one go:
+
+```go
+token, err := jwt.NewBuilder().
+  Claim(name1, value1).
+  Claim(name2, value2).
+  ...
+  Build()
+```
+
+For known fields, you can use the special methods:
+
+```go
+token, err := jwt.NewBuilder().
+  IssuedAt(time.Now()).
+  Audience("me").
+  Issuer("foobar").
+  Build()
+```
+
+One caveat that you should be aware about is that all calls to set a claim in the builder performs an _overwriting_
+operation. For example, specifying `Audience` multiple times will only overwrite the previous value. If you have fields
+that require a list of string, you should use `[]string` as the value
+
+```go
+// WRONG. The result will be "aud": "bar", not "aud": ["foo", "bar"]
+_, _ = jwt.NewBuilder().
+  Audience("foo").
+  Audience("bar).
+  Build
+
+// CORRECT.
+_, _ = jwt.NewBuilder().
+  Audience([]string{"foo", "bar"}).
+  Build()
+```
+
 # JWT Verification
 
 ## Parse and Verify a JWT (with single key)

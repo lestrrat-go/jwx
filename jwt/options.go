@@ -13,6 +13,17 @@ import (
 
 type Option = option.Interface
 
+type ConstructorOption interface {
+	Option
+	constructorOption()
+}
+
+type constructorOption struct {
+	Option
+}
+
+func (*constructorOption) constructorOption() {}
+
 // GlobalOption describes an Option that can be passed to `Settings()`.
 type GlobalOption interface {
 	Option
@@ -109,6 +120,7 @@ func newValidateOption(n interface{}, v interface{}) ValidateOption {
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
+type identConstructorClaim struct{}
 type identClock struct{}
 type identContext struct{}
 type identDecrypt struct{}
@@ -266,7 +278,7 @@ func WithAudience(s string) ValidateOption {
 	return WithValidator(ClaimContainsString(AudienceKey, s))
 }
 
-// WithClaimValue specifies that expected any claim value.
+// WithClaimValue specifies the expected value for a given claim
 func WithClaimValue(name string, v interface{}) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
 }
@@ -300,7 +312,7 @@ func WithFlattenAudience(v bool) GlobalOption {
 	return &globalOption{option.New(identFlattenAudience{}, v)}
 }
 
-type typedClaimPair struct {
+type claimPair struct {
 	Name  string
 	Value interface{}
 }
@@ -329,7 +341,7 @@ type typedClaimPair struct {
 // `openid.New()` will respect this option, if you provide your own custom
 // token type, it will need to implement the TokenWithDecodeCtx interface.
 func WithTypedClaim(name string, object interface{}) ParseOption {
-	return newParseOption(identTypedClaim{}, typedClaimPair{Name: name, Value: object})
+	return newParseOption(identTypedClaim{}, claimPair{Name: name, Value: object})
 }
 
 // WithRequiredClaim specifies that the claim identified the given name
@@ -477,4 +489,8 @@ func WithKeySetProvider(p KeySetProvider) ParseOption {
 // `context.Context` object.
 func WithContext(ctx context.Context) ValidateOption {
 	return newValidateOption(identContext{}, ctx)
+}
+
+func WithClaim(name string, v interface{}) ConstructorOption {
+	return &constructorOption{option.New(identConstructorClaim{}, &claimPair{Name: name, Value: v})}
 }

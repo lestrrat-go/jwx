@@ -472,13 +472,13 @@ func TestValidateClaims(t *testing.T) {
 	t.Run("Empty fields", func(t *testing.T) {
 		token := jwt.New()
 
-		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`) {
 			return
 		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`) {
 			return
 		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate shold fail`) {
+		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`) {
 			return
 		}
 	})
@@ -1010,8 +1010,12 @@ func TestGHIssue368(t *testing.T) {
 				}
 			})
 			t.Run("Multiple Keys", func(t *testing.T) {
-				tok := jwt.New()
-				_ = tok.Set(jwt.AudienceKey, []string{"hello", "world"})
+				tok, err := jwt.NewBuilder().
+					Audience([]string{"hello", "world"}).
+					Build()
+				if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+					return
+				}
 
 				buf, err := json.MarshalIndent(tok, "", "  ")
 				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
@@ -1040,8 +1044,12 @@ func TestGH375(t *testing.T) {
 	}
 	key.Set(jwk.KeyIDKey, `test`)
 
-	token := jwt.New()
-	token.Set(jwt.IssuerKey, `foobar`)
+	token, err := jwt.NewBuilder().
+		Issuer(`foobar`).
+		Build()
+	if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+		return
+	}
 
 	signAlg := jwa.RS512
 	signed, err := jwt.Sign(token, signAlg, key)
@@ -1161,9 +1169,13 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("exp - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set(jwt.IssuedAtKey, now)
-		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+		tok, err := jwt.NewBuilder().
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.Error(t, jwt.Validate(tok, jwt.WithMaxDelta(2*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey)), `jwt.Validate should fail`) {
 			return
@@ -1175,9 +1187,13 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("iat - exp (5 secs) < WithMinDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
-		tok.Set(jwt.IssuedAtKey, now)
+		tok, err := jwt.NewBuilder().
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey)), `jwt.Validate should fail`) {
 			return
@@ -1185,9 +1201,13 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("iat - exp (5 secs) > WithMinDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
-		tok.Set(jwt.IssuedAtKey, now)
+		tok, err := jwt.NewBuilder().
+			IssuedAt(now).
+			Expiration(now.Add(5 * time.Second)).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.NoError(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should succeed`) {
 			return
@@ -1195,8 +1215,12 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("now - iat < WithMaxDelta(10 secs)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set(jwt.IssuedAtKey, now)
+		tok, err := jwt.NewBuilder().
+			IssuedAt(now).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.NoError(t, jwt.Validate(tok, jwt.WithMaxDelta(10*time.Second, "", jwt.IssuedAtKey), jwt.WithClock(jwt.ClockFunc(func() time.Time { return now.Add(5 * time.Second) }))), `jwt.Validate should succeed`) {
 			return
@@ -1204,9 +1228,13 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("invalid claim name (c1)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set("foo", now)
-		tok.Set(jwt.ExpirationKey, now.Add(5*time.Second))
+		tok, err := jwt.NewBuilder().
+			Claim("foo", now).
+			Expiration(now.Add(5 * time.Second)).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, "foo"), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should fail`) {
 			return
@@ -1214,9 +1242,13 @@ func TestGH393(t *testing.T) {
 	})
 	t.Run("invalid claim name (c2)", func(t *testing.T) {
 		now := time.Now()
-		tok := jwt.New()
-		tok.Set(jwt.IssuedAtKey, now)
-		tok.Set("foo", now.Add(5*time.Second))
+		tok, err := jwt.NewBuilder().
+			Claim("foo", now.Add(5*time.Second)).
+			IssuedAt(now).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 
 		if !assert.Error(t, jwt.Validate(tok, jwt.WithMinDelta(10*time.Second, "foo", jwt.IssuedAtKey), jwt.WithAcceptableSkew(5*time.Second)), `jwt.Validate should fail`) {
 			return
@@ -1233,8 +1265,12 @@ func TestGH393(t *testing.T) {
 		}
 	})
 	t.Run(`WithRequiredClaim succeeds for existing claim`, func(t *testing.T) {
-		tok := jwt.New()
-		tok.Set(`foo`, 1)
+		tok, err := jwt.NewBuilder().
+			Claim(`foo`, 1).
+			Build()
+		if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+			return
+		}
 		if !assert.NoError(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
 			return
 		}
@@ -1247,8 +1283,12 @@ func TestNested(t *testing.T) {
 		return
 	}
 
-	token := jwt.New()
-	token.Set(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`)
+	token, err := jwt.NewBuilder().
+		Issuer(`https://github.com/lestrrat-go/jwx`).
+		Build()
+	if !assert.NoError(t, err, `jwt.Builder should succeed`) {
+		return
+	}
 
 	serialized, err := jwt.NewSerializer().
 		Sign(jwa.RS256, key).

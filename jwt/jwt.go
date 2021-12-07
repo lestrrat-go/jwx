@@ -133,7 +133,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identValidate{}:
 			ctx.validate = o.Value().(bool)
 		case identTypedClaim{}:
-			pair := o.Value().(typedClaimPair)
+			pair := o.Value().(claimPair)
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
 			}
