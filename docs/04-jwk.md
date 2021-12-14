@@ -20,6 +20,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Fetching JWK Sets](#fetching-jwk-sets)
   * [Fetching a JWK Set once](#fetching-a-jwk-set-once)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+  * [Using Whitelists](#using-whitelists)
 * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
 ---
@@ -255,6 +256,9 @@ wl := jwk.NewRegexpWhitelist().
   Add(regexp3)
 
 jwk.Fetch(ctx, url, jwk.WithWhitelist(wl))
+
+// or in a jwk.AutoRefresh object:
+ar.Configure(url, jwk.WithWhitelist(wl))
 ```
 
 If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement you own type of `jwk.Whitelist`.
