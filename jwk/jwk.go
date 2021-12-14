@@ -240,6 +240,10 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 // contents of the object with the data at the remote resource,
 // consider using `jwk.AutoRefresh`, which automatically refreshes
 // jwk.Set objects asynchronously.
+//
+// See the list of `jwk.FetchOption`s for various options to tweak the
+// behavior, including providing alternate HTTP Clients, setting a backoff,
+// and using whitelists.
 func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
 	res, err := fetch(ctx, urlstring, options...)
 	if err != nil {
