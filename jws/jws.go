@@ -489,7 +489,6 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 		}
 	}
 	return nil, errors.New(`failed to verify payload using key in "jku"`)
-
 }
 
 func (ctx *verifyCtx) tryVerifyCompact(hdr Headers, buf, decodedSignature, payload []byte) ([]byte, error) {
