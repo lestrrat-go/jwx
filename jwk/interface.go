@@ -145,3 +145,10 @@ type AutoRefreshError struct {
 	Error error
 	URL   string
 }
+
+// Whitelist is an interface for a set of URL whitelists. When provided
+// to JWK fetching operations, urls are checked against this object, and
+// the object must return true for urls to be fetched.
+type Whitelist interface {
+	IsAllowed(string) bool
+}

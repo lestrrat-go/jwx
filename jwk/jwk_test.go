@@ -9,7 +9,10 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -1802,4 +1805,95 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestFetch(t *testing.T) {
+	k1, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+	k2, err := jwxtest.GenerateEcdsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`) {
+		return
+	}
+	k3, err := jwxtest.GenerateSymmetricJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`) {
+		return
+	}
+	set := jwk.NewSet()
+	set.Add(k1)
+	set.Add(k2)
+	set.Add(k3)
+
+	expected, err := json.MarshalIndent(set, "", "  ")
+	if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+		return
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(expected)
+	}))
+	defer srv.Close()
+
+	testcases := []struct {
+		Name      string
+		Whitelist func() jwk.Whitelist
+	}{
+		{
+			Name: `MapWhitelist`,
+			Whitelist: func() jwk.Whitelist {
+				return jwk.NewMapWhitelist().
+					Add(`https://www.googleapis.com/oauth2/v3/certs`).
+					Add(srv.URL)
+			},
+		},
+		{
+			Name: `RegexpWhitelist`,
+			Whitelist: func() jwk.Whitelist {
+				return jwk.NewRegexpWhitelist().
+					Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
+			},
+		},
+		{
+			Name: `WhitelistFunc`,
+			Whitelist: func() jwk.Whitelist {
+				return jwk.WhitelistFunc(func(s string) bool {
+					return s == srv.URL
+				})
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			wl := tc.Whitelist()
+
+			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx`, jwk.WithFetchWhitelist(wl))
+			if !assert.Error(t, err, `jwk.Fetch should fail`) {
+				return
+			}
+			if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
+				return
+			}
+
+			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
+			if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
+				return
+			}
+
+			got, err := json.MarshalIndent(fetched, "", "  ")
+			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+				return
+			}
+
+			if !assert.Equal(t, expected, got, `data should match`) {
+				return
+			}
+		})
+	}
 }
