@@ -1501,7 +1501,7 @@ func TestJKU(t *testing.T) {
 			Name: "Success",
 		},
 		{
-			Name: "Rejected by whitelist",
+			Name:  "Rejected by whitelist",
 			Error: true,
 			VerifyOptions: func() []jws.VerifyOption {
 				wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
