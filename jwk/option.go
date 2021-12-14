@@ -161,13 +161,6 @@ func withLocalRegistry(r *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, r)}
 }
 
-// Whitelist is an interface for a set of URL whitelists. When provided
-// to JWK fetching operations, urls are checked against this object, and
-// the object must return true for urls to be fetched.
-type Whitelist interface {
-	IsAllowed(string) bool
-}
-
 // WithFetchWhitelist specifies the Whitelist object to use when
 // fetching JWKs from a remote source. This option can be passed
 // to both `jwk.Fetch()`, `jwk.NewAutoRefresh()`, and `(*jwk.AutoRefresh).Configure()`

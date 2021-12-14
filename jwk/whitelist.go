@@ -2,6 +2,9 @@ package jwk
 
 import "regexp"
 
+// RegexpWhitelist is a jwk.Whitelist object comprised of a list of *regexp.Regexp
+// objects. All entries in the list are tried until one matches. If none of the
+// *regexp.Regexp objects match, then the URL is deemed unallowed.
 type RegexpWhitelist struct {
 	patterns []*regexp.Regexp
 }
@@ -26,6 +29,8 @@ func (w *RegexpWhitelist) IsAllowed(u string) bool {
 	return false
 }
 
+// MapWhitelist is a jwk.Whitelist object comprised of a map of strings.
+// If the URL exists in the map, then the URL is allowed to be fetched.
 type MapWhitelist struct {
 	store map[string]struct{}
 }
@@ -44,6 +49,9 @@ func (w *MapWhitelist) IsAllowed(u string) bool {
 	return b
 }
 
+// WhitelistFunc is a jwk.Whitelist object based on a function.
+// You can perform any sort of check against the given URL to determine
+// if it can be fetched or not.
 type WhitelistFunc func(string) bool
 
 func (w WhitelistFunc) IsAllowed(u string) bool {
