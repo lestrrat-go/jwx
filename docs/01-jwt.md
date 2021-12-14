@@ -116,7 +116,7 @@ that require a list of string, you should use `[]string` as the value
 // WRONG. The result will be "aud": "bar", not "aud": ["foo", "bar"]
 _, _ = jwt.NewBuilder().
   Audience("foo").
-  Audience("bar).
+  Audience("bar").
   Build
 
 // CORRECT.
