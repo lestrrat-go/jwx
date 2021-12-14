@@ -1,6 +1,11 @@
 Changes
 =======
 
+v1.2.14 UNRELEASED
+[New Features]
+  * `jwk.Fetch()` and `(*jwk.AutoRefresh).Configure()` can now take `jwk.Whitelist`
+    object to check for the validity of a url to be fetched
+
 v1.2.13 07 Dec 2021
 [New Features]
   * `jwt` package now has a `Builder` that may make it easier to programmatically
