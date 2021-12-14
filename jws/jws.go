@@ -182,6 +182,13 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	return json.Marshal(result)
 }
 
+type verifyCtx struct {
+	dst             *Message
+	detachedPayload []byte
+	alg             jwa.SignatureAlgorithm
+	key             interface{}
+}
+
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
 // `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
 //
@@ -192,15 +199,16 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
 func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...VerifyOption) ([]byte, error) {
-	var dst *Message
-	var detachedPayload []byte
+	var ctx verifyCtx
+	ctx.alg = alg
+	ctx.key = key
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			dst = option.Value().(*Message)
+			ctx.dst = option.Value().(*Message)
 		case identDetachedPayload{}:
-			detachedPayload = option.Value().([]byte)
+			ctx.detachedPayload = option.Value().([]byte)
 		}
 	}
 
@@ -210,9 +218,9 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 	}
 
 	if buf[0] == '{' {
-		return verifyJSON(buf, alg, key, dst, detachedPayload)
+		return ctx.verifyJSON(buf)
 	}
-	return verifyCompact(buf, alg, key, dst, detachedPayload)
+	return ctx.verifyCompact(buf)
 }
 
 // VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
@@ -249,8 +257,8 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
 }
 
-func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message, detachedPayload []byte) ([]byte, error) {
-	verifier, err := NewVerifier(alg)
+func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
+	verifier, err := NewVerifier(ctx.alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
 	}
@@ -263,12 +271,12 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	}
 	m.SetDecodeCtx(nil)
 
-	if len(m.payload) != 0 && detachedPayload != nil {
+	if len(m.payload) != 0 && ctx.detachedPayload != nil {
 		return nil, errors.New(`can't specify detached payload for JWS with payload`)
 	}
 
-	if detachedPayload != nil {
-		m.payload = detachedPayload
+	if ctx.detachedPayload != nil {
+		m.payload = ctx.detachedPayload
 	}
 
 	// Pre-compute the base64 encoded version of payload
@@ -285,7 +293,7 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 	for i, sig := range m.signatures {
 		buf.Reset()
 		if hdr := sig.headers; hdr != nil && hdr.KeyID() != "" {
-			if jwkKey, ok := key.(jwk.Key); ok {
+			if jwkKey, ok := ctx.key.(jwk.Key); ok {
 				if jwkKey.KeyID() != hdr.KeyID() {
 					continue
 				}
@@ -312,9 +320,9 @@ func verifyJSON(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst 
 		buf.WriteByte('.')
 		buf.WriteString(payload)
 
-		if err := verifier.Verify(buf.Bytes(), sig.signature, key); err == nil {
-			if dst != nil {
-				*dst = m
+		if err := verifier.Verify(buf.Bytes(), sig.signature, ctx.key); err == nil {
+			if ctx.dst != nil {
+				*(ctx.dst) = m
 			}
 			return m.payload, nil
 		}
@@ -338,13 +346,13 @@ func getB64Value(hdr Headers) bool {
 	return b64
 }
 
-func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, dst *Message, detachedPayload []byte) ([]byte, error) {
+func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 	protected, payload, signature, err := SplitCompact(signed)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
 	}
 
-	verifier, err := NewVerifier(alg)
+	verifier, err := NewVerifier(ctx.alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create verifier")
 	}
@@ -354,8 +362,8 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 
 	verifyBuf.Write(protected)
 	verifyBuf.WriteByte('.')
-	if len(payload) == 0 && detachedPayload != nil {
-		payload = detachedPayload
+	if len(payload) == 0 && ctx.detachedPayload != nil {
+		payload = ctx.detachedPayload
 	}
 	verifyBuf.Write(payload)
 
@@ -375,14 +383,14 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 	}
 
 	if hdr.KeyID() != "" {
-		if jwkKey, ok := key.(jwk.Key); ok {
+		if jwkKey, ok := ctx.key.(jwk.Key); ok {
 			if jwkKey.KeyID() != hdr.KeyID() {
 				return nil, errors.New(`"kid" fields do not match`)
 			}
 		}
 	}
 
-	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, key); err != nil {
+	if err := verifier.Verify(verifyBuf.Bytes(), decodedSignature, ctx.key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
 	}
 
@@ -399,7 +407,7 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 		decodedPayload = v
 	}
 
-	if dst != nil {
+	if ctx.dst != nil {
 		// Construct a new Message object
 		m := NewMessage()
 		m.SetPayload(decodedPayload)
@@ -408,7 +416,7 @@ func verifyCompact(signed []byte, alg jwa.SignatureAlgorithm, key interface{}, d
 		sig.SetSignature(decodedSignature)
 		m.AppendSignature(sig)
 
-		*dst = *m
+		*(ctx.dst) = *m
 	}
 	return decodedPayload, nil
 }
