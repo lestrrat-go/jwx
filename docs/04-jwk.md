@@ -17,7 +17,9 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
 * [Setting values to fields](#setting-values-to-fields)
-* [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+* [Fetching JWK Sets](#fetching-jwk-sets)
+  * [Fetching a JWK Set onece](#fetching-a-jwk-set-onece)
+  * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
 * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
 ---
@@ -188,8 +190,17 @@ the `jwk` package defines field key names for predefined keys as constants so yo
 key.Set(jwk.KeyIDKey, `my-awesome-key`)
 key.Set(`my-custom-field`, `unbelievable-value`)
 ```
+# Fetching JWK Sets
 
-# Auto-refreshing remote keys
+## Fetching a JWK Set once
+
+To fetch a JWK Set once, use `jwk.Fetch()`.
+
+```go
+set, err := jwk.Fetch(ctx, url, options...)
+```
+
+## Auto-refreshing remote keys
 
 Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
 For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
@@ -222,9 +233,31 @@ The returned `keyset` will always be "reasonably" new. It is important that you 
 
 By "reasonably" we mean that we cannot guarantee that the keys will be refreshed immediately after it has been rotated in the remote source. But it should be close enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
 
-
-
 If re-fetching the keyset fails, a cached version will be returned from the previous successful fetch upon calling `(jwk.AutoRefresh).Fetch()`.
+
+## Using Whitelists
+
+If you are fetching JWK Sets from a possibly untrusted source such as the `"jku"` field of a JWS message, you may have to perform some sort of
+whitelist checking. You can provide a `jwk.Whitelist` object to either `jwk.Fetch()` or `(*jwk.AutoRefresh).Configure()` methods to specify the
+use of a whitelist.
+
+Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases.
+
+```go
+wl := jwk.NewMapWhitelist().
+  Add(url1).
+  Add(url2).
+  Add(url3
+
+wl := jwk.NewRegexpWhitelist().
+  Add(regexp1).
+  Add(regexp2).
+  Add(regexp3)
+
+jwk.Fetch(ctx, url, jwk.WithWhitelist(wl))
+```
+
+If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement you own type of `jwk.Whitelist`.
 
 # Converting a jwk.Key to a raw key
 
