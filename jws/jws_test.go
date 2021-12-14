@@ -1499,7 +1499,7 @@ func TestJKU(t *testing.T) {
 		return
 	}
 
-	decoded, err := jws.Verify(signed, jwa.NoSignature, nil, jws.WithUseJKU(true), jws.WithHTTPClient(srv.Client()))
+	decoded, err := jws.VerifyAuto(signed, jws.WithHTTPClient(srv.Client()))
 	if !assert.NoError(t, err, `jws.Verify should succeed`) {
 		return
 	}

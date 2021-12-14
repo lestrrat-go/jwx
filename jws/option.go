@@ -13,7 +13,6 @@ type identPayloadSigner struct{}
 type identDetachedPayload struct{}
 type identHeaders struct{}
 type identMessage struct{}
-type identUseJKU struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 
@@ -66,10 +65,6 @@ func WithMessage(m *Message) VerifyOption {
 // know exactly how and why this works.
 func WithDetachedPayload(v []byte) VerifyOption {
 	return &verifyOption{option.New(identDetachedPayload{}, v)}
-}
-
-func WithUseJKU(v bool) VerifyOption {
-	return &verifyOption{option.New(identUseJKU{}, v)}
 }
 
 func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {

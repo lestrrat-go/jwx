@@ -28,6 +28,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -195,6 +196,36 @@ type verifyCtx struct {
 	httpcl          *http.Client
 }
 
+// VerifyAuto is a special case of Verify(), where verification is done
+// using verifications parameters that can be obtained using the information
+// that is carried within the JWS message itself.
+//
+// Currently it only supports verification via `jku`.
+// This operation will cause access to remote resources via https, and therefore
+// extreme caution should be taken which urls can be accessed. Use of
+// whitelists via `jws.WithFetchWhitelist()` is highly recommended.
+func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
+	var ctx verifyCtx
+	// enable JKU processing
+	ctx.useJKU = true
+
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identMessage{}:
+			ctx.dst = option.Value().(*Message)
+		case identDetachedPayload{}:
+			ctx.detachedPayload = option.Value().([]byte)
+		case identFetchWhitelist{}:
+			ctx.wl = option.Value().(jwk.Whitelist)
+		case identHTTPClient{}:
+			ctx.httpcl = option.Value().(*http.Client)
+		}
+	}
+
+	return ctx.verify(buf)
+}
+
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
 // `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
 //
@@ -215,15 +246,15 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 			ctx.dst = option.Value().(*Message)
 		case identDetachedPayload{}:
 			ctx.detachedPayload = option.Value().([]byte)
-		case identUseJKU{}:
-			ctx.useJKU = option.Value().(bool)
-		case identFetchWhitelist{}:
-			ctx.wl = option.Value().(jwk.Whitelist)
-		case identHTTPClient{}:
-			ctx.httpcl = option.Value().(*http.Client)
+		default:
+			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With` + strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
+	return ctx.verify(buf)
+}
+
+func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, errors.New(`attempt to verify empty buffer`)
