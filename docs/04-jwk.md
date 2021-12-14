@@ -18,7 +18,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
 * [Setting values to fields](#setting-values-to-fields)
 * [Fetching JWK Sets](#fetching-jwk-sets)
-  * [Fetching a JWK Set onece](#fetching-a-jwk-set-onece)
+  * [Fetching a JWK Set once](#fetching-a-jwk-set-once)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
 * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
