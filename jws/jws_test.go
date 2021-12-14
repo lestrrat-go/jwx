@@ -12,6 +12,8 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"testing"
@@ -1466,6 +1468,42 @@ func TestGH485(t *testing.T) {
 		return
 	}
 	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
+		return
+	}
+}
+
+func TestJKU(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+
+	key.Set(jwk.KeyIDKey, `my-awesome-key`)
+
+	pubkey, err := jwk.PublicKeyOf(key)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		return
+	}
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(pubkey)
+	}))
+	defer srv.Close()
+
+	payload := []byte("Lorem Ipsum")
+
+	hdr := jws.NewHeaders()
+	hdr.Set(jws.JWKSetURLKey, srv.URL)
+	signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	decoded, err := jws.Verify(signed, jwa.NoSignature, nil, jws.WithUseJKU(true), jws.WithHTTPClient(srv.Client()))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+	if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
 		return
 	}
 }
