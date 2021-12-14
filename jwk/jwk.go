@@ -255,6 +255,7 @@ func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, 
 }
 
 func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
+	var wl Whitelist
 	var httpcl HTTPClient = http.DefaultClient
 	bo := backoff.Null()
 	for _, option := range options {
@@ -264,6 +265,14 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 			httpcl = option.Value().(HTTPClient)
 		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
+		case identFetchWhitelist{}:
+			wl = option.Value().(Whitelist)
+		}
+	}
+
+	if wl != nil {
+		if !wl.IsAllowed(urlstring) {
+			return nil, errors.New(`url rejected by whitelist`)
 		}
 	}
 

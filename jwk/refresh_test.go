@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
 )
@@ -285,8 +286,15 @@ func TestRefreshSnapshot(t *testing.T) {
 func TestErrorSink(t *testing.T) {
 	t.Parallel()
 
+	k, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+	set := jwk.NewSet()
+	set.Add(k)
 	testcases := []struct {
 		Name    string
+		Options func() []jwk.AutoRefreshOption
 		Handler http.Handler
 	}{
 		{
@@ -302,6 +310,20 @@ func TestErrorSink(t *testing.T) {
 				w.Write([]byte(`{"empty": "nonthingness"}`))
 			}),
 		},
+		{
+			Name: `rejected by whitelist`,
+			Options: func() []jwk.AutoRefreshOption {
+				return []jwk.AutoRefreshOption{
+					jwk.WithFetchWhitelist(jwk.WhitelistFunc(func(_ string) bool {
+						return false
+					})),
+				}
+			},
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(k)
+			}),
+		},
 	}
 
 	for _, tc := range testcases {
@@ -314,7 +336,13 @@ func TestErrorSink(t *testing.T) {
 			defer srv.Close()
 
 			ar := jwk.NewAutoRefresh(ctx)
-			ar.Configure(srv.URL, jwk.WithRefreshInterval(500*time.Millisecond))
+
+			var options []jwk.AutoRefreshOption
+			if f := tc.Options; f != nil {
+				options = f()
+			}
+			options = append(options, jwk.WithRefreshInterval(500*time.Millisecond))
+			ar.Configure(srv.URL, options...)
 			ch := make(chan jwk.AutoRefreshError, 256) // big buffer
 			ar.ErrorSink(ch)
 			ar.Fetch(ctx, srv.URL)
