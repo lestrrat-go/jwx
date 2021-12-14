@@ -1492,18 +1492,54 @@ func TestJKU(t *testing.T) {
 
 	payload := []byte("Lorem Ipsum")
 
-	hdr := jws.NewHeaders()
-	hdr.Set(jws.JWKSetURLKey, srv.URL)
-	signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
-	if !assert.NoError(t, err, `jws.Sign should succeed`) {
-		return
+	testcases := []struct {
+		Name          string
+		Error         bool
+		VerifyOptions func() []jws.VerifyOption
+	}{
+		{
+			Name: "Success",
+		},
+		{
+			Name: "Rejected by whitelist",
+			Error: true,
+			VerifyOptions: func() []jws.VerifyOption {
+				wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
+				return []jws.VerifyOption{
+					jws.WithFetchWhitelist(wl),
+				}
+			},
+		},
 	}
 
-	decoded, err := jws.VerifyAuto(signed, jws.WithHTTPClient(srv.Client()))
-	if !assert.NoError(t, err, `jws.Verify should succeed`) {
-		return
-	}
-	if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
-		return
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			hdr := jws.NewHeaders()
+			hdr.Set(jws.JWKSetURLKey, srv.URL)
+			signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
+			if !assert.NoError(t, err, `jws.Sign should succeed`) {
+				return
+			}
+
+			var options []jws.VerifyOption
+			if fn := tc.VerifyOptions; fn != nil {
+				options = fn()
+			}
+			options = append(options, jws.WithHTTPClient(srv.Client()))
+			decoded, err := jws.VerifyAuto(signed, options...)
+			if tc.Error {
+				if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
+					return
+				}
+			} else {
+				if !assert.NoError(t, err, `jws.VerifyAuto should succeed`) {
+					return
+				}
+				if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
+					return
+				}
+			}
+		})
 	}
 }
