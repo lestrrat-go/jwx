@@ -152,5 +152,3 @@ type AutoRefreshError struct {
 type Whitelist interface {
 	IsAllowed(string) bool
 }
-
-
