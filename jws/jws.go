@@ -247,7 +247,7 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 		case identDetachedPayload{}:
 			ctx.detachedPayload = option.Value().([]byte)
 		default:
-			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With` + strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
@@ -420,75 +420,76 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, `failed to decode headers`)
 	}
 
-	if ctx.useJKU {
-		u := hdr.JWKSetURL()
-		if u == "" {
-			return nil, errors.New(`use of "jku" field specified, but the field is empty`)
-		}
-		uo, err := url.Parse(u)
-		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse "jku"`)
-		}
-		if uo.Scheme != "https" {
-			return nil, errors.New(`url in "jku" must be HTTPS`)
-		}
-
-		var options []jwk.FetchOption
-		if ctx.wl != nil {
-			options = append(options, jwk.WithFetchWhitelist(ctx.wl))
-		}
-		if ctx.httpcl != nil {
-			options = append(options, jwk.WithHTTPClient(ctx.httpcl))
-		}
-		set, err := jwk.Fetch(context.TODO(), u, options...)
-		if err != nil {
-			return nil, errors.Wrapf(err, `failed to fetch "jku"`)
-		}
-
-		// Because we're using a JWKS here, we MUST have "kid" that matches
-		// the payload
-		if hdr.KeyID() == "" {
-			return nil, errors.Errorf(`"kid" is required on the JWS message to use "jku"`)
-		}
-
-		key, ok := set.LookupKeyID(hdr.KeyID())
-		if !ok {
-			return nil, errors.New(`key specified via "kid" is not present in the JWK set specified by "jku"`)
-		}
-
-		// hooray, we found a key. Now the algorithm will have to be inferred.
-		algs, err := AlgorithmsForKey(key)
-		if err != nil {
-			return nil, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
-		}
-
-		// for each of these algorithms, just ... keep trying ...
-		ctx.key = key
-		hdrAlg := hdr.Algorithm()
-		for _, alg := range algs {
-			// if we have a "alg" field in the JWS, we can only proceed if
-			// the inferred algorithm matches
-			if hdrAlg != "" && hdrAlg != alg {
-				continue
-			}
-
-			ctx.alg = alg
-			if decoded, err := ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload); err == nil {
-				return decoded, nil
+	if !ctx.useJKU {
+		if hdr.KeyID() != "" {
+			if jwkKey, ok := ctx.key.(jwk.Key); ok {
+				if jwkKey.KeyID() != hdr.KeyID() {
+					return nil, errors.New(`"kid" fields do not match`)
+				}
 			}
 		}
-		return nil, errors.New(`failed to verify payload using key in "jku"`)
+
+		return ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload)
 	}
 
-	if hdr.KeyID() != "" {
-		if jwkKey, ok := ctx.key.(jwk.Key); ok {
-			if jwkKey.KeyID() != hdr.KeyID() {
-				return nil, errors.New(`"kid" fields do not match`)
-			}
-		}
+	u := hdr.JWKSetURL()
+	if u == "" {
+		return nil, errors.New(`use of "jku" field specified, but the field is empty`)
+	}
+	uo, err := url.Parse(u)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to parse "jku"`)
+	}
+	if uo.Scheme != "https" {
+		return nil, errors.New(`url in "jku" must be HTTPS`)
 	}
 
-	return ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload)
+	var options []jwk.FetchOption
+	if ctx.wl != nil {
+		options = append(options, jwk.WithFetchWhitelist(ctx.wl))
+	}
+	if ctx.httpcl != nil {
+		options = append(options, jwk.WithHTTPClient(ctx.httpcl))
+	}
+	set, err := jwk.Fetch(context.TODO(), u, options...)
+	if err != nil {
+		return nil, errors.Wrapf(err, `failed to fetch "jku"`)
+	}
+
+	// Because we're using a JWKS here, we MUST have "kid" that matches
+	// the payload
+	if hdr.KeyID() == "" {
+		return nil, errors.Errorf(`"kid" is required on the JWS message to use "jku"`)
+	}
+
+	key, ok := set.LookupKeyID(hdr.KeyID())
+	if !ok {
+		return nil, errors.New(`key specified via "kid" is not present in the JWK set specified by "jku"`)
+	}
+
+	// hooray, we found a key. Now the algorithm will have to be inferred.
+	algs, err := AlgorithmsForKey(key)
+	if err != nil {
+		return nil, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
+	}
+
+	// for each of these algorithms, just ... keep trying ...
+	ctx.key = key
+	hdrAlg := hdr.Algorithm()
+	for _, alg := range algs {
+		// if we have a "alg" field in the JWS, we can only proceed if
+		// the inferred algorithm matches
+		if hdrAlg != "" && hdrAlg != alg {
+			continue
+		}
+
+		ctx.alg = alg
+		if decoded, err := ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload); err == nil {
+			return decoded, nil
+		}
+	}
+	return nil, errors.New(`failed to verify payload using key in "jku"`)
+
 }
 
 func (ctx *verifyCtx) tryVerifyCompact(hdr Headers, buf, decodedSignature, payload []byte) ([]byte, error) {
