@@ -11,7 +11,7 @@ v1.2.14 UNRELEASED
     are different, and 2) Users MUST be aware that they are doing a totally
     different operation than a regular `jws.Verify()`
 
-[Buf fixes]
+[Bug fixes]
   * `jws.SignMulti()` has been fixed to assign the "kid" field of the key used
     for signing the payload
   * `jws.SignMulti()` has been fixed to respect the "kid" field of the protected
