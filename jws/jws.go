@@ -210,9 +210,11 @@ type verifyCtx struct {
 // using verifications parameters that can be obtained using the information
 // that is carried within the JWS message itself.
 //
-// Currently it only supports verification via `jku`.
-// This operation will cause access to remote resources via https, and therefore
-// extreme caution should be taken which urls can be accessed. Use of
+// Currently it only supports verification via `jku`. Note that URLs in `jku` can
+// only have https scheme.
+//
+// Using this function will result in your program accessing remote resources via https,
+// and therefore extreme caution should be taken which urls can be accessed. Use of
 // whitelists via `jws.WithFetchWhitelist()` is highly recommended.
 func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var ctx verifyCtx
