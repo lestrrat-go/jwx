@@ -374,12 +374,19 @@ func TestSignMulti2(t *testing.T) {
 	for _, alg := range hmacAlgorithms {
 		alg := alg
 		t.Run("Verify "+alg.String(), func(t *testing.T) {
-			verified, err := jws.Verify(signed, alg, sharedkey)
+			m := jws.NewMessage()
+			verified, err := jws.Verify(signed, alg, sharedkey, jws.WithMessage(m))
 			if !assert.NoError(t, err, "Verify succeeded") {
 				return
 			}
 
 			if !assert.Equal(t, payload, verified, "verified payload matches") {
+				return
+			}
+
+			// XXX This actally doesn't really test much, but if there was anything
+			// wrong, the process should have failed well before reaching here
+			if !assert.Equal(t, payload, m.Payload(), "message payload matches") {
 				return
 			}
 		})
@@ -1628,11 +1635,13 @@ func TestJKU(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
+				m := jws.NewMessage()
 				var verifyOptions []jws.VerifyOption
 				if fn := tc.VerifyOptions; fn != nil {
 					verifyOptions = fn()
 				}
 				verifyOptions = append(verifyOptions, jws.WithHTTPClient(srv.Client()))
+				verifyOptions = append(verifyOptions, jws.WithMessage(m))
 				decoded, err := jws.VerifyAuto(signed, verifyOptions...)
 				if tc.Error {
 					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
@@ -1643,6 +1652,11 @@ func TestJKU(t *testing.T) {
 						return
 					}
 					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
+						return
+					}
+					// XXX This actally doesn't really test much, but if there was anything
+					// wrong, the process should have failed well before reaching here
+					if !assert.Equal(t, payload, m.Payload(), "message payload matches") {
 						return
 					}
 				}
