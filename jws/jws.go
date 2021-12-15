@@ -168,17 +168,19 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		}
 
 		if err := protected.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-			return nil, errors.Wrap(err, `failed to set header`)
+			return nil, errors.Wrap(err, `failed to set "alg" header`)
 		}
 
+		if key, ok := signer.key.(jwk.Key); ok {
+			if kid := key.KeyID(); kid != "" {
+				if err := protected.Set(KeyIDKey, kid); err != nil {
+					return nil, errors.Wrap(err, `failed to set "kid" header`)
+				}
+			}
+		}
 		sig := &Signature{
 			headers:   signer.PublicHeader(),
 			protected: protected,
-		}
-		if key, ok := signer.key.(jwk.Key); ok {
-			if kid := key.KeyID(); kid != "" {
-				protected.Set(KeyIDKey, kid)
-			}
 		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
