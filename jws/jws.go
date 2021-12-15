@@ -175,6 +175,11 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 			headers:   signer.PublicHeader(),
 			protected: protected,
 		}
+		if key, ok := signer.key.(jwk.Key); ok {
+			if kid := key.KeyID(); kid != "" {
+				protected.Set(KeyIDKey, kid)
+			}
+		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
 			return nil, errors.Wrapf(err, `failed to generate signature for signer #%d (alg=%s)`, i, signer.Algorithm())
@@ -194,6 +199,9 @@ type verifyCtx struct {
 	useJKU          bool
 	wl              jwk.Whitelist
 	httpcl          *http.Client
+	// This is only used to differentiate compact/JSON serialization
+	// because certain features are enabled/disabled in each
+	isJSON bool
 }
 
 // VerifyAuto is a special case of Verify(), where verification is done
@@ -301,10 +309,7 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
 }
 
 func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
-	verifier, err := NewVerifier(ctx.alg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create verifier")
-	}
+	ctx.isJSON = true
 
 	var m Message
 	m.SetDecodeCtx(collectRawCtx{})
@@ -335,13 +340,6 @@ func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
 
 	for i, sig := range m.signatures {
 		buf.Reset()
-		if hdr := sig.headers; hdr != nil && hdr.KeyID() != "" {
-			if jwkKey, ok := ctx.key.(jwk.Key); ok {
-				if jwkKey.KeyID() != hdr.KeyID() {
-					continue
-				}
-			}
-		}
 
 		var encodedProtectedHeader string
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
@@ -363,12 +361,37 @@ func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
 		buf.WriteByte('.')
 		buf.WriteString(payload)
 
-		if err := verifier.Verify(buf.Bytes(), sig.signature, ctx.key); err == nil {
+		if !ctx.useJKU {
+			if hdr := sig.protected; hdr != nil && hdr.KeyID() != "" {
+				if jwkKey, ok := ctx.key.(jwk.Key); ok {
+					if jwkKey.KeyID() != hdr.KeyID() {
+						continue
+					}
+				}
+			}
+
+			verifier, err := NewVerifier(ctx.alg)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to create verifier")
+			}
+
+			if _, err := ctx.tryVerify(verifier, sig.protected, buf.Bytes(), sig.signature, m.payload); err == nil {
+				if ctx.dst != nil {
+					*(ctx.dst) = m
+				}
+				return m.payload, nil
+			}
+			// Don't fallthrough or bail out. Try the next signature.
+			continue
+		}
+
+		if _, err := ctx.verifyJKU(sig.protected, buf.Bytes(), sig.signature, m.payload); err == nil {
 			if ctx.dst != nil {
 				*(ctx.dst) = m
 			}
 			return m.payload, nil
 		}
+		// try next
 	}
 	return nil, errors.New(`could not verify with any of the signatures`)
 }
@@ -429,9 +452,18 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 			}
 		}
 
-		return ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload)
+		verifier, err := NewVerifier(ctx.alg)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create verifier")
+		}
+
+		return ctx.tryVerify(verifier, hdr, verifyBuf.Bytes(), decodedSignature, payload)
 	}
 
+	return ctx.verifyJKU(hdr, verifyBuf.Bytes(), decodedSignature, payload)
+}
+
+func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payload []byte) ([]byte, error) {
 	u := hdr.JWKSetURL()
 	if u == "" {
 		return nil, errors.New(`use of "jku" field specified, but the field is empty`)
@@ -483,47 +515,54 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 			continue
 		}
 
-		ctx.alg = alg
-		if decoded, err := ctx.tryVerifyCompact(hdr, verifyBuf.Bytes(), decodedSignature, payload); err == nil {
+		verifier, err := NewVerifier(alg)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create verifier")
+		}
+
+		if decoded, err := ctx.tryVerify(verifier, hdr, verifyBuf, decodedSignature, payload); err == nil {
 			return decoded, nil
 		}
 	}
 	return nil, errors.New(`failed to verify payload using key in "jku"`)
 }
 
-func (ctx *verifyCtx) tryVerifyCompact(hdr Headers, buf, decodedSignature, payload []byte) ([]byte, error) {
-	verifier, err := NewVerifier(ctx.alg)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create verifier")
-	}
-
+func (ctx *verifyCtx) tryVerify(verifier Verifier, hdr Headers, buf, decodedSignature, payload []byte) ([]byte, error) {
 	if err := verifier.Verify(buf, decodedSignature, ctx.key); err != nil {
 		return nil, errors.Wrap(err, `failed to verify message`)
 	}
 
 	var decodedPayload []byte
-	if !getB64Value(hdr) { // it's not base64 encoded
-		decodedPayload = payload
-	}
 
-	if decodedPayload == nil {
-		v, err := base64.Decode(payload)
-		if err != nil {
-			return nil, errors.Wrap(err, `message verified, failed to decode payload`)
+	// When verifying JSON messages, we do not need to decode
+	// the payload, as we already have it
+	if !ctx.isJSON {
+		// This is a special case for RFC7797
+		if !getB64Value(hdr) { // it's not base64 encoded
+			decodedPayload = payload
 		}
-		decodedPayload = v
-	}
 
-	if ctx.dst != nil {
-		// Construct a new Message object
-		m := NewMessage()
-		m.SetPayload(decodedPayload)
-		sig := NewSignature()
-		sig.SetProtectedHeaders(hdr)
-		sig.SetSignature(decodedSignature)
-		m.AppendSignature(sig)
+		if decodedPayload == nil {
+			v, err := base64.Decode(payload)
+			if err != nil {
+				return nil, errors.Wrap(err, `message verified, failed to decode payload`)
+			}
+			decodedPayload = v
+		}
 
-		*(ctx.dst) = *m
+		// For compact serialization, we need to create and assign the message
+		// if requested
+		if ctx.dst != nil {
+			// Construct a new Message object
+			m := NewMessage()
+			m.SetPayload(decodedPayload)
+			sig := NewSignature()
+			sig.SetProtectedHeaders(hdr)
+			sig.SetSignature(decodedSignature)
+			m.AppendSignature(sig)
+
+			*(ctx.dst) = *m
+		}
 	}
 	return decodedPayload, nil
 }
