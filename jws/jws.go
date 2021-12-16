@@ -221,10 +221,10 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 //
 // Using this function will result in your program accessing remote resources via https,
 // and therefore extreme caution should be taken which urls can be accessed. To
-// protect uninformed users from allowing possible unintentionally opening up their
-// projects to from making unwanted requests, the default behavior is to *REJECT ALL URLs*
+// protect users from unintentionally allowing their projects to
+// make unwanted requests, the default behavior is to *REJECT ALL URLs*
 // by providing an instance of `jwk.Whitelist` that does not allow any URLs to
-// be fetched.
+// be fetched as the default whitelist.
 //
 // Therefore you *MUST* explicitly specify a whitelist yourself.
 //
