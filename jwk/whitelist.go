@@ -2,6 +2,10 @@ package jwk
 
 import "regexp"
 
+// InsecureWhitelist allows any URLs to be fetched. This is the default
+// behavior of `jwk.Fetch()`, but this exists to allow other libraries
+// (such as jws, via jws.VerifyAuto) and users to be able to explicitly
+// state that they intend to not check the URLs that are being fetched
 type InsecureWhitelist struct{}
 
 func (InsecureWhitelist) IsAllowed(string) bool {
