@@ -5,6 +5,17 @@ v1.2.14 UNRELEASED
 [New Features]
   * `jwk.Fetch()` and `(*jwk.AutoRefresh).Configure()` can now take `jwk.Whitelist`
     object to check for the validity of a url to be fetched
+  * `jws.VerifyAuto()` has been added to verify payloads that can be verified
+    using the JWK set provided in the "jku" field. This function is purposely
+    separated from the `jws.Verify()` function because 1) the required parameters
+    are different, and 2) Users MUST be aware that they are doing a totally
+    different operation than a regular `jws.Verify()`
+
+[Bug fixes]
+  * `jws.SignMulti()` has been fixed to assign the "kid" field of the key used
+    for signing the payload
+  * `jws.SignMulti()` has been fixed to respect the "kid" field of the protected
+    header, not the public header
 
 v1.2.13 07 Dec 2021
 [New Features]

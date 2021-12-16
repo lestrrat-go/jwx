@@ -1,6 +1,9 @@
 package jws
 
 import (
+	"net/http"
+
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/option"
 )
 
@@ -10,6 +13,8 @@ type identPayloadSigner struct{}
 type identDetachedPayload struct{}
 type identHeaders struct{}
 type identMessage struct{}
+type identFetchWhitelist struct{}
+type identHTTPClient struct{}
 
 func WithSigner(signer Signer, key interface{}, public, protected Headers) Option {
 	return option.New(identPayloadSigner{}, &payloadSigner{
@@ -60,4 +65,12 @@ func WithMessage(m *Message) VerifyOption {
 // know exactly how and why this works.
 func WithDetachedPayload(v []byte) VerifyOption {
 	return &verifyOption{option.New(identDetachedPayload{}, v)}
+}
+
+func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {
+	return &verifyOption{option.New(identFetchWhitelist{}, wl)}
+}
+
+func WithHTTPClient(httpcl *http.Client) VerifyOption {
+	return &verifyOption{option.New(identHTTPClient{}, httpcl)}
 }

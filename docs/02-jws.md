@@ -9,6 +9,8 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
+* [Verifying](#verifying)
+  * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
 * [Enabling ES256K](#enabling-es256k)
 # Parsing
@@ -23,7 +25,7 @@ payload, _ := jws.Verify(encoded, alg, key)
 ```
 
 You must provide the algorithm and the public key to use for verification.
-Please read "[Why don't you automatically infer the algorithm for jws.Verify?](https://github.com/lestrrat-go/jwx#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)" for why this is necessary.
+Please read "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
 If the algorithm or the key does not match, an error is returned.
 
@@ -55,13 +57,13 @@ message, _ := jwt.ReadFile(`message.jws`)
 In most cases this is all you really need.
 
 ```go
-encoded, _ := jws.Sign(payload, alg, key)
+signed, _ := jws.Sign(payload, alg, key)
 ```
 
 To sign a JWT, use [`jwt.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Sign)
 
 ```go
-encoded, _ := jwt.Sign(token, alg, key)
+signed, _ := jwt.Sign(token, alg, key)
 ```
 
 ## Generating a JWS message in JSON serialization format
@@ -71,7 +73,53 @@ When this need arises, use the [`jws.SignMulti()`](https://pkg.go.dev/github.com
 
 ```go
 signer, _ := jws.NewSigner(alg)
-encoded, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, protHeaders)
+signed, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, protHeaders)
+```
+
+# Verifying
+
+## Verification using a single key
+
+Simply use `jws.Verify()`. It will automatically do the right thing whether it's serialized in compact
+form or JSON form.
+
+```go
+payload, _ := jws.Verify(data, alg, key)
+```
+
+The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+## Verification using `jku`
+
+Regular calls to `jws.Verify()` does not respect the JWK Set referenced in the `jku` field. In order to
+verify the payload using the `jku` field, you must use the `jws.VerifyAuto()` function.
+
+```go
+payload, _ := jws.VerifyAuto(buf)
+```
+
+This will tell `jws` to verify the given buffer using the JWK Set presented at the URL specified in
+the `jku` field. If the buffer is a JSON message, then this is done for each of the signature in
+the `signatures` array.
+
+The URL in the `jku` field must have the `https` scheme, and the key ID in the JWK Set must
+match the key ID present in the JWS message.
+
+Because this operation will result in your program accessing remote resources, it is highly
+recommended that you use a URL whitelist via `jws.WithFetchWhitelist()` and `jwk.Whitelist`
+
+```go
+wl := jwk.NewMapWhitelist().
+  Add(`https://white-listed-address`)
+
+payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
+```
+
+If you must configure the HTTP Client in a special way, use the `jws.WithHTTPClient()` option:
+
+```go
+client := &http.Client{ ... }
+payload, _ := jws.VerifyAuto(buf, jws.WithHTTPClient(client))
 ```
 
 # Using a custom signing/verification algorithm

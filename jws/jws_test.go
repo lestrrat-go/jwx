@@ -12,6 +12,8 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"testing"
@@ -372,12 +374,19 @@ func TestSignMulti2(t *testing.T) {
 	for _, alg := range hmacAlgorithms {
 		alg := alg
 		t.Run("Verify "+alg.String(), func(t *testing.T) {
-			verified, err := jws.Verify(signed, alg, sharedkey)
+			m := jws.NewMessage()
+			verified, err := jws.Verify(signed, alg, sharedkey, jws.WithMessage(m))
 			if !assert.NoError(t, err, "Verify succeeded") {
 				return
 			}
 
 			if !assert.Equal(t, payload, verified, "verified payload matches") {
+				return
+			}
+
+			// XXX This actally doesn't really test much, but if there was anything
+			// wrong, the process should have failed well before reaching here
+			if !assert.Equal(t, payload, m.Payload(), "message payload matches") {
 				return
 			}
 		})
@@ -1468,4 +1477,190 @@ func TestGH485(t *testing.T) {
 	if !assert.Equal(t, expected, string(verified), `verified payload should match`) {
 		return
 	}
+}
+
+func TestJKU(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+
+	key.Set(jwk.KeyIDKey, `my-awesome-key`)
+
+	pubkey, err := jwk.PublicKeyOf(key)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		return
+	}
+	set := jwk.NewSet()
+	set.Add(pubkey)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(set)
+	}))
+	defer srv.Close()
+
+	payload := []byte("Lorem Ipsum")
+
+	t.Run("Compact", func(t *testing.T) {
+		testcases := []struct {
+			Name          string
+			Error         bool
+			VerifyOptions func() []jws.VerifyOption
+		}{
+			{
+				Name: "Success",
+			},
+			{
+				Name:  "Rejected by whitelist",
+				Error: true,
+				VerifyOptions: func() []jws.VerifyOption {
+					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(wl),
+					}
+				},
+			},
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				hdr := jws.NewHeaders()
+				hdr.Set(jws.JWKSetURLKey, srv.URL)
+				signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+
+				var options []jws.VerifyOption
+				if fn := tc.VerifyOptions; fn != nil {
+					options = fn()
+				}
+				options = append(options, jws.WithHTTPClient(srv.Client()))
+				decoded, err := jws.VerifyAuto(signed, options...)
+				if tc.Error {
+					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
+						return
+					}
+				} else {
+					if !assert.NoError(t, err, `jws.VerifyAuto should succeed`) {
+						return
+					}
+					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
+						return
+					}
+				}
+			})
+		}
+	})
+	t.Run("JSON", func(t *testing.T) {
+		// scenario: create a JSON message, which contains 3 signature entries.
+		// 1st and 3rd signatures are valid, but signed using keys that are not
+		// present in the JWKS.
+		// Only the second signature uses a key found in the JWKS
+		var keys []jwk.Key
+		for i := 0; i < 3; i++ {
+			key, err := jwxtest.GenerateRsaJwk()
+			if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+				return
+			}
+			key.Set(jwk.KeyIDKey, fmt.Sprintf(`used-%d`, i))
+			keys = append(keys, key)
+		}
+
+		var unusedKeys []jwk.Key
+		for i := 0; i < 2; i++ {
+			key, err := jwxtest.GenerateRsaJwk()
+			if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+				return
+			}
+			key.Set(jwk.KeyIDKey, fmt.Sprintf(`unused-%d`, i))
+			unusedKeys = append(unusedKeys, key)
+		}
+
+		// The set should contain unused key, used key, and unused key.
+		// ...but they need to be public keys
+		set := jwk.NewSet()
+		for _, key := range []jwk.Key{unusedKeys[0], keys[1], unusedKeys[1]} {
+			pubkey, err := jwk.PublicKeyOf(key)
+			if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+				return
+			}
+			set.Add(pubkey)
+		}
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(set)
+		}))
+		defer srv.Close()
+
+		// Sign the payload using the three keys
+		var signOptions []jws.Option
+		for _, key := range keys {
+			signer, err := jws.NewSigner(jwa.RS256)
+			if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
+				return
+			}
+
+			hdr := jws.NewHeaders()
+			hdr.Set(jws.JWKSetURLKey, srv.URL)
+			signOptions = append(signOptions, jws.WithSigner(signer, key, nil, hdr))
+		}
+
+		signed, err := jws.SignMulti(payload, signOptions...)
+		if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
+			return
+		}
+
+		testcases := []struct {
+			Name          string
+			VerifyOptions func() []jws.VerifyOption
+			Error         bool
+		}{
+			{
+				Name: "Success",
+			},
+			{
+				Name:  "Rejected by whitelist",
+				Error: true,
+				VerifyOptions: func() []jws.VerifyOption {
+					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(wl),
+					}
+				},
+			},
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				m := jws.NewMessage()
+				var verifyOptions []jws.VerifyOption
+				if fn := tc.VerifyOptions; fn != nil {
+					verifyOptions = fn()
+				}
+				verifyOptions = append(verifyOptions, jws.WithHTTPClient(srv.Client()))
+				verifyOptions = append(verifyOptions, jws.WithMessage(m))
+				decoded, err := jws.VerifyAuto(signed, verifyOptions...)
+				if tc.Error {
+					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
+						return
+					}
+				} else {
+					if !assert.NoError(t, err, `jws.VerifyAuto should succeed`) {
+						return
+					}
+					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
+						return
+					}
+					// XXX This actally doesn't really test much, but if there was anything
+					// wrong, the process should have failed well before reaching here
+					if !assert.Equal(t, payload, m.Payload(), "message payload matches") {
+						return
+					}
+				}
+			})
+		}
+	})
 }
