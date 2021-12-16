@@ -14,17 +14,6 @@ import (
 
 type Option = option.Interface
 
-type ConstructorOption interface {
-	Option
-	constructorOption()
-}
-
-type constructorOption struct {
-	Option
-}
-
-func (*constructorOption) constructorOption() {}
-
 // GlobalOption describes an Option that can be passed to `Settings()`.
 type GlobalOption interface {
 	Option
@@ -121,7 +110,6 @@ func newValidateOption(n interface{}, v interface{}) ValidateOption {
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
-type identConstructorClaim struct{}
 type identClock struct{}
 type identContext struct{}
 type identDecrypt struct{}
