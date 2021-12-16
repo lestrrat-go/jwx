@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -137,6 +138,9 @@ type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
 type identVerify struct{}
+type identVerifyAuto struct{}
+type identFetchWhitelist struct{}
+type identHTTPClient struct{}
 
 type identHeaderKey struct{}
 type identFormKey struct{}
@@ -491,6 +495,25 @@ func WithContext(ctx context.Context) ValidateOption {
 	return newValidateOption(identContext{}, ctx)
 }
 
-func WithClaim(name string, v interface{}) ConstructorOption {
-	return &constructorOption{option.New(identConstructorClaim{}, &claimPair{Name: name, Value: v})}
+// WithVerifyAuto specifies that the JWS verification should be performed
+// using `jws.VerifyAuto()`, which in turn attempts to verify the message
+// using values that are stored within the JWS message.
+//
+// Currently only verification via `jku` is supported. It is HIGHLY
+// recommended that you use `jwt.WithFetchWhitelist()` to limit the
+// URLs that can be used via `jku`.
+func WithVerifyAuto(v bool) ParseOption {
+	return newParseOption(identVerifyAuto{}, v)
+}
+
+// WithFetchWhitelist specifies the `jwk.Whitelist` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
+	return newParseOption(identFetchWhitelist{}, wl)
+}
+
+// WithHTTPClient specifies the `*http.Client` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+func WithHTTPClient(httpcl *http.Client) ParseOption {
+	return newParseOption(identHTTPClient{}, httpcl)
 }

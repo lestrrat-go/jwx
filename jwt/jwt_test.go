@@ -1426,3 +1426,60 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifyAuto(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+
+	key.Set(jwk.KeyIDKey, `my-awesome-key`)
+
+	pubkey, err := jwk.PublicKeyOf(key)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+		return
+	}
+	set := jwk.NewSet()
+	set.Add(pubkey)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(set)
+	}))
+	defer srv.Close()
+
+	tok, err := jwt.NewBuilder().
+		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx`).
+		Claim(jwt.SubjectKey, `jku-test`).
+		Build()
+
+	if !assert.NoError(t, err, `jwt.NewBuilder.Build() should succeed`) {
+		return
+	}
+
+	hdrs := jws.NewHeaders()
+	hdrs.Set(jws.JWKSetURLKey, srv.URL)
+
+	signed, err := jwt.Sign(tok, jwa.RS256, key, jwt.WithHeaders(hdrs))
+	if !assert.NoError(t, err, `jwt.Sign() should succeed`) {
+		return
+	}
+
+	wl := jwk.NewMapWhitelist().
+		Add(srv.URL)
+
+	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl), jwt.WithHTTPClient(srv.Client()))
+	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+		return
+	}
+
+	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
+		return
+	}
+
+	wl = jwk.NewMapWhitelist().
+		Add(`https://github.com/lestrrat-go/jwx`)
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl))
+	if !assert.Error(t, err, `jwt.Parse should fail`) {
+		return
+	}
+}
