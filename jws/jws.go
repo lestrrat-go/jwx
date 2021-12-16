@@ -39,6 +39,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -201,6 +202,7 @@ type verifyCtx struct {
 	useJKU          bool
 	wl              jwk.Whitelist
 	httpcl          *http.Client
+	backoff         backoff.Policy
 	// This is only used to differentiate compact/JSON serialization
 	// because certain features are enabled/disabled in each
 	isJSON bool
@@ -244,6 +246,8 @@ func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 			ctx.detachedPayload = option.Value().([]byte)
 		case identFetchWhitelist{}:
 			ctx.wl = option.Value().(jwk.Whitelist)
+		case identFetchBackoff{}:
+			ctx.backoff = option.Value().(backoff.Policy)
 		case identHTTPClient{}:
 			ctx.httpcl = option.Value().(*http.Client)
 		}
@@ -497,6 +501,9 @@ func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payloa
 	var options []jwk.FetchOption
 	if ctx.wl != nil {
 		options = append(options, jwk.WithFetchWhitelist(ctx.wl))
+	}
+	if ctx.backoff != nil {
+		options = append(options, jwk.WithFetchBackoff(ctx.backoff))
 	}
 	if ctx.httpcl != nil {
 		options = append(options, jwk.WithHTTPClient(ctx.httpcl))

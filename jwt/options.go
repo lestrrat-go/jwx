@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -127,6 +128,7 @@ type identTypedClaim struct{}
 type identValidate struct{}
 type identVerify struct{}
 type identVerifyAuto struct{}
+type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 
@@ -515,4 +517,13 @@ func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
 // to `jwt.Parse()`
 func WithHTTPClient(httpcl *http.Client) ParseOption {
 	return newParseOption(identHTTPClient{}, httpcl)
+}
+
+// WithFetchBackoff specifies the `backoff.Policy` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithFetchBackoff()` that can be passed
+// to `jwt.Parse()`
+func WithFetchBackoff(b backoff.Policy) ParseOption {
+	return newParseOption(identFetchBackoff{}, b)
 }

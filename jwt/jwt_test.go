@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -1441,7 +1442,16 @@ func TestVerifyAuto(t *testing.T) {
 	}
 	set := jwk.NewSet()
 	set.Add(pubkey)
+	backoffCount := 0
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Query().Get(`type`) {
+		case "backoff":
+			backoffCount++
+			if backoffCount == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
 	}))
@@ -1484,6 +1494,22 @@ func TestVerifyAuto(t *testing.T) {
 		Add(`https://github.com/lestrrat-go/jwx`)
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
+		return
+	}
+
+	// now with backoff
+	bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
+	parsed, err = jwt.Parse(signed,
+		jwt.WithVerifyAuto(true),
+		jwt.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+		jwt.WithHTTPClient(srv.Client()),
+		jwt.WithFetchBackoff(bo),
+	)
+	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+		return
+	}
+
+	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
 		return
 	}
 }
