@@ -494,9 +494,8 @@ func WithContext(ctx context.Context) ValidateOption {
 // `jws.VerifyAuto()`, and provide the necessary Whitelist object via
 // `jwt.WithFetchWhitelist()`
 //
-// Currently only verification via `jku` is supported. It is HIGHLY
-// recommended that you use `jwt.WithFetchWhitelist()` to limit the
-// URLs that can be used via `jku`.
+// You might also consider using a backoff policy by using `jwt.WithFetchBackoff()`
+// to control the number of requests being made.
 func WithVerifyAuto(v bool) ParseOption {
 	return newParseOption(identVerifyAuto{}, v)
 }
