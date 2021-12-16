@@ -25,7 +25,7 @@ payload, _ := jws.Verify(encoded, alg, key)
 ```
 
 You must provide the algorithm and the public key to use for verification.
-Please read "[Why don't you automatically infer the algorithm for jws.Verify?](https://github.com/lestrrat-go/jwx#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)" for why this is necessary.
+Please read "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
 If the algorithm or the key does not match, an error is returned.
 
@@ -77,6 +77,17 @@ signed, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, prot
 ```
 
 # Verifying
+
+## Verification using a single key
+
+Simply use `jws.Verify()`. It will automatically do the right thing whether it's serialized in compact
+form or JSON form.
+
+```go
+payload, _ := jws.Verify(data, alg, key)
+```
+
+The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
 ## Verification using `jku`
 
