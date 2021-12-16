@@ -2,6 +2,12 @@ package jwk
 
 import "regexp"
 
+type InsecureWhitelist struct{}
+
+func (InsecureWhitelist) IsAllowed(string) bool {
+	return true
+}
+
 // RegexpWhitelist is a jwk.Whitelist object comprised of a list of *regexp.Regexp
 // objects. All entries in the list are tried until one matches. If none of the
 // *regexp.Regexp objects match, then the URL is deemed unallowed.

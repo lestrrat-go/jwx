@@ -95,7 +95,8 @@ Regular calls to `jws.Verify()` does not respect the JWK Set referenced in the `
 verify the payload using the `jku` field, you must use the `jws.VerifyAuto()` function.
 
 ```go
-payload, _ := jws.VerifyAuto(buf)
+wl := ... // Create an appropriate whitelist
+payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
 ```
 
 This will tell `jws` to verify the given buffer using the JWK Set presented at the URL specified in
@@ -105,13 +106,20 @@ the `signatures` array.
 The URL in the `jku` field must have the `https` scheme, and the key ID in the JWK Set must
 match the key ID present in the JWS message.
 
-Because this operation will result in your program accessing remote resources, it is highly
-recommended that you use a URL whitelist via `jws.WithFetchWhitelist()` and `jwk.Whitelist`
+Because this operation will result in your program accessing remote resources, the default behavior
+is to NOT allow any URLs. You must specify a whitelist
 
 ```go
 wl := jwk.NewMapWhitelist().
   Add(`https://white-listed-address`)
 
+payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
+```
+
+If you want to allow any URLs to be accessible, use the `jwk.InsecureWhitelist`.
+
+```go
+wl := jwk.InsecureWhitelist{}
 payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
 ```
 

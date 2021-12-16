@@ -1508,7 +1508,16 @@ func TestJKU(t *testing.T) {
 			VerifyOptions func() []jws.VerifyOption
 		}{
 			{
+				Name:  "Fail without whitelist",
+				Error: true,
+			},
+			{
 				Name: "Success",
+				VerifyOptions: func() []jws.VerifyOption {
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+					}
+				},
 			},
 			{
 				Name:  "Rejected by whitelist",
@@ -1618,7 +1627,16 @@ func TestJKU(t *testing.T) {
 			Error         bool
 		}{
 			{
+				Name:  "Fail without whitelist",
+				Error: true,
+			},
+			{
 				Name: "Success",
+				VerifyOptions: func() []jws.VerifyOption {
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+					}
+				},
 			},
 			{
 				Name:  "Rejected by whitelist",

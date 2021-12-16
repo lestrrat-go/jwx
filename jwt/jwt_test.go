@@ -1476,6 +1476,10 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true))
+	if !assert.Error(t, err, `jwt.Parse should fail`) {
+		return
+	}
 	wl = jwk.NewMapWhitelist().
 		Add(`https://github.com/lestrrat-go/jwx`)
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl))

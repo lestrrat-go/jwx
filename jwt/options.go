@@ -487,6 +487,11 @@ func WithContext(ctx context.Context) ValidateOption {
 // using `jws.VerifyAuto()`, which in turn attempts to verify the message
 // using values that are stored within the JWS message.
 //
+// Only passing this option to `jwt.Parse()` will not result in a successful
+// verification. Please make sure to carefully read the documentation in
+// `jws.VerifyAuto()`, and provide the necessary Whitelist object via
+// `jwt.WithFetchWhitelist()`
+//
 // Currently only verification via `jku` is supported. It is HIGHLY
 // recommended that you use `jwt.WithFetchWhitelist()` to limit the
 // URLs that can be used via `jku`.
@@ -496,12 +501,18 @@ func WithVerifyAuto(v bool) ParseOption {
 
 // WithFetchWhitelist specifies the `jwk.Whitelist` object that should be
 // passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithFetchWhitelist()` that can be passed
+// to `jwt.Parse()`
 func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
 	return newParseOption(identFetchWhitelist{}, wl)
 }
 
 // WithHTTPClient specifies the `*http.Client` object that should be
 // passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithHTTPClient()` that can be passed
+// to `jwt.Parse()`
 func WithHTTPClient(httpcl *http.Client) ParseOption {
 	return newParseOption(identHTTPClient{}, httpcl)
 }

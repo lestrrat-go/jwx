@@ -67,6 +67,9 @@ func WithDetachedPayload(v []byte) VerifyOption {
 	return &verifyOption{option.New(identDetachedPayload{}, v)}
 }
 
+// WithFetchWhitelist specifies the whitelist object to be passed
+// to `jwk.Fetch()` when `jws.VerifyAuto()` is used. If you do not
+// specify a whitelist, `jws.VerifyAuto()` will ALWAYS fail.
 func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {
 	return &verifyOption{option.New(identFetchWhitelist{}, wl)}
 }
