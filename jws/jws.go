@@ -200,9 +200,7 @@ type verifyCtx struct {
 	alg             jwa.SignatureAlgorithm
 	key             interface{}
 	useJKU          bool
-	wl              jwk.Whitelist
-	httpcl          *http.Client
-	backoff         backoff.Policy
+	jwksFetcher     JWKSetFetcher
 	// This is only used to differentiate compact/JSON serialization
 	// because certain features are enabled/disabled in each
 	isJSON bool
@@ -216,26 +214,36 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // using verifications parameters that can be obtained using the information
 // that is carried within the JWS message itself.
 //
-// Currently it only supports verification via `jku`. Note that URLs in `jku` can
+// Currently it only supports verification via `jku` which will be fetched
+// using the object specified in `jws.JWKSetFetcher`. Note that URLs in `jku` can
 // only have https scheme.
 //
 // Using this function will result in your program accessing remote resources via https,
-// and therefore extreme caution should be taken which urls can be accessed. To
+// and therefore extreme caution should be taken which urls can be accessed.
+//
+// Without specifying extra arguments, the default `jws.JWKSetFetcher` will be
+// configured with a whitelist that rejects *ALL URLSs*. This is to
 // protect users from unintentionally allowing their projects to
-// make unwanted requests, the default behavior is to *REJECT ALL URLs*
-// by providing an instance of `jwk.Whitelist` that does not allow any URLs to
-// be fetched as the default whitelist.
+// make unwanted requests. Therefore you must explicitly provide an
+// instance of `jwk.Whitelist` that does what you want.
 //
-// Therefore you *MUST* explicitly specify a whitelist yourself.
-//
-// If you want open access to any URLs in the `jku`, use `jwk.InsecureWhitelist` as the whitelist.
+// If you want open access to any URLs in the `jku`, you can do this by
+// using `jwk.InsecureWhitelist` as the whitelist, but this should be avoided in
+// most cases, especially if the payload comes from outside of a controlled
+// environment.
 //
 // It is also advised that you consider using some sort of backoff via `jws.WithFetchBackoff`
+//
+// Alternatively, you can provide your own `jws.JWKSetFetcher`. In this case
+// there is no way for the framework to force you to set a whitelist, so the
+// default behavior is to allow any URLs. You are responsible for providing
+// your own safety measures.
 func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var ctx verifyCtx
 	// enable JKU processing
 	ctx.useJKU = true
-	ctx.wl = allowNoneWhitelist // by default, allow none
+
+	var fetchOptions []jwk.FetchOption
 
 	//nolint:forcetypeassert
 	for _, option := range options {
@@ -244,13 +252,22 @@ func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 			ctx.dst = option.Value().(*Message)
 		case identDetachedPayload{}:
 			ctx.detachedPayload = option.Value().([]byte)
+		case identJWKSetFetcher{}:
+			ctx.jwksFetcher = option.Value().(JWKSetFetcher)
 		case identFetchWhitelist{}:
-			ctx.wl = option.Value().(jwk.Whitelist)
+			fetchOptions = append(fetchOptions, jwk.WithFetchWhitelist(option.Value().(jwk.Whitelist)))
 		case identFetchBackoff{}:
-			ctx.backoff = option.Value().(backoff.Policy)
+			fetchOptions = append(fetchOptions, jwk.WithFetchBackoff(option.Value().(backoff.Policy)))
 		case identHTTPClient{}:
-			ctx.httpcl = option.Value().(*http.Client)
+			fetchOptions = append(fetchOptions, jwk.WithHTTPClient(option.Value().(*http.Client)))
 		}
+	}
+
+	// We shove the default Whitelist in the front of the option list.
+	// If the user provided one, it will overwrite our default value
+	if ctx.jwksFetcher == nil {
+		fetchOptions = append([]jwk.FetchOption{jwk.WithFetchWhitelist(allowNoneWhitelist)}, fetchOptions...)
+		ctx.jwksFetcher = NewJWKSetFetcher(fetchOptions...)
 	}
 
 	return ctx.verify(buf)
@@ -485,6 +502,34 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 	return ctx.verifyJKU(hdr, verifyBuf.Bytes(), decodedSignature, payload)
 }
 
+// JWKSetFetcher is used to fetch JWK Set spcified in the `jku` field.
+type JWKSetFetcher interface {
+	Fetch(string) (jwk.Set, error)
+}
+
+// SimpleJWKSetFetcher is the default object used to fetch JWK Sets specified in `jku`,
+// which uses `jwk.Fetch()`
+//
+// For more complicated cases, such as using `jwk.AutoRefetch`, you will have to
+// create your custom instance of `jws.JWKSetFetcher`
+type SimpleJWKSetFetcher struct {
+	options []jwk.FetchOption
+}
+
+func NewJWKSetFetcher(options ...jwk.FetchOption) *SimpleJWKSetFetcher {
+	return &SimpleJWKSetFetcher{options: options}
+}
+
+func (f *SimpleJWKSetFetcher) Fetch(u string) (jwk.Set, error) {
+	return jwk.Fetch(context.TODO(), u, f.options...)
+}
+
+type JWKSetFetchFunc func(string) (jwk.Set, error)
+
+func (f JWKSetFetchFunc) Fetch(u string) (jwk.Set, error) {
+	return f(u)
+}
+
 func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payload []byte) ([]byte, error) {
 	u := hdr.JWKSetURL()
 	if u == "" {
@@ -498,17 +543,7 @@ func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payloa
 		return nil, errors.New(`url in "jku" must be HTTPS`)
 	}
 
-	var options []jwk.FetchOption
-	if ctx.wl != nil {
-		options = append(options, jwk.WithFetchWhitelist(ctx.wl))
-	}
-	if ctx.backoff != nil {
-		options = append(options, jwk.WithFetchBackoff(ctx.backoff))
-	}
-	if ctx.httpcl != nil {
-		options = append(options, jwk.WithHTTPClient(ctx.httpcl))
-	}
-	set, err := jwk.Fetch(context.TODO(), u, options...)
+	set, err := ctx.jwksFetcher.Fetch(u)
 	if err != nil {
 		return nil, errors.Wrapf(err, `failed to fetch "jku"`)
 	}

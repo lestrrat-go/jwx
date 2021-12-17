@@ -17,6 +17,7 @@ type identMessage struct{}
 type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
+type identJWKSetFetcher struct{}
 
 func WithSigner(signer Signer, key interface{}, public, protected Headers) Option {
 	return option.New(identPayloadSigner{}, &payloadSigner{
@@ -72,16 +73,31 @@ func WithDetachedPayload(v []byte) VerifyOption {
 // WithFetchWhitelist specifies the whitelist object to be passed
 // to `jwk.Fetch()` when `jws.VerifyAuto()` is used. If you do not
 // specify a whitelist, `jws.VerifyAuto()` will ALWAYS fail.
+//
+// This option is ignored if WithJWKSetFetcher is specified.
 func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {
 	return &verifyOption{option.New(identFetchWhitelist{}, wl)}
 }
 
 // WithFetchBackoff specifies the backoff.Policy object to be passed
 // to `jwk.Fetch()` when `jws.VerifyAuto()` is used.
+//
+// This option is ignored if WithJWKSetFetcher is specified.
 func WithFetchBackoff(b backoff.Policy) VerifyOption {
 	return &verifyOption{option.New(identFetchBackoff{}, b)}
 }
 
+// WithHTTPClient specifies the *http.Client object to be passed
+// to `jwk.Fetch()` when `jws.VerifyAuto()` is used.
+//
+// This option is ignored if WithJWKSetFetcher is specified.
 func WithHTTPClient(httpcl *http.Client) VerifyOption {
 	return &verifyOption{option.New(identHTTPClient{}, httpcl)}
+}
+
+// WithJWKSetFetcher specifies the JWKSetFetcher object to be
+// used when `jws.VerifyAuto()`, for example, to use `jwk.AutoRefetch`
+// instead of the default `jwk.Fetch()`
+func WithJWKSetFetcher(f JWKSetFetcher) VerifyOption {
+	return &verifyOption{option.New(identJWKSetFetcher{}, f)}
 }

@@ -131,6 +131,7 @@ type identVerifyAuto struct{}
 type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
+type identJWKSetFetcher struct{}
 
 type identHeaderKey struct{}
 type identFormKey struct{}
@@ -504,7 +505,7 @@ func WithVerifyAuto(v bool) ParseOption {
 // passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
 //
 // This is a wrapper over `jws.WithFetchWhitelist()` that can be passed
-// to `jwt.Parse()`
+// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
 func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
 	return newParseOption(identFetchWhitelist{}, wl)
 }
@@ -513,7 +514,7 @@ func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
 // passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
 //
 // This is a wrapper over `jws.WithHTTPClient()` that can be passed
-// to `jwt.Parse()`
+// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
 func WithHTTPClient(httpcl *http.Client) ParseOption {
 	return newParseOption(identHTTPClient{}, httpcl)
 }
@@ -522,7 +523,16 @@ func WithHTTPClient(httpcl *http.Client) ParseOption {
 // passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
 //
 // This is a wrapper over `jws.WithFetchBackoff()` that can be passed
-// to `jwt.Parse()`
+// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
 func WithFetchBackoff(b backoff.Policy) ParseOption {
 	return newParseOption(identFetchBackoff{}, b)
+}
+
+// WithJWKSetFetcher specifies the `jws.JWKSetFetcher` object that should be
+// passed to `jws.VerifyAuto()`
+//
+// This is a wrapper over `jws.WithJWKSetFetcher()` that can be passed
+// to `jwt.Parse()`.
+func WithJWKSetFetcher(f jws.JWKSetFetcher) ParseOption {
+	return newParseOption(identJWKSetFetcher{}, f)
 }

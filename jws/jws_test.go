@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -1521,12 +1522,18 @@ func TestJKU(t *testing.T) {
 			{
 				Name:  "Fail without whitelist",
 				Error: true,
+				VerifyOptions: func() []jws.VerifyOption {
+					return []jws.VerifyOption{
+						jws.WithHTTPClient(srv.Client()),
+					}
+				},
 			},
 			{
 				Name: "Success",
 				VerifyOptions: func() []jws.VerifyOption {
 					return []jws.VerifyOption{
 						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+						jws.WithHTTPClient(srv.Client()),
 					}
 				},
 			},
@@ -1537,6 +1544,7 @@ func TestJKU(t *testing.T) {
 					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
 					return []jws.VerifyOption{
 						jws.WithFetchWhitelist(wl),
+						jws.WithHTTPClient(srv.Client()),
 					}
 				},
 			},
@@ -1553,6 +1561,19 @@ func TestJKU(t *testing.T) {
 					return []jws.VerifyOption{
 						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
 						jws.WithFetchBackoff(bo),
+						jws.WithHTTPClient(srv.Client()),
+					}
+				},
+			},
+			{
+				Name: "JWKSetFetcher",
+				VerifyOptions: func() []jws.VerifyOption {
+					ar := jwk.NewAutoRefresh(context.TODO())
+					return []jws.VerifyOption{
+						jws.WithJWKSetFetcher(jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
+							ar.Configure(u, jwk.WithHTTPClient(srv.Client()))
+							return ar.Fetch(context.TODO(), u)
+						})),
 					}
 				},
 			},
@@ -1576,7 +1597,6 @@ func TestJKU(t *testing.T) {
 				if fn := tc.VerifyOptions; fn != nil {
 					options = fn()
 				}
-				options = append(options, jws.WithHTTPClient(srv.Client()))
 				decoded, err := jws.VerifyAuto(signed, options...)
 				if tc.Error {
 					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
