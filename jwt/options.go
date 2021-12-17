@@ -2,8 +2,10 @@ package jwt
 
 import (
 	"context"
+	"net/http"
 	"time"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -12,17 +14,6 @@ import (
 )
 
 type Option = option.Interface
-
-type ConstructorOption interface {
-	Option
-	constructorOption()
-}
-
-type constructorOption struct {
-	Option
-}
-
-func (*constructorOption) constructorOption() {}
 
 // GlobalOption describes an Option that can be passed to `Settings()`.
 type GlobalOption interface {
@@ -120,7 +111,6 @@ func newValidateOption(n interface{}, v interface{}) ValidateOption {
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
-type identConstructorClaim struct{}
 type identClock struct{}
 type identContext struct{}
 type identDecrypt struct{}
@@ -137,6 +127,10 @@ type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
 type identVerify struct{}
+type identVerifyAuto struct{}
+type identFetchBackoff struct{}
+type identFetchWhitelist struct{}
+type identHTTPClient struct{}
 
 type identHeaderKey struct{}
 type identFormKey struct{}
@@ -491,6 +485,44 @@ func WithContext(ctx context.Context) ValidateOption {
 	return newValidateOption(identContext{}, ctx)
 }
 
-func WithClaim(name string, v interface{}) ConstructorOption {
-	return &constructorOption{option.New(identConstructorClaim{}, &claimPair{Name: name, Value: v})}
+// WithVerifyAuto specifies that the JWS verification should be performed
+// using `jws.VerifyAuto()`, which in turn attempts to verify the message
+// using values that are stored within the JWS message.
+//
+// Only passing this option to `jwt.Parse()` will not result in a successful
+// verification. Please make sure to carefully read the documentation in
+// `jws.VerifyAuto()`, and provide the necessary Whitelist object via
+// `jwt.WithFetchWhitelist()`
+//
+// You might also consider using a backoff policy by using `jwt.WithFetchBackoff()`
+// to control the number of requests being made.
+func WithVerifyAuto(v bool) ParseOption {
+	return newParseOption(identVerifyAuto{}, v)
+}
+
+// WithFetchWhitelist specifies the `jwk.Whitelist` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithFetchWhitelist()` that can be passed
+// to `jwt.Parse()`
+func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
+	return newParseOption(identFetchWhitelist{}, wl)
+}
+
+// WithHTTPClient specifies the `*http.Client` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithHTTPClient()` that can be passed
+// to `jwt.Parse()`
+func WithHTTPClient(httpcl *http.Client) ParseOption {
+	return newParseOption(identHTTPClient{}, httpcl)
+}
+
+// WithFetchBackoff specifies the `backoff.Policy` object that should be
+// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
+//
+// This is a wrapper over `jws.WithFetchBackoff()` that can be passed
+// to `jwt.Parse()`
+func WithFetchBackoff(b backoff.Policy) ParseOption {
+	return newParseOption(identFetchBackoff{}, b)
 }

@@ -13,6 +13,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
 * [Verification](#jwt-verification)
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
+  * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
@@ -177,6 +178,22 @@ token, _ := jwt.Parse(src, jwt.WithKeySet(keyset), jwt.InferAlgorithmFromKey(tru
 This will tell `jwx` to use heuristics to deduce the algorithm used. It's a brute-force approach, and does not always provide the best performance, but it will try all possible algorithms available for a given key type until one of them matches. For example, for an RSA key (either raw key or `jwk.Key`) algorithms such as RS256, RS384, RS512, PS256, PS384, and PS512 are tried.
 
 In most cases use of this option would Just Work. However, this type of "try until something works" is not really recommended from a security perspective, and that is why the option is not enabled by default.
+
+## Parse and Verify a JWT (using key located in "jku")
+
+You can parse JWTs using the JWK Set specified in the`jku` field in the JWS message by telling `jwt.Parse()` to
+use `jws.VerifyAuto()` instead of `jws.Verify()`:
+
+```go
+token, _ := jwt.Parse(
+  src,
+  jwt.WithVerifyAuto(true),
+  jwt.WithFetchWhitelist(...),
+)
+```
+
+This feature must be used with extreme caution. Please see the caveats and fine prints
+in the documentation for `jws.VerifyAuto()`
 
 # JWT Validation
 

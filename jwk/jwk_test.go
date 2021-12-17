@@ -1839,9 +1839,17 @@ func TestFetch(t *testing.T) {
 	testcases := []struct {
 		Name      string
 		Whitelist func() jwk.Whitelist
+		Error     bool
 	}{
 		{
-			Name: `MapWhitelist`,
+			Name: `InsecureWhitelist`,
+			Whitelist: func() jwk.Whitelist {
+				return jwk.InsecureWhitelist{}
+			},
+		},
+		{
+			Name:  `MapWhitelist`,
+			Error: true,
 			Whitelist: func() jwk.Whitelist {
 				return jwk.NewMapWhitelist().
 					Add(`https://www.googleapis.com/oauth2/v3/certs`).
@@ -1849,14 +1857,16 @@ func TestFetch(t *testing.T) {
 			},
 		},
 		{
-			Name: `RegexpWhitelist`,
+			Name:  `RegexpWhitelist`,
+			Error: true,
 			Whitelist: func() jwk.Whitelist {
 				return jwk.NewRegexpWhitelist().
 					Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
 			},
 		},
 		{
-			Name: `WhitelistFunc`,
+			Name:  `WhitelistFunc`,
+			Error: true,
 			Whitelist: func() jwk.Whitelist {
 				return jwk.WhitelistFunc(func(s string) bool {
 					return s == srv.URL
@@ -1874,11 +1884,13 @@ func TestFetch(t *testing.T) {
 			wl := tc.Whitelist()
 
 			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx`, jwk.WithFetchWhitelist(wl))
-			if !assert.Error(t, err, `jwk.Fetch should fail`) {
-				return
-			}
-			if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
-				return
+			if tc.Error {
+				if !assert.Error(t, err, `jwk.Fetch should fail`) {
+					return
+				}
+				if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
+					return
+				}
 			}
 
 			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))

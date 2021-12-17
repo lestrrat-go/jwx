@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	"sync/atomic"
 
@@ -92,12 +93,14 @@ type parseCtx struct {
 	keySetProvider   KeySetProvider
 	token            Token
 	validateOpts     []ValidateOption
+	verifyAutoOpts   []jws.VerifyOption
 	localReg         *json.Registry
 	inferAlgorithm   bool
 	pedantic         bool
 	skipVerification bool
 	useDefault       bool
 	validate         bool
+	verifyAuto       bool
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
@@ -110,6 +113,12 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 
 		//nolint:forcetypeassert
 		switch o.Ident() {
+		case identVerifyAuto{}:
+			ctx.verifyAuto = o.Value().(bool)
+		case identFetchWhitelist{}:
+			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithFetchWhitelist(o.Value().(jwk.Whitelist)))
+		case identHTTPClient{}:
+			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithHTTPClient(o.Value().(*http.Client)))
 		case identVerify{}:
 			ctx.verifyParams = o.Value().(VerifyParameters)
 		case identDecrypt{}:
@@ -157,6 +166,12 @@ const (
 )
 
 func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
+	if ctx.verifyAuto {
+		options := ctx.verifyAutoOpts
+		verified, err := jws.VerifyAuto(payload, options...)
+		return verified, _JwsVerifyDone, err
+	}
+
 	// if we have a key set or a provider, use that
 	ks := ctx.keySet
 	p := ctx.keySetProvider

@@ -3,6 +3,7 @@ package jws
 import (
 	"net/http"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/option"
 )
@@ -13,6 +14,7 @@ type identPayloadSigner struct{}
 type identDetachedPayload struct{}
 type identHeaders struct{}
 type identMessage struct{}
+type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 
@@ -67,8 +69,17 @@ func WithDetachedPayload(v []byte) VerifyOption {
 	return &verifyOption{option.New(identDetachedPayload{}, v)}
 }
 
+// WithFetchWhitelist specifies the whitelist object to be passed
+// to `jwk.Fetch()` when `jws.VerifyAuto()` is used. If you do not
+// specify a whitelist, `jws.VerifyAuto()` will ALWAYS fail.
 func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {
 	return &verifyOption{option.New(identFetchWhitelist{}, wl)}
+}
+
+// WithFetchBackoff specifies the backoff.Policy object to be passed
+// to `jwk.Fetch()` when `jws.VerifyAuto()` is used.
+func WithFetchBackoff(b backoff.Policy) VerifyOption {
+	return &verifyOption{option.New(identFetchBackoff{}, b)}
 }
 
 func WithHTTPClient(httpcl *http.Client) VerifyOption {

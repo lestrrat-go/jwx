@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -1493,7 +1494,16 @@ func TestJKU(t *testing.T) {
 	}
 	set := jwk.NewSet()
 	set.Add(pubkey)
+	backoffCount := 0
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Query().Get(`type`) {
+		case "backoff":
+			backoffCount++
+			if backoffCount == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
 	}))
@@ -1505,10 +1515,20 @@ func TestJKU(t *testing.T) {
 		testcases := []struct {
 			Name          string
 			Error         bool
+			Query         string
 			VerifyOptions func() []jws.VerifyOption
 		}{
 			{
+				Name:  "Fail without whitelist",
+				Error: true,
+			},
+			{
 				Name: "Success",
+				VerifyOptions: func() []jws.VerifyOption {
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+					}
+				},
 			},
 			{
 				Name:  "Rejected by whitelist",
@@ -1520,13 +1540,33 @@ func TestJKU(t *testing.T) {
 					}
 				},
 			},
+			{
+				// Note: this test doesn't really test "backoff", but it tests
+				// that jku can be fetched again upon seeing a non-200 response.
+				// to be preceise we should be also checking for the timing, but
+				// I think that can be deferred to the tests in jwk package
+				Name:  "Backoff",
+				Error: false,
+				Query: "type=backoff",
+				VerifyOptions: func() []jws.VerifyOption {
+					bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+						jws.WithFetchBackoff(bo),
+					}
+				},
+			},
 		}
 
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				hdr := jws.NewHeaders()
-				hdr.Set(jws.JWKSetURLKey, srv.URL)
+				u := srv.URL
+				if tc.Query != "" {
+					u += "?" + tc.Query
+				}
+				hdr.Set(jws.JWKSetURLKey, u)
 				signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
@@ -1618,7 +1658,16 @@ func TestJKU(t *testing.T) {
 			Error         bool
 		}{
 			{
+				Name:  "Fail without whitelist",
+				Error: true,
+			},
+			{
 				Name: "Success",
+				VerifyOptions: func() []jws.VerifyOption {
+					return []jws.VerifyOption{
+						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+					}
+				},
 			},
 			{
 				Name:  "Rejected by whitelist",

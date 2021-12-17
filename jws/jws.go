@@ -39,6 +39,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -201,10 +202,15 @@ type verifyCtx struct {
 	useJKU          bool
 	wl              jwk.Whitelist
 	httpcl          *http.Client
+	backoff         backoff.Policy
 	// This is only used to differentiate compact/JSON serialization
 	// because certain features are enabled/disabled in each
 	isJSON bool
 }
+
+var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
+	return false
+})
 
 // VerifyAuto is a special case of Verify(), where verification is done
 // using verifications parameters that can be obtained using the information
@@ -214,12 +220,22 @@ type verifyCtx struct {
 // only have https scheme.
 //
 // Using this function will result in your program accessing remote resources via https,
-// and therefore extreme caution should be taken which urls can be accessed. Use of
-// whitelists via `jws.WithFetchWhitelist()` is highly recommended.
+// and therefore extreme caution should be taken which urls can be accessed. To
+// protect users from unintentionally allowing their projects to
+// make unwanted requests, the default behavior is to *REJECT ALL URLs*
+// by providing an instance of `jwk.Whitelist` that does not allow any URLs to
+// be fetched as the default whitelist.
+//
+// Therefore you *MUST* explicitly specify a whitelist yourself.
+//
+// If you want open access to any URLs in the `jku`, use `jwk.InsecureWhitelist` as the whitelist.
+//
+// It is also advised that you consider using some sort of backoff via `jws.WithFetchBackoff`
 func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var ctx verifyCtx
 	// enable JKU processing
 	ctx.useJKU = true
+	ctx.wl = allowNoneWhitelist // by default, allow none
 
 	//nolint:forcetypeassert
 	for _, option := range options {
@@ -230,6 +246,8 @@ func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 			ctx.detachedPayload = option.Value().([]byte)
 		case identFetchWhitelist{}:
 			ctx.wl = option.Value().(jwk.Whitelist)
+		case identFetchBackoff{}:
+			ctx.backoff = option.Value().(backoff.Policy)
 		case identHTTPClient{}:
 			ctx.httpcl = option.Value().(*http.Client)
 		}
@@ -483,6 +501,9 @@ func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payloa
 	var options []jwk.FetchOption
 	if ctx.wl != nil {
 		options = append(options, jwk.WithFetchWhitelist(ctx.wl))
+	}
+	if ctx.backoff != nil {
+		options = append(options, jwk.WithFetchBackoff(ctx.backoff))
 	}
 	if ctx.httpcl != nil {
 		options = append(options, jwk.WithHTTPClient(ctx.httpcl))

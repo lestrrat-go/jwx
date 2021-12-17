@@ -2,6 +2,16 @@ package jwk
 
 import "regexp"
 
+// InsecureWhitelist allows any URLs to be fetched. This is the default
+// behavior of `jwk.Fetch()`, but this exists to allow other libraries
+// (such as jws, via jws.VerifyAuto) and users to be able to explicitly
+// state that they intend to not check the URLs that are being fetched
+type InsecureWhitelist struct{}
+
+func (InsecureWhitelist) IsAllowed(string) bool {
+	return true
+}
+
 // RegexpWhitelist is a jwk.Whitelist object comprised of a list of *regexp.Regexp
 // objects. All entries in the list are tried until one matches. If none of the
 // *regexp.Regexp objects match, then the URL is deemed unallowed.
