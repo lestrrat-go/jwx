@@ -515,6 +515,12 @@ func (f *SimpleJWKSetFetcher) Fetch(u string) (jwk.Set, error) {
 	return jwk.Fetch(context.TODO(), u, f.options...)
 }
 
+type JWKSetFetchFunc func(string) (jwk.Set, error)
+
+func (f JWKSetFetchFunc) Fetch(u string) (jwk.Set, error) {
+	return f(u)
+}
+
 func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payload []byte) ([]byte, error) {
 	u := hdr.JWKSetURL()
 	if u == "" {
