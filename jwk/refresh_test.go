@@ -135,6 +135,9 @@ func TestAutoRefresh(t *testing.T) {
 
 		af := jwk.NewAutoRefresh(ctx)
 		af.Configure(srv.URL, jwk.WithMinRefreshInterval(time.Second))
+		if !assert.True(t, af.IsRegistered(srv.URL), `af.IsRegistered should be true`) {
+			return
+		}
 
 		retries := 5
 

@@ -249,6 +249,13 @@ func (af *AutoRefresh) releaseFetching(url string) {
 	af.muFetching.Unlock()
 }
 
+// IsRegistered checks if `url` is registered already.
+func (af *AutoRefresh) IsRegistered(url string) bool {
+	_, ok := af.getRegistered(url)
+	return ok
+}
+
+// Fetch returns a jwk.Set from the given url.
 func (af *AutoRefresh) getRegistered(url string) (*target, bool) {
 	af.muRegistry.RLock()
 	t, ok := af.registry[url]
