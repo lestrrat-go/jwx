@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -119,6 +120,10 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithFetchWhitelist(o.Value().(jwk.Whitelist)))
 		case identHTTPClient{}:
 			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithHTTPClient(o.Value().(*http.Client)))
+		case identFetchBackoff{}:
+			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithFetchBackoff(o.Value().(backoff.Policy)))
+		case identJWKSetFetcher{}:
+			ctx.verifyAutoOpts = append(ctx.verifyAutoOpts, jws.WithJWKSetFetcher(o.Value().(jws.JWKSetFetcher)))
 		case identVerify{}:
 			ctx.verifyParams = o.Value().(VerifyParameters)
 		case identDecrypt{}:

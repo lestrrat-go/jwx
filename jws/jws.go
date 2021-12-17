@@ -214,21 +214,30 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // using verifications parameters that can be obtained using the information
 // that is carried within the JWS message itself.
 //
-// Currently it only supports verification via `jku`. Note that URLs in `jku` can
+// Currently it only supports verification via `jku` which will be fetched
+// using the object specified in `jws.JWKSetFetcher`. Note that URLs in `jku` can
 // only have https scheme.
 //
 // Using this function will result in your program accessing remote resources via https,
-// and therefore extreme caution should be taken which urls can be accessed. To
+// and therefore extreme caution should be taken which urls can be accessed.
+//
+// Without specifying extra arguments, the default `jws.JWKSetFetcher` will be
+// configured with a whitelist that rejects *ALL URLSs*. This is to
 // protect users from unintentionally allowing their projects to
-// make unwanted requests, the default behavior is to *REJECT ALL URLs*
-// by providing an instance of `jwk.Whitelist` that does not allow any URLs to
-// be fetched as the default whitelist.
+// make unwanted requests. Therefore you must explicitly provide an
+// instance of `jwk.Whitelist` that does what you want.
 //
-// Therefore you *MUST* explicitly specify a whitelist yourself.
-//
-// If you want open access to any URLs in the `jku`, use `jwk.InsecureWhitelist` as the whitelist.
+// If you want open access to any URLs in the `jku`, you can do this by
+// using `jwk.InsecureWhitelist` as the whitelist, but this should be avoided in
+// most cases, especially if the payload comes from outside of a controlled
+// environment.
 //
 // It is also advised that you consider using some sort of backoff via `jws.WithFetchBackoff`
+//
+// Alternatively, you can provide your own `jws.JWKSetFetcher`. In this case
+// there is no way for the framework to force you to set a whitelist, so the
+// default behavior is to allow any URLs. You are responsible for providing
+// your own safety measures.
 func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var ctx verifyCtx
 	// enable JKU processing
