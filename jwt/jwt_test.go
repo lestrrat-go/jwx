@@ -1518,8 +1518,19 @@ func TestVerifyAuto(t *testing.T) {
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(true),
 		jwt.WithJWKSetFetcher(jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
-			ar.Configure(u, jwk.WithFetchWhitelist(wl))
+			ar.Configure(u,
+				jwk.WithHTTPClient(srv.Client()),
+				jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+			)
 			return ar.Fetch(context.TODO(), u)
 		})),
 	)
+	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+		return
+	}
+
+	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
+		return
+	}
+
 }
