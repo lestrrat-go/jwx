@@ -1514,12 +1514,12 @@ func TestVerifyAuto(t *testing.T) {
 	}
 
 	// now with AutoRefresh
-	ar := jwk.NewAtoRefresh(context.TODO())
+	ar := jwk.NewAutoRefresh(context.TODO())
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(true),
 		jwt.WithJWKSetFetcher(jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
 			ar.Configure(u, jwk.WithFetchWhitelist(wl))
-			return ar.Fetch(u)
+			return ar.Fetch(context.TODO(), u)
 		})),
 	)
 }
