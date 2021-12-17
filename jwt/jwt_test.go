@@ -1532,5 +1532,4 @@ func TestVerifyAuto(t *testing.T) {
 	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
 		return
 	}
-
 }
