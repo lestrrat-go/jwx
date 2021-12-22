@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.14 UNRELEASED
+v1.2.14 22 Dec 2021
 [New Features]
   * `jwk.Fetch()` and `(*jwk.AutoRefresh).Configure()` can now take `jwk.Whitelist`
     object to check for the validity of a url to be fetched
@@ -10,6 +10,7 @@ v1.2.14 UNRELEASED
     separated from the `jws.Verify()` function because 1) the required parameters
     are different, and 2) Users MUST be aware that they are doing a totally
     different operation than a regular `jws.Verify()`
+  * `(jwk.AutoRefresh).IsRegistered()` has been added.
 
 [Bug fixes]
   * `jws.SignMulti()` has been fixed to assign the "kid" field of the key used
