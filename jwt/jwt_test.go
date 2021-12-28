@@ -147,6 +147,7 @@ func TestJWTParseVerify(t *testing.T) {
 	keys = append(keys, ed25519PrivKey)
 
 	for _, key := range keys {
+		key := key
 		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
 			t.Parallel()
 			algs, err := jws.AlgorithmsForKey(key)
@@ -206,6 +207,7 @@ func TestJWTParseVerify(t *testing.T) {
 				},
 			}
 			for _, alg := range algs {
+				alg := alg
 				for _, tc := range testcases {
 					tc := tc
 					t.Run(fmt.Sprintf("Algorithm=%s, SetAlgorithm=%t, SetKid=%t, InferAlgorithm=%t, Expect Error=%t", alg, tc.SetAlgorithm, tc.SetKid, tc.InferAlgorithm, tc.Error), func(t *testing.T) {
@@ -237,7 +239,7 @@ func TestJWTParseVerify(t *testing.T) {
 						// Permute on the location of the correct key, to check for possible
 						// cases where we loop too little or too much.
 						dummyKey, _ := jwk.New([]byte("abracadabra"))
-						for i := 0; i < 3; i++ {
+						for i := 0; i < 6; i++ {
 							var name string
 							set := jwk.NewSet()
 							switch i {
