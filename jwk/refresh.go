@@ -346,21 +346,27 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	// in a very fast iteration, but we assume here that refreshes happen
 	// seldom enough that being able to call one `select{}` with multiple
 	// targets / channels outweighs the speed penalty of using reflect.
-	baseSelcases := []reflect.SelectCase{
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ctx.Done()),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(af.configureCh),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(af.resetTimerCh),
-		},
+	//
+	const (
+		ctxDoneIdx = iota
+		configureIdx
+		resetTimerIdx
+		baseSelcasesLen
+	)
+
+	baseSelcases := make([]reflect.SelectCase, baseSelcasesLen)
+	baseSelcases[ctxDoneIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(ctx.Done()),
 	}
-	baseidx := len(baseSelcases)
+	baseSelcases[configureIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.configureCh),
+	}
+	baseSelcases[resetTimerIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.resetTimerCh),
+	}
 
 	var targets []*target
 	var selcases []reflect.SelectCase
@@ -376,7 +382,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		}
 
 		if cap(selcases) < len(af.registry) {
-			selcases = make([]reflect.SelectCase, 0, len(af.registry)+baseidx)
+			selcases = make([]reflect.SelectCase, 0, len(af.registry)+baseSelcasesLen)
 		} else {
 			selcases = selcases[:0]
 		}
@@ -393,15 +399,15 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 
 		chosen, recv, recvOK := reflect.Select(selcases)
 		switch chosen {
-		case 0:
+		case ctxDoneIdx:
 			// <-ctx.Done(). Just bail out of this loop
 			return
-		case 1:
+		case configureIdx:
 			// <-configureCh. rebuild the select list from the registry.
 			// since we're rebuilding everything for each iteration,
 			// we just need to start the loop all over again
 			continue
-		case 2:
+		case resetTimerIdx:
 			// <-resetTimerCh. interrupt polling, and reset the timer on
 			// a single target. this needs to be handled inside this select
 			if !recvOK {
@@ -425,7 +431,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			}
 
 			// Time to refresh a target
-			t := targets[chosen-baseidx]
+			t := targets[chosen-baseSelcasesLen]
 
 			// Check if there are other goroutines still doing the refresh asynchronously.
 			// This could happen if the refreshing goroutine is stuck on a backoff
