@@ -121,7 +121,7 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
 # Credits
 
-* Work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
+* Initial work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
 * Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
 * Lots of individual contributors have helped this project over the years. Thank each and everyone of you very much.
 
