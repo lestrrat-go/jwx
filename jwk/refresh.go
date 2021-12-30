@@ -446,6 +446,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			t.timer.Reset(d)
 		case removeIdx:
 			// <-removeCh. remove the URL from future fetching
+			//nolint:forcetypeassert
 			req := recv.Interface().(removeReq)
 			replyCh := req.replyCh
 			url := req.url
