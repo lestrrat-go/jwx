@@ -292,6 +292,10 @@ func TestRefreshSnapshot(t *testing.T) {
 	if !assert.Len(t, ar.Snapshot(), 0, `there should be no URLs`) {
 		return
 	}
+
+	if !assert.Error(t, ar.Remove(`dummy`), `removing a non-existing url should be an error`) {
+		return
+	}
 }
 
 func TestErrorSink(t *testing.T) {

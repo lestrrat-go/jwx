@@ -135,14 +135,16 @@ func (af *AutoRefresh) getCached(url string) (Set, bool) {
 }
 
 type removeReq struct {
-	replyCh chan struct{}
+	replyCh chan error
 	url     string
 }
 
-func (af *AutoRefresh) Remove(url string) {
-	ch := make(chan struct{})
+// Remove removes `url` from the list of urls being watched by jwk.AutoRefresh.
+// If the url is not already registered, returns an error.
+func (af *AutoRefresh) Remove(url string) error {
+	ch := make(chan error)
 	af.removeCh <- removeReq{replyCh: ch, url: url}
-	<-ch
+	return <-ch
 }
 
 // Configure registers the url to be controlled by AutoRefresh, and also
@@ -448,9 +450,13 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			replyCh := req.replyCh
 			url := req.url
 			af.muRegistry.Lock()
-			delete(af.registry, url)
+			if _, ok := af.registry[url]; !ok {
+				replyCh <- errors.Errorf(`invalid url %q (not registered)`, url)
+			} else {
+				delete(af.registry, url)
+				replyCh <- nil
+			}
 			af.muRegistry.Unlock()
-			replyCh <- struct{}{}
 		default:
 			// Do not fire a refresh in case the channel was closed.
 			if !recvOK {
