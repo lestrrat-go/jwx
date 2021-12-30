@@ -29,6 +29,7 @@ type AutoRefresh struct {
 	errSink      chan AutoRefreshError
 	cache        map[string]Set
 	configureCh  chan struct{}
+	removeCh     chan removeReq
 	fetching     map[string]chan struct{}
 	muErrSink    sync.Mutex
 	muCache      sync.RWMutex
@@ -114,6 +115,7 @@ func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
+		removeCh:     make(chan removeReq),
 		fetching:     make(map[string]chan struct{}),
 		registry:     make(map[string]*target),
 		resetTimerCh: make(chan *resetTimerReq),
@@ -130,6 +132,19 @@ func (af *AutoRefresh) getCached(url string) (Set, bool) {
 		return ks, true
 	}
 	return nil, false
+}
+
+type removeReq struct {
+	replyCh chan error
+	url     string
+}
+
+// Remove removes `url` from the list of urls being watched by jwk.AutoRefresh.
+// If the url is not already registered, returns an error.
+func (af *AutoRefresh) Remove(url string) error {
+	ch := make(chan error)
+	af.removeCh <- removeReq{replyCh: ch, url: url}
+	return <-ch
 }
 
 // Configure registers the url to be controlled by AutoRefresh, and also
@@ -346,21 +361,32 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	// in a very fast iteration, but we assume here that refreshes happen
 	// seldom enough that being able to call one `select{}` with multiple
 	// targets / channels outweighs the speed penalty of using reflect.
-	baseSelcases := []reflect.SelectCase{
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ctx.Done()),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(af.configureCh),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(af.resetTimerCh),
-		},
+	//
+	const (
+		ctxDoneIdx = iota
+		configureIdx
+		resetTimerIdx
+		removeIdx
+		baseSelcasesLen
+	)
+
+	baseSelcases := make([]reflect.SelectCase, baseSelcasesLen)
+	baseSelcases[ctxDoneIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(ctx.Done()),
 	}
-	baseidx := len(baseSelcases)
+	baseSelcases[configureIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.configureCh),
+	}
+	baseSelcases[resetTimerIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.resetTimerCh),
+	}
+	baseSelcases[removeIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.removeCh),
+	}
 
 	var targets []*target
 	var selcases []reflect.SelectCase
@@ -376,7 +402,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		}
 
 		if cap(selcases) < len(af.registry) {
-			selcases = make([]reflect.SelectCase, 0, len(af.registry)+baseidx)
+			selcases = make([]reflect.SelectCase, 0, len(af.registry)+baseSelcasesLen)
 		} else {
 			selcases = selcases[:0]
 		}
@@ -393,15 +419,15 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 
 		chosen, recv, recvOK := reflect.Select(selcases)
 		switch chosen {
-		case 0:
+		case ctxDoneIdx:
 			// <-ctx.Done(). Just bail out of this loop
 			return
-		case 1:
+		case configureIdx:
 			// <-configureCh. rebuild the select list from the registry.
 			// since we're rebuilding everything for each iteration,
 			// we just need to start the loop all over again
 			continue
-		case 2:
+		case resetTimerIdx:
 			// <-resetTimerCh. interrupt polling, and reset the timer on
 			// a single target. this needs to be handled inside this select
 			if !recvOK {
@@ -418,6 +444,20 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 				}
 			}
 			t.timer.Reset(d)
+		case removeIdx:
+			// <-removeCh. remove the URL from future fetching
+			//nolint:forcetypeassert
+			req := recv.Interface().(removeReq)
+			replyCh := req.replyCh
+			url := req.url
+			af.muRegistry.Lock()
+			if _, ok := af.registry[url]; !ok {
+				replyCh <- errors.Errorf(`invalid url %q (not registered)`, url)
+			} else {
+				delete(af.registry, url)
+				replyCh <- nil
+			}
+			af.muRegistry.Unlock()
 		default:
 			// Do not fire a refresh in case the channel was closed.
 			if !recvOK {
@@ -425,7 +465,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			}
 
 			// Time to refresh a target
-			t := targets[chosen-baseidx]
+			t := targets[chosen-baseSelcasesLen]
 
 			// Check if there are other goroutines still doing the refresh asynchronously.
 			// This could happen if the refreshing goroutine is stuck on a backoff
