@@ -284,6 +284,14 @@ func TestRefreshSnapshot(t *testing.T) {
 	for target := range ar.Snapshot() {
 		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
 	}
+
+	for _, url := range jwksURLs {
+		ar.Remove(url)
+	}
+
+	if !assert.Len(t, ar.Snapshot(), 0, `there should be no URLs`) {
+		return
+	}
 }
 
 func TestErrorSink(t *testing.T) {

@@ -29,6 +29,7 @@ type AutoRefresh struct {
 	errSink      chan AutoRefreshError
 	cache        map[string]Set
 	configureCh  chan struct{}
+	removeCh     chan removeReq
 	fetching     map[string]chan struct{}
 	muErrSink    sync.Mutex
 	muCache      sync.RWMutex
@@ -114,6 +115,7 @@ func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:        make(map[string]Set),
 		configureCh:  make(chan struct{}),
+		removeCh:     make(chan removeReq),
 		fetching:     make(map[string]chan struct{}),
 		registry:     make(map[string]*target),
 		resetTimerCh: make(chan *resetTimerReq),
@@ -130,6 +132,17 @@ func (af *AutoRefresh) getCached(url string) (Set, bool) {
 		return ks, true
 	}
 	return nil, false
+}
+
+type removeReq struct {
+	replyCh chan struct{}
+	url     string
+}
+
+func (af *AutoRefresh) Remove(url string) {
+	ch := make(chan struct{})
+	af.removeCh <- removeReq{replyCh: ch, url: url}
+	<-ch
 }
 
 // Configure registers the url to be controlled by AutoRefresh, and also
@@ -351,6 +364,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 		ctxDoneIdx = iota
 		configureIdx
 		resetTimerIdx
+		removeIdx
 		baseSelcasesLen
 	)
 
@@ -366,6 +380,10 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	baseSelcases[resetTimerIdx] = reflect.SelectCase{
 		Dir:  reflect.SelectRecv,
 		Chan: reflect.ValueOf(af.resetTimerCh),
+	}
+	baseSelcases[removeIdx] = reflect.SelectCase{
+		Dir:  reflect.SelectRecv,
+		Chan: reflect.ValueOf(af.removeCh),
 	}
 
 	var targets []*target
@@ -424,6 +442,15 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 				}
 			}
 			t.timer.Reset(d)
+		case removeIdx:
+			// <-removeCh. remove the URL from future fetching
+			req := recv.Interface().(removeReq)
+			replyCh := req.replyCh
+			url := req.url
+			af.muRegistry.Lock()
+			delete(af.registry, url)
+			af.muRegistry.Unlock()
+			replyCh <- struct{}{}
 		default:
 			// Do not fire a refresh in case the channel was closed.
 			if !recvOK {
