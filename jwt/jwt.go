@@ -263,29 +263,22 @@ func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 	}
 
 	if ctx.inferAlgorithm {
-		// Okay, we couldn't deterministically find the single key to use.
-		// fallback to heuristics.
-		for i := 0; i < ks.Len(); i++ {
-			key, _ := ks.Get(i)
-			algs, err := jws.AlgorithmsForKey(key)
-			if err != nil {
-				return nil, _JwsVerifyInvalid, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
-			}
+		// Check whether the JWT headers specify a valid
+		// algorithm, use it if it's compatible.
+		algs, err := jws.AlgorithmsForKey(key)
+		if err != nil {
+			return nil, _JwsVerifyInvalid, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
+		}
 
-			for _, alg := range algs {
-				// bail out if the JWT has a `alg` field, and it doesn't match
-				if tokAlg := headers.Algorithm(); tokAlg != "" {
-					if tokAlg != alg {
-						continue
-					}
-				}
-
-				// Yippeeeeeee! we found a key that matches both kid and alg!
-				v, state, err := verifyJWSWithParams(ctx, payload, alg, key)
-				if err == nil {
-					return v, state, nil
+		for _, alg := range algs {
+			// bail out if the JWT has a `alg` field, and it doesn't match
+			if tokAlg := headers.Algorithm(); tokAlg != "" {
+				if tokAlg != alg {
+					continue
 				}
 			}
+
+			return verifyJWSWithParams(ctx, payload, alg, key)
 		}
 	}
 

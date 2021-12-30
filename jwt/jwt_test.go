@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
+	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwe"
@@ -141,18 +143,48 @@ func TestJWTParseVerify(t *testing.T) {
 	}
 
 	ed25519PrivKey, err := jwxtest.GenerateEd25519Key()
-	if !assert.NoError(t, err, `jwxtest.GenerateEd25519Key should succed`) {
+	if !assert.NoError(t, err, `jwxtest.GenerateEd25519Key should succeed`) {
 		return
 	}
 	keys = append(keys, ed25519PrivKey)
 
 	for _, key := range keys {
+		key := key
 		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
 			t.Parallel()
 			algs, err := jws.AlgorithmsForKey(key)
 			if !assert.NoError(t, err, `jwas.AlgorithmsForKey should succeed`) {
 				return
 			}
+
+			var dummyRawKey interface{}
+			switch pk := key.(type) {
+			case *rsa.PrivateKey:
+				dummyRawKey, err = jwxtest.GenerateRsaKey()
+				if !assert.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`) {
+					return
+				}
+			case *ecdsa.PrivateKey:
+				curveAlg, ok := ecutil.AlgorithmForCurve(pk.Curve)
+				if !assert.True(t, ok, `ecutil.AlgorithmForCurve should succeed`) {
+					return
+				}
+				dummyRawKey, err = jwxtest.GenerateEcdsaKey(curveAlg)
+				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
+					return
+				}
+			case ed25519.PrivateKey:
+				dummyRawKey, err = jwxtest.GenerateEd25519Key()
+				if !assert.NoError(t, err, `jwxtest.GenerateEd25519Key should succeed`) {
+					return
+				}
+			case []byte:
+				dummyRawKey = jwxtest.GenerateSymmetricKey()
+			default:
+				assert.Fail(t, fmt.Sprintf("Unhandled key type %T", key))
+				return
+			}
+
 			testcases := []struct {
 				SetAlgorithm   bool
 				SetKid         bool
@@ -206,12 +238,14 @@ func TestJWTParseVerify(t *testing.T) {
 				},
 			}
 			for _, alg := range algs {
+				alg := alg
 				for _, tc := range testcases {
 					tc := tc
 					t.Run(fmt.Sprintf("Algorithm=%s, SetAlgorithm=%t, SetKid=%t, InferAlgorithm=%t, Expect Error=%t", alg, tc.SetAlgorithm, tc.SetKid, tc.InferAlgorithm, tc.Error), func(t *testing.T) {
 						t.Parallel()
 
 						const kid = "test-jwt-parse-verify-kid"
+						const dummyKid = "test-jwt-parse-verify-dummy-kid"
 						hdrs := jws.NewHeaders()
 						hdrs.Set(jws.KeyIDKey, kid)
 
@@ -230,14 +264,19 @@ func TestJWTParseVerify(t *testing.T) {
 							pubkey.Set(jwk.AlgorithmKey, alg)
 						}
 
+						dummyKey, err := jwk.PublicKeyOf(dummyRawKey)
+						if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
+							return
+						}
+
 						if tc.SetKid {
 							pubkey.Set(jwk.KeyIDKey, kid)
+							dummyKey.Set(jwk.KeyIDKey, dummyKid)
 						}
 
 						// Permute on the location of the correct key, to check for possible
 						// cases where we loop too little or too much.
-						dummyKey, _ := jwk.New([]byte("abracadabra"))
-						for i := 0; i < 3; i++ {
+						for i := 0; i < 6; i++ {
 							var name string
 							set := jwk.NewSet()
 							switch i {
