@@ -54,10 +54,10 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 //   jwt.ParseRequest(req)
 //
 //   # searches for "x-my-token" ONLY.
-//   jwt.ParseRequest(req, http.WithHeaderKey("x-my-token"))
+//   jwt.ParseRequest(req, jwt.WithHeaderKey("x-my-token"))
 //
 //   # searches for "Authorization" AND "x-my-token"
-//   jwt.ParseRequest(req, http.WithHeaderKey("Authorization"), http.WithHeaderKey("x-my-token"))
+//   jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithHeaderKey("x-my-token"))
 func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var hdrkeys []string
 	var formkeys []string
