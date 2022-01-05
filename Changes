@@ -1,6 +1,14 @@
 Changes
 =======
 
+v1.2.15 UNRELEASED
+[New Features]
+  * `(jwk.AutoRefresh).Remove()` has been implemented.
+[Miscellaneous]
+  * `jwt.Parse` has been improved for efficiency and has more tests to
+    cover corner cases.
+  * Documentation fixes
+
 v1.2.14 22 Dec 2021
 [New Features]
   * `jwk.Fetch()` and `(*jwk.AutoRefresh).Configure()` can now take `jwk.Whitelist`
