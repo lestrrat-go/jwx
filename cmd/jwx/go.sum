@@ -7,10 +7,14 @@ github.com/decred/dcrd/chaincfg/chainhash v1.0.2/go.mod h1:BpbrGgrPTr3YJYRN3Bm+D
 github.com/decred/dcrd/crypto/blake256 v1.0.0/go.mod h1:sQl2p6Y26YV+ZOcSTP6thNdn47hh8kt6rqSlvmrXFAc=
 github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0 h1:sgNeV1VRMDzs6rzyPpxyM0jp317hnwiq58Filgag2xw=
 github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0/go.mod h1:J70FGZSbzsjecRTiTzER+3f1KZLNaXkuv+yeFTKoxM8=
+github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d/go.mod h1:tmAIfUFEirG/Y8jhZ9M+h36obRZAk/1fcSpXwAVlfqE=
 github.com/goccy/go-json v0.4.8 h1:TfwOxfSp8hXH+ivoOk36RyDNmXATUETRdaNWDaZglf8=
 github.com/goccy/go-json v0.4.8/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MGFi0w8I=
+github.com/goccy/go-json v0.8.1 h1:4/Wjm0JIJaTDm8K1KcGrLHJoa8EsJ13YWeX+6Kfq6uI=
+github.com/goccy/go-json v0.8.1/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MGFi0w8I=
 github.com/lestrrat-go/backoff/v2 v2.0.7 h1:i2SeK33aOFJlUNJZzf2IpXRBvqBBnaGXfY5Xaop/GsE=
 github.com/lestrrat-go/backoff/v2 v2.0.7/go.mod h1:rHP/q/r9aT27n24JQLa7JhSQZCKBBOiM/uP402WwN8Y=
+github.com/lestrrat-go/backoff/v2 v2.0.8/go.mod h1:rHP/q/r9aT27n24JQLa7JhSQZCKBBOiM/uP402WwN8Y=
 github.com/lestrrat-go/blackmagic v1.0.0 h1:XzdxDbuQTz0RZZEmdU7cnQxUtFUzgCSPq8RCz4BxIi4=
 github.com/lestrrat-go/blackmagic v1.0.0/go.mod h1:TNgH//0vYSs8VXDCfkZLgIrVTTXQELZffUV0tz3MtdQ=
 github.com/lestrrat-go/codegen v1.0.0/go.mod h1:JhJw6OQAuPEfVKUCLItpaVLumDGWQznd1VaXrBk9TdM=
@@ -20,6 +24,8 @@ github.com/lestrrat-go/iter v1.0.1 h1:q8faalr2dY6o8bV45uwrxq12bRa1ezKrB6oM9FUgN4
 github.com/lestrrat-go/iter v1.0.1/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
 github.com/lestrrat-go/jwx v1.2.2 h1:sH9GeolQn9s3JyNbeEOXXPTko2fD4BwAMWXLYvcEl2k=
 github.com/lestrrat-go/jwx v1.2.2/go.mod h1:Tg2uP7bpxEHUDtuWjap/PxroJ4okxGzkQznXiG+a5Dc=
+github.com/lestrrat-go/jwx v1.2.14 h1:69OeaiFKCTn8xDmBGzHTgv/GBoO1LJcXw99GfYCDKzg=
+github.com/lestrrat-go/jwx v1.2.14/go.mod h1:3Q3Re8TaOcVTdpx4Tvz++OWmryDklihTDqrrwQiyS2A=
 github.com/lestrrat-go/option v0.0.0-20210103042652-6f1ecfceda35/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
