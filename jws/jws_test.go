@@ -37,6 +37,8 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
+var hasES256K bool
+
 func TestParseReader(t *testing.T) {
 	t.Parallel()
 	t.Run("Empty []byte", func(t *testing.T) {
@@ -1434,6 +1436,13 @@ func TestAlgorithmsForKey(t *testing.T) {
 
 	for _, tc := range testcases {
 		tc := tc
+
+		if hasES256K {
+			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
+				tc.Expected = append(tc.Expected, jwa.ES256K)
+			}
+		}
+
 		sort.Slice(tc.Expected, func(i, j int) bool {
 			return tc.Expected[i].String() < tc.Expected[j].String()
 		})
