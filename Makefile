@@ -77,10 +77,5 @@ imports:
 	goimports -w ./
 
 tidy:
-	$(MAKE) tidy-cmd
-	$(MAKE) -f $(PWD)/Makefile -C examples tidy-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench/performance tidy-cmd
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx tidy-cmd
+	./scripts/tidy.sh
 
-tidy-cmd:
-	go mod tidy
