@@ -1,3 +1,5 @@
+// +build jwx_es256k
+
 package jws_test
 
 func init() {
