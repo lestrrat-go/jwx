@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.15 UNRELEASED
+v1.2.15 07 Jan 2022
 [New Features]
   * `(jwk.AutoRefresh).Remove()` has been implemented.
 [Bug Fixes]
