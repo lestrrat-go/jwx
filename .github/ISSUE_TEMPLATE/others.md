@@ -1,5 +1,5 @@
 ---
-name: ''
+name: 'Other Issues'
 about: 'Other types of issues'
 title: ''
 labels: ''
