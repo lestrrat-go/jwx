@@ -38,7 +38,7 @@ If you found a bug, a problem with the API design, or other technical issues, pl
 
 You may also use GitHub Issues if they are about actionable items.
 
-For everything else, e.g. open-ended discussions, questions, concerns, or commentaries, please use GitHub Discussions. Please do not use GitHub Issues or PR.
+For everything else, e.g. open-ended discussions, questions, concerns, or commentaries, please use GitHub Discussions. Please do not use GitHub Issues or PR for these, as the maintainers would like to keep Issues/PRs as clean as possible with minimal long-running tasks.
 
 ### Rule 4: Delete the relevant Disclaimer section on Issues/PRs
 
