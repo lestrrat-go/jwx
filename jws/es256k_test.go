@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	hasES256K = true
+}
+
 func TestES256K(t *testing.T) {
 	payload := []byte("Hello, World!")
 
