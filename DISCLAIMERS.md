@@ -20,11 +20,6 @@ We write software because we're curious, we fix bugs because we have integrity. 
 
 ### Rule 2: Please provide code for technical issues.
 
-<<<<<<< HEAD
-=======
-This applies for technical issues.
-
->>>>>>> Add DISCLAIMERS.md, and refer from each issue template
 The authors of this project do NOT know what you are trying to accomplish.
 
 In order to understand what you are trying to accomplish, we need you to explain your intentions, but we also need code.
