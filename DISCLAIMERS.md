@@ -34,7 +34,7 @@ Please help us help you by providing us with a reproducible code.
 
 ### Rule 3: Please use correct medium.
 
-If you found a bug, a problem with the API design, or other technical issues, please file an GitHub Issue or a PR (but see previous rules).
+If you found a bug, a problem with the API design, or other technical issues, please file a GitHub Issue or a PR (but see previous rules).
 
 You may also use GitHub Issues if they are about actionable items.
 
