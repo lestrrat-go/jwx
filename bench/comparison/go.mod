@@ -6,6 +6,7 @@ replace github.com/lestrrat-go/jwx => ../..
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/jwx v1.2.5
 	github.com/stretchr/testify v1.7.0
 )

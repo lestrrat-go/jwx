@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0 // indirect
+	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/codegen v1.0.0 // indirect
 	github.com/lestrrat-go/jwx v1.2.14
 	github.com/lestrrat-go/pdebug/v3 v3.0.1 // indirect
