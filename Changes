@@ -4,6 +4,9 @@ Changes
 v1.2.15 UNRELEASED
 [New Features]
   * `(jwk.AutoRefresh).Remove()` has been implemented.
+[Bug Fixes]
+  * ES256K is now included in the list of JWS inferred algorithms, if it's
+    enabled via -tags jwx_es256k
 [Miscellaneous]
   * `jwt.Parse` has been improved for efficiency and has more tests to
     cover corner cases.
