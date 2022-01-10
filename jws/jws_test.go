@@ -1254,7 +1254,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("crit", "b64")
 
 		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
-		if !assert.Error(t, err, `jws.Sign should fail`) {
+		if !assert.NoError(t, err, `jws.Sign should succeed`) {
 			return
 		}
 	})
@@ -1269,7 +1269,7 @@ func TestRFC7797(t *testing.T) {
 			return
 		}
 
-		verified, err := jws.Verify(signed, jwa.HS256, key)
+		verified, err := jws.Verify(signed, jwa.HS256, key, jws.WithDetachedPayload([]byte(payload)))
 		if !assert.NoError(t, err, `jws.Verify should succeed`) {
 			return
 		}

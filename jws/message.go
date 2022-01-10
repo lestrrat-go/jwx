@@ -135,12 +135,11 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 
 	buf.WriteString(base64.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
-	if getB64Value(hdrs) {
+
+	b64 := getB64Value(hdrs)
+	if b64 {
 		buf.WriteString(base64.EncodeToString(payload))
 	} else {
-		if bytes.ContainsRune(payload, '.') {
-			return nil, nil, errors.New(`payload must not contain a "." when b64 = false`)
-		}
 		buf.Write(payload)
 	}
 
@@ -149,6 +148,11 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		return nil, nil, errors.Wrap(err, `failed to sign payload`)
 	}
 	s.signature = signature
+
+	// Detached payload, this should be removed from the end result
+	if !b64 {
+		buf.Truncate(buf.Len() - len(payload))
+	}
 
 	buf.WriteByte('.')
 	buf.WriteString(base64.EncodeToString(signature))
