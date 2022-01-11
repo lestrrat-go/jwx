@@ -9,6 +9,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
+  * [Generating a JWS message with detached payload](#generating-a-jws-with-detached-payload)
 * [Verifying](#verifying)
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
@@ -44,11 +45,18 @@ Think twice before attempting to do anything more than inspection using [`jws.Me
 
 ## Parse a JWS encoded message stored in a file
 
-To parsea JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Parse).
+To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Parse).
 
 ```go
-message, _ := jwt.ReadFile(`message.jws`)
+message, _ := jws.ReadFile(`message.jws`)
 ```
+
+## Parse a JWS with detached payload
+
+To parse a JWS with detached payload, use the `jws.WithDetachedPayload()` option:
+
+```go
+signed, _ := jws.
 
 # Signing
 
@@ -76,6 +84,14 @@ signer, _ := jws.NewSigner(alg)
 signed, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, protHeaders)
 ```
 
+## Generating a JWS message with detached payload
+
+Use the `jws.WithDetachedPayload()` option to sign a detached payload:
+
+```go
+signed, _ := jws.Sign(nil, alg, key, jws.WithDetachedPayload(payload))
+```
+
 # Verifying
 
 ## Verification using a single key
@@ -88,6 +104,12 @@ payload, _ := jws.Verify(data, alg, key)
 ```
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+To verify a JWS message with detached payload, use the `jws.WithDetachedPayload()` option:
+
+```go
+_, err := jws.Verify(data, alg, key, jws.WithDetachedPayload(payload))
+```
 
 ## Verification using `jku`
 
