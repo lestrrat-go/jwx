@@ -55,7 +55,16 @@ func TestParseReader(t *testing.T) {
 			return
 		}
 	})
-	t.Run("Compact missing parts", func(t *testing.T) {
+	t.Run("Compact detached payload", func(t *testing.T) {
+		t.Parallel()
+		split := strings.Split(exampleCompactSerialization, ".")
+		incoming := strings.Join([]string{split[0], "", split[2]}, ".")
+		_, err := jws.ParseString(incoming)
+		if !assert.NoError(t, err, `jws.ParseString should succeed`) {
+			return
+		}
+	})
+	t.Run("Compact missing header", func(t *testing.T) {
 		t.Parallel()
 		incoming := strings.Join(
 			(strings.Split(
@@ -1240,7 +1249,6 @@ func TestRFC7797(t *testing.T) {
 	const keysrc = `{"kty":"oct",
       "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
      }`
-	detached := []byte(`$.02`)
 
 	key, err := jwk.ParseKey([]byte(keysrc))
 	if !assert.NoError(t, err, `jwk.Parse should succeed`) {
@@ -1319,6 +1327,7 @@ func TestRFC7797(t *testing.T) {
 	})
 
 	t.Run("Verify", func(t *testing.T) {
+		detached := []byte(`$.02`)
 		testcases := []struct {
 			Name          string
 			Input         []byte
