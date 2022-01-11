@@ -75,10 +75,16 @@ key, _ := jwk.ParseKey(src, jwk.WithPEM(true))
 
 ## Parse a key from a file
 
-To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ReadFile) can be used. It accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse)
+To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ReadFile) can be used. 
 
 ```go
 keyset, _ := jwk.ReadFile(filename)
+```
+
+`jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
+
+```go
+keyset, _ := jwk.ReadFile(filename, jwk.WithPEM(true))
 ```
 
 ## Parse a key from a remote resource
