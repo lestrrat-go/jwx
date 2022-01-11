@@ -63,11 +63,27 @@ func WithMessage(m *Message) VerifyOption {
 	return &verifyOption{option.New(identMessage{}, m)}
 }
 
-// WithDetachedPayload can be used to verify a JWS message with a
-// detached payload. If you have to verify using this option, you should
-// know exactly how and why this works.
-func WithDetachedPayload(v []byte) VerifyOption {
-	return &verifyOption{option.New(identDetachedPayload{}, v)}
+type SignVerifyOption interface {
+	SignOption
+	VerifyOption
+}
+
+type signVerifyOption struct {
+	Option
+}
+
+func (*signVerifyOption) signOption()   {}
+func (*signVerifyOption) verifyOption() {}
+
+// WithDetachedPayload can be used to both sign or verify a JWS message with a
+// detached payload.
+//
+// When this option is used for `jws.Sign()`, the first parameter (normally the payload)
+// must be set to `nil`.
+//
+// If you have to verify using this option, you should know exactly how and why this works.
+func WithDetachedPayload(v []byte) SignVerifyOption {
+	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
 }
 
 // WithFetchWhitelist specifies the whitelist object to be passed

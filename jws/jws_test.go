@@ -1247,13 +1247,35 @@ func TestRFC7797(t *testing.T) {
 		return
 	}
 
-	t.Run("Invalid payload when b64 = false", func(t *testing.T) {
+	t.Run("Invalid payload when b64 = false and NOT detached", func(t *testing.T) {
 		const payload = `$.02`
 		hdrs := jws.NewHeaders()
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
 		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
+		if !assert.Error(t, err, `jws.Sign should fail`) {
+			return
+		}
+	})
+	t.Run("Invalid usage when b64 = false and NOT detached", func(t *testing.T) {
+		const payload = `$.02`
+		hdrs := jws.NewHeaders()
+		hdrs.Set("b64", false)
+		hdrs.Set("crit", "b64")
+
+		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs), jws.WithDetachedPayload([]byte(payload)))
+		if !assert.Error(t, err, `jws.Sign should fail`) {
+			return
+		}
+	})
+	t.Run("Valid payload when b64 = false and detached", func(t *testing.T) {
+		const payload = `$.02`
+		hdrs := jws.NewHeaders()
+		hdrs.Set("b64", false)
+		hdrs.Set("crit", "b64")
+
+		_, err := jws.Sign(nil, jwa.HS256, key, jws.WithHeaders(hdrs), jws.WithDetachedPayload([]byte(payload)))
 		if !assert.NoError(t, err, `jws.Sign should succeed`) {
 			return
 		}

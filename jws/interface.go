@@ -61,6 +61,7 @@ type Signature struct {
 	headers   Headers // Unprotected Headers
 	protected Headers // Protected Headers
 	signature []byte  // Signature
+	detached  bool
 }
 
 type Visitor = iter.MapVisitor
