@@ -179,7 +179,7 @@ This will tell `jwx` to use heuristics to deduce the algorithm used. It's a brut
 
 In most cases use of this option would Just Work. However, this type of "try until something works" is not really recommended from a security perspective, and that is why the option is not enabled by default.
 
-## Parse and Verify a JWT (using key located in "jku")
+## Parse and Verify a JWT (using key specified in "jku")
 
 You can parse JWTs using the JWK Set specified in the`jku` field in the JWS message by telling `jwt.Parse()` to
 use `jws.VerifyAuto()` instead of `jws.Verify()`:
