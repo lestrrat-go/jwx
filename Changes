@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.16 UNRELEASED
+v1.2.16 12 Jan 2022
 [Bug Fixes]
   * Peviously, `jws.Sign()` could not create a signed payload with
     detached and unencoded payload, even when the documentation said it could.
