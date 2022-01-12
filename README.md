@@ -2,6 +2,8 @@
 
 Various libraries implementing various JWx technologies. Please click on the package names in the table below to find the synopsis/description for each package.
 
+If you are using this module in your product or your company, please add  your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)! It really helps keeping up our motivation.
+
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
 | [jwt](https://github.com/lestrrat-go/jwx/tree/main/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
