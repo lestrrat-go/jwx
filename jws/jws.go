@@ -106,13 +106,24 @@ var muSigner = &sync.Mutex{}
 // is respected when creating the compact serialization form. That is,
 // if you specify a header with `{"b64": false}`, then the payload is
 // not base64 encoded.
+//
+// If you want to use a detached payload, use `jws.WithDetachedPayload()` as
+// one of the options. When you use this option, you must always set the
+// first parameter (`payload`) to `nil`, or the function will return an error
 func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
 	var hdrs Headers
+	var detached bool
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identHeaders{}:
 			hdrs = o.Value().(Headers)
+		case identDetachedPayload{}:
+			detached = true
+			if payload != nil {
+				return nil, errors.New(`jws.Sign: payload must be nil when jws.WithDetachedPayload() is specified`)
+			}
+			payload = o.Value().([]byte)
 		}
 	}
 
@@ -129,7 +140,14 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 	}
 	muSigner.Unlock()
 
-	sig := &Signature{protected: hdrs}
+	// XXX This is cheating. Ideally `detached` should be passed as a parameter
+	// but since this is an exported method, we can't change this without bumping
+	// major versions.... But we don't want to do that now, so we will cheat by
+	// making it part of the object
+	sig := &Signature{
+		protected: hdrs,
+		detached:  detached,
+	}
 	_, signature, err := sig.Sign(payload, signer, key)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed sign payload`)

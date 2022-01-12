@@ -55,7 +55,16 @@ func TestParseReader(t *testing.T) {
 			return
 		}
 	})
-	t.Run("Compact missing parts", func(t *testing.T) {
+	t.Run("Compact detached payload", func(t *testing.T) {
+		t.Parallel()
+		split := strings.Split(exampleCompactSerialization, ".")
+		incoming := strings.Join([]string{split[0], "", split[2]}, ".")
+		_, err := jws.ParseString(incoming)
+		if !assert.NoError(t, err, `jws.ParseString should succeed`) {
+			return
+		}
+	})
+	t.Run("Compact missing header", func(t *testing.T) {
 		t.Parallel()
 		incoming := strings.Join(
 			(strings.Split(
@@ -1240,14 +1249,13 @@ func TestRFC7797(t *testing.T) {
 	const keysrc = `{"kty":"oct",
       "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
      }`
-	detached := []byte(`$.02`)
 
 	key, err := jwk.ParseKey([]byte(keysrc))
 	if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 		return
 	}
 
-	t.Run("Invalid payload when b64 = false", func(t *testing.T) {
+	t.Run("Invalid payload when b64 = false and NOT detached", func(t *testing.T) {
 		const payload = `$.02`
 		hdrs := jws.NewHeaders()
 		hdrs.Set("b64", false)
@@ -1258,28 +1266,68 @@ func TestRFC7797(t *testing.T) {
 			return
 		}
 	})
-	t.Run("Roundtrip", func(t *testing.T) {
-		const payload = `hell0w0r1d`
+	t.Run("Invalid usage when b64 = false and NOT detached", func(t *testing.T) {
+		const payload = `$.02`
 		hdrs := jws.NewHeaders()
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		signed, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
-		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs), jws.WithDetachedPayload([]byte(payload)))
+		if !assert.Error(t, err, `jws.Sign should fail`) {
 			return
 		}
-
-		verified, err := jws.Verify(signed, jwa.HS256, key)
-		if !assert.NoError(t, err, `jws.Verify should succeed`) {
-			return
+	})
+	t.Run("Valid payload when b64 = false", func(t *testing.T) {
+		testcases := []struct {
+			Name     string
+			Payload  []byte
+			Detached bool
+		}{
+			{
+				Name:     `(Detached) payload contains a period`,
+				Payload:  []byte(`$.02`),
+				Detached: true,
+			},
+			{
+				Name:    `(NOT detached) payload does not contain a period`,
+				Payload: []byte(`hell0w0rld`),
+			},
 		}
 
-		if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
-			return
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				hdrs := jws.NewHeaders()
+				hdrs.Set("b64", false)
+				hdrs.Set("crit", "b64")
+
+				payload := tc.Payload
+				signOptions := []jws.SignOption{jws.WithHeaders(hdrs)}
+				var verifyOptions []jws.VerifyOption
+				if tc.Detached {
+					signOptions = append(signOptions, jws.WithDetachedPayload(payload))
+					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
+					payload = nil
+				}
+				signed, err := jws.Sign(payload, jwa.HS256, key, signOptions...)
+				if !assert.NoError(t, err, `jws.Sign should succeed`) {
+					return
+				}
+
+				verified, err := jws.Verify(signed, jwa.HS256, key, verifyOptions...)
+				if !assert.NoError(t, err, `jws.Verify should succeed`) {
+					return
+				}
+
+				if !assert.Equal(t, tc.Payload, verified, `payload should match`) {
+					return
+				}
+			})
 		}
 	})
 
 	t.Run("Verify", func(t *testing.T) {
+		detached := []byte(`$.02`)
 		testcases := []struct {
 			Name          string
 			Input         []byte

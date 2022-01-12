@@ -1,6 +1,29 @@
 Changes
 =======
 
+v1.2.16 UNRELEASED
+[Bug Fixes]
+  * Peviously, `jws.Sign()` could not create a signed payload with
+    detached and unencoded payload, even when the documentation said it could.
+    Now you may use the `jws.Sign()` in the following way to create
+    a JWS message with detached, unencoded state:
+
+       hdrs := jws.NewHeaders()
+       hdrs.Set("b64", false)
+       hdrs.Set("crit", "b64")
+       jws.Sign(nil, alg, key, jws.WithDetachedPayload(payload), jws.WithHeaders(hdrs))
+
+    Notice the use of `nil` for the first parameter, and the use of
+    `jws.WithDetachedPayload()`.
+
+    We realize this is not exactly a clean API, but this is currently the
+    only way to implement this in a backward-compatible fashion. Most likely
+    this will change in a future major version.
+[Miscellaneous]
+  * `jws.WithDetachedPayload()` is now of type `jws.SignVerifyOption`, which
+    satisfies both `jws.SignOption` and `jws.VerifyOption`
+   
+
 v1.2.15 07 Jan 2022
 [New Features]
   * `(jwk.AutoRefresh).Remove()` has been implemented.
