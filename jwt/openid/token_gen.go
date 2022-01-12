@@ -75,8 +75,25 @@ type Token interface {
 	UpdatedAt() time.Time
 	Website() string
 	Zoneinfo() string
+
+	// PrivateClaims return the entire set of fields (claims) in the token
+	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
 	PrivateClaims() map[string]interface{}
+
+	// Get returns the value of the corresponding field in the token, such as
+	// `nbf`, `exp`, `iat`, and other user-defined fields. If the field does not
+	// exist in the token, the second return value will be `false`
+	//
+	// If you need to access fields like `alg`, `kid`, `jku`, etc, you need
+	// to access the corresponding fields in the JWS/JWE message. For this,
+	// you will need to access them by directly parsing the payload using
+	// `jws.Parse` and `jwe.Parse`
 	Get(string) (interface{}, bool)
+
+	// Set assigns a value to the corresponding field in the token. Some
+	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
+	// be of a specific type. See the other getter methods in this interface
+	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
 	Clone() (jwt.Token, error)

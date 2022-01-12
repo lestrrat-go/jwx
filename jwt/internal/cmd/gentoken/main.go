@@ -217,8 +217,23 @@ func generateToken(obj *codegen.Object) error {
 	for _, field := range fields {
 		o.L("%s() %s", field.GetterMethod(true), fieldGetterReturnValue(field))
 	}
+	o.LL("// PrivateClaims return the entire set of fields (claims) in the token")
+	o.L("// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.")
 	o.L("PrivateClaims() map[string]interface{}")
+	o.LL("// Get returns the value of the corresponding field in the token, such as")
+	o.L("// `nbf`, `exp`, `iat`, and other user-defined fields. If the field does not")
+	o.L("// exist in the token, the second return value will be `false`")
+	o.L("//")
+	o.L("// If you need to access fields like `alg`, `kid`, `jku`, etc, you need")
+	o.L("// to access the corresponding fields in the JWS/JWE message. For this,")
+	o.L("// you will need to access them by directly parsing the payload using")
+	o.L("// `jws.Parse` and `jwe.Parse`")
 	o.L("Get(string) (interface{}, bool)")
+
+	o.LL("// Set assigns a value to the corresponding field in the token. Some")
+	o.L("// pre-defined fields such as `nbf`, `iat`, `iss` need their values to")
+	o.L("// be of a specific type. See the other getter methods in this interface")
+	o.L("// for the types of each of these fields")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
 	if objectPackage(obj) != "jwt" {
