@@ -10,6 +10,8 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse a JWT from file](#parse-a-jwt-from-file)
   * [Parse a JWT from a *http.Request](#parse-a-jwt-from-a-httprequest)
 * [Programmatically Creating a JWT](#programmatically-creating-a-jwt)
+  * [Using jwt.New](#using-jwt-new)
+  * [Using Builder](#using-builder)
 * [Verification](#jwt-verification)
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
@@ -20,6 +22,8 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Serialize using JWS](#serialize-using-jws
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
+* [Working with JWT](#working-with-jwt)
+  * [Get/Set fields](#get-set-fields)
 
 ---
 
@@ -87,7 +91,7 @@ _ = token.Set(name, value)
 
 If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
 
-## Using the Builder
+## Using Builder
 
 Since v1.2.12, the `jwt` package comes with a builder, which you can use to initialize a JWT token in (almost) one go:
 
@@ -308,4 +312,32 @@ func init() {
 
 The above call will force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has global effect.
 
+# Working with JWT
 
+## Get/Set fields
+
+Any field in the token can be accessed in an uniform away using `(jwt.Token).Get()`
+
+```go
+v, ok := token.Get(name)
+```
+
+If the field corresponding to `name` does not exist, the second return value will be `false`.
+
+The value `v` is returned as `interface{}`, as there is no way of knowing what the underlying type may be for user defined fields.
+
+For pre-defined fields whose types are known, you can use the convenience methods such as `Subject()`, `Issuer()`, `NotBefore()`, etc.
+
+```go
+s := token.Subject()
+s := token.Issuer()
+t := token.NotBefore()
+```
+
+For setting field values, there is only one path, which is to use the `Set()` method. If you are initializing a token you may also [use the builder pattern](#using-builder)
+
+```go
+err := token.Set(name, value)
+```
+
+For pre-defined fields, `Set()` will return an error when the value cannot be converted to a proper type that suits the specification. For example, fields for time data must be `time.Time` or number of seconds since epoch. See the `jwt.Token` interface and the getter methods for these fields to learn about the types for pre-defined fields.
