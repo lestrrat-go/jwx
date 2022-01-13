@@ -73,3 +73,7 @@ Often times we have people asking us about github.com/lestrrat-go/jwx/jwt not be
 For example, when a provider says they will give you an "access token" ... well, it *may* be a JWT, but often times they are just some sort of string key (which will definitely parse if you pass it to `jwt.Parse`). Sometimes what you really want is stored in a different token, and it may be called an "ID token". Who knows, these things vary between implementation to implemention.
 
 After all, the only thing we can say is that you should check that you are parsing. 
+
+## Why are you generating so many fields?
+
+Because a lot of the code is repetitive. For example, maintaining the 15 fields in a JWE header in all parts of the code (getter methods, setter methods, marshaling/unmarshaling) is doable but very very very cumbersome. We think that resources used to watching out for typos and other minor problems that may arise during maintenance is better spent elsewhere by automating generation of consistent code.

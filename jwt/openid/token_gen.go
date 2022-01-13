@@ -49,34 +49,103 @@ const (
 )
 
 type Token interface {
+
+	// Address returns the value for "address" field of the token
 	Address() *AddressClaim
+
+	// Audience returns the value for "aud" field of the token
 	Audience() []string
+
+	// Birthdate returns the value for "birthdate" field of the token
 	Birthdate() *BirthdateClaim
+
+	// Email returns the value for "email" field of the token
 	Email() string
+
+	// EmailVerified returns the value for "email_verified" field of the token
 	EmailVerified() bool
+
+	// Expiration returns the value for "exp" field of the token
 	Expiration() time.Time
+
+	// FamilyName returns the value for "family_name" field of the token
 	FamilyName() string
+
+	// Gender returns the value for "gender" field of the token
 	Gender() string
+
+	// GivenName returns the value for "given_name" field of the token
 	GivenName() string
+
+	// IssuedAt returns the value for "iat" field of the token
 	IssuedAt() time.Time
+
+	// Issuer returns the value for "iss" field of the token
 	Issuer() string
+
+	// JwtID returns the value for "jti" field of the token
 	JwtID() string
+
+	// Locale returns the value for "locale" field of the token
 	Locale() string
+
+	// MiddleName returns the value for "middle_name" field of the token
 	MiddleName() string
+
+	// Name returns the value for "name" field of the token
 	Name() string
+
+	// Nickname returns the value for "nickname" field of the token
 	Nickname() string
+
+	// NotBefore returns the value for "nbf" field of the token
 	NotBefore() time.Time
+
+	// PhoneNumber returns the value for "phone_number" field of the token
 	PhoneNumber() string
+
+	// PhoneNumberVerified returns the value for "phone_number_verified" field of the token
 	PhoneNumberVerified() bool
+
+	// Picture returns the value for "picture" field of the token
 	Picture() string
+
+	// PreferredUsername returns the value for "preferred_username" field of the token
 	PreferredUsername() string
+
+	// Profile returns the value for "profile" field of the token
 	Profile() string
+
+	// Subject returns the value for "sub" field of the token
 	Subject() string
+
+	// UpdatedAt returns the value for "updated_at" field of the token
 	UpdatedAt() time.Time
+
+	// Website returns the value for "website" field of the token
 	Website() string
+
+	// Zoneinfo returns the value for "zoneinfo" field of the token
 	Zoneinfo() string
+
+	// PrivateClaims return the entire set of fields (claims) in the token
+	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
 	PrivateClaims() map[string]interface{}
+
+	// Get returns the value of the corresponding field in the token, such as
+	// `nbf`, `exp`, `iat`, and other user-defined fields. If the field does not
+	// exist in the token, the second return value will be `false`
+	//
+	// If you need to access fields like `alg`, `kid`, `jku`, etc, you need
+	// to access the corresponding fields in the JWS/JWE message. For this,
+	// you will need to access them by directly parsing the payload using
+	// `jws.Parse` and `jwe.Parse`
 	Get(string) (interface{}, bool)
+
+	// Set assigns a value to the corresponding field in the token. Some
+	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
+	// be of a specific type. See the other getter methods in this interface
+	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
 	Clone() (jwt.Token, error)
