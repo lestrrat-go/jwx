@@ -41,12 +41,26 @@ const (
 // jwt.Token needs to handle private claims, and this really does not
 // work well when it is embedded in other structure
 type Token interface {
+
+	// Audience returns the value for "aud" field of the token
 	Audience() []string
+
+	// Expiration returns the value for "exp" field of the token
 	Expiration() time.Time
+
+	// IssuedAt returns the value for "iat" field of the token
 	IssuedAt() time.Time
+
+	// Issuer returns the value for "iss" field of the token
 	Issuer() string
+
+	// JwtID returns the value for "jti" field of the token
 	JwtID() string
+
+	// NotBefore returns the value for "nbf" field of the token
 	NotBefore() time.Time
+
+	// Subject returns the value for "sub" field of the token
 	Subject() string
 
 	// PrivateClaims return the entire set of fields (claims) in the token

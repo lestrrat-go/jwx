@@ -215,6 +215,7 @@ func generateToken(obj *codegen.Object) error {
 
 	o.L("type %s interface {", objectInterface(obj))
 	for _, field := range fields {
+		o.LL("// %s returns the value for %q field of the token", field.GetterMethod(true), field.JSON())
 		o.L("%s() %s", field.GetterMethod(true), fieldGetterReturnValue(field))
 	}
 	o.LL("// PrivateClaims return the entire set of fields (claims) in the token")
