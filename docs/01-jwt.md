@@ -23,7 +23,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
 * [Working with JWT](#working-with-jwt)
-  * [Get/Set fields](#get-set-fields)
+  * [Get/Set fields](#getset-fields)
 
 ---
 
