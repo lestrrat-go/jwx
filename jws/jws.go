@@ -342,7 +342,7 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 //
 // Furthermore if the JWS signature asks for a spefici "kid", the
 // `jwk.Key` must have the same "kid" as the signature.
-func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
+func VerifySet(buf []byte, set jwk.Set) ([]byte, jwk.Key, error) {
 	n := set.Len()
 	for i := 0; i < n; i++ {
 		key, ok := set.Get(i)
