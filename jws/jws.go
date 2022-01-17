@@ -349,7 +349,7 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, jwk.Key, error) {
 		if !ok {
 			continue
 		}
-		if key.Algorithm() == "" { // algorithm is not
+		if key.Algorithm().String() == "" { // algorithm is not set
 			continue
 		}
 
@@ -357,7 +357,19 @@ func VerifySet(buf []byte, set jwk.Set) ([]byte, jwk.Key, error) {
 			continue
 		}
 
-		buf, err := Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), key)
+		var salg jwa.SignatureAlgorithm
+		switch v := key.Algorithm().(type) {
+		case jwa.InvalidKeyAlgorithm:
+			// Take our chances and convert to jwa.SignatureAlgorithm
+			salg = jwa.SignatureAlgorithm(v)
+		case jwa.SignatureAlgorithm:
+			salg = v
+		default:
+			// Can't coerce this into jwa.SignatureAlgorithm, skip it
+			continue
+		}
+
+		buf, err := Verify(buf, salg, key)
 		if err != nil {
 			continue
 		}

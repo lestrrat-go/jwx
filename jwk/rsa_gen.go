@@ -39,7 +39,7 @@ type RSAPublicKey interface {
 }
 
 type rsaPublicKey struct {
-	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
+	algorithm              *jwa.KeyAlgorithm // https://tools.ietf.org/html/rfc7517#section-4.4
 	e                      []byte
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyOps                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
@@ -69,11 +69,11 @@ func (h rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
 
-func (h *rsaPublicKey) Algorithm() string {
+func (h *rsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return ""
+	return jwa.InvalidKeyAlgorithm("")
 }
 
 func (h *rsaPublicKey) E() []byte {
@@ -253,10 +253,12 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string:
-			h.algorithm = &v
+		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+			var tmp = jwa.KeyAlgorithmFrom(v)
+			h.algorithm = &tmp
 		case fmt.Stringer:
-			tmp := v.String()
+			s := v.String()
+			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -420,9 +422,12 @@ LOOP:
 					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
-				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+				var s string
+				if err := dec.Decode(&s); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
 				}
+				alg := jwa.KeyAlgorithmFrom(s)
+				h.algorithm = &alg
 			case RSAEKey:
 				if err := json.AssignNextBytesToken(&h.e, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, RSAEKey)
@@ -570,7 +575,7 @@ type RSAPrivateKey interface {
 }
 
 type rsaPrivateKey struct {
-	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
+	algorithm              *jwa.KeyAlgorithm // https://tools.ietf.org/html/rfc7517#section-4.4
 	d                      []byte
 	dp                     []byte
 	dq                     []byte
@@ -606,11 +611,11 @@ func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
 
-func (h *rsaPrivateKey) Algorithm() string {
+func (h *rsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return ""
+	return jwa.InvalidKeyAlgorithm("")
 }
 
 func (h *rsaPrivateKey) D() []byte {
@@ -862,10 +867,12 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string:
-			h.algorithm = &v
+		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+			var tmp = jwa.KeyAlgorithmFrom(v)
+			h.algorithm = &tmp
 		case fmt.Stringer:
-			tmp := v.String()
+			s := v.String()
+			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -1083,9 +1090,12 @@ LOOP:
 					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
-				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+				var s string
+				if err := dec.Decode(&s); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
 				}
+				alg := jwa.KeyAlgorithmFrom(s)
+				h.algorithm = &alg
 			case RSADKey:
 				if err := json.AssignNextBytesToken(&h.d, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, RSADKey)

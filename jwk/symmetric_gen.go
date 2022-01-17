@@ -30,7 +30,7 @@ type SymmetricKey interface {
 }
 
 type symmetricKey struct {
-	algorithm              *string           // https://tools.ietf.org/html/rfc7517#section-4.4
+	algorithm              *jwa.KeyAlgorithm // https://tools.ietf.org/html/rfc7517#section-4.4
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyOps                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
@@ -59,11 +59,11 @@ func (h symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq
 }
 
-func (h *symmetricKey) Algorithm() string {
+func (h *symmetricKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return ""
+	return jwa.InvalidKeyAlgorithm("")
 }
 
 func (h *symmetricKey) KeyID() string {
@@ -231,10 +231,12 @@ func (h *symmetricKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string:
-			h.algorithm = &v
+		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+			var tmp = jwa.KeyAlgorithmFrom(v)
+			h.algorithm = &tmp
 		case fmt.Stringer:
-			tmp := v.String()
+			s := v.String()
+			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -389,9 +391,12 @@ LOOP:
 					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
-				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+				var s string
+				if err := dec.Decode(&s); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
 				}
+				alg := jwa.KeyAlgorithmFrom(s)
+				h.algorithm = &alg
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)

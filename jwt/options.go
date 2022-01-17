@@ -137,16 +137,16 @@ type identHeaderKey struct{}
 type identFormKey struct{}
 
 type VerifyParameters interface {
-	Algorithm() jwa.SignatureAlgorithm
+	Algorithm() jwa.KeyAlgorithm
 	Key() interface{}
 }
 
 type verifyParams struct {
-	alg jwa.SignatureAlgorithm
+	alg jwa.KeyAlgorithm
 	key interface{}
 }
 
-func (p *verifyParams) Algorithm() jwa.SignatureAlgorithm {
+func (p *verifyParams) Algorithm() jwa.KeyAlgorithm {
 	return p.alg
 }
 
@@ -157,7 +157,12 @@ func (p *verifyParams) Key() interface{} {
 // WithVerify forces the Parse method to verify the JWT message
 // using the given key. XXX Should have been named something like
 // WithVerificationKey
-func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
+//
+// While `alg` accept jwa.KeyAlgorithm for convenience so you can
+// directly pass the return value of `(jwk.Key).Algorithm()`, in practice
+// the value must be of type jwa.SignatureAlgorithm. Otherwise the
+// verification will fail
+func WithVerify(alg jwa.KeyAlgorithm, key interface{}) ParseOption {
 	return newParseOption(identVerify{}, &verifyParams{
 		alg: alg,
 		key: key,
@@ -400,16 +405,16 @@ func WithValidator(v Validator) ValidateOption {
 }
 
 type decryptParams struct {
-	alg jwa.KeyEncryptionAlgorithm
+	alg jwa.KeyAlgorithm
 	key interface{}
 }
 
 type DecryptParameters interface {
-	Algorithm() jwa.KeyEncryptionAlgorithm
+	Algorithm() jwa.KeyAlgorithm
 	Key() interface{}
 }
 
-func (dp *decryptParams) Algorithm() jwa.KeyEncryptionAlgorithm {
+func (dp *decryptParams) Algorithm() jwa.KeyAlgorithm {
 	return dp.alg
 }
 
@@ -419,7 +424,12 @@ func (dp *decryptParams) Key() interface{} {
 
 // WithDecrypt allows users to specify parameters for decryption using
 // `jwe.Decrypt`. You must specify this if your JWT is encrypted.
-func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
+//
+// While `alg` accept jwa.KeyAlgorithm for convenience so you can
+// directly pass the return value of `(jwk.Key).Algorithm()`, in practice
+// the value must be of type jwa.SignatureAlgorithm. Otherwise the
+// verification will fail
+func WithDecrypt(alg jwa.KeyAlgorithm, key interface{}) ParseOption {
 	return newParseOption(identDecrypt{}, &decryptParams{
 		alg: alg,
 		key: key,

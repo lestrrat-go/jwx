@@ -707,7 +707,7 @@ func TestSignJWK(t *testing.T) {
 	key.Set(jwk.AlgorithmKey, jwa.RS256)
 
 	tok := jwt.New()
-	signed, err := jwt.Sign(tok, jwa.SignatureAlgorithm(key.Algorithm()), key)
+	signed, err := jwt.Sign(tok, key.Algorithm(), key)
 	assert.Nil(t, err)
 
 	header, err := jws.ParseString(string(signed))

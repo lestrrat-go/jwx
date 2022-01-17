@@ -91,7 +91,7 @@ type Key interface {
 	PublicKey() (Key, error)
 	KeyUsage() string
 	KeyOps() KeyOperationList
-	Algorithm() string
+	Algorithm() jwa.KeyAlgorithm
 	KeyID() string
 	X509URL() string
 	X509CertChain() []*x509.Certificate

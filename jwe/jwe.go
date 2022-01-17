@@ -28,8 +28,17 @@ var registry = json.NewRegistry()
 // Encrypt takes the plaintext payload and encrypts it in JWE compact format.
 // `key` should be a public key, and it may be a raw key (e.g. rsa.PublicKey) or a jwk.Key
 //
+// `alg` accepts a `jwa.KeyAlgorithm` for convenience so you can directly pass
+// the result of `(jwk.Key).Algorithm()`, but in practice it must be of type
+// `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
+//
 // Encrypt currently does not support multi-recipient messages.
-func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) ([]byte, error) {
+func Encrypt(payload []byte, alg jwa.KeyAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) ([]byte, error) {
+	keyalg, ok := alg.(jwa.KeyEncryptionAlgorithm)
+	if !ok {
+		return nil, errors.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, alg)
+	}
+
 	var protected Headers
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -205,11 +214,20 @@ func (ctx *decryptCtx) SetMessage(m *Message) {
 // key to decrypt the JWE message, and returns the decrypted payload.
 // The JWE message can be either compact or full JSON format.
 //
+// `alg` accepts a `jwa.KeyAlgorithm` for convenience so you can directly pass
+// the result of `(jwk.Key).Algorithm()`, but in practice it must be of type
+// `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
+//
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
-func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
+func Decrypt(buf []byte, alg jwa.KeyAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
+	keyalg, ok := alg.(jwa.KeyEncryptionAlgorithm)
+	if !ok {
+		return nil, errors.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, alg)
+	}
+
 	var ctx decryptCtx
 	ctx.key = key
-	ctx.alg = alg
+	ctx.alg = keyalg
 
 	var dst *Message
 	var postParse PostParser

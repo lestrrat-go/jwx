@@ -66,7 +66,9 @@ func TestGH402(t *testing.T) {
 		m := jwe.NewMessage()
 		// Test WithPostParse while we're at it
 		plain, err := jwe.Decrypt([]byte(data),
-			"invalid algorithm",
+			// This is a really cheesy way of creating a jwa.KeyEncryptionAlgorithm
+			// but a bogus one.
+			jwa.KeyEncryptionAlgorithm("invalid algorithm"),
 			nil,
 			jwe.WithMessage(m),
 			jwe.WithPostParser(pp),

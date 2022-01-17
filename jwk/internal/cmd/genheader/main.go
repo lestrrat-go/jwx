@@ -54,6 +54,7 @@ type KeyType struct {
 func _main() error {
 	codegen.RegisterZeroVal(`jwa.EllipticCurveAlgorithm`, `jwa.InvalidEllipticCurve`)
 	codegen.RegisterZeroVal(`jwa.KeyType`, `jwa.InvalidKeyType`)
+	codegen.RegisterZeroVal(`jwa.KeyAlgorithm`, `jwa.InvalidKeyAlgorithm("")`)
 
 	var objectsFile = flag.String("objects", "objects.yml", "")
 	flag.Parse()
@@ -412,10 +413,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		o.L("case %s:", keyName)
 		if f.Name(false) == `algorithm` {
 			o.L("switch v := value.(type) {")
-			o.L("case string:")
-			o.L("h.algorithm = &v")
+			o.L("case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:")
+			o.L("var tmp = jwa.KeyAlgorithmFrom(v)")
+			o.L("h.algorithm = &tmp")
 			o.L("case fmt.Stringer:")
-			o.L("tmp := v.String()")
+			o.L("s := v.String()")
+			o.L("var tmp = jwa.KeyAlgorithmFrom(s)")
 			o.L("h.algorithm = &tmp")
 			o.L("default:")
 			o.L("return errors.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
@@ -543,6 +546,14 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
 			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
 			o.L("}")
+		} else if f.Type() == "jwa.KeyAlgorithm" {
+			o.L("case %sKey:", f.Name(true))
+			o.L("var s string")
+			o.L("if err := dec.Decode(&s); err != nil {")
+			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("}")
+			o.L("alg := jwa.KeyAlgorithmFrom(s)")
+			o.L("h.%s = &alg", f.Name(false))
 		} else if f.Type() == "[]byte" {
 			name := f.Name(true)
 			switch f.Name(false) {
@@ -745,6 +756,12 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.L("//\n// If the key is already a public key, it returns a new copy minus the disallowed fields as above.")
 	o.L("PublicKey() (Key, error)")
 	for _, f := range fields {
+		if f.Name(false) == "algorithm" {
+			o.LL("// Algorithm returns the value of the `alg` field")
+			o.L("//")
+			o.L("// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.")
+			o.L("// This is why there exists a `jwa.KeyAlgorithm` type that encompases both types.")
+		}
 		o.L("%s() ", f.GetterMethod(true))
 		if v := fieldGetterReturnValue(f); v != "" {
 			o.R("%s", v)

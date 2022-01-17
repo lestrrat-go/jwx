@@ -196,7 +196,12 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		return nil, _JwsVerifySkipped, nil
 	}
 
-	return verifyJWSWithParams(ctx, payload, vp.Algorithm(), vp.Key())
+	alg, ok := vp.Algorithm().(jwa.SignatureAlgorithm)
+	if !ok {
+		return nil, _JwsVerifyDone, errors.Errorf(`verification algorithm must of type jwa.SignatureAlgorithm, but got %T`, vp.Algorithm())
+	}
+
+	return verifyJWSWithParams(ctx, payload, alg, vp.Key())
 }
 
 func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
@@ -258,10 +263,10 @@ func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 
 	// We found a key with matching kid. Check fo the algorithm specified in the key.
 	// If we find an algorithm in the key, use that.
-	if v := key.Algorithm(); v != "" {
-		var alg jwa.SignatureAlgorithm
-		if err := alg.Accept(v); err != nil {
-			return nil, _JwsVerifyInvalid, errors.Wrapf(err, `invalid signature algorithm %s`, key.Algorithm())
+	if iface, ok := key.Get(jwk.AlgorithmKey); ok {
+		alg, ok := iface.(jwa.SignatureAlgorithm)
+		if !ok {
+			return nil, _JwsVerifyInvalid, errors.Wrapf(err, `invalid signature algorithm %s`, iface)
 		}
 
 		// Okay, we have a valid algorithm, go go
@@ -485,12 +490,20 @@ OUTER:
 //
 // The algorithm specified in the `alg` parameter must be able to support
 // the type of key you provided, otherwise an error is returned.
+// For convenience `alg` is of type jwa.KeyAlgorithm so you can pass
+// the return value of `(jwk.Key).Algorithm()` directly, but in practice
+// it must be an instance of jwa.SignatureAlgorithm, otherwise an error
+// is returned.
 //
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
-func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	return NewSerializer().Sign(alg, key, options...).Serialize(t)
+func Sign(t Token, alg jwa.KeyAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
+	salg, ok := alg.(jwa.SignatureAlgorithm)
+	if !ok {
+		return nil, errors.Errorf(`jwt.Sign received %T for alg. Expected jwa.SignatureAlgorithm`, alg)
+	}
+	return NewSerializer().Sign(salg, key, options...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like

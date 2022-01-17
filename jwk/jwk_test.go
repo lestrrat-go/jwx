@@ -53,7 +53,7 @@ func init() {
 	commonDef = map[string]keyDef{
 		jwk.AlgorithmKey: {
 			Method: "Algorithm",
-			Value:  "random-algorithm",
+			Value:  jwa.KeyAlgorithmFrom("random-algorithm"),
 		},
 		jwk.KeyIDKey: {
 			Method: "KeyID",
