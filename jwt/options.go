@@ -371,16 +371,16 @@ func WithValidator(v Validator) ValidateOption {
 }
 
 type decryptParams struct {
-	alg jwa.KeyEncryptionAlgorithm
+	alg jwa.KeyAlgorithm
 	key interface{}
 }
 
 type DecryptParameters interface {
-	Algorithm() jwa.KeyEncryptionAlgorithm
+	Algorithm() jwa.KeyAlgorithm
 	Key() interface{}
 }
 
-func (dp *decryptParams) Algorithm() jwa.KeyEncryptionAlgorithm {
+func (dp *decryptParams) Algorithm() jwa.KeyAlgorithm {
 	return dp.alg
 }
 
@@ -390,7 +390,12 @@ func (dp *decryptParams) Key() interface{} {
 
 // WithDecrypt allows users to specify parameters for decryption using
 // `jwe.Decrypt`. You must specify this if your JWT is encrypted.
-func WithDecrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ParseOption {
+//
+// While `alg` accept jwa.KeyAlgorithm for convenience so you can
+// directly pass the return value of `(jwk.Key).Algorithm()`, in practice
+// the value must be of type jwa.SignatureAlgorithm. Otherwise the
+// verification will fail
+func WithDecrypt(alg jwa.KeyAlgorithm, key interface{}) ParseOption {
 	return newParseOption(identDecrypt{}, &decryptParams{
 		alg: alg,
 		key: key,

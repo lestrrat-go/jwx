@@ -108,7 +108,12 @@ var muSigner = &sync.Mutex{}
 // If you want to use a detached payload, use `jws.WithDetachedPayload()` as
 // one of the options. When you use this option, you must always set the
 // first parameter (`payload`) to `nil`, or the function will return an error
-func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
+func Sign(payload []byte, alg jwa.KeyAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
+	salg, ok := alg.(jwa.SignatureAlgorithm)
+	if !ok {
+		return nil, errors.Errorf(`expected alg to be jwa.SignatureAlgorithm, but got %T`, alg)
+	}
+
 	var hdrs Headers
 	var detached bool
 	for _, o := range options {
@@ -126,14 +131,14 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 	}
 
 	muSigner.Lock()
-	signer, ok := signers[alg]
+	signer, ok := signers[salg]
 	if !ok {
-		v, err := NewSigner(alg)
+		v, err := NewSigner(salg)
 		if err != nil {
 			muSigner.Unlock()
 			return nil, errors.Wrap(err, `failed to create signer`)
 		}
-		signers[alg] = v
+		signers[salg] = v
 		signer = v
 	}
 	muSigner.Unlock()

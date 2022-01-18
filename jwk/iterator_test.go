@@ -14,7 +14,7 @@ import (
 
 func TestIterator(t *testing.T) {
 	commonValues := map[string]interface{}{
-		jwk.AlgorithmKey: "dummy",
+		jwk.AlgorithmKey: jwa.KeyAlgorithmFrom("dummy"),
 		jwk.KeyIDKey:     "dummy-kid",
 		jwk.KeyUsageKey:  "dummy-usage",
 		jwk.KeyOpsKey:    jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey, jwk.KeyOpDeriveKey, jwk.KeyOpDeriveBits},

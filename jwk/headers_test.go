@@ -2,7 +2,6 @@ package jwk_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -98,8 +97,8 @@ func TestHeader(t *testing.T) {
 		if !assert.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`) {
 			return
 		}
-		if h.Algorithm() != "" {
-			t.Fatalf("Algorithm should be empty string")
+		if !assert.Empty(t, h.Algorithm().String(), "Algorithm should be empty string") {
+			return
 		}
 		if h.KeyID() != "" {
 			t.Fatalf("KeyID should be empty string")
@@ -128,7 +127,7 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, value.(fmt.Stringer).String(), got, "values match") {
+			if !assert.Equal(t, value, got, "values match") {
 				return
 			}
 		}

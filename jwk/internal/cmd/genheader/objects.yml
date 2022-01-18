@@ -13,6 +13,7 @@ std_fields:
     json: alg
     is_std: true
     comment: https://tools.ietf.org/html/rfc7517#section-4.4
+    type: jwa.KeyAlgorithm
   - name: keyID
     json: kid
     is_std: true

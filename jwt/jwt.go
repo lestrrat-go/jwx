@@ -324,12 +324,20 @@ OUTER:
 //
 // The algorithm specified in the `alg` parameter must be able to support
 // the type of key you provided, otherwise an error is returned.
+// For convenience `alg` is of type jwa.KeyAlgorithm so you can pass
+// the return value of `(jwk.Key).Algorithm()` directly, but in practice
+// it must be an instance of jwa.SignatureAlgorithm, otherwise an error
+// is returned.
 //
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
-func Sign(t Token, alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	return NewSerializer().Sign(alg, key, options...).Serialize(t)
+func Sign(t Token, alg jwa.KeyAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
+	salg, ok := alg.(jwa.SignatureAlgorithm)
+	if !ok {
+		return nil, errors.Errorf(`jwt.Sign received %T for alg. Expected jwa.SignatureAlgorithm`, alg)
+	}
+	return NewSerializer().Sign(salg, key, options...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like

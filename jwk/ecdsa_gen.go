@@ -36,7 +36,7 @@ type ECDSAPublicKey interface {
 }
 
 type ecdsaPublicKey struct {
-	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
+	algorithm              *jwa.KeyAlgorithm // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	keyOps                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
@@ -67,11 +67,11 @@ func (h ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
 
-func (h *ecdsaPublicKey) Algorithm() string {
+func (h *ecdsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return ""
+	return jwa.InvalidKeyAlgorithm("")
 }
 
 func (h *ecdsaPublicKey) Crv() jwa.EllipticCurveAlgorithm {
@@ -266,10 +266,12 @@ func (h *ecdsaPublicKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string:
-			h.algorithm = &v
+		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+			var tmp = jwa.KeyAlgorithmFrom(v)
+			h.algorithm = &tmp
 		case fmt.Stringer:
-			tmp := v.String()
+			s := v.String()
+			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -442,9 +444,12 @@ LOOP:
 					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
-				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+				var s string
+				if err := dec.Decode(&s); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
 				}
+				alg := jwa.KeyAlgorithmFrom(s)
+				h.algorithm = &alg
 			case ECDSACrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
@@ -597,7 +602,7 @@ type ECDSAPrivateKey interface {
 }
 
 type ecdsaPrivateKey struct {
-	algorithm              *string // https://tools.ietf.org/html/rfc7517#section-4.4
+	algorithm              *jwa.KeyAlgorithm // https://tools.ietf.org/html/rfc7517#section-4.4
 	crv                    *jwa.EllipticCurveAlgorithm
 	d                      []byte
 	keyID                  *string           // https://tools.ietf.org/html/rfc7515#section-4.1.4
@@ -629,11 +634,11 @@ func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
 
-func (h *ecdsaPrivateKey) Algorithm() string {
+func (h *ecdsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return ""
+	return jwa.InvalidKeyAlgorithm("")
 }
 
 func (h *ecdsaPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
@@ -840,10 +845,12 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string:
-			h.algorithm = &v
+		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+			var tmp = jwa.KeyAlgorithmFrom(v)
+			h.algorithm = &tmp
 		case fmt.Stringer:
-			tmp := v.String()
+			s := v.String()
+			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
 			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -1025,9 +1032,12 @@ LOOP:
 					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
-				if err := json.AssignNextStringToken(&h.algorithm, dec); err != nil {
+				var s string
+				if err := dec.Decode(&s); err != nil {
 					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
 				}
+				alg := jwa.KeyAlgorithmFrom(s)
+				h.algorithm = &alg
 			case ECDSACrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
