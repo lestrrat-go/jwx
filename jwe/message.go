@@ -2,7 +2,6 @@ package jwe
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -543,17 +542,9 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 			}
 			switch epk := epkif.(type) {
 			case jwk.ECDSAPublicKey:
-				var pubkey ecdsa.PublicKey
-				if err := epk.Raw(&pubkey); err != nil {
-					return nil, errors.Wrap(err, "failed to get public key")
-				}
-				dec.PublicKey(&pubkey)
+				dec.PublicKey(epk)
 			case jwk.OKPPublicKey:
-				var pubkey interface{}
-				if err := epk.Raw(&pubkey); err != nil {
-					return nil, errors.Wrap(err, "failed to get public key")
-				}
-				dec.PublicKey(pubkey)
+				dec.PublicKey(epk)
 			default:
 				return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
 			}

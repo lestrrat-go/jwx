@@ -747,3 +747,44 @@ func TestCustomField(t *testing.T) {
 		}
 	})
 }
+
+func TestGH554(t *testing.T) {
+	const keyID = `very-secret-key`
+	const plaintext = `hello world!`
+	privkey, err := jwxtest.GenerateEcdsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk() should succeed`) {
+		return
+	}
+
+	_ = privkey.Set(jwk.KeyIDKey, keyID)
+
+	pubkey, err := jwk.PublicKeyOf(privkey)
+	if !assert.NoError(t, err, `jwk.PublicKeyOf() should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, keyID, pubkey.KeyID(), `key ID should match`) {
+		return
+	}
+
+	encrypted, err := jwe.Encrypt([]byte(plaintext), jwa.ECDH_ES, pubkey, jwa.A256GCM, jwa.NoCompress)
+	if !assert.NoError(t, err, `jwk.Encrypt() should succeed`) {
+		return
+	}
+
+	msg, err := jwe.Parse(encrypted)
+	if !assert.NoError(t, err, `jwe.Parse() should succeed`) {
+		return
+	}
+
+	{
+		buf, _ := json.MarshalIndent(msg, "", "  ")
+		t.Logf("%s", buf)
+	}
+	// The epk must have the same key ID as the original
+	kid := msg.UnprotectedHeaders().KeyID()
+	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
+		return
+	}
+
+}

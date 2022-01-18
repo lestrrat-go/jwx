@@ -16,6 +16,8 @@ type Encrypter interface {
 	// you can pass in a Encrypter to MultiEncrypt, you can rest assured
 	// that the generated key will have the proper key ID.
 	KeyID() string
+
+	SetKeyID(string)
 }
 
 // Decrypter is an interface for things that can decrypt keys
