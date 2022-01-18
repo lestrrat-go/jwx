@@ -77,3 +77,30 @@ After all, the only thing we can say is that you should check that you are parsi
 ## Why are you generating so many fields?
 
 Because a lot of the code is repetitive. For example, maintaining the 15 fields in a JWE header in all parts of the code (getter methods, setter methods, marshaling/unmarshaling) is doable but very very very cumbersome. We think that resources used to watching out for typos and other minor problems that may arise during maintenance is better spent elsewhere by automating generation of consistent code.
+
+## Why is (jwk.Key).Algorithm() and jwa.KeyAlgorithm so confusing?
+
+To start, we sympathize. Please read on for the reason(s) why things are the way they are.
+
+First you must understand that JWKs can be used for multiple different purposes, including but not limited to JWS and JWE (key encryption). And the `alg` field is supposed to carry to what purpose the JWK is supposed to be used.
+
+This means that a JWK can, in jwx terms, carry either `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`.
+
+In order to allow passing either `jwa.SignatureAlgorithm` or `jwa.KeyEncrypionAlgorithm`, we initially implemented
+`(jwk.Key).Algorithm()` as a string, so it was possible to just change the type depending on the situation.
+
+This caused a bit of confusion for some users because this field was the only "untyped" field that potentially could have been typed. Most notably, some people wanted to do the following, but couldn't:
+
+```go
+jwt.Verify(token, jwt.WithVerify(key.Algorithm(), key))
+```
+
+Since version 2.0.0 `jwk.Key` now stores the `alg` field as a `jwa.KeyAlgorithm` type, which is just an interface that covers `jwa.SignatureAlgorithm`, `jwa.KeyEncryptionAlgorithm`, or any other type that we may need to represent in the future.
+
+Now you should be able to just pass the `alg` value to most high-level functions and methods such as `jwt.Verify`, `jws.Sign`, and `jwe.Encrypt`
+
+### When do we use `jwa.KeyAlgorithm`
+
+There are some functions that accept `jwa.KeyAlgorithm`, while there are others that expect `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`. So when do we use which?
+
+The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type.
