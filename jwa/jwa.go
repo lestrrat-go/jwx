@@ -58,5 +58,4 @@ func KeyAlgorithmFrom(v interface{}) KeyAlgorithm {
 	default:
 		return InvalidKeyAlgorithm(fmt.Sprintf("%s", v))
 	}
-
 }
