@@ -10,6 +10,12 @@ code, but DO NOT assume that these changes will stay as is, let alone at all.
   * `jws.VerifySet()` now returns the key that was used to verify the payload.
     This way you will know which key to use for further processing, such as
     checking the thumbprint of said key.
+  * `(jwk.Key).Algorithm() is now of `jwk.KeyAlgorithm` type. This field used
+    to be `string` and therefore could not be passed directly to `jwt.Sign()`
+    `jws.Sign()`, `jwe.Encrypt()`, et al. This is no longer the case, and
+    now you can pass it directly. See 
+    https://github.com/lestrrat-go/jwx/blob/main/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
+    for more details
 
 v1.2.17 12 Jan 2022
 [Miscellaneous]
