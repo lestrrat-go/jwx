@@ -789,5 +789,4 @@ func TestGH554(t *testing.T) {
 	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
 		return
 	}
-
 }

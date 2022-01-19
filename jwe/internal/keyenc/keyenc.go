@@ -236,8 +236,8 @@ func (kw ECDHESEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
 }
 
-func (e *ECDHESEncrypt) SetKeyID(v string) {
-	e.keyID = v
+func (kw *ECDHESEncrypt) SetKeyID(v string) {
+	kw.keyID = v
 }
 
 // KeyID returns the key ID associated with this encrypter
