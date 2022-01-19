@@ -39,6 +39,10 @@ func (kw *Noop) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.alg
 }
 
+func (kw *Noop) SetKeyID(v string) {
+	kw.keyID = v
+}
+
 func (kw *Noop) KeyID() string {
 	return kw.keyID
 }
@@ -59,6 +63,10 @@ func NewAES(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AES, error) {
 // Algorithm returns the key encryption algorithm being used
 func (kw *AES) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.alg
+}
+
+func (kw *AES) SetKeyID(v string) {
+	kw.keyID = v
 }
 
 // KeyID returns the key ID associated with this encrypter
@@ -102,6 +110,10 @@ func NewAESGCMEncrypt(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*AESGCM
 
 func (kw AESGCMEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
+}
+
+func (kw *AESGCMEncrypt) SetKeyID(v string) {
+	kw.keyID = v
 }
 
 func (kw AESGCMEncrypt) KeyID() string {
@@ -162,6 +174,10 @@ func (kw PBES2Encrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
 }
 
+func (kw *PBES2Encrypt) SetKeyID(v string) {
+	kw.keyID = v
+}
+
 func (kw PBES2Encrypt) KeyID() string {
 	return kw.keyID
 }
@@ -218,6 +234,10 @@ func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionA
 // Algorithm returns the key encryption algorithm being used
 func (kw ECDHESEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.algorithm
+}
+
+func (kw *ECDHESEncrypt) SetKeyID(v string) {
+	kw.keyID = v
 }
 
 // KeyID returns the key ID associated with this encrypter
@@ -400,6 +420,10 @@ func (e RSAPKCSEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return e.alg
 }
 
+func (e *RSAPKCSEncrypt) SetKeyID(v string) {
+	e.keyID = v
+}
+
 // KeyID returns the key ID associated with this encrypter
 func (e RSAPKCSEncrypt) KeyID() string {
 	return e.keyID
@@ -408,6 +432,10 @@ func (e RSAPKCSEncrypt) KeyID() string {
 // Algorithm returns the key encryption algorithm being used
 func (e RSAOAEPEncrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return e.alg
+}
+
+func (e *RSAOAEPEncrypt) SetKeyID(v string) {
+	e.keyID = v
 }
 
 // KeyID returns the key ID associated with this encrypter

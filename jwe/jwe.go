@@ -47,7 +47,10 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		return nil, errors.Wrap(err, `failed to create AES encrypter`)
 	}
 
+	var keyID string
 	if jwkKey, ok := key.(jwk.Key); ok {
+		keyID = jwkKey.KeyID()
+
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
 			return nil, errors.Wrapf(err, `failed to retrieve raw key out of %T`, key)
@@ -137,6 +140,10 @@ func Encrypt(payload []byte, keyalg jwa.KeyEncryptionAlgorithm, key interface{},
 		enc, _ = keyenc.NewNoop(keyalg, sharedkey)
 	default:
 		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
+	}
+
+	if keyID != "" {
+		enc.SetKeyID(keyID)
 	}
 
 	keysize := contentcrypt.KeySize()
