@@ -781,8 +781,11 @@ func TestGH554(t *testing.T) {
 		buf, _ := json.MarshalIndent(msg, "", "  ")
 		t.Logf("%s", buf)
 	}
+
+	recipients := msg.Recipients()
+
 	// The epk must have the same key ID as the original
-	kid := msg.UnprotectedHeaders().KeyID()
+	kid := recipients[0].Headers().KeyID()
 	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
 		return
 	}
