@@ -76,26 +76,38 @@ func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
-	signer, ok := key.(crypto.Signer)
-	if !ok {
+	var signer crypto.Signer
+	switch key := key.(type) {
+	case ExternalSigner:
+		// an external signer is a signer who knows what to do on its own.
+		// it simply returns the singature by being passed the payload
+		return key.Sign(payload)
+	case crypto.Signer:
+		// if given an *rsa.PrivateKey, we would be falling here
+		signer = key
+	default:
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
 			return nil, errors.Wrapf(err, `failed to retrieve rsa.PrivateKey out of %T`, key)
 		}
+		// rsa.PrivateKey is an instance of crypto.Signer. therefore it knows
+		// how to Sign()
 		signer = &privkey
+	}
+
+	var opts crypto.SignerOpts = rs.hash
+	if rs.pss {
+		opts = &rsa.PSSOptions{
+			Hash:       rs.hash,
+			SaltLength: rsa.PSSSaltLengthEqualsHash,
+		}
 	}
 
 	h := rs.hash.New()
 	if _, err := h.Write(payload); err != nil {
 		return nil, errors.Wrap(err, "failed to write payload to hash")
 	}
-	if rs.pss {
-		return signer.Sign(rand.Reader, h.Sum(nil), &rsa.PSSOptions{
-			Hash:       rs.hash,
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
-		})
-	}
-	return signer.Sign(rand.Reader, h.Sum(nil), rs.hash)
+	return signer.Sign(rand.Reader, h.Sum(nil), opts)
 }
 
 type rsaVerifier struct {
@@ -111,6 +123,10 @@ func newRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
 func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error {
 	if key == nil {
 		return errors.New(`missing public key while verifying payload`)
+	}
+
+	if v, ok := key.(ExternalVerifier); ok {
+		return v.Verify(payload, signature)
 	}
 
 	var pubkey rsa.PublicKey

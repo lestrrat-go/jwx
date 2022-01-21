@@ -140,13 +140,13 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 	}
 	muSigner.Unlock()
 
-	// XXX This is cheating. Ideally `detached` should be passed as a parameter
-	// but since this is an exported method, we can't change this without bumping
-	// major versions.... But we don't want to do that now, so we will cheat by
-	// making it part of the object
 	sig := &Signature{
 		protected: hdrs,
-		detached:  detached,
+		// XXX This is cheating. Ideally `detached` should be passed as a parameter
+		// but since this is an exported method, we can't change this without bumping
+		// major versions.... But we don't want to do that now, so we will cheat by
+		// making it part of the object
+		detached: detached,
 	}
 	_, signature, err := sig.Sign(payload, signer, key)
 	if err != nil {

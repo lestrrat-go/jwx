@@ -104,3 +104,15 @@ type Verifier interface {
 type HMACVerifier struct {
 	signer Signer
 }
+
+// ExternalSigner is an interface used by external components
+// that knows how to perform the signing process by itself.
+type ExternalSigner interface {
+	Sign([]byte) ([]byte, error)
+}
+
+// ExternalSigner is an interface used by external components
+// that knows how to perform the verification process by itself.
+type ExternalVerifier interface {
+	Verify([]byte, []byte) error
+}
