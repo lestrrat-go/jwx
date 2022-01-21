@@ -140,8 +140,20 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 	}
 
 	var pubkey ecdsa.PublicKey
-	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-		return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
+	if cs, ok := key.(crypto.Signer); ok {
+		cpub := cs.Public()
+		switch cpub := cpub.(type) {
+		case ecdsa.PublicKey:
+			pubkey = cpub
+		case *ecdsa.PublicKey:
+			pubkey = *cpub
+		default:
+			return errors.Errorf(`failed to retrieve ecdsa.PublicKey out of crypto.Signer %T`, key)
+		}
+	} else {
+		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+			return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
+		}
 	}
 
 	r := pool.GetBigInt()
