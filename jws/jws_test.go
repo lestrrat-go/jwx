@@ -9,6 +9,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha512"
+	"encoding/asn1"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -173,23 +174,10 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypt
 		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
 	}
 
-	curveBits := es.raw.Curve.Params().BitSize
-	keyBytes := curveBits / 8
-	// Curve bits do not need to be a multiple of 8.
-	if curveBits%8 > 0 {
-		keyBytes++
-	}
-
-	rBytes := r.Bytes()
-	rBytesPadded := make([]byte, keyBytes)
-	copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
-
-	sBytes := s.Bytes()
-	sBytesPadded := make([]byte, keyBytes)
-	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
-
-	out := append(rBytesPadded, sBytesPadded...)
-	return out, nil
+	return asn1.Marshal(struct {
+		R *big.Int
+		S *big.Int
+	}{R: r, S: s})
 }
 
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
