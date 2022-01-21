@@ -80,7 +80,7 @@ func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	switch key := key.(type) {
 	case ExternalSigner:
 		// an external signer is a signer who knows what to do on its own.
-		// it simply returns the singature by being passed the payload
+		// it simply returns the signature by being passed the payload
 		return key.Sign(payload)
 	case crypto.Signer:
 		// if given an *rsa.PrivateKey, we would be falling here
