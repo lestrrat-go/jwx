@@ -1,19 +1,23 @@
 Changes
 =======
 
-v1.2.18
+v1.2.18 23 Jan 2022
 [Bug fixes]
-  * Use `crypto.Signer`s were implemented for signing, but verification was
+  * [jwe] When presented with jwk.Key with a key ID, the jwe encryption
+    code path did not assign this key ID to the resulting data structure.
+    This has been fixed, and now the key ID is properly applied to the
+    `kid` field.
+  * [jws] Use for `crypto.Signer`s were implemented for signing, but verification was
     never properly implemented. This has been fixed.
 
 [Miscellaneous]
-  * Because of fixes to code path that deals with `crypto.Signer`s, we are
+  * [jws] Because of fixes to code path that deals with `crypto.Signer`s, we are
     now able to fully integrate with Cloud services, such as Google's Cloud KMS
     and AWS KMS, that provide key management and signing payloads
 
     An implementation for these are available at https://github.com/jwx-go/crypto-signer.
 
-    Encryption has not been implemented.
+    Suppot `crypto.Signer` in JWE encryption has not been implemented.
 
 v1.2.17 12 Jan 2022
 [Miscellaneous]
