@@ -1,6 +1,20 @@
 Changes
 =======
 
+v1.2.18
+[Bug fixes]
+  * Use `crypto.Signer`s were implemented for signing, but verification was
+    never properly implemented. This has been fixed.
+
+[Miscellaneous]
+  * Because of fixes to code path that deals with `crypto.Signer`s, we are
+    now able to fully integrate with Cloud services, such as Google's Cloud KMS
+    and AWS KMS, that provide key management and signing payloads
+
+    An implementation for these are available at https://github.com/jwx-go/crypto-signer.
+
+    Encryption has not been implemented.
+
 v1.2.17 12 Jan 2022
 [Miscellaneous]
   * Re-release v1.2.16 as v1.2.17 because of an error in the release process.
