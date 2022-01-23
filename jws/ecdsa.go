@@ -4,7 +4,9 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"io"
+	"encoding/asn1"
+	"fmt"
+	"math/big"
 
 	"github.com/lestrrat-go/jwx/internal/keyconv"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -47,61 +49,76 @@ type ecdsaSigner struct {
 	hash crypto.Hash
 }
 
-func (s ecdsaSigner) Algorithm() jwa.SignatureAlgorithm {
-	return s.alg
+func (es ecdsaSigner) Algorithm() jwa.SignatureAlgorithm {
+	return es.alg
 }
 
-type ecdsaCryptoSigner struct {
-	key  *ecdsa.PrivateKey
-	hash crypto.Hash
-}
-
-func (s *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
 		return nil, errors.New(`missing private key while signing payload`)
 	}
 
+	h := es.hash.New()
+	if _, err := h.Write(payload); err != nil {
+		return nil, errors.Wrap(err, "failed to write payload using ecdsa")
+	}
+
 	signer, ok := key.(crypto.Signer)
 	if ok {
-		// We support crypto.Signer, but we DON'T support
-		// ecdsa.PrivateKey as a crypto.Signer, because it encodes
-		// the result in ASN1 format.
-		if pk, ok := key.(*ecdsa.PrivateKey); ok {
-			signer = newECDSACryptoSigner(pk, s.hash)
+		switch key.(type) {
+		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
+			// if it's a ecdsa.PrivateKey, it's more efficient to
+			// go through the non-crypto.Signer route. Set ok to false
+			ok = false
 		}
+	}
+
+	var r, s *big.Int
+	var curveBits int
+	if ok {
+		signed, err := signer.Sign(rand.Reader, h.Sum(nil), es.hash)
+		if err != nil {
+			return nil, err
+		}
+
+		var p struct {
+			R *big.Int
+			S *big.Int
+		}
+		if _, err := asn1.Unmarshal(signed, &p); err != nil {
+			return nil, errors.Wrap(err, `failed to unmarshal ASN1 encoded signature`)
+		}
+
+		// Okay, this is silly, but hear me out. When we use the
+		// crypto.Signer interface, the PrivateKey is hidden.
+		// But we need some information about the key (it's bit size).
+		//
+		// So while silly, we're going to have to make another call
+		// here and fetch the Public key.
+		// This probably means that this should be cached some where.
+		cpub := signer.Public()
+		pubkey, ok := cpub.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf(`expected *ecdsa.PublicKey, got %T`, pubkey)
+		}
+		curveBits = pubkey.Curve.Params().BitSize
+
+		r = p.R
+		s = p.S
 	} else {
 		var privkey ecdsa.PrivateKey
 		if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
 			return nil, errors.Wrapf(err, `failed to retrieve ecdsa.PrivateKey out of %T`, key)
 		}
-		signer = newECDSACryptoSigner(&privkey, s.hash)
+		curveBits = privkey.Curve.Params().BitSize
+		rtmp, stmp, err := ecdsa.Sign(rand.Reader, &privkey, h.Sum(nil))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
+		}
+		r = rtmp
+		s = stmp
 	}
 
-	h := s.hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return nil, errors.Wrap(err, "failed to write payload using ecdsa")
-	}
-	return signer.Sign(rand.Reader, h.Sum(nil), s.hash)
-}
-
-func newECDSACryptoSigner(key *ecdsa.PrivateKey, hash crypto.Hash) crypto.Signer {
-	return &ecdsaCryptoSigner{
-		key:  key,
-		hash: hash,
-	}
-}
-
-func (cs *ecdsaCryptoSigner) Public() crypto.PublicKey {
-	return cs.key.PublicKey
-}
-
-func (cs *ecdsaCryptoSigner) Sign(seed io.Reader, digest []byte, _ crypto.SignerOpts) ([]byte, error) {
-	r, s, err := ecdsa.Sign(seed, cs.key, digest)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
-	}
-
-	curveBits := cs.key.Curve.Params().BitSize
 	keyBytes := curveBits / 8
 	// Curve bits do not need to be a multiple of 8.
 	if curveBits%8 > 0 {
@@ -140,8 +157,20 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 	}
 
 	var pubkey ecdsa.PublicKey
-	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-		return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
+	if cs, ok := key.(crypto.Signer); ok {
+		cpub := cs.Public()
+		switch cpub := cpub.(type) {
+		case ecdsa.PublicKey:
+			pubkey = cpub
+		case *ecdsa.PublicKey:
+			pubkey = *cpub
+		default:
+			return errors.Errorf(`failed to retrieve ecdsa.PublicKey out of crypto.Signer %T`, key)
+		}
+	} else {
+		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+			return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
+		}
 	}
 
 	r := pool.GetBigInt()

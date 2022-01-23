@@ -114,8 +114,20 @@ func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error 
 	}
 
 	var pubkey rsa.PublicKey
-	if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-		return errors.Wrapf(err, `failed to retrieve rsa.PublicKey out of %T`, key)
+	if cs, ok := key.(crypto.Signer); ok {
+		cpub := cs.Public()
+		switch cpub := cpub.(type) {
+		case rsa.PublicKey:
+			pubkey = cpub
+		case *rsa.PublicKey:
+			pubkey = *cpub
+		default:
+			return errors.Errorf(`failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
+		}
+	} else {
+		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
+			return errors.Wrapf(err, `failed to retrieve rsa.PublicKey out of %T`, key)
+		}
 	}
 
 	h := rv.hash.New()

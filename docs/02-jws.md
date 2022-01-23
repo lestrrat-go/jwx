@@ -10,6 +10,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
   * [Generating a JWS message with detached payload](#generating-a-jws-with-detached-payload)
+  * [Using cloud KMS services](#using-cloud-kms-services)
 * [Verifying](#verifying)
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
@@ -91,6 +92,13 @@ Use the `jws.WithDetachedPayload()` option to sign a detached payload:
 ```go
 signed, _ := jws.Sign(nil, alg, key, jws.WithDetachedPayload(payload))
 ```
+
+## Using cloud KMS services
+
+If you want to use cloud KMSes such as AWS KMS to sign and verify payloads, look for an object that implements
+`crypto.Signer`. There are some [implementations written for this module](https://github.com/jwx-go/crypto-signer).
+
+Event if you cannot find an implementation that you are looking for in the above repository, any other implementation that implements `crypto.Signer` should work.
 
 # Verifying
 
