@@ -30,6 +30,9 @@ jobs:
       - name: Install benchstat
         run: |
           go install golang.org/x/perf/cmd/benchstat@latest
-      - name: Benchmark
+      - name: Benchmark (comparison)
+        run: |
+          cd bench && make stdlib && make goccy 
+      - name: Benchmark (performance)
         run: |
           cd bench && make stdlib && make goccy && make benchstat
