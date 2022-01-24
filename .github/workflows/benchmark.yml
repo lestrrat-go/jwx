@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.16.x', '1.15.x' ]
+        go: [ '1.17.x', '1.16.x' ]
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
@@ -28,11 +28,6 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Install benchstat
-        if: ${{ startsWith(matrix.go, '1.15' }}
-        run: |
-          go install golang.org/x/perf/cmd/benchstat
-      - name: Install benchstat
-        if: ${{ startsWith(matrix.go, '1.16' }}
         run: |
           go install golang.org/x/perf/cmd/benchstat@latest
       - name: Benchmark
