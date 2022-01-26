@@ -122,7 +122,7 @@ that require a list of string, you should use `[]string` as the value
 _, _ = jwt.NewBuilder().
   Audience("foo").
   Audience("bar").
-  Build
+  Build()
 
 // CORRECT.
 _, _ = jwt.NewBuilder().
