@@ -69,7 +69,7 @@ To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](
 token, err := jwt.ParseRequest(req)
 
 // Looks under "X-JWT-Token" header
-token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("X-JWT-Token")
+token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("X-JWT-Token"))
 
 // Looks under "Authorization" and "X-JWT-Token" headers
 token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("X-JWT-Token"))
@@ -122,7 +122,7 @@ that require a list of string, you should use `[]string` as the value
 _, _ = jwt.NewBuilder().
   Audience("foo").
   Audience("bar").
-  Build
+  Build()
 
 // CORRECT.
 _, _ = jwt.NewBuilder().
