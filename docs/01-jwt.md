@@ -19,7 +19,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
-  * [Serialize using JWS](#serialize-using-jws
+  * [Serialize using JWS](#serialize-using-jws)
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
 * [Working with JWT](#working-with-jwt)
