@@ -267,6 +267,8 @@ token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`)
 serialized, err := jws.Sign(token, algorithm, key)
 ```
 
+There are some options available in the `jwt` package to modify the JWS behavior such as `jwt.WithJwsHeaders()` to specify extra protected headers to the JWS message, `jwt.WithVerifyAuto()` to invoke verification via `jku`, etc. Please read their documentation to understand how they work.
+
 If you need even further customization, consider using the `jws` package directly.
 
 ## Serialize using JWE and JWS
