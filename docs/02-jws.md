@@ -52,12 +52,13 @@ To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/githu
 message, _ := jws.ReadFile(`message.jws`)
 ```
 
-## Parse a JWS with detached payload
+## Verify a JWS with detached payload
 
 To parse a JWS with detached payload, use the `jws.WithDetachedPayload()` option:
 
 ```go
-signed, _ := jws.
+signed, _ := jws.Verify(signed, alg, key, jws.WithDetachedPayload(payload))
+```
 
 # Signing
 
