@@ -94,6 +94,17 @@ Use the `jws.WithDetachedPayload()` option to sign a detached payload:
 signed, _ := jws.Sign(nil, alg, key, jws.WithDetachedPayload(payload))
 ```
 
+## Including Arbitrary Headers to Compact Serialization
+
+By default, only some header fields are included in the result from `jws.Sign()`.
+If you want to include more headers fields in the resulting JWS, you will have to provide them via the `jws.WithHeaders()` option
+
+```go
+hdrs := jws.NewHeaders()
+hdrs.Set(`arbitrary-key`, `value`)
+signed, _ := jws.Sign(payload, alg, key, jws.WithHEaders(hdrs))
+```
+
 ## Using cloud KMS services
 
 If you want to use cloud KMSes such as AWS KMS to sign and verify payloads, look for an object that implements
