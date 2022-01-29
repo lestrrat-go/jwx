@@ -121,6 +121,11 @@ If you are editing auto-generated files (those files with the `_gen.go` suffix, 
 
 Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
+# Related Modules
+
+* [github.com/jwx-go/crypto-signer/gcp](https://github.com/jwx-go/crypto-signer/tree/main/gcp) - GCP KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
+* [github.com/jwx-go/crypto-signer/aws](https://github.com/jwx-go/crypto-signer/tree/main/aws) - AWS KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
+
 # Credits
 
 * Initial work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
