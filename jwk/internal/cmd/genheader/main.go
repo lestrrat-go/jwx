@@ -739,12 +739,14 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.L("PrivateParams() map[string]interface{}")
 	o.LL("// Clone creates a new instance of the same type")
 	o.L("Clone() (Key, error)")
-	o.LL("KeyType() jwa.KeyType")
 	o.LL("// PublicKey creates the corresponding PublicKey type for this object.")
 	o.L("// All fields are copied onto the new public key, except for those that are not allowed.")
 	o.L("//\n// If the key is already a public key, it returns a new copy minus the disallowed fields as above.")
 	o.L("PublicKey() (Key, error)")
+	o.LL("// KeyType returns the `kid` of a JWK")
+	o.L("KeyType() jwa.KeyType")
 	for _, f := range fields {
+		o.L("// %s returns `%s` of a JWK", f.GetterMethod(true), f.JSON())
 		o.L("%s() ", f.GetterMethod(true))
 		if v := fieldGetterReturnValue(f); v != "" {
 			o.R("%s", v)
