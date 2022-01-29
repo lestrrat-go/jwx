@@ -8,7 +8,7 @@ We realize this is harsh, but it will be done to protect the mental health of th
 
 * This is a free opensource project.
   * We are very glad that you find this project useful, and we intend to make software that helps you.
-  * But we are not obligated to work for you, make changes for you, or otherwise heed to your needs.
+  * But we are not obligated to work for you, do your homework or research for you, make changes for you, or otherwise heed to your needs.
 
 ## Rules
 
