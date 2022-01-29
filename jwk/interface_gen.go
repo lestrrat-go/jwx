@@ -82,20 +82,29 @@ type Key interface {
 	// Clone creates a new instance of the same type
 	Clone() (Key, error)
 
-	KeyType() jwa.KeyType
-
 	// PublicKey creates the corresponding PublicKey type for this object.
 	// All fields are copied onto the new public key, except for those that are not allowed.
 	//
 	// If the key is already a public key, it returns a new copy minus the disallowed fields as above.
 	PublicKey() (Key, error)
+
+	// KeyType returns the `kid` of a JWK
+	KeyType() jwa.KeyType
+	// KeyUsage returns `use` of a JWK
 	KeyUsage() string
+	// KeyOps returns `key_ops` of a JWK
 	KeyOps() KeyOperationList
+	// Algorithm returns `alg` of a JWK
 	Algorithm() string
+	// KeyID returns `kid` of a JWK
 	KeyID() string
+	// X509URL returns `x58` of a JWK
 	X509URL() string
+	// X509CertChain returns `x5c` of a JWK
 	X509CertChain() []*x509.Certificate
+	// X509CertThumbprint returns `x5t` of a JWK
 	X509CertThumbprint() string
+	// X509CertThumbprintS256 returns `x5t#S256` of a JWK
 	X509CertThumbprintS256() string
 
 	makePairs() []*HeaderPair
