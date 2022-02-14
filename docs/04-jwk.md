@@ -9,7 +9,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Parsing](#parsing)
   * [Parse a set](#parse-a-set)
   * [Parse a key](#parse-a-key)
-  * [Parse a key or set in PEM format](#parse-a-key-or-set-in-pem-format)
+  * [Parse a key or set in PEM format](#parse-a-key-or-a-set-in-pem-format)
   * [Parse a key from a file](#parse-a-key-from-a-file)
   * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
 * [Construction](#construction)
