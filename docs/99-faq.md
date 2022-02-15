@@ -46,7 +46,7 @@ See ["Using jwk.New()"](./04-jwk.md#using-jwknew) for more details.
 
 When you read from a PEM encoded file (e.g. `key.pem`), you cannot just parse it using `jwk.Parse()` as by default we do not expect the data to be PEM encoded. Use `jwk.WithPEM(true)` for this.
 
-See ["Parse a key or set in PEM format"](./04-jwk.md#parse-a-key-or-set-in-pem-format) for more details.
+See ["Parse a key or set in PEM format"](./04-jwk.md#parse-a-key-or-a-set-in-pem-format) for more details.
 
 ## "Why is my code to call `jwt.Sign()`/`jws.Verify()` failing?"
 
