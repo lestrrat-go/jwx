@@ -104,17 +104,17 @@ func ExampleJWK_New() {
 	{
 		raw, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
-			fmt.Printf("failed to generate new RSA privatre key: %s\n", err)
+			fmt.Printf("failed to generate new RSA private key: %s\n", err)
 			return
 		}
 
 		key, err := jwk.New(raw)
 		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
+			fmt.Printf("failed to create RSA key: %s\n", err)
 			return
 		}
 		if _, ok := key.(jwk.RSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+			fmt.Printf("expected jwk.RSAPrivateKey, got %T\n", key)
 			return
 		}
 		// PublicKey is omitted for brevity
@@ -125,17 +125,17 @@ func ExampleJWK_New() {
 	{
 		raw, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 		if err != nil {
-			fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
+			fmt.Printf("failed to generate new ECDSA private key: %s\n", err)
 			return
 		}
 
 		key, err := jwk.New(raw)
 		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
+			fmt.Printf("failed to create ECDSA key: %s\n", err)
 			return
 		}
 		if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+			fmt.Printf("expected jwk.ECDSAPrivateKey, got %T\n", key)
 			return
 		}
 		// PublicKey is omitted for brevity
@@ -151,17 +151,17 @@ func ExampleJWK_MarshalJSON() {
 	rdr := bytes.NewReader([]byte("01234567890123456789012345678901234567890123456789ABCDEF"))
 	raw, err := ecdsa.GenerateKey(elliptic.P384(), rdr)
 	if err != nil {
-		fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
+		fmt.Printf("failed to generate new ECDSA private key: %s\n", err)
 		return
 	}
 
 	key, err := jwk.New(raw)
 	if err != nil {
-		fmt.Printf("failed to create symmetric key: %s\n", err)
+		fmt.Printf("failed to create ECDSA key: %s\n", err)
 		return
 	}
 	if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-		fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+		fmt.Printf("expected jwk.ECDSAPrivateKey, got %T\n", key)
 		return
 	}
 

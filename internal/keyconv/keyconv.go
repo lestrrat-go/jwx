@@ -18,7 +18,7 @@ func RSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw rsa.PrivateKey
 		if err := jwkKey.Raw(&raw); err != nil {
-			return errors.Wrapf(err, `failed to produce rsa.PrvateKey from %T`, src)
+			return errors.Wrapf(err, `failed to produce rsa.PrivateKey from %T`, src)
 		}
 		src = &raw
 	}
@@ -67,7 +67,7 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ecdsa.PrivateKey
 		if err := jwkKey.Raw(&raw); err != nil {
-			return errors.Wrapf(err, `failed to produce ecdsa.PrvateKey from %T`, src)
+			return errors.Wrapf(err, `failed to produce ecdsa.PrivateKey from %T`, src)
 		}
 		src = &raw
 	}
