@@ -576,9 +576,9 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	if preprocess == nil {
 		input = res.Body
 	} else {
-		in, err := preprocess.Process(res.Body)
-		if err != nil {
-			err = errors.Wrapf(err, `failed to preprocess http response`)
+		in, perr := preprocess.Process(res.Body)
+		if perr != nil {
+			err = errors.Wrapf(perr, `failed to preprocess http response`)
 			goto doError
 		}
 		input = in
