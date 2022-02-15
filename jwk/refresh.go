@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"reflect"
 	"sync"
@@ -11,6 +12,16 @@ import (
 	"github.com/lestrrat-go/httpcc"
 	"github.com/pkg/errors"
 )
+
+type Processor interface {
+	Process(io.Reader) (io.Reader, error)
+}
+
+type ProcessFunc func(io.Reader) (io.Reader, error)
+
+func (f ProcessFunc) Process(in io.Reader) (io.Reader, error) {
+	return f(in)
+}
 
 // AutoRefresh is a container that keeps track of jwk.Set object by their source URLs.
 // The jwk.Set objects are refreshed automatically behind the scenes.
@@ -88,6 +99,9 @@ type target struct {
 	nextRefresh time.Time
 
 	wl Whitelist
+
+	// Object to process the incoming HTTP response body before parsing
+	preprocess Processor
 }
 
 type resetTimerReq struct {
@@ -168,6 +182,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
 	var wl Whitelist
+	var preprocess Processor
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
 	for _, option := range options {
@@ -184,6 +199,8 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			httpcl = option.Value().(HTTPClient)
 		case identFetchWhitelist{}:
 			wl = option.Value().(Whitelist)
+		case identPreprocess{}:
+			preprocess = option.Value().(Processor)
 		}
 	}
 
@@ -220,6 +237,11 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			t.wl = wl
 			doReconfigure = true
 		}
+
+		if t.preprocess != preprocess {
+			t.preprocess = preprocess
+			doReconfigure = true
+		}
 	} else {
 		t = &target{
 			backoff:            bo,
@@ -230,8 +252,9 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			// This is a placeholder timer so we can call Reset() on it later
 			// Make it sufficiently in the future so that we don't have bogus
 			// events firing
-			timer: time.NewTimer(24 * time.Hour),
-			wl:    wl,
+			timer:      time.NewTimer(24 * time.Hour),
+			wl:         wl,
+			preprocess: preprocess,
 		}
 		if hasRefreshInterval {
 			t.refreshInterval = &refreshInterval
@@ -486,6 +509,32 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 	}
 }
 
+func (af *AutoRefresh) doParse(ctx context.Context, res *http.Response, t *target, url string, input io.Reader) error {
+	keyset, err := ParseReader(input)
+	if err != nil {
+		return err
+	}
+	// Got a new key set. replace the keyset in the target
+	af.muCache.Lock()
+	af.cache[url] = keyset
+	af.muCache.Unlock()
+	nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+	rtr := &resetTimerReq{
+		t: t,
+		d: nextInterval,
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case af.resetTimerCh <- rtr:
+	}
+
+	now := time.Now()
+	t.lastRefresh = now.Local()
+	t.nextRefresh = now.Add(nextInterval).Local()
+	return nil
+}
+
 func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableBackoff bool) error {
 	af.muRegistry.RLock()
 	t, ok := af.registry[url]
@@ -506,44 +555,42 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		options = append(options, WithFetchWhitelist(t.wl))
 	}
 
-	res, err := fetch(ctx, url, options...)
-	if err == nil {
-		if res.StatusCode != http.StatusOK {
-			// now, can there be a remote resource that responds with a status code
-			// other than 200 and still be valid...? naaaaaaahhhhhh....
-			err = errors.Errorf(`bad response status code (%d)`, res.StatusCode)
-		} else {
-			defer res.Body.Close()
-			keyset, parseErr := ParseReader(res.Body)
-			if parseErr == nil {
-				// Got a new key set. replace the keyset in the target
-				af.muCache.Lock()
-				af.cache[url] = keyset
-				af.muCache.Unlock()
-				nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-				rtr := &resetTimerReq{
-					t: t,
-					d: nextInterval,
-				}
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case af.resetTimerCh <- rtr:
-				}
-
-				now := time.Now()
-				t.lastRefresh = now.Local()
-				t.nextRefresh = now.Add(nextInterval).Local()
-				return nil
-			}
-			err = parseErr
-		}
+	var preprocess Processor
+	if pp := t.preprocess; pp != nil {
+		preprocess = pp
 	}
+
+	var input io.Reader
+
+	res, err := fetch(ctx, url, options...)
+	if err != nil {
+		goto doError
+	}
+	if res.StatusCode != http.StatusOK {
+		// now, can there be a remote resource that responds with a status code
+		// other than 200 and still be valid...? naaaaaaahhhhhh....
+		err = errors.Errorf(`bad response status code (%d)`, res.StatusCode)
+		goto doError
+	}
+	defer res.Body.Close()
+	if preprocess == nil {
+		input = res.Body
+	} else {
+		in, err := preprocess.Process(res.Body)
+		if err != nil {
+			err = errors.Wrapf(err, `failed to preprocess http response`)
+			goto doError
+		}
+		input = in
+	}
+
+	err = af.doParse(ctx, res, t, url, input)
 
 	// At this point if err != nil, we know that there was something wrong
 	// in either the fetching or the parsing. Send this error to be processed,
 	// but take the extra mileage to not block regular processing by
 	// discarding the error if we fail to send it through the channel
+doError:
 	if err != nil {
 		select {
 		case af.errSink <- AutoRefreshError{Error: err, URL: url}:

@@ -20,6 +20,7 @@ type identPEM struct{}
 type identTypedField struct{}
 type identLocalRegistry struct{}
 type identFetchWhitelist struct{}
+type identPreprocess struct{}
 
 // AutoRefreshOption is a type of Option that can be passed to the
 // AutoRefresh object.
@@ -166,4 +167,8 @@ func withLocalRegistry(r *json.Registry) ParseOption {
 // to both `jwk.Fetch()`, `jwk.NewAutoRefresh()`, and `(*jwk.AutoRefresh).Configure()`
 func WithFetchWhitelist(w Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, w)}
+}
+
+func WithPreprocessor(p Processor) FetchOption {
+	return &fetchOption{option.New(identPreprocess{}, p)}
 }
