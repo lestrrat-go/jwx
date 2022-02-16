@@ -1959,16 +1959,28 @@ func TestGH567(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	for _, ignoreParseError := range []bool{true, false} {
+		ignoreParseError := ignoreParseError
+		t.Run(fmt.Sprintf(`Parse with ignoreParseError=%t`, ignoreParseError), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-	ar := jwk.NewAutoRefresh(ctx)
-	ar.Configure(srv.URL, jwk.WithIgnoreParseError(true))
+			ar := jwk.NewAutoRefresh(ctx)
+			ar.Configure(srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
 
-	set, err := ar.Fetch(ctx, srv.URL)
-	if !assert.NoError(t, err, `ar.Fetch should succeed`) {
-		return
+			set, err := ar.Fetch(ctx, srv.URL)
+			if ignoreParseError {
+				if !assert.NoError(t, err, `ar.Fetch should succeed`) {
+					return
+				}
+				if !assert.Equal(t, set.Len(), 2, `JWKS should contain two keys`) {
+					return
+				}
+			} else {
+				if !assert.Error(t, err, `ar.Fetch should fail`) {
+					return
+				}
+			}
+		})
 	}
-
-	t.Logf("%s", set)
 }
