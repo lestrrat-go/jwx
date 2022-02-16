@@ -138,8 +138,14 @@ type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-type DecodeCtx = json.DecodeCtx
-type KeyWithDecodeCtx = json.DecodeCtxContainer
+type DecodeCtx interface {
+	json.DecodeCtx
+	IgnoreParseError() bool
+}
+type KeyWithDecodeCtx interface {
+	SetDecodeCtx(DecodeCtx)
+	DecodeCtx() DecodeCtx
+}
 
 type AutoRefreshError struct {
 	Error error

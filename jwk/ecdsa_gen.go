@@ -49,7 +49,7 @@ type ecdsaPublicKey struct {
 	y                      []byte
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewECDSAPublicKey() ECDSAPublicKey {
@@ -391,13 +391,13 @@ func (k *ecdsaPublicKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *ecdsaPublicKey) DecodeCtx() DecodeCtx {
+func (k *ecdsaPublicKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *ecdsaPublicKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *ecdsaPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc
@@ -611,7 +611,7 @@ type ecdsaPrivateKey struct {
 	y                      []byte
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewECDSAPrivateKey() ECDSAPrivateKey {
@@ -973,13 +973,13 @@ func (k *ecdsaPrivateKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *ecdsaPrivateKey) DecodeCtx() DecodeCtx {
+func (k *ecdsaPrivateKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *ecdsaPrivateKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *ecdsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc

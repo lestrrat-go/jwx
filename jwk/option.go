@@ -20,6 +20,7 @@ type identPEM struct{}
 type identTypedField struct{}
 type identLocalRegistry struct{}
 type identFetchWhitelist struct{}
+type identIgnoreParseError struct{}
 
 // AutoRefreshOption is a type of Option that can be passed to the
 // AutoRefresh object.
@@ -52,6 +53,7 @@ func (*fetchOption) fetchOption()       {}
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
 type ParseOption interface {
 	ReadFileOption
+	AutoRefreshOption
 	parseOption()
 }
 
@@ -59,8 +61,9 @@ type parseOption struct {
 	Option
 }
 
-func (*parseOption) parseOption()    {}
-func (*parseOption) readFileOption() {}
+func (*parseOption) autoRefreshOption() {}
+func (*parseOption) parseOption()       {}
+func (*parseOption) readFileOption()    {}
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
@@ -166,4 +169,13 @@ func withLocalRegistry(r *json.Registry) ParseOption {
 // to both `jwk.Fetch()`, `jwk.NewAutoRefresh()`, and `(*jwk.AutoRefresh).Configure()`
 func WithFetchWhitelist(w Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, w)}
+}
+
+// WithIgnoreParseError is only applicable when used with jwk.Parse()
+// (to parse JWK sets). It specifies that errors found during parsing
+// of individual keys are ignored -- therefore, most likely the
+// only error that jwk.Parse() would return would be when there are
+// JSON syntax errors.
+func WithIgnoreParseError(b bool) ParseOption {
+	return &parseOption{option.New(identIgnoreParseError{}, b)}
 }

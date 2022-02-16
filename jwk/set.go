@@ -189,10 +189,12 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	s.keys = nil
 
 	var options []ParseOption
+	var ignoreParseError bool
 	if dc := s.dc; dc != nil {
 		if localReg := dc.Registry(); localReg != nil {
 			options = append(options, withLocalRegistry(localReg))
 		}
+		ignoreParseError = dc.IgnoreParseError()
 	}
 
 	var sawKeysField bool
@@ -225,7 +227,10 @@ LOOP:
 				for i, keysrc := range list {
 					key, err := ParseKey(keysrc, options...)
 					if err != nil {
-						return errors.Wrapf(err, `failed to code key #%d in "keys"`, i)
+						if !ignoreParseError {
+							return errors.Wrapf(err, `failed to decode key #%d in "keys"`, i)
+						}
+						continue
 					}
 					s.keys = append(s.keys, key)
 				}
