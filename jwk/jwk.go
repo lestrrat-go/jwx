@@ -419,6 +419,8 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 				localReg = json.NewRegistry()
 			}
 			localReg.Register(pair.Name, pair.Value)
+		case identIgnoreParseError{}:
+			return nil, errors.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
 		}
 	}
 

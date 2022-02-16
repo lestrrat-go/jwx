@@ -1983,4 +1983,27 @@ func TestGH567(t *testing.T) {
 			}
 		})
 	}
+
+	// Test the case when WithIgnoreParseError is passed to ParseKey
+	t.Run(`ParseKey + WithIgnoreParseError should be an error`, func(t *testing.T) {
+		key, err := jwxtest.GenerateRsaJwk()
+		if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
+			return
+		}
+
+		buf, err := json.Marshal(key)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
+
+		_, err = jwk.ParseKey(buf)
+		if !assert.NoError(t, err, `jwk.ParseKey (no WithIgnoreParseError) should succeed`) {
+			return
+		}
+
+		_, err = jwk.ParseKey(buf, jwk.WithIgnoreParseError(true))
+		if !assert.Error(t, err, `jwk.ParseKey (no WithIgnoreParseError) should fail`) {
+			return
+		}
+	})
 }
