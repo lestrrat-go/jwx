@@ -179,7 +179,7 @@ func WithFetchWhitelist(w Whitelist) FetchOption {
 //
 // DO NOT USE WITHOUT EXHAUSTING ALL OTHER ROUTES FIRST.
 //
-// The options specifies that errors found during parsing of individual
+// The option specifies that errors found during parsing of individual
 // keys are ignored. For example, if you had keys A, B, C where B is
 // invalid (e.g. it does not contain the required fields), then the
 // resulting JWKS will contain keys A and C only.
