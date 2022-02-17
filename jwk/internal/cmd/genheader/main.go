@@ -284,7 +284,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	}
 	o.L("privateParams map[string]interface{}")
 	o.L("mu *sync.RWMutex")
-	o.L("dc DecodeCtx")
+	o.L("dc json.DecodeCtx")
 	o.L("}")
 
 	o.LL("func New%[1]s() %[1]s {", ifName)
@@ -492,13 +492,13 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return cloneKey(k)")
 	o.L("}")
 
-	o.LL("func (k *%s) DecodeCtx() DecodeCtx {", structName)
+	o.LL("func (k *%s) DecodeCtx() json.DecodeCtx {", structName)
 	o.L("k.mu.RLock()")
 	o.L("defer k.mu.RUnlock()")
 	o.L("return k.dc")
 	o.L("}")
 
-	o.LL("func (k *%s) SetDecodeCtx(dc DecodeCtx) {", structName)
+	o.LL("func (k *%s) SetDecodeCtx(dc json.DecodeCtx) {", structName)
 	o.L("k.mu.Lock()")
 	o.L("defer k.mu.Unlock()")
 	o.L("k.dc = dc")

@@ -1,6 +1,17 @@
 Changes
 =======
 
+v1.2.19 UNRELEASED
+[New Feature]
+  * [jwk] jwk.Parse (and (jwk.AutoRefresh).Configure) can accept a new
+    option `jwk.WithIgnoreParseError(bool)`, which allows users to ignore
+    errors during parsing of each key contained in the JWKS, allowing
+    you to "skip" invalid keys.
+
+    This option should not be used lightly, as it hides the presence of
+    possibly faulty keys. However, this can be an escape hatch if you are
+    faced with a faulty JWKS that you do not control.
+
 v1.2.18 23 Jan 2022
 [Bug fixes]
   * [jwe] When presented with jwk.Key with a key ID, the jwe encryption

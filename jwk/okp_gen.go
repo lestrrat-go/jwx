@@ -45,7 +45,7 @@ type okpPublicKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewOKPPublicKey() OKPPublicKey {
@@ -367,13 +367,13 @@ func (k *okpPublicKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *okpPublicKey) DecodeCtx() DecodeCtx {
+func (k *okpPublicKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *okpPublicKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *okpPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc
@@ -577,7 +577,7 @@ type okpPrivateKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewOKPPrivateKey() OKPPrivateKey {
@@ -919,13 +919,13 @@ func (k *okpPrivateKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *okpPrivateKey) DecodeCtx() DecodeCtx {
+func (k *okpPrivateKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *okpPrivateKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *okpPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc

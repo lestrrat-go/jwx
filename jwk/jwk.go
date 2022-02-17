@@ -380,6 +380,15 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 	}
 }
 
+type setDecodeCtx struct {
+	json.DecodeCtx
+	ignoreParseError bool
+}
+
+func (ctx *setDecodeCtx) IgnoreParseError() bool {
+	return ctx.ignoreParseError
+}
+
 // ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
 // report failure if you attempt to pass a JWK set. Only use this function
 // when you know that the data is a single JWK.
@@ -410,6 +419,8 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 				localReg = json.NewRegistry()
 			}
 			localReg.Register(pair.Name, pair.Value)
+		case identIgnoreParseError{}:
+			return nil, errors.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
 		}
 	}
 
@@ -457,7 +468,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if localReg != nil {
-		dcKey, ok := key.(KeyWithDecodeCtx)
+		dcKey, ok := key.(json.DecodeCtxContainer)
 		if !ok {
 			return nil, errors.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
 		}
@@ -490,11 +501,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
 	var localReg *json.Registry
+	var ignoreParseError bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identIgnoreParseError{}:
+			ignoreParseError = option.Value().(bool)
 		case identTypedField{}:
 			pair := option.Value().(typedFieldPair)
 			if localReg == nil {
@@ -523,12 +537,15 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		return s, nil
 	}
 
-	if localReg != nil {
+	if localReg != nil || ignoreParseError {
 		dcKs, ok := s.(KeyWithDecodeCtx)
 		if !ok {
 			return nil, errors.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
-		dc := json.NewDecodeCtx(localReg)
+		dc := &setDecodeCtx{
+			DecodeCtx:        json.NewDecodeCtx(localReg),
+			ignoreParseError: ignoreParseError,
+		}
 		dcKs.SetDecodeCtx(dc)
 		defer func() { dcKs.SetDecodeCtx(nil) }()
 	}

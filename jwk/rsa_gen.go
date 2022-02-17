@@ -51,7 +51,7 @@ type rsaPublicKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewRSAPublicKey() RSAPublicKey {
@@ -370,13 +370,13 @@ func (k *rsaPublicKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *rsaPublicKey) DecodeCtx() DecodeCtx {
+func (k *rsaPublicKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *rsaPublicKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *rsaPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc
@@ -588,7 +588,7 @@ type rsaPrivateKey struct {
 	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
-	dc                     DecodeCtx
+	dc                     json.DecodeCtx
 }
 
 func NewRSAPrivateKey() RSAPrivateKey {
@@ -1027,13 +1027,13 @@ func (k *rsaPrivateKey) Clone() (Key, error) {
 	return cloneKey(k)
 }
 
-func (k *rsaPrivateKey) DecodeCtx() DecodeCtx {
+func (k *rsaPrivateKey) DecodeCtx() json.DecodeCtx {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.dc
 }
 
-func (k *rsaPrivateKey) SetDecodeCtx(dc DecodeCtx) {
+func (k *rsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	k.dc = dc
