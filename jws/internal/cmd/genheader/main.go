@@ -11,7 +11,6 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
-	"github.com/pkg/errors"
 )
 
 func main() {
@@ -404,7 +403,7 @@ func generateHeaders(obj *codegen.Object) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrap(err, `failed to write to headers_gen.go`)
+		return fmt.Errorf(`failed to write to headers_gen.go: %w`, err)
 	}
 	return nil
 }

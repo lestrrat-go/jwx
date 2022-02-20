@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/lestrrat-go/codegen"
-	"github.com/pkg/errors"
 )
 
 func main() {
@@ -334,10 +333,10 @@ func _main() error {
 			return t.elements[i].name < t.elements[j].name
 		})
 		if err := t.Generate(); err != nil {
-			return errors.Wrap(err, `failed to generate file`)
+			return fmt.Errorf(`failed to generate file: %w`, err)
 		}
 		if err := t.GenerateTest(); err != nil {
-			return errors.Wrap(err, `failed to generate test file`)
+			return fmt.Errorf(`failed to generate test file: %w`, err)
 		}
 	}
 	return nil
@@ -486,7 +485,7 @@ func (t typ) Generate() error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, t.filename)
+		return fmt.Errorf(`failed to write to %s: %w`, t.filename, err)
 	}
 	return nil
 }
@@ -638,7 +637,7 @@ func (t typ) GenerateTest() error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, filename)
+		return fmt.Errorf(`failed to write to %s: %w`, filename, err)
 	}
 	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/lestrrat-go/codegen"
-	"github.com/pkg/errors"
 )
 
 type definition struct {
@@ -102,7 +101,7 @@ func generateFile(def definition) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, def.Filename)
+		return fmt.Errorf(`failed to write to %s: %w`, def.Filename, err)
 	}
 	return nil
 }
