@@ -13,7 +13,6 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -52,13 +51,13 @@ func _main() error {
 
 	for _, object := range def.Objects {
 		if err := generateToken(object); err != nil {
-			return errors.Wrapf(err, `failed to generate token file %s`, objectFilename(object))
+			return fmt.Errorf(`failed to generate token file %s: %w`, objectFilename(object), err)
 		}
 	}
 
 	for _, object := range def.Objects {
 		if err := genBuilder(object); err != nil {
-			return errors.Wrapf(err, `failed to generate builder for package %q`, objectPackage(object))
+			return fmt.Errorf(`failed to generate builder for package %q: %w`, objectPackage(object), err)
 		}
 	}
 
@@ -637,7 +636,7 @@ func generateToken(obj *codegen.Object) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, objectFilename(obj))
+		return fmt.Errorf(`failed to write to %s: %w`, objectFilename(obj), err)
 	}
 	return nil
 }
@@ -703,7 +702,7 @@ func genBuilder(obj *codegen.Object) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, fn)
+		return fmt.Errorf(`failed to write to %s: %w`, fn, err)
 	}
 	return nil
 }

@@ -19,7 +19,6 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
-	"github.com/pkg/errors"
 )
 
 func main() {
@@ -249,7 +248,7 @@ func generateKeyType(kt *KeyType) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrapf(err, `failed to write to %s`, kt.Filename)
+		return fmt.Errorf(`failed to write to %s: %w`, kt.Filename, err)
 	}
 	return nil
 }
@@ -763,7 +762,7 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
 		}
-		return errors.Wrap(err, `failed to write to interface_gen.go`)
+		return fmt.Errorf(`failed to write to interface_gen.go: %w`, err)
 	}
 	return nil
 }
