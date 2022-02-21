@@ -31,15 +31,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 	"sync"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -215,83 +212,12 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 type verifyCtx struct {
 	dst             *Message
 	detachedPayload []byte
-	alg             jwa.SignatureAlgorithm
-	key             interface{}
-	useJKU          bool
-	jwksFetcher     JWKSetFetcher
-	// This is only used to differentiate compact/JSON serialization
-	// because certain features are enabled/disabled in each
-	isJSON bool
-
-	keyProviders []KeyProvider
+	keyProviders    []KeyProvider
 }
 
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 	return false
 })
-
-// VerifyAuto is a special case of Verify(), where verification is done
-// using verifications parameters that can be obtained using the information
-// that is carried within the JWS message itself.
-//
-// Currently it only supports verification via `jku` which will be fetched
-// using the object specified in `jws.JWKSetFetcher`. Note that URLs in `jku` can
-// only have https scheme.
-//
-// Using this function will result in your program accessing remote resources via https,
-// and therefore extreme caution should be taken which urls can be accessed.
-//
-// Without specifying extra arguments, the default `jws.JWKSetFetcher` will be
-// configured with a whitelist that rejects *ALL URLSs*. This is to
-// protect users from unintentionally allowing their projects to
-// make unwanted requests. Therefore you must explicitly provide an
-// instance of `jwk.Whitelist` that does what you want.
-//
-// If you want open access to any URLs in the `jku`, you can do this by
-// using `jwk.InsecureWhitelist` as the whitelist, but this should be avoided in
-// most cases, especially if the payload comes from outside of a controlled
-// environment.
-//
-// It is also advised that you consider using some sort of backoff via `jws.WithFetchBackoff`
-//
-// Alternatively, you can provide your own `jws.JWKSetFetcher`. In this case
-// there is no way for the framework to force you to set a whitelist, so the
-// default behavior is to allow any URLs. You are responsible for providing
-// your own safety measures.
-func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
-	var ctx verifyCtx
-	// enable JKU processing
-	ctx.useJKU = true
-
-	var fetchOptions []jwk.FetchOption
-
-	//nolint:forcetypeassert
-	for _, option := range options {
-		switch option.Ident() {
-		case identMessage{}:
-			ctx.dst = option.Value().(*Message)
-		case identDetachedPayload{}:
-			ctx.detachedPayload = option.Value().([]byte)
-		case identJWKSetFetcher{}:
-			ctx.jwksFetcher = option.Value().(JWKSetFetcher)
-		case identFetchWhitelist{}:
-			fetchOptions = append(fetchOptions, jwk.WithFetchWhitelist(option.Value().(jwk.Whitelist)))
-		case identFetchBackoff{}:
-			fetchOptions = append(fetchOptions, jwk.WithFetchBackoff(option.Value().(backoff.Policy)))
-		case identHTTPClient{}:
-			fetchOptions = append(fetchOptions, jwk.WithHTTPClient(option.Value().(*http.Client)))
-		}
-	}
-
-	// We shove the default Whitelist in the front of the option list.
-	// If the user provided one, it will overwrite our default value
-	if ctx.jwksFetcher == nil {
-		fetchOptions = append([]jwk.FetchOption{jwk.WithFetchWhitelist(allowNoneWhitelist)}, fetchOptions...)
-		ctx.jwksFetcher = NewJWKSetFetcher(fetchOptions...)
-	}
-
-	return ctx.verify(buf)
-}
 
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
 // `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
@@ -397,94 +323,6 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 	return nil, fmt.Errorf(`could not verify message using any of the signatures or keys`)
 }
 
-func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
-	ctx.isJSON = true
-
-	var m Message
-	m.SetDecodeCtx(collectRawCtx{})
-	defer m.clearRaw()
-	if err := json.Unmarshal(signed, &m); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal JSON message`)
-	}
-	m.SetDecodeCtx(nil)
-
-	if len(m.payload) != 0 && ctx.detachedPayload != nil {
-		return nil, errors.New(`can't specify detached payload for JWS with payload`)
-	}
-
-	if ctx.detachedPayload != nil {
-		m.payload = ctx.detachedPayload
-	}
-
-	// Pre-compute the base64 encoded version of payload
-	var payload string
-	if m.b64 {
-		payload = base64.EncodeToString(m.payload)
-	} else {
-		payload = string(m.payload)
-	}
-
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	for i, sig := range m.signatures {
-		buf.Reset()
-
-		var encodedProtectedHeader string
-		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
-			if raw := rbp.rawBuffer(); raw != nil {
-				encodedProtectedHeader = base64.EncodeToString(raw)
-			}
-		}
-
-		if encodedProtectedHeader == "" {
-			protected, err := json.Marshal(sig.protected)
-			if err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal "protected" for signature #%d`, i+1)
-			}
-
-			encodedProtectedHeader = base64.EncodeToString(protected)
-		}
-
-		buf.WriteString(encodedProtectedHeader)
-		buf.WriteByte('.')
-		buf.WriteString(payload)
-
-		if !ctx.useJKU {
-			if hdr := sig.protected; hdr != nil && hdr.KeyID() != "" {
-				if jwkKey, ok := ctx.key.(jwk.Key); ok {
-					if jwkKey.KeyID() != hdr.KeyID() {
-						continue
-					}
-				}
-			}
-
-			verifier, err := NewVerifier(ctx.alg)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to create verifier")
-			}
-
-			if _, err := ctx.tryVerify(verifier, sig.protected, buf.Bytes(), sig.signature, m.payload); err == nil {
-				if ctx.dst != nil {
-					*(ctx.dst) = m
-				}
-				return m.payload, nil
-			}
-			// Don't fallthrough or bail out. Try the next signature.
-			continue
-		}
-
-		if _, err := ctx.verifyJKU(sig.protected, buf.Bytes(), sig.signature, m.payload); err == nil {
-			if ctx.dst != nil {
-				*(ctx.dst) = m
-			}
-			return m.payload, nil
-		}
-		// try next
-	}
-	return nil, errors.New(`could not verify with any of the signatures`)
-}
-
 // get the value of b64 header field.
 // If the field does not exist, returns true (default)
 // Otherwise return the value specified by the header field.
@@ -499,57 +337,6 @@ func getB64Value(hdr Headers) bool {
 		return false
 	}
 	return b64
-}
-
-func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
-	protected, payload, signature, err := SplitCompact(signed)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
-	}
-
-	verifyBuf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(verifyBuf)
-
-	verifyBuf.Write(protected)
-	verifyBuf.WriteByte('.')
-	if len(payload) == 0 && ctx.detachedPayload != nil {
-		payload = ctx.detachedPayload
-	}
-	verifyBuf.Write(payload)
-
-	decodedSignature, err := base64.Decode(signature)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode signature`)
-	}
-
-	hdr := NewHeaders()
-	decodedProtected, err := base64.Decode(protected)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode headers`)
-	}
-
-	if err := json.Unmarshal(decodedProtected, hdr); err != nil {
-		return nil, errors.Wrap(err, `failed to decode headers`)
-	}
-
-	if !ctx.useJKU {
-		if hdr.KeyID() != "" {
-			if jwkKey, ok := ctx.key.(jwk.Key); ok {
-				if jwkKey.KeyID() != hdr.KeyID() {
-					return nil, errors.New(`"kid" fields do not match`)
-				}
-			}
-		}
-
-		verifier, err := NewVerifier(ctx.alg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create verifier")
-		}
-
-		return ctx.tryVerify(verifier, hdr, verifyBuf.Bytes(), decodedSignature, payload)
-	}
-
-	return ctx.verifyJKU(hdr, verifyBuf.Bytes(), decodedSignature, payload)
 }
 
 // JWKSetFetcher is used to fetch JWK Set spcified in the `jku` field.
@@ -581,103 +368,6 @@ type JWKSetFetchFunc func(string) (jwk.Set, error)
 
 func (f JWKSetFetchFunc) Fetch(u string) (jwk.Set, error) {
 	return f(u)
-}
-
-func (ctx *verifyCtx) verifyJKU(hdr Headers, verifyBuf, decodedSignature, payload []byte) ([]byte, error) {
-	u := hdr.JWKSetURL()
-	if u == "" {
-		return nil, errors.New(`use of "jku" field specified, but the field is empty`)
-	}
-	uo, err := url.Parse(u)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse "jku"`)
-	}
-	if uo.Scheme != "https" {
-		return nil, errors.New(`url in "jku" must be HTTPS`)
-	}
-
-	set, err := ctx.jwksFetcher.Fetch(u)
-	if err != nil {
-		return nil, errors.Wrapf(err, `failed to fetch "jku"`)
-	}
-
-	// Because we're using a JWKS here, we MUST have "kid" that matches
-	// the payload
-	if hdr.KeyID() == "" {
-		return nil, errors.Errorf(`"kid" is required on the JWS message to use "jku"`)
-	}
-
-	key, ok := set.LookupKeyID(hdr.KeyID())
-	if !ok {
-		return nil, errors.New(`key specified via "kid" is not present in the JWK set specified by "jku"`)
-	}
-
-	// hooray, we found a key. Now the algorithm will have to be inferred.
-	algs, err := AlgorithmsForKey(key)
-	if err != nil {
-		return nil, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
-	}
-
-	// for each of these algorithms, just ... keep trying ...
-	ctx.key = key
-	hdrAlg := hdr.Algorithm()
-	for _, alg := range algs {
-		// if we have a "alg" field in the JWS, we can only proceed if
-		// the inferred algorithm matches
-		if hdrAlg != "" && hdrAlg != alg {
-			continue
-		}
-
-		verifier, err := NewVerifier(alg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create verifier")
-		}
-
-		if decoded, err := ctx.tryVerify(verifier, hdr, verifyBuf, decodedSignature, payload); err == nil {
-			return decoded, nil
-		}
-	}
-	return nil, errors.New(`failed to verify payload using key in "jku"`)
-}
-
-func (ctx *verifyCtx) tryVerify(verifier Verifier, hdr Headers, buf, decodedSignature, payload []byte) ([]byte, error) {
-	if err := verifier.Verify(buf, decodedSignature, ctx.key); err != nil {
-		return nil, errors.Wrap(err, `failed to verify message`)
-	}
-
-	var decodedPayload []byte
-
-	// When verifying JSON messages, we do not need to decode
-	// the payload, as we already have it
-	if !ctx.isJSON {
-		// This is a special case for RFC7797
-		if !getB64Value(hdr) { // it's not base64 encoded
-			decodedPayload = payload
-		}
-
-		if decodedPayload == nil {
-			v, err := base64.Decode(payload)
-			if err != nil {
-				return nil, errors.Wrap(err, `message verified, failed to decode payload`)
-			}
-			decodedPayload = v
-		}
-
-		// For compact serialization, we need to create and assign the message
-		// if requested
-		if ctx.dst != nil {
-			// Construct a new Message object
-			m := NewMessage()
-			m.SetPayload(decodedPayload)
-			sig := NewSignature()
-			sig.SetProtectedHeaders(hdr)
-			sig.SetSignature(decodedSignature)
-			m.AppendSignature(sig)
-
-			*(ctx.dst) = *m
-		}
-	}
-	return decodedPayload, nil
 }
 
 // This is an "optimized" ioutil.ReadAll(). It will attempt to read

@@ -58,7 +58,7 @@ type keySetProvider struct {
 	set            jwk.Set
 	requireKid     bool // true if `kid` must be specified
 	useDefault     bool // true if the first key should be used iff there's exactly one key in set
-	inferAlgorithm bool // true if the algorithm should be infered from key type
+	inferAlgorithm bool // true if the algorithm should be inferred from key type
 }
 
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature) error {

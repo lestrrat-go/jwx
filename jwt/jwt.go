@@ -15,7 +15,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwe"
 
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 )
@@ -93,10 +92,8 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 
 type parseCtx struct {
 	decryptParams    DecryptParameters
-	keySet           jwk.Set
 	token            Token
 	validateOpts     []ValidateOption
-	verifyAutoOpts   []jws.VerifyOption
 	verifyOpts       []jws.VerifyOption
 	localReg         *json.Registry
 	inferAlgorithm   bool
@@ -104,7 +101,6 @@ type parseCtx struct {
 	skipVerification bool
 	useDefault       bool
 	validate         bool
-	verifyAuto       bool
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
@@ -162,135 +158,6 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 
 	verified, err := jws.Verify(payload, ctx.verifyOpts...)
 	return verified, _JwsVerifyDone, err
-}
-
-func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
-	/*
-		// First, get the JWS message
-		msg, err := jws.Parse(payload)
-		if err != nil {
-			return nil, _JwsVerifyInvalid, errors.Wrap(err, `failed to parse token data as JWS message`)
-		}
-		ks := ctx.keySet
-		if ks == nil { // the caller should have checked ctx.keySet || ctx.keySetProvider
-			if p := ctx.keySetProvider; p != nil {
-				// "trust" the payload, and parse it so that the provider can do its thing
-				ctx.skipVerification = true
-				tok, err := parse(ctx, msg.Payload())
-				if err != nil {
-					return nil, _JwsVerifyInvalid, err
-				}
-				ctx.skipVerification = false
-
-				v, err := p.KeySetFrom(tok)
-				if err != nil {
-					return nil, _JwsVerifyInvalid, errors.Wrap(err, `failed to obtain jwk.Set from KeySetProvider`)
-				}
-				ks = v
-			}
-		}
-
-		// Bail out early if we don't even have a key in the set
-		if ks.Len() == 0 {
-			return nil, _JwsVerifyInvalid, errors.New(`empty keyset provided`)
-		}
-
-		var key jwk.Key
-
-		// Find the kid. we need the kid, unless the user explicitly
-		// specified to use the "default" (the first and only) key in the set
-		headers := msg.Signatures()[0].ProtectedHeaders()
-		kid := headers.KeyID()
-		if kid == "" {
-			// If the kid is NOT specified... ctx.useDefault needs to be true, and the
-			// JWKs must have exactly one key in it
-			if !ctx.useDefault {
-				return nil, _JwsVerifyInvalid, errors.New(`failed to find matching key: no key ID ("kid") specified in token`)
-			} else if ctx.useDefault && ks.Len() > 1 {
-				return nil, _JwsVerifyInvalid, errors.New(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
-			}
-
-			// if we got here, then useDefault == true AND there is exactly
-			// one key in the set.
-			key, _ = ks.Get(0)
-		} else {
-			// Otherwise we better be able to look up the key, baby.
-			v, ok := ks.LookupKeyID(kid)
-			if !ok {
-				return nil, _JwsVerifyInvalid, errors.Errorf(`failed to find key with key ID %q in key set`, kid)
-			}
-			key = v
-		}
-
-		// We found a key with matching kid. Check fo the algorithm specified in the key.
-		// If we find an algorithm in the key, use that.
-		if v := key.Algorithm(); v != "" {
-			var alg jwa.SignatureAlgorithm
-			if err := alg.Accept(v); err != nil {
-				return nil, _JwsVerifyInvalid, errors.Wrapf(err, `invalid signature algorithm %s`, key.Algorithm())
-			}
-
-			// Okay, we have a valid algorithm, go go
-			return verifyJWSWithParams(ctx, payload, alg, key)
-		}
-
-		if ctx.inferAlgorithm {
-			// Check whether the JWT headers specify a valid
-			// algorithm, use it if it's compatible.
-			algs, err := jws.AlgorithmsForKey(key)
-			if err != nil {
-				return nil, _JwsVerifyInvalid, errors.Wrapf(err, `failed to get a list of signature methods for key type %s`, key.KeyType())
-			}
-
-			for _, alg := range algs {
-				// bail out if the JWT has a `alg` field, and it doesn't match
-				if tokAlg := headers.Algorithm(); tokAlg != "" {
-					if tokAlg != alg {
-						continue
-					}
-				}
-
-				return verifyJWSWithParams(ctx, payload, alg, key)
-			}
-		}
-
-		return nil, _JwsVerifyInvalid, errors.New(`failed to match any of the keys`)
-	*/
-	return nil, 0, nil
-}
-
-func verifyJWSWithParams(ctx *parseCtx, payload []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, int, error) {
-	var m *jws.Message
-	var verifyOpts []jws.VerifyOption
-	// Probably needs to be fixed later to accomodate for jwt.Parse changes
-	verifyOpts = append(verifyOpts, jws.WithKey(alg, key))
-	if ctx.pedantic {
-		m = jws.NewMessage()
-		verifyOpts = []jws.VerifyOption{jws.WithMessage(m)}
-	}
-	v, err := jws.Verify(payload, verifyOpts...)
-	if err != nil {
-		return nil, _JwsVerifyInvalid, errors.Wrap(err, `failed to verify jws signature`)
-	}
-
-	if !ctx.pedantic {
-		return v, _JwsVerifyDone, nil
-	}
-	// This payload could be a JWT+JWS, in which case typ: JWT should be there
-	// If its JWT+(JWE or JWS or...)+JWS, then cty should be JWT
-	for _, sig := range m.Signatures() {
-		hdrs := sig.ProtectedHeaders()
-		if strings.ToLower(hdrs.Type()) == _jwt {
-			return v, _JwsVerifyDone, nil
-		}
-
-		if strings.ToLower(hdrs.ContentType()) == _jwt {
-			return v, _JwsVerifyExpectNested, nil
-		}
-	}
-
-	// Hmmm, it was a JWS and we got... nothing?
-	return nil, _JwsVerifyInvalid, errors.Errorf(`expected "typ" or "cty" fields, neither could be found`)
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
