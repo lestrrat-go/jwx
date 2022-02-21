@@ -32,9 +32,7 @@ linters:
     - govet
     - interfacer # deprecated
     - ifshort
-    - ireturn
     - lll
-    - maintidx
     - maligned # deprecated
     - makezero
     - nakedret
@@ -45,7 +43,6 @@ linters:
     - tagliatelle
     - testpackage
     - thelper
-    - varnamelen
     - wrapcheck
     - wsl
 
