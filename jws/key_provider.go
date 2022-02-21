@@ -90,7 +90,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature) e
 					return nil
 				}
 			}
-			return fmt.Errorf(`algorithm in the message does not match any of the infered algorithms`)
+			return fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
 		}
 
 		// Yes, you get to try them all!!!!!!!

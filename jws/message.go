@@ -11,12 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type collectRawCtx struct{}
-
-func (collectRawCtx) CollectRaw() bool {
-	return true
-}
-
 func NewSignature() *Signature {
 	return &Signature{}
 }

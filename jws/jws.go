@@ -252,6 +252,7 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse jws: %w`, err)
 	}
+	defer msg.clearRaw()
 
 	if ctx.detachedPayload != nil {
 		if len(msg.payload) != 0 {

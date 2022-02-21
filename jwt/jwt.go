@@ -151,6 +151,8 @@ const (
 	_JwsVerifySkipped
 )
 
+var _ = _JwsVerifyInvalid
+
 func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 	if len(ctx.verifyOpts) == 0 {
 		return nil, _JwsVerifySkipped, nil

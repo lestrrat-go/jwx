@@ -119,7 +119,6 @@ type identJweHeaders struct{}
 type identJwsHeaders struct{}
 type identKey struct{}
 type identKeySet struct{}
-type identKeySetProvider struct{}
 type identPedantic struct{}
 type identValidator struct{}
 type identToken struct{}
