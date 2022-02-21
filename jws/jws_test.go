@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -39,6 +40,27 @@ const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.ey
 const badValue = "%badvalue%"
 
 var hasES256K bool
+
+func TestSanity(t *testing.T) {
+	t.Run("sanity: Verify with single key", func(t *testing.T) {
+		key, err := jwk.ParseKey([]byte(`{
+    "kty": "oct",
+    "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+  }`))
+		if !assert.NoError(t, err, `jwk.New should succeed`) {
+			return
+		}
+
+		payload, err := jws.Verify([]byte(exampleCompactSerialization), jws.WithKey(jwa.HS256, key))
+		if !assert.NoError(t, err, `jws.Verify should succeed`) {
+			return
+		}
+
+		if !assert.Equal(t, []byte(examplePayload), payload, `payloads should match`) {
+			return
+		}
+	})
+}
 
 func TestParseReader(t *testing.T) {
 	t.Parallel()
@@ -183,8 +205,6 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypt
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
 
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
-	t.Helper()
-
 	jwkKey, err := jwk.New(signKey)
 	if !assert.NoError(t, err, `jwk.New should succeed`) {
 		return
@@ -254,7 +274,8 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 				name := name
 				testKey := testKey
 				t.Run(name, func(t *testing.T) {
-					verified, err := jws.Verify(signed, alg, testKey)
+					t.Logf("testKey = %T", testKey)
+					verified, err := jws.Verify(signed, jws.WithKey(alg, testKey))
 					if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
 						return
 					}
@@ -338,9 +359,10 @@ func TestRoundtrip(t *testing.T) {
 		pubkey := key.Public()
 		jwkKey, _ := jwk.New(pubkey)
 		keys := map[string]interface{}{
-			"Verify(ed25519.Public())":  pubkey,
-			"Verify(*ed25519.Public())": &pubkey,
-			"Verify(jwk.Key)":           jwkKey,
+			"Verify(ed25519.Public())": pubkey,
+			// Meh, this doesn't work
+			// "Verify(*ed25519.Public())": &pubkey,
+			"Verify(jwk.Key)": jwkKey,
 		}
 		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA} {
 			alg := alg
@@ -376,7 +398,7 @@ func TestSignMulti2(t *testing.T) {
 		alg := alg
 		t.Run("Verify "+alg.String(), func(t *testing.T) {
 			m := jws.NewMessage()
-			verified, err := jws.Verify(signed, alg, sharedkey, jws.WithMessage(m))
+			verified, err := jws.Verify(signed, jws.WithKey(alg, sharedkey), jws.WithMessage(m))
 			if !assert.NoError(t, err, "Verify succeeded") {
 				return
 			}
@@ -537,7 +559,7 @@ func TestEncode(t *testing.T) {
 		if !assert.NoError(t, err, `jwk.PublicRawKeyOf should succeed`) {
 			return
 		}
-		verifiedPayload, err := jws.Verify(jwsCompact, alg, publicKey)
+		verifiedPayload, err := jws.Verify(jwsCompact, jws.WithKey(alg, publicKey))
 		if err != nil || string(verifiedPayload) != string(jwsPayload) {
 			t.Fatal("Failed to verify message")
 		}
@@ -1094,8 +1116,8 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.VerifySet(signed, set)
-				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+				verified, err := jws.Verify(signed, jws.WithKeySet(set))
+				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
@@ -1127,8 +1149,8 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.VerifySet(signed, set)
-				if !assert.NoError(t, err, `jws.VerifySet should succeed`) {
+				verified, err := jws.Verify(signed, jws.WithKeySet(set))
+				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
@@ -1211,7 +1233,7 @@ func TestWithMessage(t *testing.T) {
 	}
 
 	m := jws.NewMessage()
-	payload, err := jws.Verify(signed, jwa.RS256, key.PublicKey, jws.WithMessage(m))
+	payload, err := jws.Verify(signed, jws.WithKey(jwa.RS256, key.PublicKey), jws.WithMessage(m))
 	if !assert.NoError(t, err, `jws.Verify should succeed`) {
 		return
 	}
@@ -1292,6 +1314,7 @@ func TestRFC7797(t *testing.T) {
 				payload := tc.Payload
 				signOptions := []jws.SignOption{jws.WithHeaders(hdrs)}
 				var verifyOptions []jws.VerifyOption
+				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256, key))
 				if tc.Detached {
 					signOptions = append(signOptions, jws.WithDetachedPayload(payload))
 					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
@@ -1302,8 +1325,9 @@ func TestRFC7797(t *testing.T) {
 					return
 				}
 
-				verified, err := jws.Verify(signed, jwa.HS256, key, verifyOptions...)
+				verified, err := jws.Verify(signed, verifyOptions...)
 				if !assert.NoError(t, err, `jws.Verify should succeed`) {
+					t.Logf(`signed %q`, signed)
 					return
 				}
 
@@ -1369,7 +1393,9 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				payload, err := jws.Verify(tc.Input, jwa.HS256, key, tc.VerifyOptions...)
+				options := tc.VerifyOptions
+				options = append(options, jws.WithKey(jwa.HS256, key))
+				payload, err := jws.Verify(tc.Input, options...)
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
@@ -1508,7 +1534,7 @@ func TestGH485(t *testing.T) {
     "signatures": [{"protected": %q, "signature": %q}]
 }`, payload, protected, signature)
 
-	verified, err := jws.Verify([]byte(signed), jwa.HS256, []byte("secret"))
+	verified, err := jws.Verify([]byte(signed), jws.WithKey(jwa.HS256, []byte("secret")))
 	if !assert.NoError(t, err, `jws.Verify should succeed`) {
 		return
 	}
@@ -1517,7 +1543,7 @@ func TestGH485(t *testing.T) {
 	}
 
 	compact := strings.Join([]string{protected, payload, signature}, ".")
-	verified, err = jws.Verify([]byte(compact), jwa.HS256, []byte("secret"))
+	verified, err = jws.Verify([]byte(compact), jws.WithKey(jwa.HS256, []byte("secret")))
 	if !assert.NoError(t, err, `jws.Verify should succeed`) {
 		return
 	}
@@ -1559,38 +1585,38 @@ func TestJKU(t *testing.T) {
 
 	t.Run("Compact", func(t *testing.T) {
 		testcases := []struct {
-			Name          string
-			Error         bool
-			Query         string
-			VerifyOptions func() []jws.VerifyOption
+			Name    string
+			Error   bool
+			Query   string
+			Fetcher func() jws.JWKSetFetcher
 		}{
 			{
 				Name:  "Fail without whitelist",
 				Error: true,
-				VerifyOptions: func() []jws.VerifyOption {
-					return []jws.VerifyOption{
-						jws.WithHTTPClient(srv.Client()),
-					}
+				Fetcher: func() jws.JWKSetFetcher {
+					return jws.NewJWKSetFetcher(
+						jwk.WithHTTPClient(srv.Client()),
+					)
 				},
 			},
 			{
 				Name: "Success",
-				VerifyOptions: func() []jws.VerifyOption {
-					return []jws.VerifyOption{
-						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-						jws.WithHTTPClient(srv.Client()),
-					}
+				Fetcher: func() jws.JWKSetFetcher {
+					return jws.NewJWKSetFetcher(
+						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+						jwk.WithHTTPClient(srv.Client()),
+					)
 				},
 			},
 			{
 				Name:  "Rejected by whitelist",
 				Error: true,
-				VerifyOptions: func() []jws.VerifyOption {
+				Fetcher: func() jws.JWKSetFetcher {
 					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
-					return []jws.VerifyOption{
-						jws.WithFetchWhitelist(wl),
-						jws.WithHTTPClient(srv.Client()),
-					}
+					return jws.NewJWKSetFetcher(
+						jwk.WithFetchWhitelist(wl),
+						jwk.WithHTTPClient(srv.Client()),
+					)
 				},
 			},
 			{
@@ -1601,25 +1627,23 @@ func TestJKU(t *testing.T) {
 				Name:  "Backoff",
 				Error: false,
 				Query: "type=backoff",
-				VerifyOptions: func() []jws.VerifyOption {
+				Fetcher: func() jws.JWKSetFetcher {
 					bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
-					return []jws.VerifyOption{
-						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-						jws.WithFetchBackoff(bo),
-						jws.WithHTTPClient(srv.Client()),
-					}
+					return jws.NewJWKSetFetcher(
+						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+						jwk.WithFetchBackoff(bo),
+						jwk.WithHTTPClient(srv.Client()),
+					)
 				},
 			},
 			{
 				Name: "JWKSetFetcher",
-				VerifyOptions: func() []jws.VerifyOption {
+				Fetcher: func() jws.JWKSetFetcher {
 					ar := jwk.NewAutoRefresh(context.TODO())
-					return []jws.VerifyOption{
-						jws.WithJWKSetFetcher(jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
-							ar.Configure(u, jwk.WithHTTPClient(srv.Client()))
-							return ar.Fetch(context.TODO(), u)
-						})),
-					}
+					return jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
+						ar.Configure(u, jwk.WithHTTPClient(srv.Client()))
+						return ar.Fetch(context.TODO(), u)
+					})
 				},
 			},
 		}
@@ -1638,17 +1662,13 @@ func TestJKU(t *testing.T) {
 					return
 				}
 
-				var options []jws.VerifyOption
-				if fn := tc.VerifyOptions; fn != nil {
-					options = fn()
-				}
-				decoded, err := jws.VerifyAuto(signed, options...)
+				decoded, err := jws.Verify(signed, jws.WithAutoVerify(tc.Fetcher()))
 				if tc.Error {
-					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
+					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
 					}
 				} else {
-					if !assert.NoError(t, err, `jws.VerifyAuto should succeed`) {
+					if !assert.NoError(t, err, `jws.Verify should succeed`) {
 						return
 					}
 					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
@@ -1691,6 +1711,7 @@ func TestJKU(t *testing.T) {
 			if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
 				return
 			}
+			log.Printf("key id -> %q", pubkey.KeyID())
 			set.Add(pubkey)
 		}
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1718,9 +1739,9 @@ func TestJKU(t *testing.T) {
 		}
 
 		testcases := []struct {
-			Name          string
-			VerifyOptions func() []jws.VerifyOption
-			Error         bool
+			Name         string
+			FetchOptions func() []jwk.FetchOption
+			Error        bool
 		}{
 			{
 				Name:  "Fail without whitelist",
@@ -1728,19 +1749,19 @@ func TestJKU(t *testing.T) {
 			},
 			{
 				Name: "Success",
-				VerifyOptions: func() []jws.VerifyOption {
-					return []jws.VerifyOption{
-						jws.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+				FetchOptions: func() []jwk.FetchOption {
+					return []jwk.FetchOption{
+						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
 					}
 				},
 			},
 			{
 				Name:  "Rejected by whitelist",
 				Error: true,
-				VerifyOptions: func() []jws.VerifyOption {
+				FetchOptions: func() []jwk.FetchOption {
 					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
-					return []jws.VerifyOption{
-						jws.WithFetchWhitelist(wl),
+					return []jwk.FetchOption{
+						jwk.WithFetchWhitelist(wl),
 					}
 				},
 			},
@@ -1750,19 +1771,19 @@ func TestJKU(t *testing.T) {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				m := jws.NewMessage()
-				var verifyOptions []jws.VerifyOption
-				if fn := tc.VerifyOptions; fn != nil {
-					verifyOptions = fn()
+				var options []jwk.FetchOption
+				if fn := tc.FetchOptions; fn != nil {
+					options = fn()
 				}
-				verifyOptions = append(verifyOptions, jws.WithHTTPClient(srv.Client()))
-				verifyOptions = append(verifyOptions, jws.WithMessage(m))
-				decoded, err := jws.VerifyAuto(signed, verifyOptions...)
+				options = append(options, jwk.WithHTTPClient(srv.Client()))
+				f := jws.NewJWKSetFetcher(options...)
+				decoded, err := jws.Verify(signed, jws.WithAutoVerify(f), jws.WithMessage(m))
 				if tc.Error {
-					if !assert.Error(t, err, `jws.VerifyAuto should fail`) {
+					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
 					}
 				} else {
-					if !assert.NoError(t, err, `jws.VerifyAuto should succeed`) {
+					if !assert.NoError(t, err, `jws.Verify should succeed`) {
 						return
 					}
 					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {

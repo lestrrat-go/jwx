@@ -222,6 +222,8 @@ type verifyCtx struct {
 	// This is only used to differentiate compact/JSON serialization
 	// because certain features are enabled/disabled in each
 	isJSON bool
+
+	keyProviders []KeyProvider
 }
 
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
@@ -300,10 +302,8 @@ func VerifyAuto(buf []byte, options ...VerifyOption) ([]byte, error) {
 // `Verifier` in `verify` subpackage, and call `Verify` method on it.
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
-func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...VerifyOption) ([]byte, error) {
+func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var ctx verifyCtx
-	ctx.alg = alg
-	ctx.key = key
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
@@ -311,6 +311,8 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 			ctx.dst = option.Value().(*Message)
 		case identDetachedPayload{}:
 			ctx.detachedPayload = option.Value().([]byte)
+		case identKeyProvider{}:
+			ctx.keyProviders = append(ctx.keyProviders, option.Value().(KeyProvider))
 		default:
 			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -320,49 +322,79 @@ func Verify(buf []byte, alg jwa.SignatureAlgorithm, key interface{}, options ...
 }
 
 func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
-	buf = bytes.TrimSpace(buf)
-	if len(buf) == 0 {
-		return nil, errors.New(`attempt to verify empty buffer`)
+	msg, err := Parse(buf)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to parse jws: %w`, err)
 	}
 
-	if buf[0] == '{' {
-		return ctx.verifyJSON(buf)
-	}
-	return ctx.verifyCompact(buf)
-}
-
-// VerifySet uses keys store in a jwk.Set to verify the payload in `buf`.
-//
-// In order for `VerifySet()` to use a key in the given set, the
-// `jwk.Key` object must have a valid "alg" field, and it also must
-// have either an empty value or the value "sig" in the "use" field.
-//
-// Furthermore if the JWS signature asks for a spefici "kid", the
-// `jwk.Key` must have the same "kid" as the signature.
-func VerifySet(buf []byte, set jwk.Set) ([]byte, error) {
-	n := set.Len()
-	for i := 0; i < n; i++ {
-		key, ok := set.Get(i)
-		if !ok {
-			continue
-		}
-		if key.Algorithm() == "" { // algorithm is not
-			continue
+	if ctx.detachedPayload != nil {
+		if len(msg.payload) != 0 {
+			return nil, fmt.Errorf(`can't specify detached payload for JWS with payload`)
 		}
 
-		if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
-			continue
-		}
-
-		buf, err := Verify(buf, jwa.SignatureAlgorithm(key.Algorithm()), key)
-		if err != nil {
-			continue
-		}
-
-		return buf, nil
+		msg.payload = ctx.detachedPayload
 	}
 
-	return nil, errors.New(`failed to verify message with any of the keys in the jwk.Set object`)
+	// Pre-compute the base64 encoded version of payload
+	var payload string
+	if msg.b64 {
+		payload = base64.EncodeToString(msg.payload)
+	} else {
+		payload = string(msg.payload)
+	}
+
+	verifyBuf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(verifyBuf)
+
+	for i, sig := range msg.signatures {
+		verifyBuf.Reset()
+
+		var encodedProtectedHeader string
+		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
+			if raw := rbp.rawBuffer(); raw != nil {
+				encodedProtectedHeader = base64.EncodeToString(raw)
+			}
+		}
+
+		if encodedProtectedHeader == "" {
+			protected, err := json.Marshal(sig.protected)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
+			}
+
+			encodedProtectedHeader = base64.EncodeToString(protected)
+		}
+
+		verifyBuf.WriteString(encodedProtectedHeader)
+		verifyBuf.WriteByte('.')
+		verifyBuf.WriteString(payload)
+
+		for i, kp := range ctx.keyProviders {
+			var sink algKeySink
+			if err := kp.FetchKeys(&sink, msg); err != nil {
+				return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
+			}
+
+			for _, pair := range sink.list {
+				alg, key := pair.alg, pair.key
+				verifier, err := NewVerifier(alg)
+				if err != nil {
+					return nil, fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)
+				}
+
+				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
+					continue
+				}
+
+				if ctx.dst != nil {
+					*(ctx.dst) = *msg
+				}
+
+				return msg.payload, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf(`could not verify message using any of the signatures or keys`)
 }
 
 func (ctx *verifyCtx) verifyJSON(signed []byte) ([]byte, error) {
@@ -535,6 +567,9 @@ type SimpleJWKSetFetcher struct {
 }
 
 func NewJWKSetFetcher(options ...jwk.FetchOption) *SimpleJWKSetFetcher {
+	// We shove this in the front so that the ser is forced to
+	// specify a whitelist
+	options = append([]jwk.FetchOption{jwk.WithFetchWhitelist(allowNoneWhitelist)}, options...)
 	return &SimpleJWKSetFetcher{options: options}
 }
 
@@ -858,9 +893,16 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
 	}
 
-	decodedPayload, err := base64.Decode(payload)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode payload`)
+	var decodedPayload []byte
+	b64 := getB64Value(hdr)
+	if !b64 {
+		decodedPayload = payload
+	} else {
+		v, err := base64.Decode(payload)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to decode payload`)
+		}
+		decodedPayload = v
 	}
 
 	decodedSignature, err := base64.Decode(signature)
@@ -874,6 +916,7 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		protected: hdr,
 		signature: decodedSignature,
 	})
+	msg.b64 = b64
 	return &msg, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/lestrrat-go/backoff/v2"
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/option"
 )
@@ -116,4 +117,25 @@ func WithHTTPClient(httpcl *http.Client) VerifyOption {
 // instead of the default `jwk.Fetch()`
 func WithJWKSetFetcher(f JWKSetFetcher) VerifyOption {
 	return &verifyOption{option.New(identJWKSetFetcher{}, f)}
+}
+
+type identKeyProvider struct{}
+
+func WithKey(alg jwa.SignatureAlgorithm, key interface{}) VerifyOption {
+	return &verifyOption{option.New(identKeyProvider{}, &staticKeyProvider{
+		alg: alg,
+		key: key,
+	})}
+}
+
+func WithKeySet(set jwk.Set) VerifyOption {
+	return &verifyOption{option.New(identKeyProvider{}, &keySetProvider{
+		set: set,
+	})}
+}
+
+func WithAutoVerify(f JWKSetFetcher) VerifyOption {
+	return &verifyOption{option.New(identKeyProvider{}, jkuProvider{
+		fetcher: f,
+	})}
 }

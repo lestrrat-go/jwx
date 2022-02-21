@@ -294,11 +294,13 @@ func verifyJWSWithKeySet(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 func verifyJWSWithParams(ctx *parseCtx, payload []byte, alg jwa.SignatureAlgorithm, key interface{}) ([]byte, int, error) {
 	var m *jws.Message
 	var verifyOpts []jws.VerifyOption
+	// Probably needs to be fixed later to accomodate for jwt.Parse changes
+	verifyOpts = append(verifyOpts, jws.WithKey(alg, key))
 	if ctx.pedantic {
 		m = jws.NewMessage()
 		verifyOpts = []jws.VerifyOption{jws.WithMessage(m)}
 	}
-	v, err := jws.Verify(payload, alg, key, verifyOpts...)
+	v, err := jws.Verify(payload, verifyOpts...)
 	if err != nil {
 		return nil, _JwsVerifyInvalid, errors.Wrap(err, `failed to verify jws signature`)
 	}

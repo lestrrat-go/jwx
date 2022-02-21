@@ -341,7 +341,7 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 		pubkey = tkey.Public()
 	}
 
-	return jws.Verify(buf, alg, pubkey)
+	return jws.Verify(buf, jws.WithKey(alg, pubkey))
 }
 
 func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm, keyfile string) (string, func(), error) {

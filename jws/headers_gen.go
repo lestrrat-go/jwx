@@ -520,12 +520,7 @@ LOOP:
 			return errors.Errorf(`invalid token %T`, tok)
 		}
 	}
-
-	if dc := h.dc; dc != nil {
-		if dc.CollectRaw() {
-			h.raw = buf
-		}
-	}
+	h.raw = buf
 	return nil
 }
 

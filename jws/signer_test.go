@@ -28,7 +28,7 @@ func TestSign(t *testing.T) {
 	})
 	t.Run("RSA verify with no public key", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Verify([]byte(nil), jwa.RS256, nil)
+		_, err := jws.Verify([]byte(nil), jws.WithKey(jwa.RS256, nil))
 		if !assert.Error(t, err, "Verify with no private key should return error") {
 			return
 		}

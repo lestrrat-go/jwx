@@ -360,11 +360,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return errors.Errorf(`invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
-	o.LL("if dc := h.dc; dc != nil {")
-	o.L("if dc.CollectRaw() {")
 	o.L("h.raw = buf")
-	o.L("}")
-	o.L("}")
 	o.L("return nil")
 	o.L("}")
 
