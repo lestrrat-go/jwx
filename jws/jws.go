@@ -371,7 +371,7 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 
 		for i, kp := range ctx.keyProviders {
 			var sink algKeySink
-			if err := kp.FetchKeys(&sink, msg); err != nil {
+			if err := kp.FetchKeys(&sink, sig); err != nil {
 				return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 			}
 

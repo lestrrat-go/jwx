@@ -95,7 +95,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("Parse (correct signature key)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(signed, jwt.WithVerify(alg, &key.PublicKey))
+		t2, err := jwt.Parse(signed, jwt.WithKey(alg, &key.PublicKey))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
@@ -105,7 +105,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
 		t.Parallel()
-		_, err := jwt.Parse(signed, jwt.WithVerify(jwa.RS512, &key.PublicKey))
+		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512, &key.PublicKey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -114,7 +114,7 @@ func TestJWTParse(t *testing.T) {
 		t.Parallel()
 		pubkey := key.PublicKey
 		pubkey.E = 0 // bogus value
-		_, err := jwt.Parse(signed, jwt.WithVerify(alg, &pubkey))
+		_, err := jwt.Parse(signed, jwt.WithKey(alg, &pubkey))
 		if !assert.Error(t, err, `jwt.Parse should fail`) {
 			return
 		}
@@ -309,9 +309,8 @@ func TestJWTParseVerify(t *testing.T) {
 							}
 
 							t.Run(name, func(t *testing.T) {
-								options := []jwt.ParseOption{jwt.WithKeySet(set)}
-								if tc.InferAlgorithm {
-									options = append(options, jwt.InferAlgorithmFromKey(true))
+								options := []jwt.ParseOption{
+									jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(tc.InferAlgorithm)),
 								}
 								t2, err := jwt.Parse(signed, options...)
 
@@ -349,50 +348,6 @@ func TestJWTParseVerify(t *testing.T) {
 			return
 		}
 
-		t.Run("Use KeySetProvider", func(t *testing.T) {
-			t.Parallel()
-			pubkey, _ := jwk.New(key.PublicKey)
-
-			pubkey.Set(jwk.AlgorithmKey, alg)
-			pubkey.Set(jwk.KeyIDKey, kid)
-
-			set := jwk.NewSet()
-			set.Add(pubkey)
-
-			t2, err := t1.Clone()
-			if !assert.NoError(t, err) {
-				return
-			}
-			if !assert.NoError(t, t2.Set(jwt.IssuerKey, "http://www.example.com")) {
-				return
-			}
-			signed, err := jwt.Sign(t2, alg, key, jwt.WithHeaders(hdrs))
-			if !assert.NoError(t, err) {
-				return
-			}
-
-			t3, err := jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
-				switch tok.Issuer() {
-				case "http://www.example.com":
-					return set, nil
-				}
-				return nil, fmt.Errorf("unknown issuer")
-			})))
-			if !assert.NoError(t, err, `jwt.Parse with key set func should succeed`) {
-				return
-			}
-
-			if !assert.True(t, jwt.Equal(t2, t3), `t2 == t3`) {
-				return
-			}
-
-			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
-				return nil, errors.New(`dummy`)
-			})))
-			if !assert.Error(t, err, `jwt.Parse should fail`) {
-				return
-			}
-		})
 		t.Run("Alg does not match", func(t *testing.T) {
 			t.Parallel()
 			pubkey, err := jwk.PublicKeyOf(key)
@@ -405,7 +360,7 @@ func TestJWTParseVerify(t *testing.T) {
 			set := jwk.NewSet()
 			set.Add(pubkey)
 
-			_, err = jwt.Parse(signed, jwt.WithKeySet(set), jwt.InferAlgorithmFromKey(true), jwt.UseDefaultKey(true))
+			_, err = jwt.Parse(signed, jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true), jws.WithUseDefault(true)))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
 			}
@@ -425,7 +380,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 			set := jwk.NewSet()
 			set.Add(pubkey)
-			t2, err := jwt.Parse(signedNoKid, jwt.WithKeySet(set), jwt.UseDefaultKey(true))
+			t2, err := jwt.Parse(signedNoKid, jwt.WithKeySet(set, jws.WithUseDefault(true)))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
 			}
@@ -639,7 +594,7 @@ func TestGH52(t *testing.T) {
 				return
 			}
 
-			if _, err = jws.Verify(s, jwa.ES256, pub); !assert.NoError(t, err, `test should pass (run %d)`, i) {
+			if _, err = jws.Verify(s, jws.WithKey(jwa.ES256, pub)); !assert.NoError(t, err, `test should pass (run %d)`, i) {
 				return
 			}
 		}(t, priv, i)
@@ -807,6 +762,7 @@ func TestCustomField(t *testing.T) {
 	t.Run("jwt.Parse", func(t *testing.T) {
 		token, err := jwt.Parse([]byte(src))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
+			t.Logf("%q", src)
 			return
 		}
 
@@ -868,7 +824,7 @@ func TestParseRequest(t *testing.T) {
 					jwt.WithHeaderKey("x-authorization"),
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
-					jwt.WithVerify(jwa.ES256, pubkey))
+					jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -878,7 +834,7 @@ func TestParseRequest(t *testing.T) {
 				return httptest.NewRequest(http.MethodGet, u, nil)
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -890,7 +846,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
 			},
 		},
 		{
@@ -914,7 +870,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -926,7 +882,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithKey(jwa.ES256, pubkey))
 			},
 		},
 		{
@@ -937,7 +893,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -952,7 +908,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithKey(jwa.ES256, pubkey))
 			},
 		},
 		{
@@ -966,7 +922,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -981,7 +937,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithVerify(jwa.ES256, pubkey), jwt.WithFormKey("access_token"))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey), jwt.WithFormKey("access_token"))
 			},
 			Error: true,
 		},
@@ -1354,7 +1310,7 @@ func TestNested(t *testing.T) {
 
 	// Second layer should JWS.
 	jwsMessage := jws.NewMessage()
-	verified, err := jws.Verify(decrypted, jwa.RS256, key.PublicKey, jws.WithMessage(jwsMessage))
+	verified, err := jws.Verify(decrypted, jws.WithKey(jwa.RS256, key.PublicKey), jws.WithMessage(jwsMessage))
 	if !assert.NoError(t, err, `jws.Verify should succeed`) {
 		return
 	}
@@ -1368,7 +1324,7 @@ func TestNested(t *testing.T) {
 
 	parsed, err := jwt.Parse(serialized,
 		jwt.WithPedantic(true),
-		jwt.WithVerify(jwa.RS256, key.PublicKey),
+		jwt.WithKey(jwa.RS256, key.PublicKey),
 		jwt.WithDecrypt(jwa.RSA_OAEP, key),
 	)
 	if !assert.NoError(t, err, `jwt.Parse with both decryption and verification should succeed`) {
@@ -1411,7 +1367,7 @@ func TestGH430(t *testing.T) {
 		return
 	}
 
-	if _, err = jwt.Parse(signed, jwt.WithVerify(jwa.HS256, key)); !assert.NoError(t, err, `jwt.Parse should succeed`) {
+	if _, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256, key)); !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return
 	}
 }
@@ -1457,7 +1413,7 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 				tc,
 				jwt.WithValidate(true),
 				jwt.WithPedantic(pedantic),
-				jwt.WithVerify(jwa.RS256, &key.PublicKey),
+				jwt.WithKey(jwa.RS256, &key.PublicKey),
 			)
 			t.Logf("%s", err)
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
@@ -1516,7 +1472,7 @@ func TestVerifyAuto(t *testing.T) {
 	wl := jwk.NewMapWhitelist().
 		Add(srv.URL)
 
-	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl), jwt.WithHTTPClient(srv.Client()))
+	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher(jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(srv.Client()))))
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return
 	}
@@ -1525,13 +1481,13 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 
-	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true))
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher()))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
 	}
 	wl = jwk.NewMapWhitelist().
 		Add(`https://github.com/lestrrat-go/jwx`)
-	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(true), jwt.WithFetchWhitelist(wl))
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher(jwk.WithFetchWhitelist(wl))))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
 	}
@@ -1539,10 +1495,13 @@ func TestVerifyAuto(t *testing.T) {
 	// now with backoff
 	bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
 	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(true),
-		jwt.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-		jwt.WithHTTPClient(srv.Client()),
-		jwt.WithFetchBackoff(bo),
+		jwt.WithVerifyAuto(
+			jws.NewJWKSetFetcher(
+				jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+				jwk.WithHTTPClient(srv.Client()),
+				jwk.WithFetchBackoff(bo),
+			),
+		),
 	)
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return
@@ -1555,14 +1514,14 @@ func TestVerifyAuto(t *testing.T) {
 	// now with AutoRefresh
 	ar := jwk.NewAutoRefresh(context.TODO())
 	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(true),
-		jwt.WithJWKSetFetcher(jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
-			ar.Configure(u,
-				jwk.WithHTTPClient(srv.Client()),
-				jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-			)
-			return ar.Fetch(context.TODO(), u)
-		})),
+		jwt.WithVerifyAuto(
+			jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
+				ar.Configure(u,
+					jwk.WithHTTPClient(srv.Client()),
+					jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+				)
+				return ar.Fetch(context.TODO(), u)
+			})),
 	)
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return

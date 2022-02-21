@@ -120,22 +120,69 @@ func WithJWKSetFetcher(f JWKSetFetcher) VerifyOption {
 }
 
 type identKeyProvider struct{}
+type identRequireKid struct{}
+type identUseDefault struct{}
+type identInferAlgorithm struct{}
 
 func WithKey(alg jwa.SignatureAlgorithm, key interface{}) VerifyOption {
-	return &verifyOption{option.New(identKeyProvider{}, &staticKeyProvider{
+	return WithKeyProvider(&staticKeyProvider{
 		alg: alg,
 		key: key,
-	})}
+	})
 }
 
-func WithKeySet(set jwk.Set) VerifyOption {
-	return &verifyOption{option.New(identKeyProvider{}, &keySetProvider{
-		set: set,
-	})}
+// WithKeySetOption is an option passed to the WithKeySet() option (recursion!)
+type WithKeySetOption interface {
+	Option
+	withKeySetOption()
 }
 
-func WithAutoVerify(f JWKSetFetcher) VerifyOption {
-	return &verifyOption{option.New(identKeyProvider{}, jkuProvider{
+type withKeySetOption struct {
+	Option
+}
+
+func (*withKeySetOption) withKeySetOption() {}
+
+func WithRequireKid(v bool) WithKeySetOption {
+	return &withKeySetOption{option.New(identRequireKid{}, v)}
+}
+
+func WithUseDefault(v bool) WithKeySetOption {
+	return &withKeySetOption{option.New(identUseDefault{}, v)}
+}
+
+func WithInferAlgorithmFromKey(v bool) WithKeySetOption {
+	return &withKeySetOption{option.New(identInferAlgorithm{}, v)}
+}
+
+func WithKeySet(set jwk.Set, options ...WithKeySetOption) VerifyOption {
+	var requireKid, useDefault, inferAlgorithm bool
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identRequireKid{}:
+			requireKid = option.Value().(bool)
+		case identUseDefault{}:
+			useDefault = option.Value().(bool)
+		case identInferAlgorithm{}:
+			inferAlgorithm = option.Value().(bool)
+		}
+	}
+
+	return WithKeyProvider(&keySetProvider{
+		set:            set,
+		requireKid:     requireKid,
+		useDefault:     useDefault,
+		inferAlgorithm: inferAlgorithm,
+	})
+}
+
+func WithVerifyAuto(f JWKSetFetcher) VerifyOption {
+	return WithKeyProvider(jkuProvider{
 		fetcher: f,
-	})}
+	})
+}
+
+func WithKeyProvider(kp KeyProvider) VerifyOption {
+	return &verifyOption{option.New(identKeyProvider{}, kp)}
 }

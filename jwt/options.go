@@ -2,10 +2,8 @@ package jwt
 
 import (
 	"context"
-	"net/http"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwe"
 	"github.com/lestrrat-go/jwx/jwk"
@@ -119,6 +117,7 @@ type identFlattenAudience struct{}
 type identInferAlgorithmFromKey struct{}
 type identJweHeaders struct{}
 type identJwsHeaders struct{}
+type identKey struct{}
 type identKeySet struct{}
 type identKeySetProvider struct{}
 type identPedantic struct{}
@@ -126,42 +125,16 @@ type identValidator struct{}
 type identToken struct{}
 type identTypedClaim struct{}
 type identValidate struct{}
-type identVerify struct{}
 type identVerifyAuto struct{}
-type identFetchBackoff struct{}
-type identFetchWhitelist struct{}
-type identHTTPClient struct{}
-type identJWKSetFetcher struct{}
 
 type identHeaderKey struct{}
 type identFormKey struct{}
 
-type VerifyParameters interface {
-	Algorithm() jwa.SignatureAlgorithm
-	Key() interface{}
-}
-
-type verifyParams struct {
-	alg jwa.SignatureAlgorithm
-	key interface{}
-}
-
-func (p *verifyParams) Algorithm() jwa.SignatureAlgorithm {
-	return p.alg
-}
-
-func (p *verifyParams) Key() interface{} {
-	return p.key
-}
-
 // WithVerify forces the Parse method to verify the JWT message
 // using the given key. XXX Should have been named something like
 // WithVerificationKey
-func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
-	return newParseOption(identVerify{}, &verifyParams{
-		alg: alg,
-		key: key,
-	})
+func WithKey(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
+	return newParseOption(identKey{}, jws.WithKey(alg, key))
 }
 
 // WithKeySet forces the Parse method to verify the JWT message
@@ -184,10 +157,9 @@ func WithVerify(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
 //
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
-//
-// If provided with WithKeySetProvider(), this option takes precedence.
-func WithKeySet(set jwk.Set) ParseOption {
-	return newParseOption(identKeySet{}, set)
+func WithKeySet(set jwk.Set, options ...jws.WithKeySetOption) ParseOption {
+	options = append(append([]jws.WithKeySetOption(nil), jws.WithRequireKid(true)), options...)
+	return newParseOption(identKeySet{}, jws.WithKeySet(set, options...))
 }
 
 // UseDefaultKey is used in conjunction with the option WithKeySet
@@ -450,32 +422,6 @@ func InferAlgorithmFromKey(v bool) ParseOption {
 	return newParseOption(identInferAlgorithmFromKey{}, v)
 }
 
-// KeySetProvider is an interface for objects that can choose the appropriate
-// jwk.Set to be used when verifying JWTs
-type KeySetProvider interface {
-	// KeySetFrom returns the jwk.Set to be used to verify the token.
-	// Keep in mind that the token at the point when the method is called is NOT VERIFIED.
-	// DO NOT trust the contents of the Token too much. For example, do not take the
-	// hint as to which signature algorithm to use from the token itself.
-	KeySetFrom(Token) (jwk.Set, error)
-}
-
-// KeySetProviderFunc is an implementation of KeySetProvider that is based
-// on a function.
-type KeySetProviderFunc func(Token) (jwk.Set, error)
-
-func (fn KeySetProviderFunc) KeySetFrom(t Token) (jwk.Set, error) {
-	return fn(t)
-}
-
-// WithKeySetProvider allows users to specify an object to choose which
-// jwk.Set to use for verification.
-//
-// If provided with WithKeySet(), WithKeySet() option takes precedence.
-func WithKeySetProvider(p KeySetProvider) ParseOption {
-	return newParseOption(identKeySetProvider{}, p)
-}
-
 // WithContext allows you to specify a context.Context object to be used
 // with `jwt.Validate()` option.
 //
@@ -497,42 +443,12 @@ func WithContext(ctx context.Context) ValidateOption {
 //
 // You might also consider using a backoff policy by using `jwt.WithFetchBackoff()`
 // to control the number of requests being made.
-func WithVerifyAuto(v bool) ParseOption {
-	return newParseOption(identVerifyAuto{}, v)
+func WithVerifyAuto(f jws.JWKSetFetcher) ParseOption {
+	return newParseOption(identVerifyAuto{}, jws.WithVerifyAuto(f))
 }
 
-// WithFetchWhitelist specifies the `jwk.Whitelist` object that should be
-// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
-//
-// This is a wrapper over `jws.WithFetchWhitelist()` that can be passed
-// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
-func WithFetchWhitelist(wl jwk.Whitelist) ParseOption {
-	return newParseOption(identFetchWhitelist{}, wl)
-}
+type identKeyProvider struct{}
 
-// WithHTTPClient specifies the `*http.Client` object that should be
-// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
-//
-// This is a wrapper over `jws.WithHTTPClient()` that can be passed
-// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
-func WithHTTPClient(httpcl *http.Client) ParseOption {
-	return newParseOption(identHTTPClient{}, httpcl)
-}
-
-// WithFetchBackoff specifies the `backoff.Policy` object that should be
-// passed to `jws.VerifyAuto()`, which in turn will be passed to `jwk.Fetch()`
-//
-// This is a wrapper over `jws.WithFetchBackoff()` that can be passed
-// to `jwt.Parse()`, and will be ignored if you spcify `jws.WithJWKSetFetcher()`
-func WithFetchBackoff(b backoff.Policy) ParseOption {
-	return newParseOption(identFetchBackoff{}, b)
-}
-
-// WithJWKSetFetcher specifies the `jws.JWKSetFetcher` object that should be
-// passed to `jws.VerifyAuto()`
-//
-// This is a wrapper over `jws.WithJWKSetFetcher()` that can be passed
-// to `jwt.Parse()`.
-func WithJWKSetFetcher(f jws.JWKSetFetcher) ParseOption {
-	return newParseOption(identJWKSetFetcher{}, f)
+func WithKeyProvider(kp jws.KeyProvider) ParseOption {
+	return newParseOption(identKeyProvider{}, jws.WithKeyProvider(kp))
 }

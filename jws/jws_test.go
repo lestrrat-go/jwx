@@ -1662,7 +1662,7 @@ func TestJKU(t *testing.T) {
 					return
 				}
 
-				decoded, err := jws.Verify(signed, jws.WithAutoVerify(tc.Fetcher()))
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(tc.Fetcher()))
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
@@ -1777,7 +1777,7 @@ func TestJKU(t *testing.T) {
 				}
 				options = append(options, jwk.WithHTTPClient(srv.Client()))
 				f := jws.NewJWKSetFetcher(options...)
-				decoded, err := jws.Verify(signed, jws.WithAutoVerify(f), jws.WithMessage(m))
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(f), jws.WithMessage(m))
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
