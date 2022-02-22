@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.19 UNRELEASED
+v1.2.19 22 Feb 2022
 [New Feature]
   * [jwk] jwk.Parse (and (jwk.AutoRefresh).Configure) can accept a new
     option `jwk.WithIgnoreParseError(bool)`, which allows users to ignore
