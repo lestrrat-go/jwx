@@ -14,12 +14,12 @@ type KeyProvider interface {
 }
 
 type KeySink interface {
-	Key(jwa.SignatureAlgorithm, jwk.Key)
+	Key(jwa.SignatureAlgorithm, interface{})
 }
 
 type algKeyPair struct {
 	alg jwa.SignatureAlgorithm
-	key jwk.Key
+	key interface{}
 }
 
 type algKeySink struct {
@@ -27,7 +27,7 @@ type algKeySink struct {
 	list []algKeyPair
 }
 
-func (s *algKeySink) Key(alg jwa.SignatureAlgorithm, key jwk.Key) {
+func (s *algKeySink) Key(alg jwa.SignatureAlgorithm, key interface{}) {
 	s.mu.Lock()
 	s.list = append(s.list, algKeyPair{alg, key})
 	s.mu.Unlock()
@@ -39,18 +39,7 @@ type staticKeyProvider struct {
 }
 
 func (kp *staticKeyProvider) FetchKeys(sink KeySink, _ *Signature) error {
-	var jwkKey jwk.Key
-	switch key := kp.key.(type) {
-	case jwk.Key:
-		jwkKey = key
-	default:
-		v, err := jwk.New(key)
-		if err != nil {
-			return fmt.Errorf(`failed to convert key into jwk.Key: %w`, err)
-		}
-		jwkKey = v
-	}
-	sink.Key(kp.alg, jwkKey)
+	sink.Key(kp.alg, kp.key)
 	return nil
 }
 

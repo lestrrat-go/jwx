@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt/openid"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -154,10 +155,11 @@ func ExampleJWT_ParseWithJWKS() {
 			token, err := jwt.Parse(
 				payload,
 				// Tell the parser that you want to use this keyset
-				jwt.WithKeySet(keyset),
-				// Tell the parser that you can trust this KeySet, and that
-				// you want to use the sole key in it
-				jwt.UseDefaultKey(true),
+				jwt.WithKeySet(keyset,
+					// Tell the parser that you can trust this KeySet, and that
+					// you want to use the sole key in it
+					jws.WithUseDefault(true),
+				),
 			)
 			if err != nil {
 				fmt.Printf("failed to parse payload: %s\n", err)
@@ -243,7 +245,7 @@ func ExampleJWT_Sign() {
 		token, err := jwt.Parse(
 			payload,
 			jwt.WithValidate(true),
-			jwt.WithVerify(jwa.RS256, &privKey.PublicKey),
+			jwt.WithKey(jwa.RS256, &privKey.PublicKey),
 		)
 		if err != nil {
 			fmt.Printf("failed to parse JWT token: %s\n", err)

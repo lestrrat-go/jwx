@@ -45,7 +45,7 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// Up to this point, you probably will replace with a simple jwk.Fetch()
 
 	// Now verify using the set.
-	if _, err := jws.VerifySet(signed, set); err != nil {
+	if _, err := jws.Verify(signed, jws.WithKeySet(set)); err != nil {
 		fmt.Printf("Failed to verify using jwk.Set!: %s", err)
 	}
 
@@ -106,7 +106,7 @@ func ExampleJWS_ExternalSignerVerifier() {
 		return
 	}
 
-	verified, err := jws.Verify(signed, jwa.EdDSA, pubkey)
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA, pubkey))
 	if err != nil {
 		fmt.Printf(`failed to verify signed message: %s`, err)
 		return
@@ -133,7 +133,7 @@ func ExampleJWS_Sign() {
 		return
 	}
 
-	verified, err := jws.Verify(buf, jwa.RS256, &privkey.PublicKey)
+	verified, err := jws.Verify(buf, jws.WithKey(jwa.RS256, &privkey.PublicKey))
 	if err != nil {
 		log.Printf("failed to verify JWS message: %s", err)
 		return
