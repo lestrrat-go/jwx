@@ -1662,7 +1662,7 @@ func TestJKU(t *testing.T) {
 						aropts = append(aropts, jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}))
 						ar.Configure(u, aropts...)
 
-						return ar.Fetch(context.TODO(), u)
+						return ar.Fetch(ctx, u)
 					})
 				},
 			},
