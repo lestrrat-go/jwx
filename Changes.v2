@@ -1,0 +1,86 @@
+Changes
+=======
+
+
+[Incompatible Changes]
+  These are changes that are incompatible with the v1.x.x version.
+
+  * [jwk] `(jwk.Key).Algorithm() is now of `jwk.KeyAlgorithm` type. This field used
+    to be `string` and therefore could not be passed directly to `jwt.Sign()`
+    `jws.Sign()`, `jwe.Encrypt()`, et al. This is no longer the case, and
+    now you can pass it directly. See 
+    https://github.com/lestrrat-go/jwx/blob/main/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
+    for more details
+
+  * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
+    They represent something that can fetch a jwk.Set
+
+  * [jws] jws.Verify()'s method signature has been changed to
+
+      jwt.Verify([]byte, options ...jws.VerifyOption) ([]byte, error)
+
+    - For static key pair, use `jws.WithKey()`
+    - For static JWKS, use `jws.WithKeySet()`
+    - For enabling verification using `jku`, use `jws.WithVerifyAuto()`
+    - For custom, possibly dynamic key provisioning, use `jws.WithKeyProvider()`
+
+    These options can be stacked. Therefore, you could configure the
+    verification process to attempt a static key pair, a JWKS, and only
+    try other forms if the first two fails, for example.
+   
+  * [jws] jws.WithVerify() has been removed.
+
+  * [jws] jws.WithKey() has been added to specify an algorithm + key to
+    verify the payload with.
+
+  * [jws] jws.WithKeySet() has been added to specify a JWKS to be used for
+    verification.
+
+    The option can take further options:
+
+      jws.Parse(serialized,
+        jws.WithKeySet(set,
+          // require `kid` to match
+          jws.WithRequireKid(true),
+          // optionally skip matching kid if there's exactly one key in set
+          jws.WithUseDefault(true),
+          // infer algorithm name from key type
+          jws.WithInferAlgorithm(true),
+        ),
+      )
+
+  * [jws] jws.WithVerifyAuto() has been added to enable verification
+    using `jku`.
+
+    The first argument must be a jwk.SetFetcher object, but can be
+    set to `nil` to use the default implementation which is `jwk.Fetch`
+
+    The rest of the arguments are treated as options passed to the
+    `(jwk.SetFetcher).Fetch()` function.
+
+  * [jws] jws.WithKeyProvider() has been added to specify arbitrary
+    code to specify which keys to try.
+
+  * [jws] jws.KeyProvider interface has been added
+  * [jws] jws.KeyProviderFunc has been added
+ 
+  * [jws] jws.WithKeyUsed has been added to allow users to retrieve
+    the key used for verification. This is useful in cases you provided
+    multiple keys and you want to know which one was successful
+
+  * [jwt] jwt.WithKeySetProvider has been removed. The original purpose was to
+    use the JWT data (such as `iss`) to figure out which key to use for
+    verification. However, this can easily be implemented as follows:
+
+      msg, _ := jws.Parse(serialized) // no verification
+      token, _ := jwt.Parse(msg.Payload()) // no verification
+      switch token.Issuer() {
+      case jwt.IssuerKey:
+        _, err := jws.Verify(serialized, jwt.WithKeySet(set))
+        if err != nil {
+          ...
+        }
+      }
+
+    Also, this really... is not safe. You are using an unverified payload
+    to verify the JWS.
