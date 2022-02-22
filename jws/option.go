@@ -1,9 +1,8 @@
 package jws
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/option"
@@ -15,10 +14,6 @@ type identPayloadSigner struct{}
 type identDetachedPayload struct{}
 type identHeaders struct{}
 type identMessage struct{}
-type identFetchBackoff struct{}
-type identFetchWhitelist struct{}
-type identHTTPClient struct{}
-type identJWKSetFetcher struct{}
 
 func WithSigner(signer Signer, key interface{}, public, protected Headers) Option {
 	return option.New(identPayloadSigner{}, &payloadSigner{
@@ -87,43 +82,12 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
 }
 
-// WithFetchWhitelist specifies the whitelist object to be passed
-// to `jwk.Fetch()` when `jws.VerifyAuto()` is used. If you do not
-// specify a whitelist, `jws.VerifyAuto()` will ALWAYS fail.
-//
-// This option is ignored if WithJWKSetFetcher is specified.
-func WithFetchWhitelist(wl jwk.Whitelist) VerifyOption {
-	return &verifyOption{option.New(identFetchWhitelist{}, wl)}
-}
-
-// WithFetchBackoff specifies the backoff.Policy object to be passed
-// to `jwk.Fetch()` when `jws.VerifyAuto()` is used.
-//
-// This option is ignored if WithJWKSetFetcher is specified.
-func WithFetchBackoff(b backoff.Policy) VerifyOption {
-	return &verifyOption{option.New(identFetchBackoff{}, b)}
-}
-
-// WithHTTPClient specifies the *http.Client object to be passed
-// to `jwk.Fetch()` when `jws.VerifyAuto()` is used.
-//
-// This option is ignored if WithJWKSetFetcher is specified.
-func WithHTTPClient(httpcl *http.Client) VerifyOption {
-	return &verifyOption{option.New(identHTTPClient{}, httpcl)}
-}
-
-// WithJWKSetFetcher specifies the JWKSetFetcher object to be
-// used when `jws.VerifyAuto()`, for example, to use `jwk.AutoRefetch`
-// instead of the default `jwk.Fetch()`
-func WithJWKSetFetcher(f JWKSetFetcher) VerifyOption {
-	return &verifyOption{option.New(identJWKSetFetcher{}, f)}
-}
-
 type identKeyProvider struct{}
 type identRequireKid struct{}
 type identUseDefault struct{}
 type identInferAlgorithm struct{}
 type identKeyUsed struct{}
+type identContext struct{}
 
 func WithKey(alg jwa.SignatureAlgorithm, key interface{}) VerifyOption {
 	return WithKeyProvider(&staticKeyProvider{
@@ -178,9 +142,18 @@ func WithKeySet(set jwk.Set, options ...WithKeySetOption) VerifyOption {
 	})
 }
 
-func WithVerifyAuto(f JWKSetFetcher) VerifyOption {
+func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) VerifyOption {
+	if f == nil {
+		f = jwk.SetFetchFunc(jwk.Fetch)
+	}
+
+	// the option MUST start with a "disallow no whitelist" to force
+	// users provide a whitelist
+	options = append(append([]jwk.FetchOption(nil), jwk.WithFetchWhitelist(allowNoneWhitelist)), options...)
+
 	return WithKeyProvider(jkuProvider{
 		fetcher: f,
+		options: options,
 	})
 }
 
@@ -190,4 +163,8 @@ func WithKeyProvider(kp KeyProvider) VerifyOption {
 
 func WithKeyUsed(v interface{}) VerifyOption {
 	return &verifyOption{option.New(identKeyUsed{}, v)}
+}
+
+func WithContext(ctx context.Context) VerifyOption {
+	return &verifyOption{option.New(identContext{}, ctx)}
 }

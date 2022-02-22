@@ -210,13 +210,6 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	return json.Marshal(result)
 }
 
-type verifyCtx struct {
-	dst             *Message
-	detachedPayload []byte
-	keyProviders    []KeyProvider
-	keyUsed         interface{}
-}
-
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 	return false
 })
@@ -231,18 +224,26 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // If you need to access signatures and JOSE headers in a JWS message,
 // use `Parse` function to get `Message` object.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
-	var ctx verifyCtx
+	var dst *Message
+	var detachedPayload []byte
+	var keyProviders []KeyProvider
+	var keyUsed interface{}
+
+	ctx := context.Background()
+
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			ctx.dst = option.Value().(*Message)
+			dst = option.Value().(*Message)
 		case identDetachedPayload{}:
-			ctx.detachedPayload = option.Value().([]byte)
+			detachedPayload = option.Value().([]byte)
 		case identKeyProvider{}:
-			ctx.keyProviders = append(ctx.keyProviders, option.Value().(KeyProvider))
+			keyProviders = append(keyProviders, option.Value().(KeyProvider))
 		case identKeyUsed{}:
-			ctx.keyUsed = option.Value()
+			keyUsed = option.Value()
+		case identContext{}:
+			ctx = option.Value().(context.Context)
 		default:
 			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -254,12 +255,12 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	}
 	defer msg.clearRaw()
 
-	if ctx.detachedPayload != nil {
+	if detachedPayload != nil {
 		if len(msg.payload) != 0 {
 			return nil, fmt.Errorf(`can't specify detached payload for JWS with payload`)
 		}
 
-		msg.payload = ctx.detachedPayload
+		msg.payload = detachedPayload
 	}
 
 	// Pre-compute the base64 encoded version of payload
@@ -296,9 +297,9 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		verifyBuf.WriteByte('.')
 		verifyBuf.WriteString(payload)
 
-		for i, kp := range ctx.keyProviders {
+		for i, kp := range keyProviders {
 			var sink algKeySink
-			if err := kp.FetchKeys(&sink, sig); err != nil {
+			if err := kp.FetchKeys(ctx, &sink, sig); err != nil {
 				return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 			}
 
@@ -313,14 +314,14 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 					continue
 				}
 
-				if ctx.keyUsed != nil {
-					if err := blackmagic.AssignIfCompatible(ctx.keyUsed, key); err != nil {
-						return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, ctx.keyUsed, err)
+				if keyUsed != nil {
+					if err := blackmagic.AssignIfCompatible(keyUsed, key); err != nil {
+						return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, keyUsed, err)
 					}
 				}
 
-				if ctx.dst != nil {
-					*(ctx.dst) = *msg
+				if dst != nil {
+					*(dst) = *msg
 				}
 
 				return msg.payload, nil
@@ -344,37 +345,6 @@ func getB64Value(hdr Headers) bool {
 		return false
 	}
 	return b64
-}
-
-// JWKSetFetcher is used to fetch JWK Set spcified in the `jku` field.
-type JWKSetFetcher interface {
-	Fetch(string) (jwk.Set, error)
-}
-
-// SimpleJWKSetFetcher is the default object used to fetch JWK Sets specified in `jku`,
-// which uses `jwk.Fetch()`
-//
-// For more complicated cases, such as using `jwk.AutoRefetch`, you will have to
-// create your custom instance of `jws.JWKSetFetcher`
-type SimpleJWKSetFetcher struct {
-	options []jwk.FetchOption
-}
-
-func NewJWKSetFetcher(options ...jwk.FetchOption) *SimpleJWKSetFetcher {
-	// We shove this in the front so that the ser is forced to
-	// specify a whitelist
-	options = append([]jwk.FetchOption{jwk.WithFetchWhitelist(allowNoneWhitelist)}, options...)
-	return &SimpleJWKSetFetcher{options: options}
-}
-
-func (f *SimpleJWKSetFetcher) Fetch(u string) (jwk.Set, error) {
-	return jwk.Fetch(context.TODO(), u, f.options...)
-}
-
-type JWKSetFetchFunc func(string) (jwk.Set, error)
-
-func (f JWKSetFetchFunc) Fetch(u string) (jwk.Set, error) {
-	return f(u)
 }
 
 // This is an "optimized" ioutil.ReadAll(). It will attempt to read

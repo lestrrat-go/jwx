@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"sync"
@@ -10,7 +11,7 @@ import (
 )
 
 type KeyProvider interface {
-	FetchKeys(KeySink, *Signature) error
+	FetchKeys(context.Context, KeySink, *Signature) error
 }
 
 type KeySink interface {
@@ -38,7 +39,7 @@ type staticKeyProvider struct {
 	key interface{}
 }
 
-func (kp *staticKeyProvider) FetchKeys(sink KeySink, _ *Signature) error {
+func (kp *staticKeyProvider) FetchKeys(_ context.Context, sink KeySink, _ *Signature) error {
 	sink.Key(kp.alg, kp.key)
 	return nil
 }
@@ -91,7 +92,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature) e
 	return nil
 }
 
-func (kp *keySetProvider) FetchKeys(sink KeySink, sig *Signature) error {
+func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature) error {
 	if kp.requireKid {
 		var key jwk.Key
 
@@ -130,10 +131,11 @@ func (kp *keySetProvider) FetchKeys(sink KeySink, sig *Signature) error {
 }
 
 type jkuProvider struct {
-	fetcher JWKSetFetcher
+	fetcher jwk.SetFetcher
+	options []jwk.FetchOption
 }
 
-func (kp jkuProvider) FetchKeys(sink KeySink, sig *Signature) error {
+func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature) error {
 	kid := sig.ProtectedHeaders().KeyID()
 	if kid == "" {
 		return nil
@@ -154,7 +156,7 @@ func (kp jkuProvider) FetchKeys(sink KeySink, sig *Signature) error {
 		return fmt.Errorf(`url in "jku" must be HTTPS`)
 	}
 
-	set, err := kp.fetcher.Fetch(u)
+	set, err := kp.fetcher.Fetch(ctx, u, kp.options...)
 	if err != nil {
 		return fmt.Errorf(`failed to fetch %q: %w`, u, err)
 	}
@@ -183,8 +185,8 @@ func (kp jkuProvider) FetchKeys(sink KeySink, sig *Signature) error {
 	return nil
 }
 
-type KeyProviderFunc func(KeySink, *Signature) error
+type KeyProviderFunc func(context.Context, KeySink, *Signature) error
 
-func (kp KeyProviderFunc) FetchKeys(sink KeySink, sig *Signature) error {
-	return kp(sink, sig)
+func (kp KeyProviderFunc) FetchKeys(ctx context.Context, sink KeySink, sig *Signature) error {
+	return kp(ctx, sink, sig)
 }

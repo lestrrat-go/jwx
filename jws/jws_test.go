@@ -1599,38 +1599,37 @@ func TestJKU(t *testing.T) {
 
 	t.Run("Compact", func(t *testing.T) {
 		testcases := []struct {
-			Name    string
-			Error   bool
-			Query   string
-			Fetcher func() jws.JWKSetFetcher
+			Name         string
+			Error        bool
+			Query        string
+			Fetcher      func() jwk.SetFetcher
+			FetchOptions func() []jwk.FetchOption
 		}{
 			{
 				Name:  "Fail without whitelist",
 				Error: true,
-				Fetcher: func() jws.JWKSetFetcher {
-					return jws.NewJWKSetFetcher(
-						jwk.WithHTTPClient(srv.Client()),
-					)
+				FetchOptions: func() []jwk.FetchOption {
+					return []jwk.FetchOption{jwk.WithHTTPClient(srv.Client())}
 				},
 			},
 			{
 				Name: "Success",
-				Fetcher: func() jws.JWKSetFetcher {
-					return jws.NewJWKSetFetcher(
+				FetchOptions: func() []jwk.FetchOption {
+					return []jwk.FetchOption{
 						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
 						jwk.WithHTTPClient(srv.Client()),
-					)
+					}
 				},
 			},
 			{
 				Name:  "Rejected by whitelist",
 				Error: true,
-				Fetcher: func() jws.JWKSetFetcher {
+				FetchOptions: func() []jwk.FetchOption {
 					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx`)
-					return jws.NewJWKSetFetcher(
+					return []jwk.FetchOption{
 						jwk.WithFetchWhitelist(wl),
 						jwk.WithHTTPClient(srv.Client()),
-					)
+					}
 				},
 			},
 			{
@@ -1641,21 +1640,28 @@ func TestJKU(t *testing.T) {
 				Name:  "Backoff",
 				Error: false,
 				Query: "type=backoff",
-				Fetcher: func() jws.JWKSetFetcher {
+				FetchOptions: func() []jwk.FetchOption {
 					bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
-					return jws.NewJWKSetFetcher(
+					return []jwk.FetchOption{
 						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
 						jwk.WithFetchBackoff(bo),
 						jwk.WithHTTPClient(srv.Client()),
-					)
+					}
 				},
 			},
 			{
 				Name: "JWKSetFetcher",
-				Fetcher: func() jws.JWKSetFetcher {
+				Fetcher: func() jwk.SetFetcher {
 					ar := jwk.NewAutoRefresh(context.TODO())
-					return jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
-						ar.Configure(u, jwk.WithHTTPClient(srv.Client()))
+					return jwk.SetFetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
+						var aropts []jwk.AutoRefreshOption
+						for _, option := range options {
+							aropts = append(aropts, option)
+						}
+						aropts = append(aropts, jwk.WithHTTPClient(srv.Client()))
+						aropts = append(aropts, jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}))
+						ar.Configure(u, aropts...)
+
 						return ar.Fetch(context.TODO(), u)
 					})
 				},
@@ -1676,7 +1682,16 @@ func TestJKU(t *testing.T) {
 					return
 				}
 
-				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(tc.Fetcher()))
+				var options []jwk.FetchOption
+				if f := tc.FetchOptions; f != nil {
+					options = append(options, f()...)
+				}
+
+				var fetcher jwk.SetFetcher
+				if f := tc.Fetcher; f != nil {
+					fetcher = f()
+				}
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(fetcher, options...))
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return
@@ -1790,8 +1805,8 @@ func TestJKU(t *testing.T) {
 					options = fn()
 				}
 				options = append(options, jwk.WithHTTPClient(srv.Client()))
-				f := jws.NewJWKSetFetcher(options...)
-				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(f), jws.WithMessage(m))
+
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(nil, options...), jws.WithMessage(m))
 				if tc.Error {
 					if !assert.Error(t, err, `jws.Verify should fail`) {
 						return

@@ -232,6 +232,16 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 }
 
+type SetFetcher interface {
+	Fetch(context.Context, string, ...FetchOption) (Set, error)
+}
+
+type SetFetchFunc func(context.Context, string, ...FetchOption) (Set, error)
+
+func (f SetFetchFunc) Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
+	return f(ctx, urlstring, options...)
+}
+
 // Fetch fetches a JWK resource specified by a URL. The url must be
 // pointing to a resource that is supported by `net/http`.
 //

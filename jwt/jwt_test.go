@@ -1472,7 +1472,7 @@ func TestVerifyAuto(t *testing.T) {
 	wl := jwk.NewMapWhitelist().
 		Add(srv.URL)
 
-	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher(jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(srv.Client()))))
+	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(srv.Client())))
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return
 	}
@@ -1481,13 +1481,13 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 
-	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher()))
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
 	}
 	wl = jwk.NewMapWhitelist().
 		Add(`https://github.com/lestrrat-go/jwx`)
-	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(jws.NewJWKSetFetcher(jwk.WithFetchWhitelist(wl))))
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return
 	}
@@ -1495,12 +1495,10 @@ func TestVerifyAuto(t *testing.T) {
 	// now with backoff
 	bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
 	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(
-			jws.NewJWKSetFetcher(
-				jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-				jwk.WithHTTPClient(srv.Client()),
-				jwk.WithFetchBackoff(bo),
-			),
+		jwt.WithVerifyAuto(nil,
+			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+			jwk.WithHTTPClient(srv.Client()),
+			jwk.WithFetchBackoff(bo),
 		),
 	)
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
@@ -1515,13 +1513,19 @@ func TestVerifyAuto(t *testing.T) {
 	ar := jwk.NewAutoRefresh(context.TODO())
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(
-			jws.JWKSetFetchFunc(func(u string) (jwk.Set, error) {
-				ar.Configure(u,
-					jwk.WithHTTPClient(srv.Client()),
-					jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-				)
-				return ar.Fetch(context.TODO(), u)
-			})),
+			jwk.SetFetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
+				var aropts []jwk.AutoRefreshOption
+				// jwk.FetchOption is also an AutoRefreshOption, but the container
+				// doesn't match the signature... so... we need to convert them...
+				for _, option := range options {
+					aropts = append(aropts, option)
+				}
+				ar.Configure(u, aropts...)
+				return ar.Fetch(ctx, u)
+			}),
+			jwk.WithHTTPClient(srv.Client()),
+			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+		),
 	)
 	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 		return

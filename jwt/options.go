@@ -442,8 +442,8 @@ func WithContext(ctx context.Context) ValidateOption {
 //
 // You might also consider using a backoff policy by using `jwt.WithFetchBackoff()`
 // to control the number of requests being made.
-func WithVerifyAuto(f jws.JWKSetFetcher) ParseOption {
-	return newParseOption(identVerifyAuto{}, jws.WithVerifyAuto(f))
+func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) ParseOption {
+	return newParseOption(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))
 }
 
 type identKeyProvider struct{}
