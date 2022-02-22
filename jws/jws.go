@@ -242,7 +242,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		case identKeyProvider{}:
 			ctx.keyProviders = append(ctx.keyProviders, option.Value().(KeyProvider))
 		case identKeyUsed{}:
-			ctx.keyUsed = option.Value().(interface{})
+			ctx.keyUsed = option.Value()
 		default:
 			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
