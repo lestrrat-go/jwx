@@ -37,6 +37,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
@@ -213,6 +214,7 @@ type verifyCtx struct {
 	dst             *Message
 	detachedPayload []byte
 	keyProviders    []KeyProvider
+	keyUsed         interface{}
 }
 
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
@@ -239,15 +241,13 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			ctx.detachedPayload = option.Value().([]byte)
 		case identKeyProvider{}:
 			ctx.keyProviders = append(ctx.keyProviders, option.Value().(KeyProvider))
+		case identKeyUsed{}:
+			ctx.keyUsed = option.Value().(interface{})
 		default:
 			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
-	return ctx.verify(buf)
-}
-
-func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse jws: %w`, err)
@@ -311,6 +311,12 @@ func (ctx *verifyCtx) verify(buf []byte) ([]byte, error) {
 
 				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
 					continue
+				}
+
+				if ctx.keyUsed != nil {
+					if err := blackmagic.AssignIfCompatible(ctx.keyUsed, key); err != nil {
+						return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, ctx.keyUsed, err)
+					}
 				}
 
 				if ctx.dst != nil {

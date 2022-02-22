@@ -123,6 +123,7 @@ type identKeyProvider struct{}
 type identRequireKid struct{}
 type identUseDefault struct{}
 type identInferAlgorithm struct{}
+type identKeyUsed struct{}
 
 func WithKey(alg jwa.SignatureAlgorithm, key interface{}) VerifyOption {
 	return WithKeyProvider(&staticKeyProvider{
@@ -185,4 +186,8 @@ func WithVerifyAuto(f JWKSetFetcher) VerifyOption {
 
 func WithKeyProvider(kp KeyProvider) VerifyOption {
 	return &verifyOption{option.New(identKeyProvider{}, kp)}
+}
+
+func WithKeyUsed(v interface{}) VerifyOption {
+	return &verifyOption{option.New(identKeyUsed{}, v)}
 }

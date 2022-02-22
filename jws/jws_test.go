@@ -1116,11 +1116,18 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.Verify(signed, jws.WithKeySet(set))
+				var used jwk.Key
+				verified, err := jws.Verify(signed, jws.WithKeySet(set), jws.WithKeyUsed(&used))
 				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+				expected, _ := jwk.PublicKeyOf(key)
+				thumb1, _ := expected.Thumbprint(crypto.SHA1)
+				thumb2, _ := used.Thumbprint(crypto.SHA1)
+				if !assert.Equal(t, thumb1, thumb2, `keys should match`) {
 					return
 				}
 			})
@@ -1149,11 +1156,18 @@ func TestVerifySet(t *testing.T) {
 					}
 				}
 
-				verified, err := jws.Verify(signed, jws.WithKeySet(set))
+				var used jwk.Key
+				verified, err := jws.Verify(signed, jws.WithKeySet(set), jws.WithKeyUsed(&used))
 				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}
 				if !assert.Equal(t, []byte(payload), verified, `payload should match`) {
+					return
+				}
+				expected, _ := jwk.PublicKeyOf(key)
+				thumb1, _ := expected.Thumbprint(crypto.SHA1)
+				thumb2, _ := used.Thumbprint(crypto.SHA1)
+				if !assert.Equal(t, thumb1, thumb2, `keys should match`) {
 					return
 				}
 			})
