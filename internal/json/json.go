@@ -34,7 +34,7 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 
 	buf, err := base64.DecodeString(val)
 	if err != nil {
-		return errors.Errorf(`expected base64 encoded []byte (%T)`, val)
+		return errors.Errorf(`expected base64url encoded []byte (%T)`, val)
 	}
 	*dst = buf
 	return nil
