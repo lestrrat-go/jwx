@@ -18,6 +18,7 @@ type identKey struct{}
 type identKeyUsed struct{}
 type identKeyProvider struct{}
 type identPayloadSigner struct{}
+type identSerialization struct{}
 
 // WithKey options
 type identSignProtected struct{}
@@ -93,6 +94,14 @@ func (*signVerifyOption) verifyOption() {}
 // If you have to verify using this option, you should know exactly how and why this works.
 func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
+}
+
+func WithCompact() SignOption {
+	return &signOption{option.New(identSerialization{}, fmtCompact)}
+}
+
+func WithJSON() SignOption {
+	return &signOption{option.New(identSerialization{}, fmtJSON)}
 }
 
 type WithKeyOption interface {

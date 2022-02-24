@@ -14,14 +14,14 @@ func TestSign(t *testing.T) {
 	t.Parallel()
 	t.Run("Bad algorithm", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Sign([]byte(nil), jwa.SignatureAlgorithm("FooBar"), nil)
+		_, err := jws.Sign([]byte(nil), jws.WithKey(jwa.SignatureAlgorithm("FooBar"), nil))
 		if !assert.Error(t, err, "Unknown algorithm should return error") {
 			return
 		}
 	})
 	t.Run("No private key", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jwa.RS256, nil)
+		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jws.WithKey(jwa.RS256, nil))
 		if !assert.Error(t, err, "Sign with no private key should return error") {
 			return
 		}
@@ -74,24 +74,17 @@ func TestSignMulti(t *testing.T) {
 		return
 	}
 
-	s1, err := jws.NewSigner(jwa.RS256)
-	if !assert.NoError(t, err, "RSA Signer created") {
-		return
-	}
 	s1hdr := jws.NewHeaders()
 	s1hdr.Set(jws.KeyIDKey, "2010-12-29")
 
-	s2, err := jws.NewSigner(jwa.ES256)
-	if !assert.NoError(t, err, "DSA Signer created") {
-		return
-	}
 	s2hdr := jws.NewHeaders()
 	s2hdr.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
-	m, err := jws.SignMulti([]byte(v),
-		jws.WithSigner(s1, rsakey, s1hdr, nil),
-		jws.WithSigner(s2, dsakey, s2hdr, nil),
+	m, err := jws.Sign([]byte(v),
+		jws.WithJSON(),
+		jws.WithKey(jwa.RS256, rsakey, jws.WithPublic(s1hdr)),
+		jws.WithKey(jwa.ES256, dsakey, jws.WithPublic(s2hdr)),
 	)
 	if !assert.NoError(t, err, "jws.SignMulti should succeed") {
 		return

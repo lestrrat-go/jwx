@@ -157,7 +157,7 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 			}
 		}
 	}
-	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
+	return jws.Sign(payload, jws.WithKey(s.alg, s.key, jws.WithProtected(hdrs)))
 }
 
 func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) *Serializer {
