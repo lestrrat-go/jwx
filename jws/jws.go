@@ -138,6 +138,10 @@ const (
 	fmtMax
 )
 
+// silence linters
+var _ = fmtInvalid
+var _ = fmtMax
+
 func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	format := fmtCompact
 	var signers []*payloadSigner
