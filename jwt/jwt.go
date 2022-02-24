@@ -14,7 +14,6 @@ import (
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/jwe"
 
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 )
@@ -332,12 +331,8 @@ OUTER:
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
-func Sign(t Token, alg jwa.KeyAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	salg, ok := alg.(jwa.SignatureAlgorithm)
-	if !ok {
-		return nil, errors.Errorf(`jwt.Sign received %T for alg. Expected jwa.SignatureAlgorithm`, alg)
-	}
-	return NewSerializer().Sign(salg, key, options...).Serialize(t)
+func Sign(t Token, options ...SignOption) ([]byte, error) {
+	return NewSerializer().Sign(options...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like

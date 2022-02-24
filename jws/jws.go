@@ -152,7 +152,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		case identSerialization{}:
 			format = o.Value().(int)
 		case identKey{}:
-			data := o.Value().(withKey)
+			data := o.Value().(*withKey)
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
@@ -290,7 +290,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		case identDetachedPayload{}:
 			detachedPayload = option.Value().([]byte)
 		case identKey{}:
-			pair := option.Value().(withKey)
+			pair := option.Value().(*withKey)
 			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
 			if !ok {
 				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.SignatureAlgorithm (got %T)`, pair.alg)

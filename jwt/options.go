@@ -73,6 +73,19 @@ func newSignOption(n interface{}, v interface{}) SignOption {
 
 func (*signOption) signOption() {}
 
+type SignParseOption interface {
+	SignOption
+	ParseOption
+}
+
+type signParseOption struct {
+	Option
+}
+
+func (*signParseOption) readFileOption() {}
+func (*signParseOption) parseOption()    {}
+func (*signParseOption) signOption()     {}
+
 // EncryptOption describes an Option that can be passed to Encrypt() or
 // (jwt.Serializer).Encrypt
 type EncryptOption interface {
@@ -129,11 +142,12 @@ type identVerifyAuto struct{}
 type identHeaderKey struct{}
 type identFormKey struct{}
 
-// WithVerify forces the Parse method to verify the JWT message
-// using the given key. XXX Should have been named something like
-// WithVerificationKey
-func WithKey(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
-	return newParseOption(identKey{}, jws.WithKey(alg, key))
+// WithKey forces the Parse method to verify the JWT message
+// using the given key.
+//
+// This is a utility wrapper around `jws.WithKey()`
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeyOption) SignParseOption {
+	return &signParseOption{option.New(identKey{}, jws.WithKey(alg, key, options...))}
 }
 
 // WithKeySet forces the Parse method to verify the JWT message

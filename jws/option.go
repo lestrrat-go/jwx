@@ -104,6 +104,8 @@ func WithJSON() SignOption {
 	return &signOption{option.New(identSerialization{}, fmtJSON)}
 }
 
+// WithKeyOption describes option types that can be passed to the `jws.WithKey()`
+// option.
 type WithKeyOption interface {
 	Option
 	withKeyOption()
@@ -141,6 +143,14 @@ type withKey struct {
 	public    Headers
 }
 
+// This exist as escape hatches to modify the header values after the fact
+func (w *withKey) Protected(v Headers) Headers {
+	if w.protected == nil && v != nil {
+		w.protected = v
+	}
+	return w.protected
+}
+
 // WithKey is used to pass algorithm/key pair to either `jws.Sign()` or `jws.Verify()`.
 //
 // When used with `jws.Sign()`, additional properties `jws.WithProtected()` and
@@ -162,7 +172,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeyOption) Si
 	}
 
 	return &signVerifyOption{
-		option.New(identKey{}, withKey{
+		option.New(identKey{}, &withKey{
 			alg:       alg,
 			key:       key,
 			protected: protected,
