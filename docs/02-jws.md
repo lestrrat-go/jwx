@@ -23,7 +23,7 @@ If you want to get the payload in the JWS message after it has been verified, us
 
 ```go
 var encoded = []byte{...}
-payload, _ := jws.Verify(encoded, alg, key)
+payload, _ := jws.Verify(encoded, jws.WithKey(alg, key))
 ```
 
 You must provide the algorithm and the public key to use for verification.
@@ -57,7 +57,7 @@ message, _ := jws.ReadFile(`message.jws`)
 To parse a JWS with detached payload, use the `jws.WithDetachedPayload()` option:
 
 ```go
-signed, _ := jws.Verify(signed, alg, key, jws.WithDetachedPayload(payload))
+signed, _ := jws.Verify(signed, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
 ```
 
 # Signing
@@ -67,23 +67,28 @@ signed, _ := jws.Verify(signed, alg, key, jws.WithDetachedPayload(payload))
 In most cases this is all you really need.
 
 ```go
-signed, _ := jws.Sign(payload, alg, key)
+signed, _ := jws.Sign(payload, jws.WithKey(alg, key))
 ```
 
 To sign a JWT, use [`jwt.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Sign)
+Notice that in this case the `WithKey()` options is that of the `jwt` package.
 
 ```go
-signed, _ := jwt.Sign(token, alg, key)
+signed, _ := jwt.Sign(token, jwt.WithKey(alg, key))
 ```
 
 ## Generating a JWS message in JSON serialization format
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
-When this need arises, use the [`jws.SignMulti()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#SignMulti) method.
+
+When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
 
 ```go
-signer, _ := jws.NewSigner(alg)
-signed, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, protHeaders)
+signed, _ := jws.Sign(payload,
+  jws.WithJSON(),
+  jws.WithKey(alg1, key1),
+  jws.WithKey(alg2, key2),
+)
 ```
 
 ## Generating a JWS message with detached payload
@@ -91,7 +96,7 @@ signed, _ := jws.SignMulti(payload, jws.WithSigner(signer, key, pubHeaders, prot
 Use the `jws.WithDetachedPayload()` option to sign a detached payload:
 
 ```go
-signed, _ := jws.Sign(nil, alg, key, jws.WithDetachedPayload(payload))
+signed, _ := jws.Sign(nil, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
 ```
 
 ## Including Arbitrary Headers to Compact Serialization
@@ -102,8 +107,10 @@ If you want to include more headers fields in the resulting JWS, you will have t
 ```go
 hdrs := jws.NewHeaders()
 hdrs.Set(`arbitrary-key`, `value`)
-signed, _ := jws.Sign(payload, alg, key, jws.WithHEaders(hdrs))
+signed, _ := jws.Sign(payload, jws.WithKey(alg, key, jws.WithProtected(hdrs)))
 ```
+
+Even if you need to pass in custom headers, normally you should only need to set the protected headers.
 
 ## Using cloud KMS services
 
@@ -120,7 +127,7 @@ Simply use `jws.Verify()`. It will automatically do the right thing whether it's
 form or JSON form.
 
 ```go
-payload, _ := jws.Verify(data, alg, key)
+payload, _ := jws.Verify(data, jws.WithKey(alg, key))
 ```
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
@@ -128,7 +135,7 @@ The `alg` must be explicitly specified. See "[Why don't you automatically infer 
 To verify a JWS message with detached payload, use the `jws.WithDetachedPayload()` option:
 
 ```go
-_, err := jws.Verify(data, alg, key, jws.WithDetachedPayload(payload))
+_, err := jws.Verify(data, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
 ```
 
 ## Verification using `jku`
