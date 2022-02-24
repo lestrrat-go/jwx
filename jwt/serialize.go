@@ -153,6 +153,7 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 }
 
 func (s *Serializer) Sign(options ...SignOption) *Serializer {
+	//nolint:prealloc
 	var soptions []jws.SignOption
 	for _, option := range options {
 		v, ok := option.Value().(jws.SignOption)

@@ -17,7 +17,6 @@ type identHeaders struct{}
 type identKey struct{}
 type identKeyUsed struct{}
 type identKeyProvider struct{}
-type identPayloadSigner struct{}
 type identSerialization struct{}
 
 // WithKey options
@@ -28,15 +27,6 @@ type identSignPublic struct{}
 type identRequireKid struct{}
 type identUseDefault struct{}
 type identInferAlgorithm struct{}
-
-func WithSigner(signer Signer, key interface{}, public, protected Headers) Option {
-	return option.New(identPayloadSigner{}, &payloadSigner{
-		signer:    signer,
-		key:       key,
-		protected: protected,
-		public:    public,
-	})
-}
 
 type SignOption interface {
 	Option
@@ -96,10 +86,20 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
 }
 
+// WithCompact specifies that the result of `jws.Sign()` is serialized in
+// compact format.
+//
+// By default `jws.Sign()` will opt to use compact format, so you usually
+// do not need to specify this option other than to be explicit about it
 func WithCompact() SignOption {
 	return &signOption{option.New(identSerialization{}, fmtCompact)}
 }
 
+// WithJSON specifies that the result of `jws.Sign()` is serialized in
+// JSON format.
+//
+// If you pass multiple keys to `jws.Sign()`, it will fail unless
+// you also pass this option.
 func WithJSON() SignOption {
 	return &signOption{option.New(identSerialization{}, fmtJSON)}
 }
@@ -181,7 +181,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeyOption) Si
 	}
 }
 
-// WithKeySetOption is an option passed to the WithKeySet() option (recursion!)
+// WithKeySetOption is a suboption passed to the WithKeySet() option
 type WithKeySetOption interface {
 	Option
 	withKeySetOption()
@@ -193,6 +193,9 @@ type withKeySetOption struct {
 
 func (*withKeySetOption) withKeySetOption() {}
 
+// WithrequiredKid specifies whether the keys in the jwk.Set should
+// only be matched if the target JWS message's Key ID and the Key ID
+// in the given key matches.
 func WithRequireKid(v bool) WithKeySetOption {
 	return &withKeySetOption{option.New(identRequireKid{}, v)}
 }
@@ -246,6 +249,16 @@ func WithKeyProvider(kp KeyProvider) VerifyOption {
 	return &verifyOption{option.New(identKeyProvider{}, kp)}
 }
 
+// WithKeyUsed allows you to specify the `jws.Verify()` function to
+// return the key used for verification. This may be useful when
+// you specify multiple key sources or if you pass a `jwk.Set`
+// and you want to know which key was successful at verifying the
+// signature.
+//
+// `v` must be a pointer to an empty `interface{}`. Do not use
+// `jwk.Key` here unless you are 100% sure that all keys that you
+// have provided are instances of `jwk.Key` (remember that the
+// jwx API allows users to specify a raw key such as *rsa.PublicKey)
 func WithKeyUsed(v interface{}) VerifyOption {
 	return &verifyOption{option.New(identKeyUsed{}, v)}
 }

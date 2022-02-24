@@ -12,6 +12,17 @@ Changes
     https://github.com/lestrrat-go/jwx/blob/main/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
     for more details
 
+  * [jws] `jws.Sign()` can now generate JWS messages in either compact or JSON
+    forms. By default, the compact form is used. JSON format can be
+    enabled by using the `jws.WithJSON` option.
+
+  * [jws] `jws.Sign()` can now accept multiple keys by passing multiple
+    `jws.WithKey()` options. This can be used with `jws.WithJSON` to
+    create JWS messages with multiple signatures.
+
+  * [jws] `jws.WithCompact` and `jws.WithJSON` options have been added
+    to control the signatur serialization format.
+
   * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
     They represent something that can fetch a jwk.Set
 
@@ -36,7 +47,7 @@ Changes
   * [jws] jws.WithKeySet() has been added to specify a JWKS to be used for
     verification.
 
-    The option can take further options:
+    The option can take further suboptions:
 
       jws.Parse(serialized,
         jws.WithKeySet(set,
@@ -48,8 +59,9 @@ Changes
           jws.WithInferAlgorithm(true),
         ),
       )
-
-  * [jws] jws.WithVerifyAuto() has been added to enable verification
+  * [jws] `jws.VerifuAuto` has been removed in favor of using
+    `jws.WithVerifyAuto` option with `jws.Verify()`
+  * [jws] `jws.WithVerifyAuto` has been added to enable verification
     using `jku`.
 
     The first argument must be a jwk.SetFetcher object, but can be
@@ -84,3 +96,12 @@ Changes
 
     Also, this really... is not safe. You are using an unverified payload
     to verify the JWS.
+
+  * [jws] Remove `jws.WithPayloadSigner()`. This should be completely repleceable
+    using `jws.WithKey()`
+
+  * [jwt] `jwt.Sign()` has been changed so that it works more like the new `jws.Sign()`
+  * [jwt] `jwt.WithVerify()` has been renamed to `jwt.WithKey()`. The option can
+    be used for both signing and parsing.
+  * [jwt] `jwt.WithHeaders` and `jwt.WithJwsHeaders` have been removed.
+    You should be able to use the new `jwt.WithKey` option to pass headers
