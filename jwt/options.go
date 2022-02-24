@@ -63,16 +63,8 @@ type SignOption interface {
 	signOption()
 }
 
-type signOption struct {
-	Option
-}
-
-func newSignOption(n interface{}, v interface{}) SignOption {
-	return &signOption{option.New(n, v)}
-}
-
-func (*signOption) signOption() {}
-
+// SignParseOption describes an Option that can be passed to both
+// `jwt.Sign()` and `jwt.Parse()`
 type SignParseOption interface {
 	SignOption
 	ParseOption
