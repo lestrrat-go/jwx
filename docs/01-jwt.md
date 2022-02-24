@@ -191,8 +191,7 @@ use `jws.VerifyAuto()` instead of `jws.Verify()`:
 ```go
 token, _ := jwt.Parse(
   src,
-  jwt.WithVerifyAuto(true),
-  jwt.WithFetchWhitelist(...),
+  jwt.WithVerifyAuto(nil, jwt.WithFetchWhitelist(...)),
 )
 ```
 
@@ -264,10 +263,8 @@ The `jwt` package provides a convenience function `jwt.Sign()` to serialize a to
 token := jwt.New()
 token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`)
 
-serialized, err := jws.Sign(token, algorithm, key)
+serialized, err := jwt.Sign(token, jwt.WithKey(algorithm, key))
 ```
-
-There are some options available in the `jwt` package to modify the JWS behavior such as `jwt.WithJwsHeaders()` to specify extra protected headers to the JWS message, `jwt.WithVerifyAuto()` to invoke verification via `jku`, etc. Please read their documentation to understand how they work.
 
 If you need even further customization, consider using the `jws` package directly.
 
