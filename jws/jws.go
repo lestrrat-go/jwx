@@ -243,6 +243,16 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			dst = option.Value().(*Message)
 		case identDetachedPayload{}:
 			detachedPayload = option.Value().([]byte)
+		case identKey{}:
+			pair := option.Value().(withKey)
+			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.SignatureAlgorithm (got %T)`, pair.alg)
+			}
+			keyProviders = append(keyProviders, &staticKeyProvider{
+				alg: alg,
+				key: pair.key,
+			})
 		case identKeyProvider{}:
 			keyProviders = append(keyProviders, option.Value().(KeyProvider))
 		case identKeyUsed{}:
@@ -309,7 +319,12 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			}
 
 			for _, pair := range sink.list {
-				alg, key := pair.alg, pair.key
+				// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
+				// this may seem ugly, but we're trying to avoid declaring separate
+				// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
+				//nolint:forcetypeassert
+				alg := pair.alg.(jwa.SignatureAlgorithm)
+				key := pair.key
 				verifier, err := NewVerifier(alg)
 				if err != nil {
 					return nil, fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)

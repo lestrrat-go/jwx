@@ -10,10 +10,23 @@ import (
 
 type Option = option.Interface
 
-type identPayloadSigner struct{}
+type identContext struct{}
 type identDetachedPayload struct{}
-type identHeaders struct{}
 type identMessage struct{}
+type identHeaders struct{}
+type identKey struct{}
+type identKeyUsed struct{}
+type identKeyProvider struct{}
+type identPayloadSigner struct{}
+
+// WithKey options
+type identSignProtected struct{}
+type identSignPublic struct{}
+
+// WithKeySet options
+type identRequireKid struct{}
+type identUseDefault struct{}
+type identInferAlgorithm struct{}
 
 func WithSigner(signer Signer, key interface{}, public, protected Headers) Option {
 	return option.New(identPayloadSigner{}, &payloadSigner{
@@ -82,18 +95,71 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
 }
 
-type identKeyProvider struct{}
-type identRequireKid struct{}
-type identUseDefault struct{}
-type identInferAlgorithm struct{}
-type identKeyUsed struct{}
-type identContext struct{}
+type WithKeyOption interface {
+	Option
+	withKeyOption()
+}
 
-func WithKey(alg jwa.SignatureAlgorithm, key interface{}) VerifyOption {
-	return WithKeyProvider(&staticKeyProvider{
-		alg: alg,
-		key: key,
-	})
+type withKeyOption struct {
+	Option
+}
+
+func (*withKeyOption) withKeyOption() {}
+
+// WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
+// to specify a protected header to be attached to the JWS signature.
+//
+// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+func WithProtected(hdr Headers) WithKeyOption {
+	return &withKeyOption{option.New(identSignProtected{}, hdr)}
+}
+
+// WithPublic is used with `jws.WithKey()` option when used with `jws.Sign()`
+// to specify a public header to be attached to the JWS signature.
+//
+// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+//
+// `jws.Sign()` will result in an error if `jws.WithPublic()` is used
+// and the serialization format is compact serialization.
+func WithPublic(hdr Headers) WithKeyOption {
+	return &withKeyOption{option.New(identSignPublic{}, hdr)}
+}
+
+type withKey struct {
+	alg       jwa.KeyAlgorithm
+	key       interface{}
+	protected Headers
+	public    Headers
+}
+
+// WithKey is used to pass algorithm/key pair to either `jws.Sign()` or `jws.Verify()`.
+//
+// When used with `jws.Sign()`, additional properties `jws.WithProtected()` and
+// `jws.WithPublic()` to specify JWS headers that should be used whe signing().
+// These options are ignored whe the `jws.WithKey()` option is used with `jws.Verify()`.
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeyOption) SignVerifyOption {
+	// Implementation note: this option is shared between Sign() and
+	// Verify(). As such we don't create a KeyProvider here because
+	// if used in Sign() we would be doing something else.
+	var protected, public Headers
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identSignProtected{}:
+			protected = option.Value().(Headers)
+		case identSignPublic{}:
+			public = option.Value().(Headers)
+		}
+	}
+
+	return &signVerifyOption{
+		option.New(identKey{}, withKey{
+			alg:       alg,
+			key:       key,
+			protected: protected,
+			public:    public,
+		}),
+	}
 }
 
 // WithKeySetOption is an option passed to the WithKeySet() option (recursion!)
