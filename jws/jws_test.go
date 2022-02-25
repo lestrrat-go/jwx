@@ -244,7 +244,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 	for _, key := range signKeys {
 		key := key
 		t.Run(key.Name, func(t *testing.T) {
-			signed, err := jws.Sign(payload, alg, key.Key)
+			signed, err := jws.Sign(payload, jws.WithKey(alg, key.Key))
 			if !assert.NoError(t, err, "jws.Sign should succeed") {
 				return
 			}
@@ -380,16 +380,12 @@ func TestSignMulti2(t *testing.T) {
 	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
 	var signed []byte
 	t.Run("Sign", func(t *testing.T) {
-		var options []jws.Option
+		var options = []jws.SignOption{jws.WithJSON()}
 		for _, alg := range hmacAlgorithms {
-			signer, err := jws.NewSigner(alg)
-			if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
-				return
-			}
-			options = append(options, jws.WithSigner(signer, sharedkey, nil, nil))
+			options = append(options, jws.WithKey(alg, sharedkey)) // (signer, sharedkey, nil, nil))
 		}
 		var err error
-		signed, err = jws.SignMulti(payload, options...)
+		signed, err = jws.Sign(payload, options...)
 		if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
 			return
 		}
@@ -519,7 +515,7 @@ func TestEncode(t *testing.T) {
 			return
 		}
 		var jwsCompact []byte
-		jwsCompact, err = jws.Sign(jwsPayload, alg, key)
+		jwsCompact, err = jws.Sign(jwsPayload, jws.WithKey(alg, key))
 		if err != nil {
 			t.Fatal("Failed to sign message")
 		}
@@ -1101,7 +1097,7 @@ func TestVerifySet(t *testing.T) {
 				}
 
 				set := makeSet(key)
-				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, key))
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
 				}
@@ -1141,7 +1137,7 @@ func TestVerifySet(t *testing.T) {
 				key.Set(jwk.KeyIDKey, `mykey`)
 
 				set := makeSet(key)
-				signed, err := jws.Sign([]byte(payload), jwa.RS256, key)
+				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, key))
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
 				}
@@ -1192,7 +1188,7 @@ func TestCustomField(t *testing.T) {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(`x-birthday`, string(bdaybytes))
 
-	signed, err := jws.Sign([]byte(payload), jwa.RS256, privkey, jws.WithHeaders(hdrs))
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtected(hdrs)))
 	if !assert.NoError(t, err, `jws.Sign should succeed`) {
 		return
 	}
@@ -1241,7 +1237,7 @@ func TestWithMessage(t *testing.T) {
 	}
 
 	const text = "hello, world"
-	signed, err := jws.Sign([]byte(text), jwa.RS256, key)
+	signed, err := jws.Sign([]byte(text), jws.WithKey(jwa.RS256, key))
 	if !assert.NoError(t, err, `jws.Sign should succeed`) {
 		return
 	}
@@ -1285,7 +1281,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs)))
 		if !assert.Error(t, err, `jws.Sign should fail`) {
 			return
 		}
@@ -1296,7 +1292,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jwa.HS256, key, jws.WithHeaders(hdrs), jws.WithDetachedPayload([]byte(payload)))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs)), jws.WithDetachedPayload([]byte(payload)))
 		if !assert.Error(t, err, `jws.Sign should fail`) {
 			return
 		}
@@ -1326,7 +1322,7 @@ func TestRFC7797(t *testing.T) {
 				hdrs.Set("crit", "b64")
 
 				payload := tc.Payload
-				signOptions := []jws.SignOption{jws.WithHeaders(hdrs)}
+				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs))}
 				var verifyOptions []jws.VerifyOption
 				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256, key))
 				if tc.Detached {
@@ -1334,7 +1330,7 @@ func TestRFC7797(t *testing.T) {
 					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
 					payload = nil
 				}
-				signed, err := jws.Sign(payload, jwa.HS256, key, signOptions...)
+				signed, err := jws.Sign(payload, signOptions...)
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
 				}
@@ -1677,7 +1673,7 @@ func TestJKU(t *testing.T) {
 					u += "?" + tc.Query
 				}
 				hdr.Set(jws.JWKSetURLKey, u)
-				signed, err := jws.Sign(payload, jwa.RS256, key, jws.WithHeaders(hdr))
+				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, key, jws.WithProtected(hdr)))
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
 				}
@@ -1750,19 +1746,14 @@ func TestJKU(t *testing.T) {
 		defer srv.Close()
 
 		// Sign the payload using the three keys
-		var signOptions []jws.Option
+		var signOptions = []jws.SignOption{jws.WithJSON()}
 		for _, key := range keys {
-			signer, err := jws.NewSigner(jwa.RS256)
-			if !assert.NoError(t, err, `jws.NewSigner should succeed`) {
-				return
-			}
-
 			hdr := jws.NewHeaders()
 			hdr.Set(jws.JWKSetURLKey, srv.URL)
-			signOptions = append(signOptions, jws.WithSigner(signer, key, nil, hdr))
+			signOptions = append(signOptions, jws.WithKey(jwa.RS256, key, jws.WithProtected(hdr)))
 		}
 
-		signed, err := jws.SignMulti(payload, signOptions...)
+		signed, err := jws.Sign(payload, signOptions...)
 		if !assert.NoError(t, err, `jws.SignMulti should succeed`) {
 			return
 		}

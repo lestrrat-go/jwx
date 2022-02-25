@@ -56,7 +56,7 @@ func TestJWTParse(t *testing.T) {
 		return
 	}
 	t1 := jwt.New()
-	signed, err := jwt.Sign(t1, alg, key)
+	signed, err := jwt.Sign(t1, jwt.WithKey(alg, key))
 	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
 		return
 	}
@@ -250,7 +250,7 @@ func TestJWTParseVerify(t *testing.T) {
 						hdrs.Set(jws.KeyIDKey, kid)
 
 						t1 := jwt.New()
-						signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
+						signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtected(hdrs)))
 						if !assert.NoError(t, err, "token.Sign should succeed") {
 							return
 						}
@@ -343,7 +343,7 @@ func TestJWTParseVerify(t *testing.T) {
 		hdrs := jws.NewHeaders()
 		hdrs.Set(jws.KeyIDKey, kid)
 		t1 := jwt.New()
-		signed, err := jwt.Sign(t1, alg, key, jwt.WithHeaders(hdrs))
+		signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtected(hdrs)))
 		if !assert.NoError(t, err, "token.Sign should succeed") {
 			return
 		}
@@ -374,7 +374,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			pubkey.Set(jwk.AlgorithmKey, alg)
 			pubkey.Set(jwk.KeyIDKey, kid)
-			signedNoKid, err := jwt.Sign(t1, alg, key)
+			signedNoKid, err := jwt.Sign(t1, jwt.WithKey(alg, key))
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
@@ -401,7 +401,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			pubkey1.Set(jwk.KeyIDKey, kid)
 			pubkey2.Set(jwk.KeyIDKey, "test-jwt-parse-verify-kid-2")
-			signedNoKid, err := jwt.Sign(t1, alg, key)
+			signedNoKid, err := jwt.Sign(t1, jwt.WithKey(alg, key))
 			if err != nil {
 				t.Fatal("Failed to sign JWT")
 			}
@@ -589,7 +589,7 @@ func TestGH52(t *testing.T) {
 			defer wg.Done()
 			tok := jwt.New()
 
-			s, err := jwt.Sign(tok, jwa.ES256, priv)
+			s, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, priv))
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -630,7 +630,7 @@ func TestSignErrors(t *testing.T) {
 	}
 
 	tok := jwt.New()
-	_, err = jwt.Sign(tok, jwa.SignatureAlgorithm("BOGUS"), priv)
+	_, err = jwt.Sign(tok, jwt.WithKey(jwa.SignatureAlgorithm("BOGUS"), priv))
 	if !assert.Error(t, err) {
 		return
 	}
@@ -639,7 +639,7 @@ func TestSignErrors(t *testing.T) {
 		return
 	}
 
-	_, err = jwt.Sign(tok, jwa.ES256, nil)
+	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256, nil))
 	if !assert.Error(t, err) {
 		return
 	}
@@ -662,7 +662,7 @@ func TestSignJWK(t *testing.T) {
 	key.Set(jwk.AlgorithmKey, jwa.RS256)
 
 	tok := jwt.New()
-	signed, err := jwt.Sign(tok, key.Algorithm(), key)
+	signed, err := jwt.Sign(tok, jwt.WithKey(key.Algorithm(), key))
 	assert.Nil(t, err)
 
 	header, err := jws.ParseString(string(signed))
@@ -690,7 +690,7 @@ func TestSignTyp(t *testing.T) {
 	t.Run(`"typ" header parameter should be set to JWT by default`, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
-		signed, err := jwt.Sign(t1, jwa.RS256, key)
+		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -708,7 +708,7 @@ func TestSignTyp(t *testing.T) {
 		t1 := jwt.New()
 		hdrs := jws.NewHeaders()
 		hdrs.Set(`typ`, `custom-typ`)
-		signed, err := jwt.Sign(t1, jwa.RS256, key, jwt.WithHeaders(hdrs))
+		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key, jws.WithProtected(hdrs)))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -805,7 +805,7 @@ func TestParseRequest(t *testing.T) {
 	tok.Set(jwt.IssuerKey, u)
 	tok.Set(jwt.IssuedAtKey, time.Now().Round(0))
 
-	signed, _ := jwt.Sign(tok, jwa.ES256, privkey)
+	signed, _ := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
 
 	testcases := []struct {
 		Request func() *http.Request
@@ -1048,7 +1048,7 @@ func TestGH375(t *testing.T) {
 	}
 
 	signAlg := jwa.RS512
-	signed, err := jwt.Sign(token, signAlg, key)
+	signed, err := jwt.Sign(token, jwt.WithKey(signAlg, key))
 	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
 		return
 	}
@@ -1125,8 +1125,8 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 		if !assert.NoError(t, token.Set("typed-claim", expected), `expected.Set should succeed`) {
 			return
 		}
-		v, err := jwt.Sign(token, jwa.RS256, key)
-		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		v, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, key))
+		if !assert.NoError(t, err, `jwt.Sign should succeed`) {
 			return
 		}
 		signed = v
@@ -1287,7 +1287,7 @@ func TestNested(t *testing.T) {
 	}
 
 	serialized, err := jwt.NewSerializer().
-		Sign(jwa.RS256, key).
+		Sign(jwt.WithKey(jwa.RS256, key)).
 		Encrypt(jwa.RSA_OAEP, key.PublicKey, jwa.A256GCM, jwa.NoCompress).
 		Serialize(token)
 
@@ -1346,7 +1346,7 @@ func TestRFC7797(t *testing.T) {
 	token := jwt.New()
 	token.Set(jwt.AudienceKey, `foo`)
 
-	_, err = jwt.Sign(token, jwa.RS256, key, jwt.WithJwsHeaders(hdrs))
+	_, err = jwt.Sign(token, jwt.WithKey(jwa.RS256, key, jws.WithProtected(hdrs)))
 	if !assert.Error(t, err, `jwt.Sign should fail`) {
 		return
 	}
@@ -1362,7 +1362,7 @@ func TestGH430(t *testing.T) {
 	}
 
 	key := []byte("secret")
-	signed, err := jwt.Sign(t1, jwa.HS256, key)
+	signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256, key))
 	if !assert.NoError(t, err, `jwt.Sign should succeed`) {
 		return
 	}
@@ -1464,7 +1464,7 @@ func TestVerifyAuto(t *testing.T) {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(jws.JWKSetURLKey, srv.URL)
 
-	signed, err := jwt.Sign(tok, jwa.RS256, key, jwt.WithHeaders(hdrs))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key, jws.WithProtected(hdrs)))
 	if !assert.NoError(t, err, `jwt.Sign() should succeed`) {
 		return
 	}

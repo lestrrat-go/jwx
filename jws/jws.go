@@ -108,19 +108,61 @@ var muSigner = &sync.Mutex{}
 // If you want to use a detached payload, use `jws.WithDetachedPayload()` as
 // one of the options. When you use this option, you must always set the
 // first parameter (`payload`) to `nil`, or the function will return an error
-func Sign(payload []byte, alg jwa.KeyAlgorithm, key interface{}, options ...SignOption) ([]byte, error) {
-	salg, ok := alg.(jwa.SignatureAlgorithm)
-	if !ok {
-		return nil, errors.Errorf(`expected alg to be jwa.SignatureAlgorithm, but got %T`, alg)
-	}
 
-	var hdrs Headers
+func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) (*payloadSigner, error) {
+	muSigner.Lock()
+	signer, ok := signers[alg]
+	if !ok {
+		v, err := NewSigner(alg)
+		if err != nil {
+			muSigner.Unlock()
+			return nil, fmt.Errorf(`failed to create payload signer: %w`, err)
+		}
+		signers[alg] = v
+		signer = v
+	}
+	muSigner.Unlock()
+
+	return &payloadSigner{
+		signer:    signer,
+		key:       key,
+		public:    public,
+		protected: protected,
+	}, nil
+}
+
+const (
+	fmtInvalid = iota
+	fmtCompact
+	fmtJSON
+	fmtMax
+)
+
+// silence linters
+var _ = fmtInvalid
+var _ = fmtMax
+
+func Sign(payload []byte, options ...SignOption) ([]byte, error) {
+	format := fmtCompact
+	var signers []*payloadSigner
 	var detached bool
 	for _, o := range options {
 		//nolint:forcetypeassert
 		switch o.Ident() {
-		case identHeaders{}:
-			hdrs = o.Value().(Headers)
+		case identSerialization{}:
+			format = o.Value().(int)
+		case identKey{}:
+			data := o.Value().(*withKey)
+
+			alg, ok := data.alg.(jwa.SignatureAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`jws.Sign: expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, o.Value())
+			}
+			signer, err := makeSigner(alg, data.key, data.public, data.protected)
+			if err != nil {
+				return nil, fmt.Errorf(`jws.Sign: failed to create signer: %w`, err)
+			}
+			signers = append(signers, signer)
 		case identDetachedPayload{}:
 			detached = true
 			if payload != nil {
@@ -130,54 +172,16 @@ func Sign(payload []byte, alg jwa.KeyAlgorithm, key interface{}, options ...Sign
 		}
 	}
 
-	muSigner.Lock()
-	signer, ok := signers[salg]
-	if !ok {
-		v, err := NewSigner(salg)
-		if err != nil {
-			muSigner.Unlock()
-			return nil, errors.Wrap(err, `failed to create signer`)
-		}
-		signers[salg] = v
-		signer = v
+	lsigner := len(signers)
+	if lsigner == 0 {
+		return nil, fmt.Errorf(`jws.Sign: no signers available. Specify an alogirthm and akey using jws.WithKey()`)
 	}
-	muSigner.Unlock()
-
-	// XXX This is cheating. Ideally `detached` should be passed as a parameter
-	// but since this is an exported method, we can't change this without bumping
-	// major versions.... But we don't want to do that now, so we will cheat by
-	// making it part of the object
-	sig := &Signature{
-		protected: hdrs,
-		detached:  detached,
-	}
-	_, signature, err := sig.Sign(payload, signer, key)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed sign payload`)
+	if format == fmtCompact && lsigner != 1 {
+		return nil, fmt.Errorf(`jws.Sign: cannot have multiple specified for compact serialization`)
 	}
 
-	return signature, nil
-}
-
-// SignMulti accepts multiple signers via the options parameter,
-// and creates a JWS in JSON serialization format that contains
-// signatures from applying aforementioned signers.
-//
-// Use `jws.WithSigner(...)` to specify values how to generate
-// each signature in the `"signatures": [ ... ]` field.
-func SignMulti(payload []byte, options ...Option) ([]byte, error) {
-	var signers []*payloadSigner
-	for _, o := range options {
-		switch o.Ident() {
-		case identPayloadSigner{}:
-			signers = append(signers, o.Value().(*payloadSigner))
-		}
-	}
-
-	if len(signers) == 0 {
-		return nil, errors.New(`no signers provided`)
-	}
-
+	// Create a Message object with all the bits and bobs, and we'll
+	// serialize it in the end
 	var result Message
 
 	result.payload = payload
@@ -203,6 +207,8 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		sig := &Signature{
 			headers:   signer.PublicHeader(),
 			protected: protected,
+			// cheat. FIXXXXXXMEEEEEE
+			detached: detached,
 		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
@@ -212,7 +218,47 @@ func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 		result.signatures = append(result.signatures, sig)
 	}
 
-	return json.Marshal(result)
+	switch format {
+	case fmtJSON:
+		return json.Marshal(result)
+	case fmtCompact:
+		// Take the only signature object, and convert it into a Compact
+		// serialization format
+		s := result.signatures[0]
+		// XXX check if this is correct
+		hdrs := s.ProtectedHeaders()
+
+		hdrbuf, err := json.Marshal(hdrs)
+		if err != nil {
+			return nil, fmt.Errorf(`jws.Sign: failed to marshal headers: %w`, err)
+		}
+
+		buf := pool.GetBytesBuffer()
+		defer pool.ReleaseBytesBuffer(buf)
+
+		buf.WriteString(base64.EncodeToString(hdrbuf))
+		buf.WriteByte('.')
+
+		if !detached {
+			if getB64Value(hdrs) {
+				encoded := base64.EncodeToString(payload)
+				buf.WriteString(encoded)
+			} else {
+				if bytes.Contains(payload, []byte{'.'}) {
+					return nil, fmt.Errorf(`jws.Sign: payload must not contain a "."`)
+				}
+				buf.Write(payload)
+			}
+		}
+
+		buf.WriteByte('.')
+		buf.WriteString(base64.EncodeToString(s.signature))
+		ret := make([]byte, buf.Len())
+		copy(ret, buf.Bytes())
+		return ret, nil
+	default:
+		return nil, fmt.Errorf(`jws.Sign: invalid serialization format`)
+	}
 }
 
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
@@ -243,6 +289,16 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			dst = option.Value().(*Message)
 		case identDetachedPayload{}:
 			detachedPayload = option.Value().([]byte)
+		case identKey{}:
+			pair := option.Value().(*withKey)
+			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.SignatureAlgorithm (got %T)`, pair.alg)
+			}
+			keyProviders = append(keyProviders, &staticKeyProvider{
+				alg: alg,
+				key: pair.key,
+			})
 		case identKeyProvider{}:
 			keyProviders = append(keyProviders, option.Value().(KeyProvider))
 		case identKeyUsed{}:
@@ -309,7 +365,12 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			}
 
 			for _, pair := range sink.list {
-				alg, key := pair.alg, pair.key
+				// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
+				// this may seem ugly, but we're trying to avoid declaring separate
+				// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
+				//nolint:forcetypeassert
+				alg := pair.alg.(jwa.SignatureAlgorithm)
+				key := pair.key
 				verifier, err := NewVerifier(alg)
 				if err != nil {
 					return nil, fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)

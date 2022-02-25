@@ -63,15 +63,20 @@ type SignOption interface {
 	signOption()
 }
 
-type signOption struct {
+// SignParseOption describes an Option that can be passed to both
+// `jwt.Sign()` and `jwt.Parse()`
+type SignParseOption interface {
+	SignOption
+	ParseOption
+}
+
+type signParseOption struct {
 	Option
 }
 
-func newSignOption(n interface{}, v interface{}) SignOption {
-	return &signOption{option.New(n, v)}
-}
-
-func (*signOption) signOption() {}
+func (*signParseOption) readFileOption() {}
+func (*signParseOption) parseOption()    {}
+func (*signParseOption) signOption()     {}
 
 // EncryptOption describes an Option that can be passed to Encrypt() or
 // (jwt.Serializer).Encrypt
@@ -116,8 +121,8 @@ type identDefault struct{}
 type identFlattenAudience struct{}
 type identInferAlgorithmFromKey struct{}
 type identJweHeaders struct{}
-type identJwsHeaders struct{}
 type identKey struct{}
+type identKeyProvider struct{}
 type identKeySet struct{}
 type identPedantic struct{}
 type identValidator struct{}
@@ -129,11 +134,12 @@ type identVerifyAuto struct{}
 type identHeaderKey struct{}
 type identFormKey struct{}
 
-// WithVerify forces the Parse method to verify the JWT message
-// using the given key. XXX Should have been named something like
-// WithVerificationKey
-func WithKey(alg jwa.SignatureAlgorithm, key interface{}) ParseOption {
-	return newParseOption(identKey{}, jws.WithKey(alg, key))
+// WithKey forces the Parse method to verify the JWT message
+// using the given key.
+//
+// This is a utility wrapper around `jws.WithKey()`
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeyOption) SignParseOption {
+	return &signParseOption{option.New(identKey{}, jws.WithKey(alg, key, options...))}
 }
 
 // WithKeySet forces the Parse method to verify the JWT message
@@ -174,22 +180,6 @@ func UseDefaultKey(value bool) ParseOption {
 // JWT tokens.
 func WithToken(t Token) ParseOption {
 	return newParseOption(identToken{}, t)
-}
-
-// WithHeaders is passed to `jwt.Sign()` function, to allow specifying arbitrary
-// header values to be included in the header section of the jws message
-//
-// This option will be deprecated in the next major version. Use
-// jwt.WithJwsHeaders() instead.
-func WithHeaders(hdrs jws.Headers) SignOption {
-	return WithJwsHeaders(hdrs)
-}
-
-// WithJwsHeaders is passed to `jwt.Sign()` function or
-// "jwt.Serializer".Sign() method, to allow specifying arbitrary
-// header values to be included in the header section of the JWE message
-func WithJwsHeaders(hdrs jws.Headers) SignOption {
-	return newSignOption(identJwsHeaders{}, hdrs)
 }
 
 // WithJweHeaders is passed to "jwt.Serializer".Encrypt() method to allow
@@ -436,22 +426,31 @@ func WithContext(ctx context.Context) ValidateOption {
 	return newValidateOption(identContext{}, ctx)
 }
 
-// WithVerifyAuto specifies that the JWS verification should be performed
-// using `jws.VerifyAuto()`, which in turn attempts to verify the message
-// using values that are stored within the JWS message.
+// WithVerifyAuto specifies that the JWS verification should be attempted
+// by using the data available in the JWS message. Currently only verification
+// method available is to use the keys available in the JWKS URL pointed
+// in the `jku` field.
 //
-// Only passing this option to `jwt.Parse()` will not result in a successful
-// verification. Please make sure to carefully read the documentation in
-// `jws.VerifyAuto()`, and provide the necessary Whitelist object via
-// `jwt.WithFetchWhitelist()`
+// The first argument should either be `nil`, or your custom jwk.SetFetcher
+// object, which tells how the JWKS should be fetched. Leaving it to
+// `nil` is equivalent to specifying that `jwk.Fetch` should be used.
 //
-// You might also consider using a backoff policy by using `jwt.WithFetchBackoff()`
-// to control the number of requests being made.
+// You can further pass options to customize the fetching behavior.
+//
+// One notable difference in the option available via the `jwt`
+// package and the `jws.Verify()` or `jwk.Fetch()` functions is that
+// by default all fetching is disabled unless you explicitly whitelist urls.
+// Therefore, when you use this option you WILL have to specify at least
+// the `jwk.WithFetchWhitelist()` suboption: as:
+//
+//   jwt.Parse(data, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(...)))
+//
+// See the list of available options that you can pass to `jwk.Fetch()`
+// in the `jwk` package, including specifying a backoff policy by via
+// `jwt.WithFetchBackoff()`
 func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) ParseOption {
 	return newParseOption(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))
 }
-
-type identKeyProvider struct{}
 
 func WithKeyProvider(kp jws.KeyProvider) ParseOption {
 	return newParseOption(identKeyProvider{}, jws.WithKeyProvider(kp))

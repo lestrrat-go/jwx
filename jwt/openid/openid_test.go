@@ -450,7 +450,7 @@ func TestOpenIDClaims(t *testing.T) {
 			if !assert.NoError(t, err, `rsa.GeneraKey should succeed`) {
 				return
 			}
-			signed, err := jwt.Sign(token, alg, key)
+			signed, err := jwt.Sign(token, jwt.WithKey(alg, key))
 			if !assert.NoError(t, err, `jwt.Sign should succeed`) {
 				return
 			}

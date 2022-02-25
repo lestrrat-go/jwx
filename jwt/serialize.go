@@ -120,9 +120,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 }
 
 type jwsSerializer struct {
-	alg     jwa.SignatureAlgorithm
-	key     interface{}
-	options []SignOption
+	options []jws.SignOption
 }
 
 func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
@@ -131,40 +129,42 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 		return nil, errors.New(`expected []byte as input`)
 	}
 
-	var hdrs jws.Headers
-	//nolint:forcetypeassert
 	for _, option := range s.options {
-		switch option.Ident() {
-		case identJwsHeaders{}:
-			hdrs = option.Value().(jws.Headers)
+		pc, ok := option.Value().(interface{ Protected(jws.Headers) jws.Headers })
+		if !ok {
+			continue
 		}
-	}
+		hdrs := pc.Protected(jws.NewHeaders())
+		if err := setTypeOrCty(ctx, hdrs); err != nil {
+			return nil, err // this is already wrapped
+		}
 
-	if hdrs == nil {
-		hdrs = jws.NewHeaders()
-	}
-
-	if err := setTypeOrCty(ctx, hdrs); err != nil {
-		return nil, err // this is already wrapped
-	}
-
-	// JWTs MUST NOT use b64 = false
-	// https://datatracker.ietf.org/doc/html/rfc7797#section-7
-	if v, ok := hdrs.Get("b64"); ok {
-		if bval, bok := v.(bool); bok {
-			if !bval { // b64 = false
-				return nil, errors.New(`b64 cannot be false for JWTs`)
+		// JWTs MUST NOT use b64 = false
+		// https://datatracker.ietf.org/doc/html/rfc7797#section-7
+		if v, ok := hdrs.Get("b64"); ok {
+			if bval, bok := v.(bool); bok {
+				if !bval { // b64 = false
+					return nil, errors.New(`b64 cannot be false for JWTs`)
+				}
 			}
 		}
 	}
-	return jws.Sign(payload, s.alg, s.key, jws.WithHeaders(hdrs))
+	return jws.Sign(payload, s.options...)
 }
 
-func (s *Serializer) Sign(alg jwa.SignatureAlgorithm, key interface{}, options ...SignOption) *Serializer {
+func (s *Serializer) Sign(options ...SignOption) *Serializer {
+	//nolint:prealloc
+	var soptions []jws.SignOption
+	for _, option := range options {
+		v, ok := option.Value().(jws.SignOption)
+		if !ok {
+			continue
+		}
+		soptions = append(soptions, v)
+	}
+
 	return s.Step(&jwsSerializer{
-		alg:     alg,
-		key:     key,
-		options: options,
+		options: soptions,
 	})
 }
 

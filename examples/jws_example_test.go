@@ -23,7 +23,7 @@ func ExampleJWS_VerifyWithJWKSet() {
 		return
 	}
 	const payload = "Lorem ipsum"
-	signed, err := jws.Sign([]byte(payload), jwa.RS256, privkey)
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
 	if err != nil {
 		log.Printf("failed to sign payload: %s", err)
 		return
@@ -100,7 +100,7 @@ func ExampleJWS_ExternalSignerVerifier() {
 	}
 
 	const payload = "Lorem Ipsum"
-	signed, err := jws.Sign([]byte(payload), jwa.EdDSA, privkey)
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA, privkey))
 	if err != nil {
 		fmt.Printf(`failed to generate signed message: %s`, err)
 		return
@@ -127,7 +127,7 @@ func ExampleJWS_Sign() {
 		return
 	}
 
-	buf, err := jws.Sign([]byte("Lorem ipsum"), jwa.RS256, privkey)
+	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.RS256, privkey))
 	if err != nil {
 		log.Printf("failed to sign payload: %s", err)
 		return

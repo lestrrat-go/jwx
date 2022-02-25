@@ -19,7 +19,7 @@ type KeySink interface {
 }
 
 type algKeyPair struct {
-	alg jwa.SignatureAlgorithm
+	alg jwa.KeyAlgorithm
 	key interface{}
 }
 

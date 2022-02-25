@@ -34,7 +34,7 @@ func BenchmarkJWT(b *testing.B) {
 				{
 					Name: "jwt.Sign",
 					Test: func(b *testing.B) error {
-						_, err := jwt.Sign(t1, alg, key)
+						_, err := jwt.Sign(t1, jwt.WithKey(alg, key))
 						return err
 					},
 				},
@@ -60,7 +60,7 @@ func BenchmarkJWT(b *testing.B) {
 	})
 
 	b.Run("Serialization", func(b *testing.B) {
-		signedBuf, err := jwt.Sign(t1, alg, key)
+		signedBuf, err := jwt.Sign(t1, jwt.WithKey(alg, key))
 		if err != nil {
 			b.Fatal(err)
 		}

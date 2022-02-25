@@ -350,7 +350,7 @@ func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm
 		return "", nil, errors.Wrapf(err, `failed to parse keyfile %s`, keyfile)
 	}
 
-	buf, err := jws.Sign(payload, alg, key)
+	buf, err := jws.Sign(payload, jws.WithKey(alg, key))
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to sign payload`)
 	}
