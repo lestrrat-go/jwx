@@ -138,7 +138,7 @@ type identFormKey struct{}
 // using the given key.
 //
 // This is a utility wrapper around `jws.WithKey()`
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeyOption) SignParseOption {
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeySuboption) SignParseOption {
 	return &signParseOption{option.New(identKey{}, jws.WithKey(alg, key, options...))}
 }
 
@@ -162,8 +162,8 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeyOption
 //
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
-func WithKeySet(set jwk.Set, options ...jws.WithKeySetOption) ParseOption {
-	options = append(append([]jws.WithKeySetOption(nil), jws.WithRequireKid(true)), options...)
+func WithKeySet(set jwk.Set, options ...jws.WithKeySetSuboption) ParseOption {
+	options = append(append([]jws.WithKeySetSuboption(nil), jws.WithRequireKid(true)), options...)
 	return newParseOption(identKeySet{}, jws.WithKeySet(set, options...))
 }
 

@@ -104,25 +104,25 @@ func WithJSON() SignOption {
 	return &signOption{option.New(identSerialization{}, fmtJSON)}
 }
 
-// WithKeyOption describes option types that can be passed to the `jws.WithKey()`
+// WithKeySuboption describes option types that can be passed to the `jws.WithKey()`
 // option.
-type WithKeyOption interface {
+type WithKeySuboption interface {
 	Option
-	withKeyOption()
+	withKeySuboption()
 }
 
-type withKeyOption struct {
+type withKeySuboption struct {
 	Option
 }
 
-func (*withKeyOption) withKeyOption() {}
+func (*withKeySuboption) withKeySuboption() {}
 
 // WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
 // to specify a protected header to be attached to the JWS signature.
 //
 // It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
-func WithProtected(hdr Headers) WithKeyOption {
-	return &withKeyOption{option.New(identSignProtected{}, hdr)}
+func WithProtected(hdr Headers) WithKeySuboption {
+	return &withKeySuboption{option.New(identSignProtected{}, hdr)}
 }
 
 // WithPublic is used with `jws.WithKey()` option when used with `jws.Sign()`
@@ -132,8 +132,8 @@ func WithProtected(hdr Headers) WithKeyOption {
 //
 // `jws.Sign()` will result in an error if `jws.WithPublic()` is used
 // and the serialization format is compact serialization.
-func WithPublic(hdr Headers) WithKeyOption {
-	return &withKeyOption{option.New(identSignPublic{}, hdr)}
+func WithPublic(hdr Headers) WithKeySuboption {
+	return &withKeySuboption{option.New(identSignPublic{}, hdr)}
 }
 
 type withKey struct {
@@ -153,10 +153,10 @@ func (w *withKey) Protected(v Headers) Headers {
 
 // WithKey is used to pass algorithm/key pair to either `jws.Sign()` or `jws.Verify()`.
 //
-// When used with `jws.Sign()`, additional properties `jws.WithProtected()` and
-// `jws.WithPublic()` to specify JWS headers that should be used whe signing().
-// These options are ignored whe the `jws.WithKey()` option is used with `jws.Verify()`.
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeyOption) SignVerifyOption {
+// When used with `jws.Sign()`, additional suboptions `jws.WithProtected()` and
+// `jws.WithPublic()` can be passed to specify JWS headers that should be used whe signing.
+// These suboptions are ignored whe the `jws.WithKey()` option is used with `jws.Verify()`.
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) SignVerifyOption {
 	// Implementation note: this option is shared between Sign() and
 	// Verify(). As such we don't create a KeyProvider here because
 	// if used in Sign() we would be doing something else.
@@ -181,34 +181,34 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeyOption) Si
 	}
 }
 
-// WithKeySetOption is a suboption passed to the WithKeySet() option
-type WithKeySetOption interface {
+// WithKeySetSuboption is a suboption passed to the WithKeySet() option
+type WithKeySetSuboption interface {
 	Option
-	withKeySetOption()
+	withKeySetSuboption()
 }
 
-type withKeySetOption struct {
+type withKeySetSuboption struct {
 	Option
 }
 
-func (*withKeySetOption) withKeySetOption() {}
+func (*withKeySetSuboption) withKeySetSuboption() {}
 
 // WithrequiredKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWS message's Key ID and the Key ID
 // in the given key matches.
-func WithRequireKid(v bool) WithKeySetOption {
-	return &withKeySetOption{option.New(identRequireKid{}, v)}
+func WithRequireKid(v bool) WithKeySetSuboption {
+	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
 }
 
-func WithUseDefault(v bool) WithKeySetOption {
-	return &withKeySetOption{option.New(identUseDefault{}, v)}
+func WithUseDefault(v bool) WithKeySetSuboption {
+	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
 }
 
-func WithInferAlgorithmFromKey(v bool) WithKeySetOption {
-	return &withKeySetOption{option.New(identInferAlgorithm{}, v)}
+func WithInferAlgorithmFromKey(v bool) WithKeySetSuboption {
+	return &withKeySetSuboption{option.New(identInferAlgorithm{}, v)}
 }
 
-func WithKeySet(set jwk.Set, options ...WithKeySetOption) VerifyOption {
+func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	var requireKid, useDefault, inferAlgorithm bool
 	for _, option := range options {
 		//nolint:forcetypeassert
