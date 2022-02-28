@@ -35,7 +35,8 @@ type recipientBuilder struct {
 
 func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm, cc *content_crypt.Generic) (Recipient, []byte, error) {
 	// we need the raw key
-	var rawKey interface{} = b.key
+	rawKey := b.key
+
 	var keyID string
 	if jwkKey, ok := b.key.(jwk.Key); ok {
 		// Meanwhile, grab the kid as well
@@ -227,7 +228,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 
 	if useRawCEK {
 		if len(builders) != 1 {
-			return nil, fmt.Errorf(`jwe.Encrypt: multiple recipients for ECDH-ES/DIRECT mode suppoted`)
+			return nil, fmt.Errorf(`jwe.Encrypt: multiple recipients for ECDH-ES/DIRECT mode supported`)
 		}
 	}
 

@@ -3,8 +3,6 @@ package jwe
 import (
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
 
@@ -127,10 +125,10 @@ type Message struct {
 	// Header Parameter names in the three locations MUST be disjoint.
 	recipients []Recipient
 
-	// Additional members can be present in both the JSON objects defined
+	// TODO: Additional members can be present in both the JSON objects defined
 	// above; if not understood by implementations encountering them, they
 	// MUST be ignored.
-	privateParams map[string]interface{}
+	// privateParams map[string]interface{}
 
 	// These two fields below are not available for the public consumers of this object.
 	// rawProtectedHeaders stores the original protected header buffer
@@ -139,22 +137,6 @@ type Message struct {
 	// When this flag is true, UnmarshalJSON() will populate the
 	// rawProtectedHeaders field
 	storeProtectedHeaders bool
-}
-
-// contentEncrypter encrypts the content using the content using the
-// encrypted key
-type contentEncrypter interface {
-	Algorithm() jwa.ContentEncryptionAlgorithm
-	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
-}
-
-//nolint:govet
-type encryptCtx struct {
-	keyEncrypters    []keyenc.Encrypter
-	protected        Headers
-	contentEncrypter contentEncrypter
-	generator        keygen.Generator
-	compress         jwa.CompressionAlgorithm
 }
 
 // populater is an interface for things that may modify the
