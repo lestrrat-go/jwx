@@ -436,24 +436,6 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 	return nil
 }
 
-// Decrypt decrypts the message using the specified algorithm and key.
-//
-// `key` must be a private key in its "raw" format (i.e. something like
-// *rsa.PrivateKey, instead of jwk.Key)
-//
-// This method is marked for deprecation. It will be removed from the API
-// in the next major release. You should not rely on this method
-// to work 100% of the time, especially when it was obtained via jwe.Parse
-// instead of being constructed from scratch by this library.
-func (m *Message) Decrypt(alg jwa.KeyEncryptionAlgorithm, key interface{}) ([]byte, error) {
-	var ctx decryptCtx
-	ctx.alg = alg
-	ctx.key = key
-	ctx.msg = m
-
-	return doDecryptCtx(&ctx)
-}
-
 func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 	m := dctx.msg
 	alg := dctx.alg
