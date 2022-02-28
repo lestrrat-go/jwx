@@ -187,24 +187,24 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	serializers := []struct {
+	templates := []*struct {
 		Name     string
-		Func     func(*jwe.Message) ([]byte, error)
+		Options  []jwe.EncryptOption
 		Expected string
 	}{
 		{
 			Name:     "Compact",
-			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.Compact(m) },
+			Options:  []jwe.EncryptOption{jwe.WithCompact()},
 			Expected: serialized,
 		},
 		{
 			Name:     "JSON",
-			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
+			Options:  []jwe.EncryptOption{jwe.WithJSON()},
 			Expected: `{"ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg","tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
 		},
 		{
-			Name: "JSON (Pretty)",
-			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyFormat(true)) },
+			Name:    "JSON (Pretty)",
+			Options: []jwe.EncryptOption{jwe.WithJSON(jwe.WithPretty(true))},
 			Expected: `{
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
@@ -218,41 +218,54 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 	}
 
-	for _, serializer := range serializers {
-		serializer := serializer
-		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
-			compression := compression
+	ntmpl := len(templates)
+	testcases := make([]struct {
+		Name     string
+		Options  []jwe.EncryptOption
+		Expected string
+	}, ntmpl*2)
+
+	for i, tmpl := range templates {
+		options := make([]jwe.EncryptOption, len(tmpl.Options))
+		copy(options, tmpl.Options)
+
+		for j, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
 			compName := compression.String()
 			if compName == "" {
 				compName = "none"
 			}
-			t.Run(serializer.Name+" (compression="+compName+")", func(t *testing.T) {
-				jsonbuf, err := serializer.Func(msg)
-				if !assert.NoError(t, err, "serialize succeeded") {
-					return
-				}
-
-				if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
-					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyFormat(true))
-					t.Logf("%s", jsonbuf)
-					return
-				}
-
-				encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey), jwe.WithCompress(compression))
-				if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-					return
-				}
-
-				plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
-				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-					return
-				}
-
-				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-					return
-				}
-			})
+			tc := testcases[i+j]
+			tc.Name = tmpl.Name + " (compression=" + compName + ")"
+			tc.Expected = tmpl.Expected
+			tc.Options = append(options, jwe.WithCompress(compression))
 		}
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			options := tc.Options
+			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
+
+			for i, option := range options {
+				t.Logf("%d: %s", i, option)
+			}
+
+			encrypted, err := jwe.Encrypt(plaintext, options...)
+			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+				return
+			}
+			t.Logf("%s", encrypted)
+
+			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+				return
+			}
+		})
 	}
 
 	// Test direct marshaling and unmarshaling

@@ -25,6 +25,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	fmtInvalid = iota
+	fmtCompact
+	fmtJSON
+	fmtJSONPretty
+	fmtMax
+)
+
+var _ = fmtInvalid
+var _ = fmtMax
+
 var registry = json.NewRegistry()
 
 type recipientBuilder struct {
@@ -187,6 +198,8 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	// default compression is "none"
 	compression := jwa.NoCompress
 
+	format := fmtCompact
+
 	// builds each "recipient" with encrypted_key and headers
 	var builders []*recipientBuilder
 
@@ -216,8 +229,10 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 			calg = option.Value().(jwa.ContentEncryptionAlgorithm)
 		case identCompress{}:
 			compression = option.Value().(jwa.CompressionAlgorithm)
-		case identProtectedHeader{}:
+		case identProtectedHeaders{}:
 			protected = option.Value().(Headers)
+		case identSerialization{}:
+			format = option.Value().(int)
 		}
 	}
 
@@ -324,8 +339,14 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
 	}
 
-	// TODO: support other means
-	return Compact(msg)
+	switch format {
+	case fmtCompact:
+		return Compact(msg)
+	case fmtJSON:
+		return JSON(msg)
+	default:
+		return nil, fmt.Errorf(`jwe.Encrypt: invalid serialization`)
+	}
 }
 
 // DecryptCtx is used internally when jwe.Decrypt is called, and is

@@ -135,6 +135,7 @@ const (
 	fmtInvalid = iota
 	fmtCompact
 	fmtJSON
+	fmtJSONPretty
 	fmtMax
 )
 
@@ -221,6 +222,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	switch format {
 	case fmtJSON:
 		return json.Marshal(result)
+	case fmtJSONPretty:
+		return json.MarshalIndent(result, "", "  ")
 	case fmtCompact:
 		// Take the only signature object, and convert it into a Compact
 		// serialization format

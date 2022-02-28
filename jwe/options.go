@@ -7,27 +7,6 @@ import (
 	"github.com/lestrrat-go/option"
 )
 
-type Option = option.Interface
-type identMessage struct{}
-type identPostParser struct{}
-type identPrettyFormat struct{}
-type identProtectedHeader struct{}
-type identRecipientHeaders struct{}
-type identKey struct{}
-type identCompress struct{}
-type identContentEncryptionAlgorithm struct{}
-
-type DecryptOption interface {
-	Option
-	decryptOption()
-}
-
-type decryptOption struct {
-	Option
-}
-
-func (*decryptOption) decryptOption() {}
-
 type SerializerOption interface {
 	Option
 	serializerOption()
@@ -39,17 +18,6 @@ type serializerOption struct {
 
 func (*serializerOption) serializerOption() {}
 
-type EncryptOption interface {
-	Option
-	encryptOption()
-}
-
-type encryptOption struct {
-	Option
-}
-
-func (*encryptOption) encryptOption() {}
-
 // WithPrettyFormat specifies if the `jwe.JSON` serialization tool
 // should generate pretty-formatted output
 func WithPrettyFormat(b bool) SerializerOption {
@@ -60,19 +28,7 @@ func WithPrettyFormat(b bool) SerializerOption {
 // "enc" and "zip" will be overwritten when encryption is performed.
 func WithProtectedHeaders(h Headers) EncryptOption {
 	cloned, _ := h.Clone(context.Background())
-	return &encryptOption{option.New(identProtectedHeader{}, cloned)}
-}
-
-// WithMessage provides a message object to be populated by `jwe.Decrpt`
-// Using this option allows you to decrypt AND obtain the `jwe.Message`
-// in one go.
-//
-// Note that you should NOT be using the message object for anything other
-// than inspecting its contents. Particularly, do not expect the message
-// reliable when you call `Decrypt` on it. `(jwe.Message).Decrypt` is
-// slated to be deprecated in the next major version.
-func WithMessage(m *Message) DecryptOption {
-	return &decryptOption{option.New(identMessage{}, m)}
+	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
 }
 
 // WithPostParser specifies the handler to be called immediately
@@ -141,12 +97,38 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 	})}
 }
 
-// Because there _could_ be other values to the compress algorithm,
-// we take an argument
-func WithCompress(alg jwa.CompressionAlgorithm) EncryptOption {
-	return &encryptOption{option.New(identCompress{}, alg)}
+type JSONSuboption interface {
+	Option
+	withJSONSuboption()
 }
 
-func WithContentEncryption(alg jwa.ContentEncryptionAlgorithm) EncryptOption {
-	return &encryptOption{option.New(identContentEncryptionAlgorithm{}, alg)}
+type jsonSuboption struct {
+	Option
+}
+
+func (*jsonSuboption) withJSONSuboption() {}
+
+func WithPretty(v bool) JSONSuboption {
+	return &jsonSuboption{option.New(identPretty{}, v)}
+}
+
+// WithJSON specifies that the result of `jwe.Encrypt()` is serialized in
+// JSON format.
+//
+// If you pass multiple keys to `jwe.Encrypt()`, it will fail unless
+// you also pass this option.
+func WithJSON(options ...JSONSuboption) EncryptOption {
+	var pretty bool
+	for _, option := range options {
+		switch option.Ident() {
+		case identPretty{}:
+			pretty = option.Value().(bool)
+		}
+	}
+
+	format := fmtJSON
+	if pretty {
+		format = fmtJSONPretty
+	}
+	return &encryptOption{option.New(identSerialization{}, format)}
 }
