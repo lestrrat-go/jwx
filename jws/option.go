@@ -119,6 +119,7 @@ func WithPretty(v bool) JSONSuboption {
 func WithJSON(options ...JSONSuboption) SignOption {
 	var pretty bool
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPretty{}:
 			pretty = option.Value().(bool)
