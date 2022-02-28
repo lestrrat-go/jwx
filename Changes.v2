@@ -5,7 +5,11 @@ Changes
 [Incompatible Changes]
   These are changes that are incompatible with the v1.x.x version.
 
-  * [jwk] `(jwk.Key).Algorithm() is now of `jwk.KeyAlgorithm` type. This field used
+  * [jwe] `(jwe.Message).Decrypt()` has been removed. Since formatting of the
+    original serialized message matters (including whitespace), using a parsed
+    object was inherently confusing.
+
+  * [jwk] `(jwk.Key).Algorithm()` is now of `jwk.KeyAlgorithm` type. This field used
     to be `string` and therefore could not be passed directly to `jwt.Sign()`
     `jws.Sign()`, `jwe.Encrypt()`, et al. This is no longer the case, and
     now you can pass it directly. See 
