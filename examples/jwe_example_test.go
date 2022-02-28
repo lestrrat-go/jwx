@@ -21,7 +21,7 @@ func ExampleJWE_Encrypt() {
 
 	payload := []byte("Lorem Ipsum")
 
-	encrypted, err := jwe.Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5, &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 	if err != nil {
 		log.Printf("failed to encrypt payload: %s", err)
 		return
@@ -38,7 +38,7 @@ func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 
 	payload := []byte("Lorem Ipsum")
 
-	encrypted, err := jwe.Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5, &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,10 +86,7 @@ func ExampleJWE_ComplexDecrypt() {
 	protected.Set(`jwx-hints`, `foobar`) // in real life this would a more meaningful value
 	encrypted, err := jwe.Encrypt(
 		[]byte(payload),
-		jwa.RSA_OAEP,
-		privkey.PublicKey,
-		jwa.A256GCM,
-		jwa.NoCompress,
+		jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey),
 		jwe.WithProtectedHeaders(protected),
 	)
 	if err != nil {

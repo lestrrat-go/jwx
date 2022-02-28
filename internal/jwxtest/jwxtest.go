@@ -308,7 +308,7 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 		keyif = rawkey
 	}
 
-	buf, err := jwe.Encrypt(payload, keyalg, keyif, contentalg, compressalg)
+	buf, err := jwe.Encrypt(payload, jwe.WithKey(keyalg, keyif), jwe.WithContentEncryption(contentalg), jwe.WithCompress(compressalg))
 	if err != nil {
 		return "", nil, errors.Wrap(err, `failed to encrypt payload`)
 	}

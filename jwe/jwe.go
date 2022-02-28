@@ -5,8 +5,10 @@ package jwe
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -23,90 +25,86 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	fmtInvalid = iota
+	fmtCompact
+	fmtJSON
+	fmtJSONPretty
+	fmtMax
+)
+
+var _ = fmtInvalid
+var _ = fmtMax
+
 var registry = json.NewRegistry()
 
-// Encrypt takes the plaintext payload and encrypts it in JWE compact format.
-// `key` should be a public key, and it may be a raw key (e.g. rsa.PublicKey) or a jwk.Key
-//
-// `alg` accepts a `jwa.KeyAlgorithm` for convenience so you can directly pass
-// the result of `(jwk.Key).Algorithm()`, but in practice it must be of type
-// `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
-//
-// Encrypt currently does not support multi-recipient messages.
-func Encrypt(payload []byte, alg jwa.KeyAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) ([]byte, error) {
-	keyalg, ok := alg.(jwa.KeyEncryptionAlgorithm)
-	if !ok {
-		return nil, errors.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, alg)
-	}
+type recipientBuilder struct {
+	alg     jwa.KeyEncryptionAlgorithm
+	key     interface{}
+	headers Headers
+}
 
-	var protected Headers
-	for _, option := range options {
-		//nolint:forcetypeassert
-		switch option.Ident() {
-		case identProtectedHeader{}:
-			protected = option.Value().(Headers)
-		}
-	}
-	if protected == nil {
-		protected = NewHeaders()
-	}
-
-	contentcrypt, err := content_crypt.NewGeneric(contentalg)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to create AES encrypter`)
-	}
+func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm, cc *content_crypt.Generic) (Recipient, []byte, error) {
+	// we need the raw key
+	rawKey := b.key
 
 	var keyID string
-	if jwkKey, ok := key.(jwk.Key); ok {
+	if jwkKey, ok := b.key.(jwk.Key); ok {
+		// Meanwhile, grab the kid as well
 		keyID = jwkKey.KeyID()
 
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve raw key out of %T`, key)
+			return nil, nil, fmt.Errorf(`failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
-		key = raw
+		rawKey = raw
 	}
 
+	// First, create a key encryptor
 	var enc keyenc.Encrypter
-	switch keyalg {
+	switch b.alg {
 	case jwa.RSA1_5:
 		var pubkey rsa.PublicKey
-		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
+		if err := keyconv.RSAPublicKey(&pubkey, rawKey); err != nil {
+			return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, rawKey, err)
 		}
 
-		enc, err = keyenc.NewRSAPKCSEncrypt(keyalg, &pubkey)
+		v, err := keyenc.NewRSAPKCSEncrypt(b.alg, &pubkey)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to create RSA PKCS encrypter")
+			return nil, nil, fmt.Errorf(`failed to create RSA PKCS encrypter: %w`, err)
 		}
+		enc = v
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var pubkey rsa.PublicKey
-		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
+		if err := keyconv.RSAPublicKey(&pubkey, rawKey); err != nil {
+			return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, rawKey, err)
 		}
 
-		enc, err = keyenc.NewRSAOAEPEncrypt(keyalg, &pubkey)
+		v, err := keyenc.NewRSAOAEPEncrypt(b.alg, &pubkey)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to create RSA OAEP encrypter")
+			return nil, nil, fmt.Errorf(`failed to create RSA OAEP encrypter: %w`, err)
 		}
+		enc = v
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW,
 		jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW,
 		jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-		sharedkey, ok := key.([]byte)
+		sharedkey, ok := rawKey.([]byte)
 		if !ok {
-			return nil, errors.New("invalid key: []byte required")
+			return nil, nil, fmt.Errorf(`invalid key: []byte required (%T)`, rawKey)
 		}
-		switch keyalg {
+
+		var err error
+		switch b.alg {
 		case jwa.A128KW, jwa.A192KW, jwa.A256KW:
-			enc, err = keyenc.NewAES(keyalg, sharedkey)
+			enc, err = keyenc.NewAES(b.alg, sharedkey)
 		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-			enc, err = keyenc.NewPBES2Encrypt(keyalg, sharedkey)
+			enc, err = keyenc.NewPBES2Encrypt(b.alg, sharedkey)
 		default:
-			enc, err = keyenc.NewAESGCMEncrypt(keyalg, sharedkey)
+			enc, err = keyenc.NewAESGCMEncrypt(b.alg, sharedkey)
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to create key wrap encrypter")
+			return nil, nil, fmt.Errorf(`failed to create key wrap encrypter: %w`, err)
 		}
 		// NOTE: there was formerly a restriction, introduced
 		// in PR #26, which disallowed certain key/content
@@ -114,12 +112,12 @@ func Encrypt(payload []byte, alg jwa.KeyAlgorithm, key interface{}, contentalg j
 		// interop with the jose tool demonstrates it.
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var keysize int
-		switch keyalg {
+		switch b.alg {
 		case jwa.ECDH_ES:
 			// https://tools.ietf.org/html/rfc7518#page-15
 			// In Direct Key Agreement mode, the output of the Concat KDF MUST be a
 			// key of the same length as that used by the "enc" algorithm.
-			keysize = contentcrypt.KeySize()
+			keysize = cc.KeySize()
 		case jwa.ECDH_ES_A128KW:
 			keysize = 16
 		case jwa.ECDH_ES_A192KW:
@@ -128,48 +126,227 @@ func Encrypt(payload []byte, alg jwa.KeyAlgorithm, key interface{}, contentalg j
 			keysize = 32
 		}
 
-		switch key := key.(type) {
+		switch key := rawKey.(type) {
 		case x25519.PublicKey:
-			enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, key)
+			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, rawKey)
+			if err != nil {
+				return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
+			}
+			enc = v
 		default:
 			var pubkey ecdsa.PublicKey
-			if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-				return nil, errors.Wrapf(err, "failed to generate public key from key (%T)", key)
+			if err := keyconv.ECDSAPublicKey(&pubkey, rawKey); err != nil {
+				return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, key, err)
 			}
-			enc, err = keyenc.NewECDHESEncrypt(keyalg, contentalg, keysize, &pubkey)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create ECDHS key wrap encrypter")
+			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, &pubkey)
+			if err != nil {
+				return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
+			}
+			enc = v
 		}
 	case jwa.DIRECT:
-		sharedkey, ok := key.([]byte)
+		sharedkey, ok := rawKey.([]byte)
 		if !ok {
-			return nil, errors.New("invalid key: []byte required")
+			return nil, nil, fmt.Errorf("invalid key: []byte required")
 		}
-		enc, _ = keyenc.NewNoop(keyalg, sharedkey)
+		enc, _ = keyenc.NewNoop(b.alg, sharedkey)
 	default:
-		return nil, errors.Errorf(`invalid key encryption algorithm (%s)`, keyalg)
+		return nil, nil, fmt.Errorf(`invalid key encryption algorithm (%s)`, b.alg)
 	}
 
 	if keyID != "" {
 		enc.SetKeyID(keyID)
 	}
 
-	keysize := contentcrypt.KeySize()
-	encctx := getEncryptCtx()
-	defer releaseEncryptCtx(encctx)
+	r := NewRecipient()
 
-	encctx.protected = protected
-	encctx.contentEncrypter = contentcrypt
-	encctx.generator = keygen.NewRandom(keysize)
-	encctx.keyEncrypters = []keyenc.Encrypter{enc}
-	encctx.compress = compressalg
-	msg, err := encctx.Encrypt(payload)
+	if err := r.Headers().Set(AlgorithmKey, b.alg); err != nil {
+		return nil, nil, fmt.Errorf(`failed to set header: %w`, err)
+	}
+	if v := enc.KeyID(); v != "" {
+		if err := r.Headers().Set(KeyIDKey, v); err != nil {
+			return nil, nil, fmt.Errorf(`failed to set header: %w`, err)
+		}
+	}
+
+	var rawCEK []byte
+	enckey, err := enc.Encrypt(cek)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to encrypt key: %w`, err)
+	}
+	if enc.Algorithm() == jwa.ECDH_ES || enc.Algorithm() == jwa.DIRECT {
+		rawCEK = enckey.Bytes()
+	} else {
+		if err := r.SetEncryptedKey(enckey.Bytes()); err != nil {
+			return nil, nil, fmt.Errorf(`failed to set encrypted key: %w`, err)
+		}
+	}
+
+	if hp, ok := enckey.(populater); ok {
+		if err := hp.Populate(r.Headers()); err != nil {
+			return nil, nil, fmt.Errorf(`failed to populate: %w`, err)
+		}
+	}
+
+	return r, rawCEK, nil
+}
+
+func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
+	// default content encryption algorithm
+	calg := jwa.A256GCM
+
+	// default compression is "none"
+	compression := jwa.NoCompress
+
+	format := fmtCompact
+
+	// builds each "recipient" with encrypted_key and headers
+	var builders []*recipientBuilder
+
+	var protected Headers
+	var useRawCEK bool
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identKey{}:
+			data := option.Value().(*withKey)
+			v, ok := data.alg.(jwa.KeyEncryptionAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`jwe.Encrypt: expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, data.alg)
+			}
+
+			switch v {
+			case jwa.DIRECT, jwa.ECDH_ES:
+				useRawCEK = true
+			}
+
+			builders = append(builders, &recipientBuilder{
+				alg:     v,
+				key:     data.key,
+				headers: data.headers,
+			})
+		case identContentEncryptionAlgorithm{}:
+			calg = option.Value().(jwa.ContentEncryptionAlgorithm)
+		case identCompress{}:
+			compression = option.Value().(jwa.CompressionAlgorithm)
+		case identProtectedHeaders{}:
+			protected = option.Value().(Headers)
+		case identSerialization{}:
+			format = option.Value().(int)
+		}
+	}
+
+	// We need to have at least one builder
+	if len(builders) == 0 {
+		return nil, fmt.Errorf(`jwe.Encrypt: missing key encryption builders: use jwe.WithKey() to specify one`)
+	}
+
+	if useRawCEK {
+		if len(builders) != 1 {
+			return nil, fmt.Errorf(`jwe.Encrypt: multiple recipients for ECDH-ES/DIRECT mode supported`)
+		}
+	}
+
+	// There is exactly one content encrypter.
+	contentcrypt, err := content_crypt.NewGeneric(calg)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe.Encrypt: failed to create AES encrypter: %w`, err)
+	}
+
+	generator := keygen.NewRandom(contentcrypt.KeySize())
+	bk, err := generator.Generate()
+	if err != nil {
+		return nil, fmt.Errorf(`jwe.Encrypt: failed to generate key: %w`, err)
+	}
+	cek := bk.Bytes()
+
+	recipients := make([]Recipient, len(builders))
+	for i, builder := range builders {
+		// some builders require hint from the contentcrypt object
+		r, rawCEK, err := builder.Build(cek, calg, contentcrypt)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Encrypt: failed to create recipient #%d: %w`, i, err)
+		}
+		recipients[i] = r
+
+		// Kinda feels weird, but if useRawCEK == true, we asserted earlier
+		// that len(builders) == 1, so this is OK
+		if useRawCEK {
+			cek = rawCEK
+		}
+	}
+
+	if protected == nil {
+		protected = NewHeaders()
+	}
+
+	if err := protected.Set(ContentEncryptionKey, calg); err != nil {
+		return nil, fmt.Errorf(`jwe.Encrypt: failed to set "enc" in protected header: %w`, err)
+	}
+
+	if compression != jwa.NoCompress {
+		payload, err = compress(payload)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Encrypt: failed to compress payload before encryption: %w`, err)
+		}
+		if err := protected.Set(CompressionKey, compression); err != nil {
+			return nil, fmt.Errorf(`jwe.Encrypt: failed to set "zip" in protected header: %w`, err)
+		}
+	}
+
+	// If there's only one recipient, you want to include that in the
+	// protected header
+	if len(recipients) == 1 {
+		h, err := protected.Merge(context.TODO(), recipients[0].Headers())
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Encrypt: failed to merge protected headers: %w`, err)
+		}
+		protected = h
+	}
+
+	aad, err := protected.Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
+	}
+
+	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encrypt payload")
 	}
 
-	return Compact(msg)
+	msg := NewMessage()
+
+	decodedAad, err := base64.Decode(aad)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode base64")
+	}
+	if err := msg.Set(AuthenticatedDataKey, decodedAad); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+	}
+	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+	}
+	if err := msg.Set(InitializationVectorKey, iv); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+	}
+	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+	}
+	if err := msg.Set(RecipientsKey, recipients); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+	}
+	if err := msg.Set(TagKey, tag); err != nil {
+		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+	}
+
+	switch format {
+	case fmtCompact:
+		return Compact(msg)
+	case fmtJSON:
+		return JSON(msg)
+	default:
+		return nil, fmt.Errorf(`jwe.Encrypt: invalid serialization`)
+	}
 }
 
 // DecryptCtx is used internally when jwe.Decrypt is called, and is

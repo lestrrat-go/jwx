@@ -18,6 +18,7 @@ type identKey struct{}
 type identKeyUsed struct{}
 type identKeyProvider struct{}
 type identSerialization struct{}
+type identPretty struct{}
 
 // WithKey options
 type identSignProtected struct{}
@@ -95,13 +96,41 @@ func WithCompact() SignOption {
 	return &signOption{option.New(identSerialization{}, fmtCompact)}
 }
 
+type JSONSuboption interface {
+	Option
+	withJSONSuboption()
+}
+
+type jsonSuboption struct {
+	Option
+}
+
+func (*jsonSuboption) withJSONSuboption() {}
+
+func WithPretty(v bool) JSONSuboption {
+	return &jsonSuboption{option.New(identPretty{}, v)}
+}
+
 // WithJSON specifies that the result of `jws.Sign()` is serialized in
 // JSON format.
 //
 // If you pass multiple keys to `jws.Sign()`, it will fail unless
 // you also pass this option.
-func WithJSON() SignOption {
-	return &signOption{option.New(identSerialization{}, fmtJSON)}
+func WithJSON(options ...JSONSuboption) SignOption {
+	var pretty bool
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identPretty{}:
+			pretty = option.Value().(bool)
+		}
+	}
+
+	format := fmtJSON
+	if pretty {
+		format = fmtJSONPretty
+	}
+	return &signOption{option.New(identSerialization{}, format)}
 }
 
 // WithKeySuboption describes option types that can be passed to the `jws.WithKey()`

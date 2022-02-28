@@ -3,8 +3,6 @@ package jwe
 import (
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/internal/iter"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
 )
 
@@ -17,7 +15,25 @@ type Recipient interface {
 }
 
 type stdRecipient struct {
-	headers      Headers
+	// Comments on each field are taken from https://datatracker.ietf.org/doc/html/rfc7516
+	//
+	// header
+	//    The "header" member MUST be present and contain the value JWE Per-
+	//    Recipient Unprotected Header when the JWE Per-Recipient
+	//    Unprotected Header value is non-empty; otherwise, it MUST be
+	//    absent.  This value is represented as an unencoded JSON object,
+	//    rather than as a string.  These Header Parameter values are not
+	//    integrity protected.
+	//
+	// At least one of the "header", "protected", and "unprotected" members
+	// MUST be present so that "alg" and "enc" Header Parameter values are
+	// conveyed for each recipient computation.
+	headers Headers
+
+	// encrypted_key
+	//    The "encrypted_key" member MUST be present and contain the value
+	//    BASE64URL(JWE Encrypted Key) when the JWE Encrypted Key value is
+	//    non-empty; otherwise, it MUST be absent.
 	encryptedKey []byte
 }
 
@@ -42,13 +58,77 @@ type stdRecipient struct {
 // if we tried to re-calculate it from a parsed message.
 //nolint:govet
 type Message struct {
-	authenticatedData    []byte
-	cipherText           []byte
+	// Comments on each field are taken from https://datatracker.ietf.org/doc/html/rfc7516
+	//
+	// protected
+	//    The "protected" member MUST be present and contain the value
+	//    BASE64URL(UTF8(JWE Protected Header)) when the JWE Protected
+	//    Header value is non-empty; otherwise, it MUST be absent.  These
+	//    Header Parameter values are integrity protected.
+	protectedHeaders Headers
+
+	// unprotected
+	//    The "unprotected" member MUST be present and contain the value JWE
+	//    Shared Unprotected Header when the JWE Shared Unprotected Header
+	//    value is non-empty; otherwise, it MUST be absent.  This value is
+	//    represented as an unencoded JSON object, rather than as a string.
+	//    These Header Parameter values are not integrity protected.
+	unprotectedHeaders Headers
+
+	// iv
+	//    The "iv" member MUST be present and contain the value
+	//    BASE64URL(JWE Initialization Vector) when the JWE Initialization
+	//    Vector value is non-empty; otherwise, it MUST be absent.
 	initializationVector []byte
-	tag                  []byte
-	recipients           []Recipient
-	protectedHeaders     Headers
-	unprotectedHeaders   Headers
+
+	// aad
+	//    The "aad" member MUST be present and contain the value
+	//    BASE64URL(JWE AAD)) when the JWE AAD value is non-empty;
+	//    otherwise, it MUST be absent.  A JWE AAD value can be included to
+	//    supply a base64url-encoded value to be integrity protected but not
+	//    encrypted.
+	authenticatedData []byte
+
+	// ciphertext
+	//    The "ciphertext" member MUST be present and contain the value
+	//    BASE64URL(JWE Ciphertext).
+	cipherText []byte
+
+	// tag
+	//    The "tag" member MUST be present and contain the value
+	//    BASE64URL(JWE Authentication Tag) when the JWE Authentication Tag
+	//    value is non-empty; otherwise, it MUST be absent.
+	tag []byte
+
+	// recipients
+	//    The "recipients" member value MUST be an array of JSON objects.
+	//    Each object contains information specific to a single recipient.
+	//    This member MUST be present with exactly one array element per
+	//    recipient, even if some or all of the array element values are the
+	//    empty JSON object "{}" (which can happen when all Header Parameter
+	//    values are shared between all recipients and when no encrypted key
+	//    is used, such as when doing Direct Encryption).
+	//
+	// Some Header Parameters, including the "alg" parameter, can be shared
+	// among all recipient computations.  Header Parameters in the JWE
+	// Protected Header and JWE Shared Unprotected Header values are shared
+	// among all recipients.
+	//
+	// The Header Parameter values used when creating or validating per-
+	// recipient ciphertext and Authentication Tag values are the union of
+	// the three sets of Header Parameter values that may be present: (1)
+	// the JWE Protected Header represented in the "protected" member, (2)
+	// the JWE Shared Unprotected Header represented in the "unprotected"
+	// member, and (3) the JWE Per-Recipient Unprotected Header represented
+	// in the "header" member of the recipient's array element.  The union
+	// of these sets of Header Parameters comprises the JOSE Header.  The
+	// Header Parameter names in the three locations MUST be disjoint.
+	recipients []Recipient
+
+	// TODO: Additional members can be present in both the JSON objects defined
+	// above; if not understood by implementations encountering them, they
+	// MUST be ignored.
+	// privateParams map[string]interface{}
 
 	// These two fields below are not available for the public consumers of this object.
 	// rawProtectedHeaders stores the original protected header buffer
@@ -57,22 +137,6 @@ type Message struct {
 	// When this flag is true, UnmarshalJSON() will populate the
 	// rawProtectedHeaders field
 	storeProtectedHeaders bool
-}
-
-// contentEncrypter encrypts the content using the content using the
-// encrypted key
-type contentEncrypter interface {
-	Algorithm() jwa.ContentEncryptionAlgorithm
-	Encrypt([]byte, []byte, []byte) ([]byte, []byte, []byte, error)
-}
-
-//nolint:govet
-type encryptCtx struct {
-	keyEncrypters    []keyenc.Encrypter
-	protected        Headers
-	contentEncrypter contentEncrypter
-	generator        keygen.Generator
-	compress         jwa.CompressionAlgorithm
 }
 
 // populater is an interface for things that may modify the

@@ -174,11 +174,6 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	{
-		buf, _ := json.MarshalIndent(msg, "", "  ")
-		t.Logf("%s", buf)
-	}
-
 	if !assert.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1") {
 		return
 	}
@@ -192,24 +187,24 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		return
 	}
 
-	serializers := []struct {
+	templates := []*struct {
 		Name     string
-		Func     func(*jwe.Message) ([]byte, error)
+		Options  []jwe.EncryptOption
 		Expected string
 	}{
 		{
 			Name:     "Compact",
-			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.Compact(m) },
+			Options:  []jwe.EncryptOption{jwe.WithCompact()},
 			Expected: serialized,
 		},
 		{
 			Name:     "JSON",
-			Func:     func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m) },
+			Options:  []jwe.EncryptOption{jwe.WithJSON()},
 			Expected: `{"ciphertext":"5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A","iv":"48V1_ALb6US04U3b","protected":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","header":{"alg":"RSA-OAEP"},"encrypted_key":"OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg","tag":"XFBoMYUZodetZdvTiFvSkQ"}`,
 		},
 		{
-			Name: "JSON (Pretty)",
-			Func: func(m *jwe.Message) ([]byte, error) { return jwe.JSON(m, jwe.WithPrettyFormat(true)) },
+			Name:    "JSON (Pretty)",
+			Options: []jwe.EncryptOption{jwe.WithJSON(jwe.WithPretty(true))},
 			Expected: `{
   "ciphertext": "5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A",
   "iv": "48V1_ALb6US04U3b",
@@ -223,41 +218,54 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 	}
 
-	for _, serializer := range serializers {
-		serializer := serializer
-		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
-			compression := compression
+	ntmpl := len(templates)
+	testcases := make([]struct {
+		Name     string
+		Options  []jwe.EncryptOption
+		Expected string
+	}, ntmpl*2)
+
+	for i, tmpl := range templates {
+		options := make([]jwe.EncryptOption, len(tmpl.Options))
+		copy(options, tmpl.Options)
+
+		for j, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
 			compName := compression.String()
 			if compName == "" {
 				compName = "none"
 			}
-			t.Run(serializer.Name+" (compression="+compName+")", func(t *testing.T) {
-				jsonbuf, err := serializer.Func(msg)
-				if !assert.NoError(t, err, "serialize succeeded") {
-					return
-				}
-
-				if !assert.Equal(t, serializer.Expected, string(jsonbuf), "serialize result matches") {
-					jsonbuf, _ = jwe.JSON(msg, jwe.WithPrettyFormat(true))
-					t.Logf("%s", jsonbuf)
-					return
-				}
-
-				encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, rawkey.PublicKey, jwa.A256GCM, compression)
-				if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-					return
-				}
-
-				plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
-				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-					return
-				}
-
-				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-					return
-				}
-			})
+			tc := testcases[i+j]
+			tc.Name = tmpl.Name + " (compression=" + compName + ")"
+			tc.Expected = tmpl.Expected
+			tc.Options = append(options, jwe.WithCompress(compression))
 		}
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			options := tc.Options
+			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
+
+			for i, option := range options {
+				t.Logf("%d: %s", i, option)
+			}
+
+			encrypted, err := jwe.Encrypt(plaintext, options...)
+			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
+				return
+			}
+			t.Logf("%s", encrypted)
+
+			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+				return
+			}
+
+			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+				return
+			}
+		})
 	}
 
 	// Test direct marshaling and unmarshaling
@@ -295,7 +303,7 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, &rsaPrivKey.PublicKey, jwa.A256GCM, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, &rsaPrivKey.PublicKey))
 		if !assert.NoError(t, err, "Encrypt should succeed") {
 			return
 		}
@@ -323,7 +331,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := jwe.Encrypt(plaintext, jwa.RSA1_5, &rsaPrivKey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5, &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
 		}
@@ -356,7 +364,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		encrypted, err := jwe.Encrypt(plaintext, jwa.A128KW, sharedkey, jwa.A128CBC_HS256, jwa.NoCompress)
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW, sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
 		}
@@ -386,25 +394,14 @@ func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}
 	for _, alg := range algorithms {
 		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
-			encrypted, err := jwe.Encrypt(plaintext, alg, pubkey, jwa.A256GCM, jwa.NoCompress)
+			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(alg, pubkey))
 			if !assert.NoError(t, err, "Encrypt succeeds") {
 				return
 			}
 
-			t.Logf("encrypted = %s", encrypted)
-
-			msg, err := jwe.Parse(encrypted)
+			_, err = jwe.Parse(encrypted)
 			if !assert.NoError(t, err, `jwe.Parse should succeed`) {
 				return
-			}
-
-			{
-				buf, _ := json.MarshalIndent(msg, "", "  ")
-				t.Logf("%s", buf)
-			}
-			{
-				buf, _ := json.MarshalIndent(msg.ProtectedHeaders(), "", "  ")
-				t.Logf("%s", buf)
 			}
 
 			decrypted, err := jwe.Decrypt(encrypted, alg, privkey)
@@ -494,11 +491,6 @@ func Test_GHIssue207(t *testing.T) {
 				return
 			}
 
-			{
-				buf, _ := json.MarshalIndent(msg, "", "  ")
-				t.Logf("%s", buf)
-			}
-
 			decrypted, err := msg.Decrypt(((msg.Recipients())[0]).Headers().Algorithm(), &key)
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
@@ -530,16 +522,20 @@ func TestEncode_Direct(t *testing.T) {
 		tc := tc
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			key := make([]byte, tc.KeySize)
-			_, err := rand.Read(key)
-			if !assert.NoError(t, err, "Key generation succeeds") {
-				return
+			/*
+				_, err := rand.Read(key)
+				if !assert.NoError(t, err, "Key generation succeeds") {
+					return
+				}*/
+			for n := 0; n < len(key); {
+				w := copy(key[n:], []byte(`12345678`))
+				n += w
 			}
 
-			encrypted, err := jwe.Encrypt(plaintext, jwa.DIRECT, key, tc.Algorithm, jwa.NoCompress)
-			if !assert.NoError(t, err, "Encrypt succeeds") {
+			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT, key), jwe.WithContentEncryption(tc.Algorithm))
+			if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
 				return
 			}
-
 			decrypted, err := jwe.Decrypt(encrypted, jwa.DIRECT, key)
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
@@ -706,7 +702,7 @@ func TestCustomField(t *testing.T) {
 	protected := jwe.NewHeaders()
 	protected.Set(`x-birthday`, string(bdaybytes))
 
-	encrypted, err := jwe.Encrypt(plaintext, jwa.RSA_OAEP, pubkey, jwa.A256GCM, jwa.NoCompress, jwe.WithProtectedHeaders(protected))
+	encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
 	if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
 		return
 	}
@@ -767,7 +763,7 @@ func TestGH554(t *testing.T) {
 		return
 	}
 
-	encrypted, err := jwe.Encrypt([]byte(plaintext), jwa.ECDH_ES, pubkey, jwa.A256GCM, jwa.NoCompress)
+	encrypted, err := jwe.Encrypt([]byte(plaintext), jwe.WithKey(jwa.ECDH_ES, pubkey))
 	if !assert.NoError(t, err, `jwk.Encrypt() should succeed`) {
 		return
 	}

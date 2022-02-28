@@ -1,0 +1,60 @@
+output: jwe/options_gen.go
+interfaces:
+  - name: DecryptOption
+    comment: |
+      DecryptOption describes options that can be passed to `jwe.Decrypt`
+  - name: EncryptOption
+    comment: |
+      EncryptOption describes options that can be passed to `jwe.Encrypt`
+options:
+  - ident: Key
+    skip_option: true
+  - ident: Pretty
+    skip_option: true
+  - ident: ProtectedHeaders
+    skip_option: true
+  # These should be deprecated?
+  - ident: PostParser
+    skip_option: true
+  - ident: PrettyFormat
+    skip_option: true
+  - ident: RecipientHeaders
+    skip_option: true
+  - ident: Serialization
+    option_name: WithCompact
+    interface: EncryptOption
+    constant_value: fmtCompact
+    comment: |
+      WithCompact specifies that the result of `jwe.Encrypt()` is serialized in
+      compact format.
+      
+      By default `jwe.Encrypt()` will opt to use compact format, so you usually
+      do not need to specify this option other than to be explicit about it
+  - ident: Compress
+    interface: EncryptOption
+    argument_type: jwa.CompressionAlgorithm
+    comment: |
+      WithCompress specifies the compression algorithm to use when encrypting
+      a payload using `jwe.Encrypt` (Yes, we know it can only be "" or "DEF",
+      but the way the specification is written it could allow for more options,
+      and therefore this option takes an argument)
+  - ident: ContentEncryptionAlgorithm
+    interface: EncryptOption
+    option_name: WithContentEncryption
+    argument_type: jwa.ContentEncryptionAlgorithm
+    comment: |
+      WithContentEncryptionAlgorithm specifies the algorithm to encrypt the
+      JWE message content with. If not provided, `jwa.A256GCM` is used.
+  - ident: Message
+    interface: DecryptOption
+    argument_type: '*Message'
+    comment: |
+      WithMessage provides a message object to be populated by `jwe.Decrpt`
+      Using this option allows you to decrypt AND obtain the `jwe.Message`
+      in one go.
+      
+      Note that you should NOT be using the message object for anything other
+      than inspecting its contents. Particularly, do not expect the message
+      reliable when you call `Decrypt` on it. `(jwe.Message).Decrypt` is
+      slated to be deprecated in the next major version.
+
