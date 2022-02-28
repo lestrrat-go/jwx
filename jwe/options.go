@@ -3,6 +3,7 @@ package jwe
 import (
 	"context"
 
+	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/option"
 )
 
@@ -11,6 +12,10 @@ type identMessage struct{}
 type identPostParser struct{}
 type identPrettyFormat struct{}
 type identProtectedHeader struct{}
+type identRecipientHeaders struct{}
+type identKey struct{}
+type identCompress struct{}
+type identContentEncryptionAlgorithm struct{}
 
 type DecryptOption interface {
 	Option
@@ -84,4 +89,64 @@ func WithMessage(m *Message) DecryptOption {
 // decrypt a message using non-standard hints.
 func WithPostParser(p PostParser) DecryptOption {
 	return &decryptOption{option.New(identPostParser{}, p)}
+}
+
+type DecryptEncryptOption interface {
+	DecryptOption
+	EncryptOption
+}
+
+type decryptEncryptOption struct {
+	Option
+}
+
+func (*decryptEncryptOption) decryptOption() {}
+func (*decryptEncryptOption) encryptOption() {}
+
+type withKey struct {
+	alg     jwa.KeyAlgorithm
+	key     interface{}
+	headers Headers
+}
+
+type WithKeySuboption interface {
+	Option
+	withKeySuboption()
+}
+
+type withKeySuboption struct {
+	Option
+}
+
+func (*withKeySuboption) withKeySuboption() {}
+
+func WithRecipientHeaders(hdr Headers) WithKeySuboption {
+	return &withKeySuboption{option.New(identRecipientHeaders{}, hdr)}
+}
+
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) DecryptEncryptOption {
+	var hdr Headers
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identRecipientHeaders{}:
+			hdr = option.Value().(Headers)
+		}
+	}
+
+	return &decryptEncryptOption{option.New(identKey{}, &withKey{
+		alg:     alg,
+		key:     key,
+		headers: hdr,
+	})}
+}
+
+// Because there _could_ be other values to the compress algorithm,
+// we take an argument
+func WithCompress(alg jwa.CompressionAlgorithm) EncryptOption {
+	return &encryptOption{option.New(identCompress{}, alg)}
+}
+
+func WithContentEncryption(alg jwa.ContentEncryptionAlgorithm) EncryptOption {
+	return &encryptOption{option.New(identContentEncryptionAlgorithm{}, alg)}
 }

@@ -104,9 +104,11 @@ func (e encryptCtx) Encrypt(plaintext []byte) (*Message, error) {
 		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
 	}
 
-	plaintext, err = compress(plaintext, compression)
-	if err != nil {
-		return nil, errors.Wrap(err, `failed to compress payload before encryption`)
+	if compression != jwa.NoCompress {
+		plaintext, err = compress(plaintext)
+		if err != nil {
+			return nil, errors.Wrap(err, `failed to compress payload before encryption`)
+		}
 	}
 
 	// ...on the other hand, there's only one content cipher.

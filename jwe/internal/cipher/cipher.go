@@ -83,7 +83,7 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	}, nil
 }
 
-func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, tag []byte, err error) {
+func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, tag []byte, err error) {
 	var aead cipher.AEAD
 	aead, err = c.fetch.Fetch(cek)
 	if err != nil {
@@ -124,8 +124,8 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertext, t
 	}
 
 	tag = combined[tagoffset:]
-	ciphertext = make([]byte, tagoffset)
-	copy(ciphertext, combined[:tagoffset])
+	ciphertxt = make([]byte, tagoffset)
+	copy(ciphertxt, combined[:tagoffset])
 
 	return
 }

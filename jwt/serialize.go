@@ -198,7 +198,7 @@ func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 	if err := setTypeOrCty(ctx, hdrs); err != nil {
 		return nil, err // this is already wrapped
 	}
-	return jwe.Encrypt(payload, s.keyalg, s.key, s.contentalg, s.compressalg, jwe.WithProtectedHeaders(hdrs))
+	return jwe.Encrypt(payload, jwe.WithKey(s.keyalg, s.key), jwe.WithContentEncryption(s.contentalg), jwe.WithCompress(s.compressalg), jwe.WithProtectedHeaders(hdrs))
 }
 
 func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) *Serializer {

@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/internal/pool"
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 
@@ -14,11 +13,7 @@ func uncompress(plaintext []byte) ([]byte, error) {
 	return ioutil.ReadAll(flate.NewReader(bytes.NewReader(plaintext)))
 }
 
-func compress(plaintext []byte, alg jwa.CompressionAlgorithm) ([]byte, error) {
-	if alg == jwa.NoCompress {
-		return plaintext, nil
-	}
-
+func compress(plaintext []byte) ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 

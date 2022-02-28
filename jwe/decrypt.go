@@ -50,6 +50,9 @@ type Decrypter struct {
 //
 // You should consider this object immutable once you assign values to it.
 func NewDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey interface{}) *Decrypter {
+	if ctalg == "" {
+		panic("WHAT")
+	}
 	return &Decrypter{
 		ctalg:   ctalg,
 		keyalg:  keyalg,
