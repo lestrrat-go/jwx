@@ -1,3 +1,4 @@
+package_name: jwe
 output: jwe/options_gen.go
 interfaces:
   - name: DecryptOption
