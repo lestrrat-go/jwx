@@ -1,12 +1,11 @@
 package openid
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -140,44 +139,44 @@ func (t *AddressClaim) Set(key string, value interface{}) error {
 			t.formatted = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'formatted': %T`, value)
+		return fmt.Errorf(`invalid type for key 'formatted': %T`, value)
 	case AddressStreetAddressKey:
 		v, ok := value.(string)
 		if ok {
 			t.streetAddress = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'streetAddress': %T`, value)
+		return fmt.Errorf(`invalid type for key 'streetAddress': %T`, value)
 	case AddressLocalityKey:
 		v, ok := value.(string)
 		if ok {
 			t.locality = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'locality': %T`, value)
+		return fmt.Errorf(`invalid type for key 'locality': %T`, value)
 	case AddressRegionKey:
 		v, ok := value.(string)
 		if ok {
 			t.region = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'region': %T`, value)
+		return fmt.Errorf(`invalid type for key 'region': %T`, value)
 	case AddressPostalCodeKey:
 		v, ok := value.(string)
 		if ok {
 			t.postalCode = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'postalCode': %T`, value)
+		return fmt.Errorf(`invalid type for key 'postalCode': %T`, value)
 	case AddressCountryKey:
 		v, ok := value.(string)
 		if ok {
 			t.country = &v
 			return nil
 		}
-		return errors.Errorf(`invalid type for key 'country': %T`, value)
+		return fmt.Errorf(`invalid type for key 'country': %T`, value)
 	default:
-		return errors.Errorf(`invalid key for address claim: %s`, key)
+		return fmt.Errorf(`invalid key for address claim: %s`, key)
 	}
 }
 
@@ -192,12 +191,12 @@ func (t *AddressClaim) Accept(v interface{}) error {
 	case map[string]interface{}:
 		for key, value := range v {
 			if err := t.Set(key, value); err != nil {
-				return errors.Wrap(err, `failed to set header`)
+				return fmt.Errorf(`failed to set header: %w`, err)
 			}
 		}
 		return nil
 	default:
-		return errors.Errorf(`invalid type for AddressClaim: %T`, v)
+		return fmt.Errorf(`invalid type for AddressClaim: %T`, v)
 	}
 }
 
@@ -267,7 +266,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 func (t *AddressClaim) UnmarshalJSON(data []byte) error {
 	var proxy addressClaimMarshalProxy
 	if err := json.Unmarshal(data, &proxy); err != nil {
-		return errors.Wrap(err, `failed to unmarshasl address claim`)
+		return fmt.Errorf(`failed to unmarshasl address claim: %w`, err)
 	}
 
 	t.formatted = proxy.Xformatted
