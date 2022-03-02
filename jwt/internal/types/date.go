@@ -1,12 +1,11 @@
 package types
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
-
-	"github.com/pkg/errors"
 )
 
 // NumericDate represents the date format used in the 'nbf' claim
@@ -53,21 +52,21 @@ func (n *NumericDate) Accept(v interface{}) error {
 	case string:
 		i, err := strconv.ParseInt(x[:], 10, 64)
 		if err != nil {
-			return errors.Errorf(`invalid epoch value %#v`, x)
+			return fmt.Errorf(`invalid epoch value %#v`, x)
 		}
 		t = time.Unix(i, 0)
 
 	case json.Number:
 		intval, err := x.Int64()
 		if err != nil {
-			return errors.Wrapf(err, `failed to convert json value %#v to int64`, x)
+			return fmt.Errorf(`failed to convert json value %#v to int64: %w`, x, err)
 		}
 		t = time.Unix(intval, 0)
 	case time.Time:
 		t = x
 	default:
 		if !numericToTime(v, &t) {
-			return errors.Errorf(`invalid type %T`, v)
+			return fmt.Errorf(`invalid type %T`, v)
 		}
 	}
 	n.Time = t.UTC()
@@ -86,12 +85,12 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(data, &v); err != nil {
-		return errors.Wrap(err, `failed to unmarshal date`)
+		return fmt.Errorf(`failed to unmarshal date: %w`, err)
 	}
 
 	var n2 NumericDate
 	if err := n2.Accept(v); err != nil {
-		return errors.Wrap(err, `invalid value for NumericDate`)
+		return fmt.Errorf(`invalid value for NumericDate: %w`, err)
 	}
 	*n = n2
 	return nil
