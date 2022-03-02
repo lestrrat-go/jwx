@@ -9,8 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -36,7 +34,7 @@ func unpad(buf []byte, n int) ([]byte, error) {
 	lbuf := len(buf)
 	rem := lbuf % n
 	if rem != 0 {
-		return nil, errors.Errorf("input buffer must be multiple of block size %d", n)
+		return nil, fmt.Errorf("input buffer must be multiple of block size %d", n)
 	}
 
 	count := 0
@@ -48,7 +46,7 @@ func unpad(buf []byte, n int) ([]byte, error) {
 		count++
 	}
 	if count != int(last) {
-		return nil, errors.New("invalid padding")
+		return nil, fmt.Errorf(`invalid padding`)
 	}
 
 	return buf[:lbuf-int(last)], nil
@@ -71,7 +69,7 @@ func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 
 	bc, ciphererr := f(ekey)
 	if ciphererr != nil {
-		err = errors.Wrap(ciphererr, `failed to execute block cipher function`)
+		err = fmt.Errorf(`failed to execute block cipher function`, ciphererr)
 		return
 	}
 
@@ -84,7 +82,7 @@ func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 	case 32:
 		hfunc = sha512.New
 	default:
-		return nil, errors.Errorf("unsupported key size %d", keysize)
+		return nil, fmt.Errorf("unsupported key size %d", keysize)
 	}
 
 	return &Hmac{
@@ -120,7 +118,7 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 
 	h := hmac.New(c.hash, c.integrityKey)
 	if _, err := h.Write(buf); err != nil {
-		return nil, errors.Wrap(err, "failed to write ComputeAuthTag using Hmac")
+		return nil, fmt.Errorf(`failed to write ComputeAuthTag using Hmac: %w`, err)
 	}
 	s := h.Sum(nil)
 	return s[:c.tagsize], nil
@@ -169,7 +167,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 // Open fulfills the crypto.AEAD interface
 func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	if len(ciphertext) < c.keysize {
-		return nil, errors.New("invalid ciphertext (too short)")
+		return nil, fmt.Errorf(`invalid ciphertext (too short)`)
 	}
 
 	tagOffset := len(ciphertext) - c.tagsize
@@ -185,11 +183,11 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 
 	expectedTag, err := c.ComputeAuthTag(data, nonce, ciphertext[:tagOffset])
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to compute auth tag`)
+		return nil, fmt.Errorf(`failed to compute auth tag: %w`, err)
 	}
 
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
-		return nil, errors.New("invalid ciphertext (tag mismatch)")
+		return nil, fmt.Errorf(`invalid ciphertext (tag mismatch)`)
 	}
 
 	cbc := cipher.NewCBCDecrypter(c.blockCipher, nonce)
@@ -198,7 +196,7 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 
 	plaintext, err := unpad(buf, c.blockCipher.BlockSize())
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate plaintext from decrypted blocks`)
+		return nil, fmt.Errorf(`failed to generate plaintext from decrypted blocks: %w`, err)
 	}
 	ret := ensureSize(dst, len(plaintext))
 	out := ret[len(dst):]
