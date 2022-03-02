@@ -48,6 +48,7 @@ func _main() error {
 			Comment      string
 			ConcreteType string `yaml:"concrete_type"`
 			Methods      []string
+			Embeds       []string
 		} `yaml:"interfaces"`
 		Options []*struct {
 			Ident         string
@@ -112,7 +113,14 @@ func _main() error {
 		} else {
 			o.LL(`type %s interface {`, iface.Name)
 		}
-		o.L(`Option`)
+		if len(iface.Embeds) < 1 {
+			o.L(`Option`)
+		} else {
+			for _, embed := range iface.Embeds {
+				o.L(embed)
+			}
+		}
+
 		for _, method := range iface.Methods {
 			o.L(`%s()`, method)
 		}
