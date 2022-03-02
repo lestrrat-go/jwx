@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"golang.org/x/crypto/curve25519"
@@ -14,7 +15,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 // Bytes returns the byte from this ByteKey
@@ -49,7 +49,7 @@ func (g Random) Size() int {
 func (g Random) Generate() (ByteSource, error) {
 	buf := make([]byte, g.keysize)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
-		return nil, errors.Wrap(err, "failed to read from rand.Reader")
+		return nil, fmt.Errorf(`failed to read from rand.Reader: %w`, err)
 	}
 	return ByteKey(buf), nil
 }
@@ -73,7 +73,7 @@ func (g Ecdhes) Size() int {
 func (g Ecdhes) Generate() (ByteSource, error) {
 	priv, err := ecdsa.GenerateKey(g.pubkey.Curve, rand.Reader)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate key for ECDH-ES")
+		return nil, fmt.Errorf(`failed to generate key for ECDH-ES: %w`, err)
 	}
 
 	var algorithm string
@@ -92,7 +92,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
 	if _, err := kdf.Read(kek); err != nil {
-		return nil, errors.Wrap(err, "failed to read kdf")
+		return nil, fmt.Errorf(`failed to read kdf: %w`, err)
 	}
 
 	return ByteWithECPublicKey{
@@ -120,7 +120,7 @@ func (g X25519) Size() int {
 func (g X25519) Generate() (ByteSource, error) {
 	pub, priv, err := x25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate key for X25519")
+		return nil, fmt.Errorf(`failed to generate key for X25519: %w`, err)
 	}
 
 	var algorithm string
@@ -135,12 +135,12 @@ func (g X25519) Generate() (ByteSource, error) {
 
 	zBytes, err := curve25519.X25519(priv.Seed(), g.pubkey)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to compute Z")
+		return nil, fmt.Errorf(`failed to compute Z: %w`, err)
 	}
 	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
 	if _, err := kdf.Read(kek); err != nil {
-		return nil, errors.Wrap(err, "failed to read kdf")
+		return nil, fmt.Errorf(`failed to read kdf: %w`, err)
 	}
 
 	return ByteWithECPublicKey{
@@ -154,11 +154,11 @@ func (g X25519) Generate() (ByteSource, error) {
 func (k ByteWithECPublicKey) Populate(h Setter) error {
 	key, err := jwk.New(k.PublicKey)
 	if err != nil {
-		return errors.Wrap(err, "failed to create JWK")
+		return fmt.Errorf(`failed to create JWK: %w`, err)
 	}
 
 	if err := h.Set("epk", key); err != nil {
-		return errors.Wrap(err, "failed to write header")
+		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 	return nil
 }
@@ -167,11 +167,11 @@ func (k ByteWithECPublicKey) Populate(h Setter) error {
 // parameters ('iv' and 'tag')
 func (k ByteWithIVAndTag) Populate(h Setter) error {
 	if err := h.Set("iv", k.IV); err != nil {
-		return errors.Wrap(err, "failed to write header")
+		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
 	if err := h.Set("tag", k.Tag); err != nil {
-		return errors.Wrap(err, "failed to write header")
+		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
 	return nil
@@ -181,11 +181,11 @@ func (k ByteWithIVAndTag) Populate(h Setter) error {
 // parameters ('p2s' and 'p2c')
 func (k ByteWithSaltAndCount) Populate(h Setter) error {
 	if err := h.Set("p2c", k.Count); err != nil {
-		return errors.Wrap(err, "failed to write header")
+		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
 	if err := h.Set("p2s", k.Salt); err != nil {
-		return errors.Wrap(err, "failed to write header")
+		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
 	return nil
