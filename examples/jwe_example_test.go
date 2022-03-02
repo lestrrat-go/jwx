@@ -10,7 +10,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
-	"github.com/pkg/errors"
 )
 
 func ExampleJWE_Encrypt() {
@@ -118,7 +117,7 @@ func ExampleJWE_ComplexDecrypt() {
 		}
 
 		// If there were errors, just return it, and the whole jwe.Decrypt will fail.
-		return errors.Errorf(`invalid value for jwx-hints: %s`, rawhint)
+		return fmt.Errorf(`invalid value for jwx-hints: %s`, rawhint)
 	}
 
 	// Calling jwe.Decrypt with the extra argument of jwe.WithPostParser().
