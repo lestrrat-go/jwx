@@ -11,7 +11,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 func init() {
@@ -25,11 +24,11 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	defer k.mu.Unlock()
 
 	if rawKey.X == nil {
-		return errors.Errorf(`invalid ecdsa.PublicKey`)
+		return fmt.Errorf(`invalid ecdsa.PublicKey`)
 	}
 
 	if rawKey.Y == nil {
-		return errors.Errorf(`invalid ecdsa.PublicKey`)
+		return fmt.Errorf(`invalid ecdsa.PublicKey`)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
@@ -46,7 +45,7 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
 		crv = tmp
 	} else {
-		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+		return fmt.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
 	k.crv = &crv
 
@@ -58,13 +57,13 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	defer k.mu.Unlock()
 
 	if rawKey.PublicKey.X == nil {
-		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+		return fmt.Errorf(`invalid ecdsa.PrivateKey`)
 	}
 	if rawKey.PublicKey.Y == nil {
-		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+		return fmt.Errorf(`invalid ecdsa.PrivateKey`)
 	}
 	if rawKey.D == nil {
-		return errors.Errorf(`invalid ecdsa.PrivateKey`)
+		return fmt.Errorf(`invalid ecdsa.PrivateKey`)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.X, rawKey.Curve)
@@ -85,7 +84,7 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
 		crv = tmp
 	} else {
-		return errors.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+		return fmt.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
 	}
 	k.crv = &crv
 
@@ -97,7 +96,7 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	if tmp, ok := ecutil.CurveForAlgorithm(alg); ok {
 		crv = tmp
 	} else {
-		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
+		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 
 	var x, y big.Int
@@ -114,7 +113,7 @@ func (k *ecdsaPublicKey) Raw(v interface{}) error {
 
 	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
 	if err != nil {
-		return errors.Wrap(err, `failed to build public key`)
+		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
 
 	return blackmagic.AssignIfCompatible(v, pubk)
@@ -126,7 +125,7 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 
 	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
 	if err != nil {
-		return errors.Wrap(err, `failed to build public key`)
+		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
 
 	var key ecdsa.PrivateKey
@@ -150,7 +149,7 @@ func makeECDSAPublicKey(v interface {
 			continue
 		default:
 			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+				return nil, fmt.Errorf(`failed to set field %s: %w`, pair.Key, err)
 			}
 		}
 	}
@@ -186,7 +185,7 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 	var key ecdsa.PublicKey
 	if err := k.Raw(&key); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize ecdsa.PublicKey for thumbprint generation`)
+		return nil, fmt.Errorf(`failed to materialize ecdsa.PublicKey for thumbprint generation: %w`, err)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
@@ -210,7 +209,7 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 	var key ecdsa.PrivateKey
 	if err := k.Raw(&key); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize ecdsa.PrivateKey for thumbprint generation`)
+		return nil, fmt.Errorf(`failed to materialize ecdsa.PrivateKey for thumbprint generation: %w`, err)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
