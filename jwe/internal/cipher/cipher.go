@@ -8,7 +8,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
-	"github.com/pkg/errors"
 )
 
 var gcm = &gcmFetcher{}
@@ -17,12 +16,12 @@ var cbc = &cbcFetcher{}
 func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for GCM")
+		return nil, fmt.Errorf(`cipher: failed to create AES cipher for GCM: %w`, err)
 	}
 
 	aead, err := cipher.NewGCM(aescipher)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to create GCM for cipher`)
+		return nil, fmt.Errorf(`failed to create GCM for cipher: %w`, err)
 	}
 	return aead, nil
 }
@@ -30,7 +29,7 @@ func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 func (f cbcFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
-		return nil, errors.Wrap(err, "cipher: failed to create AES cipher for CBC")
+		return nil, fmt.Errorf(`cipher: failed to create AES cipher for CBC: %w`, err)
 	}
 	return aead, nil
 }
@@ -73,7 +72,7 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 		keysize = tagsize * 2
 		fetcher = cbc
 	default:
-		return nil, errors.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
+		return nil, fmt.Errorf("failed to create AES content cipher: invalid algorithm (%s)", alg)
 	}
 
 	return &AesContentCipher{
@@ -87,7 +86,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 	var aead cipher.AEAD
 	aead, err = c.fetch.Fetch(cek)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to fetch AEAD")
+		return nil, nil, nil, fmt.Errorf(`failed to fetch AEAD: %w`, err)
 	}
 
 	// Seal may panic (argh!), so protect ourselves from that
@@ -97,11 +96,11 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 			case error:
 				err = e
 			case string:
-				err = errors.New(e)
-			default:
 				err = fmt.Errorf("%s", e)
+			default:
+				err = fmt.Errorf("%w", e)
 			}
-			err = errors.Wrap(err, "failed to encrypt")
+			err = fmt.Errorf(`failed to encrypt: %w`, err)
 		}
 	}()
 
@@ -112,7 +111,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 		bs, err = c.NonceGenerator.Generate()
 	}
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to generate nonce")
+		return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
 	}
 	iv = bs.Bytes()
 
@@ -133,7 +132,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
 	aead, err := c.fetch.Fetch(cek)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch AEAD data")
+		return nil, fmt.Errorf(`failed to fetch AEAD data: %w`, err)
 	}
 
 	// Open may panic (argh!), so protect ourselves from that
@@ -143,11 +142,11 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 			case error:
 				err = e
 			case string:
-				err = errors.New(e)
+				err = fmt.Errorf(`%s`, e)
 			default:
-				err = fmt.Errorf("%s", e)
+				err = fmt.Errorf("%w", e)
 			}
-			err = errors.Wrap(err, "failed to decrypt")
+			err = fmt.Errorf(`failed to decrypt: %w`, err)
 			return
 		}
 	}()
@@ -158,7 +157,7 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 
 	buf, aeaderr := aead.Open(nil, iv, combined, aad)
 	if aeaderr != nil {
-		err = errors.Wrap(aeaderr, `aead.Open failed`)
+		err = fmt.Errorf(`aead.Open failed: %w`, aeaderr)
 		return
 	}
 	plaintext = buf
