@@ -5,6 +5,7 @@ package openid
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -446,21 +446,21 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 	case AddressKey:
 		var acceptor AddressClaim
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AddressKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, AddressKey, err)
 		}
 		t.address = &acceptor
 		return nil
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AudienceKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, AudienceKey, err)
 		}
 		t.audience = acceptor
 		return nil
 	case BirthdateKey:
 		var acceptor BirthdateClaim
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, BirthdateKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, BirthdateKey, err)
 		}
 		t.birthdate = &acceptor
 		return nil
@@ -469,17 +469,17 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.email = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, EmailKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, EmailKey, value)
 	case EmailVerifiedKey:
 		if v, ok := value.(bool); ok {
 			t.emailVerified = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, ExpirationKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, ExpirationKey, err)
 		}
 		t.expiration = &acceptor
 		return nil
@@ -488,23 +488,23 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.familyName = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
 	case GenderKey:
 		if v, ok := value.(string); ok {
 			t.gender = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, GenderKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, GenderKey, value)
 	case GivenNameKey:
 		if v, ok := value.(string); ok {
 			t.givenName = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, IssuedAtKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, IssuedAtKey, err)
 		}
 		t.issuedAt = &acceptor
 		return nil
@@ -513,41 +513,41 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.issuer = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
 			t.jwtID = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
 	case LocaleKey:
 		if v, ok := value.(string); ok {
 			t.locale = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
 	case MiddleNameKey:
 		if v, ok := value.(string); ok {
 			t.middleName = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
 	case NameKey:
 		if v, ok := value.(string); ok {
 			t.name = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, NameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, NameKey, value)
 	case NicknameKey:
 		if v, ok := value.(string); ok {
 			t.nickname = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
 	case NotBeforeKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, NotBeforeKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, NotBeforeKey, err)
 		}
 		t.notBefore = &acceptor
 		return nil
@@ -556,41 +556,41 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.phoneNumber = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, PhoneNumberKey, value)
 	case PhoneNumberVerifiedKey:
 		if v, ok := value.(bool); ok {
 			t.phoneNumberVerified = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
 	case PictureKey:
 		if v, ok := value.(string); ok {
 			t.picture = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, PictureKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, PictureKey, value)
 	case PreferredUsernameKey:
 		if v, ok := value.(string); ok {
 			t.preferredUsername = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
 	case ProfileKey:
 		if v, ok := value.(string); ok {
 			t.profile = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
 	case SubjectKey:
 		if v, ok := value.(string); ok {
 			t.subject = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	case UpdatedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, UpdatedAtKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, UpdatedAtKey, err)
 		}
 		t.updatedAt = &acceptor
 		return nil
@@ -599,13 +599,13 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.website = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
 	case ZoneinfoKey:
 		if v, ok := value.(string); ok {
 			t.zoneinfo = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
 	default:
 		if t.privateClaims == nil {
 			t.privateClaims = map[string]interface{}{}
@@ -1001,7 +1001,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -1010,131 +1010,131 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AddressKey:
 				var decoded AddressClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AddressKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AddressKey, err)
 				}
 				t.address = &decoded
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
 				}
 				t.audience = decoded
 			case BirthdateKey:
 				var decoded BirthdateClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, BirthdateKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, BirthdateKey, err)
 				}
 				t.birthdate = &decoded
 			case EmailKey:
 				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, EmailKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, EmailKey, err)
 				}
 			case EmailVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, EmailVerifiedKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, EmailVerifiedKey, err)
 				}
 				t.emailVerified = &decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
 				}
 				t.expiration = &decoded
 			case FamilyNameKey:
 				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, FamilyNameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, FamilyNameKey, err)
 				}
 			case GenderKey:
 				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, GenderKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, GenderKey, err)
 				}
 			case GivenNameKey:
 				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, GivenNameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, GivenNameKey, err)
 				}
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
 				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case LocaleKey:
 				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, LocaleKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, LocaleKey, err)
 				}
 			case MiddleNameKey:
 				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, MiddleNameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, MiddleNameKey, err)
 				}
 			case NameKey:
 				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, NameKey, err)
 				}
 			case NicknameKey:
 				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NicknameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, NicknameKey, err)
 				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
 				}
 				t.notBefore = &decoded
 			case PhoneNumberKey:
 				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, PhoneNumberKey, err)
 				}
 			case PhoneNumberVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PhoneNumberVerifiedKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, PhoneNumberVerifiedKey, err)
 				}
 				t.phoneNumberVerified = &decoded
 			case PictureKey:
 				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PictureKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, PictureKey, err)
 				}
 			case PreferredUsernameKey:
 				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, PreferredUsernameKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, PreferredUsernameKey, err)
 				}
 			case ProfileKey:
 				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ProfileKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, ProfileKey, err)
 				}
 			case SubjectKey:
 				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			case UpdatedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, UpdatedAtKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, UpdatedAtKey, err)
 				}
 				t.updatedAt = &decoded
 			case WebsiteKey:
 				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, WebsiteKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, WebsiteKey, err)
 				}
 			case ZoneinfoKey:
 				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ZoneinfoKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, ZoneinfoKey, err)
 				}
 			default:
 				if dc := t.dc; dc != nil {
@@ -1151,10 +1151,10 @@ LOOP:
 					t.setNoLock(tok, decoded)
 					continue
 				}
-				return errors.Wrapf(err, `could not decode field %s`, tok)
+				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return errors.Errorf(`invalid token %T`, tok)
+			return fmt.Errorf(`invalid token %T`, tok)
 		}
 	}
 	return nil
@@ -1178,7 +1178,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		switch f {
 		case AudienceKey:
 			if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {
-				return nil, errors.Wrap(err, `failed to encode "aud"`)
+				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 			}
 			continue
 		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
@@ -1192,7 +1192,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+				return nil, fmt.Errorf(`failed to marshal field %s: %w`, f, err)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}

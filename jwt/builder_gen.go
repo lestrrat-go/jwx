@@ -3,9 +3,8 @@
 package jwt
 
 import (
+	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Builder is a convenience wrapper around the New() constructor
@@ -64,7 +63,7 @@ func (b *Builder) Build() (Token, error) {
 	tok := New()
 	for _, claim := range b.claims {
 		if err := tok.Set(claim.Key.(string), claim.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set claim %q`, claim.Key.(string))
+			return nil, fmt.Errorf(`failed to set claim %q: %w`, claim.Key.(string), err)
 		}
 	}
 	return tok, nil

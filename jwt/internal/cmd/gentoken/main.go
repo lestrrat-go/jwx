@@ -350,7 +350,7 @@ func generateToken(obj *codegen.Object) error {
 			o.L("tmp := v.String()")
 			o.L("t.algorithm = &tmp")
 			o.L("default:")
-			o.L("return errors.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
+			o.L("return fmt.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
 			o.L("}")
 			o.L("return nil")
 		} else if fieldHasAccept(f) {
@@ -361,7 +361,7 @@ func generateToken(obj *codegen.Object) error {
 			}
 
 			o.L("if err := acceptor.Accept(value); err != nil {")
-			o.L("return errors.Wrapf(err, `invalid value for %%s key`, %s)", keyName)
+			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %s, err)", keyName)
 			o.L("}") // end if err := t.%s.Accept(value)
 			if fieldStorageTypeIsIndirect(f.Type()) || IsPointer(f) {
 				o.L("t.%s = &acceptor", f.Name(false))
@@ -378,7 +378,7 @@ func generateToken(obj *codegen.Object) error {
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
-			o.L("return errors.Errorf(`invalid value for %%s key: %%T`, %s, value)", keyName)
+			o.L("return fmt.Errorf(`invalid value for %%s key: %%T`, %s, value)", keyName)
 		}
 	}
 	o.L("default:")
@@ -473,7 +473,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("for {")
 	o.L("tok, err := dec.Token()")
 	o.L("if err != nil {")
-	o.L("return errors.Wrap(err, `error reading token`)")
+	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
 	o.L("}")
 	o.L("switch tok := tok.(type) {")
 	o.L("case json.Delim:")
@@ -482,7 +482,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("if tok == '}' { // End of object")
 	o.L("break LOOP")
 	o.L("} else if tok != '{' {")
-	o.L("return errors.Errorf(`expected '{', but got '%%c'`, tok)")
+	o.L("return fmt.Errorf(`expected '{', but got '%%c'`, tok)")
 	o.L("}")
 	o.L("case string: // Objects can only have string keys")
 	o.L("switch tok {")
@@ -491,18 +491,18 @@ func generateToken(obj *codegen.Object) error {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.Name(false))
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == byteSliceType {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.Name(false))
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "types.StringList" || strings.HasPrefix(f.Type(), "[]") {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("t.%s = decoded", f.Name(false))
 		} else {
@@ -513,7 +513,7 @@ func generateToken(obj *codegen.Object) error {
 				o.L("var decoded %s", f.Type())
 			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("t.%s = &decoded", f.Name(false))
 		}
@@ -536,10 +536,10 @@ func generateToken(obj *codegen.Object) error {
 	o.L("t.setNoLock(tok, decoded)")
 	o.L("continue")
 	o.L("}")
-	o.L("return errors.Wrapf(err, `could not decode field %%s`, tok)")
+	o.L("return fmt.Errorf(`could not decode field %%s: %%w`, tok, err)")
 	o.L("}")
 	o.L("default:")
-	o.L("return errors.Errorf(`invalid token %%T`, tok)")
+	o.L("return fmt.Errorf(`invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
 
@@ -573,7 +573,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("switch f {")
 	o.L("case AudienceKey:")
 	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {")
-	o.L("return nil, errors.Wrap(err, `failed to encode \"aud\"`)")
+	o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
 	o.L("}")
 	o.L("continue")
 	if lndf := len(numericDateFields); lndf > 0 {
@@ -597,7 +597,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, errors.Wrapf(err, `failed to marshal field %%s`, f)")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%s: %%w`, f, err)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")
@@ -688,7 +688,7 @@ func genBuilder(obj *codegen.Object) error {
 	o.L("tok := New()")
 	o.L("for _, claim := range b.claims {")
 	o.L("if err := tok.Set(claim.Key.(string), claim.Value); err != nil {")
-	o.L("return nil, errors.Wrapf(err, `failed to set claim %%q`, claim.Key.(string))")
+	o.L("return nil, fmt.Errorf(`failed to set claim %%q: %%w`, claim.Key.(string), err)")
 	o.L("}")
 	o.L("}")
 	o.L("return tok, nil")
