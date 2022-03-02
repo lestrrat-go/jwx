@@ -2,11 +2,11 @@ package json
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/pkg/errors"
 )
 
 var muGlobalConfig sync.RWMutex
@@ -29,12 +29,12 @@ func Unmarshal(b []byte, v interface{}) error {
 func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 	var val string
 	if err := dec.Decode(&val); err != nil {
-		return errors.Wrap(err, `error reading next value`)
+		return fmt.Errorf(`error reading next value: %w`, err)
 	}
 
 	buf, err := base64.DecodeString(val)
 	if err != nil {
-		return errors.Errorf(`expected base64 encoded []byte (%T)`, val)
+		return fmt.Errorf(`expected base64 encoded []byte (%T)`, val)
 	}
 	*dst = buf
 	return nil
@@ -43,7 +43,7 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 func ReadNextStringToken(dec *Decoder) (string, error) {
 	var val string
 	if err := dec.Decode(&val); err != nil {
-		return "", errors.Wrap(err, `error reading next value`)
+		return "", fmt.Errorf(`error reading next value: %w`, err)
 	}
 	return val, nil
 }
