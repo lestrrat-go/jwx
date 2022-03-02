@@ -171,7 +171,7 @@ func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 
 	fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-fmt-data-*", bytes.NewReader(data))
 	if perr != nil {
-		return nil, fmt.Errorf(`failed to write data to file: %w`, err)
+		return nil, fmt.Errorf(`failed to write data to file: %w`, perr)
 	}
 	defer pcleanup()
 
