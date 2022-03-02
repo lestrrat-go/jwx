@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -68,7 +67,7 @@ func main() {
 func dumpJSON(dst io.Writer, v interface{}) error {
 	buf, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, `failed to serialize to JSON`)
+		return fmt.Errorf(`failed to serialize to JSON: %w`, err)
 	}
 	dst.Write(buf)
 	return nil
@@ -80,11 +79,11 @@ func getSource(filename string) (io.ReadCloser, error) {
 		src = ioutil.NopCloser(os.Stdin)
 	} else {
 		if filename == "" {
-			return nil, errors.New(`filename required (use "-" to read from stdin)`)
+			return nil, fmt.Errorf(`filename required (use "-" to read from stdin)`)
 		}
 		f, err := os.Open(filename)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to open file %s`, filename)
+			return nil, fmt.Errorf(`failed to open file %s: %w`, filename, err)
 		}
 		src = f
 	}
@@ -97,11 +96,11 @@ func getOutput(filename string) (io.WriteCloser, error) {
 	case "-":
 		output = &dummyWriteCloser{os.Stdout}
 	case "":
-		return nil, errors.New(`output must be a file name, or "-" for STDOUT`)
+		return nil, fmt.Errorf(`output must be a file name, or "-" for STDOUT`)
 	default:
 		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to create file %s`, filename)
+			return nil, fmt.Errorf(`failed to create file %s: %w`, filename, err)
 		}
 		output = f
 	}
@@ -116,11 +115,11 @@ func getKeyFile(keyfile, format string) (jwk.Set, error) {
 	case "pem":
 		keyoptions = append(keyoptions, jwk.WithPEM(true))
 	default:
-		return nil, errors.Errorf(`invalid JWK format "%s"`, format)
+		return nil, fmt.Errorf(`invalid JWK format "%s"`, format)
 	}
 	keyset, err := jwk.ReadFile(keyfile, keyoptions...)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse key`)
+		return nil, fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
 	return keyset, nil
