@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/lestrrat-go/jwx/internal/keyconv"
-	"github.com/lestrrat-go/jwx/internal/pool"
-	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v2/internal/pool"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/pkg/errors"
 )
 

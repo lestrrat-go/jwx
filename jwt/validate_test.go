@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +23,7 @@ func TestGHIssue10(t *testing.T) {
 	}{
 		{
 			ClaimName:  jwt.IssuerKey,
-			ClaimValue: `github.com/lestrrat-go/jwx`,
+			ClaimValue: `github.com/lestrrat-go/jwx/v2`,
 			OptionFunc: jwt.WithIssuer,
 			BuildFunc: func(v string) (jwt.Token, error) {
 				return jwt.NewBuilder().
@@ -145,7 +145,7 @@ func TestGHIssue10(t *testing.T) {
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx").
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v2").
 			Build()
 		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return

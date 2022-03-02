@@ -1,4 +1,4 @@
-# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk)
+# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk)
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
 
@@ -206,7 +206,7 @@ import (
   "encoding/json"
   "log"
 
-  "github.com/lestrrat-go/jwx/jwk"
+  "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
 func main() {

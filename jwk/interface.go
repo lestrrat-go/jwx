@@ -8,8 +8,8 @@ import (
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/internal/iter"
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
 // KeyUsageType is used to denote what this key should be used for

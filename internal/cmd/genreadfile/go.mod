@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/internal/cmd/genreadfile
+module github.com/lestrrat-go/jwx/v2/internal/cmd/genreadfile
 
 go 1.16
 

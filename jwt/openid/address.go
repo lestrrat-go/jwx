@@ -3,8 +3,8 @@ package openid
 import (
 	"strconv"
 
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/internal/pool"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/pool"
 
 	"github.com/pkg/errors"
 )

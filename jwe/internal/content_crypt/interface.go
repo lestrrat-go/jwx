@@ -1,8 +1,8 @@
 package content_crypt //nolint:golint
 
 import (
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/cipher"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe/internal/cipher"
 )
 
 // Generic encrypts a message by applying all the necessary

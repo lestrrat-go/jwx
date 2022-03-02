@@ -11,8 +11,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
 func ExampleJWK_Usage() {

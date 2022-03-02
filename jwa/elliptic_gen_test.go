@@ -5,7 +5,7 @@ package jwa_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/stretchr/testify/assert"
 )
 

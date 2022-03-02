@@ -1,6 +1,6 @@
 # Working with JWS
 
-In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws)
+In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v2/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
 
 * [Parsing](#parsing)
   * [Getting the payload from a JWS encoded buffer](#getting-the-payload-from-a-jws-encoded-buffer)
@@ -19,7 +19,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 
 ## Getting the payload from a JWS encoded buffer
 
-If you want to get the payload in the JWS message after it has been verified, use [`jws.Verify()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Verify)
+If you want to get the payload in the JWS message after it has been verified, use [`jws.Verify()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Verify)
 
 ```go
 var encoded = []byte{...}
@@ -33,20 +33,20 @@ If the algorithm or the key does not match, an error is returned.
 
 ## Parse a JWS encoded buffer into a jws.Message
 
-You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Message) object. In this mode, there is no verification performed.
+You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
 
 ```go
 var payload = []byte{...}
 msg, _ := jws.Parse(payload)
 ```
 
-Note that [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Message) is not really built for general signing/verification usage.
+Note that [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) is not really built for general signing/verification usage.
 It's built more so for inspection purposes.
-Think twice before attempting to do anything more than inspection using [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Message).
+Think twice before attempting to do anything more than inspection using [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message).
 
 ## Parse a JWS encoded message stored in a file
 
-To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Parse).
+To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
 ```go
 message, _ := jws.ReadFile(`message.jws`)
@@ -70,7 +70,7 @@ In most cases this is all you really need.
 signed, _ := jws.Sign(payload, jws.WithKey(alg, key))
 ```
 
-To sign a JWT, use [`jwt.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Sign)
+To sign a JWT, use [`jwt.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Sign)
 Notice that in this case the `WithKey()` options is that of the `jwt` package.
 
 ```go
@@ -81,7 +81,7 @@ signed, _ := jwt.Sign(token, jwt.WithKey(alg, key))
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
 
-When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
+When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
 
 ```go
 signed, _ := jws.Sign(payload,
@@ -183,7 +183,7 @@ payload, _ := jws.VerifyAuto(buf, jws.WithHTTPClient(client))
 
 Sometimes we do not offer a particular algorithm out of the box, but you have an implementation for it.
 
-In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jws#RegisterVerifier) functions to
+In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterVerifier) functions to
 generate your own verifier instance. 
 
 ```go

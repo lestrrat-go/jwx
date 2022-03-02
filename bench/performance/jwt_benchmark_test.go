@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 func BenchmarkJWT(b *testing.B) {

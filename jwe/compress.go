@@ -5,7 +5,7 @@ import (
 	"compress/flate"
 	"io/ioutil"
 
-	"github.com/lestrrat-go/jwx/internal/pool"
+	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/pkg/errors"
 )
 

@@ -15,12 +15,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/ecutil"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
-	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/x25519"
+	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jws"
+	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )

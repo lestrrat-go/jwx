@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/pkg/errors"
 )
 

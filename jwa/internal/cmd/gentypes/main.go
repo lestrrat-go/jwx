@@ -510,7 +510,7 @@ func (t typ) GenerateTest() error {
 	o.L("import (")
 	pkgs := []string{
 		"testing",
-		"github.com/lestrrat-go/jwx/jwa",
+		"github.com/lestrrat-go/jwx/v2/jwa",
 		"github.com/stretchr/testify/assert",
 	}
 	for _, pkg := range pkgs {

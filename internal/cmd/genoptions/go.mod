@@ -1,11 +1,11 @@
-module github.com/lestrrat-go/jwx/jwe/internal/cmd/genoptions
+module github.com/lestrrat-go/jwx/v2/jwe/internal/cmd/genoptions
 
 go 1.17
 
 require (
 	github.com/goccy/go-yaml v1.9.5
 	github.com/lestrrat-go/codegen v1.0.3
-	github.com/lestrrat-go/jwx v1.2.19
+	github.com/lestrrat-go/jwx/v2 v1.2.19
 	github.com/lestrrat-go/option v1.0.0
 	github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b
 )

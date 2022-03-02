@@ -12,9 +12,9 @@ import (
 
 	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -2,8 +2,8 @@ package jwe
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/internal/iter"
-	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
 )
 
 // Recipient holds the encrypted key and hints to decrypt the key

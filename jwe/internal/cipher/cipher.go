@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe/internal/aescbc"
-	"github.com/lestrrat-go/jwx/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe/internal/aescbc"
+	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
 	"github.com/pkg/errors"
 )
 

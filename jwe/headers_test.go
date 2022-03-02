@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +71,7 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			Key:    jwe.JWKSetURLKey,
-			Value:  "http://github.com/lestrrat-go/jwx",
+			Value:  "http://github.com/lestrrat-go/jwx/v2",
 			Method: "JWKSetURL",
 		},
 		{
@@ -101,7 +101,7 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			Key:    jwe.X509URLKey,
-			Value:  "http://github.com/lestrrat-go/jwx",
+			Value:  "http://github.com/lestrrat-go/jwx/v2",
 			Method: "X509URL",
 		},
 		{Key: "private", Value: "boofoo"},

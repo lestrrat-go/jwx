@@ -19,16 +19,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/ecutil"
-	"github.com/lestrrat-go/jwx/internal/jose"
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v2/internal/jose"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/pkg/errors"
 
-	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/x25519"
+	"github.com/lestrrat-go/jwx/v2/internal/base64"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,7 +92,7 @@ func init() {
 			Method: "X509CertThumbprintS256",
 		},
 		jwk.X509URLKey: {
-			Value:  "http://github.com/lestrrat-go/jwx",
+			Value:  "http://github.com/lestrrat-go/jwx/v2",
 			Method: "X509URL",
 		},
 		"private": {Value: "boofoo"},
@@ -1884,7 +1884,7 @@ func TestFetch(t *testing.T) {
 
 			wl := tc.Whitelist()
 
-			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx`, jwk.WithFetchWhitelist(wl))
+			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/v2`, jwk.WithFetchWhitelist(wl))
 			if tc.Error {
 				if !assert.Error(t, err, `jwk.Fetch should fail`) {
 					return

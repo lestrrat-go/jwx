@@ -19,8 +19,8 @@ github.com/lestrrat-go/httpcc v1.0.0 h1:FszVC6cKfDvBKcJv646+lkh4GydQg2Z29scgUfkO
 github.com/lestrrat-go/httpcc v1.0.0/go.mod h1:tGS/u00Vh5N6FHNkExqGGNId8e0Big+++0Gf8MBnAvE=
 github.com/lestrrat-go/iter v1.0.1 h1:q8faalr2dY6o8bV45uwrxq12bRa1ezKrB6oM9FUgN4A=
 github.com/lestrrat-go/iter v1.0.1/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
-github.com/lestrrat-go/jwx v1.2.15 h1:58CEGJpf1TS3NJASMfMkTp6stlvPTsqs1xxAu/Yf/uM=
-github.com/lestrrat-go/jwx v1.2.15/go.mod h1:DJKaoM8f1OvYVwWoW45gBrUxMlpD4FHjT0UnrW3iX28=
+github.com/lestrrat-go/jwx/v2/v2 v1.2.15 h1:58CEGJpf1TS3NJASMfMkTp6stlvPTsqs1xxAu/Yf/uM=
+github.com/lestrrat-go/jwx/v2/v2 v1.2.15/go.mod h1:DJKaoM8f1OvYVwWoW45gBrUxMlpD4FHjT0UnrW3iX28=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

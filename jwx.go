@@ -18,13 +18,13 @@
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
 // online documentation for this module.
-// You can find the examples in Github at https://github.com/lestrrat-go/jwx/examples
+// You can find the examples in Github at https://github.com/lestrrat-go/jwx/v2/examples
 //
-// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
+// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx/v2)
 package jwx
 
 import (
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
 // DecoderSettings gives you a access to configure the "encoding/json".Decoder

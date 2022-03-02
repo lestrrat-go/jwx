@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 
 	"github.com/pkg/errors"
 )

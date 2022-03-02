@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/jwa/internal/cmd/gentypes
+module github.com/lestrrat-go/jwx/v2/jwa/internal/cmd/gentypes
 
 go 1.16
 

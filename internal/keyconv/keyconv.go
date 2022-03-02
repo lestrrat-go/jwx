@@ -6,7 +6,7 @@ import (
 	"crypto/rsa"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ed25519"
 )

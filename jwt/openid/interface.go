@@ -2,8 +2,8 @@ package openid
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/internal/iter"
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
 type ClaimPair = mapiter.Pair

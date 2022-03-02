@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/option"
 )
 

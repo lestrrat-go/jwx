@@ -7,7 +7,7 @@ import (
 	"crypto"
 	"crypto/x509"
 
-	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 )
 
 const (

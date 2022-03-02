@@ -5,8 +5,8 @@ package jwk_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/internal/ecutil"
-	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/stretchr/testify/assert"
 )
 

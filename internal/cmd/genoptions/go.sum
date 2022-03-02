@@ -22,8 +22,8 @@ github.com/lestrrat-go/codegen v1.0.3 h1:HviEmojOS51tH5L762bRMAZPj8DTIkwk24Il8M+
 github.com/lestrrat-go/codegen v1.0.3/go.mod h1:q3mmYUQW1bg3Z74ap7RgaVv1LmrBtlAKQOElxZTKlRM=
 github.com/lestrrat-go/httpcc v1.0.0/go.mod h1:tGS/u00Vh5N6FHNkExqGGNId8e0Big+++0Gf8MBnAvE=
 github.com/lestrrat-go/iter v1.0.1/go.mod h1:zIdgO1mRKhn8l9vrZJZz9TUMMFbQbLeTsbqPDrJ/OJc=
-github.com/lestrrat-go/jwx v1.2.19 h1:qxxLmAXNwZpTTvjc4PH21nT7I4wPK6lVv3lVNcZPnUk=
-github.com/lestrrat-go/jwx v1.2.19/go.mod h1:bWTBO7IHHVMtNunM8so9MT8wD+euEY1PzGEyCnuI2qM=
+github.com/lestrrat-go/jwx/v2 v1.2.19 h1:qxxLmAXNwZpTTvjc4PH21nT7I4wPK6lVv3lVNcZPnUk=
+github.com/lestrrat-go/jwx/v2 v1.2.19/go.mod h1:bWTBO7IHHVMtNunM8so9MT8wD+euEY1PzGEyCnuI2qM=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
 github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b h1:3laG8JWIeDGb7lf00nMRznLdCHy0aZPd/CGz7Okn1SY=

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/pkg/errors"
 )
 

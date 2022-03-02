@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2/v2/jwk"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )

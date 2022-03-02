@@ -3,11 +3,11 @@ package jwe
 import (
 	"context"
 
-	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/base64"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/internal/iter"
 	"github.com/pkg/errors"
 )
 

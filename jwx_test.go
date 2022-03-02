@@ -8,14 +8,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lestrrat-go/jwx"
-	"github.com/lestrrat-go/jwx/internal/ecutil"
-	"github.com/lestrrat-go/jwx/internal/jose"
-	"github.com/lestrrat-go/jwx/internal/json"
-	"github.com/lestrrat-go/jwx/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwe"
-	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/v2"
+	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v2/internal/jose"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -473,7 +473,7 @@ func TestGuessFormat(t *testing.T) {
 		{
 			Name:     "JWT",
 			Expected: jwx.JWT,
-			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx"}`),
+			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx/v2"}`),
 		},
 	}
 

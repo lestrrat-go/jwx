@@ -1,6 +1,6 @@
 # Working with JWT
 
-In this document we describe how to work with JWT using `github.com/lestrrat-go/jwx/jwt`
+In this document we describe how to work with JWT using `github.com/lestrrat-go/jwx/v2/jwt`
 
 * [Terminology](#terminology)
   * [Verification](#verification)
@@ -41,7 +41,7 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 ## Parse a JWT
 
-To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Parse)
+To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse)
 
 ```go
 src := []byte{...}
@@ -54,7 +54,7 @@ In order to perform verification/validation, please see the methods described el
 
 ## Parse a JWT from file
 
-To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Parse).
+To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
 
 ```go
 token, _ := jwt.ReadFile(`token.json`)
@@ -62,7 +62,7 @@ token, _ := jwt.ReadFile(`token.json`)
 
 ## Parse a JWT from a *http.Request
 
-To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
+To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
 
 ```go
 // Looks under "Authorization" header
@@ -134,18 +134,18 @@ _, _ = jwt.NewBuilder().
 
 ## Parse and Verify a JWT (with single key)
 
-To parse a JWT *and* verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Parse) function. Let's assume the signature was generated using ES256:
+To parse a JWT *and* verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the signature was generated using ES256:
 
 ```go
 src := []byte{...}
 token, _ := jwt.Parse(src, jwt.WithVerify(jwa.ES256, key))
 ```
 
-In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
+In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
 
 ## Parse and Verify a JWT (with a key set, matching "kid")
 
-To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Parse) function. Let's assume the JWS contains the "kid" header of the key that generated the signature:
+To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the JWS contains the "kid" header of the key that generated the signature:
 
 ```go
 src := []byte{...}
@@ -200,7 +200,7 @@ in the documentation for `jws.VerifyAuto()`
 
 # JWT Validation
 
-To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Validate) function.
+To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) function.
 
 ```go
 if err := jwt.Validate(token); err != nil {
@@ -208,11 +208,11 @@ if err := jwt.Validate(token); err != nil {
 }
 ```
 
-By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt#ValidateOption) values.
+By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ValidateOption) values.
 
 ```go
-// Check for token["iss"] == "github.com/lestrrat-go/jwx"
-if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx`)) {
+// Check for token["iss"] == "github.com/lestrrat-go/jwx/v2"
+if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx/v2`)) {
   return errors.New(`failed to validate token`)
 }
 ```
@@ -261,7 +261,7 @@ The `jwt` package provides a convenience function `jwt.Sign()` to serialize a to
 
 ```go
 token := jwt.New()
-token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`)
+token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx/v2`)
 
 serialized, err := jwt.Sign(token, jwt.WithKey(algorithm, key))
 ```
@@ -285,7 +285,7 @@ If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializ
 
 When you marshal `jwt.Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
 
-The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/issues/368)).
+The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/v2/issues/368)).
 
 ```
 {

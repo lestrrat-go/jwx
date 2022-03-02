@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx
+module github.com/lestrrat-go/jwx/v2
 
 go 1.15
 
@@ -14,5 +14,3 @@ require (
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
 )
-
-retract v1.2.16 // see https://github.com/lestrrat-go/jwx/releases/tag/v1.2.17

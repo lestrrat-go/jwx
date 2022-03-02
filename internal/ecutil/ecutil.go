@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 )
 
 // data for available curves. Some algorithms may be compiled in/out

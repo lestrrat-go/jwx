@@ -1,4 +1,4 @@
-# JWT [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/jwt)
+# JWT [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jwt.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt)
 
 Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.ietf.org/html/rfc7519).
 
@@ -8,7 +8,7 @@ Package jwt implements JSON Web Tokens as described in [RFC7519](https://tools.i
 * Conversion to and from JSON
 * Generate signed tokens
 * Verify signed tokens
-* Extra support for OpenID tokens via [github.com/lestrrat-go/jwx/jwt/openid](./jwt/openid)
+* Extra support for OpenID tokens via [github.com/lestrrat-go/jwx/v2/jwt/openid](./jwt/openid)
 
 How-to style documentation can be found in the [docs directory](../docs).
 
@@ -32,7 +32,7 @@ func ExampleJWT() {
   const aLongLongTimeAgo = 233431200
 
   t := jwt.New()
-  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
+  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
   t.Set(jwt.AudienceKey, `Golang Users`)
   t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
   t.Set(`privateClaimKey`, `Hello, World!`)
@@ -97,7 +97,7 @@ func Example_openid() {
   const aLongLongTimeAgo = 233431200
 
   t := openid.New()
-  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/jwt`)
+  t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
   t.Set(jwt.AudienceKey, `Golang Users`)
   t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
   t.Set(`privateClaimKey`, `Hello, World!`)
