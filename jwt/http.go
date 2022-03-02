@@ -1,13 +1,13 @@
 package jwt
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
-	"github.com/pkg/errors"
 )
 
 // ParseHeader parses a JWT stored in a http.Header.
@@ -18,7 +18,7 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 	key := http.CanonicalHeaderKey(name)
 	v := strings.TrimSpace(hdr.Get(key))
 	if v == "" {
-		return nil, errors.Errorf(`empty header (%s)`, key)
+		return nil, fmt.Errorf(`empty header (%s)`, key)
 	}
 
 	if key == "Authorization" {
@@ -34,7 +34,7 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 func ParseForm(values url.Values, name string, options ...ParseOption) (Token, error) {
 	v := strings.TrimSpace(values.Get(name))
 	if v == "" {
-		return nil, errors.Errorf(`empty value (%s)`, name)
+		return nil, fmt.Errorf(`empty value (%s)`, name)
 	}
 
 	return ParseString(v, options...)
@@ -98,7 +98,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 
 	if cl := req.ContentLength; cl > 0 {
 		if err := req.ParseForm(); err != nil {
-			return nil, errors.Wrap(err, `failed to parse form`)
+			return nil, fmt.Errorf(`failed to parse form: %w`, err)
 		}
 	}
 
@@ -183,5 +183,5 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 			}
 		}
 	}
-	return nil, errors.New(b.String())
+	return nil, fmt.Errorf(b.String())
 }
