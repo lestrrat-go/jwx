@@ -420,7 +420,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.L("var tmp = jwa.KeyAlgorithmFrom(s)")
 			o.L("h.algorithm = &tmp")
 			o.L("default:")
-			o.L("return errors.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
+			o.L("return fmt.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
 			o.L("}")
 			o.L("return nil")
 		} else if f.Name(false) == `keyUsage` {
@@ -431,17 +431,17 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.L("tmp := v.String()")
 			o.L("h.keyUsage = &tmp")
 			o.L("default:")
-			o.L("return errors.Errorf(`invalid key usage type %%s`, v)")
+			o.L("return fmt.Errorf(`invalid key usage type %%s`, v)")
 			o.L("}")
 			o.L("case string:")
 			o.L("h.keyUsage = &v")
 			o.L("default:")
-			o.L("return errors.Errorf(`invalid key usage type %%s`, v)")
+			o.L("return fmt.Errorf(`invalid key usage type %%s`, v)")
 			o.L("}")
 		} else if fieldHasAccept(f) {
 			o.L("var acceptor %s", f.Type())
 			o.L("if err := acceptor.Accept(value); err != nil {")
-			o.L("return errors.Wrapf(err, `invalid value for %%s key`, %s)", keyName)
+			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %s, err)", keyName)
 			o.L("}") // end if err := h.%s.Accept(value)
 			if fieldStorageTypeIsIndirect(f.Type()) {
 				o.L("h.%s = &acceptor", f.Name(false))
@@ -458,7 +458,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
-			o.L("return errors.Errorf(`invalid value for %%s key: %%T`, %s, value)", keyName)
+			o.L("return fmt.Errorf(`invalid value for %%s key: %%T`, %s, value)", keyName)
 		}
 	}
 	o.L("default:")
@@ -516,7 +516,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("for {")
 	o.L("tok, err := dec.Token()")
 	o.L("if err != nil {")
-	o.L("return errors.Wrap(err, `error reading token`)")
+	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
 	o.L("}")
 	o.L("switch tok := tok.(type) {")
 	o.L("case json.Delim:")
@@ -525,7 +525,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("if tok == '}' { // End of object")
 	o.L("break LOOP")
 	o.L("} else if tok != '{' {")
-	o.L("return errors.Errorf(`expected '{', but got '%%c'`, tok)")
+	o.L("return fmt.Errorf(`expected '{', but got '%%c'`, tok)")
 	o.L("}")
 	o.L("case string: // Objects can only have string keys")
 	o.L("switch tok {")
@@ -533,23 +533,23 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("case KeyTypeKey:")
 	o.L("val, err := json.ReadNextStringToken(dec)")
 	o.L("if err != nil {")
-	o.L("return errors.Wrap(err, `error reading token`)")
+	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
 	o.L("}")
 	o.L("if val != %s.String() {", kt.KeyType)
-	o.L("return errors.Errorf(`invalid kty value for RSAPublicKey (%%s)`, val)")
+	o.L("return fmt.Errorf(`invalid kty value for RSAPublicKey (%%s)`, val)")
 	o.L("}")
 
 	for _, f := range obj.Fields() {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "jwa.KeyAlgorithm" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var s string")
 			o.L("if err := dec.Decode(&s); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", f.Name(true))
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("alg := jwa.KeyAlgorithmFrom(s)")
 			o.L("h.%s = &alg", f.Name(false))
@@ -561,7 +561,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			}
 			o.L("case %sKey:", name)
 			o.L("if err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.Name(false))
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", name)
 			o.L("}")
 		} else {
 			name := f.Name(true)
@@ -571,7 +571,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.L("case %sKey:", name)
 			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return errors.Wrapf(err, `failed to decode value for key %%s`, %sKey)", name)
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", name)
 			o.L("}")
 			o.L("h.%s = &decoded", f.Name(false))
 		}
@@ -594,17 +594,17 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("h.setNoLock(tok, decoded)")
 	o.L("continue")
 	o.L("}")
-	o.L("return errors.Wrapf(err, `could not decode field %%s`, tok)")
+	o.L("return fmt.Errorf(`could not decode field %%s: %%w`, tok, err)")
 	o.L("}")
 	o.L("default:")
-	o.L("return errors.Errorf(`invalid token %%T`, tok)")
+	o.L("return fmt.Errorf(`invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
 
 	for _, f := range obj.Fields() {
 		if f.IsRequired() {
 			o.L("if h.%s == nil {", f.Name(false))
-			o.L("return errors.Errorf(`required field %s is missing`)", f.JSON())
+			o.L("return fmt.Errorf(`required field %s is missing`)", f.JSON())
 			o.L("}")
 		}
 	}
@@ -639,7 +639,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, errors.Wrapf(err, `failed to encode value for field %%s`, f)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, f, err)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")
@@ -689,7 +689,6 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 		"crypto/x509",
 		"fmt",
 		"github.com/lestrrat-go/jwx/v2/jwa",
-		"github.com/pkg/errors",
 	}
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
