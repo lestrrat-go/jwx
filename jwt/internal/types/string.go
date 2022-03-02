@@ -1,9 +1,9 @@
 package types
 
 import (
-	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
 type StringList []string
@@ -25,11 +25,11 @@ func (l *StringList) Accept(v interface{}) error {
 				list[i] = s
 				continue
 			}
-			return errors.Errorf(`invalid list element type %T`, e)
+			return fmt.Errorf(`invalid list element type %T`, e)
 		}
 		*l = list
 	default:
-		return errors.Errorf(`invalid type: %T`, v)
+		return fmt.Errorf(`invalid type: %T`, v)
 	}
 	return nil
 }
@@ -37,7 +37,7 @@ func (l *StringList) Accept(v interface{}) error {
 func (l *StringList) UnmarshalJSON(data []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(data, &v); err != nil {
-		return errors.Wrap(err, `failed to unmarshal data`)
+		return fmt.Errorf(`failed to unmarshal data: %w`, err)
 	}
 	return l.Accept(v)
 }
