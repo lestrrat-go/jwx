@@ -10,10 +10,9 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/lestrrat-go/jwx/v2/v2/internal/ecutil"
-	"github.com/lestrrat-go/jwx/v2/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/v2/x25519"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
@@ -90,7 +89,7 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 
 func makeJwkGenerateCmd() *cli.Command {
 	var crvnames bytes.Buffer
-	for i, crv := range ecutil.AvailableCurves() {
+	for i, crv := range jwk.AvailableCurves() {
 		if i > 0 {
 			crvnames.WriteByte('/')
 		}
@@ -146,7 +145,7 @@ func makeJwkGenerateCmd() *cli.Command {
 				return errors.Wrapf(err, `invalid elliptic curve name %s`, c.String("curve"))
 			}
 
-			crv, ok := ecutil.CurveForAlgorithm(crvalg)
+			crv, ok := jwk.CurveForAlgorithm(crvalg)
 			if !ok {
 				return errors.Errorf(`invalid elliptic curve for ECDSA: %s (expected %s)`, crvalg, crvnames.String())
 			}

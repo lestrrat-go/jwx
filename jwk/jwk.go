@@ -9,6 +9,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
+	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/x25519"
@@ -724,4 +726,12 @@ func asnEncode(key Key) (string, []byte, error) {
 //
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
+}
+
+func AvailableCurves() []elliptic.Curve {
+	return ecutil.AvailableCurves()
+}
+
+func CurveForAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, bool) {
+	return ecutil.CurveForAlgorithm(alg)
 }

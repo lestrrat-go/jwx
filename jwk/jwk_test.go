@@ -2007,3 +2007,13 @@ func TestGH567(t *testing.T) {
 		}
 	})
 }
+
+func TestAvailableCurves(t *testing.T) {
+	// Not much to test here, but this silences the linters
+	_ = jwk.AvailableCurves()
+}
+
+func TestCurveForAlgorithm(t *testing.T) {
+	// Not much to test here, but this silences the linters
+	_, _ = jwk.CurveForAlgorithm(jwa.P521)
+}

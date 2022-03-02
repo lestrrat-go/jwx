@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 
-	"github.com/lestrrat-go/jwx/v2/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/v2/jwe"
-	"github.com/lestrrat-go/jwx/v2/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -105,7 +106,7 @@ func makeJweEncryptCmd() *cli.Command {
 			return errors.Wrapf(err, `failed to retrieve public key of %T`, key)
 		}
 
-		encrypted, err := jwe.Encrypt(buf, keyenc, pubkey, cntenc, compress)
+		encrypted, err := jwe.Encrypt(buf, jwe.WithKey(keyenc, pubkey), jwe.WithContentEncryption(cntenc), jwe.WithCompress(compress))
 		if err != nil {
 			return errors.Wrap(err, `failed to encrypt message`)
 		}
@@ -163,41 +164,20 @@ func makeJweDecryptCmd() *cli.Command {
 
 			// if we have an explicit key encryption algorithm, we don't have to
 			// guess it.
-			v, err := jwe.Decrypt(buf, keyenc, key)
+			v, err := jwe.Decrypt(buf, jwe.WithKey(keyenc, key))
 			if err != nil {
 				return errors.Wrap(err, `failed to decrypt message`)
 			}
 			decrypted = v
 		} else {
-			// This is silly, but we go through each recipient, and try the key
-			// with each algorithm
-			msg, err := jwe.Parse(buf)
+			v, err := jwe.Decrypt(buf, jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
+				sink.Key(r.Headers().Algorithm(), key)
+				return nil
+			})))
 			if err != nil {
-				return errors.Wrap(err, `failed to parse JWE message`)
+				return errors.Wrap(err, `failed to decrypt message`)
 			}
-
-			// if we have no recipients, pretend like we only have one
-			recipients := msg.Recipients()
-			if len(recipients) == 0 {
-				r := jwe.NewRecipient()
-				if err := r.SetHeaders(msg.ProtectedHeaders()); err != nil {
-					return errors.Wrap(err, `failed to set headers to recipient`)
-				}
-				recipients = append(recipients, r)
-			}
-
-			for _, recipient := range recipients {
-				v, err := msg.Decrypt(recipient.Headers().Algorithm(), key)
-				if err != nil {
-					continue
-				}
-				decrypted = v
-				break
-			}
-
-			if decrypted == nil {
-				return errors.Errorf(`could not decrypt message`)
-			}
+			decrypted = v
 		}
 
 		output, err := getOutput(c.String("output"))

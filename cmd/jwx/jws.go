@@ -1,18 +1,15 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/lestrrat-go/jwx/v2/v2/internal/base64"
-	"github.com/lestrrat-go/jwx/v2/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/v2/jws"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -67,67 +64,24 @@ func makeJwsParseCmd() *cli.Command {
 			}
 		}
 
-		buf = bytes.TrimSpace(buf)
-		if len(buf) == 0 {
-			return errors.New(`empty buffer`)
+		msg, err := jws.Parse(buf)
+		if err != nil {
+			return errors.Wrap(err, `failed to parse message`)
 		}
 
-		if buf[0] == '{' {
-			var m map[string]json.RawMessage
-			if err := json.Unmarshal(buf, &m); err != nil {
-				return errors.Wrap(err, `failed to unmarshal message`)
-			}
-		} else {
-			protected, payload, signature, err := jws.SplitCompact(buf)
+		jsbuf, err := json.MarshalIndent(msg, "", "  ")
+		if err != nil {
+			return errors.Wrap(err, `failed to marshal message`)
+		}
+
+		fmt.Fprintf(os.Stdout, "%s\n\n", jsbuf)
+
+		for i, sig := range msg.Signatures() {
+			sigbuf, err := json.MarshalIndent(sig.ProtectedHeaders(), "", "  ")
 			if err != nil {
-				return errors.Wrap(err, `failed to split compact JWS message`)
+				return errors.Wrapf(err, `failed to marshal signature %d`, 1)
 			}
-
-			decodedProtected, err := base64.Decode(protected)
-			if err != nil {
-				return errors.Wrap(err, `failed to base64 decode protected headers`)
-			}
-
-			var protectedMap map[string]interface{}
-			if err := json.Unmarshal(decodedProtected, &protectedMap); err != nil {
-				return errors.Wrap(err, `failed to decode protected headers`)
-			}
-
-			serializedProtected, err := json.MarshalIndent(protectedMap, "", "  ")
-			if err != nil {
-				return errors.Wrap(err, `failed to encode protected headers`)
-			}
-
-			decodedPayload, err := base64.Decode(payload)
-			if err != nil {
-				return errors.Wrap(err, `failed to base64 decode payload`)
-			}
-
-			fmt.Fprintf(os.Stdout, "Signature:                 %#v", string(signature))
-			fmt.Fprintf(os.Stdout, "\nProtected Headers:         %#v", string(protected))
-			fmt.Fprintf(os.Stdout, "\nDecoded Protected Headers:")
-			prefix := "                           "
-			scanner := bufio.NewScanner(bytes.NewReader(serializedProtected))
-			if scanner.Scan() {
-				txt := scanner.Text()
-				fmt.Fprintf(os.Stdout, " %s", txt)
-			}
-
-			for scanner.Scan() {
-				txt := scanner.Text()
-				fmt.Fprintf(os.Stdout, "\n%s%s", prefix, txt)
-			}
-
-			fmt.Fprintf(os.Stdout, "\nPayload:                  ")
-			scanner = bufio.NewScanner(bytes.NewReader(decodedPayload))
-			if scanner.Scan() {
-				txt := scanner.Text()
-				fmt.Fprintf(os.Stdout, " %s", txt)
-			}
-			for scanner.Scan() {
-				txt := scanner.Text()
-				fmt.Fprintf(os.Stdout, "\n%s%s", prefix, txt)
-			}
+			fmt.Fprintf(os.Stdout, "Signature %d: %s\n", i, sigbuf)
 		}
 		return nil
 	}
@@ -213,7 +167,7 @@ func makeJwsVerifyCmd() *cli.Command {
 		defer output.Close()
 
 		if c.Bool("match-kid") {
-			payload, err := jws.VerifySet(buf, keyset)
+			payload, err := jws.Verify(buf, jws.WithKeySet(keyset))
 			if err == nil {
 				fmt.Fprintf(output, "%s", payload)
 				return nil
@@ -233,7 +187,7 @@ func makeJwsVerifyCmd() *cli.Command {
 			for iter := keyset.Iterate(ctx); iter.Next(ctx); {
 				pair := iter.Pair()
 				key := pair.Value.(jwk.Key)
-				payload, err := jws.Verify(buf, alg, key)
+				payload, err := jws.Verify(buf, jws.WithKey(alg, key))
 				if err == nil {
 					fmt.Fprintf(output, "%s", payload)
 					return nil
@@ -314,7 +268,8 @@ func makeJwsSignCmd() *cli.Command {
 			options = append(options, jws.WithHeaders(h))
 		}
 
-		signed, err := jws.Sign(buf, alg, key, options...)
+		options = append(options, jws.WithKey(alg, key))
+		signed, err := jws.Sign(buf, options...)
 		if err != nil {
 			return errors.Wrap(err, `failed to sign payload`)
 		}
