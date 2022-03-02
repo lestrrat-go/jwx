@@ -13,6 +13,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -24,14 +25,13 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 var registry = json.NewRegistry()
 
 func bigIntToBytes(n *big.Int) ([]byte, error) {
 	if n == nil {
-		return nil, errors.New(`invalid *big.Int value`)
+		return nil, fmt.Errorf(`invalid *big.Int value`)
 	}
 	return n.Bytes(), nil
 }
@@ -47,7 +47,7 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 //   * []byte creates a symmetric key
 func New(key interface{}) (Key, error) {
 	if key == nil {
-		return nil, errors.New(`jwk.New requires a non-nil key`)
+		return nil, fmt.Errorf(`jwk.New requires a non-nil key`)
 	}
 
 	var ptr interface{}
@@ -68,59 +68,59 @@ func New(key interface{}) (Key, error) {
 	case *rsa.PrivateKey:
 		k := NewRSAPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *rsa.PublicKey:
 		k := NewRSAPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *ecdsa.PrivateKey:
 		k := NewECDSAPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *ecdsa.PublicKey:
 		k := NewECDSAPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case ed25519.PrivateKey:
 		k := NewOKPPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case ed25519.PublicKey:
 		k := NewOKPPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case x25519.PrivateKey:
 		k := NewOKPPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case x25519.PublicKey:
 		k := NewOKPPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case []byte:
 		k := NewSymmetricKey()
 		if err := k.FromRaw(rawKey); err != nil {
-			return nil, errors.Wrapf(err, `failed to initialize %T from %T`, k, rawKey)
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	default:
-		return nil, errors.Errorf(`invalid key type '%T' for jwk.New`, key)
+		return nil, fmt.Errorf(`invalid key type '%T' for jwk.New`, key)
 	}
 }
 
@@ -140,11 +140,11 @@ func PublicSetOf(v Set) (Set, error) {
 	for i := 0; i < n; i++ {
 		k, ok := v.Get(i)
 		if !ok {
-			return nil, errors.New("key not found")
+			return nil, fmt.Errorf(`key not found`)
 		}
 		pubKey, err := PublicKeyOf(k)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to get public key of %T`, k)
+			return nil, fmt.Errorf(`failed to get public key of %T: %w`, k, err)
 		}
 		newSet.Add(pubKey)
 	}
@@ -168,7 +168,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 
 	jk, err := New(v)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to convert key into JWK`)
+		return nil, fmt.Errorf(`failed to convert key into JWK: %w`, err)
 	}
 
 	return jk.PublicKey()
@@ -185,12 +185,12 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	if pk, ok := v.(PublicKeyer); ok {
 		pubk, err := pk.PublicKey()
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to obtain public key from %T`, v)
+			return nil, fmt.Errorf(`failed to obtain public key from %T: %w`, v, err)
 		}
 
 		var raw interface{}
 		if err := pubk.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to obtain raw key from %T`, pubk)
+			return nil, fmt.Errorf(`failed to obtain raw key from %T: %w`, pubk, err)
 		}
 		return raw, nil
 	}
@@ -230,7 +230,7 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	case []byte:
 		return x, nil
 	default:
-		return nil, errors.Errorf(`invalid key type passed to PublicKeyOf (%T)`, v)
+		return nil, fmt.Errorf(`invalid key type passed to PublicKeyOf (%T)`, v)
 	}
 }
 
@@ -265,7 +265,7 @@ func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, 
 	defer res.Body.Close()
 	keyset, err := ParseReader(res.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse JWK set`)
+		return nil, fmt.Errorf(`failed to parse JWK set: %w`, err)
 	}
 	return keyset, nil
 }
@@ -288,13 +288,13 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 
 	if wl != nil {
 		if !wl.IsAllowed(urlstring) {
-			return nil, errors.New(`url rejected by whitelist`)
+			return nil, fmt.Errorf(`url rejected by whitelist`)
 		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlstring, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to new request to remote JWK")
+		return nil, fmt.Errorf(`failed to new request to remote JWK: %w`, err)
 	}
 
 	b := bo.Start(ctx)
@@ -302,12 +302,12 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	for backoff.Continue(b) {
 		res, err := httpcl.Do(req)
 		if err != nil {
-			lastError = errors.Wrap(err, "failed to fetch remote JWK")
+			lastError = fmt.Errorf(`failed to fetch remote JWK: %w`, err)
 			continue
 		}
 
 		if res.StatusCode != http.StatusOK {
-			lastError = errors.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
+			lastError = fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
 			continue
 		}
 		return res, nil
@@ -317,7 +317,7 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 	// e.g. what if we bailed out of `for backoff.Contineu(b)` without making
 	// a single request? or, <-ctx.Done() returned?
 	if lastError == nil {
-		lastError = errors.New(`fetching remote JWK did not complete`)
+		lastError = fmt.Errorf(`fetching remote JWK did not complete`)
 	}
 	return nil, lastError
 }
@@ -329,11 +329,11 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 func ParseRawKey(data []byte, rawkey interface{}) error {
 	key, err := ParseKey(data)
 	if err != nil {
-		return errors.Wrap(err, `failed to parse key`)
+		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
 	if err := key.Raw(rawkey); err != nil {
-		return errors.Wrap(err, `failed to assign to raw key variable`)
+		return fmt.Errorf(`failed to assign to raw key variable: %w`, err)
 	}
 
 	return nil
@@ -345,7 +345,7 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 	block, rest := pem.Decode(src)
 	if block == nil {
-		return nil, nil, errors.New(`failed to decode PEM data`)
+		return nil, nil, fmt.Errorf(`failed to decode PEM data`)
 	}
 
 	switch block.Type {
@@ -353,42 +353,42 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 	case "RSA PRIVATE KEY":
 		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse PKCS1 private key`)
+			return nil, nil, fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
 		}
 		return key, rest, nil
 	case "RSA PUBLIC KEY":
 		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse PKCS1 public key`)
+			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
 		}
 		return key, rest, nil
 	case "EC PRIVATE KEY":
 		key, err := x509.ParseECPrivateKey(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse EC private key`)
+			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)
 		}
 		return key, rest, nil
 	case "PUBLIC KEY":
 		// XXX *could* return dsa.PublicKey
 		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse PKIX public key`)
+			return nil, nil, fmt.Errorf(`failed to parse PKIX public key: %w`, err)
 		}
 		return key, rest, nil
 	case "PRIVATE KEY":
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse PKCS8 private key`)
+			return nil, nil, fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
 		}
 		return key, rest, nil
 	case "CERTIFICATE":
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, `failed to parse certificate`)
+			return nil, nil, fmt.Errorf(`failed to parse certificate: %w`, err)
 		}
 		return cert.PublicKey, rest, nil
 	default:
-		return nil, nil, errors.Errorf(`invalid PEM block type %s`, block.Type)
+		return nil, nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
 	}
 }
 
@@ -432,14 +432,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 			}
 			localReg.Register(pair.Name, pair.Value)
 		case identIgnoreParseError{}:
-			return nil, errors.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
+			return nil, fmt.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
 		}
 	}
 
 	if parsePEM {
 		raw, _, err := parsePEMEncodedRawKey(data)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to parse PEM encoded key`)
+			return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 		}
 		return New(raw)
 	}
@@ -450,7 +450,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if err := json.Unmarshal(data, &hint); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal JSON into key hint`)
+		return nil, fmt.Errorf(`failed to unmarshal JSON into key hint: %w`, err)
 	}
 
 	var key Key
@@ -476,13 +476,13 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 			key = newOKPPublicKey()
 		}
 	default:
-		return nil, errors.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
+		return nil, fmt.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
 	}
 
 	if localReg != nil {
 		dcKey, ok := key.(json.DecodeCtxContainer)
 		if !ok {
-			return nil, errors.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
+			return nil, fmt.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
 		}
 		dc := json.NewDecodeCtx(localReg)
 		dcKey.SetDecodeCtx(dc)
@@ -490,7 +490,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if err := json.Unmarshal(data, key); err != nil {
-		return nil, errors.Wrapf(err, `failed to unmarshal JSON into key (%T)`, key)
+		return nil, fmt.Errorf(`failed to unmarshal JSON into key (%T): %w`, key, err)
 	}
 
 	return key, nil
@@ -537,11 +537,11 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		for len(src) > 0 {
 			raw, rest, err := parsePEMEncodedRawKey(src)
 			if err != nil {
-				return nil, errors.Wrap(err, `failed to parse PEM encoded key`)
+				return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 			}
 			key, err := New(raw)
 			if err != nil {
-				return nil, errors.Wrapf(err, `failed to create jwk.Key from %T`, raw)
+				return nil, fmt.Errorf(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
 			s.Add(key)
 			src = bytes.TrimSpace(rest)
@@ -552,7 +552,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	if localReg != nil || ignoreParseError {
 		dcKs, ok := s.(KeyWithDecodeCtx)
 		if !ok {
-			return nil, errors.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
+			return nil, fmt.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
 		dc := &setDecodeCtx{
 			DecodeCtx:        json.NewDecodeCtx(localReg),
@@ -563,7 +563,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal JWK set")
+		return nil, fmt.Errorf(`failed to unmarshal JWK set: %w`, err)
 	}
 	return s, nil
 }
@@ -574,7 +574,7 @@ func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 	// JWKs except when we encounter an EOF, so just... ReadAll
 	buf, err := ioutil.ReadAll(src)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to read from io.Reader`)
+		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
 	}
 
 	return Parse(buf, options...)
@@ -604,11 +604,11 @@ func AssignKeyID(key Key, options ...Option) error {
 
 	h, err := key.Thumbprint(hash)
 	if err != nil {
-		return errors.Wrap(err, `failed to generate thumbprint`)
+		return fmt.Errorf(`failed to generate thumbprint: %w`, err)
 	}
 
 	if err := key.Set(KeyIDKey, base64.EncodeToString(h)); err != nil {
-		return errors.Wrap(err, `failed to set "kid"`)
+		return fmt.Errorf(`failed to set "kid": %w`, err)
 	}
 
 	return nil
@@ -632,12 +632,12 @@ func cloneKey(src Key) (Key, error) {
 	case SymmetricKey:
 		dst = NewSymmetricKey()
 	default:
-		return nil, errors.Errorf(`unknown key type %T`, src)
+		return nil, fmt.Errorf(`unknown key type %T`, src)
 	}
 
 	for _, pair := range src.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+			return nil, fmt.Errorf(`failed to set %s: %w`, pair.Key.(string), err)
 		}
 	}
 	return dst, nil
@@ -660,7 +660,7 @@ func Pem(v interface{}) ([]byte, error) {
 	case Set:
 		set = v
 	default:
-		return nil, errors.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
+		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
 	}
 
 	var ret []byte
@@ -668,7 +668,7 @@ func Pem(v interface{}) ([]byte, error) {
 		key, _ := set.Get(i)
 		typ, buf, err := asnEncode(key)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to encode content for key #%d`, i)
+			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
 		}
 
 		var block pem.Block
@@ -684,25 +684,25 @@ func asnEncode(key Key) (string, []byte, error) {
 	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
 		var rawkey interface{}
 		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, errors.Wrap(err, `failed to get raw key from jwk.Key`)
+			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
 		if err != nil {
-			return "", nil, errors.Wrap(err, `failed to marshal PKCS8`)
+			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
 		return "PRIVATE KEY", buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		var rawkey interface{}
 		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, errors.Wrap(err, `failed to get raw key from jwk.Key`)
+			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKIXPublicKey(rawkey)
 		if err != nil {
-			return "", nil, errors.Wrap(err, `failed to marshal PKIX`)
+			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
 		}
 		return "PUBLIC KEY", buf, nil
 	default:
-		return "", nil, errors.Errorf(`unsupported key type %T`, key)
+		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
 	}
 }
 
