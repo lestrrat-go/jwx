@@ -59,7 +59,7 @@ func ExampleEncrypt() {
 
   payload := []byte("Lorem Ipsum")
 
-  encrypted, err := jwe.Encrypt(payload, jwa.RSA1_5, &privkey.PublicKey, jwa.A128CBC_HS256, jwa.NoCompress)
+  encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5, &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
   if err != nil {
     log.Printf("failed to encrypt payload: %s", err)
     return
@@ -79,7 +79,7 @@ func ExampleDecrypt() {
     return
   }
 
-  decrypted, err := jwe.Decrypt(encrypted, jwa.RSA1_5, privkey)
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5, privkey))
   if err != nil {
     log.Printf("failed to decrypt: %s", err)
     return

@@ -1297,7 +1297,7 @@ func TestNested(t *testing.T) {
 
 	// First layer should be JWE
 	jweMessage := jwe.NewMessage()
-	decrypted, err := jwe.Decrypt(serialized, jwa.RSA_OAEP, key, jwe.WithMessage(jweMessage))
+	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.RSA_OAEP, key), jwe.WithMessage(jweMessage))
 	if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 		return
 	}

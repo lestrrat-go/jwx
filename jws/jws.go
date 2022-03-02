@@ -313,6 +313,10 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		}
 	}
 
+	if len(keyProviders) < 1 {
+		return nil, fmt.Errorf(`jws.Verify: no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
+	}
+
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse jws: %w`, err)
@@ -363,7 +367,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 
 		for i, kp := range keyProviders {
 			var sink algKeySink
-			if err := kp.FetchKeys(ctx, &sink, sig); err != nil {
+			if err := kp.FetchKeys(ctx, &sink, sig, msg); err != nil {
 				return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 			}
 
