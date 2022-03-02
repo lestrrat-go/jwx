@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 func Encode(src []byte) []byte {
@@ -56,7 +55,7 @@ func Decode(src []byte) ([]byte, error) {
 	dst := make([]byte, enc.DecodedLen(len(src)))
 	n, err := enc.Decode(dst, src)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode source`)
+		return nil, fmt.Errorf(`failed to decode source: %w`, err)
 	}
 	return dst[:n], nil
 }
