@@ -2,13 +2,13 @@ package jwe
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/iter"
-	"github.com/pkg/errors"
 )
 
 type isZeroer interface {
@@ -64,7 +64,7 @@ func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) 
 func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {
 	dst := NewHeaders()
 	if err := h.Copy(ctx, dst); err != nil {
-		return nil, errors.Wrap(err, `failed to copy header contents to new object`)
+		return nil, fmt.Errorf(`failed to copy header contents to new object: %w`, err)
 	}
 	return dst, nil
 }
@@ -72,7 +72,7 @@ func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {
 func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
 	for _, pair := range h.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return errors.Wrapf(err, `failed to set header`)
+			return fmt.Errorf(`failed to set header: %w`, err)
 		}
 	}
 	return nil
@@ -83,13 +83,13 @@ func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
 
 	if h != nil {
 		if err := h.Copy(ctx, h3); err != nil {
-			return nil, errors.Wrap(err, `failed to copy headers from receiver`)
+			return nil, fmt.Errorf(`failed to copy headers from receiver: %w`, err)
 		}
 	}
 
 	if h2 != nil {
 		if err := h2.Copy(ctx, h3); err != nil {
-			return nil, errors.Wrap(err, `failed to copy headers from argument`)
+			return nil, fmt.Errorf(`failed to copy headers from argument: %w`, err)
 		}
 	}
 
@@ -99,7 +99,7 @@ func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
 func (h *stdHeaders) Encode() ([]byte, error) {
 	buf, err := json.Marshal(h)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to marshal headers to JSON prior to encoding`)
+		return nil, fmt.Errorf(`failed to marshal headers to JSON prior to encoding: %w`, err)
 	}
 
 	return base64.Encode(buf), nil
@@ -109,11 +109,11 @@ func (h *stdHeaders) Decode(buf []byte) error {
 	// base64 json string -> json object representation of header
 	decoded, err := base64.Decode(buf)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal base64 encoded buffer")
+		return fmt.Errorf(`failed to unmarshal base64 encoded buffer: %w`, err)
 	}
 
 	if err := json.Unmarshal(decoded, h); err != nil {
-		return errors.Wrap(err, "failed to unmarshal buffer")
+		return fmt.Errorf(`failed to unmarshal buffer: %w`, err)
 	}
 
 	return nil
