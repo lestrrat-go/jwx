@@ -11,7 +11,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 var ecdsaSigners map[jwa.SignatureAlgorithm]*ecdsaSigner
@@ -55,12 +54,12 @@ func (es ecdsaSigner) Algorithm() jwa.SignatureAlgorithm {
 
 func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
-		return nil, errors.New(`missing private key while signing payload`)
+		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
 
 	h := es.hash.New()
 	if _, err := h.Write(payload); err != nil {
-		return nil, errors.Wrap(err, "failed to write payload using ecdsa")
+		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
 	}
 
 	signer, ok := key.(crypto.Signer)
@@ -86,7 +85,7 @@ func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 			S *big.Int
 		}
 		if _, err := asn1.Unmarshal(signed, &p); err != nil {
-			return nil, errors.Wrap(err, `failed to unmarshal ASN1 encoded signature`)
+			return nil, fmt.Errorf(`failed to unmarshal ASN1 encoded signature: %w`, err)
 		}
 
 		// Okay, this is silly, but hear me out. When we use the
@@ -108,12 +107,12 @@ func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	} else {
 		var privkey ecdsa.PrivateKey
 		if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve ecdsa.PrivateKey out of %T`, key)
+			return nil, fmt.Errorf(`failed to retrieve ecdsa.PrivateKey out of %T: %w`, key, err)
 		}
 		curveBits = privkey.Curve.Params().BitSize
 		rtmp, stmp, err := ecdsa.Sign(rand.Reader, &privkey, h.Sum(nil))
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
+			return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
 		}
 		r = rtmp
 		s = stmp
@@ -153,7 +152,7 @@ func (v ecdsaVerifier) Algorithm() jwa.SignatureAlgorithm {
 
 func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
 	if key == nil {
-		return errors.New(`missing public key while verifying payload`)
+		return fmt.Errorf(`missing public key while verifying payload`)
 	}
 
 	var pubkey ecdsa.PublicKey
@@ -165,11 +164,11 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 		case *ecdsa.PublicKey:
 			pubkey = *cpub
 		default:
-			return errors.Errorf(`failed to retrieve ecdsa.PublicKey out of crypto.Signer %T`, key)
+			return fmt.Errorf(`failed to retrieve ecdsa.PublicKey out of crypto.Signer %T`, key)
 		}
 	} else {
 		if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-			return errors.Wrapf(err, `failed to retrieve ecdsa.PublicKey out of %T`, key)
+			return fmt.Errorf(`failed to retrieve ecdsa.PublicKey out of %T: %w`, key, err)
 		}
 	}
 
@@ -184,11 +183,11 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 
 	h := v.hash.New()
 	if _, err := h.Write(payload); err != nil {
-		return errors.Wrap(err, "failed to write payload using ecdsa")
+		return fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
 	}
 
 	if !ecdsa.Verify(&pubkey, h.Sum(nil), r, s) {
-		return errors.New(`failed to verify signature using ecdsa`)
+		return fmt.Errorf(`failed to verify signature using ecdsa`)
 	}
 	return nil
 }
