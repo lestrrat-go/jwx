@@ -8,8 +8,6 @@ import (
 	"strconv"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
-
-	"github.com/pkg/errors"
 )
 
 // https://openid.net/specs/openid-connect-core-1_0.html
@@ -50,11 +48,11 @@ func (b BirthdateClaim) Day() int {
 func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
-		return errors.Wrap(err, `failed to unmarshal JSON string for birthdate claim`)
+		return fmt.Errorf(`failed to unmarshal JSON string for birthdate claim: %w`, err)
 	}
 
 	if err := b.Accept(s); err != nil {
-		return errors.Wrap(err, `failed to accept JSON value for birthdate claim`)
+		return fmt.Errorf(`failed to accept JSON value for birthdate claim: %w`, err)
 	}
 	return nil
 }
@@ -92,7 +90,7 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 		// yeah, yeah, regexp is slow. PR's welcome
 		indices := birthdateRx.FindStringSubmatchIndex(v)
 		if indices == nil {
-			return errors.New(`invalid pattern for birthdate`)
+			return fmt.Errorf(`invalid pattern for birthdate`)
 		}
 		var tmp BirthdateClaim
 
@@ -104,26 +102,26 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 		// only returns range errors, so we should be safe.
 		year, _ := strconv.ParseInt(v[indices[2]:indices[3]], 10, 64)
 		if year <= 0 {
-			return errors.New(`failed to parse birthdate year`)
+			return fmt.Errorf(`failed to parse birthdate year`)
 		}
 		tmp.year = tointptr(year)
 
 		month, _ := strconv.ParseInt(v[indices[4]:indices[5]], 10, 64)
 		if month <= 0 {
-			return errors.New(`failed to parse birthdate month`)
+			return fmt.Errorf(`failed to parse birthdate month`)
 		}
 		tmp.month = tointptr(month)
 
 		day, _ := strconv.ParseInt(v[indices[6]:indices[7]], 10, 64)
 		if day <= 0 {
-			return errors.New(`failed to parse birthdate day`)
+			return fmt.Errorf(`failed to parse birthdate day`)
 		}
 		tmp.day = tointptr(day)
 
 		*b = tmp
 		return nil
 	default:
-		return errors.Errorf(`invalid type for birthdate: %T`, v)
+		return fmt.Errorf(`invalid type for birthdate: %T`, v)
 	}
 }
 

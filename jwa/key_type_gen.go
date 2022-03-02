@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // KeyType represents the key type ("kty") that are supported
@@ -60,12 +58,12 @@ func (v *KeyType) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.KeyType: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.KeyType: %T`, value)
 		}
 		tmp = KeyType(s)
 	}
 	if _, ok := allKeyTypes[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.KeyType value`)
+		return fmt.Errorf(`invalid jwa.KeyType value`)
 	}
 
 	*v = tmp

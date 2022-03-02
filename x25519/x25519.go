@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"crypto"
 	cryptorand "crypto/rand"
+	"fmt"
 	"io"
 
 	"golang.org/x/crypto/curve25519"
-
-	"github.com/pkg/errors"
 )
 
 // This mirrors ed25519's structure for private/public "keys". jwx
@@ -81,12 +80,12 @@ func (priv PrivateKey) Seed() []byte {
 func NewKeyFromSeed(seed []byte) (PrivateKey, error) {
 	privateKey := make([]byte, PrivateKeySize)
 	if len(seed) != SeedSize {
-		return nil, errors.Errorf("unexpected seed size: %d", len(seed))
+		return nil, fmt.Errorf("unexpected seed size: %d", len(seed))
 	}
 	copy(privateKey, seed)
 	public, err := curve25519.X25519(seed, curve25519.Basepoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to compute public key")
+		return nil, fmt.Errorf(`failed to compute public key: %w`, err)
 	}
 	copy(privateKey[SeedSize:], public)
 

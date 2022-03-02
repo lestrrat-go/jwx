@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,12 +32,12 @@ func GenerateRsaKey() (*rsa.PrivateKey, error) {
 func GenerateRsaJwk() (jwk.Key, error) {
 	key, err := GenerateRsaKey()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate RSA private key`)
+		return nil, fmt.Errorf(`failed to generate RSA private key: %w`, err)
 	}
 
 	k, err := jwk.New(key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.RSAPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.RSAPrivateKey: %w`, err)
 	}
 
 	return k, nil
@@ -46,7 +46,7 @@ func GenerateRsaJwk() (jwk.Key, error) {
 func GenerateRsaPublicJwk() (jwk.Key, error) {
 	key, err := GenerateRsaJwk()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.RSAPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.RSAPrivateKey: %w`, err)
 	}
 
 	return jwk.PublicKeyOf(key)
@@ -57,7 +57,7 @@ func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error)
 	if tmp, ok := ecutil.CurveForAlgorithm(alg); ok {
 		crv = tmp
 	} else {
-		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
+		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 
 	return ecdsa.GenerateKey(crv, rand.Reader)
@@ -66,12 +66,12 @@ func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error)
 func GenerateEcdsaJwk() (jwk.Key, error) {
 	key, err := GenerateEcdsaKey(jwa.P521)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate ECDSA private key`)
+		return nil, fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 	}
 
 	k, err := jwk.New(key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.ECDSAPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.ECDSAPrivateKey: %w`, err)
 	}
 
 	return k, nil
@@ -80,7 +80,7 @@ func GenerateEcdsaJwk() (jwk.Key, error) {
 func GenerateEcdsaPublicJwk() (jwk.Key, error) {
 	key, err := GenerateEcdsaJwk()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.ECDSAPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.ECDSAPrivateKey: %w`, err)
 	}
 
 	return jwk.PublicKeyOf(key)
@@ -96,7 +96,7 @@ func GenerateSymmetricKey() []byte {
 func GenerateSymmetricJwk() (jwk.Key, error) {
 	key, err := jwk.New(GenerateSymmetricKey())
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.SymmetricKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.SymmetricKey: %w`, err)
 	}
 
 	return key, nil
@@ -110,12 +110,12 @@ func GenerateEd25519Key() (ed25519.PrivateKey, error) {
 func GenerateEd25519Jwk() (jwk.Key, error) {
 	key, err := GenerateEd25519Key()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate Ed25519 private key`)
+		return nil, fmt.Errorf(`failed to generate Ed25519 private key: %w`, err)
 	}
 
 	k, err := jwk.New(key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.OKPPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.OKPPrivateKey: %w`, err)
 	}
 
 	return k, nil
@@ -129,12 +129,12 @@ func GenerateX25519Key() (x25519.PrivateKey, error) {
 func GenerateX25519Jwk() (jwk.Key, error) {
 	key, err := GenerateX25519Key()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate X25519 private key`)
+		return nil, fmt.Errorf(`failed to generate X25519 private key: %w`, err)
 	}
 
 	k, err := jwk.New(key)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to generate jwk.OKPPrivateKey`)
+		return nil, fmt.Errorf(`failed to generate jwk.OKPPrivateKey: %w`, err)
 	}
 
 	return k, nil
@@ -143,17 +143,17 @@ func GenerateX25519Jwk() (jwk.Key, error) {
 func WriteFile(template string, src io.Reader) (string, func(), error) {
 	file, cleanup, err := CreateTempFile(template)
 	if err != nil {
-		return "", nil, errors.Wrap(err, `failed to create temporary file`)
+		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
 
 	if _, err := io.Copy(file, src); err != nil {
 		defer cleanup()
-		return "", nil, errors.Wrap(err, `failed to copy content to temporary file`)
+		return "", nil, fmt.Errorf(`failed to copy content to temporary file: %w`, err)
 	}
 
 	if err := file.Sync(); err != nil {
 		defer cleanup()
-		return "", nil, errors.Wrap(err, `failed to sync file`)
+		return "", nil, fmt.Errorf(`failed to sync file: %w`, err)
 	}
 	return file.Name(), cleanup, nil
 }
@@ -163,7 +163,7 @@ func WriteJSONFile(template string, v interface{}) (string, func(), error) {
 
 	enc := json.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {
-		return "", nil, errors.Wrap(err, `failed to encode object to JSON`)
+		return "", nil, fmt.Errorf(`failed to encode object to JSON: %w`, err)
 	}
 	return WriteFile(template, &buf)
 }
@@ -220,7 +220,7 @@ func DumpFile(t *testing.T, file string) {
 func CreateTempFile(template string) (*os.File, func(), error) {
 	file, err := ioutil.TempFile("", template)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create temporary file")
+		return nil, nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
 
 	cleanup := func() {
@@ -234,13 +234,13 @@ func CreateTempFile(template string) (*os.File, func(), error) {
 func ReadFile(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to open file %s`, file)
+		return nil, fmt.Errorf(`failed to open file %s: %w`, file, err)
 	}
 	defer f.Close()
 
 	buf, err := ioutil.ReadAll(f)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to read from key file %s`, file)
+		return nil, fmt.Errorf(`failed to read from key file %s: %w`, file, err)
 	}
 
 	return buf, nil
@@ -249,12 +249,12 @@ func ReadFile(file string) ([]byte, error) {
 func ParseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 	buf, err := ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to read from key file %s`, file)
+		return nil, fmt.Errorf(`failed to read from key file %s: %w`, file, err)
 	}
 
 	key, err := jwk.ParseKey(buf)
 	if err != nil {
-		return nil, errors.Wrapf(err, `filed to parse JWK in key file %s`, file)
+		return nil, fmt.Errorf(`filed to parse JWK in key file %s: %w`, file, err)
 	}
 
 	return key, nil
@@ -263,17 +263,17 @@ func ParseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgorithm, jwkfile string) ([]byte, error) {
 	key, err := ParseJwkFile(ctx, jwkfile)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to parse keyfile %s`, file)
+		return nil, fmt.Errorf(`failed to parse keyfile %s: %w`, file, err)
 	}
 
 	buf, err := ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to read from encrypted file %s`, file)
+		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
 	var rawkey interface{}
 	if err := key.Raw(&rawkey); err != nil {
-		return nil, errors.Wrap(err, `failed to obtain raw key from JWK`)
+		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
 
 	return jwe.Decrypt(buf, jwe.WithKey(alg, rawkey))
@@ -282,7 +282,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptionAlgorithm, keyfile string, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) (string, func(), error) {
 	key, err := ParseJwkFile(ctx, keyfile)
 	if err != nil {
-		return "", nil, errors.Wrapf(err, `failed to parse keyfile %s`, keyfile)
+		return "", nil, fmt.Errorf(`failed to parse keyfile %s: %w`, keyfile, err)
 	}
 
 	var keyif interface{}
@@ -291,26 +291,26 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var rawkey rsa.PrivateKey
 		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey.PublicKey
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var rawkey ecdsa.PrivateKey
 		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey.PublicKey
 	default:
 		var rawkey []byte
 		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, errors.Wrap(err, `failed to obtain raw key`)
+			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey
 	}
 
 	buf, err := jwe.Encrypt(payload, jwe.WithKey(keyalg, keyif), jwe.WithContentEncryption(contentalg), jwe.WithCompress(compressalg))
 	if err != nil {
-		return "", nil, errors.Wrap(err, `failed to encrypt payload`)
+		return "", nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
 	return WriteFile("jwx-test-*.jwe", bytes.NewReader(buf))
@@ -319,17 +319,17 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm, jwkfile string) ([]byte, error) {
 	key, err := ParseJwkFile(ctx, jwkfile)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to parse keyfile %s`, file)
+		return nil, fmt.Errorf(`failed to parse keyfile %s: %w`, file, err)
 	}
 
 	buf, err := ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, `failed to read from encrypted file %s`, file)
+		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
 	var rawkey, pubkey interface{}
 	if err := key.Raw(&rawkey); err != nil {
-		return nil, errors.Wrap(err, `failed to obtain raw key from JWK`)
+		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
 	pubkey = rawkey
 	switch tkey := rawkey.(type) {
@@ -347,12 +347,12 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm, keyfile string) (string, func(), error) {
 	key, err := ParseJwkFile(ctx, keyfile)
 	if err != nil {
-		return "", nil, errors.Wrapf(err, `failed to parse keyfile %s`, keyfile)
+		return "", nil, fmt.Errorf(`failed to parse keyfile %s: %w`, keyfile, err)
 	}
 
 	buf, err := jws.Sign(payload, jws.WithKey(alg, key))
 	if err != nil {
-		return "", nil, errors.Wrap(err, `failed to sign payload`)
+		return "", nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
 
 	return WriteFile("jwx-test-*.jws", bytes.NewReader(buf))

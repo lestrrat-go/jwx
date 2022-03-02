@@ -8,7 +8,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -74,17 +73,17 @@ func makeJweEncryptCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
 
 		var keyenc jwa.KeyEncryptionAlgorithm
 		if err := keyenc.Accept(c.String("key-encryption")); err != nil {
-			return errors.Wrap(err, `invalid key encryption algorithm`)
+			return fmt.Errorf(`invalid key encryption algorithm: %w`, err)
 		}
 
 		var cntenc jwa.ContentEncryptionAlgorithm
 		if err := cntenc.Accept(c.String("content-encryption")); err != nil {
-			return errors.Wrap(err, `invalid content encryption algorithm`)
+			return fmt.Errorf(`invalid content encryption algorithm: %w`, err)
 		}
 
 		compress := jwa.NoCompress
@@ -97,18 +96,18 @@ func makeJweEncryptCmd() *cli.Command {
 			return err
 		}
 		if keyset.Len() != 1 {
-			return errors.New(`jwk file must contain exactly one key`)
+			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
 		key, _ := keyset.Get(0)
 
 		pubkey, err := jwk.PublicKeyOf(key)
 		if err != nil {
-			return errors.Wrapf(err, `failed to retrieve public key of %T`, key)
+			return fmt.Errorf(`failed to retrieve public key of %T: %w`, key, err)
 		}
 
 		encrypted, err := jwe.Encrypt(buf, jwe.WithKey(keyenc, pubkey), jwe.WithContentEncryption(cntenc), jwe.WithCompress(compress))
 		if err != nil {
-			return errors.Wrap(err, `failed to encrypt message`)
+			return fmt.Errorf(`failed to encrypt message: %w`, err)
 		}
 
 		output, err := getOutput(c.String("output"))
@@ -142,7 +141,7 @@ func makeJweDecryptCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
 
 		keyset, err := getKeyFile(c.String("key"), c.String("key-format"))
@@ -150,7 +149,7 @@ func makeJweDecryptCmd() *cli.Command {
 			return err
 		}
 		if keyset.Len() != 1 {
-			return errors.New(`jwk file must contain exactly one key`)
+			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
 		key, _ := keyset.Get(0)
 
@@ -159,14 +158,14 @@ func makeJweDecryptCmd() *cli.Command {
 		if keyencalg := c.String("key-encryption"); keyencalg != "" {
 			var keyenc jwa.KeyEncryptionAlgorithm
 			if err := keyenc.Accept(c.String("key-encryption")); err != nil {
-				return errors.Wrap(err, `invalid key encryption algorithm`)
+				return fmt.Errorf(`invalid key encryption algorithm: %w`, err)
 			}
 
 			// if we have an explicit key encryption algorithm, we don't have to
 			// guess it.
 			v, err := jwe.Decrypt(buf, jwe.WithKey(keyenc, key))
 			if err != nil {
-				return errors.Wrap(err, `failed to decrypt message`)
+				return fmt.Errorf(`failed to decrypt message: %w`, err)
 			}
 			decrypted = v
 		} else {
@@ -175,7 +174,7 @@ func makeJweDecryptCmd() *cli.Command {
 				return nil
 			})))
 			if err != nil {
-				return errors.Wrap(err, `failed to decrypt message`)
+				return fmt.Errorf(`failed to decrypt message: %w`, err)
 			}
 			decrypted = v
 		}

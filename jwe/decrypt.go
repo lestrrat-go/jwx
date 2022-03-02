@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
+	"fmt"
 	"hash"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -17,7 +18,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 // Decrypter is responsible for taking various components to decrypt a message.
@@ -125,11 +125,11 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 		case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
 			cipher, err := cipher.NewAES(d.ctalg)
 			if err != nil {
-				return nil, errors.Wrapf(err, `failed to build content cipher for %s`, d.ctalg)
+				return nil, fmt.Errorf(`failed to build content cipher for %s: %w`, d.ctalg, err)
 			}
 			d.cipher = cipher
 		default:
-			return nil, errors.Errorf(`invalid content cipher algorithm (%s)`, d.ctalg)
+			return nil, fmt.Errorf(`invalid content cipher algorithm (%s)`, d.ctalg)
 		}
 	}
 
@@ -139,13 +139,13 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, err error) {
 	cek, keyerr := d.DecryptKey(recipientKey)
 	if keyerr != nil {
-		err = errors.Wrap(keyerr, `failed to decrypt key`)
+		err = fmt.Errorf(`failed to decrypt key: %w`, keyerr)
 		return
 	}
 
 	cipher, ciphererr := d.ContentCipher()
 	if ciphererr != nil {
-		err = errors.Wrap(ciphererr, `failed to fetch content crypt cipher`)
+		err = fmt.Errorf(`failed to fetch content crypt cipher: %w`, ciphererr)
 		return
 	}
 
@@ -156,7 +156,7 @@ func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, 
 
 	plaintext, err = cipher.Decrypt(cek, d.iv, ciphertext, d.tag, computedAad)
 	if err != nil {
-		err = errors.Wrap(err, `failed to decrypt payload`)
+		err = fmt.Errorf(`failed to decrypt payload: %w`, err)
 		return
 	}
 
@@ -189,39 +189,39 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		block, err := aes.NewCipher(cek)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to create new AES cipher`)
+			return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
 		}
 
 		jek, err := keyenc.Unwrap(block, recipientKey)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to unwrap key`)
+			return nil, fmt.Errorf(`failed to unwrap key: %w`, err)
 		}
 
 		return jek, nil
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		if len(d.keyiv) != 12 {
-			return nil, errors.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
+			return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
 		}
 		if len(d.keytag) != 16 {
-			return nil, errors.Errorf("GCM requires 128-bit tag, got %d", len(d.keytag)*8)
+			return nil, fmt.Errorf("GCM requires 128-bit tag, got %d", len(d.keytag)*8)
 		}
 		block, err := aes.NewCipher(cek)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to create new AES cipher`)
+			return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
 		}
 		aesgcm, err := cryptocipher.NewGCM(block)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to create new GCM wrap`)
+			return nil, fmt.Errorf(`failed to create new GCM wrap: %w`, err)
 		}
 		ciphertext := recipientKey[:]
 		ciphertext = append(ciphertext, d.keytag...)
 		jek, err := aesgcm.Open(nil, d.keyiv, ciphertext, nil)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to decode key`)
+			return nil, fmt.Errorf(`failed to decode key: %w`, err)
 		}
 		return jek, nil
 	default:
-		return nil, errors.Errorf("decrypt key: unsupported algorithm %s", d.keyalg)
+		return nil, fmt.Errorf("decrypt key: unsupported algorithm %s", d.keyalg)
 	}
 }
 
@@ -230,7 +230,7 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 		var ok bool
 		cek, ok = d.privkey.([]byte)
 		if !ok {
-			return nil, errors.Errorf("decrypt key: []byte is required as the key to build %s key decrypter (got %T)", d.keyalg, d.privkey)
+			return nil, fmt.Errorf("decrypt key: []byte is required as the key to build %s key decrypter (got %T)", d.keyalg, d.privkey)
 		}
 
 		return d.decryptSymmetricKey(recipientKey, cek)
@@ -238,12 +238,12 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 
 	k, err := d.BuildKeyDecrypter()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to build key decrypter`)
+		return nil, fmt.Errorf(`failed to build key decrypter: %w`, err)
 	}
 
 	cek, err = k.Decrypt(recipientKey)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to decrypt key`)
+		return nil, fmt.Errorf(`failed to decrypt key: %w`, err)
 	}
 
 	return cek, nil
@@ -252,28 +252,28 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 	cipher, err := d.ContentCipher()
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to fetch content crypt cipher`)
+		return nil, fmt.Errorf(`failed to fetch content crypt cipher: %w`, err)
 	}
 
 	switch alg := d.keyalg; alg {
 	case jwa.RSA1_5:
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
-			return nil, errors.Wrapf(err, "*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
+			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
 		}
 
 		return keyenc.NewRSAPKCS15Decrypt(alg, &privkey, cipher.KeySize()/2), nil
 	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
-			return nil, errors.Wrapf(err, "*rsa.PrivateKey is required as the key to build %s key decrypter", alg)
+			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
 		}
 
 		return keyenc.NewRSAOAEPDecrypt(alg, &privkey)
 	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
 		sharedkey, ok := d.privkey.([]byte)
 		if !ok {
-			return nil, errors.Errorf("[]byte is required as the key to build %s key decrypter", alg)
+			return nil, fmt.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
 
 		return keyenc.NewAES(alg, sharedkey)
@@ -284,17 +284,17 @@ func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 		default:
 			var pubkey ecdsa.PublicKey
 			if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {
-				return nil, errors.Wrapf(err, "*ecdsa.PublicKey is required as the key to build %s key decrypter", alg)
+				return nil, fmt.Errorf(`*ecdsa.PublicKey is required as the key to build %s key decrypter: %w`, alg, err)
 			}
 
 			var privkey ecdsa.PrivateKey
 			if err := keyconv.ECDSAPrivateKey(&privkey, d.privkey); err != nil {
-				return nil, errors.Wrapf(err, "*ecdsa.PrivateKey is required as the key to build %s key decrypter", alg)
+				return nil, fmt.Errorf(`*ecdsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
 			}
 
 			return keyenc.NewECDHESDecrypt(alg, d.ctalg, &pubkey, d.apu, d.apv, &privkey), nil
 		}
 	default:
-		return nil, errors.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
+		return nil, fmt.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
 	}
 }

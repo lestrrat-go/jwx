@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/lestrrat-go/jwx/v2 v2.0.0-00010101000000-000000000000
-	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 )
@@ -18,6 +17,7 @@ require (
 	github.com/lestrrat-go/httpcc v1.0.0 // indirect
 	github.com/lestrrat-go/iter v1.0.1 // indirect
 	github.com/lestrrat-go/option v1.0.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 )
 

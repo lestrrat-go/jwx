@@ -9,7 +9,6 @@ import (
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
-	"github.com/pkg/errors"
 )
 
 const keysKey = `keys` // appease linter
@@ -28,7 +27,7 @@ func (s *set) Set(n string, v interface{}) error {
 	if n == keysKey {
 		vl, ok := v.([]Key)
 		if !ok {
-			return errors.Errorf(`value for field "keys" must be []jwk.Key`)
+			return fmt.Errorf(`value for field "keys" must be []jwk.Key`)
 		}
 		s.keys = vl
 		return nil
@@ -159,7 +158,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 		fmt.Fprintf(buf, `%q:`, field)
 		if field != keysKey {
 			if err := enc.Encode(s.privateParams[field]); err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal field %q`, field)
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
 			buf.WriteByte('[')
@@ -168,7 +167,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 					buf.WriteByte(',')
 				}
 				if err := enc.Encode(k); err != nil {
-					return nil, errors.Wrapf(err, `failed to marshal key #%d`, i)
+					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)
 				}
 			}
 			buf.WriteByte(']')
@@ -203,7 +202,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 
 		switch tok := tok.(type) {
@@ -213,7 +212,7 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string:
 			switch tok {
@@ -221,14 +220,14 @@ LOOP:
 				sawKeysField = true
 				var list []json.RawMessage
 				if err := dec.Decode(&list); err != nil {
-					return errors.Wrap(err, `failed to decode "keys"`)
+					return fmt.Errorf(`failed to decode "keys": %w`, err)
 				}
 
 				for i, keysrc := range list {
 					key, err := ParseKey(keysrc, options...)
 					if err != nil {
 						if !ignoreParseError {
-							return errors.Wrapf(err, `failed to decode key #%d in "keys"`, i)
+							return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 						}
 						continue
 					}
@@ -237,7 +236,7 @@ LOOP:
 			default:
 				var v interface{}
 				if err := dec.Decode(&v); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %q`, tok)
+					return fmt.Errorf(`failed to decode value for key %q: %w`, tok, err)
 				}
 				s.privateParams[tok] = v
 			}
@@ -252,7 +251,7 @@ LOOP:
 	if !sawKeysField {
 		key, err := ParseKey(data, options...)
 		if err != nil {
-			return errors.Wrapf(err, `failed to parse sole key in key set`)
+			return fmt.Errorf(`failed to parse sole key in key set`)
 		}
 		s.keys = append(s.keys, key)
 	}

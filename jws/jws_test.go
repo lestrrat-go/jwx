@@ -27,7 +27,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -193,7 +192,7 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypt
 	// This is just here to test the interface conversion
 	r, s, err := ecdsa.Sign(rand, es.raw, digest)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to sign payload using ecdsa")
+		return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
 	}
 
 	return asn1.Marshal(struct {

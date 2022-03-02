@@ -7,7 +7,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/pkg/errors"
 )
 
 type SerializeCtx interface {
@@ -79,12 +78,12 @@ type jsonSerializer struct{}
 func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, error) {
 	token, ok := v.(Token)
 	if !ok {
-		return nil, errors.Errorf(`invalid input: expected jwt.Token`)
+		return nil, fmt.Errorf(`invalid input: expected jwt.Token`)
 	}
 
 	buf, err := json.Marshal(token)
 	if err != nil {
-		return nil, errors.Errorf(`failed to serialize as JSON`)
+		return nil, fmt.Errorf(`failed to serialize as JSON`)
 	}
 	return buf, nil
 }
@@ -104,7 +103,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 		// We are executed immediately after json marshaling
 		if _, ok := hdrs.Get(typKey); !ok {
 			if err := hdrs.Set(typKey, `JWT`); err != nil {
-				return errors.Wrapf(err, `failed to set %s key to "JWT"`, typKey)
+				return fmt.Errorf(`failed to set %s key to "JWT": %w`, typKey, err)
 			}
 		}
 	} else {
@@ -112,7 +111,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 			// If this is part of a nested sequence, we should set cty = 'JWT'
 			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
 			if err := hdrs.Set(ctyKey, `JWT`); err != nil {
-				return errors.Wrapf(err, `failed to set %s key to "JWT"`, ctyKey)
+				return fmt.Errorf(`failed to set %s key to "JWT": %w`, ctyKey, err)
 			}
 		}
 	}
@@ -126,7 +125,7 @@ type jwsSerializer struct {
 func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
 	payload, ok := v.([]byte)
 	if !ok {
-		return nil, errors.New(`expected []byte as input`)
+		return nil, fmt.Errorf(`expected []byte as input`)
 	}
 
 	for _, option := range s.options {
@@ -144,7 +143,7 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 		if v, ok := hdrs.Get("b64"); ok {
 			if bval, bok := v.(bool); bok {
 				if !bval { // b64 = false
-					return nil, errors.New(`b64 cannot be false for JWTs`)
+					return nil, fmt.Errorf(`b64 cannot be false for JWTs`)
 				}
 			}
 		}
@@ -225,14 +224,14 @@ func (s *Serializer) Serialize(t Token) ([]byte, error) {
 		ctx.step = i
 		v, err := step.Serialize(&ctx, payload)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to serialize token at step #%d`, i+1)
+			return nil, fmt.Errorf(`failed to serialize token at step #%d: %w`, i+1, err)
 		}
 		payload = v
 	}
 
 	res, ok := payload.([]byte)
 	if !ok {
-		return nil, errors.New(`invalid serialization produced`)
+		return nil, fmt.Errorf(`invalid serialization produced`)
 	}
 
 	return res, nil

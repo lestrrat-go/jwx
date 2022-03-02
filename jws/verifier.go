@@ -1,8 +1,9 @@
 package jws
 
 import (
+	"fmt"
+
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 type VerifierFactory interface {
@@ -64,5 +65,5 @@ func NewVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, errors.Errorf(`unsupported signature algorithm "%s"`, alg)
+	return nil, fmt.Errorf(`unsupported signature algorithm "%s"`, alg)
 }

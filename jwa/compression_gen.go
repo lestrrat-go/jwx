@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // CompressionAlgorithm represents the compression algorithms as described in https://tools.ietf.org/html/rfc7518#section-7.3
@@ -55,12 +53,12 @@ func (v *CompressionAlgorithm) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.CompressionAlgorithm: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.CompressionAlgorithm: %T`, value)
 		}
 		tmp = CompressionAlgorithm(s)
 	}
 	if _, ok := allCompressionAlgorithms[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.CompressionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.CompressionAlgorithm value`)
 	}
 
 	*v = tmp

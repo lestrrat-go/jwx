@@ -2,10 +2,10 @@ package jws
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/iter"
-	"github.com/pkg/errors"
 )
 
 // Iterate returns a channel that successively returns all the
@@ -37,7 +37,7 @@ func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) 
 func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
 	for _, pair := range h.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return errors.Wrapf(err, `failed to set header`)
+			return fmt.Errorf(`failed to set header: %w`, err)
 		}
 	}
 	return nil
@@ -51,13 +51,13 @@ func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
 
 	if h1 != nil {
 		if err := h1.Copy(ctx, h3); err != nil {
-			return nil, errors.Wrap(err, `failed to copy headers from first Header`)
+			return nil, fmt.Errorf(`failed to copy headers from first Header: %w`, err)
 		}
 	}
 
 	if h2 != nil {
 		if err := h2.Copy(ctx, h3); err != nil {
-			return nil, errors.Wrap(err, `failed to copy headers from second Header`)
+			return nil, fmt.Errorf(`failed to copy headers from second Header: %w`, err)
 		}
 	}
 

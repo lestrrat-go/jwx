@@ -4,11 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
+	"fmt"
 	"hash"
 
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
@@ -36,7 +36,7 @@ func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
 	return func(payload []byte, key []byte) ([]byte, error) {
 		h := hmac.New(hfunc, key)
 		if _, err := h.Write(payload); err != nil {
-			return nil, errors.Wrap(err, "failed to write payload using hmac")
+			return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
 		}
 		return h.Sum(nil), nil
 	}
@@ -49,11 +49,11 @@ func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {
 func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	var hmackey []byte
 	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
-		return nil, errors.Wrapf(err, `invalid key type %T. []byte is required`, key)
+		return nil, fmt.Errorf(`invalid key type %T. []byte is required: %w`, key, err)
 	}
 
 	if len(hmackey) == 0 {
-		return nil, errors.New(`missing key while signing payload`)
+		return nil, fmt.Errorf(`missing key while signing payload`)
 	}
 
 	return s.sign(payload, hmackey)
@@ -67,11 +67,11 @@ func newHMACVerifier(alg jwa.SignatureAlgorithm) Verifier {
 func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
 	expected, err := v.signer.Sign(payload, key)
 	if err != nil {
-		return errors.Wrap(err, `failed to generated signature`)
+		return fmt.Errorf(`failed to generated signature: %w`, err)
 	}
 
 	if !hmac.Equal(signature, expected) {
-		return errors.New(`failed to match hmac signature`)
+		return fmt.Errorf(`failed to match hmac signature`)
 	}
 	return nil
 }

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1
@@ -81,12 +79,12 @@ func (v *SignatureAlgorithm) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.SignatureAlgorithm: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.SignatureAlgorithm: %T`, value)
 		}
 		tmp = SignatureAlgorithm(s)
 	}
 	if _, ok := allSignatureAlgorithms[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.SignatureAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.SignatureAlgorithm value`)
 	}
 
 	*v = tmp

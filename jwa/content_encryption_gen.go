@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
@@ -63,12 +61,12 @@ func (v *ContentEncryptionAlgorithm) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.ContentEncryptionAlgorithm: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.ContentEncryptionAlgorithm: %T`, value)
 		}
 		tmp = ContentEncryptionAlgorithm(s)
 	}
 	if _, ok := allContentEncryptionAlgorithms[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.ContentEncryptionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.ContentEncryptionAlgorithm value`)
 	}
 
 	*v = tmp

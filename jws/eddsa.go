@@ -4,10 +4,10 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"crypto/rand"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 type eddsaSigner struct{}
@@ -22,7 +22,7 @@ func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
 
 func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
-		return nil, errors.New(`missing private key while signing payload`)
+		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
 
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
@@ -33,7 +33,7 @@ func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		// users gave us a pointer instead of non-pointer, etc.
 		var privkey ed25519.PrivateKey
 		if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve ed25519.PrivateKey out of %T`, key)
+			return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
 		}
 		signer = privkey
 	}
@@ -48,7 +48,7 @@ func newEdDSAVerifier() Verifier {
 
 func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
 	if key == nil {
-		return errors.New(`missing public key while verifying payload`)
+		return fmt.Errorf(`missing public key while verifying payload`)
 	}
 
 	var pubkey ed25519.PublicKey
@@ -57,16 +57,16 @@ func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err e
 		v := signer.Public()
 		pubkey, ok = v.(ed25519.PublicKey)
 		if !ok {
-			return errors.Errorf(`expected crypto.Signer.Public() to return ed25519.PublicKey, but got %T`, v)
+			return fmt.Errorf(`expected crypto.Signer.Public() to return ed25519.PublicKey, but got %T`, v)
 		}
 	} else {
 		if err := keyconv.Ed25519PublicKey(&pubkey, key); err != nil {
-			return errors.Wrapf(err, `failed to retrieve ed25519.PublicKey out of %T`, key)
+			return fmt.Errorf(`failed to retrieve ed25519.PublicKey out of %T: %w`, key, err)
 		}
 	}
 
 	if !ed25519.Verify(pubkey, payload, signature) {
-		return errors.New(`failed to match EdDSA signature`)
+		return fmt.Errorf(`failed to match EdDSA signature`)
 	}
 
 	return nil

@@ -5,6 +5,7 @@ package jwt
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -210,21 +210,21 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AudienceKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, AudienceKey, err)
 		}
 		t.audience = acceptor
 		return nil
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, ExpirationKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, ExpirationKey, err)
 		}
 		t.expiration = &acceptor
 		return nil
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, IssuedAtKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, IssuedAtKey, err)
 		}
 		t.issuedAt = &acceptor
 		return nil
@@ -233,17 +233,17 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.issuer = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
 			t.jwtID = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
 	case NotBeforeKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, NotBeforeKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, NotBeforeKey, err)
 		}
 		t.notBefore = &acceptor
 		return nil
@@ -252,7 +252,7 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 			t.subject = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
 	default:
 		if t.privateClaims == nil {
 			t.privateClaims = map[string]interface{}{}
@@ -388,7 +388,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -397,45 +397,45 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AudienceKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
 				}
 				t.audience = decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ExpirationKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
 				}
 				t.expiration = &decoded
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, IssuedAtKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
 				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, IssuerKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, JwtIDKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, NotBeforeKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
 				}
 				t.notBefore = &decoded
 			case SubjectKey:
 				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, SubjectKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			default:
 				if dc := t.dc; dc != nil {
@@ -452,10 +452,10 @@ LOOP:
 					t.setNoLock(tok, decoded)
 					continue
 				}
-				return errors.Wrapf(err, `could not decode field %s`, tok)
+				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return errors.Errorf(`invalid token %T`, tok)
+			return fmt.Errorf(`invalid token %T`, tok)
 		}
 	}
 	return nil
@@ -479,7 +479,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		switch f {
 		case AudienceKey:
 			if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {
-				return nil, errors.Wrap(err, `failed to encode "aud"`)
+				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 			}
 			continue
 		case ExpirationKey, IssuedAtKey, NotBeforeKey:
@@ -493,7 +493,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				return nil, errors.Wrapf(err, `failed to marshal field %s`, f)
+				return nil, fmt.Errorf(`failed to marshal field %s: %w`, f, err)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}

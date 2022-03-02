@@ -7,13 +7,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )
@@ -62,10 +62,10 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 	if format == "pem" {
 		buf, err := jwk.Pem(keyset)
 		if err != nil {
-			return errors.Wrap(err, `failed to format key in PEM format`)
+			return fmt.Errorf(`failed to format key in PEM format: %w`, err)
 		}
 		if _, err := dst.Write(buf); err != nil {
-			return errors.Wrap(err, `failed to write to destination`)
+			return fmt.Errorf(`failed to write to destination: %w`, err)
 		}
 		return nil
 	}
@@ -73,18 +73,18 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 	if format == "json" {
 		if preserve || keyset.Len() != 1 {
 			if err := dumpJSON(dst, keyset); err != nil {
-				return errors.Wrap(err, `failed to marshal keyset into JSON format`)
+				return fmt.Errorf(`failed to marshal keyset into JSON format: %w`, err)
 			}
 		} else {
 			key, _ := keyset.Get(0)
 			if err := dumpJSON(dst, key); err != nil {
-				return errors.Wrap(err, `failed to marshal key into JSON format`)
+				return fmt.Errorf(`failed to marshal key into JSON format: %w`, err)
 			}
 		}
 		return nil
 	}
 
-	return errors.Errorf(`invalid JWK format "%s"`, format)
+	return fmt.Errorf(`invalid JWK format "%s"`, format)
 }
 
 func makeJwkGenerateCmd() *cli.Command {
@@ -134,7 +134,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		case jwa.RSA:
 			v, err := rsa.GenerateKey(rand.Reader, c.Int("keysize"))
 			if err != nil {
-				return errors.Wrap(err, `failed to generate rsa private key`)
+				return fmt.Errorf(`failed to generate rsa private key: %w`, err)
 			}
 			rawkey = v
 		case jwa.EC:
@@ -142,17 +142,17 @@ func makeJwkGenerateCmd() *cli.Command {
 
 			var crvalg jwa.EllipticCurveAlgorithm
 			if err := crvalg.Accept(c.String("curve")); err != nil {
-				return errors.Wrapf(err, `invalid elliptic curve name %s`, c.String("curve"))
+				return fmt.Errorf(`invalid elliptic curve name %s: %w`, c.String("curve"), err)
 			}
 
 			crv, ok := jwk.CurveForAlgorithm(crvalg)
 			if !ok {
-				return errors.Errorf(`invalid elliptic curve for ECDSA: %s (expected %s)`, crvalg, crvnames.String())
+				return fmt.Errorf(`invalid elliptic curve for ECDSA: %s (expected %s)`, crvalg, crvnames.String())
 			}
 
 			v, err := ecdsa.GenerateKey(crv, rand.Reader)
 			if err != nil {
-				return errors.Wrap(err, `failed to generate ECDSA private key`)
+				return fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 			}
 			rawkey = v
 		case jwa.OctetSeq:
@@ -163,42 +163,42 @@ func makeJwkGenerateCmd() *cli.Command {
 		case jwa.OKP:
 			var crvalg jwa.EllipticCurveAlgorithm
 			if err := crvalg.Accept(c.String("curve")); err != nil {
-				return errors.Wrap(err, `invalid elliptic curve name`)
+				return fmt.Errorf(`invalid elliptic curve name: %w`, err)
 			}
 
 			switch crvalg {
 			case jwa.Ed25519:
 				_, priv, err := ed25519.GenerateKey(rand.Reader)
 				if err != nil {
-					return errors.Wrap(err, `failed to generate ed25519 private key`)
+					return fmt.Errorf(`failed to generate ed25519 private key: %w`, err)
 				}
 				rawkey = priv
 			case jwa.X25519:
 				_, priv, err := x25519.GenerateKey(rand.Reader)
 				if err != nil {
-					return errors.Wrap(err, `failed to generate x25519 private key`)
+					return fmt.Errorf(`failed to generate x25519 private key: %w`, err)
 				}
 				rawkey = priv
 			default:
-				return errors.Errorf(`invalid elliptic curve for OKP: %s (expected %s/%s)`, crvalg, jwa.Ed25519, jwa.X25519)
+				return fmt.Errorf(`invalid elliptic curve for OKP: %s (expected %s/%s)`, crvalg, jwa.Ed25519, jwa.X25519)
 			}
 		default:
-			return errors.Errorf(`invalid key type %s`, typ)
+			return fmt.Errorf(`invalid key type %s`, typ)
 		}
 		var attrs map[string]interface{}
 		if tmpl := c.String("template"); tmpl != "" {
 			if err := json.Unmarshal([]byte(tmpl), &attrs); err != nil {
-				return errors.Wrap(err, `failed to unmarshal template`)
+				return fmt.Errorf(`failed to unmarshal template: %w`, err)
 			}
 		}
 		key, err := jwk.New(rawkey)
 		if err != nil {
-			return errors.Wrap(err, `failed to create new JWK from raw key`)
+			return fmt.Errorf(`failed to create new JWK from raw key: %w`, err)
 		}
 
 		for k, v := range attrs {
 			if err := key.Set(k, v); err != nil {
-				return errors.Wrapf(err, `failed to set field %s`, k)
+				return fmt.Errorf(`failed to set field %s: %w`, k, err)
 			}
 		}
 
@@ -208,7 +208,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		if c.Bool("public-key") {
 			pubks, err := jwk.PublicSetOf(keyset)
 			if err != nil {
-				return errors.Wrap(err, `failed to generate public keys`)
+				return fmt.Errorf(`failed to generate public keys: %w`, err)
 			}
 			keyset = pubks
 		}
@@ -256,7 +256,7 @@ func makeJwkFormatCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
 
 		var options []jwk.ParseOption
@@ -265,12 +265,12 @@ func makeJwkFormatCmd() *cli.Command {
 		case "pem":
 			options = append(options, jwk.WithPEM(true))
 		default:
-			return errors.Errorf(`invalid input format %s`, format)
+			return fmt.Errorf(`invalid input format %s`, format)
 		}
 
 		keyset, err := jwk.Parse(buf, options...)
 		if err != nil {
-			return errors.Wrap(err, `failed to parse keyset`)
+			return fmt.Errorf(`failed to parse keyset: %w`, err)
 		}
 
 		output, err := getOutput(c.String("output"))
@@ -282,7 +282,7 @@ func makeJwkFormatCmd() *cli.Command {
 		if c.Bool("public-key") {
 			pubks, err := jwk.PublicSetOf(keyset)
 			if err != nil {
-				return errors.Wrap(err, `failed to generate public keys`)
+				return fmt.Errorf(`failed to generate public keys: %w`, err)
 			}
 			keyset = pubks
 		}

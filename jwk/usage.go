@@ -1,6 +1,6 @@
 package jwk
 
-import "github.com/pkg/errors"
+import "fmt"
 
 func (k KeyUsageType) String() string {
 	return string(k)
@@ -14,7 +14,7 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 			*k = v
 			return nil
 		default:
-			return errors.Errorf("invalid key usage type %s", v)
+			return fmt.Errorf("invalid key usage type %s", v)
 		}
 	case string:
 		switch v {
@@ -22,9 +22,9 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 			*k = KeyUsageType(v)
 			return nil
 		default:
-			return errors.Errorf("invalid key usage type %s", v)
+			return fmt.Errorf("invalid key usage type %s", v)
 		}
 	}
 
-	return errors.Errorf("invalid value for key usage type %s", v)
+	return fmt.Errorf("invalid value for key usage type %s", v)
 }

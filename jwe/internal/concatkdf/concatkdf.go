@@ -3,8 +3,7 @@ package concatkdf
 import (
 	"crypto"
 	"encoding/binary"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 type KDF struct {
@@ -48,13 +47,13 @@ func (k *KDF) Read(out []byte) (int, error) {
 		h.Reset()
 
 		if err := binary.Write(h, binary.BigEndian, round); err != nil {
-			return 0, errors.Wrap(err, "failed to write round using kdf")
+			return 0, fmt.Errorf(`failed to write round using kdf: %w`, err)
 		}
 		if _, err := h.Write(k.z); err != nil {
-			return 0, errors.Wrap(err, "failed to write z using kdf")
+			return 0, fmt.Errorf(`failed to write z using kdf: %w`, err)
 		}
 		if _, err := h.Write(k.otherinfo); err != nil {
-			return 0, errors.Wrap(err, "failed to write other info using kdf")
+			return 0, fmt.Errorf(`failed to write other info using kdf: %w`, err)
 		}
 
 		k.buf = append(k.buf, h.Sum(nil)...)

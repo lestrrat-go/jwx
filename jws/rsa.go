@@ -4,10 +4,10 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 var rsaSigners map[jwa.SignatureAlgorithm]*rsaSigner
@@ -73,21 +73,21 @@ func (rs *rsaSigner) Algorithm() jwa.SignatureAlgorithm {
 
 func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	if key == nil {
-		return nil, errors.New(`missing private key while signing payload`)
+		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
 
 	signer, ok := key.(crypto.Signer)
 	if !ok {
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve rsa.PrivateKey out of %T`, key)
+			return nil, fmt.Errorf(`failed to retrieve rsa.PrivateKey out of %T: %w`, key, err)
 		}
 		signer = &privkey
 	}
 
 	h := rs.hash.New()
 	if _, err := h.Write(payload); err != nil {
-		return nil, errors.Wrap(err, "failed to write payload to hash")
+		return nil, fmt.Errorf(`failed to write payload to hash: %w`, err)
 	}
 	if rs.pss {
 		return signer.Sign(rand.Reader, h.Sum(nil), &rsa.PSSOptions{
@@ -110,7 +110,7 @@ func newRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
 
 func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error {
 	if key == nil {
-		return errors.New(`missing public key while verifying payload`)
+		return fmt.Errorf(`missing public key while verifying payload`)
 	}
 
 	var pubkey rsa.PublicKey
@@ -122,17 +122,17 @@ func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error 
 		case *rsa.PublicKey:
 			pubkey = *cpub
 		default:
-			return errors.Errorf(`failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
+			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
 		}
 	} else {
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return errors.Wrapf(err, `failed to retrieve rsa.PublicKey out of %T`, key)
+			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of %T: %w`, key, err)
 		}
 	}
 
 	h := rv.hash.New()
 	if _, err := h.Write(payload); err != nil {
-		return errors.Wrap(err, "failed to write payload to hash")
+		return fmt.Errorf(`failed to write payload to hash: %w`, err)
 	}
 
 	if rv.pss {

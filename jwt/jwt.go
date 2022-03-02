@@ -5,6 +5,7 @@ package jwt
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -13,9 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwe"
-
 	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/pkg/errors"
 )
 
 const _jwt = `jwt`
@@ -84,7 +83,7 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := ioutil.ReadAll(src)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to read from token data source`)
+		return nil, fmt.Errorf(`failed to read from token data source: %w`, err)
 	}
 	return parseBytes(data, options...)
 }
@@ -119,7 +118,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identToken{}:
 			token, ok := o.Value().(Token)
 			if !ok {
-				return nil, errors.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
+				return nil, fmt.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
 			}
 			ctx.token = token
 		case identPedantic{}:
@@ -176,7 +175,7 @@ OUTER:
 		case jwx.JWT:
 			if ctx.pedantic {
 				if expectNested {
-					return nil, errors.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
+					return nil, fmt.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
 				}
 			}
 
@@ -194,7 +193,7 @@ OUTER:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these
 			if ctx.pedantic {
-				return nil, errors.Errorf(`invalid JWT`)
+				return nil, fmt.Errorf(`invalid JWT`)
 			}
 
 			if i == 0 {
@@ -243,13 +242,13 @@ OUTER:
 			// No verification.
 			m, err := jws.Parse(data)
 			if err != nil {
-				return nil, errors.Wrap(err, `invalid jws message`)
+				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}
 			payload = m.Payload()
 		case jwx.JWE:
 			dp := ctx.decryptParams
 			if dp == nil {
-				return nil, errors.Errorf(`jwt.Parse: cannot proceed with JWE encrypted payload without decryption parameters`)
+				return nil, fmt.Errorf(`jwt.Parse: cannot proceed with JWE encrypted payload without decryption parameters`)
 			}
 
 			var m *jwe.Message
@@ -262,7 +261,7 @@ OUTER:
 			decryptOpts = append(decryptOpts, jwe.WithKey(dp.Algorithm(), dp.Key()))
 			v, err := jwe.Decrypt(data, decryptOpts...)
 			if err != nil {
-				return nil, errors.Wrap(err, `failed to decrypt payload`)
+				return nil, fmt.Errorf(`failed to decrypt payload: %w`, err)
 			}
 
 			if !ctx.pedantic {
@@ -281,7 +280,7 @@ OUTER:
 				continue OUTER
 			}
 		default:
-			return nil, errors.Errorf(`unsupported format (layer: #%d)`, i+1)
+			return nil, fmt.Errorf(`unsupported format (layer: #%d)`, i+1)
 		}
 		expectNested = false
 	}
@@ -293,7 +292,7 @@ OUTER:
 	if ctx.localReg != nil {
 		dcToken, ok := ctx.token.(TokenWithDecodeCtx)
 		if !ok {
-			return nil, errors.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
+			return nil, fmt.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
 		}
 		dc := json.NewDecodeCtx(ctx.localReg)
 		dcToken.SetDecodeCtx(dc)
@@ -301,7 +300,7 @@ OUTER:
 	}
 
 	if err := json.Unmarshal(payload, ctx.token); err != nil {
-		return nil, errors.Wrap(err, `failed to parse token`)
+		return nil, fmt.Errorf(`failed to parse token: %w`, err)
 	}
 
 	if ctx.validate {
@@ -373,7 +372,7 @@ func (t *stdToken) Clone() (Token, error) {
 
 	for _, pair := range t.makePairs() {
 		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+			return nil, fmt.Errorf(`failed to set %s: %w`, pair.Key.(string), err)
 		}
 	}
 	return dst, nil

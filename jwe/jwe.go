@@ -22,7 +22,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -306,37 +305,37 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 
 	aad, err := protected.Encode()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 encode protected headers")
+		return nil, fmt.Errorf(`failed to base64 encode protected headers: %w`, err)
 	}
 
 	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt payload")
+		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
 	msg := NewMessage()
 
 	decodedAad, err := base64.Decode(aad)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode base64")
+		return nil, fmt.Errorf(`failed to decode base64: %w`, err)
 	}
 	if err := msg.Set(AuthenticatedDataKey, decodedAad); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, AuthenticatedDataKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, AuthenticatedDataKey, err)
 	}
 	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
 	}
 	if err := msg.Set(InitializationVectorKey, iv); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, InitializationVectorKey, err)
 	}
 	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, ProtectedHeadersKey, err)
 	}
 	if err := msg.Set(RecipientsKey, recipients); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, RecipientsKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, RecipientsKey, err)
 	}
 	if err := msg.Set(TagKey, tag); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, TagKey, err)
 	}
 
 	switch format {
@@ -413,18 +412,18 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 	msg, err := parseJSONOrCompact(buf, true)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
+		return nil, fmt.Errorf(`failed to parse buffer for Decrypt: %w`, err)
 	}
 
 	// Process things that are common to the message
 	ctx := context.TODO()
 	h, err := msg.protectedHeaders.Clone(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to copy protected headers`)
+		return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
 	}
 	h, err = h.Merge(ctx, msg.unprotectedHeaders)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
+		return nil, fmt.Errorf(`failed to merge headers for message decryption: %w`, err)
 	}
 
 	var aad []byte
@@ -440,7 +439,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 		var err error
 		computedAad, err = msg.protectedHeaders.Encode()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to encode protected headers")
+			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
 		}
 	}
 
@@ -450,7 +449,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	if len(recipients) == 0 {
 		r := NewRecipient()
 		if err := r.SetHeaders(msg.protectedHeaders); err != nil {
-			return nil, errors.Wrap(err, `failed to set headers to recipient`)
+			return nil, fmt.Errorf(`failed to set headers to recipient: %w`, err)
 		}
 		recipients = append(recipients, r)
 	}
@@ -510,7 +509,7 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+			return nil, fmt.Errorf(`failed to retrieve raw key from %T: %w`, key, err)
 		}
 		key = raw
 	}
@@ -539,23 +538,23 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		epkif, ok := h2.Get(EphemeralPublicKeyKey)
 		if !ok {
-			return nil, errors.New("failed to get 'epk' field")
+			return nil, fmt.Errorf(`failed to get 'epk' field`)
 		}
 		switch epk := epkif.(type) {
 		case jwk.ECDSAPublicKey:
 			var pubkey ecdsa.PublicKey
 			if err := epk.Raw(&pubkey); err != nil {
-				return nil, errors.Wrap(err, "failed to get public key")
+				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
 			dec.PublicKey(&pubkey)
 		case jwk.OKPPublicKey:
 			var pubkey interface{}
 			if err := epk.Raw(&pubkey); err != nil {
-				return nil, errors.Wrap(err, "failed to get public key")
+				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
 			dec.PublicKey(pubkey)
 		default:
-			return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
+			return nil, fmt.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
 		}
 
 		if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
@@ -568,51 +567,51 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
 		ivB64, ok := h2.Get(InitializationVectorKey)
 		if !ok {
-			return nil, errors.New("failed to get 'iv' field")
+			return nil, fmt.Errorf(`failed to get 'iv' field`)
 		}
 		ivB64Str, ok := ivB64.(string)
 		if !ok {
-			return nil, errors.Errorf("unexpected type for 'iv': %T", ivB64)
+			return nil, fmt.Errorf("unexpected type for 'iv': %T", ivB64)
 		}
 		tagB64, ok := h2.Get(TagKey)
 		if !ok {
-			return nil, errors.New("failed to get 'tag' field")
+			return nil, fmt.Errorf(`failed to get 'tag' field`)
 		}
 		tagB64Str, ok := tagB64.(string)
 		if !ok {
-			return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
+			return nil, fmt.Errorf("unexpected type for 'tag': %T", tagB64)
 		}
 		iv, err := base64.DecodeString(ivB64Str)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
+			return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
 		}
 		tag, err := base64.DecodeString(tagB64Str)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
+			return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
 		}
 		dec.KeyInitializationVector(iv)
 		dec.KeyTag(tag)
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
 		saltB64, ok := h2.Get(SaltKey)
 		if !ok {
-			return nil, errors.New("failed to get 'p2s' field")
+			return nil, fmt.Errorf(`failed to get 'p2s' field`)
 		}
 		saltB64Str, ok := saltB64.(string)
 		if !ok {
-			return nil, errors.Errorf("unexpected type for 'p2s': %T", saltB64)
+			return nil, fmt.Errorf("unexpected type for 'p2s': %T", saltB64)
 		}
 
 		count, ok := h2.Get(CountKey)
 		if !ok {
-			return nil, errors.New("failed to get 'p2c' field")
+			return nil, fmt.Errorf(`failed to get 'p2c' field`)
 		}
 		countFlt, ok := count.(float64)
 		if !ok {
-			return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
+			return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
 		}
 		salt, err := base64.DecodeString(saltB64Str)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to b64-decode 'salt'")
+			return nil, fmt.Errorf(`failed to b64-decode 'salt': %w`, err)
 		}
 		dec.KeySalt(salt)
 		dec.KeyCount(int(countFlt))
@@ -632,7 +631,7 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 	}
 
 	if plaintext == nil {
-		return nil, errors.New("failed to find matching recipient")
+		return nil, fmt.Errorf(`failed to find matching recipient`)
 	}
 
 	return plaintext, nil
@@ -647,7 +646,7 @@ func Parse(buf []byte) (*Message, error) {
 func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
-		return nil, errors.New("empty buffer")
+		return nil, fmt.Errorf(`empty buffer`)
 	}
 
 	if buf[0] == '{' {
@@ -665,7 +664,7 @@ func ParseString(s string) (*Message, error) {
 func ParseReader(src io.Reader) (*Message, error) {
 	buf, err := ioutil.ReadAll(src)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to read from io.Reader`)
+		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
 	}
 	return Parse(buf)
 }
@@ -674,7 +673,7 @@ func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	m := NewMessage()
 	m.storeProtectedHeaders = storeProtectedHeaders
 	if err := json.Unmarshal(buf, &m); err != nil {
-		return nil, errors.Wrap(err, "failed to parse JSON")
+		return nil, fmt.Errorf(`failed to parse JSON: %w`, err)
 	}
 	return m, nil
 }
@@ -682,51 +681,51 @@ func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	parts := bytes.Split(buf, []byte{'.'})
 	if len(parts) != 5 {
-		return nil, errors.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
+		return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
 	}
 
 	hdrbuf, err := base64.Decode(parts[0])
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse first part of compact form`)
+		return nil, fmt.Errorf(`failed to parse first part of compact form: %w`, err)
 	}
 
 	protected := NewHeaders()
 	if err := json.Unmarshal(hdrbuf, protected); err != nil {
-		return nil, errors.Wrap(err, "failed to parse header JSON")
+		return nil, fmt.Errorf(`failed to parse header JSON: %w`, err)
 	}
 
 	ivbuf, err := base64.Decode(parts[2])
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 decode iv")
+		return nil, fmt.Errorf(`failed to base64 decode iv: %w`, err)
 	}
 
 	ctbuf, err := base64.Decode(parts[3])
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 decode content")
+		return nil, fmt.Errorf(`failed to base64 decode content: %w`, err)
 	}
 
 	tagbuf, err := base64.Decode(parts[4])
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to base64 decode tag")
+		return nil, fmt.Errorf(`failed to base64 decode tag: %w`, err)
 	}
 
 	m := NewMessage()
 	if err := m.Set(CipherTextKey, ctbuf); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, CipherTextKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
 	}
 	if err := m.Set(InitializationVectorKey, ivbuf); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, InitializationVectorKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, InitializationVectorKey, err)
 	}
 	if err := m.Set(ProtectedHeadersKey, protected); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, ProtectedHeadersKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, ProtectedHeadersKey, err)
 	}
 
 	if err := m.makeDummyRecipient(string(parts[1]), protected); err != nil {
-		return nil, errors.Wrap(err, `failed to setup recipient`)
+		return nil, fmt.Errorf(`failed to setup recipient: %w`, err)
 	}
 
 	if err := m.Set(TagKey, tagbuf); err != nil {
-		return nil, errors.Wrapf(err, `failed to set %s`, TagKey)
+		return nil, fmt.Errorf(`failed to set %s: %w`, TagKey, err)
 	}
 
 	if storeProtectedHeaders {

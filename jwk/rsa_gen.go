@@ -17,7 +17,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -261,7 +260,7 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
-			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case RSAEKey:
@@ -269,17 +268,17 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 			h.e = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case KeyOpsKey:
 		var acceptor KeyOperationList
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, KeyOpsKey, err)
 		}
 		h.keyOps = &acceptor
 		return nil
@@ -291,23 +290,23 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 				tmp := v.String()
 				h.keyUsage = &tmp
 			default:
-				return errors.Errorf(`invalid key usage type %s`, v)
+				return fmt.Errorf(`invalid key usage type %s`, v)
 			}
 		case string:
 			h.keyUsage = &v
 		default:
-			return errors.Errorf(`invalid key usage type %s`, v)
+			return fmt.Errorf(`invalid key usage type %s`, v)
 		}
 	case RSANKey:
 		if v, ok := value.([]byte); ok {
 			h.n = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSANKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSANKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, X509CertChainKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, X509CertChainKey, err)
 		}
 		h.x509CertChain = &acceptor
 		return nil
@@ -316,19 +315,19 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 			h.x509CertThumbprint = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprintS256 = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
 			h.x509URL = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]interface{}{}
@@ -400,7 +399,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -409,64 +408,64 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case KeyTypeKey:
 				val, err := json.ReadNextStringToken(dec)
 				if err != nil {
-					return errors.Wrap(err, `error reading token`)
+					return fmt.Errorf(`error reading token: %w`, err)
 				}
 				if val != jwa.RSA.String() {
-					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
 				var s string
 				if err := dec.Decode(&s); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
 				alg := jwa.KeyAlgorithmFrom(s)
 				h.algorithm = &alg
 			case RSAEKey:
 				if err := json.AssignNextBytesToken(&h.e, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSAEKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAEKey, err)
 				}
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case KeyOpsKey:
 				var decoded KeyOperationList
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyOpsKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyOpsKey, err)
 				}
 				h.keyOps = &decoded
 			case KeyUsageKey:
 				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyUsageKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 				}
 			case RSANKey:
 				if err := json.AssignNextBytesToken(&h.n, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSANKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSANKey, err)
 				}
 			case X509CertChainKey:
 				var decoded CertificateChain
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
 				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
 				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:
 				if dc := h.dc; dc != nil {
@@ -483,17 +482,17 @@ LOOP:
 					h.setNoLock(tok, decoded)
 					continue
 				}
-				return errors.Wrapf(err, `could not decode field %s`, tok)
+				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return errors.Errorf(`invalid token %T`, tok)
+			return fmt.Errorf(`invalid token %T`, tok)
 		}
 	}
 	if h.e == nil {
-		return errors.Errorf(`required field e is missing`)
+		return fmt.Errorf(`required field e is missing`)
 	}
 	if h.n == nil {
-		return errors.Errorf(`required field n is missing`)
+		return fmt.Errorf(`required field n is missing`)
 	}
 	return nil
 }
@@ -526,7 +525,7 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode value for field %s`, f)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}
@@ -875,7 +874,7 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 			var tmp = jwa.KeyAlgorithmFrom(s)
 			h.algorithm = &tmp
 		default:
-			return errors.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case RSADKey:
@@ -883,35 +882,35 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 			h.d = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSADKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSADKey, value)
 	case RSADPKey:
 		if v, ok := value.([]byte); ok {
 			h.dp = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSADPKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSADPKey, value)
 	case RSADQKey:
 		if v, ok := value.([]byte); ok {
 			h.dq = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSADQKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSADQKey, value)
 	case RSAEKey:
 		if v, ok := value.([]byte); ok {
 			h.e = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case KeyOpsKey:
 		var acceptor KeyOperationList
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, KeyOpsKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, KeyOpsKey, err)
 		}
 		h.keyOps = &acceptor
 		return nil
@@ -923,41 +922,41 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 				tmp := v.String()
 				h.keyUsage = &tmp
 			default:
-				return errors.Errorf(`invalid key usage type %s`, v)
+				return fmt.Errorf(`invalid key usage type %s`, v)
 			}
 		case string:
 			h.keyUsage = &v
 		default:
-			return errors.Errorf(`invalid key usage type %s`, v)
+			return fmt.Errorf(`invalid key usage type %s`, v)
 		}
 	case RSANKey:
 		if v, ok := value.([]byte); ok {
 			h.n = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSANKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSANKey, value)
 	case RSAPKey:
 		if v, ok := value.([]byte); ok {
 			h.p = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSAPKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSAPKey, value)
 	case RSAQKey:
 		if v, ok := value.([]byte); ok {
 			h.q = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSAQKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSAQKey, value)
 	case RSAQIKey:
 		if v, ok := value.([]byte); ok {
 			h.qi = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, RSAQIKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, RSAQIKey, value)
 	case X509CertChainKey:
 		var acceptor CertificateChain
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, X509CertChainKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, X509CertChainKey, err)
 		}
 		h.x509CertChain = &acceptor
 		return nil
@@ -966,19 +965,19 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 			h.x509CertThumbprint = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprintS256 = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
 			h.x509URL = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]interface{}{}
@@ -1068,7 +1067,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -1077,88 +1076,88 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case KeyTypeKey:
 				val, err := json.ReadNextStringToken(dec)
 				if err != nil {
-					return errors.Wrap(err, `error reading token`)
+					return fmt.Errorf(`error reading token: %w`, err)
 				}
 				if val != jwa.RSA.String() {
-					return errors.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
 				var s string
 				if err := dec.Decode(&s); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
 				alg := jwa.KeyAlgorithmFrom(s)
 				h.algorithm = &alg
 			case RSADKey:
 				if err := json.AssignNextBytesToken(&h.d, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSADKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSADKey, err)
 				}
 			case RSADPKey:
 				if err := json.AssignNextBytesToken(&h.dp, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSADPKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSADPKey, err)
 				}
 			case RSADQKey:
 				if err := json.AssignNextBytesToken(&h.dq, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSADQKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSADQKey, err)
 				}
 			case RSAEKey:
 				if err := json.AssignNextBytesToken(&h.e, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSAEKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAEKey, err)
 				}
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case KeyOpsKey:
 				var decoded KeyOperationList
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyOpsKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyOpsKey, err)
 				}
 				h.keyOps = &decoded
 			case KeyUsageKey:
 				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyUsageKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 				}
 			case RSANKey:
 				if err := json.AssignNextBytesToken(&h.n, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSANKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSANKey, err)
 				}
 			case RSAPKey:
 				if err := json.AssignNextBytesToken(&h.p, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSAPKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAPKey, err)
 				}
 			case RSAQKey:
 				if err := json.AssignNextBytesToken(&h.q, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSAQKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAQKey, err)
 				}
 			case RSAQIKey:
 				if err := json.AssignNextBytesToken(&h.qi, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, RSAQIKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAQIKey, err)
 				}
 			case X509CertChainKey:
 				var decoded CertificateChain
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
 				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
 				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:
 				if dc := h.dc; dc != nil {
@@ -1175,26 +1174,26 @@ LOOP:
 					h.setNoLock(tok, decoded)
 					continue
 				}
-				return errors.Wrapf(err, `could not decode field %s`, tok)
+				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return errors.Errorf(`invalid token %T`, tok)
+			return fmt.Errorf(`invalid token %T`, tok)
 		}
 	}
 	if h.d == nil {
-		return errors.Errorf(`required field d is missing`)
+		return fmt.Errorf(`required field d is missing`)
 	}
 	if h.e == nil {
-		return errors.Errorf(`required field e is missing`)
+		return fmt.Errorf(`required field e is missing`)
 	}
 	if h.n == nil {
-		return errors.Errorf(`required field n is missing`)
+		return fmt.Errorf(`required field n is missing`)
 	}
 	if h.p == nil {
-		return errors.Errorf(`required field p is missing`)
+		return fmt.Errorf(`required field p is missing`)
 	}
 	if h.q == nil {
-		return errors.Errorf(`required field q is missing`)
+		return fmt.Errorf(`required field q is missing`)
 	}
 	return nil
 }
@@ -1227,7 +1226,7 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				return nil, errors.Wrapf(err, `failed to encode value for field %s`, f)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}

@@ -381,7 +381,6 @@ func (t typ) Generate() error {
 	o.LL("import (")
 	pkgs := []string{
 		"fmt",
-		"github.com/pkg/errors",
 	}
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
@@ -439,13 +438,13 @@ func (t typ) Generate() error {
 	o.L("case string:")
 	o.L("s = x")
 	o.L("default:")
-	o.L("return errors.Errorf(`invalid type for jwa.%s: %%T`, value)", t.name)
+	o.L("return fmt.Errorf(`invalid type for jwa.%s: %%T`, value)", t.name)
 	o.L("}")
 	o.L("tmp = %s(s)", t.name)
 	o.L("}")
 
 	o.L("if _, ok := all%ss[tmp]; !ok {", t.name)
-	o.L("return errors.Errorf(`invalid jwa.%s value`)", t.name)
+	o.L("return fmt.Errorf(`invalid jwa.%s value`)", t.name)
 	o.L("}")
 
 	o.LL("*v = tmp")

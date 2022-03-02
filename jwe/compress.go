@@ -3,10 +3,10 @@ package jwe
 import (
 	"bytes"
 	"compress/flate"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
-	"github.com/pkg/errors"
 )
 
 func uncompress(plaintext []byte) ([]byte, error) {
@@ -22,12 +22,12 @@ func compress(plaintext []byte) ([]byte, error) {
 	for len(in) > 0 {
 		n, err := w.Write(in)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to write to compression writer`)
+			return nil, fmt.Errorf(`failed to write to compression writer: %w`, err)
 		}
 		in = in[n:]
 	}
 	if err := w.Close(); err != nil {
-		return nil, errors.Wrap(err, "failed to close compression writer")
+		return nil, fmt.Errorf(`failed to close compression writer: %w`, err)
 	}
 
 	ret := make([]byte, buf.Len())

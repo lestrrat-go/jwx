@@ -10,7 +10,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,20 +57,20 @@ func makeJwsParseCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 			if err != nil {
-				return errors.Wrap(err, `failed to read message`)
+				return fmt.Errorf(`failed to read message: %w`, err)
 			}
 		}
 
 		msg, err := jws.Parse(buf)
 		if err != nil {
-			return errors.Wrap(err, `failed to parse message`)
+			return fmt.Errorf(`failed to parse message: %w`, err)
 		}
 
 		jsbuf, err := json.MarshalIndent(msg, "", "  ")
 		if err != nil {
-			return errors.Wrap(err, `failed to marshal message`)
+			return fmt.Errorf(`failed to marshal message: %w`, err)
 		}
 
 		fmt.Fprintf(os.Stdout, "%s\n\n", jsbuf)
@@ -79,7 +78,7 @@ func makeJwsParseCmd() *cli.Command {
 		for i, sig := range msg.Signatures() {
 			sigbuf, err := json.MarshalIndent(sig.ProtectedHeaders(), "", "  ")
 			if err != nil {
-				return errors.Wrapf(err, `failed to marshal signature %d`, 1)
+				return fmt.Errorf(`failed to marshal signature %d: %w`, 1, err)
 			}
 			fmt.Fprintf(os.Stdout, "Signature %d: %s\n", i, sigbuf)
 		}
@@ -143,7 +142,7 @@ func makeJwsVerifyCmd() *cli.Command {
 
 		keyset, err = jwk.PublicSetOf(keyset)
 		if err != nil {
-			return errors.Wrap(err, `failed to retrieve public key`)
+			return fmt.Errorf(`failed to retrieve public key: %w`, err)
 		}
 
 		src, err := getSource(c.Args().Get(0))
@@ -154,9 +153,9 @@ func makeJwsVerifyCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 			if err != nil {
-				return errors.Wrap(err, `failed to verify message`)
+				return fmt.Errorf(`failed to verify message: %w`, err)
 			}
 		}
 
@@ -176,11 +175,11 @@ func makeJwsVerifyCmd() *cli.Command {
 			var alg jwa.SignatureAlgorithm
 			givenalg := c.String("alg")
 			if givenalg == "" {
-				return errors.New(`option --alg must be given`)
+				return fmt.Errorf(`option --alg must be given`)
 			}
 
 			if err := alg.Accept(givenalg); err != nil {
-				return errors.Errorf(`invalid alg %s`, givenalg)
+				return fmt.Errorf(`invalid alg %s`, givenalg)
 			}
 
 			ctx := context.Background()
@@ -195,7 +194,7 @@ func makeJwsVerifyCmd() *cli.Command {
 			}
 		}
 
-		return errors.New(`could not verify with any of the keys`)
+		return fmt.Errorf(`could not verify with any of the keys`)
 	}
 	return &cmd
 }
@@ -231,7 +230,7 @@ func makeJwsSignCmd() *cli.Command {
 		}
 
 		if keyset.Len() != 1 {
-			return errors.New(`jwk file must contain exactly one key`)
+			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
 		key, _ := keyset.Get(0)
 
@@ -243,27 +242,27 @@ func makeJwsSignCmd() *cli.Command {
 
 		buf, err := ioutil.ReadAll(src)
 		if err != nil {
-			return errors.Wrap(err, `failed to read data from source`)
+			return fmt.Errorf(`failed to read data from source: %w`, err)
 			if err != nil {
-				return errors.Wrap(err, `failed to sign message`)
+				return fmt.Errorf(`failed to sign message: %w`, err)
 			}
 		}
 
 		var alg jwa.SignatureAlgorithm
 		givenalg := c.String("alg")
 		if givenalg == "" {
-			return errors.New(`option --alg must be given`)
+			return fmt.Errorf(`option --alg must be given`)
 		}
 
 		if err := alg.Accept(givenalg); err != nil {
-			return errors.Errorf(`invalid alg %s`, givenalg)
+			return fmt.Errorf(`invalid alg %s`, givenalg)
 		}
 
 		var options []jws.SignOption
 		if hdrbuf := c.String("header"); hdrbuf != "" {
 			h := jws.NewHeaders()
 			if err := json.Unmarshal([]byte(hdrbuf), h); err != nil {
-				return errors.Wrap(err, `failed to parse header`)
+				return fmt.Errorf(`failed to parse header: %w`, err)
 			}
 			options = append(options, jws.WithHeaders(h))
 		}
@@ -271,7 +270,7 @@ func makeJwsSignCmd() *cli.Command {
 		options = append(options, jws.WithKey(alg, key))
 		signed, err := jws.Sign(buf, options...)
 		if err != nil {
-			return errors.Wrap(err, `failed to sign payload`)
+			return fmt.Errorf(`failed to sign payload: %w`, err)
 		}
 
 		output, err := getOutput(c.String("output"))

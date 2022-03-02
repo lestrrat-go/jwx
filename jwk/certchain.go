@@ -2,11 +2,11 @@ package jwk
 
 import (
 	"crypto/x509"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/pkg/errors"
 )
 
 func (c CertificateChain) MarshalJSON() ([]byte, error) {
@@ -21,7 +21,7 @@ func (c CertificateChain) MarshalJSON() ([]byte, error) {
 func (c *CertificateChain) UnmarshalJSON(buf []byte) error {
 	var list []string
 	if err := json.Unmarshal(buf, &list); err != nil {
-		return errors.Wrap(err, `failed to unmarshal JSON into []string`)
+		return fmt.Errorf(`failed to unmarshal JSON into []string: %w`, err)
 	}
 
 	var tmp CertificateChain
@@ -50,7 +50,7 @@ func (c *CertificateChain) Accept(v interface{}) error {
 				list[i] = es
 				continue
 			}
-			return errors.Errorf(`invalid list element type: expected string, got %T at element %d`, e, i)
+			return fmt.Errorf(`invalid list element type: expected string, got %T at element %d`, e, i)
 		}
 	case []string:
 		list = x
@@ -62,18 +62,18 @@ func (c *CertificateChain) Accept(v interface{}) error {
 		}
 		return nil
 	default:
-		return errors.Errorf(`invalid type for CertificateChain: %T`, v)
+		return fmt.Errorf(`invalid type for CertificateChain: %T`, v)
 	}
 
 	certs := make([]*x509.Certificate, len(list))
 	for i, e := range list {
 		buf, err := base64.DecodeString(e)
 		if err != nil {
-			return errors.Wrap(err, `failed to base64 decode list element`)
+			return fmt.Errorf(`failed to base64 decode list element: %w`, err)
 		}
 		cert, err := x509.ParseCertificate(buf)
 		if err != nil {
-			return errors.Wrap(err, `failed to parse certificate`)
+			return fmt.Errorf(`failed to parse certificate: %w`, err)
 		}
 		certs[i] = cert
 	}

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
-	"github.com/pkg/errors"
 )
 
 var executablePath string
@@ -77,7 +76,7 @@ func RunJoseCommand(ctx context.Context, t *testing.T, args []string, outw, errw
 			t.Logf("captured error: %s", errout.String())
 		}
 
-		return errors.Wrap(err, `failed to execute command`)
+		return fmt.Errorf(`failed to execute command: %w`, err)
 	}
 
 	return nil
@@ -92,11 +91,11 @@ func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, fu
 
 	file, cleanup, err := jwxtest.CreateTempFile("jwx-jose-key-*.jwk")
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to create temporary file")
+		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
 
 	if err := RunJoseCommand(ctx, t, []string{"jwk", "gen", "-i", template, "-o", file.Name()}, nil, nil); err != nil {
-		return "", nil, errors.Wrap(err, `failed to generate key`)
+		return "", nil, fmt.Errorf(`failed to generate key: %w`, err)
 	}
 
 	return file.Name(), cleanup, nil
@@ -125,7 +124,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 	if len(payload) > 0 {
 		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
 		if perr != nil {
-			return "", nil, errors.Wrap(perr, `failed to write payload to file`)
+			return "", nil, fmt.Errorf(`failed to write payload to file: %w`, perr)
 		}
 
 		cmdargs = append(cmdargs, "-I", fn)
@@ -135,7 +134,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 
 	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-key-*.jwe`)
 	if oerr != nil {
-		return "", nil, errors.Wrap(oerr, "failed to create temporary file")
+		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, oerr)
 	}
 
 	cmdargs = append(cmdargs, "-o", ofile.Name())
@@ -146,7 +145,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 			jwxtest.DumpFile(t, pfile)
 		}
 		jwxtest.DumpFile(t, keyfile)
-		return "", nil, errors.Wrap(err, `failed to encrypt message`)
+		return "", nil, fmt.Errorf(`failed to encrypt message: %w`, err)
 	}
 
 	return ofile.Name(), ocleanup, nil
@@ -161,7 +160,7 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 		jwxtest.DumpFile(t, cfile)
 		jwxtest.DumpFile(t, kfile)
 
-		return nil, errors.Wrap(err, `failed to decrypt message`)
+		return nil, fmt.Errorf(`failed to decrypt message: %w`, err)
 	}
 
 	return output.Bytes(), nil
@@ -172,7 +171,7 @@ func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 
 	fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-fmt-data-*", bytes.NewReader(data))
 	if perr != nil {
-		return nil, errors.Wrap(perr, `failed to write data to file`)
+		return nil, fmt.Errorf(`failed to write data to file: %w`, perr)
 	}
 	defer pcleanup()
 
@@ -182,7 +181,7 @@ func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 	if err := RunJoseCommand(ctx, t, cmdargs, &output, nil); err != nil {
 		jwxtest.DumpFile(t, fn)
 
-		return nil, errors.Wrap(err, `failed to format JWE message`)
+		return nil, fmt.Errorf(`failed to format JWE message: %w`, err)
 	}
 
 	return output.Bytes(), nil
@@ -204,7 +203,7 @@ func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, 
 	if len(payload) > 0 {
 		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
 		if perr != nil {
-			return "", nil, errors.Wrap(perr, `failed to write payload to file`)
+			return "", nil, fmt.Errorf(`failed to write payload to file: %w`, perr)
 		}
 
 		cmdargs = append(cmdargs, "-I", fn)
@@ -214,7 +213,7 @@ func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, 
 
 	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-sig-*.jws`)
 	if oerr != nil {
-		return "", nil, errors.Wrap(oerr, "failed to create temporary file")
+		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, oerr)
 	}
 
 	cmdargs = append(cmdargs, "-o", ofile.Name())
@@ -225,7 +224,7 @@ func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, 
 			jwxtest.DumpFile(t, pfile)
 		}
 		jwxtest.DumpFile(t, keyfile)
-		return "", nil, errors.Wrap(err, `failed to sign message`)
+		return "", nil, fmt.Errorf(`failed to sign message: %w`, err)
 	}
 
 	return ofile.Name(), ocleanup, nil
@@ -240,7 +239,7 @@ func VerifyJws(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte, 
 		jwxtest.DumpFile(t, cfile)
 		jwxtest.DumpFile(t, kfile)
 
-		return nil, errors.Wrap(err, `failed to decrypt message`)
+		return nil, fmt.Errorf(`failed to decrypt message: %w`, err)
 	}
 
 	return output.Bytes(), nil

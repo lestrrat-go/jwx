@@ -6,7 +6,6 @@ import (
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/pkg/errors"
 )
 
 func (k *symmetricKey) FromRaw(rawKey []byte) error {
@@ -14,7 +13,7 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	defer k.mu.Unlock()
 
 	if len(rawKey) == 0 {
-		return errors.New(`non-empty []byte key required`)
+		return fmt.Errorf(`non-empty []byte key required`)
 	}
 
 	k.octets = rawKey
@@ -37,7 +36,7 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 	var octets []byte
 	if err := k.Raw(&octets); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize symmetric key`)
+		return nil, fmt.Errorf(`failed to materialize symmetric key: %w`, err)
 	}
 
 	h := hash.New()
@@ -52,7 +51,7 @@ func (k *symmetricKey) PublicKey() (Key, error) {
 
 	for _, pair := range k.makePairs() {
 		if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			return nil, fmt.Errorf(`failed to set field %s: %w`, pair.Key, err)
 		}
 	}
 	return newKey, nil
