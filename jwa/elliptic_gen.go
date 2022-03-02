@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 //  EllipticCurveAlgorithm represents the algorithms used for EC keys
@@ -66,12 +64,12 @@ func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.EllipticCurveAlgorithm: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.EllipticCurveAlgorithm: %T`, value)
 		}
 		tmp = EllipticCurveAlgorithm(s)
 	}
 	if _, ok := allEllipticCurveAlgorithms[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
 	}
 
 	*v = tmp

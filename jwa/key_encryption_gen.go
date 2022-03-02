@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
@@ -85,12 +83,12 @@ func (v *KeyEncryptionAlgorithm) Accept(value interface{}) error {
 		case string:
 			s = x
 		default:
-			return errors.Errorf(`invalid type for jwa.KeyEncryptionAlgorithm: %T`, value)
+			return fmt.Errorf(`invalid type for jwa.KeyEncryptionAlgorithm: %T`, value)
 		}
 		tmp = KeyEncryptionAlgorithm(s)
 	}
 	if _, ok := allKeyEncryptionAlgorithms[tmp]; !ok {
-		return errors.Errorf(`invalid jwa.KeyEncryptionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.KeyEncryptionAlgorithm value`)
 	}
 
 	*v = tmp
