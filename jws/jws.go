@@ -44,7 +44,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 var registry = json.NewRegistry()
@@ -167,7 +166,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		case identDetachedPayload{}:
 			detached = true
 			if payload != nil {
-				return nil, errors.New(`jws.Sign: payload must be nil when jws.WithDetachedPayload() is specified`)
+				return nil, fmt.Errorf(`jws.Sign: payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
 			payload = o.Value().([]byte)
 		}
@@ -195,13 +194,13 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 
 		if err := protected.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-			return nil, errors.Wrap(err, `failed to set "alg" header`)
+			return nil, fmt.Errorf(`failed to set "alg" header: %w`, err)
 		}
 
 		if key, ok := signer.key.(jwk.Key); ok {
 			if kid := key.KeyID(); kid != "" {
 				if err := protected.Set(KeyIDKey, kid); err != nil {
-					return nil, errors.Wrap(err, `failed to set "kid" header`)
+					return nil, fmt.Errorf(`failed to set "kid" header: %w`, err)
 				}
 			}
 		}
@@ -213,7 +212,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
-			return nil, errors.Wrapf(err, `failed to generate signature for signer #%d (alg=%s)`, i, signer.Algorithm())
+			return nil, fmt.Errorf(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
 		}
 
 		result.signatures = append(result.signatures, sig)
@@ -309,7 +308,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		case identContext{}:
 			ctx = option.Value().(context.Context)
 		default:
-			return nil, errors.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return nil, fmt.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
@@ -451,7 +450,7 @@ func Parse(src []byte) (*Message, error) {
 			return parseCompact(src)
 		}
 	}
-	return nil, errors.New("invalid byte sequence")
+	return nil, fmt.Errorf(`invalid byte sequence`)
 }
 
 // Parse parses contents from the given source and creates a jws.Message
@@ -472,12 +471,12 @@ func ParseReader(src io.Reader) (*Message, error) {
 	for {
 		r, _, err := rdr.ReadRune()
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to read rune`)
+			return nil, fmt.Errorf(`failed to read rune: %w`, err)
 		}
 		if !unicode.IsSpace(r) {
 			first = r
 			if err := rdr.UnreadRune(); err != nil {
-				return nil, errors.Wrap(err, `failed to unread rune`)
+				return nil, fmt.Errorf(`failed to unread rune: %w`, err)
 			}
 
 			break
@@ -493,7 +492,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 
 	m, err := parser(rdr)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to parse jws message`)
+		return nil, fmt.Errorf(`failed to parse jws message: %w`, err)
 	}
 
 	return m, nil
@@ -502,7 +501,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 func parseJSONReader(src io.Reader) (result *Message, err error) {
 	var m Message
 	if err := json.NewDecoder(src).Decode(&m); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
+		return nil, fmt.Errorf(`failed to unmarshal jws message: %w`, err)
 	}
 	return &m, nil
 }
@@ -510,7 +509,7 @@ func parseJSONReader(src io.Reader) (result *Message, err error) {
 func parseJSON(data []byte) (result *Message, err error) {
 	var m Message
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, errors.Wrap(err, `failed to unmarshal jws message`)
+		return nil, fmt.Errorf(`failed to unmarshal jws message: %w`, err)
 	}
 	return &m, nil
 }
@@ -520,7 +519,7 @@ func parseJSON(data []byte) (result *Message, err error) {
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	parts := bytes.Split(src, []byte("."))
 	if len(parts) < 3 {
-		return nil, nil, nil, errors.New(`invalid number of segments`)
+		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
 	return parts[0], parts[1], parts[2], nil
 }
@@ -530,7 +529,7 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 	parts := strings.Split(src, ".")
 	if len(parts) < 3 {
-		return nil, nil, nil, errors.New(`invalid number of segments`)
+		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
 	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
 }
@@ -556,7 +555,7 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		n, err := rdr.Read(buf)
 		// return on unexpected read error
 		if err != nil && err != io.EOF {
-			return nil, nil, nil, errors.Wrap(err, `unexpected end of input`)
+			return nil, nil, nil, fmt.Errorf(`unexpected end of input: %w`, err)
 		}
 
 		// append to current buffer
@@ -599,7 +598,7 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		}
 	}
 	if periods != 2 {
-		return nil, nil, nil, errors.New(`invalid number of segments`)
+		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
 
 	return protected, payload, signature, nil
@@ -609,7 +608,7 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 func parseCompactReader(rdr io.Reader) (m *Message, err error) {
 	protected, payload, signature, err := SplitCompactReader(rdr)
 	if err != nil {
-		return nil, errors.Wrap(err, `invalid compact serialization format`)
+		return nil, fmt.Errorf(`invalid compact serialization format: %w`, err)
 	}
 	return parse(protected, payload, signature)
 }
@@ -617,7 +616,7 @@ func parseCompactReader(rdr io.Reader) (m *Message, err error) {
 func parseCompact(data []byte) (m *Message, err error) {
 	protected, payload, signature, err := SplitCompact(data)
 	if err != nil {
-		return nil, errors.Wrap(err, `invalid compact serialization format`)
+		return nil, fmt.Errorf(`invalid compact serialization format: %w`, err)
 	}
 	return parse(protected, payload, signature)
 }
@@ -625,12 +624,12 @@ func parseCompact(data []byte) (m *Message, err error) {
 func parse(protected, payload, signature []byte) (*Message, error) {
 	decodedHeader, err := base64.Decode(protected)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode protected headers`)
+		return nil, fmt.Errorf(`failed to decode protected headers: %w`, err)
 	}
 
 	hdr := NewHeaders()
 	if err := json.Unmarshal(decodedHeader, hdr); err != nil {
-		return nil, errors.Wrap(err, `failed to parse JOSE headers`)
+		return nil, fmt.Errorf(`failed to parse JOSE headers: %w`, err)
 	}
 
 	var decodedPayload []byte
@@ -640,14 +639,14 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	} else {
 		v, err := base64.Decode(payload)
 		if err != nil {
-			return nil, errors.Wrap(err, `failed to decode payload`)
+			return nil, fmt.Errorf(`failed to decode payload: %w`, err)
 		}
 		decodedPayload = v
 	}
 
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to decode signature`)
+		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
 	}
 
 	var msg Message
@@ -728,12 +727,12 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 	case []byte:
 		kty = jwa.OctetSeq
 	default:
-		return nil, errors.Errorf(`invalid key %T`, key)
+		return nil, fmt.Errorf(`invalid key %T`, key)
 	}
 
 	algs, ok := keyTypeToAlgorithms[kty]
 	if !ok {
-		return nil, errors.Errorf(`invalid key type %q`, kty)
+		return nil, fmt.Errorf(`invalid key type %q`, kty)
 	}
 	return algs, nil
 }
