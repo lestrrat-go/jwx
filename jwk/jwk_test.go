@@ -23,7 +23,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/jose"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
-	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -1473,7 +1472,7 @@ func TestTypedFields(t *testing.T) {
 				t.Helper()
 				v, ok := field.(typedField)
 				if !ok {
-					return nil, errors.Errorf(`field value should be of type "typedField", but got %T`, field)
+					return nil, fmt.Errorf(`field value should be of type "typedField", but got %T`, field)
 				}
 				return &v, nil
 			},
@@ -1485,12 +1484,12 @@ func TestTypedFields(t *testing.T) {
 				t.Helper()
 				v, ok := field.(json.RawMessage)
 				if !ok {
-					return nil, errors.Errorf(`field value should be of type "json.RawMessage", but got %T`, field)
+					return nil, fmt.Errorf(`field value should be of type "json.RawMessage", but got %T`, field)
 				}
 
 				var c typedField
 				if err := json.Unmarshal(v, &c); err != nil {
-					return nil, errors.Wrap(err, `json.Unmarshal failed`)
+					return nil, fmt.Errorf(`json.Unmarshal failed: %w`, err)
 				}
 
 				return &c, nil
