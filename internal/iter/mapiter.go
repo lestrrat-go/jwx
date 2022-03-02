@@ -2,9 +2,9 @@ package iter
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/pkg/errors"
 )
 
 // MapVisitor is a specialized visitor for our purposes.
@@ -29,7 +29,7 @@ func WalkMap(ctx context.Context, src mapiter.Source, visitor MapVisitor) error 
 func AsMap(ctx context.Context, src mapiter.Source) (map[string]interface{}, error) {
 	var m map[string]interface{}
 	if err := mapiter.AsMap(ctx, src, &m); err != nil {
-		return nil, errors.Wrap(err, `mapiter.AsMap failed`)
+		return nil, fmt.Errorf(`mapiter.AsMap failed: %w`, err)
 	}
 	return m, nil
 }
