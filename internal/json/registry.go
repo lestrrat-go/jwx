@@ -1,10 +1,9 @@
 package json
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 type Registry struct {
@@ -40,14 +39,14 @@ func (r *Registry) Decode(dec *Decoder, name string) (interface{}, error) {
 	if typ, ok := r.data[name]; ok {
 		ptr := reflect.New(typ).Interface()
 		if err := dec.Decode(ptr); err != nil {
-			return nil, errors.Wrapf(err, `failed to decode field %s`, name)
+			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
 		}
 		return reflect.ValueOf(ptr).Elem().Interface(), nil
 	}
 
 	var decoded interface{}
 	if err := dec.Decode(&decoded); err != nil {
-		return nil, errors.Wrapf(err, `failed to decode field %s`, name)
+		return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
 	}
 	return decoded, nil
 }
