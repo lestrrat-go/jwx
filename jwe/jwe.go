@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -459,8 +458,6 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.msg = msg
 	dctx.keyProviders = keyProviders
 	dctx.protectedHeaders = h
-
-	log.Printf("%#v", dst)
 
 	var lastError error
 	for _, recipient := range recipients {
