@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"context"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -11,128 +10,14 @@ import (
 	"github.com/lestrrat-go/option"
 )
 
-type Option = option.Interface
-
-// GlobalOption describes an Option that can be passed to `Settings()`.
-type GlobalOption interface {
-	Option
-	globalOption()
-}
-
-type globalOption struct {
-	Option
-}
-
-func (*globalOption) globalOption() {}
-
-// ParseRequestOption describes an Option that can be passed to `ParseRequest()`.
-type ParseRequestOption interface {
-	ParseOption
-	httpParseOption()
-}
-
-type httpParseOption struct {
-	ParseOption
-}
-
-func (*httpParseOption) httpParseOption() {}
-
-// ParseOption describes an Option that can be passed to `Parse()`.
-// ParseOption also implements ReadFileOption, therefore it may be
-// safely pass them to `jwt.ReadFile()`
-type ParseOption interface {
-	ReadFileOption
-	parseOption()
-}
-
-type parseOption struct {
-	Option
-}
-
-func newParseOption(n interface{}, v interface{}) ParseOption {
-	return &parseOption{option.New(n, v)}
-}
-
-func (*parseOption) parseOption()    {}
-func (*parseOption) readFileOption() {}
-
-// SignOption describes an Option that can be passed to Sign() or
-// (jwt.Serializer).Sign
-type SignOption interface {
-	Option
-	signOption()
-}
-
-// SignParseOption describes an Option that can be passed to both
-// `jwt.Sign()` and `jwt.Parse()`
-type SignParseOption interface {
-	SignOption
-	ParseOption
-}
-
-type signParseOption struct {
-	Option
-}
-
-func (*signParseOption) readFileOption() {}
-func (*signParseOption) parseOption()    {}
-func (*signParseOption) signOption()     {}
-
-// EncryptOption describes an Option that can be passed to Encrypt() or
-// (jwt.Serializer).Encrypt
-type EncryptOption interface {
-	Option
-	encryptOption()
-}
-
-type encryptOption struct {
-	Option
-}
-
-func newEncryptOption(n interface{}, v interface{}) EncryptOption {
-	return &encryptOption{option.New(n, v)}
-}
-
-func (*encryptOption) encryptOption() {}
-
-// ValidateOption describes an Option that can be passed to Validate().
-// ValidateOption also implements ParseOption, therefore it may be
-// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
-type ValidateOption interface {
-	ParseOption
-	validateOption()
-}
-
-type validateOption struct {
-	ParseOption
-}
-
-func newValidateOption(n interface{}, v interface{}) ValidateOption {
-	return &validateOption{newParseOption(n, v)}
-}
-
-func (*validateOption) validateOption() {}
-
-type identAcceptableSkew struct{}
-type identClock struct{}
-type identContext struct{}
 type identDecrypt struct{}
 type identDefault struct{}
-type identFlattenAudience struct{}
 type identInferAlgorithmFromKey struct{}
 type identJweHeaders struct{}
 type identKey struct{}
-type identKeyProvider struct{}
 type identKeySet struct{}
-type identPedantic struct{}
-type identValidator struct{}
-type identToken struct{}
 type identTypedClaim struct{}
-type identValidate struct{}
 type identVerifyAuto struct{}
-
-type identHeaderKey struct{}
-type identFormKey struct{}
 
 // WithKey forces the Parse method to verify the JWT message
 // using the given key.
@@ -164,7 +49,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeySubopt
 // use that key, you can use the `jwt.WithDefaultKey` option.
 func WithKeySet(set jwk.Set, options ...jws.WithKeySetSuboption) ParseOption {
 	options = append(append([]jws.WithKeySetSuboption(nil), jws.WithRequireKid(true)), options...)
-	return newParseOption(identKeySet{}, jws.WithKeySet(set, options...))
+	return &parseOption{option.New(identKeySet{}, jws.WithKeySet(set, options...))}
 }
 
 // UseDefaultKey is used in conjunction with the option WithKeySet
@@ -173,39 +58,14 @@ func WithKeySet(set jwk.Set, options ...jws.WithKeySetSuboption) ParseOption {
 // multiple keys then the default behavior is unchanged -- that is,
 // the since we can't determine the key to use, it returns an error.
 func UseDefaultKey(value bool) ParseOption {
-	return newParseOption(identDefault{}, value)
-}
-
-// WithToken specifies the token instance that is used when parsing
-// JWT tokens.
-func WithToken(t Token) ParseOption {
-	return newParseOption(identToken{}, t)
+	return &parseOption{option.New(identDefault{}, value)}
 }
 
 // WithJweHeaders is passed to "jwt.Serializer".Encrypt() method to allow
 // specifying arbitrary header values to be included in the protected header
 // of the JWE message
 func WithJweHeaders(hdrs jwe.Headers) EncryptOption {
-	return newEncryptOption(identJweHeaders{}, hdrs)
-}
-
-// WithValidate is passed to `Parse()` method to denote that the
-// validation of the JWT token should be performed after a successful
-// parsing of the incoming payload.
-func WithValidate(b bool) ParseOption {
-	return newParseOption(identValidate{}, b)
-}
-
-// WithClock specifies the `Clock` to be used when verifying
-// claims exp and nbf.
-func WithClock(c Clock) ValidateOption {
-	return newValidateOption(identClock{}, c)
-}
-
-// WithAcceptableSkew specifies the duration in which exp and nbf
-// claims may differ by. This value should be positive
-func WithAcceptableSkew(dur time.Duration) ValidateOption {
-	return newValidateOption(identAcceptableSkew{}, dur)
+	return &encryptOption{option.New(identJweHeaders{}, hdrs)}
 }
 
 // WithIssuer specifies that expected issuer value. If not specified,
@@ -239,35 +99,6 @@ func WithClaimValue(name string, v interface{}) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
 }
 
-// WithHeaderKey is used to specify header keys to search for tokens.
-//
-// While the type system allows this option to be passed to jwt.Parse() directly,
-// doing so will have no effect. Only use it for HTTP request parsing functions
-func WithHeaderKey(v string) ParseRequestOption {
-	return &httpParseOption{newParseOption(identHeaderKey{}, v)}
-}
-
-// WithFormKey is used to specify header keys to search for tokens.
-//
-// While the type system allows this option to be passed to jwt.Parse() directly,
-// doing so will have no effect. Only use it for HTTP request parsing functions
-func WithFormKey(v string) ParseRequestOption {
-	return &httpParseOption{newParseOption(identFormKey{}, v)}
-}
-
-// WithFlattenAudience specifies if the "aud" claim should be flattened
-// to a single string upon the token being serialized to JSON.
-//
-// This is sometimes important when a JWT consumer does not understand that
-// the "aud" claim can actually take the form of an array of strings.
-//
-// The default value is `false`, which means that "aud" claims are always
-// rendered as a arrays of strings. This setting has a global effect,
-// and will change the behavior for all JWT serialization.
-func WithFlattenAudience(v bool) GlobalOption {
-	return &globalOption{option.New(identFlattenAudience{}, v)}
-}
-
 type claimPair struct {
 	Name  string
 	Value interface{}
@@ -297,7 +128,7 @@ type claimPair struct {
 // `openid.New()` will respect this option, if you provide your own custom
 // token type, it will need to implement the TokenWithDecodeCtx interface.
 func WithTypedClaim(name string, object interface{}) ParseOption {
-	return newParseOption(identTypedClaim{}, claimPair{Name: name, Value: object})
+	return &parseOption{option.New(identTypedClaim{}, claimPair{Name: name, Value: object})}
 }
 
 // WithRequiredClaim specifies that the claim identified the given name
@@ -344,22 +175,6 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	return WithValidator(MinDeltaIs(c1, c2, dur))
 }
 
-// WithValidator validates the token with the given Validator.
-//
-// For example, in order to validate tokens that are only valid during August, you would write
-//
-//    validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
-//      if time.Now().Month() != 8 {
-//        return fmt.Errorf(`tokens are only valid during August!`)
-//      }
-//      return nil
-//    })
-//   err := jwt.Validate(token, jwt.WithValidator(validator))
-//
-func WithValidator(v Validator) ValidateOption {
-	return newValidateOption(identValidator{}, v)
-}
-
 type decryptParams struct {
 	alg jwa.KeyAlgorithm
 	key interface{}
@@ -386,16 +201,10 @@ func (dp *decryptParams) Key() interface{} {
 // the value must be of type jwa.SignatureAlgorithm. Otherwise the
 // verification will fail
 func WithDecrypt(alg jwa.KeyAlgorithm, key interface{}) ParseOption {
-	return newParseOption(identDecrypt{}, &decryptParams{
+	return &parseOption{option.New(identDecrypt{}, &decryptParams{
 		alg: alg,
 		key: key,
-	})
-}
-
-// WithPedantic enables pedantic mode for parsing JWTs. Currently this only
-// applies to checking for the correct `typ` and/or `cty` when necessary.
-func WithPedantic(v bool) ParseOption {
-	return newParseOption(identPedantic{}, v)
+	})}
 }
 
 // InferAlgorithmFromKey allows jwt.Parse to guess the signature algorithm
@@ -413,17 +222,7 @@ func WithPedantic(v bool) ParseOption {
 // Your JWT still need to have an `alg` field, and it must match one of the
 // candidates that we produce for your key
 func InferAlgorithmFromKey(v bool) ParseOption {
-	return newParseOption(identInferAlgorithmFromKey{}, v)
-}
-
-// WithContext allows you to specify a context.Context object to be used
-// with `jwt.Validate()` option.
-//
-// Please be aware that in the next major release of this library,
-// `jwt.Validate()`'s signature will change to include an explicit
-// `context.Context` object.
-func WithContext(ctx context.Context) ValidateOption {
-	return newValidateOption(identContext{}, ctx)
+	return &parseOption{option.New(identInferAlgorithmFromKey{}, v)}
 }
 
 // WithVerifyAuto specifies that the JWS verification should be attempted
@@ -449,9 +248,5 @@ func WithContext(ctx context.Context) ValidateOption {
 // in the `jwk` package, including specifying a backoff policy by via
 // `jwt.WithFetchBackoff()`
 func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) ParseOption {
-	return newParseOption(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))
-}
-
-func WithKeyProvider(kp jws.KeyProvider) ParseOption {
-	return newParseOption(identKeyProvider{}, jws.WithKeyProvider(kp))
+	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
 }

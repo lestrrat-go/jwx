@@ -1,0 +1,240 @@
+package_name: jwt
+output: jwt/options_gen.go
+interfaces:
+  - name: GlobalOption
+    comment: |
+      GlobalOption describes an Option that can be passed to `Settings()`.
+  - name: EncryptOption
+    comment: |
+      EncryptOption describes an Option that can be passed to (jwt.Serializer).Encrypt
+  - name: ParseOption
+    methods:
+      - parseOption
+      - readFileOption
+    comment: |
+      ParseOption describes an Option that can be passed to `jwt.Parse()`.
+      ParseOption also implements ReadFileOption, therefore it may be
+      safely pass them to `jwt.ReadFile()`
+  - name: SignOption
+    comment: |
+      SignOption describes an Option that can be passed to `jwt.Sign()` or
+      (jwt.Serializer).Sign
+  - name: SignParseOption
+    methods:
+      - parseOption
+      - readFileOption
+      - signOption
+    comment: |
+      SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
+      `jwt.Parse()`
+  - name: ValidateOption
+    methods:
+      - parseOption
+      - readFileOption
+      - validateOption
+    comment: |
+      ValidateOption describes an Option that can be passed to Validate().
+      ValidateOption also implements ParseOption, therefore it may be
+      safely passed to `Parse()` (and thus `jwt.ReadFile()`)
+
+#  - name: WithJSONSuboption
+#    concrete_type: withJSONSuboption
+#    comment: |
+#      JSONSuboption describes suboptions that can be passed to `jws.WithJSON()` option
+#  - name: WithKeySuboption
+#    comment: |
+#      WithKeySuboption describes option types that can be passed to the `jws.WithKey()`
+#      option.
+#  - name: WithKeySetSuboption
+#    comment: |
+#      WithKeySetSuboption is a suboption passed to the WithKeySet() option
+options:
+  - ident: AcceptableSkew
+    interface: ValidateOption
+    argument_type: time.Duration
+    comment: |
+      WithAcceptableSkew specifies the duration in which exp and nbf
+      claims may differ by. This value should be positive
+  - ident: Clock
+    interface: ValidateOption
+    argument_type: Clock
+    comment: |
+      WithClock specifies the `Clock` to be used when verifying
+      exp and nbf claims.
+  - ident: Context
+    interface: ValidateOption
+    argument_type: context.Context
+    comment: |
+      WithContext allows you to specify a context.Context object to be used
+      with `jwt.Validate()` option.
+      
+      Please be aware that in the next major release of this library,
+      `jwt.Validate()`'s signature will change to include an explicit
+      `context.Context` object.
+  - ident: FlattenAudience
+    interface: GlobalOption
+    argument_type: bool
+    comment: |
+      WithFlattenAudience specifies if the "aud" claim should be flattened
+      to a single string upon the token being serialized to JSON.
+      
+      This is sometimes important when a JWT consumer does not understand that
+      the "aud" claim can actually take the form of an array of strings.
+      
+      The default value is `false`, which means that "aud" claims are always
+      rendered as a arrays of strings. This setting has a global effect,
+      and will change the behavior for all JWT serialization.
+  - ident: FormKey
+    interface: ParseOption
+    argument_type: string
+    comment: |
+      WithFormKey is used to specify header keys to search for tokens.
+      
+      While the type system allows this option to be passed to jwt.Parse() directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: HeaderKey
+    interface: ParseOption
+    argument_type: string
+    comment: |
+      WithHeaderKey is used to specify header keys to search for tokens.
+      
+      While the type system allows this option to be passed to `jwt.Parse()` directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: Token
+    interface: ParseOption
+    argument_type: Token
+    comment: |
+      WithToken specifies the token instance where the result JWT is stored
+      when parsing JWT tokensthat is used when parsing
+  - ident: Validate
+    interface: ParseOption
+    argument_type: bool
+    comment: |
+      WithValidate is passed to `Parse()` method to denote that the
+      validation of the JWT token should be performed after a successful
+      parsing of the incoming payload.
+  - ident: KeyProvider
+    interface: ParseOption
+    argument_type: jws.KeyProvider
+  - ident: Pedantic
+    interface: ParseOption
+    argument_type: bool
+    comment: |
+      WithPedantic enables pedantic mode for parsing JWTs. Currently this only
+      applies to checking for the correct `typ` and/or `cty` when necessary.
+  - ident: Validator
+    interface: ValidateOption
+    argument_type: Validator
+    comment: |
+      WithValidator validates the token with the given Validator.
+      
+      For example, in order to validate tokens that are only valid during August, you would write
+      
+         validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+           if time.Now().Month() != 8 {
+             return fmt.Errorf(`tokens are only valid during August!`)
+           }
+           return nil
+         })
+         err := jwt.Validate(token, jwt.WithValidator(validator))
+
+#  - ident: Key
+#    skip_option: true
+#  - ident: Serialization
+#    skip_option: true
+#  - ident: Serialization
+#    option_name: WithCompact
+#    interface: SignOption
+#    constant_value: fmtCompact
+#    comment: |
+#      WithCompact specifies that the result of `jws.Sign()` is serialized in
+#      compact format.
+#      
+#      By default `jws.Sign()` will opt to use compact format, so you usually
+#      do not need to specify this option other than to be explicit about it
+#  - ident: DetachedPayload
+#    interface: SignVerifyOption
+#    argument_type: '[]byte'
+#    comment: |
+#       WithDetachedPayload can be used to both sign or verify a JWS message with a
+#       detached payload.
+#       
+#       When this option is used for `jws.Sign()`, the first parameter (normally the payload)
+#       must be set to `nil`.
+#       
+#       If you have to verify using this option, you should know exactly how and why this works.
+#  - ident: Message
+#    interface: VerifyOption
+#    argument_type: '*Message'
+#    comment: |
+#      WithMessage can be passed to Verify() to obtain the jws.Message upon
+#      a successful verification.
+#  - ident: KeyUsed
+#    interface: VerifyOption
+#    argument_type: 'interface{}'
+#    comment: |
+#      WithKeyUsed allows you to specify the `jws.Verify()` function to
+#      return the key used for verification. This may be useful when
+#      you specify multiple key sources or if you pass a `jwk.Set`
+#      and you want to know which key was successful at verifying the
+#      signature.
+#      
+#      `v` must be a pointer to an empty `interface{}`. Do not use
+#      `jwk.Key` here unless you are 100% sure that all keys that you
+#      have provided are instances of `jwk.Key` (remember that the
+#      jwx API allows users to specify a raw key such as *rsa.PublicKey)
+#  - ident: InferAlgorithmFromKey
+#    interface: WithKeySetSuboption
+#    argument_type: bool
+#    comment: |
+#      WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name
+#      should be inferred by looking at the provided key.
+#  - ident: UseDefault
+#    interface: WithKeySetSuboption
+#    argument_type: bool
+#    comment: |
+#      WithUseDefault specifies that if and only if a jwk.Key contains
+#      exactly one jwk.Key, that tkey should be used.
+#      (I think this should be removed)
+#  - ident: RequireKid
+#    interface: WithKeySetSuboption
+#    argument_type: bool
+#    comment: |
+#      WithrequiredKid specifies whether the keys in the jwk.Set should
+#      only be matched if the target JWS message's Key ID and the Key ID
+#      in the given key matches.
+#  - ident: Pretty
+#    interface: WithJSONSuboption
+#    argument_type: bool
+#    comment: |
+#      WithPretty specifies whether the JSON output should be formatted and
+#      indented
+#  - ident: KeyProvider
+#    interface: VerifyOption
+#    argument_type: KeyProvider
+#  - ident: Context
+#    interface: VerifyOption
+#    argument_type: context.Context
+#  - ident: ProtectedHeaders
+#    interface: WithKeySuboption
+#    option_name: WithProtected
+#    argument_type: Headers
+#    comment: |
+#      WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
+#      to specify a protected header to be attached to the JWS signature.
+#      
+#      It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+#  - ident: PublicHeaders
+#    interface: WithKeySuboption
+#    option_name: WithPublic
+#    argument_type: Headers
+#    comment: |
+#      WithPublic is used with `jws.WithKey()` option when used with `jws.Sign()`
+#      to specify a public header to be attached to the JWS signature.
+#      
+#      It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+#      
+#      `jws.Sign()` will result in an error if `jws.WithPublic()` is used
+#      and the serialization format is compact serialization.
+#
+#
