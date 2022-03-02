@@ -4,12 +4,12 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
-	"github.com/pkg/errors"
 )
 
 func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
@@ -18,23 +18,23 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 
 	d, err := bigIntToBytes(rawKey.D)
 	if err != nil {
-		return errors.Wrap(err, `invalid rsa.PrivateKey`)
+		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	k.d = d
 
 	if len(rawKey.Primes) < 2 {
-		return errors.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
+		return fmt.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
 	}
 
 	p, err := bigIntToBytes(rawKey.Primes[0])
 	if err != nil {
-		return errors.Wrap(err, `invalid rsa.PrivateKey`)
+		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	k.p = p
 
 	q, err := bigIntToBytes(rawKey.Primes[1])
 	if err != nil {
-		return errors.Wrap(err, `invalid rsa.PrivateKey`)
+		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	k.q = q
 
@@ -52,7 +52,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	// public key part
 	n, e, err := rsaPublicKeyByteValuesFromRaw(&rawKey.PublicKey)
 	if err != nil {
-		return errors.Wrap(err, `invalid rsa.PrivateKey`)
+		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	k.n = n
 	k.e = e
@@ -63,7 +63,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 func rsaPublicKeyByteValuesFromRaw(rawKey *rsa.PublicKey) ([]byte, []byte, error) {
 	n, err := bigIntToBytes(rawKey.N)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, `invalid rsa.PublicKey`)
+		return nil, nil, fmt.Errorf(`invalid rsa.PublicKey: %w`, err)
 	}
 
 	data := make([]byte, 8)
@@ -83,7 +83,7 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 
 	n, e, err := rsaPublicKeyByteValuesFromRaw(rawKey)
 	if err != nil {
-		return errors.Wrap(err, `invalid rsa.PrivateKey`)
+		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	k.n = n
 	k.e = e
@@ -124,7 +124,7 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 	pubk.n = k.n
 	pubk.e = k.e
 	if err := pubk.Raw(&key.PublicKey); err != nil {
-		return errors.Wrap(err, `failed to materialize RSA public key`)
+		return fmt.Errorf(`failed to materialize RSA public key: %w`, err)
 	}
 
 	key.D = &d
@@ -177,7 +177,7 @@ func makeRSAPublicKey(v interface {
 			continue
 		default:
 			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+				return nil, fmt.Errorf(`failed to set field %s: %w`, pair.Key, err)
 			}
 		}
 	}
@@ -201,7 +201,7 @@ func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 	var key rsa.PrivateKey
 	if err := k.Raw(&key); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize RSA private key`)
+		return nil, fmt.Errorf(`failed to materialize RSA private key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
 }
@@ -212,7 +212,7 @@ func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 	var key rsa.PublicKey
 	if err := k.Raw(&key); err != nil {
-		return nil, errors.Wrap(err, `failed to materialize RSA public key`)
+		return nil, fmt.Errorf(`failed to materialize RSA public key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key)
 }
@@ -229,7 +229,7 @@ func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
 
 	h := hash.New()
 	if _, err := buf.WriteTo(h); err != nil {
-		return nil, errors.Wrap(err, "failed to write rsaThumbprint")
+		return nil, fmt.Errorf(`failed to write rsaThumbprint: %w`, err)
 	}
 	return h.Sum(nil), nil
 }
