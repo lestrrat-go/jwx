@@ -2,10 +2,9 @@ package jwt
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type Clock interface {
@@ -22,7 +21,7 @@ func isSupportedTimeClaim(c string) error {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
 		return nil
 	}
-	return NewValidationError(errors.Errorf(`unsupported time claim %s`, strconv.Quote(c)))
+	return NewValidationError(fmt.Errorf(`unsupported time claim %s`, strconv.Quote(c)))
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
@@ -130,11 +129,11 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	if iitr.less { // t1 - t2 <= iitr.dur
 		// t1 - t2 < iitr.dur + skew
 		if t1.Sub(t2) > iitr.dur+skew {
-			return NewValidationError(errors.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
+			return NewValidationError(fmt.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
 		}
 	} else {
 		if t1.Sub(t2) < iitr.dur-skew {
-			return NewValidationError(errors.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
+			return NewValidationError(fmt.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
 		}
 	}
 	return nil
@@ -156,9 +155,9 @@ type validationError struct {
 
 func (validationError) isValidationError() {}
 
-var errTokenExpired = NewValidationError(errors.New(`exp not satisfied`))
-var errInvalidIssuedAt = NewValidationError(errors.New(`iat not satisfied`))
-var errTokenNotYetValid = NewValidationError(errors.New(`nbf not satisfied`))
+var errTokenExpired = NewValidationError(fmt.Errorf(`exp not satisfied`))
+var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`iat not satisfied`))
+var errTokenNotYetValid = NewValidationError(fmt.Errorf(`nbf not satisfied`))
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
 // is not satisfied
@@ -321,12 +320,12 @@ func IsValidationError(err error) bool {
 func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 	v, ok := t.Get(ccs.name)
 	if !ok {
-		return NewValidationError(errors.Errorf(`claim %q not found`, ccs.name))
+		return NewValidationError(fmt.Errorf(`claim %q not found`, ccs.name))
 	}
 
 	list, ok := v.([]string)
 	if !ok {
-		return NewValidationError(errors.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
+		return NewValidationError(fmt.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
 	}
 
 	var found bool
@@ -337,7 +336,7 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 		}
 	}
 	if !found {
-		return NewValidationError(errors.Errorf(`%s not satisfied`, ccs.name))
+		return NewValidationError(fmt.Errorf(`%s not satisfied`, ccs.name))
 	}
 	return nil
 }
@@ -358,10 +357,10 @@ func ClaimValueIs(name string, value interface{}) Validator {
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	v, ok := t.Get(cv.name)
 	if !ok {
-		return NewValidationError(errors.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
+		return NewValidationError(fmt.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
 	}
 	if v != cv.value {
-		return NewValidationError(errors.Errorf(`%q not satisfied: values do not match`, cv.name))
+		return NewValidationError(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
 	}
 	return nil
 }
@@ -377,7 +376,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	_, ok := t.Get(string(ir))
 	if !ok {
-		return NewValidationError(errors.Errorf(`required claim %q was not found`, string(ir)))
+		return NewValidationError(fmt.Errorf(`required claim %q was not found`, string(ir)))
 	}
 	return nil
 }
