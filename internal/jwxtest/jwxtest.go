@@ -276,7 +276,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 		return nil, errors.Wrap(err, `failed to obtain raw key from JWK`)
 	}
 
-	return jwe.Decrypt(buf, alg, rawkey)
+	return jwe.Decrypt(buf, jwe.WithKey(alg, rawkey))
 }
 
 func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptionAlgorithm, keyfile string, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) (string, func(), error) {

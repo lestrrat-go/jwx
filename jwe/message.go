@@ -2,15 +2,12 @@ package jwe
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/pool"
-	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
-	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/pkg/errors"
 )
 
@@ -436,193 +433,61 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 	return nil
 }
 
-func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
-	m := dctx.msg
-	alg := dctx.alg
-	key := dctx.key
-
-	if jwkKey, ok := key.(jwk.Key); ok {
-		var raw interface{}
-		if err := jwkKey.Raw(&raw); err != nil {
-			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
-		}
-		key = raw
+func Compact(m *Message) ([]byte, error) {
+	if len(m.recipients) != 1 {
+		return nil, errors.New("wrong number of recipients for compact serialization")
 	}
 
-	var err error
+	recipient := m.recipients[0]
+
+	// The protected header must be a merge between the message-wide
+	// protected header AND the recipient header
+
+	// There's something wrong if m.protectedHeaders is nil, but
+	// it could happen
+	if m.protectedHeaders == nil {
+		return nil, errors.New("invalid protected header")
+	}
+
 	ctx := context.TODO()
-	h, err := m.protectedHeaders.Clone(ctx)
+	hcopy, err := m.protectedHeaders.Clone(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to copy protected headers`)
+		return nil, errors.Wrap(err, "failed to copy protected header")
 	}
-	h, err = h.Merge(ctx, m.unprotectedHeaders)
+	hcopy, err = hcopy.Merge(ctx, m.unprotectedHeaders)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
+		return nil, errors.Wrap(err, "failed to merge unprotected header")
+	}
+	hcopy, err = hcopy.Merge(ctx, recipient.Headers())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to merge recipient header")
 	}
 
-	enc := m.protectedHeaders.ContentEncryption()
-	var aad []byte
-	if aadContainer := m.authenticatedData; aadContainer != nil {
-		aad = base64.Encode(aadContainer)
+	protected, err := hcopy.Encode()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode header")
 	}
 
-	var computedAad []byte
-	if len(m.rawProtectedHeaders) > 0 {
-		computedAad = m.rawProtectedHeaders
-	} else {
-		// this is probably not required once msg.Decrypt is deprecated
-		var err error
-		computedAad, err = m.protectedHeaders.Encode()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to encode protected headers")
-		}
-	}
+	encryptedKey := base64.Encode(recipient.EncryptedKey())
+	iv := base64.Encode(m.initializationVector)
+	cipher := base64.Encode(m.cipherText)
+	tag := base64.Encode(m.tag)
 
-	dec := NewDecrypter(alg, enc, key).
-		AuthenticatedData(aad).
-		ComputedAuthenticatedData(computedAad).
-		InitializationVector(m.initializationVector).
-		Tag(m.tag)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
-	var plaintext []byte
-	var lastError error
+	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
+	buf.Write(protected)
+	buf.WriteByte('.')
+	buf.Write(encryptedKey)
+	buf.WriteByte('.')
+	buf.Write(iv)
+	buf.WriteByte('.')
+	buf.Write(cipher)
+	buf.WriteByte('.')
+	buf.Write(tag)
 
-	// if we have no recipients, pretend like we only have one
-	recipients := m.recipients
-	if len(recipients) == 0 {
-		r := NewRecipient()
-		if err := r.SetHeaders(m.protectedHeaders); err != nil {
-			return nil, errors.Wrap(err, `failed to set headers to recipient`)
-		}
-		recipients = append(recipients, r)
-	}
-
-	for _, recipient := range recipients {
-		// strategy: try each recipient. If we fail in one of the steps,
-		// keep looping because there might be another key with the same algo
-		if recipient.Headers().Algorithm() != alg {
-			// algorithms don't match
-			continue
-		}
-
-		h2, err := h.Clone(ctx)
-		if err != nil {
-			lastError = errors.Wrap(err, `failed to copy headers (1)`)
-			continue
-		}
-
-		h2, err = h2.Merge(ctx, recipient.Headers())
-		if err != nil {
-			lastError = errors.Wrap(err, `failed to copy headers (2)`)
-			continue
-		}
-
-		switch alg {
-		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-			epkif, ok := h2.Get(EphemeralPublicKeyKey)
-			if !ok {
-				return nil, errors.New("failed to get 'epk' field")
-			}
-			switch epk := epkif.(type) {
-			case jwk.ECDSAPublicKey:
-				var pubkey ecdsa.PublicKey
-				if err := epk.Raw(&pubkey); err != nil {
-					return nil, errors.Wrap(err, "failed to get public key")
-				}
-				dec.PublicKey(&pubkey)
-			case jwk.OKPPublicKey:
-				var pubkey interface{}
-				if err := epk.Raw(&pubkey); err != nil {
-					return nil, errors.Wrap(err, "failed to get public key")
-				}
-				dec.PublicKey(pubkey)
-			default:
-				return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
-			}
-
-			if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
-				dec.AgreementPartyUInfo(apu)
-			}
-
-			if apv := h2.AgreementPartyVInfo(); len(apv) > 0 {
-				dec.AgreementPartyVInfo(apv)
-			}
-		case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-			ivB64, ok := h2.Get(InitializationVectorKey)
-			if !ok {
-				return nil, errors.New("failed to get 'iv' field")
-			}
-			ivB64Str, ok := ivB64.(string)
-			if !ok {
-				return nil, errors.Errorf("unexpected type for 'iv': %T", ivB64)
-			}
-			tagB64, ok := h2.Get(TagKey)
-			if !ok {
-				return nil, errors.New("failed to get 'tag' field")
-			}
-			tagB64Str, ok := tagB64.(string)
-			if !ok {
-				return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
-			}
-			iv, err := base64.DecodeString(ivB64Str)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
-			}
-			tag, err := base64.DecodeString(tagB64Str)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
-			}
-			dec.KeyInitializationVector(iv)
-			dec.KeyTag(tag)
-		case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-			saltB64, ok := h2.Get(SaltKey)
-			if !ok {
-				return nil, errors.New("failed to get 'p2s' field")
-			}
-			saltB64Str, ok := saltB64.(string)
-			if !ok {
-				return nil, errors.Errorf("unexpected type for 'p2s': %T", saltB64)
-			}
-
-			count, ok := h2.Get(CountKey)
-			if !ok {
-				return nil, errors.New("failed to get 'p2c' field")
-			}
-			countFlt, ok := count.(float64)
-			if !ok {
-				return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
-			}
-			salt, err := base64.DecodeString(saltB64Str)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to b64-decode 'salt'")
-			}
-			dec.KeySalt(salt)
-			dec.KeyCount(int(countFlt))
-		}
-
-		plaintext, err = dec.Decrypt(recipient.EncryptedKey(), m.cipherText)
-		if err != nil {
-			lastError = errors.Wrap(err, `failed to decrypt`)
-			continue
-		}
-
-		if h2.Compression() == jwa.Deflate {
-			buf, err := uncompress(plaintext)
-			if err != nil {
-				lastError = errors.Wrap(err, `failed to uncompress payload`)
-				continue
-			}
-			plaintext = buf
-		}
-		break
-	}
-
-	if plaintext == nil {
-		if lastError != nil {
-			return nil, errors.Errorf(`failed to find matching recipient to decrypt key (last error = %s)`, lastError)
-		}
-		return nil, errors.New("failed to find matching recipient")
-	}
-
-	return plaintext, nil
+	result := make([]byte, buf.Len())
+	copy(result, buf.Bytes())
+	return result, nil
 }

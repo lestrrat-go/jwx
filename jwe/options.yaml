@@ -7,6 +7,13 @@ interfaces:
   - name: EncryptOption
     comment: |
       EncryptOption describes options that can be passed to `jwe.Encrypt`
+  - name: WithJSONSuboption
+    concrete_type: withJSONSuboption
+    comment: |
+      JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
+  - name: WithKeySetSuboption
+    comment: |
+      WithKeySetSuboption is a suboption passed to the WithKeySet() option
 options:
   - ident: Key
     skip_option: true
@@ -14,13 +21,11 @@ options:
     skip_option: true
   - ident: ProtectedHeaders
     skip_option: true
-  # These should be deprecated?
-  - ident: PostParser
-    skip_option: true
-  - ident: PrettyFormat
-    skip_option: true
   - ident: RecipientHeaders
     skip_option: true
+  - ident: KeyProvider
+    interface: DecryptOption
+    argument_type: KeyProvider
   - ident: Serialization
     option_name: WithCompact
     interface: EncryptOption
@@ -58,4 +63,17 @@ options:
       than inspecting its contents. Particularly, do not expect the message
       reliable when you call `Decrypt` on it. `(jwe.Message).Decrypt` is
       slated to be deprecated in the next major version.
+  - ident: RequireKid
+    interface: WithKeySetSuboption
+    argument_type: bool
+    comment: |
+      WithrequiredKid specifies whether the keys in the jwk.Set should
+      only be matched if the target JWE message's Key ID and the Key ID
+      in the given key matches.
+  - ident: Pretty
+    interface: WithJSONSuboption
+    argument_type: bool
+    comment: |
+      WithPretty specifies whether the JSON output should be formatted and
+      indented
 

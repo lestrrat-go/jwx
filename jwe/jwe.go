@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
 	"github.com/lestrrat-go/jwx/internal/json"
@@ -343,7 +344,9 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	case fmtCompact:
 		return Compact(msg)
 	case fmtJSON:
-		return JSON(msg)
+		return json.Marshal(msg)
+	case fmtJSONPretty:
+		return json.MarshalIndent(msg, "", "  ")
 	default:
 		return nil, fmt.Errorf(`jwe.Encrypt: invalid serialization`)
 	}
@@ -365,33 +368,11 @@ type DecryptCtx interface {
 }
 
 type decryptCtx struct {
-	alg jwa.KeyEncryptionAlgorithm
-	key interface{}
-	msg *Message
-}
-
-func (ctx *decryptCtx) Algorithm() jwa.KeyEncryptionAlgorithm {
-	return ctx.alg
-}
-
-func (ctx *decryptCtx) SetAlgorithm(v jwa.KeyEncryptionAlgorithm) {
-	ctx.alg = v
-}
-
-func (ctx *decryptCtx) Key() interface{} {
-	return ctx.key
-}
-
-func (ctx *decryptCtx) SetKey(v interface{}) {
-	ctx.key = v
-}
-
-func (ctx *decryptCtx) Message() *Message {
-	return ctx.msg
-}
-
-func (ctx *decryptCtx) SetMessage(m *Message) {
-	ctx.msg = m
+	msg              *Message
+	aad              []byte
+	computedAad      []byte
+	keyProviders     []KeyProvider
+	protectedHeaders Headers
 }
 
 // Decrypt takes the key encryption algorithm and the corresponding
@@ -403,25 +384,27 @@ func (ctx *decryptCtx) SetMessage(m *Message) {
 // `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
 //
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
-func Decrypt(buf []byte, alg jwa.KeyAlgorithm, key interface{}, options ...DecryptOption) ([]byte, error) {
-	keyalg, ok := alg.(jwa.KeyEncryptionAlgorithm)
-	if !ok {
-		return nil, errors.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, alg)
-	}
-
-	var ctx decryptCtx
-	ctx.key = key
-	ctx.alg = keyalg
+func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
+	var keyProviders []KeyProvider
 
 	var dst *Message
-	var postParse PostParser
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
 			dst = option.Value().(*Message)
-		case identPostParser{}:
-			postParse = option.Value().(PostParser)
+		case identKeyProvider{}:
+			keyProviders = append(keyProviders, option.Value().(KeyProvider))
+		case identKey{}:
+			pair := option.Value().(*withKey)
+			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)`, pair.alg)
+			}
+			keyProviders = append(keyProviders, &staticKeyProvider{
+				alg: alg,
+				key: pair.key,
+			})
 		}
 	}
 
@@ -430,25 +413,228 @@ func Decrypt(buf []byte, alg jwa.KeyAlgorithm, key interface{}, options ...Decry
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
 	}
 
-	ctx.msg = msg
-	if postParse != nil {
-		if err := postParse.PostParse(&ctx); err != nil {
-			return nil, errors.Wrap(err, `failed to execute PostParser hook`)
+	// Process things that are common to the message
+	ctx := context.TODO()
+	h, err := msg.protectedHeaders.Clone(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, `failed to copy protected headers`)
+	}
+	h, err = h.Merge(ctx, msg.unprotectedHeaders)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to merge headers for message decryption")
+	}
+
+	var aad []byte
+	if aadContainer := msg.authenticatedData; aadContainer != nil {
+		aad = base64.Encode(aadContainer)
+	}
+
+	var computedAad []byte
+	if len(msg.rawProtectedHeaders) > 0 {
+		computedAad = msg.rawProtectedHeaders
+	} else {
+		// this is probably not required once msg.Decrypt is deprecated
+		var err error
+		computedAad, err = msg.protectedHeaders.Encode()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode protected headers")
 		}
 	}
 
-	payload, err := doDecryptCtx(&ctx)
+	// for each recipient, attempt to match the key providers
+	// if we have no recipients, pretend like we only have one
+	recipients := msg.recipients
+	if len(recipients) == 0 {
+		r := NewRecipient()
+		if err := r.SetHeaders(msg.protectedHeaders); err != nil {
+			return nil, errors.Wrap(err, `failed to set headers to recipient`)
+		}
+		recipients = append(recipients, r)
+	}
+
+	var dctx decryptCtx
+
+	dctx.aad = aad
+	dctx.computedAad = computedAad
+	dctx.msg = msg
+	dctx.keyProviders = keyProviders
+	dctx.protectedHeaders = h
+
+	log.Printf("%#v", dst)
+
+	var lastError error
+	for _, recipient := range recipients {
+		decrypted, err := dctx.try(ctx, recipient)
+		if err != nil {
+			lastError = err
+			continue
+		}
+		if dst != nil {
+			*dst = *msg
+			dst.rawProtectedHeaders = nil
+			dst.storeProtectedHeaders = false
+		}
+		return decrypted, nil
+	}
+	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients (last error = %w)`, lastError)
+}
+
+func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, error) {
+	for i, kp := range dctx.keyProviders {
+		var sink algKeySink
+		if err := kp.FetchKeys(ctx, &sink, recipient, dctx.msg); err != nil {
+			return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
+		}
+
+		for _, pair := range sink.list {
+			// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
+			// this may seem ugly, but we're trying to avoid declaring separate
+			// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
+			//nolint:forcetypeassert
+			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
+			key := pair.key
+
+			decrypted, err := dctx.decryptKey(ctx, alg, key, recipient)
+			if err != nil {
+				continue
+			}
+
+			return decrypted, nil
+		}
+	}
+	return nil, fmt.Errorf(`jwe.Encrypt: failed to match any of the keys with recipient`)
+}
+
+func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
+	if jwkKey, ok := key.(jwk.Key); ok {
+		var raw interface{}
+		if err := jwkKey.Raw(&raw); err != nil {
+			return nil, errors.Wrapf(err, `failed to retrieve raw key from %T`, key)
+		}
+		key = raw
+	}
+	dec := NewDecrypter(alg, dctx.msg.protectedHeaders.ContentEncryption(), key).
+		AuthenticatedData(dctx.aad).
+		ComputedAuthenticatedData(dctx.computedAad).
+		InitializationVector(dctx.msg.initializationVector).
+		Tag(dctx.msg.tag)
+
+	if recipient.Headers().Algorithm() != alg {
+		// algorithms don't match
+		return nil, fmt.Errorf(`jwe.Decrypt: key and recipient algorithms do not match`)
+	}
+
+	h2, err := dctx.protectedHeaders.Clone(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, `failed to decrypt message`)
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
 	}
 
-	if dst != nil {
-		*dst = *msg
-		dst.rawProtectedHeaders = nil
-		dst.storeProtectedHeaders = false
+	h2, err = h2.Merge(ctx, recipient.Headers())
+	if err != nil {
+		return nil, fmt.Errorf(`failed to copy headers (2): %w`, err)
 	}
 
-	return payload, nil
+	switch alg {
+	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		epkif, ok := h2.Get(EphemeralPublicKeyKey)
+		if !ok {
+			return nil, errors.New("failed to get 'epk' field")
+		}
+		switch epk := epkif.(type) {
+		case jwk.ECDSAPublicKey:
+			var pubkey ecdsa.PublicKey
+			if err := epk.Raw(&pubkey); err != nil {
+				return nil, errors.Wrap(err, "failed to get public key")
+			}
+			dec.PublicKey(&pubkey)
+		case jwk.OKPPublicKey:
+			var pubkey interface{}
+			if err := epk.Raw(&pubkey); err != nil {
+				return nil, errors.Wrap(err, "failed to get public key")
+			}
+			dec.PublicKey(pubkey)
+		default:
+			return nil, errors.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
+		}
+
+		if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
+			dec.AgreementPartyUInfo(apu)
+		}
+
+		if apv := h2.AgreementPartyVInfo(); len(apv) > 0 {
+			dec.AgreementPartyVInfo(apv)
+		}
+	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+		ivB64, ok := h2.Get(InitializationVectorKey)
+		if !ok {
+			return nil, errors.New("failed to get 'iv' field")
+		}
+		ivB64Str, ok := ivB64.(string)
+		if !ok {
+			return nil, errors.Errorf("unexpected type for 'iv': %T", ivB64)
+		}
+		tagB64, ok := h2.Get(TagKey)
+		if !ok {
+			return nil, errors.New("failed to get 'tag' field")
+		}
+		tagB64Str, ok := tagB64.(string)
+		if !ok {
+			return nil, errors.Errorf("unexpected type for 'tag': %T", tagB64)
+		}
+		iv, err := base64.DecodeString(ivB64Str)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to b64-decode 'iv'")
+		}
+		tag, err := base64.DecodeString(tagB64Str)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to b64-decode 'tag'")
+		}
+		dec.KeyInitializationVector(iv)
+		dec.KeyTag(tag)
+	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+		saltB64, ok := h2.Get(SaltKey)
+		if !ok {
+			return nil, errors.New("failed to get 'p2s' field")
+		}
+		saltB64Str, ok := saltB64.(string)
+		if !ok {
+			return nil, errors.Errorf("unexpected type for 'p2s': %T", saltB64)
+		}
+
+		count, ok := h2.Get(CountKey)
+		if !ok {
+			return nil, errors.New("failed to get 'p2c' field")
+		}
+		countFlt, ok := count.(float64)
+		if !ok {
+			return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
+		}
+		salt, err := base64.DecodeString(saltB64Str)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to b64-decode 'salt'")
+		}
+		dec.KeySalt(salt)
+		dec.KeyCount(int(countFlt))
+	}
+
+	plaintext, err := dec.Decrypt(recipient.EncryptedKey(), dctx.msg.cipherText)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe.Decrypt: decryption failed: %w`, err)
+	}
+
+	if h2.Compression() == jwa.Deflate {
+		buf, err := uncompress(plaintext)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Derypt: failed to uncompress payload: %w`, err)
+		}
+		plaintext = buf
+	}
+
+	if plaintext == nil {
+		return nil, errors.New("failed to find matching recipient")
+	}
+
+	return plaintext, nil
 }
 
 // Parse parses the JWE message into a Message object. The JWE message

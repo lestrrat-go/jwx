@@ -126,7 +126,7 @@ func TestParse(t *testing.T) {
 			return
 		}
 
-		buf, err := jwe.JSON(msg)
+		buf, err := json.Marshal(msg)
 		if !assert.NoError(t, err, "Serializing to JSON format should succeed") {
 			return
 		}
@@ -170,7 +170,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	msg := jwe.NewMessage()
-	plaintext, err := jwe.Decrypt([]byte(serialized), jwa.RSA_OAEP, rawkey, jwe.WithMessage(msg))
+	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP, rawkey), jwe.WithMessage(msg))
 	if !assert.NoError(t, err, "jwe.Decrypt should be successful") {
 		return
 	}
@@ -253,7 +253,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 			}
 			t.Logf("%s", encrypted)
 
-			plaintext, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, rawkey)
+			plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawkey))
 			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
 				return
 			}
@@ -304,7 +304,7 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 			return
 		}
 
-		decrypted, err := jwe.Decrypt(encrypted, jwa.RSA_OAEP, rsaPrivKey)
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rsaPrivKey))
 		if !assert.NoError(t, err, "Decrypt should succeed") {
 			return
 		}
@@ -332,7 +332,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 			return
 		}
 
-		decrypted, err := jwe.Decrypt(encrypted, jwa.RSA1_5, rsaPrivKey)
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5, rsaPrivKey))
 		if !assert.NoError(t, err, "Decrypt successful") {
 			return
 		}
@@ -365,7 +365,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 			return
 		}
 
-		decrypted, err := jwe.Decrypt(encrypted, jwa.A128KW, sharedkey)
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW, sharedkey))
 		if !assert.NoError(t, err, "Decrypt successful") {
 			return
 		}
@@ -400,7 +400,7 @@ func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}
 				return
 			}
 
-			decrypted, err := jwe.Decrypt(encrypted, alg, privkey)
+			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(alg, privkey))
 			if !assert.NoError(t, err, "Decrypt succeeds") {
 				return
 			}
@@ -534,7 +534,7 @@ func TestEncode_Direct(t *testing.T) {
 			if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
 				return
 			}
-			decrypted, err := jwe.Decrypt(encrypted, jwa.DIRECT, key)
+			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT, key))
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
 			}
@@ -613,7 +613,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 				return
 			}
 
-			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwa.DIRECT, key)
+			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT, key))
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
 			}

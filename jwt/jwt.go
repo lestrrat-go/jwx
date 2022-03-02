@@ -259,7 +259,8 @@ OUTER:
 				decryptOpts = []jwe.DecryptOption{jwe.WithMessage(m)}
 			}
 
-			v, err := jwe.Decrypt(data, dp.Algorithm(), dp.Key(), decryptOpts...)
+			decryptOpts = append(decryptOpts, jwe.WithKey(dp.Algorithm(), dp.Key()))
+			v, err := jwe.Decrypt(data, decryptOpts...)
 			if err != nil {
 				return nil, errors.Wrap(err, `failed to decrypt payload`)
 			}

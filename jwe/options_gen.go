@@ -33,15 +33,39 @@ type encryptOption struct {
 
 func (*encryptOption) encryptOption() {}
 
+// JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
+type WithJSONSuboption interface {
+	Option
+	withJSONSuboption()
+}
+
+type withJSONSuboption struct {
+	Option
+}
+
+func (*withJSONSuboption) withJSONSuboption() {}
+
+// WithKeySetSuboption is a suboption passed to the WithKeySet() option
+type WithKeySetSuboption interface {
+	Option
+	withKeySetSuboption()
+}
+
+type withKeySetSuboption struct {
+	Option
+}
+
+func (*withKeySetSuboption) withKeySetSuboption() {}
+
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
 type identKey struct{}
+type identKeyProvider struct{}
 type identMessage struct{}
-type identPostParser struct{}
 type identPretty struct{}
-type identPrettyFormat struct{}
 type identProtectedHeaders struct{}
 type identRecipientHeaders struct{}
+type identRequireKid struct{}
 type identSerialization struct{}
 
 func (identCompress) String() string {
@@ -56,20 +80,16 @@ func (identKey) String() string {
 	return "WithKey"
 }
 
+func (identKeyProvider) String() string {
+	return "WithKeyProvider"
+}
+
 func (identMessage) String() string {
 	return "WithMessage"
 }
 
-func (identPostParser) String() string {
-	return "WithPostParser"
-}
-
 func (identPretty) String() string {
 	return "WithPretty"
-}
-
-func (identPrettyFormat) String() string {
-	return "WithPrettyFormat"
 }
 
 func (identProtectedHeaders) String() string {
@@ -78,6 +98,10 @@ func (identProtectedHeaders) String() string {
 
 func (identRecipientHeaders) String() string {
 	return "WithRecipientHeaders"
+}
+
+func (identRequireKid) String() string {
+	return "WithRequireKid"
 }
 
 func (identSerialization) String() string {
@@ -98,6 +122,10 @@ func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 	return &encryptOption{option.New(identContentEncryptionAlgorithm{}, v)}
 }
 
+func WithKeyProvider(v KeyProvider) DecryptOption {
+	return &decryptOption{option.New(identKeyProvider{}, v)}
+}
+
 // WithMessage provides a message object to be populated by `jwe.Decrpt`
 // Using this option allows you to decrypt AND obtain the `jwe.Message`
 // in one go.
@@ -108,6 +136,19 @@ func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 // slated to be deprecated in the next major version.
 func WithMessage(v *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, v)}
+}
+
+// WithPretty specifies whether the JSON output should be formatted and
+// indented
+func WithPretty(v bool) WithJSONSuboption {
+	return &withJSONSuboption{option.New(identPretty{}, v)}
+}
+
+// WithrequiredKid specifies whether the keys in the jwk.Set should
+// only be matched if the target JWE message's Key ID and the Key ID
+// in the given key matches.
+func WithRequireKid(v bool) WithKeySetSuboption {
+	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
 }
 
 // WithCompact specifies that the result of `jwe.Encrypt()` is serialized in
