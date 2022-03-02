@@ -12,7 +12,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/pkg/errors"
 )
 
 func ExampleJWS_VerifyWithJWKSet() {
@@ -71,7 +70,7 @@ func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byt
 	case ed25519.PrivateKey:
 		return ed25519.Sign(key, payload), nil
 	default:
-		return nil, errors.Errorf(`invalid key type %T`, keyif)
+		return nil, fmt.Errorf(`invalid key type %T`, keyif)
 	}
 }
 
@@ -81,9 +80,9 @@ func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif
 		if ed25519.Verify(key, payload, signature) {
 			return nil
 		}
-		return errors.New(`failed to verify EdDSA signature`)
+		return fmt.Errorf(`failed to verify EdDSA signature`)
 	default:
-		return errors.Errorf(`invalid key type %T`, keyif)
+		return fmt.Errorf(`invalid key type %T`, keyif)
 	}
 }
 
