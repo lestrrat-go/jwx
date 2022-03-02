@@ -24,7 +24,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwe"
-	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -1088,7 +1087,7 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 				t.Helper()
 				v, ok := claim.(Claim)
 				if !ok {
-					return nil, errors.Errorf(`claim value should be of type "Claim", but got %T`, claim)
+					return nil, fmt.Errorf(`claim value should be of type "Claim", but got %T`, claim)
 				}
 				return &v, nil
 			},
@@ -1100,12 +1099,12 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 				t.Helper()
 				v, ok := claim.(json.RawMessage)
 				if !ok {
-					return nil, errors.Errorf(`claim value should be of type "json.RawMessage", but got %T`, claim)
+					return nil, fmt.Errorf(`claim value should be of type "json.RawMessage", but got %T`, claim)
 				}
 
 				var c Claim
 				if err := json.Unmarshal(v, &c); err != nil {
-					return nil, errors.Wrap(err, `json.Unmarshal failed`)
+					return nil, fmt.Errorf(`json.Unmarshal failed: %w`, err)
 				}
 
 				return &c, nil
