@@ -69,7 +69,7 @@ func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 
 	bc, ciphererr := f(ekey)
 	if ciphererr != nil {
-		err = fmt.Errorf(`failed to execute block cipher function: %%w`, ciphererr)
+		err = fmt.Errorf(`failed to execute block cipher function: %w`, ciphererr)
 		return
 	}
 
