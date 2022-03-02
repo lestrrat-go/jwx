@@ -5,6 +5,7 @@ package jws
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -318,7 +318,7 @@ func (h *stdHeaders) setNoLock(name string, value interface{}) error {
 	case AlgorithmKey:
 		var acceptor jwa.SignatureAlgorithm
 		if err := acceptor.Accept(value); err != nil {
-			return errors.Wrapf(err, `invalid value for %s key`, AlgorithmKey)
+			return fmt.Errorf(`invalid value for %s key: %w`, AlgorithmKey, err)
 		}
 		h.algorithm = &acceptor
 		return nil
@@ -327,61 +327,61 @@ func (h *stdHeaders) setNoLock(name string, value interface{}) error {
 			h.contentType = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
 	case CriticalKey:
 		if v, ok := value.([]string); ok {
 			h.critical = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
 	case JWKKey:
 		if v, ok := value.(jwk.Key); ok {
 			h.jwk = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, JWKKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, JWKKey, value)
 	case JWKSetURLKey:
 		if v, ok := value.(string); ok {
 			h.jwkSetURL = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
 			h.typ = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, TypeKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, TypeKey, value)
 	case X509CertChainKey:
 		if v, ok := value.([]string); ok {
 			h.x509CertChain = v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprint = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprintS256 = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
 			h.x509URL = &v
 			return nil
 		}
-		return errors.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
+		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]interface{}{}
@@ -440,7 +440,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return errors.Wrap(err, `error reading token`)
+			return fmt.Errorf(`error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -449,65 +449,65 @@ LOOP:
 			if tok == '}' { // End of object
 				break LOOP
 			} else if tok != '{' {
-				return errors.Errorf(`expected '{', but got '%c'`, tok)
+				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AlgorithmKey:
 				var decoded jwa.SignatureAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, AlgorithmKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
 				h.algorithm = &decoded
 			case ContentTypeKey:
 				if err := json.AssignNextStringToken(&h.contentType, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, ContentTypeKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, ContentTypeKey, err)
 				}
 			case CriticalKey:
 				var decoded []string
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, CriticalKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, CriticalKey, err)
 				}
 				h.critical = decoded
 			case JWKKey:
 				var buf json.RawMessage
 				if err := dec.Decode(&buf); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, JWKKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, JWKKey, err)
 				}
 				key, err := jwk.ParseKey(buf)
 				if err != nil {
-					return errors.Wrapf(err, `failed to parse JWK for key %s`, JWKKey)
+					return fmt.Errorf(`failed to parse JWK for key %s: %w`, JWKKey, err)
 				}
 				h.jwk = key
 			case JWKSetURLKey:
 				if err := json.AssignNextStringToken(&h.jwkSetURL, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, JWKSetURLKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, JWKSetURLKey, err)
 				}
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, KeyIDKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case TypeKey:
 				if err := json.AssignNextStringToken(&h.typ, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, TypeKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, TypeKey, err)
 				}
 			case X509CertChainKey:
 				var decoded []string
 				if err := dec.Decode(&decoded); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertChainKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
 				h.x509CertChain = decoded
 			case X509CertThumbprintKey:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509CertThumbprintS256Key)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
 				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
-					return errors.Wrapf(err, `failed to decode value for key %s`, X509URLKey)
+					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:
 				decoded, err := registry.Decode(dec, tok)
@@ -517,7 +517,7 @@ LOOP:
 				h.setNoLock(tok, decoded)
 			}
 		default:
-			return errors.Errorf(`invalid token %T`, tok)
+			return fmt.Errorf(`invalid token %T`, tok)
 		}
 	}
 	h.raw = buf
@@ -544,7 +544,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				errors.Errorf(`failed to encode value for field %s`, p.Key)
+				fmt.Errorf(`failed to encode value for field %s`, p.Key)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}
