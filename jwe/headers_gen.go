@@ -702,7 +702,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 			buf.WriteRune('"')
 		default:
 			if err := enc.Encode(v); err != nil {
-				return fmt.Errorf(`failed to encode value for field %s`, f)
+				return nil, fmt.Errorf(`failed to encode value for field %s`, f)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}

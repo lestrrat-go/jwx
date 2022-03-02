@@ -383,7 +383,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return fmt.Errorf(`failed to encode value for field %%s`, f)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, f)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")
