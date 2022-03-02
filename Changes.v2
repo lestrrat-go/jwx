@@ -4,6 +4,11 @@ Changes
 
 [Incompatible Changes]
   These are changes that are incompatible with the v1.x.x version.
+  * Module now requires go 1.17
+
+  * Use of github.com/pkg/errors is no more. If you were relying on bevaior
+    that depends on the errors being an instance of github.com/pkg/errors
+    then you need to change your code
 
   * [jwe] `jwe.Compact()`'s signature has been changed to `Compact(*Message)`
 
