@@ -313,6 +313,10 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		}
 	}
 
+	if len(keyProviders) < 1 {
+		return nil, fmt.Errorf(`jws.Verify: no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
+	}
+
 	msg, err := Parse(buf)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse jws: %w`, err)

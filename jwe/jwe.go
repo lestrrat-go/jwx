@@ -407,6 +407,10 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 		}
 	}
 
+	if len(keyProviders) < 1 {
+		return nil, fmt.Errorf(`jwe.Decrypt: no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
+	}
+
 	msg, err := parseJSONOrCompact(buf, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse buffer for Decrypt")
