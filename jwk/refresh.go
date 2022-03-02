@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 	"sync"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/httpcc"
-	"github.com/pkg/errors"
 )
 
 // AutoRefresh is a container that keeps track of jwk.Set object by their source URLs.
@@ -294,7 +294,7 @@ func (af *AutoRefresh) getRegistered(url string) (*target, bool) {
 // objects are shared among all consumers and the backend goroutine
 func (af *AutoRefresh) Fetch(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
-		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
+		return nil, fmt.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
 
 	ks, found := af.getCached(url)
@@ -312,7 +312,7 @@ func (af *AutoRefresh) Fetch(ctx context.Context, url string) (Set, error) {
 // make sure the AutoRefresh cache is warmed up before starting your main loop
 func (af *AutoRefresh) Refresh(ctx context.Context, url string) (Set, error) {
 	if _, ok := af.getRegistered(url); !ok {
-		return nil, errors.Errorf(`url %s must be configured using "Configure()" first`, url)
+		return nil, fmt.Errorf(`url %s must be configured using "Configure()" first`, url)
 	}
 
 	return af.refresh(ctx, url)
@@ -342,14 +342,14 @@ func (af *AutoRefresh) refresh(ctx context.Context, url string) (Set, error) {
 
 		// The first time around, we need to fetch the keyset
 		if err := af.doRefreshRequest(ctx, url, false); err != nil {
-			return nil, errors.Wrapf(err, `failed to fetch resource pointed by %s`, url)
+			return nil, fmt.Errorf(`failed to fetch resource pointed by %s: %w`, url, err)
 		}
 	}
 
 	// the cache should now be populated
 	ks, ok := af.getCached(url)
 	if !ok {
-		return nil, errors.New("cache was not populated after explicit refresh")
+		return nil, fmt.Errorf(`cache was not populated after explicit refresh`)
 	}
 
 	return ks, nil
@@ -452,7 +452,7 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 			url := req.url
 			af.muRegistry.Lock()
 			if _, ok := af.registry[url]; !ok {
-				replyCh <- errors.Errorf(`invalid url %q (not registered)`, url)
+				replyCh <- fmt.Errorf(`invalid url %q (not registered)`, url)
 			} else {
 				delete(af.registry, url)
 				replyCh <- nil
@@ -492,7 +492,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	af.muRegistry.RUnlock()
 
 	if !ok {
-		return errors.Errorf(`url "%s" is not registered`, url)
+		return fmt.Errorf(`url "%s" is not registered`, url)
 	}
 
 	// In case the refresh fails due to errors in fetching/parsing the JWKS,
@@ -511,7 +511,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		if res.StatusCode != http.StatusOK {
 			// now, can there be a remote resource that responds with a status code
 			// other than 200 and still be valid...? naaaaaaahhhhhh....
-			err = errors.Errorf(`bad response status code (%d)`, res.StatusCode)
+			err = fmt.Errorf(`bad response status code (%d)`, res.StatusCode)
 		} else {
 			defer res.Body.Close()
 			keyset, parseErr := ParseReader(res.Body, parseOptions...)
