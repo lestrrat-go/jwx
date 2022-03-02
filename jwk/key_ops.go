@@ -1,6 +1,6 @@
 package jwk
 
-import "github.com/pkg/errors"
+import "fmt"
 
 func (ops *KeyOperationList) Get() KeyOperationList {
 	if ops == nil {
@@ -19,7 +19,7 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 			if es, ok := e.(string); ok {
 				l[i] = es
 			} else {
-				return errors.Errorf(`invalid list element type: expected string, got %T`, v)
+				return fmt.Errorf(`invalid list element type: expected string, got %T`, v)
 			}
 		}
 		return ops.Accept(l)
@@ -30,7 +30,7 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
 				list[i] = e
 			default:
-				return errors.Errorf(`invalid keyoperation %v`, e)
+				return fmt.Errorf(`invalid keyoperation %v`, e)
 			}
 		}
 
@@ -43,7 +43,7 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
 				list[i] = e
 			default:
-				return errors.Errorf(`invalid keyoperation %v`, e)
+				return fmt.Errorf(`invalid keyoperation %v`, e)
 			}
 		}
 
@@ -53,6 +53,6 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 		*ops = x
 		return nil
 	default:
-		return errors.Errorf(`invalid value %T`, v)
+		return fmt.Errorf(`invalid value %T`, v)
 	}
 }
