@@ -10,7 +10,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/x25519"
-	"github.com/pkg/errors"
 )
 
 func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
@@ -28,7 +27,7 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
-		return errors.Errorf(`unknown key type %T`, rawKeyIf)
+		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
 	}
 
 	return nil
@@ -51,7 +50,7 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
-		return errors.Errorf(`unknown key type %T`, rawKeyIf)
+		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
 	}
 
 	return nil
@@ -64,7 +63,7 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (interface{}
 	case jwa.X25519:
 		return x25519.PublicKey(xbuf), nil
 	default:
-		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
+		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }
 
@@ -75,7 +74,7 @@ func (k *okpPublicKey) Raw(v interface{}) error {
 
 	pubk, err := buildOKPPublicKey(k.Crv(), k.x)
 	if err != nil {
-		return errors.Wrap(err, `failed to build public key`)
+		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
 
 	return blackmagic.AssignIfCompatible(v, pubk)
@@ -86,20 +85,20 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 	case jwa.Ed25519:
 		ret := ed25519.NewKeyFromSeed(dbuf)
 		if !bytes.Equal(xbuf, ret.Public().(ed25519.PublicKey)) {
-			return nil, errors.Errorf(`invalid x value given d value`)
+			return nil, fmt.Errorf(`invalid x value given d value`)
 		}
 		return ret, nil
 	case jwa.X25519:
 		ret, err := x25519.NewKeyFromSeed(dbuf)
 		if err != nil {
-			return nil, errors.Wrap(err, `unable to construct x25519 private key from seed`)
+			return nil, fmt.Errorf(`unable to construct x25519 private key from seed: %w`, err)
 		}
 		if !bytes.Equal(xbuf, ret.Public().(x25519.PublicKey)) {
-			return nil, errors.Errorf(`invalid x value given d value`)
+			return nil, fmt.Errorf(`invalid x value given d value`)
 		}
 		return ret, nil
 	default:
-		return nil, errors.Errorf(`invalid curve algorithm %s`, alg)
+		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }
 
@@ -109,7 +108,7 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 
 	privk, err := buildOKPPrivateKey(k.Crv(), k.x, k.d)
 	if err != nil {
-		return errors.Wrap(err, `failed to build public key`)
+		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
 
 	return blackmagic.AssignIfCompatible(v, privk)
@@ -127,7 +126,7 @@ func makeOKPPublicKey(v interface {
 			continue
 		default:
 			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+				return nil, fmt.Errorf(`failed to set field %s: %w`, pair.Key, err)
 			}
 		}
 	}
