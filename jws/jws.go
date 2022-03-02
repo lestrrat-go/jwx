@@ -367,7 +367,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 
 		for i, kp := range keyProviders {
 			var sink algKeySink
-			if err := kp.FetchKeys(ctx, &sink, sig); err != nil {
+			if err := kp.FetchKeys(ctx, &sink, sig, msg); err != nil {
 				return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 			}
 

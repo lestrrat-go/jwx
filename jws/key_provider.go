@@ -11,7 +11,7 @@ import (
 )
 
 type KeyProvider interface {
-	FetchKeys(context.Context, KeySink, *Signature) error
+	FetchKeys(context.Context, KeySink, *Signature, *Message) error
 }
 
 type KeySink interface {
@@ -39,7 +39,7 @@ type staticKeyProvider struct {
 	key interface{}
 }
 
-func (kp *staticKeyProvider) FetchKeys(_ context.Context, sink KeySink, _ *Signature) error {
+func (kp *staticKeyProvider) FetchKeys(_ context.Context, sink KeySink, _ *Signature, _ *Message) error {
 	sink.Key(kp.alg, kp.key)
 	return nil
 }
@@ -51,7 +51,7 @@ type keySetProvider struct {
 	inferAlgorithm bool // true if the algorithm should be inferred from key type
 }
 
-func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature) error {
+func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) error {
 	if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
 		return nil
 	}
@@ -92,7 +92,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature) e
 	return nil
 }
 
-func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature) error {
+func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
 	if kp.requireKid {
 		var key jwk.Key
 
@@ -118,12 +118,12 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			key = v
 		}
 
-		return kp.selectKey(sink, key, sig)
+		return kp.selectKey(sink, key, sig, msg)
 	}
 
 	for i := 0; i < kp.set.Len(); i++ {
 		key, _ := kp.set.Get(i)
-		if err := kp.selectKey(sink, key, sig); err != nil {
+		if err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue
 		}
 	}
@@ -135,7 +135,7 @@ type jkuProvider struct {
 	options []jwk.FetchOption
 }
 
-func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature) error {
+func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message) error {
 	kid := sig.ProtectedHeaders().KeyID()
 	if kid == "" {
 		return nil
@@ -185,8 +185,8 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 	return nil
 }
 
-type KeyProviderFunc func(context.Context, KeySink, *Signature) error
+type KeyProviderFunc func(context.Context, KeySink, *Signature, *Message) error
 
-func (kp KeyProviderFunc) FetchKeys(ctx context.Context, sink KeySink, sig *Signature) error {
-	return kp(ctx, sink, sig)
+func (kp KeyProviderFunc) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, msg *Message) error {
+	return kp(ctx, sink, sig, msg)
 }
