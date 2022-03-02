@@ -1,9 +1,10 @@
 package content_crypt //nolint:golint
 
 import (
+	"fmt"
+
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/cipher"
-	"github.com/pkg/errors"
 )
 
 func (c Generic) Algorithm() jwa.ContentEncryptionAlgorithm {
@@ -13,7 +14,7 @@ func (c Generic) Algorithm() jwa.ContentEncryptionAlgorithm {
 func (c Generic) Encrypt(cek, plaintext, aad []byte) ([]byte, []byte, []byte, error) {
 	iv, encrypted, tag, err := c.cipher.Encrypt(cek, plaintext, aad)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, `failed to crypt content`)
+		return nil, nil, nil, fmt.Errorf(`failed to crypt content: %w`, err)
 	}
 
 	return iv, encrypted, tag, nil
@@ -26,7 +27,7 @@ func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 	c, err := cipher.NewAES(alg)
 	if err != nil {
-		return nil, errors.Wrap(err, `aes crypt: failed to create content cipher`)
+		return nil, fmt.Errorf(`aes crypt: failed to create content cipher: %w`, err)
 	}
 
 	return &Generic{
