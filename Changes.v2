@@ -1,9 +1,29 @@
 Changes
 =======
 
-
 [Incompatible Changes]
   These are changes that are incompatible with the v1.x.x version.
+
+  tl;dr for JWT users:
+
+    // most basic
+    jwt.Parse(serialized, jwt.WithKey(alg, key))
+    jwt.Sign(token, jwt.WithKey(alg,key))
+
+    // with a jwk.Set
+    jwt.Parse(serialized, jwt.WithKeySet(set))
+
+    // UseDefault/InferAlgorithm with JWKS
+    jwt.Parse(serialized, jwt.WithKeySet(set,
+      jws.WithUseDefault(true), jws.WithInferAlgorithm(true))
+
+    // Use `jku`
+    jwt.Parse(serialized, jwt.WithVerifyAuto(...))
+
+    // Any other custom key provisioning (using functions in this
+    // example, but can be anything that fulfills jws.KeyProvider)
+    jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
+
   * Module now requires go 1.17
 
   * Use of github.com/pkg/errors is no more. If you were relying on bevaior
