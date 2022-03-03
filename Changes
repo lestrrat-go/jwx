@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.20 UNRELEASED
+[Miscellaneous]
+  * Dependency on golang.org/x/crypto has been upgraded to
+    v0.0.0-20220214200702-86341886e292 to address
+    https://nvd.nist.gov/vuln/detail/CVE-2020-14040 (#598)
+
 v1.2.19 22 Feb 2022
 [New Feature]
   * [jwk] jwk.Parse (and (jwk.AutoRefresh).Configure) can accept a new
