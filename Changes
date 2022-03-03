@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.20 UNRELEASED
+v1.2.20 03 Mar 2022
 [Miscellaneous]
   * Dependency on golang.org/x/crypto has been upgraded to
     v0.0.0-20220214200702-86341886e292 to address
