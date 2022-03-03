@@ -203,6 +203,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	var builders []*recipientBuilder
 
 	var protected Headers
+	var mergeProtected bool
 	var useRawCEK bool
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -228,8 +229,20 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 			calg = option.Value().(jwa.ContentEncryptionAlgorithm)
 		case identCompress{}:
 			compression = option.Value().(jwa.CompressionAlgorithm)
+		case identMergeProtectedHeaders{}:
+			mergeProtected = option.Value().(bool)
 		case identProtectedHeaders{}:
-			protected = option.Value().(Headers)
+			v := option.Value().(Headers)
+			if !mergeProtected || protected == nil {
+				protected = v
+			} else {
+				ctx := context.TODO()
+				merged, err := protected.Merge(ctx, v)
+				if err != nil {
+					return nil, fmt.Errorf(`jwe.Encrypt: failed to merge headers: %w`, err)
+				}
+				protected = merged
+			}
 		case identSerialization{}:
 			format = option.Value().(int)
 		}

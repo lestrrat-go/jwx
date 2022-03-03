@@ -76,4 +76,10 @@ options:
     comment: |
       WithPretty specifies whether the JSON output should be formatted and
       indented
-
+  - ident: MergeProtectedHeaders
+    interface: EncryptOption
+    argument_type: bool
+    comment: |
+      WithMergeProtectedHeaders specify that when given multiple headers
+      as options to `jwe.Encrypt`, these headers should be merged instead
+      of overwritten

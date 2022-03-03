@@ -54,11 +54,11 @@ JWTs can be stored in HTTP headers, form values, etc, and you need to decide whe
 The `jwt` package provides several ways to retrieve JWT data from an HTTP request.
 `jwt.ParseRequest` is the most generic front end, and the user will be able to dynamically change where to fetch the data from. By default the "Authorization" header is checked. If you want to check for more places, you can specify it as additional options. Please read the manual for `jwt.ParseRequest` for more details.
 
-The option `jwt.WithVerify` is added to validate the JWS message. You will need to execute `jwt.Validate` to validate the content of the JWT message. You can control what gets validated by passing options to `jwt.Validate`. Please read the manual for `jwt.Validate` for more details.
+The option `jwt.WithKey` is added to validate the JWS message. You will need to execute `jwt.Validate` to validate the content of the JWT message. You can control what gets validated by passing options to `jwt.Validate`. Please read the manual for `jwt.Validate` for more details.
 
 ```go
 func (s *Server) HandleFoo(w http.ResponseWriter, req *http.Request) {
-  token, err := jwt.ParseRequest(req, jwt.WithVerify(s.alg, s.verifyKey))
+  token, err := jwt.ParseRequest(req, jwt.WithKey(s.alg, s.verifyKey))
   if err != nil {
     // handle error
   }
@@ -79,7 +79,7 @@ In this example we are writing the token to the response body of the response.
 func (s *Server) HandleBar(w http.ResponseWriter, req *http.Request) {
   var token jwt.Token
 
-  signed, err := jwt.Sign(token, s.alg, s.signKey)
+  signed, err := jwt.Sign(token, jwt.WithKey(s.alg, s.signKey))
   if err != nil {
     // handle errors
   }

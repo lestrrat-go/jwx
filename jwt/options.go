@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -10,29 +11,139 @@ import (
 	"github.com/lestrrat-go/option"
 )
 
-type identDecrypt struct{}
-type identDefault struct{}
-type identInferAlgorithmFromKey struct{}
-type identJweHeaders struct{}
 type identKey struct{}
 type identKeySet struct{}
 type identTypedClaim struct{}
 type identVerifyAuto struct{}
 
-// WithKey forces the Parse method to verify the JWT message
-// using the given key.
+func toSignOptions(options ...Option) ([]jws.SignOption, error) {
+	var soptions []jws.SignOption
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identKey{}:
+			wk := option.Value().(*withKey) // this always succeeds
+			var wksoptions []jws.WithKeySuboption
+			for _, subopt := range wk.options {
+				wksopt, ok := subopt.(jws.WithKeySuboption)
+				if !ok {
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
+				}
+				wksoptions = append(wksoptions, wksopt)
+			}
+
+			soptions = append(soptions, jws.WithKey(wk.alg, wk.key, wksoptions...))
+		}
+	}
+	return soptions, nil
+}
+
+func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
+	var soptions []jwe.EncryptOption
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identKey{}:
+			wk := option.Value().(*withKey) // this always succeeds
+			var wksoptions []jwe.WithKeySuboption
+			for _, subopt := range wk.options {
+				wksopt, ok := subopt.(jwe.WithKeySuboption)
+				if !ok {
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jwe.WithKeySuboption, but got %T`, subopt)
+				}
+				wksoptions = append(wksoptions, wksopt)
+			}
+
+			soptions = append(soptions, jwe.WithKey(wk.alg, wk.key, wksoptions...))
+		}
+	}
+	return soptions, nil
+}
+
+func toVerifyOptions(options ...Option) ([]jws.VerifyOption, error) {
+	var voptions []jws.VerifyOption
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identKey{}:
+			wk := option.Value().(*withKey) // this always succeeds
+			var wksoptions []jws.WithKeySuboption
+			for _, subopt := range wk.options {
+				wksopt, ok := subopt.(jws.WithKeySuboption)
+				if !ok {
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
+				}
+				wksoptions = append(wksoptions, wksopt)
+			}
+
+			voptions = append(voptions, jws.WithKey(wk.alg, wk.key, wksoptions...))
+		case identKeySet{}:
+			wks := option.Value().(*withKeySet) // this always succeeds
+			var wkssoptions []jws.WithKeySetSuboption
+			for _, subopt := range wks.options {
+				wkssopt, ok := subopt.(jws.WithKeySetSuboption)
+				if !ok {
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySetSuboption, but got %T`, subopt)
+				}
+				wkssoptions = append(wkssoptions, wkssopt)
+			}
+
+			voptions = append(voptions, jws.WithKeySet(wks.set, wkssoptions...))
+		case identVerifyAuto{}:
+			// this one doesn't need conversion. just get the stored option
+			voptions = append(voptions, option.Value().(jws.VerifyOption))
+		case identKeyProvider{}:
+			kp, ok := option.Value().(jws.KeyProvider)
+			if !ok {
+				return nil, fmt.Errorf(`expected jws.KeyProvider, got %T`, option.Value())
+			}
+			voptions = append(voptions, jws.WithKeyProvider(kp))
+		}
+	}
+	return voptions, nil
+}
+
+type withKey struct {
+	alg     jwa.KeyAlgorithm
+	key     interface{}
+	options []Option
+}
+
+// WithKey is a multi-purpose option. It can be used for either jwt.Sign, jwt.Parse (and
+// its siblings), and jwt.Serializer methods.
 //
-// This is a utility wrapper around `jws.WithKey()`
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeySuboption) SignParseOption {
-	return &signParseOption{option.New(identKey{}, jws.WithKey(alg, key, options...))}
+// It is the caller's responsibility to match the suboptions to the operation that they
+// are performing. For example, you are not allowed to do this:
+//
+//    jwt.Sign(token, jwt.WithKey(alg, key, jweOptions...))
+//
+// In the above example, the creation of the option via `jwt.WithKey()` will work, but
+// when `jwt.Sign()` is called, the fact that you passed JWE suboptions will be
+// detected, and it will be an error.
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, suboptions ...Option) SignEncryptParseOption {
+	return &signEncryptParseOption{option.New(identKey{}, &withKey{
+		alg:     alg,
+		key:     key,
+		options: suboptions,
+	})}
+}
+
+type withKeySet struct {
+	set     jwk.Set
+	options []interface{}
 }
 
 // WithKeySet forces the Parse method to verify the JWT message
 // using one of the keys in the given key set.
 //
-// The key and the JWT MUST have a proper `kid` field set.
-// The key to use for signature verification is chosen by matching
-// the Key ID of the JWT and the ID of the given key set.
+// Unlike the equivalent option in `jws` (`jws.WithKeySet`), the `jwt`
+// version by default requires that key IDs (`kid`) in the JWS message
+// and the JWK in the given `jwk.Set` match in order for the verification
+// to proceed.
+//
+// This is for security reasons. If you must disable it, you can do so by
+// specifying `jws.WithRequireKid(false)` in the suboptions. But we don't
+// recommend it unless you know exactly what the security implications are
 //
 // When using this option, keys MUST have a proper 'alg' field
 // set. This is because we need to know the exact algorithm that
@@ -43,29 +154,16 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...jws.WithKeySubopt
 // of allowing a library to automatically choose a signature verification strategy,
 // and you do not mind the verification process having to possibly
 // attempt using multiple times before succeeding to verify. See
-// `jwt.InferAlgorithmFromKey` option
+// `jws.InferAlgorithmFromKey` option
 //
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
-func WithKeySet(set jwk.Set, options ...jws.WithKeySetSuboption) ParseOption {
-	options = append(append([]jws.WithKeySetSuboption(nil), jws.WithRequireKid(true)), options...)
-	return &parseOption{option.New(identKeySet{}, jws.WithKeySet(set, options...))}
-}
-
-// UseDefaultKey is used in conjunction with the option WithKeySet
-// to instruct the Parse method to default to the single key in a key
-// set when no Key ID is included in the JWT. If the key set contains
-// multiple keys then the default behavior is unchanged -- that is,
-// the since we can't determine the key to use, it returns an error.
-func UseDefaultKey(value bool) ParseOption {
-	return &parseOption{option.New(identDefault{}, value)}
-}
-
-// WithJweHeaders is passed to "jwt.Serializer".Encrypt() method to allow
-// specifying arbitrary header values to be included in the protected header
-// of the JWE message
-func WithJweHeaders(hdrs jwe.Headers) EncryptOption {
-	return &encryptOption{option.New(identJweHeaders{}, hdrs)}
+func WithKeySet(set jwk.Set, options ...interface{}) ParseOption {
+	options = append(append([]interface{}(nil), jws.WithRequireKid(true)), options...)
+	return &parseOption{option.New(identKeySet{}, &withKeySet{
+		set:     set,
+		options: options,
+	})}
 }
 
 // WithIssuer specifies that expected issuer value. If not specified,
@@ -173,56 +271,6 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 //
 func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	return WithValidator(MinDeltaIs(c1, c2, dur))
-}
-
-type decryptParams struct {
-	alg jwa.KeyAlgorithm
-	key interface{}
-}
-
-type DecryptParameters interface {
-	Algorithm() jwa.KeyAlgorithm
-	Key() interface{}
-}
-
-func (dp *decryptParams) Algorithm() jwa.KeyAlgorithm {
-	return dp.alg
-}
-
-func (dp *decryptParams) Key() interface{} {
-	return dp.key
-}
-
-// WithDecrypt allows users to specify parameters for decryption using
-// `jwe.Decrypt`. You must specify this if your JWT is encrypted.
-//
-// While `alg` accept jwa.KeyAlgorithm for convenience so you can
-// directly pass the return value of `(jwk.Key).Algorithm()`, in practice
-// the value must be of type jwa.SignatureAlgorithm. Otherwise the
-// verification will fail
-func WithDecrypt(alg jwa.KeyAlgorithm, key interface{}) ParseOption {
-	return &parseOption{option.New(identDecrypt{}, &decryptParams{
-		alg: alg,
-		key: key,
-	})}
-}
-
-// InferAlgorithmFromKey allows jwt.Parse to guess the signature algorithm
-// passed to `jws.Verify()`, in case the key you provided does not have a proper `alg` header.
-//
-// Compared to providing explicit `alg` from the key this is slower, and in
-// case our heuristics are wrong or outdated, may fail to verify the token.
-// Also, automatic detection of signature verification methods are always
-// more vulnerable for potential attack vectors.
-//
-// It is highly recommended that you fix your key to contain a proper `alg`
-// header field instead of resorting to using this option, but sometimes
-// it just needs to happen.
-//
-// Your JWT still need to have an `alg` field, and it must match one of the
-// candidates that we produce for your key
-func InferAlgorithmFromKey(v bool) ParseOption {
-	return &parseOption{option.New(identInferAlgorithmFromKey{}, v)}
 }
 
 // WithVerifyAuto specifies that the JWS verification should be attempted

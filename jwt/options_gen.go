@@ -6,6 +6,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/option"
 )
@@ -53,6 +54,28 @@ func (*parseOption) parseOption() {}
 
 func (*parseOption) readFileOption() {}
 
+// SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
+// `jwt.Parse()`
+type SignEncryptParseOption interface {
+	Option
+	parseOption()
+	encryptOption()
+	readFileOption()
+	signOption()
+}
+
+type signEncryptParseOption struct {
+	Option
+}
+
+func (*signEncryptParseOption) parseOption() {}
+
+func (*signEncryptParseOption) encryptOption() {}
+
+func (*signEncryptParseOption) readFileOption() {}
+
+func (*signEncryptParseOption) signOption() {}
+
 // SignOption describes an Option that can be passed to `jwt.Sign()` or
 // (jwt.Serializer).Sign
 type SignOption interface {
@@ -65,25 +88,6 @@ type signOption struct {
 }
 
 func (*signOption) signOption() {}
-
-// SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
-// `jwt.Parse()`
-type SignParseOption interface {
-	Option
-	parseOption()
-	readFileOption()
-	signOption()
-}
-
-type signParseOption struct {
-	Option
-}
-
-func (*signParseOption) parseOption() {}
-
-func (*signParseOption) readFileOption() {}
-
-func (*signParseOption) signOption() {}
 
 // ValidateOption describes an Option that can be passed to Validate().
 // ValidateOption also implements ParseOption, therefore it may be
@@ -108,11 +112,13 @@ func (*validateOption) validateOption() {}
 type identAcceptableSkew struct{}
 type identClock struct{}
 type identContext struct{}
+type identEncryptOption struct{}
 type identFlattenAudience struct{}
 type identFormKey struct{}
 type identHeaderKey struct{}
 type identKeyProvider struct{}
 type identPedantic struct{}
+type identSignOption struct{}
 type identToken struct{}
 type identValidate struct{}
 type identValidator struct{}
@@ -127,6 +133,10 @@ func (identClock) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identEncryptOption) String() string {
+	return "WithEncryptOption"
 }
 
 func (identFlattenAudience) String() string {
@@ -147,6 +157,10 @@ func (identKeyProvider) String() string {
 
 func (identPedantic) String() string {
 	return "WithPedantic"
+}
+
+func (identSignOption) String() string {
+	return "WithSignOption"
 }
 
 func (identToken) String() string {
@@ -181,6 +195,13 @@ func WithClock(v Clock) ValidateOption {
 // `context.Context` object.
 func WithContext(v context.Context) ValidateOption {
 	return &validateOption{option.New(identContext{}, v)}
+}
+
+// WithEncryptOption provides an escape hatch for cases where extra options to
+// `(jws.Serializer).Encrypt()` must be specified when usng `jwt.Sign()`. Normally you do not
+// need to use this.
+func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
+	return &encryptOption{option.New(identEncryptOption{}, v)}
 }
 
 // WithFlattenAudience specifies if the "aud" claim should be flattened
@@ -220,6 +241,13 @@ func WithKeyProvider(v jws.KeyProvider) ParseOption {
 // applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
 	return &parseOption{option.New(identPedantic{}, v)}
+}
+
+// WithSignOption provides an escape hatch for cases where extra options to
+// `jws.Sign()` must be specified when usng `jwt.Sign()`. Normally you do not
+// need to use this.
+func WithSignOption(v jws.SignOption) SignOption {
+	return &signOption{option.New(identSignOption{}, v)}
 }
 
 // WithToken specifies the token instance where the result JWT is stored

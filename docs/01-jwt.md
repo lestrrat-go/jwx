@@ -138,7 +138,7 @@ To parse a JWT *and* verify that its content matches the signature as described 
 
 ```go
 src := []byte{...}
-token, _ := jwt.Parse(src, jwt.WithVerify(jwa.ES256, key))
+token, _ := jwt.Parse(src, jwt.WithKey(jwa.ES256, key))
 ```
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
@@ -176,7 +176,7 @@ However, we realize this is cumbersome, and sometimes you just don't know what t
 In such cases you can use the `jwt.InferAlgorithmFromKey()` option:
 
 ```go
-token, _ := jwt.Parse(src, jwt.WithKeySet(keyset), jwt.InferAlgorithmFromKey(true))
+token, _ := jwt.Parse(src, jwt.WithKeySet(keyset, jws.InferAlgorithmFromKey(true)))
 ```
 
 This will tell `jwx` to use heuristics to deduce the algorithm used. It's a brute-force approach, and does not always provide the best performance, but it will try all possible algorithms available for a given key type until one of them matches. For example, for an RSA key (either raw key or `jwk.Key`) algorithms such as RS256, RS384, RS512, PS256, PS384, and PS512 are tried.

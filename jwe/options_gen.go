@@ -61,6 +61,7 @@ type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
 type identKey struct{}
 type identKeyProvider struct{}
+type identMergeProtectedHeaders struct{}
 type identMessage struct{}
 type identPretty struct{}
 type identProtectedHeaders struct{}
@@ -82,6 +83,10 @@ func (identKey) String() string {
 
 func (identKeyProvider) String() string {
 	return "WithKeyProvider"
+}
+
+func (identMergeProtectedHeaders) String() string {
+	return "WithMergeProtectedHeaders"
 }
 
 func (identMessage) String() string {
@@ -124,6 +129,13 @@ func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 
 func WithKeyProvider(v KeyProvider) DecryptOption {
 	return &decryptOption{option.New(identKeyProvider{}, v)}
+}
+
+// WithMergeProtectedHeaders specify that when given multiple headers
+// as options to `jwe.Encrypt`, these headers should be merged instead
+// of overwritten
+func WithMergeProtectedHeaders(v bool) EncryptOption {
+	return &encryptOption{option.New(identMergeProtectedHeaders{}, v)}
 }
 
 // WithMessage provides a message object to be populated by `jwe.Decrpt`

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
@@ -29,6 +28,16 @@ func (ctx *serializeCtx) Nested() bool {
 
 type SerializeStep interface {
 	Serialize(SerializeCtx, interface{}) (interface{}, error)
+}
+
+// errStep is always an error. used to indicate that a method like
+// serializer.Sign or Encrypt already errored out on configuration
+type errStep struct {
+	err error
+}
+
+func (e errStep) Serialize(_ SerializeCtx, _ interface{}) (interface{}, error) {
+	return nil, e.err
 }
 
 // Serializer is a generic serializer for JWTs. Whereas other conveinience
@@ -152,27 +161,32 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 }
 
 func (s *Serializer) Sign(options ...SignOption) *Serializer {
-	//nolint:prealloc
 	var soptions []jws.SignOption
-	for _, option := range options {
-		v, ok := option.Value().(jws.SignOption)
-		if !ok {
-			continue
+	if l := len(options); l > 0 {
+		// we need to from SignOption to Option because ... reasons
+		// (todo: when go1.18 prevails, use type parameters
+		rawoptions := make([]Option, l)
+		for i, option := range options {
+			rawoptions[i] = option
 		}
-		soptions = append(soptions, v)
-	}
 
+		converted, err := toSignOptions(rawoptions...)
+		if err != nil {
+			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Sign: failed to convert options into jws.SignOption: %w`, err)})
+		}
+		soptions = converted
+	}
+	return s.sign(soptions...)
+}
+
+func (s *Serializer) sign(options ...jws.SignOption) *Serializer {
 	return s.Step(&jwsSerializer{
-		options: soptions,
+		options: options,
 	})
 }
 
 type jweSerializer struct {
-	keyalg      jwa.KeyEncryptionAlgorithm
-	key         interface{}
-	contentalg  jwa.ContentEncryptionAlgorithm
-	compressalg jwa.CompressionAlgorithm
-	options     []EncryptOption
+	options []jwe.EncryptOption
 }
 
 func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
@@ -181,32 +195,44 @@ func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 		return nil, fmt.Errorf(`expected []byte as input`)
 	}
 
-	var hdrs jwe.Headers
-	//nolint:forcetypeassert
-	for _, option := range s.options {
-		switch option.Ident() {
-		case identJweHeaders{}:
-			hdrs = option.Value().(jwe.Headers)
-		}
-	}
-
-	if hdrs == nil {
-		hdrs = jwe.NewHeaders()
-	}
-
+	hdrs := jwe.NewHeaders()
 	if err := setTypeOrCty(ctx, hdrs); err != nil {
 		return nil, err // this is already wrapped
 	}
-	return jwe.Encrypt(payload, jwe.WithKey(s.keyalg, s.key), jwe.WithContentEncryption(s.contentalg), jwe.WithCompress(s.compressalg), jwe.WithProtectedHeaders(hdrs))
+
+	options := append([]jwe.EncryptOption{jwe.WithMergeProtectedHeaders(true), jwe.WithProtectedHeaders(hdrs)}, s.options...)
+	return jwe.Encrypt(payload, options...)
 }
 
-func (s *Serializer) Encrypt(keyalg jwa.KeyEncryptionAlgorithm, key interface{}, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm, options ...EncryptOption) *Serializer {
+// Encrypt specifies the JWT to be serialized as an encrypted payload.
+//
+// One notable difference between this method and `jwe.Encrypt()` is that
+// while `jwe.Encrypt()` OVERWRITES the previous headers when `jwe.WithProtectedHeaders()`
+// is provided, this method MERGES them. This is due to the fact that we
+// MUST add some extra headers to construct a proper JWE message.
+// Be careful when you pass multiple `jwe.EncryptOption`s.
+func (s *Serializer) Encrypt(options ...EncryptOption) *Serializer {
+	var eoptions []jwe.EncryptOption
+	if l := len(options); l > 0 {
+		// we need to from SignOption to Option because ... reasons
+		// (todo: when go1.18 prevails, use type parameters
+		rawoptions := make([]Option, l)
+		for i, option := range options {
+			rawoptions[i] = option
+		}
+
+		converted, err := toEncryptOptions(rawoptions...)
+		if err != nil {
+			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Encrypt: failed to convert options into jwe.EncryptOption: %w`, err)})
+		}
+		eoptions = converted
+	}
+	return s.encrypt(eoptions...)
+}
+
+func (s *Serializer) encrypt(options ...jwe.EncryptOption) *Serializer {
 	return s.Step(&jweSerializer{
-		keyalg:      keyalg,
-		key:         key,
-		contentalg:  contentalg,
-		compressalg: compressalg,
-		options:     options,
+		options: options,
 	})
 }
 

@@ -92,7 +92,7 @@ In order to allow passing either `jwa.SignatureAlgorithm` or `jwa.KeyEncrypionAl
 This caused a bit of confusion for some users because this field was the only "untyped" field that potentially could have been typed. Most notably, some people wanted to do the following, but couldn't:
 
 ```go
-jwt.Verify(token, jwt.WithVerify(key.Algorithm(), key))
+jwt.Verify(token, jwt.WithKey(key.Algorithm(), key))
 ```
 
 Since version 2.0.0 `jwk.Key` now stores the `alg` field as a `jwa.KeyAlgorithm` type, which is just an interface that covers `jwa.SignatureAlgorithm`, `jwa.KeyEncryptionAlgorithm`, or any other type that we may need to represent in the future.
