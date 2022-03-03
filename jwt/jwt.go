@@ -8,16 +8,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
-
-const _jwt = `jwt`
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
@@ -51,10 +47,9 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
-// This function can work with encrypted and/or signed tokens. Any combination
-// of JWS and JWE may be applied to the token, but this function will only
-// attempt to verify/decrypt up to 2 levels (i.e. JWS only, JWE only, JWS then
-// JWE, or JWE then JWS)
+// This function can only work either raw JWT (JSON) and JWS (Compact or JSON).
+// If you need JWE support on top of it, you will need to rollout your
+// own workaround.
 //
 // If the token is signed and you want to verify the payload matches the signature,
 // you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(jwk.Set) option.
@@ -89,20 +84,18 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 }
 
 type parseCtx struct {
-	decryptParams    DecryptParameters
 	token            Token
 	validateOpts     []ValidateOption
 	verifyOpts       []jws.VerifyOption
 	localReg         *json.Registry
-	inferAlgorithm   bool
 	pedantic         bool
 	skipVerification bool
-	useDefault       bool
 	validate         bool
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	var ctx parseCtx
+	var verifyOpts []Option
 	for _, o := range options {
 		if v, ok := o.(ValidateOption); ok {
 			ctx.validateOpts = append(ctx.validateOpts, v)
@@ -112,9 +105,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}:
-			ctx.verifyOpts = append(ctx.verifyOpts, o.Value().(jws.VerifyOption))
-		case identDecrypt{}:
-			ctx.decryptParams = o.Value().(DecryptParameters)
+			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
 			token, ok := o.Value().(Token)
 			if !ok {
@@ -123,8 +114,6 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			ctx.token = token
 		case identPedantic{}:
 			ctx.pedantic = o.Value().(bool)
-		case identDefault{}:
-			ctx.useDefault = o.Value().(bool)
 		case identValidate{}:
 			ctx.validate = o.Value().(bool)
 		case identTypedClaim{}:
@@ -133,9 +122,15 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				ctx.localReg = json.NewRegistry()
 			}
 			ctx.localReg.Register(pair.Name, pair.Value)
-		case identInferAlgorithmFromKey{}:
-			ctx.inferAlgorithm = o.Value().(bool)
 		}
+	}
+
+	if len(verifyOpts) > 0 {
+		converted, err := toVerifyOptions(verifyOpts...)
+		if err != nil {
+			return nil, fmt.Errorf(`jwt.Parse: failed to convert options into jws.VerifyOption: %w`, err)
+		}
+		ctx.verifyOpts = converted
 	}
 
 	data = bytes.TrimSpace(data)
@@ -245,40 +240,6 @@ OUTER:
 				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}
 			payload = m.Payload()
-		case jwx.JWE:
-			dp := ctx.decryptParams
-			if dp == nil {
-				return nil, fmt.Errorf(`jwt.Parse: cannot proceed with JWE encrypted payload without decryption parameters`)
-			}
-
-			var m *jwe.Message
-			var decryptOpts []jwe.DecryptOption
-			if ctx.pedantic {
-				m = jwe.NewMessage()
-				decryptOpts = []jwe.DecryptOption{jwe.WithMessage(m)}
-			}
-
-			decryptOpts = append(decryptOpts, jwe.WithKey(dp.Algorithm(), dp.Key()))
-			v, err := jwe.Decrypt(data, decryptOpts...)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to decrypt payload: %w`, err)
-			}
-
-			if !ctx.pedantic {
-				payload = v
-				continue
-			}
-
-			if strings.ToLower(m.ProtectedHeaders().Type()) == _jwt {
-				payload = v
-				break OUTER
-			}
-
-			if strings.ToLower(m.ProtectedHeaders().ContentType()) == _jwt {
-				expectNested = true
-				payload = v
-				continue OUTER
-			}
 		default:
 			return nil, fmt.Errorf(`unsupported format (layer: #%d)`, i+1)
 		}
@@ -332,7 +293,22 @@ OUTER:
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jwt.WithHeaders option.
 func Sign(t Token, options ...SignOption) ([]byte, error) {
-	return NewSerializer().Sign(options...).Serialize(t)
+	var soptions []jws.SignOption
+	if l := len(options); l > 0 {
+		// we need to from SignOption to Option because ... reasons
+		// (todo: when go1.18 prevails, use type parameters
+		rawoptions := make([]Option, l)
+		for i, option := range options {
+			rawoptions[i] = option
+		}
+
+		converted, err := toSignOptions(rawoptions...)
+		if err != nil {
+			return nil, fmt.Errorf(`jwt.Sign: failed to convert options into jws.SignOption: %w`, err)
+		}
+		soptions = converted
+	}
+	return NewSerializer().sign(soptions...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like
