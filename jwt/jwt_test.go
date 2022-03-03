@@ -23,6 +23,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jwe"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -1453,4 +1454,39 @@ func TestVerifyAuto(t *testing.T) {
 	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
 		return
 	}
+}
+
+func TestSerializer(t *testing.T) {
+	t.Run(`Invalid sign suboption`, func(t *testing.T) {
+		_, err := jwt.NewSerializer().
+			Sign(jwt.WithKey(jwa.HS256, []byte("abracadavra"), jwe.WithCompress(jwa.Deflate))).
+			Serialize(jwt.New())
+		if !assert.Error(t, err, `Serialize() should fail`) {
+			return
+		}
+	})
+	t.Run(`Invalid SignatureAglrotihm`, func(t *testing.T) {
+		_, err := jwt.NewSerializer().
+			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadavra"))).
+			Serialize(jwt.New())
+		if !assert.Error(t, err, `Serialize() should succeedl`) {
+			return
+		}
+	})
+	t.Run(`Invalid encrypt suboption`, func(t *testing.T) {
+		_, err := jwt.NewSerializer().
+			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadavra"), jws.WithPretty(true))).
+			Serialize(jwt.New())
+		if !assert.Error(t, err, `Serialize() should fail`) {
+			return
+		}
+	})
+	t.Run(`Invalid KeyEncryptionAglrotihm`, func(t *testing.T) {
+		_, err := jwt.NewSerializer().
+			Encrypt(jwt.WithKey(jwa.HS256, []byte("abracadavra"))).
+			Serialize(jwt.New())
+		if !assert.Error(t, err, `Serialize() should succeedl`) {
+			return
+		}
+	})
 }
