@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/lestrrat-go/jwx/v2 v2.0.0-00010101000000-000000000000
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 )
 
 require (
