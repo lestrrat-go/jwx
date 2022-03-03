@@ -47,12 +47,12 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
 // The token must be encoded in either JSON format or compact format.
 //
-// This function can only work either raw JWT (JSON) and JWS (Compact or JSON).
+// This function can only work with either raw JWT (JSON) and JWS (Compact or JSON).
 // If you need JWE support on top of it, you will need to rollout your
 // own workaround.
 //
 // If the token is signed and you want to verify the payload matches the signature,
-// you must pass the jwt.WithVerify(alg, key) or jwt.WithKeySet(jwk.Set) option.
+// you must pass the jwt.WithKey(alg, key) or jwt.WithKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 //
 // During verification, if the JWS headers specify a key ID (`kid`), the
