@@ -233,6 +233,9 @@ func WithHeaderKey(v string) ParseOption {
 	return &parseOption{option.New(identHeaderKey{}, v)}
 }
 
+// WithKeyProvider allows users to specify an object to provide keys to
+// sign/verify tokens using arbitrary code. Please read the documentation
+// for `jws.KeyProvider` in the `jws` package for details on how this works.
 func WithKeyProvider(v jws.KeyProvider) ParseOption {
 	return &parseOption{option.New(identKeyProvider{}, v)}
 }

@@ -19,7 +19,7 @@ More examples are located in the examples directory ([jwt_example_test.go](../ex
 ## Verify a signed JWT
 
 ```go
-  token, err := jwt.Parse(payload, jwt.WithKeySet(keyset))
+  token, err := jwt.Parse(payload, jwt.WithKey(alg, key))
   if err != nil {
     fmt.Printf("failed to parse payload: %s\n", err)
   }
@@ -59,7 +59,7 @@ func ExampleJWT() {
 
   {
     // Signing a token (using raw rsa.PrivateKey)
-    signed, err := jwt.Sign(t, jwa.RS256, key)
+    signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, key))
     if err != nil {
       log.Printf("failed to sign token: %s", err)
       return
@@ -75,7 +75,7 @@ func ExampleJWT() {
       return
     }
 
-    signed, err := jwt.Sign(t, jwa.RS256, jwkKey)
+    signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, jwkKey))
     if err != nil {
       log.Printf("failed to sign token: %s", err)
       return

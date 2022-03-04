@@ -16,6 +16,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
+  * [Parse and Verify a JWT (using custom key retrieval logic)](#parse-and-verify-ajwt-using-custom-key-retrieval-logic)
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
@@ -197,6 +198,29 @@ token, _ := jwt.Parse(
 
 This feature must be used with extreme caution. Please see the caveats and fine prints
 in the documentation for `jws.VerifyAuto()`
+
+## Parse and Verify a JWT (using custom key retrieval logic)
+
+Consider a case where you want to load the key to verify a Token from a database.
+In this case you can use `jws.KeyProvider`:
+
+```go
+token, _ := jwt.Parse(
+  src,
+  jwt.WithKeyProvider(jwt.WithKeyProviderFunc(func(ctx context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+    // Use current signature or the message as hint to
+    // look for the key, perhaps KeyID()
+    kid := sig.ProtectedHeaders().KeyID()
+    alg, key, err := loadKey(kid)
+    if err != nil {
+      return err
+    }
+
+    sink.Key(alg, key)
+    return nil
+  })),
+)
+```
 
 # JWT Validation
 
