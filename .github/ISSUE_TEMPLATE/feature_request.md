@@ -9,7 +9,7 @@ assignees: ''
 
 **Disclaimer**
 
-Before filing an issue, please read the contents of [DISCLAIMERS.md](https://github.com/lestrrat-go/jwx/v2/blob/main/DISCLAIMERS.md), and follow its instructions.
+Before filing an issue, please read the contents of [DISCLAIMERS.md](https://github.com/lestrrat-go/jwx/blob/v2/DISCLAIMERS.md), and follow its instructions.
 
 **Abstract**
 Please describe concisely what you want to accomplish, including prerequisite information. Please remember that if _you_ cannot articulate the problem, we cannot guess what you are thinking.

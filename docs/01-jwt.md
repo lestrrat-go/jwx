@@ -309,7 +309,7 @@ If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializ
 
 When you marshal `jwt.Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
 
-The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/v2/issues/368)).
+The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/tree/v2/issues/368)).
 
 ```
 {

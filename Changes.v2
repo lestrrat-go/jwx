@@ -83,7 +83,7 @@ Changes
     to be `string` and therefore could not be passed directly to `jwt.Sign()`
     `jws.Sign()`, `jwe.Encrypt()`, et al. This is no longer the case, and
     now you can pass it directly. See 
-    https://github.com/lestrrat-go/jwx/v2/blob/main/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
+    https://github.com/lestrrat-go/jwx/blob/v2/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
     for more details
 
   * [jws] `jws.Sign()` can now generate JWS messages in either compact or JSON
