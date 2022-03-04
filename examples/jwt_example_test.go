@@ -389,3 +389,87 @@ func ExampleJWT_OpenIDToken() {
 	//   "sub": "https://github.com/lestrrat-go/jwx/v2/jwt"
 	// }
 }
+
+type TokenWithSource struct {
+	jwt.Token
+	undecoded []byte
+}
+
+func ParseTokenWithSource(serialized []byte, options ...jwt.ParseOption) (*TokenWithSource, error) {
+	tok := TokenWithSource{
+		Token: jwt.New(),
+	}
+
+	options = append(options, jwt.WithToken(&tok))
+
+	_, err := jwt.Parse(serialized, options...)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to verify token: %w`, err)
+	}
+
+	tok.undecoded = serialized
+	return &tok, nil
+}
+
+func (t *TokenWithSource) Verify(options ...jws.VerifyOption) error {
+	if _, err := jws.Verify(t.undecoded, options...); err != nil {
+		return fmt.Errorf(`jws.Verify failed: %w`, err)
+	}
+	return nil
+}
+
+func (t *TokenWithSource) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, t.Token)
+}
+
+func (t *TokenWithSource) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.Token)
+}
+
+// This example shows how you might want to customize a token without
+// verifying it, but carry the original serialized payload so that it can be
+// verified at a later point
+func ExampleJWT_Extended() {
+	key, err := jwk.New([]byte(`abracadavra`))
+	if err != nil {
+		fmt.Printf("failed to create key: %s\n", err)
+		return
+	}
+
+	var serialized []byte
+	{
+		t0, err := jwt.NewBuilder().
+			Issuer(`github.com/lestrrat-go/jwx`).
+			Audience([]string{`custom-token`}).
+			Build()
+		if err != nil {
+			fmt.Printf("failed to create token t0: %s\n", err)
+			return
+		}
+
+		v, err := jwt.Sign(t0, jwt.WithKey(jwa.HS256, key))
+		if err != nil {
+			fmt.Printf("failed to sign token t0: %s\n", err)
+			return
+		}
+		serialized = v
+	}
+
+	tok, err := ParseTokenWithSource(serialized)
+	if err != nil {
+		fmt.Printf("failed to parse custom token: %s\n", err)
+		return
+	}
+
+	if tok.Issuer() != `github.com/lestrrat-go/jwx` {
+		fmt.Printf("issuer did not match (got %q)\n", tok.Issuer())
+		return
+	}
+
+	if err := tok.Verify(jws.WithKey(jwa.HS256, key)); err != nil {
+		fmt.Printf("failed to verify token: %s\n", err)
+		return
+	}
+
+	// OUTPUT:
+}
