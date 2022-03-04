@@ -20,10 +20,10 @@ import (
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
 
-// Decrypter is responsible for taking various components to decrypt a message.
+// decrypter is responsible for taking various components to decrypt a message.
 // its operation is not concurrency safe. You must provide locking yourself
 //nolint:govet
-type Decrypter struct {
+type decrypter struct {
 	aad         []byte
 	apu         []byte
 	apv         []byte
@@ -41,7 +41,7 @@ type Decrypter struct {
 	keycount    int
 }
 
-// NewDecrypter Creates a new Decrypter instance. You must supply the
+// newDecrypter Creates a new Decrypter instance. You must supply the
 // rest of parameters via their respective setter methods before
 // calling Decrypt().
 //
@@ -49,77 +49,77 @@ type Decrypter struct {
 // *rsa.PrivateKey, instead of jwk.Key)
 //
 // You should consider this object immutable once you assign values to it.
-func NewDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey interface{}) *Decrypter {
-	return &Decrypter{
+func newDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey interface{}) *decrypter {
+	return &decrypter{
 		ctalg:   ctalg,
 		keyalg:  keyalg,
 		privkey: privkey,
 	}
 }
 
-func (d *Decrypter) AgreementPartyUInfo(apu []byte) *Decrypter {
+func (d *decrypter) AgreementPartyUInfo(apu []byte) *decrypter {
 	d.apu = apu
 	return d
 }
 
-func (d *Decrypter) AgreementPartyVInfo(apv []byte) *Decrypter {
+func (d *decrypter) AgreementPartyVInfo(apv []byte) *decrypter {
 	d.apv = apv
 	return d
 }
 
-func (d *Decrypter) AuthenticatedData(aad []byte) *Decrypter {
+func (d *decrypter) AuthenticatedData(aad []byte) *decrypter {
 	d.aad = aad
 	return d
 }
 
-func (d *Decrypter) ComputedAuthenticatedData(aad []byte) *Decrypter {
+func (d *decrypter) ComputedAuthenticatedData(aad []byte) *decrypter {
 	d.computedAad = aad
 	return d
 }
 
-func (d *Decrypter) ContentEncryptionAlgorithm(ctalg jwa.ContentEncryptionAlgorithm) *Decrypter {
+func (d *decrypter) ContentEncryptionAlgorithm(ctalg jwa.ContentEncryptionAlgorithm) *decrypter {
 	d.ctalg = ctalg
 	return d
 }
 
-func (d *Decrypter) InitializationVector(iv []byte) *Decrypter {
+func (d *decrypter) InitializationVector(iv []byte) *decrypter {
 	d.iv = iv
 	return d
 }
 
-func (d *Decrypter) KeyCount(keycount int) *Decrypter {
+func (d *decrypter) KeyCount(keycount int) *decrypter {
 	d.keycount = keycount
 	return d
 }
 
-func (d *Decrypter) KeyInitializationVector(keyiv []byte) *Decrypter {
+func (d *decrypter) KeyInitializationVector(keyiv []byte) *decrypter {
 	d.keyiv = keyiv
 	return d
 }
 
-func (d *Decrypter) KeySalt(keysalt []byte) *Decrypter {
+func (d *decrypter) KeySalt(keysalt []byte) *decrypter {
 	d.keysalt = keysalt
 	return d
 }
 
-func (d *Decrypter) KeyTag(keytag []byte) *Decrypter {
+func (d *decrypter) KeyTag(keytag []byte) *decrypter {
 	d.keytag = keytag
 	return d
 }
 
 // PublicKey sets the public key to be used in decoding EC based encryptions.
 // The key must be in its "raw" format (i.e. *ecdsa.PublicKey, instead of jwk.Key)
-func (d *Decrypter) PublicKey(pubkey interface{}) *Decrypter {
+func (d *decrypter) PublicKey(pubkey interface{}) *decrypter {
 	d.pubkey = pubkey
 	return d
 }
 
-func (d *Decrypter) Tag(tag []byte) *Decrypter {
+func (d *decrypter) Tag(tag []byte) *decrypter {
 	d.tag = tag
 	return d
 }
 
-func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
+func (d *decrypter) ContentCipher() (content_crypt.Cipher, error) {
 	if d.cipher == nil {
 		switch d.ctalg {
 		case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
@@ -136,7 +136,7 @@ func (d *Decrypter) ContentCipher() (content_crypt.Cipher, error) {
 	return d.cipher, nil
 }
 
-func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, err error) {
+func (d *decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, err error) {
 	cek, keyerr := d.DecryptKey(recipientKey)
 	if keyerr != nil {
 		err = fmt.Errorf(`failed to decrypt key: %w`, keyerr)
@@ -163,7 +163,7 @@ func (d *Decrypter) Decrypt(recipientKey, ciphertext []byte) (plaintext []byte, 
 	return plaintext, nil
 }
 
-func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error) {
+func (d *decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error) {
 	switch d.keyalg {
 	case jwa.DIRECT:
 		return cek, nil
@@ -225,7 +225,7 @@ func (d *Decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 	}
 }
 
-func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
+func (d *decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 	if d.keyalg.IsSymmetric() {
 		var ok bool
 		cek, ok = d.privkey.([]byte)
@@ -249,7 +249,7 @@ func (d *Decrypter) DecryptKey(recipientKey []byte) (cek []byte, err error) {
 	return cek, nil
 }
 
-func (d *Decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
+func (d *decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 	cipher, err := d.ContentCipher()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to fetch content crypt cipher: %w`, err)

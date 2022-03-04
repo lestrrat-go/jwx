@@ -65,6 +65,8 @@ Changes
     These options can be stacked. Therefore, you could configure the
     verification process to attempt a static key pair, a JWKS, and only
     try other forms if the first two fails, for example.
+
+  * [jwe] jwe.Decrypter has been unexported. Users did not need this.
    
   * [jwe] jwe.WithKeyProvider() has been added to specify arbitrary
     code to specify which keys to try.
@@ -74,7 +76,8 @@ Changes
   * [jwe] jwe.KeyProviderFunc has been added
  
   * [jwe] `WithPostParser()` has been removed. You can achieve the same effect
-    by using `jwe.WithKeyProvider()`
+    by using `jwe.WithKeyProvider()`. Because this was the only consumer for
+    `jwe.DecryptCtx`, this type has been removed as well.
 
   * [jwk] `(jwk.Key).Algorithm()` is now of `jwk.KeyAlgorithm` type. This field used
     to be `string` and therefore could not be passed directly to `jwt.Sign()`
