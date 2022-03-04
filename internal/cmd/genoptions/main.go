@@ -119,6 +119,16 @@ func genOptions(objects *Objects) error {
 
 	o.LL(`package %s`, objects.PackageName)
 
+	// Write all imports -- they will be pruned by golang.org/x/tools/imports eventually,
+	// so it's okay to be redundant
+	o.WriteImports(
+		`github.com/lestrrat-go/jwx/v2/jwa`,
+		`github.com/lestrrat-go/jwx/v2/jwe`,
+		`github.com/lestrrat-go/jwx/v2/jwk`,
+		`github.com/lestrrat-go/jwx/v2/jws`,
+		`github.com/lestrrat-go/jwx/v2/jwt`,
+	)
+
 	o.LL(`type Option = option.Interface`)
 
 	for _, iface := range objects.Interfaces {
