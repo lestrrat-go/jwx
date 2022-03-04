@@ -1,6 +1,9 @@
 package_name: jwe
 output: jwe/options_gen.go
 interfaces:
+  - name: CompactOption
+    comment: |
+      CompactOption describes options that can be passed to `jwe.Compact`
   - name: DecryptOption
     comment: |
       DecryptOption describes options that can be passed to `jwe.Decrypt`

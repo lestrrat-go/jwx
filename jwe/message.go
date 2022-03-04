@@ -431,7 +431,13 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 	return nil
 }
 
-func Compact(m *Message) ([]byte, error) {
+// Compact generates a JWE message in compact serialization format from a
+// `*jwe.Message` object. The object contain exactly one recipient, or
+// an error is returned.
+//
+// This function currently does not take any options, but the function
+// signature contains `options` for possible future expansion of the API
+func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	if len(m.recipients) != 1 {
 		return nil, fmt.Errorf(`wrong number of recipients for compact serialization`)
 	}

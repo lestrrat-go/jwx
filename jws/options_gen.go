@@ -10,6 +10,18 @@ import (
 
 type Option = option.Interface
 
+// CompactOption describes options that can be passed to `jws.Compact`
+type CompactOption interface {
+	Option
+	compactOption()
+}
+
+type compactOption struct {
+	Option
+}
+
+func (*compactOption) compactOption() {}
+
 // SignOption describes options that can be passed to `jws.Sign`
 type SignOption interface {
 	Option
@@ -87,6 +99,7 @@ type withKeySuboption struct {
 func (*withKeySuboption) withKeySuboption() {}
 
 type identContext struct{}
+type identDetached struct{}
 type identDetachedPayload struct{}
 type identInferAlgorithmFromKey struct{}
 type identKey struct{}
@@ -102,6 +115,10 @@ type identUseDefault struct{}
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identDetached) String() string {
+	return "WithDetached"
 }
 
 func (identDetachedPayload) String() string {
@@ -145,7 +162,7 @@ func (identRequireKid) String() string {
 }
 
 func (identSerialization) String() string {
-	return "WithCompact"
+	return "WithSerialization"
 }
 
 func (identUseDefault) String() string {
@@ -154,6 +171,13 @@ func (identUseDefault) String() string {
 
 func WithContext(v context.Context) VerifyOption {
 	return &verifyOption{option.New(identContext{}, v)}
+}
+
+// WithDetached specifies that the `jws.Message` should be serialized in
+// JWS compact serialization with detached payload. The resulting octet
+// sequence will not contain the payload section.
+func WithDetached(v bool) CompactOption {
+	return &compactOption{option.New(identDetached{}, v)}
 }
 
 // WithDetachedPayload can be used to both sign or verify a JWS message with a

@@ -436,3 +436,58 @@ func (m Message) marshalFull() ([]byte, error) {
 	copy(ret, buf.Bytes())
 	return ret, nil
 }
+
+// Compact generates a JWS message in compact serialization format from
+// `*jws.Message` object. The object contain exactly one signature, or
+// an error is returned.
+//
+// If using a detached payload, the payload must already be stored in
+// the `*jws.Message` object, and the `jws.WithDetached()` option
+// must be passed to the function.
+func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
+	if l := len(msg.signatures); l != 1 {
+		return nil, fmt.Errorf(`jws.Compact: cannot serialize message with %d signatures (must be one)`, l)
+	}
+
+	var detached bool
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identDetached{}:
+			detached = option.Value().(bool)
+		}
+	}
+
+	s := msg.signatures[0]
+	// XXX check if this is correct
+	hdrs := s.ProtectedHeaders()
+
+	hdrbuf, err := json.Marshal(hdrs)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.Compress: failed to marshal headers: %w`, err)
+	}
+
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
+
+	buf.WriteString(base64.EncodeToString(hdrbuf))
+	buf.WriteByte('.')
+
+	if !detached {
+		if getB64Value(hdrs) {
+			encoded := base64.EncodeToString(msg.payload)
+			buf.WriteString(encoded)
+		} else {
+			if bytes.Contains(msg.payload, []byte{'.'}) {
+				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
+			}
+			buf.Write(msg.payload)
+		}
+	}
+
+	buf.WriteByte('.')
+	buf.WriteString(base64.EncodeToString(s.signature))
+	ret := make([]byte, buf.Len())
+	copy(ret, buf.Bytes())
+	return ret, nil
+}

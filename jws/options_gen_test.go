@@ -10,6 +10,7 @@ import (
 
 func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithContext", identContext{}.String())
+	require.Equal(t, "WithDetached", identDetached{}.String())
 	require.Equal(t, "WithDetachedPayload", identDetachedPayload{}.String())
 	require.Equal(t, "WithInferAlgorithmFromKey", identInferAlgorithmFromKey{}.String())
 	require.Equal(t, "WithKey", identKey{}.String())
@@ -20,6 +21,6 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithProtected", identProtectedHeaders{}.String())
 	require.Equal(t, "WithPublic", identPublicHeaders{}.String())
 	require.Equal(t, "WithRequireKid", identRequireKid{}.String())
-	require.Equal(t, "WithCompact", identSerialization{}.String())
+	require.Equal(t, "WithSerialization", identSerialization{}.String())
 	require.Equal(t, "WithUseDefault", identUseDefault{}.String())
 }
