@@ -59,7 +59,7 @@ func ExampleJWT() {
 
   {
     // Signing a token (using raw rsa.PrivateKey)
-    signed, err := jwt.Sign(t, jwa.RS256, key)
+    signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, key))
     if err != nil {
       log.Printf("failed to sign token: %s", err)
       return
@@ -75,7 +75,7 @@ func ExampleJWT() {
       return
     }
 
-    signed, err := jwt.Sign(t, jwa.RS256, jwkKey)
+    signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, jwkKey))
     if err != nil {
       log.Printf("failed to sign token: %s", err)
       return

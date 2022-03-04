@@ -105,6 +105,10 @@ options:
   - ident: KeyProvider
     interface: ParseOption
     argument_type: jws.KeyProvider
+    comment: |
+      WithKeyProvider allows users to specify an object to provide keys to
+      sign/verify tokens using arbitrary code. Please read the documentation
+      for `jws.KeyProvider` in the `jws` package for details on how this works.
   - ident: Pedantic
     interface: ParseOption
     argument_type: bool
