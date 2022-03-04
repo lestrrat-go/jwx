@@ -16,6 +16,23 @@ func (s stringer) String() string {
 	return s.src
 }
 
+func TestSanity(t *testing.T) {
+	var k1 jwa.KeyAlgorithm = jwa.RS256
+	if _, ok := k1.(jwa.SignatureAlgorithm); !assert.True(t, ok, `converting k1 to jws.SignatureAlgorithm should succeed`) {
+		return
+	}
+	if _, ok := k1.(jwa.KeyEncryptionAlgorithm); !assert.False(t, ok, `converting k1 to jws.KeyEncryptionAlgorithm should fail`) {
+		return
+	}
+	var k2 jwa.KeyAlgorithm = jwa.DIRECT
+	if _, ok := k2.(jwa.SignatureAlgorithm); !assert.False(t, ok, `converting k2 to jws.SignatureAlgorithm should fail`) {
+		return
+	}
+	if _, ok := k2.(jwa.KeyEncryptionAlgorithm); !assert.True(t, ok, `converting k2 to jws.KeyEncryptionAlgorithm should succeed`) {
+		return
+	}
+}
+
 func TestKeyAlgorithmFrom(t *testing.T) {
 	testcases := []struct {
 		Input interface{}
