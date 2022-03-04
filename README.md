@@ -82,7 +82,7 @@ to specify alternate structs to parse objects with custom fields)
 In the end I think it comes down to your usage pattern, and priorities.
 Some general guidelines that come to mind are:
 
-* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/tree/v2/blob/main/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
+* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/v2/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
 * If you want to honor all possible custom fields transparently, use this module.
 * If you want a standardized clean API, use this module.
 
