@@ -534,8 +534,8 @@ v1.1.0 31 Jan 2021
       go build -tags jwx_goccy ...
 
     In some cases you get an extra 40~50% performance improvement in serailization
-    https://github.com/lestrrat-go/jwx/v2/pull/314#issue-560594020
-    https://github.com/lestrrat-go/jwx/v2/pull/314#issuecomment-766343888
+    https://github.com/lestrrat-go/jwx/tree/v2/pull/314#issue-560594020
+    https://github.com/lestrrat-go/jwx/tree/v2/pull/314#issuecomment-766343888
 
   * Location for examples and benchmarks have changed: Now examples/ and bench/ 
     are their respective locations, and they are each a standalone module,
