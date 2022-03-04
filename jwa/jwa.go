@@ -41,7 +41,7 @@ func KeyAlgorithmFrom(v interface{}) KeyAlgorithm {
 	switch v := v.(type) {
 	case SignatureAlgorithm:
 		return v
-	case ContentEncryptionAlgorithm:
+	case KeyEncryptionAlgorithm:
 		return v
 	case string:
 		var salg SignatureAlgorithm
