@@ -1,0 +1,117 @@
+package_name: jwk
+output: jwk/options_gen.go
+interfaces:
+  - name: AutoRefreshOption
+    comment: |
+      AutoRefreshOption is a type of Option that can be passed to the
+      AutoRefresh object.
+  - name: AssignKeyIDOption
+  - name: FetchOption
+    methods:
+      - autoRefreshOption
+      - fetchOption
+    comment: |
+      FetchOption is a type of Option that can be passed to `jwk.Fetch()`
+      FetchOption also implements the `AutoRefreshOption`, and thus can
+      safely be passed to `(*jwk.AutoRefresh).Configure()`
+  - name: ParseOption
+    methods:
+      - autoRefreshOption
+      - fetchOption
+      - readFileOption
+    comment: |
+      ParseOption is a type of Option that can be passed to `jwk.Parse()`
+      ParseOption also implmentsthe `ReadFileOPtion` and `AutoRefreshOption`,
+      and thus safely be passed to `jwk.ReadFile` and `(*jwk.AutoRefresh).Configure()`
+options:
+  - ident: HTTPClient
+    interface: FetchOption
+    argument_type: HTTPClient
+    comment: |
+      WithHTTPClient allows users to specify the "net/http".Client object that
+      is used when fetching jwk.Set objects.
+  - ident: FetchBackoff
+    interface: FetchOption
+    argument_type: backoff.Policy
+    comment: |
+      WithFetchBackoff specifies the backoff policy to use when
+      refreshing a JWKS from a remote server fails.
+      
+      This does not have any effect on initial `Fetch()`, or any of the `Refresh()` calls --
+      the backoff is applied ONLY on the background refreshing goroutine.
+  - ident: ThumbprintHash
+    interface: AssignKeyIDOption
+    argument_type: crypto.Hash
+  - ident: RefreshInterval
+    interface: AutoRefreshOption
+    argument_type: time.Duration
+    comment: |
+      WithRefreshInterval specifies the static interval between refreshes
+      of jwk.Set objects controlled by jwk.AutoRefresh.
+      
+      Providing this option overrides the adaptive token refreshing based
+      on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
+      and refreshes will *always* happen in this interval.
+  - ident: MinRefreshInterval
+    interface: AutoRefreshOption
+    argument_type: time.Duration
+    comment: |
+      WithMinRefreshInterval specifies the minimum refresh interval to be used
+      when using AutoRefresh. This value is ONLY used if you did not specify
+      a user-supplied static refresh interval via `WithRefreshInterval`.
+      
+      This value is used as a fallback value when tokens are refreshed.
+      
+      When we fetch the key from a remote URL, we first look at the max-age
+      directive from Cache-Control response header. If this value is present,
+      we compare the max-age value and the value specified by this option
+      and take the larger one.
+      
+      Next we check for the Expires header, and similarly if the header is
+      present, we compare it against the value specified by this option,
+      and take the larger one.
+      
+      Finally, if neither of the above headers are present, we use the
+      value specified by this option as the next refresh timing
+      
+      If unspecified, the minimum refresh interval is 1 hour
+  - ident: LocalRegistry
+    option_name: withLocalRegistry
+    interface: ParseOption
+    argument_type: '*json.Registry'
+    comment: This option is only available for internal code. Users don't get to play with it
+  - ident: PEM
+    interface: ParseOption
+    argument_type: bool
+    comment: WithPEM specifies that the input to `Parse()` is a PEM encoded key.
+  - ident: FetchWhitelist
+    interface: FetchOption
+    argument_type: Whitelist
+    comment: |
+      WithFetchWhitelist specifies the Whitelist object to use when
+      fetching JWKs from a remote source. This option can be passed
+      to both `jwk.Fetch()`, `jwk.NewAutoRefresh()`, and `(*jwk.AutoRefresh).Configure()`
+  - ident: IgnoreParseError
+    interface: ParseOption
+    argument_type: bool
+    comment: |
+      WithIgnoreParseError is only applicable when used with `jwk.Parse()`
+      (i.e. to parse JWK sets). If passed to `jwk.ParseKey()`, the function
+      will return an error no matter what the input is.
+      
+      DO NOT USE WITHOUT EXHAUSTING ALL OTHER ROUTES FIRST.
+      
+      The option specifies that errors found during parsing of individual
+      keys are ignored. For example, if you had keys A, B, C where B is
+      invalid (e.g. it does not contain the required fields), then the
+      resulting JWKS will contain keys A and C only.
+      
+      This options exists as an escape hatch for those times when a
+      key in a JWKS that is irrelevant for your use case is causing
+      your JWKS parsing to fail, and you want to get to the rest of the
+      keys in the JWKS.
+      
+      Again, DO NOT USE unless you have exhausted all other routes.
+      When you use this option, you will not be able to tell if you are
+      using a faulty JWKS, except for when there are JSON syntax errors.
+

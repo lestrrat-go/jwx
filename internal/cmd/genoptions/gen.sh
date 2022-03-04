@@ -12,6 +12,7 @@ go build -o genoptions main.go
 popd
 
 ./internal/cmd/genoptions/genoptions -objects=jwe/options.yaml
+./internal/cmd/genoptions/genoptions -objects=jwk/options.yaml
 ./internal/cmd/genoptions/genoptions -objects=jws/options.yaml
 ./internal/cmd/genoptions/genoptions -objects=jwt/options.yaml
 
