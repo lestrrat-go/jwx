@@ -15,18 +15,6 @@ func WithProtectedHeaders(h Headers) EncryptOption {
 	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
 }
 
-type DecryptEncryptOption interface {
-	DecryptOption
-	EncryptOption
-}
-
-type decryptEncryptOption struct {
-	Option
-}
-
-func (*decryptEncryptOption) decryptOption() {}
-func (*decryptEncryptOption) encryptOption() {}
-
 type withKey struct {
 	alg     jwa.KeyAlgorithm
 	key     interface{}
@@ -48,7 +36,14 @@ func WithRecipientHeaders(hdr Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identRecipientHeaders{}, hdr)}
 }
 
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) DecryptEncryptOption {
+// WithKey is used to pass a static algorithm/key pair to either `jwe.Encrypt()` or `jwe.Decrypt()`.
+//
+// The `alg` parameter is the identifier for the key encryption algorithm that should be used.
+// It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.SignatureAlgorithm`
+// types. It is this way so that the value in `(jwk.Key).Algorithm()` can be directly
+// passed to the option. If you specify other algorithm types such as `jwa.ContentEncryptionAlgorithm`,
+// then you will get an error when `jws.Sign()` or `jws.Verify()` is executed.
+func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -58,7 +53,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 		}
 	}
 
-	return &decryptEncryptOption{option.New(identKey{}, &withKey{
+	return &encryptDecryptOption{option.New(identKey{}, &withKey{
 		alg:     alg,
 		key:     key,
 		headers: hdr,

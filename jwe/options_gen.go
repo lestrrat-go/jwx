@@ -33,6 +33,21 @@ type decryptOption struct {
 
 func (*decryptOption) decryptOption() {}
 
+// EncryptDecryptOption describes options that can be passed to either `jwe.Encrypt` or `jwe.Decrypt`
+type EncryptDecryptOption interface {
+	Option
+	encryptOption()
+	decryptOption()
+}
+
+type encryptDecryptOption struct {
+	Option
+}
+
+func (*encryptDecryptOption) encryptOption() {}
+
+func (*encryptDecryptOption) decryptOption() {}
+
 // EncryptOption describes options that can be passed to `jwe.Encrypt`
 type EncryptOption interface {
 	Option

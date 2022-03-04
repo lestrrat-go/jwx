@@ -12,9 +12,20 @@ import (
 // KeyProvider is responsible for providing key(s) to encrypt or decrypt a payload.
 // Multiple `jwe.KeyProvider`s can be passed to `jwe.Encrypt()` or `jwe.Decrypt()`
 //
+// `jwe.Encrypt()` can only accept static key providers via `jwe.WithKey()`,
+// while `jwe.Derypt()` can accept `jwe.WithKey()`, `jwe.WithKeySet()`,
+// and `jwe.WithKeyProvider()`.
+//
 // Understanding how this works is crucial to learn how this package works.
 // Here we will use `jwe.Decrypt()` as an example to show how the `KeyProvider`
 // works.
+//
+// `jwe.Encrypt()` is straightforward: the content encryption key is encrypted
+// using the provided keys, and JWS recipient objects are created for each.
+//
+// `jwe.Decrypt()` is a bit more involved, because there are cases you
+// will want to compute/deduce/guess the keys that you would like to
+// use for decryption.
 //
 // The first thing that `jwe.Decrypt()` needs to do is to collect the
 // KeyProviders from the option list that the user provided (presented in pseudocode):
@@ -54,9 +65,6 @@ import (
 //       return OK
 //     }
 //   }
-//
-// `jwe.Encrypt()` does mostly the same thing, but it generates recipients
-// instead of decrypting until something matches.
 type KeyProvider interface {
 	FetchKeys(context.Context, KeySink, Recipient, *Message) error
 }

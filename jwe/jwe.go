@@ -190,6 +190,26 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 	return r, rawCEK, nil
 }
 
+// Encrypt generates a JWE message for the given payload and returns
+// it in serialized form, which can be in either compact or
+// JSON format. Default is compact.
+//
+// You must pass at least one key to `jwe.Encrypt()` by using `jwe.WithKey()`
+// option.
+//
+//   jwe.Encrypt(payload, jwe.WithKey(alg, key))
+//   jwe.Encrypt(payload, jws.WithJSON(), jws.WithKey(alg1, key1), jws.WithKey(alg2, key2))
+//
+// Note that in the second example the `jws.WithJSON()` option is
+// specified as well. This is because the compact serialization
+// format does not support multiple recipients, and users must
+// specifically ask for the JSON serialization format.
+//
+// Read the documentation for `jwe.WithKey()` to learn more about the
+// possible values that can be used for `alg` and `key`.
+//
+// Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
+// for a complete list of options that can be passed to this function.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	// default content encryption algorithm
 	calg := jwa.A256GCM

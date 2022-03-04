@@ -10,6 +10,12 @@ interfaces:
   - name: EncryptOption
     comment: |
       EncryptOption describes options that can be passed to `jwe.Encrypt`
+  - name: EncryptDecryptOption
+    methods:
+      - encryptOption
+      - decryptOption
+    comment: |
+      EncryptDecryptOption describes options that can be passed to either `jwe.Encrypt` or `jwe.Decrypt`
   - name: WithJSONSuboption
     concrete_type: withJSONSuboption
     comment: |

@@ -47,6 +47,10 @@ Changes
     `jwe.WithKey()` options. This can be used with `jwe.WithJSON` to
     create JWE messages with multiple signatures.
 
+  * [jwe] `jwe.DecryptEncryptOption()` has been renamed to `jwe.EncryptDecryptOption()`.
+    This is so that it is more uniform with `jws` equivalent of `jws.SignVerifyOption()`
+    where the producer (`Sign`) comes before the consumer (`Verify`) in the naming
+
   * [jwe] `jwe.WithCompact` and `jwe.WithJSON` options have been added
     to control the serialization format.
 

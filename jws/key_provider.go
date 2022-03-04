@@ -13,11 +13,20 @@ import (
 // KeyProvider is responsible for providing key(s) to sign or verify a payload.
 // Multiple `jws.KeyProvider`s can be passed to `jws.Verify()` or `jws.Sign()`
 //
-// Understanding how this works is crucial to learn how this package works.
-// Here we will use `jws.Verify()` as an example to show how the `KeyProvider`
-// works.
+// `jws.Sign()` can only accept static key providers via `jws.WithKey()`,
+// while `jws.Verify()` can accept `jws.WithKey()`, `jws.WithKeySet()`,
+// `jws.WithVerifyAuto()`, and `jws.WithKeyProvider()`.
 //
-// The first thing that `jws.Verify()` needs to do is to collect the
+// Understanding how this works is crucial to learn how this package works.
+//
+// `jws.Sign()` is straightforward: signatures are created for each
+// provided key.
+//
+// `jws.Verify()` is a bit more involved, because there are cases you
+// will want to compute/deduce/guess the keys that you would like to
+// use for verification.
+//
+// The first thing that `jws.Verify()` does is to collect the
 // KeyProviders from the option list that the user provided (presented in pseudocode):
 //
 //   keyProviders := filterKeyProviders(options)
@@ -56,9 +65,6 @@ import (
 //       return OK
 //     }
 //   }
-//
-// `jws.Sign()` does mostly the same thing, but it generates signatures
-// instead of verifying until something matches.
 type KeyProvider interface {
 	FetchKeys(context.Context, KeySink, *Signature, *Message) error
 }
