@@ -94,7 +94,7 @@ func ExampleJWE_ComplexDecrypt() {
 		return
 	}
 
-	// The party responsible to determining the key is the jwe.PostParser hook.
+	// The party responsible to determining the key is the jwe.KeyProvider hook.
 	//
 	// Here we are using a function turned into an interface for brevity, but in real life
 	// I would personally recommend creating a real type for your specific needs

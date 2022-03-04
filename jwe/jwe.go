@@ -383,21 +383,6 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	}
 }
 
-// DecryptCtx is used internally when jwe.Decrypt is called, and is
-// passed for hooks that you may pass into it.
-//
-// Regular users should not have to touch this object, but if you need advanced handling
-// of messages, you might have to use it. Only use it when you really
-// understand how JWE processing works in this library.
-type DecryptCtx interface {
-	Algorithm() jwa.KeyEncryptionAlgorithm
-	SetAlgorithm(jwa.KeyEncryptionAlgorithm)
-	Key() interface{}
-	SetKey(interface{})
-	Message() *Message
-	SetMessage(*Message)
-}
-
 type decryptCtx struct {
 	msg              *Message
 	aad              []byte
@@ -546,7 +531,7 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 		}
 		key = raw
 	}
-	dec := NewDecrypter(alg, dctx.msg.protectedHeaders.ContentEncryption(), key).
+	dec := newDecrypter(alg, dctx.msg.protectedHeaders.ContentEncryption(), key).
 		AuthenticatedData(dctx.aad).
 		ComputedAuthenticatedData(dctx.computedAad).
 		InitializationVector(dctx.msg.initializationVector).
