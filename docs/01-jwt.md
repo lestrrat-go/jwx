@@ -16,7 +16,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
-  * [Parse and Verify a JWT (using custom key retrieval logic)](#parse-and-verify-ajwt-using-custom-key-retrieval-logic)
+  * [Parse and Verify a JWT (using custom key retrieval logic)](#parse-and-verify-a-jwt-using-custom-key-retrieval-logic)
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
