@@ -1,8 +1,33 @@
 # github.com/lestrrat-go/jwx/v2 ![](https://github.com/lestrrat-go/jwx/v2/workflows/CI/badge.svg) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2) [![codecov.io](http://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=main)](http://codecov.io/github/lestrrat-go/jwx?branch=main)
 
-Various libraries implementing various JWx technologies. Please click on the package names in the table below to find the synopsis/description for each package.
+Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
 If you are using this module in your product or your company, please add  your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/v2/wiki/Users)! It really helps keeping up our motivation.
+
+# Features
+
+* Complete coverage of JWA/JWE/JWK/JWS/JWT, not just JWT+minimum tool set.
+* Opinionated, but very uniform API. Everything is symmetric, and follows a standard convetion
+
+Some more in-depth discussion on why you might want to use this library over others
+can be found in the [Description section](#description)
+
+# How-to Documentation
+
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2)
+* [How-to style documentation](./docs)
+* [Runnable Examples](./examples)
+
+## Installation
+
+```
+go install github.com/lestrrat-go/jwx/v2/cmd/jwx
+```
+
+# Description
+
+This Go module implements JWA, JWE, JWK, JWS, and JWT. Please see the following table for the list of
+available packages:
 
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
@@ -11,15 +36,6 @@ If you are using this module in your product or your company, please add  your p
 | [jwa](https://github.com/lestrrat-go/jwx/v2/tree/main/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
 | [jws](https://github.com/lestrrat-go/jwx/v2/tree/main/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
 | [jwe](https://github.com/lestrrat-go/jwx/v2/tree/main/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
-
-# How to Use
-
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2)
-* [How-to style documentation](./docs)
-* [Runnable Examples](./examples)
-
-# Description
-
 ## History
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
@@ -72,34 +88,6 @@ Some general guidelines that come to mind are:
 
 Otherwise, feel free to choose something else.
 
-# Command Line Tool
-
-Since v1.1.1 we have a command line tool `jwx` (*). With `jwx` you can create JWKs (from PEM files, even), sign and verify JWS message, encrypt and decrypt JWE messages, etc.
-
-(*) Okay, it existed since a long time ago, but it was never useful.
-
-## Installation
-
-```
-go install github.com/lestrrat-go/jwx/v2/cmd/jwx
-```
-
-# Caveats
-
-## Backwards Compatibility Notice
-
-### Users of github.com/lestrrat/go-jwx
-
-Uh, why are you using such an ancient version? You know that repository is archived for a reason, yeah? Please use the new version.
-
-### Pre-1.0.0 users
-
-The API has been reworked quite substantially between pre- and post 1.0.0 releases. Please check out the [Changes](./Changes) file (or the [diff](https://github.com/lestrrat-go/jwx/v2/compare/v0.9.2...v1.0.0), if you are into that sort of thing)
-
-### v1.0.x users
-
-The API has gone under some changes for v1.1.0. If you are upgrading, you might want to read the relevant parts in the [Changes](./Changes) file.
-
 # Contributions
 
 ## Issues
@@ -123,12 +111,13 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/v2/discussions) firs
 
 # Related Modules
 
+* [github.com/lestrrat-go/echo-middileware-jwx](https://github.com/lestrrat-go/echo-middleware-jwx) - Sample Echo middleware
 * [github.com/jwx-go/crypto-signer/gcp](https://github.com/jwx-go/crypto-signer/tree/main/gcp) - GCP KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
 * [github.com/jwx-go/crypto-signer/aws](https://github.com/jwx-go/crypto-signer/tree/main/aws) - AWS KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
 
 # Credits
 
 * Initial work on this library was generously sponsored by HDE Inc (https://www.hde.co.jp)
-* Lots of code, especially JWE was taken from go-jose library (https://github.com/square/go-jose)
+* Lots of code, especially JWE was initially taken from go-jose library (https://github.com/square/go-jose)
 * Lots of individual contributors have helped this project over the years. Thank each and everyone of you very much.
 
