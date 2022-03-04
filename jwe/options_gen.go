@@ -9,6 +9,18 @@ import (
 
 type Option = option.Interface
 
+// CompactOption describes options that can be passed to `jwe.Compact`
+type CompactOption interface {
+	Option
+	compactOption()
+}
+
+type compactOption struct {
+	Option
+}
+
+func (*compactOption) compactOption() {}
+
 // DecryptOption describes options that can be passed to `jwe.Decrypt`
 type DecryptOption interface {
 	Option

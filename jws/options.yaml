@@ -1,6 +1,9 @@
 package_name: jws
 output: jws/options_gen.go
 interfaces:
+  - name: CompactOption
+    comment: |
+      CompactOption describes options that can be passed to `jws.Compact`
   - name: VerifyOption
     comment: |
       VerifyOption describes options that can be passed to `jws.Verify`
@@ -39,6 +42,13 @@ options:
       
       By default `jws.Sign()` will opt to use compact format, so you usually
       do not need to specify this option other than to be explicit about it
+  - ident: Detached
+    interface: CompactOption
+    argument_type: bool
+    comment: |
+      WithDetached specifies that the `jws.Message` should be serialized in
+      JWS compact serialization with detached payload. The resulting octet
+      sequence will not contain the payload section.
   - ident: DetachedPayload
     interface: SignVerifyOption
     argument_type: '[]byte'
