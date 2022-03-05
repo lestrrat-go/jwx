@@ -45,6 +45,29 @@ We use the terms "validate" and "validation" to describe the process of checking
 To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse)
 
 <!-- INCLUDE(examples/jwt_parse_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_Parse() {
+  // Note: this JWT has NOT been verified because we have not
+  // passed jwt.WithKey() et al. You need to pass these values
+  // if you want the token to be parsed and verified in one go
+  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC))
+  if err != nil {
+    fmt.Printf("%s\n", err)
+    return
+  }
+  _ = tok
+  // OUTPUT:
+}
+```
+source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
 Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
@@ -56,6 +79,42 @@ In order to perform verification/validation, please see the methods described el
 To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
 
 <!-- INCLUDE(examples/jwt_readfile_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "io/ioutil"
+  "log"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ReadFile() {
+  f, err := ioutil.TempFile(``, `snippet_jwt_readfile-*.jws`)
+  if err != nil {
+    log.Printf(`failed to create temporary file: %s`, err)
+    return
+  }
+  defer os.Remove(f.Name())
+
+  fmt.Fprintf(f, exampleJWTSignedHMAC)
+  f.Close()
+
+  // Note: this JWT has NOT been verified because we have not
+  // passed jwt.WithKey() et al. You need to pass these values
+  // if you want the token to be parsed and verified in one go
+  tok, err := jwt.ReadFile(f.Name())
+  if err != nil {
+    log.Printf(`failed to read file %q: %s`, f.Name(), err)
+    return
+  }
+  _ = tok
+  // OUTPUT:
+}
+```
+source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWT from a *http.Request
@@ -63,6 +122,66 @@ To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github
 To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
 
 <!-- INCLUDE(examples/jwt_parse_request_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "net/http"
+  "net/url"
+  "strings"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ParseRequest_Authorization() {
+  values := url.Values{
+    `access_token`: []string{exampleJWTSignedHMAC},
+  }
+
+  req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, strings.NewReader(values.Encode()))
+  if err != nil {
+    fmt.Printf("failed to create request: %s\n", err)
+    return
+  }
+
+  req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, exampleJWTSignedECDSA))
+  req.Header.Set(`X-JWT-Token`, exampleJWTSignedRSA)
+
+  testcases := []struct {
+    options []jwt.ParseOption
+  }{
+    // No options - looks under "Authorization" header
+    {},
+    // Looks under "X-JWT-Token" header only
+    {
+      options: []jwt.ParseOption{jwt.WithHeaderKey(`X-JWT-Token`)},
+    },
+    // Looks under "Authorization" and "X-JWT-Token" headers
+    {
+      options: []jwt.ParseOption{jwt.WithHeaderKey(`Authorization`), jwt.WithHeaderKey(`X-JWT-Token`)},
+    },
+    // Looks under "Authorization" header and "access_token" form field
+    {
+      options: []jwt.ParseOption{jwt.WithFormKey(`access_token`)},
+    },
+  }
+
+  for _, tc := range testcases {
+    // Note: this JWT has NOT been verified because we have not
+    // passed jwt.WithKey() et al. You need to pass these values
+    // if you want the token to be parsed and verified in one go
+    tok, err := jwt.ParseRequest(req, tc.options...)
+    if err != nil {
+      fmt.Printf("jwt.ParseRequest with options %#v failed: %s\n", tc.options, err)
+      return
+    }
+    _ = tok
+  }
+  // OUTPUT:
+}
+```
+source: [examples/jwt_parse_request_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_request_example_test.go)
 <!-- END INCLUDE -->
 
 # Programmatically Creating a JWT
@@ -72,6 +191,37 @@ To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](
 The most straight forward way is to use the constructor `jwt.New()` and use `(jwt.Token).Set()`:
 
 <!-- INCLUDE(examples/jwt_construct_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_Construct() {
+  tok := jwt.New()
+  if err := tok.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`); err != nil {
+    fmt.Printf("failed to set claim: %s\n", err)
+    return
+  }
+  if err := tok.Set(jwt.AudienceKey, `users`); err != nil {
+    fmt.Printf("failed to set claim: %s\n", err)
+    return
+  }
+
+  if err := json.NewEncoder(os.Stdout).Encode(tok); err != nil {
+    fmt.Printf("failed to encode to JSON: %s\n", err)
+    return
+  }
+  // OUTPUT:
+  // {"aud":["users"],"iss":"github.com/lestrrat-go/jwx"}
+}
+```
+source: [examples/jwt_construct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_construct_example_test.go)
 <!-- END INCLUDE -->
 
 If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
@@ -86,6 +236,37 @@ One caveat that you should be aware about is that all calls to set a claim in th
 operation. If you set the same claim multiple times, the last value is used.
 
 <!-- INCLUDE(examples/jwt_builder_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_Builder() {
+  tok, err := jwt.NewBuilder().
+    Claim(`claim1`, `value1`).
+    Claim(`claim2`, `value2`).
+    Issuer(`github.com/lestrrat-go/jwx`).
+    Audience([]string{`users`}).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+  if err := json.NewEncoder(os.Stdout).Encode(tok); err != nil {
+    fmt.Printf("failed to encode to JSON: %s\n", err)
+    return
+  }
+  // OUTPUT:
+  // {"aud":["users"],"claim1":"value1","claim2":"value2","iss":"github.com/lestrrat-go/jwx"}
+}
+```
+source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_builder_example_test.go)
 <!-- END INCLUDE -->
 
 # JWT Verification
@@ -95,6 +276,36 @@ operation. If you set the same claim multiple times, the last value is used.
 To parse a JWT *and* verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the signature was generated using ES256:
 
 <!-- INCLUDE(examples/jwt_parse_with_key_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ParseWithKey() {
+  const keysrc = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
+
+  key, err := jwk.ParseKey([]byte(keysrc))
+  if err != nil {
+    fmt.Printf("jwk.ParseKey failed: %s\n", err)
+    return
+  }
+
+  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256, key))
+  if err != nil {
+    fmt.Printf("jwt.Parse failed: %s\n", err)
+    return
+  }
+  _ = tok
+  // OUTPUT:
+}
+```
+source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
@@ -104,6 +315,105 @@ In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".Publi
 To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the JWS contains the "kid" header of the key that generated the signature:
 
 <!-- INCLUDE(examples/jwt_parse_with_keyset_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ParseWithKeySet() {
+  var serialized []byte
+  var signingKey jwk.Key
+  var keyset jwk.Set
+
+  // Preparation:
+  //
+  // For demonstration purposes, we need to do some preparation
+  // Create a JWK key to sign the token (and also give a KeyID),
+  {
+    privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+    if err != nil {
+      fmt.Printf("failed to generate private key: %s\n", err)
+      return
+    }
+    // This is the key we will use to sign
+    realKey, err := jwk.New(privKey)
+    if err != nil {
+      fmt.Printf("failed to create JWK: %s\n", err)
+      return
+    }
+    realKey.Set(jwk.KeyIDKey, `mykey`)
+    realKey.Set(jwk.AlgorithmKey, jwa.RS256)
+
+    // For demonstration purposes, we also create a bogus key
+    bogusKey := jwk.NewSymmetricKey()
+    bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature)
+    bogusKey.Set(jwk.KeyIDKey, "otherkey")
+
+    // Now create a key set that users will use to verity the signed serialized against
+    // Normally these keys are available somewhere like https://www.googleapis.com/oauth2/v3/certs
+    // This key set contains two keys, the first one is the correct one
+
+    // We can use the jwk.PublicSetOf() utility to get a JWKS
+    // all of the public keys
+    {
+      privset := jwk.NewSet()
+      privset.Add(realKey)
+      privset.Add(bogusKey)
+      v, err := jwk.PublicSetOf(privset)
+      if err != nil {
+        fmt.Printf("failed to create public JWKS: %s\n", err)
+        return
+      }
+      keyset = v
+    }
+
+    signingKey = realKey
+  }
+
+  // Create the token
+  token := jwt.New()
+  token.Set(`foo`, `bar`)
+
+  // Sign the token and generate a JWS message
+  signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, signingKey))
+  if err != nil {
+    fmt.Printf("failed to generate signed serialized: %s\n", err)
+    return
+  }
+
+  // This is what you typically get as a signed JWT from a server
+  serialized = signed
+
+  // Actual verification:
+  // FINALLY. This is how you Parse and verify the serialized.
+  // Key IDs are automatically matched.
+  // There was a lot of code above, but as a consumer, below is really all you need
+  // to write in your code
+  tok, err := jwt.Parse(
+    serialized,
+    // Tell the parser that you want to use this keyset
+    jwt.WithKeySet(keyset),
+
+    // Replace the above option with the following option if you know your key
+    // does not have an "alg"/ field (which is apparently the case for Azure tokens)
+    // jwt.WithKeySet(keyset, jws.WithInferAlgorithmFromKey(true)),
+  )
+  if err != nil {
+    fmt.Printf("failed to parse serialized: %s\n", err)
+  }
+  _ = tok
+  // OUTPUT:
+}
+```
+source: [examples/jwt_parse_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 Or, if you want to switch which `jwk.Set` to use depending on the contents of the unverified token, you can use the `jwt.WithKeySetProvider` option.
