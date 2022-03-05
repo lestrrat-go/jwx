@@ -7,7 +7,15 @@ If you are using this module in your product or your company, please add  your p
 # Features
 
 * Complete coverage of JWA/JWE/JWK/JWS/JWT, not just JWT+minimum tool set.
+  * Supports JWS messages with multiple signatures, both compact and JSON serialization
+  * Supports JWS with detached payload
+  * Supports JWS with unencoded payload (RFC7797)
+  * Supports JWE messages with multiple recipients, both compact and JSON serialization
+  * Most operations work with either JWK or raw keys e.g. *rsa.PrivateKey, *ecdsa.PrivateKey, etc).
 * Opinionated, but very uniform API. Everything is symmetric, and follows a standard convetion
+  * jws.Parse/Verify/Sign
+  * jwe.Parse/Encrypt/Decrypt
+  * Arguments are organized as explicit required paramters and optional WithXXXX() style options.
 
 Some more in-depth discussion on why you might want to use this library over others
 can be found in the [Description section](#description)
