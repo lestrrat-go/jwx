@@ -55,9 +55,8 @@ In order to perform verification/validation, please see the methods described el
 
 To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
 
-```go
-token, _ := jwt.ReadFile(`token.json`)
-```
+<!-- INCLUDE(examples/snippets_jwt_read_file_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a JWT from a *http.Request
 
