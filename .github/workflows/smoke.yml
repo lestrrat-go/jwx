@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Check documentation generator
+        run: |
+          find . -name '*.md' | xargs env AUTODOC_DRYRUN=1 perl tools/autodoc.pl
       - name: Cache Go modules
         uses: actions/cache@v2
         with:

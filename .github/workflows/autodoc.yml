@@ -1,0 +1,20 @@
+name: Auto-Doc
+on:
+  pull_request:
+    branches:
+      - v2
+    types:
+      - closed
+
+jobs:
+  autodoc:
+    runs-on: ubuntu-latest
+    name: "Run commands to generate documentation"
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Process markdown files
+        run: |
+          find . -name '*.md' | xargs perl tools/autodoc.pl
+ 
