@@ -103,10 +103,8 @@ In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".Publi
 
 To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the JWS contains the "kid" header of the key that generated the signature:
 
-```go
-src := []byte{...}
-token, _ := jwt.Parse(src, jwt.WithKeySet(keyset))
-```
+<!-- INCLUDE(examples/jwt_parse_with_keyset_example_test.go) -->
+<!-- END INCLUDE -->
 
 Or, if you want to switch which `jwk.Set` to use depending on the contents of the unverified token, you can use the `jwt.WithKeySetProvider` option.
 
