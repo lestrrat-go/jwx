@@ -44,10 +44,8 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse)
 
-```go
-src := []byte{...}
-token, _ := jwt.Parse(src)
-```
+<!-- INCLUDE(examples/snippets_jwt_parse_example_test.go) -->
+<!-- END INCLUDE -->
 
 Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
 This just reads the contents of src, and maps it into the token, period.
