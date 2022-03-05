@@ -29,7 +29,7 @@ for my $filename (@files) {
     
         $output->print("```go\n");
         my $content = do {
-            open(my $file, '<', $include_filename) or die $!;
+            open(my $file, '<', $include_filename) or die "failed to include file $include_filename from source file $filename: $!";
             local $/;
             <$file>;
         };
@@ -44,20 +44,23 @@ for my $filename (@files) {
     $output->close();
     close($src);
 
-    rename $output->filename, $filename or die $!;
-
-    if (!$has_diff) {
-        my $diff = `git diff $filename`;
-        if ($diff) {
-            $has_diff = 1;
+    if (!$ENV{AUTODOC_DRYRUN}) {
+        rename $output->filename, $filename or die $!;
+        if (!$has_diff) {
+            my $diff = `git diff $filename`;
+            if ($diff) {
+                $has_diff = 1;
+            }
         }
     }
 }
 
-if ($has_diff) {
-    system("git", "remote", "set-url", "origin", "https://github-actions:$ENV{GITHUB_TOKEN}\@github.com/$ENV{GITHUB_REPOSITORY}") == 0 or die $!;
-    system("git", "config", "--global", "user.name", "$ENV{GITHUB_ACTOR}") == 0 or die $!;
-    system("git", "config", "--global", "user.email", "$ENV{GITHUB_ACTOR}\@users.noreply.github.com") == 0 or die $!;
-    system("git", "commit", "-m", "autodoc updates", @files) == 0 or die $!;
-    system("git", "push", "origin", "HEAD:$ENV{GITHUB_REF}") == 0 or die $!;
+if (!$ENV{AUTODOC_DRYRUN}) {
+    if ($has_diff) {
+        system("git", "remote", "set-url", "origin", "https://github-actions:$ENV{GITHUB_TOKEN}\@github.com/$ENV{GITHUB_REPOSITORY}") == 0 or die $!;
+        system("git", "config", "--global", "user.name", "$ENV{GITHUB_ACTOR}") == 0 or die $!;
+        system("git", "config", "--global", "user.email", "$ENV{GITHUB_ACTOR}\@users.noreply.github.com") == 0 or die $!;
+        system("git", "commit", "-m", "autodoc updates", @files) == 0 or die $!;
+        system("git", "push", "origin", "HEAD:$ENV{GITHUB_REF}") == 0 or die $!;
+    }
 }

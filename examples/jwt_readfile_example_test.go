@@ -1,4 +1,4 @@
-package examples
+package examples_test
 
 import (
 	"fmt"
@@ -17,11 +17,12 @@ func ExampleJWT_ReadFile() {
 	}
 	defer os.Remove(f.Name())
 
-	fmt.Fprintf(f, sampleSignedJWT)
+	fmt.Fprintf(f, exampleJWTSignedHMAC)
 	f.Close()
 
 	// Note: this JWT has NOT been verified because we have not
-	// passed jwt.WithKey() et al.
+	// passed jwt.WithKey() et al. You need to pass these values
+	// if you want the token to be parsed and verified in one go
 	tok, err := jwt.ReadFile(f.Name())
 	if err != nil {
 		log.Printf(`failed to read file %q: %s`, f.Name(), err)

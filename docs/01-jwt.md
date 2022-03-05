@@ -44,7 +44,7 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse)
 
-<!-- INCLUDE(examples/snippets_jwt_parse_example_test.go) -->
+<!-- INCLUDE(examples/jwt_parse_example_test.go) -->
 <!-- END INCLUDE -->
 
 Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
@@ -55,78 +55,38 @@ In order to perform verification/validation, please see the methods described el
 
 To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
 
-<!-- INCLUDE(examples/snippets_jwt_read_file_example_test.go) -->
+<!-- INCLUDE(examples/jwt_readfile_example_test.go) -->
 <!-- END INCLUDE -->
 
 ## Parse a JWT from a *http.Request
 
 To parse a JWT stored within a *http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
 
-```go
-// Looks under "Authorization" header
-token, err := jwt.ParseRequest(req)
-
-// Looks under "X-JWT-Token" header
-token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("X-JWT-Token"))
-
-// Looks under "Authorization" and "X-JWT-Token" headers
-token, err := jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("X-JWT-Token"))
-
-// Looks under "Authorization" header and "access_token" form field
-token, err := jwt.ParseRequest(req, jwt.WithFormKey("access_token"))
-```
+<!-- INCLUDE(examples/jwt_parse_request_example_test.go) -->
+<!-- END INCLUDE -->
 
 # Programmatically Creating a JWT
 
 ## Using `jwt.New`
 
-The most straight
+The most straight forward way is to use the constructor `jwt.New()` and use `(jwt.Token).Set()`:
 
-```go
-token := jwt.New()
-_ = token.Set(name, value)
-```
+<!-- INCLUDE(examples/jwt_construct_example_test.go) -->
+<!-- END INCLUDE -->
 
 If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
 
 ## Using Builder
 
-Since v1.2.12, the `jwt` package comes with a builder, which you can use to initialize a JWT token in (almost) one go:
-
-```go
-token, err := jwt.NewBuilder().
-  Claim(name1, value1).
-  Claim(name2, value2).
-  ...
-  Build()
-```
-
-For known fields, you can use the special methods:
-
-```go
-token, err := jwt.NewBuilder().
-  IssuedAt(time.Now()).
-  Audience("me").
-  Issuer("foobar").
-  Build()
-```
+Since v1.2.12, the `jwt` package comes with a builder, which you can use to initialize a JWT token in (almost) one go.
+For known fields, you can use the special methods such as `Issuer()` and `Audience()`. For other claims
+you can use the `Claim()` method.
 
 One caveat that you should be aware about is that all calls to set a claim in the builder performs an _overwriting_
-operation. For example, specifying `Audience` multiple times will only overwrite the previous value. If you have fields
-that require a list of string, you should use `[]string` as the value
+operation. If you set the same claim multiple times, the last value is used.
 
-```go
-// WRONG. The result will be "aud": "bar", not "aud": ["foo", "bar"]
-_, _ = jwt.NewBuilder().
-  Audience("foo").
-  Audience("bar").
-  Build()
-
-// CORRECT.
-_, _ = jwt.NewBuilder().
-  Audience([]string{"foo", "bar"}).
-  Build()
-```
+<!-- INCLUDE(examples/jwt_builder_example_test.go) -->
+<!-- END INCLUDE -->
 
 # JWT Verification
 
@@ -134,10 +94,8 @@ _, _ = jwt.NewBuilder().
 
 To parse a JWT *and* verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the signature was generated using ES256:
 
-```go
-src := []byte{...}
-token, _ := jwt.Parse(src, jwt.WithKey(jwa.ES256, key))
-```
+<!-- INCLUDE(examples/jwt_parse_with_key_example_test.go) -->
+<!-- END INCLUDE -->
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
 
