@@ -2,7 +2,7 @@ name: Auto-Doc
 on:
   pull_request:
     branches:
-      - v2
+      - v2-test
     types:
       - closed
 
