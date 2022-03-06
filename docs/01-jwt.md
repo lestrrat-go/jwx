@@ -656,6 +656,8 @@ func ExampleJWT_Validate() {
       return
     }
 
+    // NOTE: This token has NOT been verified for demonstration
+    // purposes. Use `jwt.WithKey()` or the like in your production code
     _, err = jwt.Parse(buf, jwt.WithValidate(true))
     if err == nil {
       fmt.Printf("token should fail validation\n")
@@ -751,7 +753,6 @@ func ExampleJWT_ValidateValidator() {
   fmt.Printf("%s\n", err)
   // OUTPUT:
   // tokens are only valid if issued during August!
-
 }
 ```
 source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_validator_example_test.go)
@@ -762,6 +763,76 @@ source: [examples/jwt_validate_validator_example_test.go](https://github.com/les
 If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. To do this, you can use the function `jwt.IsValidationError()`. To further differentiate between specific errors, you can use `errors.Is()`:
 
 <!-- INCLUDE(examples/jwt_validate_detect_error_type_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "errors"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ValidateDetectErrorType() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    Expiration(time.Now().Add(-1 * time.Hour)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  buf, err := json.Marshal(tok)
+  if err != nil {
+    fmt.Printf("failed to serialize token: %s\n", err)
+    return
+  }
+
+  {
+    // Case 1: Parsing error. We're not showing verification faiure
+    // but it is about the same in the context of wanting to know
+    // if it's a validation error or not
+    _, err := jwt.Parse(buf[:len(buf)-1], jwt.WithValidate(true))
+    if err == nil {
+      fmt.Printf("token should fail parsing\n")
+      return
+    }
+
+    if jwt.IsValidationError(err) {
+      fmt.Printf("error should NOT be validation error\n")
+      return
+    }
+  }
+
+  {
+    // Case 2: Parsing works, validation fails
+    // NOTE: This token has NOT been verified for demonstration
+    // purposes. Use `jwt.WithKey()` or the like in your production code
+    _, err = jwt.Parse(buf, jwt.WithValidate(true))
+    if err == nil {
+      fmt.Printf("token should fail parsing\n")
+      return
+    }
+
+    if !jwt.IsValidationError(err) {
+      fmt.Printf("error should be validation error\n")
+      return
+    }
+
+    if !errors.Is(err, jwt.ErrTokenExpired()) {
+      fmt.Printf("error should be of token expired type\n")
+      return
+    }
+    fmt.Printf("%s\n", err)
+  }
+  // OUTPUT:
+  // "exp" not satisfied
+}
+```
+source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_detect_error_type_example_test.go)
 <!-- END INCLUDE -->
 
 # JWT Serialization
@@ -774,6 +845,34 @@ In this case it will be marshaled as a JSON object rather than in the compact fo
 Since it will be just the raw token, no signing or encryption will be performed.
 
 <!-- INCLUDE(examples/jwt_serialize_json_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_SerializeJSON() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(tok)
+  // OUTPUT:
+  // {"iat":233431200,"iss":"github.com/lestrrat-go/jwx"}
+}
+```
+source: [examples/jwt_serialize_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize using JWS
@@ -783,6 +882,46 @@ The `jwt` package provides a convenience function `jwt.Sign()` to serialize a to
 If you need even further customization, consider using the `jws` package directly.
 
 <!-- INCLUDE(examples/jwt_serialize_jws_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_SerializeJWS() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  key, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    fmt.Printf("failed to create symmetric key: %s\n", err)
+    return
+  }
+
+  serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
+  if err != nil {
+    fmt.Printf("failed to sign token: %s\n", err)
+    return
+  }
+
+  fmt.Printf("%s\n", serialized)
+  // OUTPUT:
+  // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.rTlpyVnHFWosNud7seqlsvhM8UoXUIAKfdWHySFO5Ro
+}
+```
+source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jws_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize using JWE and JWS
@@ -794,6 +933,63 @@ If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializ
 The following example, encrypts a token using JWE, then uses JWS to sign the encrypted payload:
 
 <!-- INCLUDE(examples/jwt_serialize_jwe_jws_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_SerializeJWEJWS() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to generate private key: %s\n", err)
+    return
+  }
+
+  enckey, err := jwk.New(privkey.PublicKey)
+  if err != nil {
+    fmt.Printf("failed to create symmetric key: %s\n", err)
+    return
+  }
+
+  signkey, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    fmt.Printf("failed to create symmetric key: %s\n", err)
+    return
+  }
+
+  serialized, err := jwt.NewSerializer().
+    Encrypt(jwt.WithKey(jwa.RSA_OAEP, enckey)).
+    Sign(jwt.WithKey(jwa.HS256, signkey)).
+    Serialize(tok)
+  if err != nil {
+    fmt.Printf("failed to encrypt and sign token: %s\n", err)
+    return
+  }
+  _ = serialized
+  // We don't use the result of serialization as it will always be
+  // different because of randomness used in the encryption logic
+  // OUTPUT:
+}
+```
+source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jwe_jws_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize the the `aud` field as a single string
