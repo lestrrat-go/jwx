@@ -18,6 +18,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (using arbitrary keys)](#parse-and-verify-a-jwt-using-arbitrary-keys)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
 * [Validation](#jwt-validation)
+  * [Validate for specific claims]
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
   * [Serialize using JWS](#serialize-using-jws)
@@ -614,34 +615,22 @@ in the documentation for `jws.VerifyAuto()`
 
 To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) function.
 
-```go
-if err := jwt.Validate(token); err != nil {
-	return errors.New(`failed to validate token`)
-}
-```
+<!-- INCLUDE(examples/jwt_validate_example_test.go) -->
+<!-- END INCLUDE -->
 
-By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ValidateOption) values.
+## Validate for specific claim values
 
-```go
-// Check for token["iss"] == "github.com/lestrrat-go/jwx/v2"
-if err := jwt.Validate(token, jwt.WithIssuer(`github.com/lestrrat-go/jwx/v2`)) {
-  return errors.New(`failed to validate token`)
-}
-```
+By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ValidateOption) values, such as `jwt.WithClaimValue()`, `jwt.WithRequiredClaim()`, etc.
+
+<!-- INCLUDE(examples/jwt_validate_issuer_example_test.go) -->
+<!-- END INCLUDE -->
+
+## Create a custom validator
 
 You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
 
-```go
-validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
-  if time.Now().Month() != 8 {
-    return jwt.NewValidationError(errors.New(`tokens are only valid during August!`))
-  }
-  return nil
-})
-if err := jwt.Validate(token, jwt.WithValidator(validator)); err != nil {
-  ...
-}
-```
+<!-- INCLUDE(examples/jwt_validate_validator_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Detecting error types
 
