@@ -18,7 +18,8 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (using arbitrary keys)](#parse-and-verify-a-jwt-using-arbitrary-keys)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
 * [Validation](#jwt-validation)
-  * [Validate for specific claims]
+  * [Validate for specific claims](#validate-for-specific-claims)
+  * [Use a custom validator](#use-a-custom-validator)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
   * [Serialize using JWS](#serialize-using-jws)
@@ -625,7 +626,7 @@ By default we only check for the time-related components of a token, such as "ia
 <!-- INCLUDE(examples/jwt_validate_issuer_example_test.go) -->
 <!-- END INCLUDE -->
 
-## Create a custom validator
+## Use a custom validator
 
 You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
 
