@@ -617,6 +617,37 @@ in the documentation for `jws.VerifyAuto()`
 To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) function.
 
 <!-- INCLUDE(examples/jwt_validate_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_Validate() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    Expiration(time.Now().Add(-1 * time.Hour)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  err = jwt.Validate(tok)
+  if err == nil {
+    fmt.Printf("token should fail validation\n")
+    return
+  }
+  fmt.Printf("%s\n", err)
+  // OUTPUT:
+  // "exp" not satisfied
+}
+```
+source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_example_test.go)
 <!-- END INCLUDE -->
 
 ## Validate for specific claim values
@@ -624,6 +655,37 @@ To validate if the JWT's contents, such as if the JWT contains the proper "iss",
 By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ValidateOption) values, such as `jwt.WithClaimValue()`, `jwt.WithRequiredClaim()`, etc.
 
 <!-- INCLUDE(examples/jwt_validate_issuer_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ValidateIssuer() {
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    Expiration(time.Now().Add(time.Hour)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  err = jwt.Validate(tok, jwt.WithIssuer(`nobody`))
+  if err == nil {
+    fmt.Printf("token should fail validation\n")
+    return
+  }
+  fmt.Printf("%s\n", err)
+  // OUTPUT:
+  // "iss" not satisfied: values do not match
+}
+```
+source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_issuer_example_test.go)
 <!-- END INCLUDE -->
 
 ## Use a custom validator
@@ -631,6 +693,47 @@ By default we only check for the time-related components of a token, such as "ia
 You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
 
 <!-- INCLUDE(examples/jwt_validate_validator_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "errors"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_ValidateValidator() {
+  validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+    if t.IssuedAt().Month() != 8 {
+      return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
+    }
+    return nil
+  })
+
+  tok, err := jwt.NewBuilder().
+    Issuer(`github.com/lestrrat-go/jwx`).
+    IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  err = jwt.Validate(tok, jwt.WithValidator(validator))
+  if err == nil {
+    fmt.Printf("token should fail validation\n")
+    return
+  }
+  fmt.Printf("%s\n", err)
+  // OUTPUT:
+  // tokens are only valid if issued during August!
+
+}
+```
+source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_validator_example_test.go)
 <!-- END INCLUDE -->
 
 ## Detecting error types
