@@ -42,6 +42,28 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 # Parsing
 
+Parsing a (possibly) JWT comprises of multiple distinct operations. Typically your JWTs are signed and serialized as JWS messages. The JWT is _enveloped_ in JWS. The following is a [sample JWS message serialized in compact form](https://datatracker.ietf.org/doc/html/rfc7515#appendix-A.1):
+
+```
+eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjX
+```
+
+This message is comprised of three data segments encoded in `base64`, concatenated with a `.`. Each part reads as follows:
+
+* **Part 1**: The JWS protected headers. These are metadata required to verify the signed payload.
+* **Part 2**: The JWS payload. This can be any arbitrary data, but in our case it would be a JWT object.
+* **Part 3**: The JWS signature. This is the signature generated from the signinig key, the headers, and the payload.
+
+It is important to realize that JWS in itself has nothing to do with JWT. The envelope and therefore the JWS mechanism itself does not care that the payload is JWT or not.
+
+Once we verify the integrity of the payload using JWS verification, the payload can then be trusted to be untampered.
+Therefore, while the JWS payload _could_ theoretically be decoded as a JWT object before verification, its contents
+should not be trusted -- e.g. it should not be used to store information that has to do with verification.
+
+The `jwt.Parse()` function in this package not only provides ways to decode a JWT object from JSON, but it also
+provides convenient ways to perform the above verification and decoding of the JWT object in one go,
+as well as validating the contents of the JWT object after it has been decoded.
+
 ## Parse a JWT
 
 To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse)
@@ -1012,15 +1034,10 @@ The examples below shoud both be valid, but apparently there are systems that do
 }
 ```
 
-To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option.
+To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option. The following example shows you how to force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has **global effect**.
 
-```go
-func init() {
-  jwt.Settings(jwt.WithFlattenAudience(true))
-}
-```
-
-The above call will force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has global effect.
+<!-- INCLUDE(examples/jwt_flatten_audience_example_test.go) -->
+<!-- END INCLUDE -->
 
 # Working with JWT
 
