@@ -155,9 +155,9 @@ type validationError struct {
 
 func (validationError) isValidationError() {}
 
-var errTokenExpired = NewValidationError(fmt.Errorf(`exp not satisfied`))
-var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`iat not satisfied`))
-var errTokenNotYetValid = NewValidationError(fmt.Errorf(`nbf not satisfied`))
+var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
+var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
+var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
 // is not satisfied
@@ -336,7 +336,7 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 		}
 	}
 	if !found {
-		return NewValidationError(fmt.Errorf(`%s not satisfied`, ccs.name))
+		return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
 	}
 	return nil
 }
@@ -376,7 +376,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	_, ok := t.Get(string(ir))
 	if !ok {
-		return NewValidationError(fmt.Errorf(`required claim %q was not found`, string(ir)))
+		return NewValidationError(fmt.Errorf(`%q not satisfied: required claim not found`, string(ir)))
 	}
 	return nil
 }
