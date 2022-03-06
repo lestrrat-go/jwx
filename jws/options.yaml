@@ -129,7 +129,6 @@ options:
     argument_type: context.Context
   - ident: ProtectedHeaders
     interface: WithKeySuboption
-    option_name: WithProtected
     argument_type: Headers
     comment: |
       WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
@@ -138,7 +137,6 @@ options:
       It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
   - ident: PublicHeaders
     interface: WithKeySuboption
-    option_name: WithPublic
     argument_type: Headers
     comment: |
       WithPublic is used with `jws.WithKey()` option when used with `jws.Sign()`

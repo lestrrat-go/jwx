@@ -195,7 +195,7 @@ type jkuProvider struct {
 func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message) error {
 	kid := sig.ProtectedHeaders().KeyID()
 	if kid == "" {
-		return nil
+		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
 	}
 
 	// errors here can't be reliablly passed to the consumers.
@@ -220,6 +220,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 
 	key, ok := set.LookupKeyID(kid)
 	if !ok {
+		// It is not an error if the key with the kid doesn't exist
 		return nil
 	}
 

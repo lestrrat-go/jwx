@@ -150,11 +150,11 @@ func (identPretty) String() string {
 }
 
 func (identProtectedHeaders) String() string {
-	return "WithProtected"
+	return "WithProtectedHeaders"
 }
 
 func (identPublicHeaders) String() string {
-	return "WithPublic"
+	return "WithPublicHeaders"
 }
 
 func (identRequireKid) String() string {
@@ -246,7 +246,7 @@ func WithPretty(v bool) WithJSONSuboption {
 // to specify a protected header to be attached to the JWS signature.
 //
 // It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
-func WithProtected(v Headers) WithKeySuboption {
+func WithProtectedHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identProtectedHeaders{}, v)}
 }
 
@@ -257,7 +257,7 @@ func WithProtected(v Headers) WithKeySuboption {
 //
 // `jws.Sign()` will result in an error if `jws.WithPublic()` is used
 // and the serialization format is compact serialization.
-func WithPublic(v Headers) WithKeySuboption {
+func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
 }
 

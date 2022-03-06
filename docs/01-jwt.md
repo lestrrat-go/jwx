@@ -17,7 +17,6 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
   * [Parse and Verify a JWT (using arbitrary keys)](#parse-and-verify-a-jwt-using-arbitrary-keys)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
-  * [Parse and Verify a JWT (using custom key retrieval logic)](#parse-and-verify-a-jwt-using-custom-key-retrieval-logic)
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
@@ -516,40 +515,14 @@ source: [examples/jwt_parse_with_key_provider_example_test.go](https://github.co
 ## Parse and Verify a JWT (using key specified in "jku")
 
 You can parse JWTs using the JWK Set specified in the`jku` field in the JWS message by telling `jwt.Parse()` to
-use `jws.VerifyAuto()` instead of `jws.Verify()`:
+use `jws.VerifyAuto()` instead of `jws.Verify()`. This would effectively allow a JWS to be
+self-validating.
 
-```go
-token, _ := jwt.Parse(
-  src,
-  jwt.WithVerifyAuto(nil, jwt.WithFetchWhitelist(...)),
-)
-```
+<!-- INCLUDE(examples/jwt_parse_with_jku_example_test.go) -->
+<!-- END INCLUDE -->
 
 This feature must be used with extreme caution. Please see the caveats and fine prints
 in the documentation for `jws.VerifyAuto()`
-
-## Parse and Verify a JWT (using custom key retrieval logic)
-
-Consider a case where you want to load the key to verify a Token from a database.
-In this case you can use `jws.KeyProvider`:
-
-```go
-token, _ := jwt.Parse(
-  src,
-  jwt.WithKeyProvider(jwt.WithKeyProviderFunc(func(ctx context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
-    // Use current signature or the message as hint to
-    // look for the key, perhaps KeyID()
-    kid := sig.ProtectedHeaders().KeyID()
-    alg, key, err := loadKey(kid)
-    if err != nil {
-      return err
-    }
-
-    sink.Key(alg, key)
-    return nil
-  })),
-)
-```
 
 # JWT Validation
 

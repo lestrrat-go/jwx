@@ -55,6 +55,9 @@ func ExampleJWT_ParseWithKeyProvider() {
 			return nil
 		}
 
+		// Note: we only send one key here, but we could potentially send _ALL_
+		// keys in the store and have `jws.Verify()` try each one (but it would
+		// most likely be a waste if you did that)
 		sink.Key(alg, key)
 		return nil
 	})))

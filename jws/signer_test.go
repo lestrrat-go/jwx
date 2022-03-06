@@ -83,8 +83,8 @@ func TestSignMulti(t *testing.T) {
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
 	m, err := jws.Sign([]byte(v),
 		jws.WithJSON(),
-		jws.WithKey(jwa.RS256, rsakey, jws.WithPublic(s1hdr)),
-		jws.WithKey(jwa.ES256, dsakey, jws.WithPublic(s2hdr)),
+		jws.WithKey(jwa.RS256, rsakey, jws.WithPublicHeaders(s1hdr)),
+		jws.WithKey(jwa.ES256, dsakey, jws.WithPublicHeaders(s2hdr)),
 	)
 	if !assert.NoError(t, err, "jws.SignMulti should succeed") {
 		return
