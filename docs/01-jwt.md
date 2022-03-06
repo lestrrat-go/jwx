@@ -761,51 +761,40 @@ source: [examples/jwt_validate_validator_example_test.go](https://github.com/les
 
 If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. To do this, you can use the function `jwt.IsValidationError()`. To further differentiate between specific errors, you can use `errors.Is()`:
 
-```go
-token, err := jwt.Parse(src, jwt.WithValidat(true))
-if err != nil {
-  if jwt.IsValidationError(err) {
-    switch {
-    case errors.Is(err, jwt.ErrTokenExpired()):
-      ...
-    case errors.Is(err, jwt.ErrTokenNotYetValid()):
-      ...
-    case errors.Is(err, jwt.ErrInvalidIssuedAt()):
-      ...
-    default:
-      ...
-    }
-  }
-}
-```
+<!-- INCLUDE(examples/jwt_validate_detect_error_type_example_test.go) -->
+<!-- END INCLUDE -->
 
 # JWT Serialization
+
+## Serialize as JSON
+
+`jwt.Token` objects can safely be passed to `"encoding/json".Marshal()` and friends.
+In this case it will be marshaled as a JSON object rather than in the compact format.
+
+Since it will be just the raw token, no signing or encryption will be performed.
+
+<!-- INCLUDE(examples/jwt_serialize_json_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Serialize using JWS
 
 The `jwt` package provides a convenience function `jwt.Sign()` to serialize a token using JWS.
 
-```go
-token := jwt.New()
-token.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx/v2`)
-
-serialized, err := jwt.Sign(token, jwt.WithKey(algorithm, key))
-```
-
 If you need even further customization, consider using the `jws` package directly.
+
+<!-- INCLUDE(examples/jwt_serialize_jws_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Serialize using JWE and JWS
 
-The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors. For example, to encrypt a token using JWE, then use JWS to sign it, do the following:
+The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors. 
 
-```go
-serizlied, err := jwt.NewSerializer().
-  Encrypt(keyEncryptionAlgorithm, keyEncryptionKey, contentEncryptionAlgorithm, compression).
-  Sign(signatureAlgorithm, signatureKey).
-  Serialize(token)
-```
+If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()` -- but at this point it may just be easier if you hand-rolled your own serialization.
 
-If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()`
+The following example, encrypts a token using JWE, then uses JWS to sign the encrypted payload:
+
+<!-- INCLUDE(examples/jwt_serialize_jwe_jws_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Serialize the the `aud` field as a single string
 

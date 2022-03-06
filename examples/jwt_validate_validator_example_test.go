@@ -34,5 +34,4 @@ func ExampleJWT_ValidateValidator() {
 	fmt.Printf("%s\n", err)
 	// OUTPUT:
 	// tokens are only valid if issued during August!
-
 }
