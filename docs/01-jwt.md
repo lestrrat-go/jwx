@@ -1037,6 +1037,43 @@ The examples below shoud both be valid, but apparently there are systems that do
 To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option. The following example shows you how to force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has **global effect**.
 
 <!-- INCLUDE(examples/jwt_flatten_audience_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWT_FlattenAudience() {
+  // This bit has been commented out because it would have
+  // global effect in all of the examples. Create a init()
+  // function with the following code if you are using it
+  // in producion
+  //
+  // jwt.Settings(jwt.WithFlattenAudience(true))
+
+  tok, err := jwt.NewBuilder().
+    Audience([]string{`foo`}).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(tok)
+
+  // If the flattened audience is enabled, the following shoud
+  // result in an error, and produce `{"aud":"foo"}`
+
+  // OUTPUT:
+  // {"aud":["foo"]}
+}
+```
+source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_flatten_audience_example_test.go)
 <!-- END INCLUDE -->
 
 # Working with JWT
