@@ -249,7 +249,7 @@ func TestJWTParseVerify(t *testing.T) {
 						hdrs.Set(jws.KeyIDKey, kid)
 
 						t1 := jwt.New()
-						signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtected(hdrs)))
+						signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtectedHeaders(hdrs)))
 						if !assert.NoError(t, err, "token.Sign should succeed") {
 							return
 						}
@@ -342,7 +342,7 @@ func TestJWTParseVerify(t *testing.T) {
 		hdrs := jws.NewHeaders()
 		hdrs.Set(jws.KeyIDKey, kid)
 		t1 := jwt.New()
-		signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtected(hdrs)))
+		signed, err := jwt.Sign(t1, jwt.WithKey(alg, key, jws.WithProtectedHeaders(hdrs)))
 		if !assert.NoError(t, err, "token.Sign should succeed") {
 			return
 		}
@@ -707,7 +707,7 @@ func TestSignTyp(t *testing.T) {
 		t1 := jwt.New()
 		hdrs := jws.NewHeaders()
 		hdrs.Set(`typ`, `custom-typ`)
-		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key, jws.WithProtected(hdrs)))
+		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdrs)))
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -1384,7 +1384,7 @@ func TestVerifyAuto(t *testing.T) {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(jws.JWKSetURLKey, srv.URL)
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key, jws.WithProtected(hdrs)))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdrs)))
 	if !assert.NoError(t, err, `jwt.Sign() should succeed`) {
 		return
 	}

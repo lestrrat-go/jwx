@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -1187,7 +1186,7 @@ func TestCustomField(t *testing.T) {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(`x-birthday`, string(bdaybytes))
 
-	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtected(hdrs)))
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtectedHeaders(hdrs)))
 	if !assert.NoError(t, err, `jws.Sign should succeed`) {
 		return
 	}
@@ -1280,7 +1279,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs)))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)))
 		if !assert.Error(t, err, `jws.Sign should fail`) {
 			return
 		}
@@ -1291,7 +1290,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs)), jws.WithDetachedPayload([]byte(payload)))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)), jws.WithDetachedPayload([]byte(payload)))
 		if !assert.Error(t, err, `jws.Sign should fail`) {
 			return
 		}
@@ -1321,7 +1320,7 @@ func TestRFC7797(t *testing.T) {
 				hdrs.Set("crit", "b64")
 
 				payload := tc.Payload
-				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256, key, jws.WithProtected(hdrs))}
+				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs))}
 				var verifyOptions []jws.VerifyOption
 				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256, key))
 				if tc.Detached {
@@ -1672,7 +1671,7 @@ func TestJKU(t *testing.T) {
 					u += "?" + tc.Query
 				}
 				hdr.Set(jws.JWKSetURLKey, u)
-				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, key, jws.WithProtected(hdr)))
+				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdr)))
 				if !assert.NoError(t, err, `jws.Sign should succeed`) {
 					return
 				}
@@ -1735,7 +1734,9 @@ func TestJKU(t *testing.T) {
 			if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
 				return
 			}
-			log.Printf("key id -> %q", pubkey.KeyID())
+			if !assert.Equal(t, pubkey.KeyID(), key.KeyID(), `key ID should be populated`) {
+				return
+			}
 			set.Add(pubkey)
 		}
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1749,7 +1750,7 @@ func TestJKU(t *testing.T) {
 		for _, key := range keys {
 			hdr := jws.NewHeaders()
 			hdr.Set(jws.JWKSetURLKey, srv.URL)
-			signOptions = append(signOptions, jws.WithKey(jwa.RS256, key, jws.WithProtected(hdr)))
+			signOptions = append(signOptions, jws.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdr)))
 		}
 
 		signed, err := jws.Sign(payload, signOptions...)
@@ -1803,6 +1804,11 @@ func TestJKU(t *testing.T) {
 					}
 				} else {
 					if !assert.NoError(t, err, `jws.Verify should succeed`) {
+						set, _ := jwk.Fetch(context.Background(), srv.URL, options...)
+						{
+							buf, _ := json.MarshalIndent(set, "", "  ")
+							t.Logf("%s", buf)
+						}
 						return
 					}
 					if !assert.Equal(t, payload, decoded, `decoded payload should match`) {
