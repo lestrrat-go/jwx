@@ -118,11 +118,11 @@ signed, _ := jws.Sign(payload,
 
 ## Generating a JWS message with detached payload
 
-Use the `jws.WithDetachedPayload()` option to sign a detached payload:
+JWS messages can be constructed with a detached payload. Use the `jws.WithDetachedPayload()` option to
+create a JWS message with the message detached from the result.
 
-```go
-signed, _ := jws.Sign(nil, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
-```
+<!-- INCLUDE(examples/jws_sign_detached_payload_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Including Arbitrary Headers to Compact Serialization
 
@@ -199,7 +199,7 @@ by passing `jws.WithRequireKid(true)`.
 
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
 
-<!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
+<!-- INCLUDE(examples/jws_verify_with_keyset_example_test.go) -->
 ```go
 package examples_test
 
@@ -238,9 +238,8 @@ source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrr
 
 To verify a JWS message with detached payload, use the `jws.WithDetachedPayload()` option:
 
-```go
-_, err := jws.Verify(data, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
-```
+<!-- INCLUDE(examples/jws_verify_detached_payload_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Verification using `jku`
 
