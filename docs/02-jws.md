@@ -154,6 +154,38 @@ It will automatically do the right thing whether it's serialized in compact form
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
 <!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "log"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_VerifyWithKey() {
+  const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
+
+  key, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    log.Printf("failed to create key: %s", err)
+    return
+  }
+
+  buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
+  if err != nil {
+    log.Printf("failed to sign payload: %s", err)
+    return
+  }
+  fmt.Printf("%s\n", buf)
+  // OUTPUT:
+  // Lorem ipsum
+}
+```
+source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a JWKS
@@ -168,6 +200,38 @@ by passing `jws.WithRequireKid(true)`.
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
 
 <!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "log"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_VerifyWithKey() {
+  const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
+
+  key, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    log.Printf("failed to create key: %s", err)
+    return
+  }
+
+  buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
+  if err != nil {
+    log.Printf("failed to sign payload: %s", err)
+    return
+  }
+  fmt.Printf("%s\n", buf)
+  // OUTPUT:
+  // Lorem ipsum
+}
+```
+source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a detached payload
