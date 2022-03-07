@@ -153,7 +153,21 @@ It will automatically do the right thing whether it's serialized in compact form
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
-<!-- INCLUDE(examples/jws_verify_with_key_example_test.go -->
+<!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
+<!-- END INCLUDE -->
+
+## Verification using a JWKS
+
+To verify a payload using JWKS, by default you will need your payload and JWKS to have matching `alg` field.
+
+The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+Note that unlike in JWT, the `kid` is not required by default, although you _can_ make it so
+by passing `jws.WithRequireKid(true)`.
+
+For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
+
+<!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
 <!-- END INCLUDE -->
 
 ## Verification using a detached payload
