@@ -122,6 +122,38 @@ JWS messages can be constructed with a detached payload. Use the `jws.WithDetach
 create a JWS message with the message detached from the result.
 
 <!-- INCLUDE(examples/jws_sign_detached_payload_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_SignDetachedPayload() {
+  payload := `$.02`
+
+  key, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    fmt.Printf("failed to create symmetric key: %s\n", err)
+    return
+  }
+
+  serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+
+  fmt.Printf("%s\n", serialized)
+  // OUTPUT:
+  // eyJhbGciOiJIUzI1NiJ9..eOOVjre9XHILxvHaJpH-ZCb1TiiiTZLOY0Jhr7mwDns
+}
+```
+source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including Arbitrary Headers to Compact Serialization
@@ -201,9 +233,11 @@ For more discussion on why/how `alg`/`kid` values work, please read the [relevan
 
 <!-- INCLUDE(examples/jws_verify_with_keyset_example_test.go) -->
 ```go
-package examples_test
+package examples
 
 import (
+  "crypto/rand"
+  "crypto/rsa"
   "fmt"
   "log"
 
@@ -212,26 +246,44 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_VerifyWithKey() {
-  const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
-
-  key, err := jwk.New([]byte(`abracadavra`))
+func ExampleJWS_VerifyWithJWKSet() {
+  // Setup payload first...
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
-    log.Printf("failed to create key: %s", err)
+    log.Printf("failed to create private key: %s", err)
     return
   }
-
-  buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
+  const payload = "Lorem ipsum"
+  signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
   if err != nil {
     log.Printf("failed to sign payload: %s", err)
     return
   }
-  fmt.Printf("%s\n", buf)
+
+  // Create a JWK Set
+  set := jwk.NewSet()
+  // Add some bogus keys
+  k1, _ := jwk.New([]byte("abracadavra"))
+  set.Add(k1)
+  k2, _ := jwk.New([]byte("opensasame"))
+  set.Add(k2)
+  // Add the real thing
+  pubkey, _ := jwk.PublicRawKeyOf(privkey)
+  k3, _ := jwk.New(pubkey)
+  k3.Set(jwk.AlgorithmKey, jwa.RS256)
+  set.Add(k3)
+
+  // Up to this point, you probably will replace with a simple jwk.Fetch()
+
+  // Now verify using the set.
+  if _, err := jws.Verify(signed, jws.WithKeySet(set)); err != nil {
+    fmt.Printf("Failed to verify using jwk.Set!: %s", err)
+  }
+
   // OUTPUT:
-  // Lorem ipsum
 }
 ```
-source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_key_example_test.go)
+source: [examples/jws_verify_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a detached payload
@@ -239,6 +291,39 @@ source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrr
 To verify a JWS message with detached payload, use the `jws.WithDetachedPayload()` option:
 
 <!-- INCLUDE(examples/jws_verify_detached_payload_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_VerifyDetachedPayload() {
+  serialized := `eyJhbGciOiJIUzI1NiJ9..eOOVjre9XHILxvHaJpH-ZCb1TiiiTZLOY0Jhr7mwDns`
+  payload := `$.02`
+
+  key, err := jwk.New([]byte(`abracadavra`))
+  if err != nil {
+    fmt.Printf("failed to create symmetric key: %s\n", err)
+    return
+  }
+
+  verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+
+  fmt.Printf("%s\n", verified)
+  // OUTPUT:
+  // $.02
+}
+```
+source: [examples/jws_verify_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using `jku`
