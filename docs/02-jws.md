@@ -186,7 +186,7 @@ Sometimes we do not offer a particular algorithm out of the box, but you have an
 In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterVerifier) functions to
 generate your own verifier instance. 
 
-<!-- INCLUDE(example/jws_custom_signer_verifier_example_test.go) -->
+<!-- INCLUDE(examples/jws_custom_signer_verifier_example_test.go) -->
 <!-- END INCLUDE -->
 
 # Enabling ES256K
