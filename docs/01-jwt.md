@@ -336,7 +336,11 @@ In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".Publi
 
 ## Parse and Verify a JWT (with a key set, matching "kid")
 
-To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function. Let's assume the JWS contains the "kid" header of the key that generated the signature:
+To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function.
+
+The following code does a lot of preparation to mimic a real JWKS signed JWT, but the code required in the user side is located towards the end.
+
+In real life, the location of JWKS files are specified by the service that provided you with the signed JWT. The URL for these JWKS files often (but are not always guaranteed to be) take the form `https://DOMAIN/.well-known/jwks.json` and the like. If you need to fetch these in your code, [refer to the documentation on `jwk` package](04-jwk.md#fetching-jwk-sets).
 
 <!-- INCLUDE(examples/jwt_parse_with_keyset_example_test.go) -->
 ```go
@@ -440,7 +444,20 @@ func ExampleJWT_ParseWithKeySet() {
 source: [examples/jwt_parse_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
-Notice that there's a commented out section in the above code where it uses an extra suboption
+There are a couple of things to note.
+
+First is that the signing key is initialized with key ID (`kid`). By using a `jwk.Key` with `kid` field set,
+the resulting JWS message will also have the field `kid` set to the same value in the
+corresponding protected headers. This is set because the default behavior is to ONLY accept
+keys if they have matching `kid` fields as the JWS protecte headers.
+
+You may override this behavior if you explicitly specify to to turn this off using
+the `jws.WithRequireKid(false)` option, but this is not recommended. If you already
+know which is supposed to work before hand, it is recommended that you parse the `jwk.Set`
+and modify it manually so that it has a proper `kid` field. Unlike using `jws.WithRequireKid(false)`
+option, this will not allow unintended keys to slip by and have the verification succeed.
+
+Second, notice that there's a commented out section in the above code where it uses an extra suboption
 `jws.WithInferAlgorithmFromKey()` in the `jwt.Parse()` call. The above examples will correctly
 verify the message as we explicitly set the `alg` with a proper value. However, if the key in your
 particular JWKS does not contain an `alg` field, the above example would fail.
