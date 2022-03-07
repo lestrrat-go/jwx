@@ -16,6 +16,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
   * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
   * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
+  * [Fetch a JWKS and Verify a JWT]
 * [Validation](#jwt-validation)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
@@ -198,6 +199,18 @@ token, _ := jwt.Parse(
 
 This feature must be used with extreme caution. Please see the caveats and fine prints
 in the documentation for `jws.VerifyAuto()`
+
+# Fetch a JWKS and Verify a JWT
+
+Fetching JWKS from the authorization server exposed end-point & verify JWT token.
+
+```go
+const jwksURL = `https://YOUR_DOMAIN/.well-known/jwks.json or https://YOUR_DOMAIN/.well-known/protocol/openid-connect/certs/certs`
+
+jwksSet, _ :=jwk.Fetch(request.Context(), jwksURL)
+
+token, _ := jwt.Parse(src,jwt.WithKeySet(jwksSet), jwt.WithValidate(true))
+```
 
 # JWT Validation
 
