@@ -3,7 +3,6 @@
 In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v2/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
 
 * [Parsing](#parsing)
-  * [Getting the payload from a JWS encoded buffer](#getting-the-payload-from-a-jws-encoded-buffer)
   * [Parse a JWS encoded buffer into a jws.Message](#parse-a-jws-encoded-buffer-into-a-jwsmessage)
   * [Parse a JWS encoded message stored in a file](#parse-a-jws-encoded-message-stored-in-a-file)
 * [Signing](#signing)
@@ -15,50 +14,31 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
 * [Enabling ES256K](#enabling-es256k)
+
 # Parsing
 
-## Getting the payload from a JWS encoded buffer
+Parsing a JWS message means taking either a JWS message serialized in JSON or Compact form
+and loading it into a `jws.Message` object. No verification is performed, and therefore
+you cannot "trust" the contents in the same way that a verified message could be trusted.
 
-If you want to get the payload in the JWS message after it has been verified, use [`jws.Verify()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Verify)
-
-```go
-var encoded = []byte{...}
-payload, _ := jws.Verify(encoded, jws.WithKey(alg, key))
-```
-
-You must provide the algorithm and the public key to use for verification.
-Please read "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
-
-If the algorithm or the key does not match, an error is returned.
+Also, be aware that a `jws.Message` is not meant to be used for either signing or
+verification. It is only provided such that it can be inspected -- there is no way
+to sign or verify using a parsed `jws.Message`. To do this, you would need to use
+`jws.Sign()` or `jws.Message()`.
 
 ## Parse a JWS encoded buffer into a jws.Message
 
 You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
 
-```go
-var payload = []byte{...}
-msg, _ := jws.Parse(payload)
-```
-
-Note that [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) is not really built for general signing/verification usage.
-It's built more so for inspection purposes.
-Think twice before attempting to do anything more than inspection using [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message).
+<!-- INCLUDE(examples/jws_parse_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a JWS encoded message stored in a file
 
 To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
-```go
-message, _ := jws.ReadFile(`message.jws`)
-```
-
-## Verify a JWS with detached payload
-
-To parse a JWS with detached payload, use the `jws.WithDetachedPayload()` option:
-
-```go
-signed, _ := jws.Verify(signed, jws.WithKey(alg, key), jws.WithDetachedPayload(payload))
-```
+<!-- INCLUDE(examples/jws_read_file_example_test.go) -->
+<!-- END INCLUDE -->
 
 # Signing
 
@@ -108,13 +88,8 @@ Generally the only time you need to use a JSON serialization format is when you 
 
 When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
 
-```go
-signed, _ := jws.Sign(payload,
-  jws.WithJSON(),
-  jws.WithKey(alg1, key1),
-  jws.WithKey(alg2, key2),
-)
-```
+<!-- INCLUDE(examples/jws_sign_json_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Generating a JWS message with detached payload
 

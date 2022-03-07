@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"log"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -15,13 +14,13 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// Setup payload first...
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		log.Printf("failed to create private key: %s", err)
+		fmt.Printf("failed to create private key: %s\n", err)
 		return
 	}
 	const payload = "Lorem ipsum"
 	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
 	if err != nil {
-		log.Printf("failed to sign payload: %s", err)
+		fmt.Printf("failed to sign payload: %s\n", err)
 		return
 	}
 

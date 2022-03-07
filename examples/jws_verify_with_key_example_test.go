@@ -2,7 +2,6 @@ package examples_test
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -14,13 +13,13 @@ func ExampleJWS_VerifyWithKey() {
 
 	key, err := jwk.New([]byte(`abracadavra`))
 	if err != nil {
-		log.Printf("failed to create key: %s", err)
+		fmt.Printf("failed to create key: %s\n", err)
 		return
 	}
 
 	buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
 	if err != nil {
-		log.Printf("failed to sign payload: %s", err)
+		fmt.Printf("failed to sign payload: %s\n", err)
 		return
 	}
 	fmt.Printf("%s\n", buf)

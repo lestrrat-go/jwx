@@ -3,7 +3,6 @@ package examples_test
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -12,7 +11,7 @@ import (
 func ExampleJWT_ReadFile() {
 	f, err := ioutil.TempFile(``, `snippet_jwt_readfile-*.jws`)
 	if err != nil {
-		log.Printf(`failed to create temporary file: %s`, err)
+		fmt.Printf("failed to create temporary file: %s\n", err)
 		return
 	}
 	defer os.Remove(f.Name())
@@ -25,7 +24,7 @@ func ExampleJWT_ReadFile() {
 	// if you want the token to be parsed and verified in one go
 	tok, err := jwt.ReadFile(f.Name())
 	if err != nil {
-		log.Printf(`failed to read file %q: %s`, f.Name(), err)
+		fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
 		return
 	}
 	_ = tok
