@@ -148,14 +148,15 @@ Event if you cannot find an implementation that you are looking for in the above
 
 ## Verification using a single key
 
-Simply use `jws.Verify()`. It will automatically do the right thing whether it's serialized in compact
-form or JSON form.
-
-```go
-payload, _ := jws.Verify(data, jws.WithKey(alg, key))
-```
+To verify a JWS message using a single key, use `jws.Verify()` with the `jws.WithKey()` option.
+It will automatically do the right thing whether it's serialized in compact form or JSON form.
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+<!-- INCLUDE(examples/jws_verify_with_key_example_test.go -->
+<!-- END INCLUDE -->
+
+## Verification using a detached payload
 
 To verify a JWS message with detached payload, use the `jws.WithDetachedPayload()` option:
 
