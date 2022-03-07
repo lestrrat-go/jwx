@@ -31,6 +31,42 @@ to sign or verify using a parsed `jws.Message`. To do this, you would need to us
 You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
 
 <!-- INCLUDE(examples/jws_parse_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "io/ioutil"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_Parse() {
+  const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
+
+  f, err := ioutil.TempFile("", "example_jws_parse-*.jws")
+  if err != nil {
+    fmt.Printf("failed to create temporary file: %s\n", err)
+  }
+  defer os.Remove(f.Name())
+
+  f.Write([]byte(src))
+  f.Close()
+
+  msg, err := jws.ReadFile(f.Name())
+  if err != nil {
+    fmt.Printf("failed to parse JWS message from file %q: %s\n", f.Name(), err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(msg)
+  // OUTPUT:
+  // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
+}
+```
+source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS encoded message stored in a file
@@ -38,6 +74,33 @@ You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/
 To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
 <!-- INCLUDE(examples/jws_read_file_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_ReadFile() {
+  const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
+
+  msg, err := jws.Parse([]byte(src))
+  if err != nil {
+    fmt.Printf("failed to parse JWS message: %s\n", err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(msg)
+
+  // OUTPUT:
+  // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
+}
+```
+source: [examples/jws_read_file_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_read_file_example_test.go)
 <!-- END INCLUDE -->
 
 # Signing
@@ -55,7 +118,6 @@ package examples_test
 
 import (
   "fmt"
-  "log"
 
   "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jwk"
@@ -65,13 +127,13 @@ import (
 func ExampleJWS_Sign() {
   key, err := jwk.New([]byte(`abracadavra`))
   if err != nil {
-    log.Printf("failed to create key: %s", err)
+    fmt.Printf("failed to create key: %s\n", err)
     return
   }
 
   buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key))
   if err != nil {
-    log.Printf("failed to sign payload: %s", err)
+    fmt.Printf("failed to sign payload: %s\n", err)
     return
   }
   fmt.Printf("%s\n", buf)
@@ -89,6 +151,45 @@ Generally the only time you need to use a JSON serialization format is when you 
 When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
 
 <!-- INCLUDE(examples/jws_sign_json_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_SignJSON() {
+  var keys []jwk.Key
+
+  for i := 0; i < 3; i++ {
+    key, err := jwk.New([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
+    if err != nil {
+      fmt.Printf("failed to create key: %s\n", err)
+      return
+    }
+    keys = append(keys, key)
+  }
+
+  options := []jws.SignOption{jws.WithJSON()}
+  for _, key := range keys {
+    options = append(options, jws.WithKey(jwa.HS256, key))
+  }
+
+  buf, err := jws.Sign([]byte("Lorem ipsum"), options...)
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", buf)
+  // OUTPUT:
+  // {"payload":"TG9yZW0gaXBzdW0","signatures":[{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"uKad3F0NclLDZBXhuq4fDpVqQwwFLGI3opL_xMNyUTA"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"ghg_AA3UTfVXztTr2wRKBUcNsPE_4zYQvWoaXVVT19M"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"NrvTYIR4rGCG7CIn_YVtGDFvqE-ft9PqNOjIJmKlVog"}]}
+}
+```
+source: [examples/jws_sign_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWS message with detached payload
@@ -166,7 +267,6 @@ package examples_test
 
 import (
   "fmt"
-  "log"
 
   "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jwk"
@@ -178,13 +278,13 @@ func ExampleJWS_VerifyWithKey() {
 
   key, err := jwk.New([]byte(`abracadavra`))
   if err != nil {
-    log.Printf("failed to create key: %s", err)
+    fmt.Printf("failed to create key: %s\n", err)
     return
   }
 
   buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
   if err != nil {
-    log.Printf("failed to sign payload: %s", err)
+    fmt.Printf("failed to sign payload: %s\n", err)
     return
   }
   fmt.Printf("%s\n", buf)
@@ -214,7 +314,6 @@ import (
   "crypto/rand"
   "crypto/rsa"
   "fmt"
-  "log"
 
   "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jwk"
@@ -225,13 +324,13 @@ func ExampleJWS_VerifyWithJWKSet() {
   // Setup payload first...
   privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
-    log.Printf("failed to create private key: %s", err)
+    fmt.Printf("failed to create private key: %s\n", err)
     return
   }
   const payload = "Lorem ipsum"
   signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
   if err != nil {
-    log.Printf("failed to sign payload: %s", err)
+    fmt.Printf("failed to sign payload: %s\n", err)
     return
   }
 
