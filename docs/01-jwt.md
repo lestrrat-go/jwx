@@ -340,7 +340,7 @@ To parse a JWT *and* verify that its content matches the signature as described 
 
 The following code does a lot of preparation to mimic a real JWKS signed JWT, but the code required in the user side is located towards the end.
 
-In real life, the location of JWKS files are specified by the service that provided you with the signed JWT. The URL for these JWKS files often (but are not always guaranteed to be) take the form `https://DOMAIN/.well-known/jwks.json` and the like.
+In real life, the location of JWKS files are specified by the service that provided you with the signed JWT. The URL for these JWKS files often (but are not always guaranteed to be) take the form `https://DOMAIN/.well-known/jwks.json` and the like. If you need to fetch these in your code, [refer to the documentation on `jwk` package](04-jwk.md#fetching-jwk-sets).
 
 <!-- INCLUDE(examples/jwt_parse_with_keyset_example_test.go) -->
 ```go
