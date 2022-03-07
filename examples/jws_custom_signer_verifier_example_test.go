@@ -1,10 +1,10 @@
 package examples_test
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
 
+	"github.com/cloudflare/circl/sign/ed25519"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
