@@ -50,31 +50,6 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// OUTPUT:
 }
 
-func ExampleJWS_Sign() {
-	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Printf("failed to create private key: %s", err)
-		return
-	}
-
-	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.RS256, privkey))
-	if err != nil {
-		log.Printf("failed to sign payload: %s", err)
-		return
-	}
-
-	verified, err := jws.Verify(buf, jws.WithKey(jwa.RS256, &privkey.PublicKey))
-	if err != nil {
-		log.Printf("failed to verify JWS message: %s", err)
-		return
-	}
-
-	// Do something with `verified` ....
-	_ = verified
-
-	// OUTPUT:
-}
-
 func ExampleJWS_Message() {
 	const payload = `eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ`
 	const encodedSig1 = `cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw`

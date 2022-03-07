@@ -64,18 +64,13 @@ signed, _ := jws.Verify(signed, jws.WithKey(alg, key), jws.WithDetachedPayload(p
 
 ## Generating a JWS message in compact serialization format
 
-In most cases this is all you really need.
+To sign an arbitrary payload as a JWS message in compact serialization format, use `jwt.Sign()`.
 
-```go
-signed, _ := jws.Sign(payload, jws.WithKey(alg, key))
-```
+Note that this would be [slightly different if you are signing JWTs](01-jwt.md#serialize-using-jws), as you would be
+using functions from the `jwt` package instead of `jws`.
 
-To sign a JWT, use [`jwt.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Sign)
-Notice that in this case the `WithKey()` options is that of the `jwt` package.
-
-```go
-signed, _ := jwt.Sign(token, jwt.WithKey(alg, key))
-```
+<!-- INCLUDE(examples/jws_sign_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Generating a JWS message in JSON serialization format
 
