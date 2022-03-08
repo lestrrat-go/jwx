@@ -403,27 +403,8 @@ It automatically creates the appropriate underlying key based on the given argum
 | x25519.PrivateKey | OKP Private Key | |
 | x25519.PubliKey | OKP Public Key | |
 
-One common mistake we see is users using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) to construct a key from a []byte variable containing the raw JSON format JWK.
-
-```go
-// THIS IS WRONG!
-buf, _ := ioutil.ReadFile(`key.json`) // os.ReadFile in go 1.16+
-key, _ := jwk.New(buf) // ALWAYS creates a symmetric key
-```
-
-[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) is used to create a new key from a known, *raw key* type. To process a yet-to-be-parsed
-JWK, use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse) or [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ReadFile)
-
-```go
-// Parse a buffer containing a JSON JWK
-buf, _ := ioutil.ReadFile(`key.json`) // os.ReadFile in go 1.16+
-key, _ := jwk.Parse(buf)
-```
-
-```go
-// Read a file, parse it as JSON
-key, _ := jwk.ParseFile(`key.json`)
-```
+<!-- INCLUDE(examples/jwk_new_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Construct a specific key type from scratch
 
@@ -496,62 +477,27 @@ set, err := jwk.Fetch(ctx, url, options...)
 Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
 For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
 
-Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch), but keys are usually expired and rotated due to security reasons.
+Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch),
+but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
 `github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) tool to do this for you.
 
-First, set up the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) object.
-You need to pass it a `context.Context` object to control the lifecycle of the background fetching goroutine.
-
-```go
-ar := jwk.NewAutoRefresh(ctx)
-```
-
-Next you need to tell [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) which URLs to keep updating. For this, we use the `Configure()` method. [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) will use the information found in the HTTP headers (`Cache-Control` and `Expires`) or the default interval to determine when to fetch the key next time.
-
-```go
-ar.Configure(`https://example.com/certs/pubkeys.json`)
-```
-
-And lastly, each time you are about to use the key, load it from the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) object.
-
-```go
-keyset, _ := ar.Fetch(ctx, `https://example.com/certs/pubkeys.json`)
-```
-
-The returned `keyset` will always be "reasonably" new. It is important that you always call `ar.Fetch()` before using the `keyset` as this is where the refreshing occurs.
-
-By "reasonably" we mean that we cannot guarantee that the keys will be refreshed immediately after it has been rotated in the remote source. But it should be close enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
-
-If re-fetching the keyset fails, a cached version will be returned from the previous successful fetch upon calling `(jwk.AutoRefresh).Fetch()`.
+<!-- INCLUDE(examples/jwk_auto_refresh_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Using Whitelists
 
-If you are fetching JWK Sets from a possibly untrusted source such as the `"jku"` field of a JWS message, you may have to perform some sort of
-whitelist checking. You can provide a `jwk.Whitelist` object to either `jwk.Fetch()` or `(*jwk.AutoRefresh).Configure()` methods to specify the
-use of a whitelist.
+If you are fetching JWK Sets from a possibly untrusted source such as the URL in the`"jku"` field of a JWS message,
+you may have to perform some sort of whitelist checking. You can provide a `jwk.Whitelist` object to either
+`jwk.Fetch()` or `(*jwk.AutoRefresh).Configure()` methods to specify the use of a whitelist.
 
-Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases.
-
-```go
-wl := jwk.NewMapWhitelist().
-  Add(url1).
-  Add(url2).
-  Add(url3
-
-wl := jwk.NewRegexpWhitelist().
-  Add(regexp1).
-  Add(regexp2).
-  Add(regexp3)
-
-jwk.Fetch(ctx, url, jwk.WithWhitelist(wl))
-
-// or in a jwk.AutoRefresh object:
-ar.Configure(url, jwk.WithWhitelist(wl))
-```
-
+Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases,
+as well as `jwk.InsecureWhitelist` for when you explicitly want to allo all URLs.
 If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement you own type of `jwk.Whitelist`.
+
+<!-- INCLUDE(examples/jwk_whitelist_example_test.go) -->
+<!-- END INCLUDE -->
 
 # Converting a jwk.Key to a raw key
 

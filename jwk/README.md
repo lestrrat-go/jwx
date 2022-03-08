@@ -1,17 +1,14 @@
 # JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk)
 
-Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517)
+Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517).
+If you are looking to use JWT wit JWKs, look no further than [github.com/lestrrat-go/jwx](../jwt).
 
 * Parse and work with RSA/EC/Symmetric/OKP JWK types
   * Convert to and from JSON
   * Convert to and from raw key types (e.g. *rsa.PrivateKey)
-* Ability to keep a JWKS fresh.
+* Ability to keep a JWKS fresh using *jwk.AutoRefersh
 
-How-to style documentation can be found in the [docs directory](../docs).
-
-Examples are located in the examples directory ([jwk_example_test.go](../examples/jwk_example_test.go))
-
-Supported key types:
+## Supported key types:
 
 | kty | Curve                   | Go Key Type                                   |
 |:----|:------------------------|:----------------------------------------------|
@@ -24,128 +21,10 @@ Supported key types:
 * Note 1: Experimental
 * Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
 
-# SYNOPSIS
+# Documentation
 
-## Parse a JWK or a JWK set
-
-```go
-  // Parse a single JWK key.
-  key, err := jwk.ParseKey(...)
-
-  // Parse a JWK set (or a single JWK key)
-  set, err := jwk.Parse(...)
-```
-
-## Create JWK keys from raw keys
-
-```go
-func ExampleNew() {
-	// New returns different underlying types of jwk.Key objects
-	// depending on the input value.
-
-	// []byte -> jwk.SymmetricKey
-	{
-		raw := []byte("Lorem Ipsum")
-		key, err := jwk.New(raw)
-		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.SymmetricKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
-	}
-
-	// *rsa.PrivateKey -> jwk.RSAPrivateKey
-	// *rsa.PublicKey  -> jwk.RSAPublicKey
-	{
-		raw, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			fmt.Printf("failed to generate new RSA privatre key: %s\n", err)
-			return
-		}
-
-		key, err := jwk.New(raw)
-		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.RSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
-		// PublicKey is omitted for brevity
-	}
-
-	// *ecdsa.PrivateKey -> jwk.ECDSAPrivateKey
-	// *ecdsa.PublicKey  -> jwk.ECDSAPublicKey
-	{
-		raw, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		if err != nil {
-			fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
-			return
-		}
-
-		key, err := jwk.New(raw)
-		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
-		// PublicKey is omitted for brevity
-	}
-
-	// OUTPUT:
-}
-```
-
-# Get the JSON representation of a key
-
-```go
-func ExampleMarshalJSON() {
-	// to get the same values every time, we need to create a static source
-	// of "randomness"
-	rdr := bytes.NewReader([]byte("01234567890123456789012345678901234567890123456789ABCDEF"))
-	raw, err := ecdsa.GenerateKey(elliptic.P384(), rdr)
-	if err != nil {
-		fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
-		return
-	}
-
-	key, err := jwk.New(raw)
-	if err != nil {
-		fmt.Printf("failed to create symmetric key: %s\n", err)
-		return
-	}
-	if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-		fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-		return
-	}
-
-	key.Set(jwk.KeyIDKey, "mykey")
-
-	buf, err := json.MarshalIndent(key, "", "  ")
-	if err != nil {
-		fmt.Printf("failed to marshal key into JSON: %s\n", err)
-		return
-	}
-	fmt.Printf("%s\n", buf)
-
-	// OUTPUT:
-	// {
-	//   "kty": "EC",
-	//   "crv": "P-384",
-	//   "d": "ODkwMTIzNDU2Nzg5MDEyMz7deMbyLt8g4cjcxozuIoygLLlAeoQ1AfM9TSvxkFHJ",
-	//   "kid": "mykey",
-	//   "x": "gvvRMqm1w5aHn7sVNA2QUJeOVcedUnmiug6VhU834gzS9k87crVwu9dz7uLOdoQl",
-	//   "y": "7fVF7b6J_6_g6Wu9RuJw8geWxEi5ja9Gp2TSdELm5u2E-M7IF-bsxqcdOj3n1n7N"
-	// }
-}
-```
+Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk), or
+the how-to style documentation on how to use JWK can be found in the [docs directory](../docs/04-jwk.md).
 
 # Auto-Refresh a key during a long running process
 
