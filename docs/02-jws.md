@@ -76,7 +76,7 @@ source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 
 To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
-<!-- INCLUDE(examples/jws_read_file_example_test.go) -->
+<!-- INCLUDE(examples/jws_readfile_example_test.go) -->
 ```go
 package examples_test
 
