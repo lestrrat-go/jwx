@@ -26,12 +26,6 @@ can be found in the [Description section](#description)
 * [How-to style documentation](./docs)
 * [Runnable Examples](./examples)
 
-## Installation
-
-```
-go install github.com/lestrrat-go/jwx/v2/cmd/jwx
-```
-
 # Description
 
 This Go module implements JWA, JWE, JWK, JWS, and JWT. Please see the following table for the list of
