@@ -51,51 +51,43 @@ and so forth
 
 If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse)
 
-```go
-keyset, _ := jwk.Parse(src)
-```
+<!-- INCLUDE(examples/jwk_parse_jwks_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a key
 
 If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseKey)
 
-```go
-key, _ := jwk.ParseKey(src)
-```
+<!-- INCLUDE(examples/jwk_parse_key_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a key or a set in PEM format
 
 Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#WithPEM) option.
 
-```go
-keyset, _ := jwk.Parse(srcSet, jwk.WithPEM(true))
-
-key, _ := jwk.ParseKey(src, jwk.WithPEM(true))
-```
+<!-- INCLUDE(examples/jwk_parse_with_pem_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a key from a file
 
 To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ReadFile) can be used. 
 
-```go
-keyset, _ := jwk.ReadFile(filename)
-```
+<!-- INCLUDE(examples/jwk_readfile_example_test.go) -->
+<!-- END INCLUDE -->
 
 `jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
 
-```go
-keyset, _ := jwk.ReadFile(filename, jwk.WithPEM(true))
-```
+<!-- INCLUDE(examples/jwk_readfile_with_pem_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Parse a key from a remote resource
 
 To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
-```go
-keyset, _ := jwk.Fetch(ctx, url)
-```
-
 If you are going to be using this key repeatedly in a long running process, consider using [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) described elsewhere in this document.
+
+<!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
+<!-- END INCLUDE -->
 
 # Construction
 
