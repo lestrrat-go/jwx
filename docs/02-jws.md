@@ -8,9 +8,12 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
-  * [Generating a JWS message with detached payload](#generating-a-jws-with-detached-payload)
+  * [Generating a JWS message with detached payload](#generating-a-jws-message-with-detached-payload)
   * [Using cloud KMS services](#using-cloud-kms-services)
 * [Verifying](#verifying)
+  * [Verification using a single key](#verification-using-a-single-key)
+  * [Verification using a JWKS](#verification-using-a-jwks)
+  * [Verification using a detached payload](#verification-using-a-detached-payload)
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-customg-signingverification-algorithm)
 * [Enabling ES256K](#enabling-es256k)
@@ -73,7 +76,7 @@ source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 
 To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
-<!-- INCLUDE(examples/jws_read_file_example_test.go) -->
+<!-- INCLUDE(examples/jws_readfile_example_test.go) -->
 ```go
 package examples_test
 
