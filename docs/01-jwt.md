@@ -115,7 +115,7 @@ import (
 )
 
 func ExampleJWT_ReadFile() {
-  f, err := ioutil.TempFile(``, `snippet_jwt_readfile-*.jws`)
+  f, err := ioutil.TempFile(``, `jwt_readfile-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
