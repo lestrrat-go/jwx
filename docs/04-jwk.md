@@ -404,6 +404,100 @@ It automatically creates the appropriate underlying key based on the given argum
 | x25519.PubliKey | OKP Public Key | |
 
 <!-- INCLUDE(examples/jwk_new_example_test.go) -->
+```go
+package examples
+
+import (
+  "crypto/ecdsa"
+  "crypto/elliptic"
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWK_New() {
+  // First, THIS IS THE WRONG WAY TO USE jwk.New().
+  //
+  // Assume that the file contains a JWK in JSON format
+  //
+  //  buf, _ := os.ReadFile(file)
+  //  key, _ := json.New(buf)
+  //
+  // This is not right, because the jwk.New() function determines
+  // the type of `jwk.Key` to create based on the TYPE of the argument.
+  // In this case the type of `buf` is always []byte, and therefore
+  // it will always create a symmetric key.
+  //
+  // What you want to do is to _parse_ `buf`.
+  //
+  //  keyset, _ := jwk.Parse(buf)
+  //  key, _    := jwk.ParseKey(buf)
+  //
+  // See other examples in examples/jwk_parse_key_example_test.go and
+  // examples/jwk_parse_jwks_example_test.go
+
+  // []byte -> jwk.SymmetricKey
+  {
+    raw := []byte("Lorem Ipsum")
+    key, err := jwk.New(raw)
+    if err != nil {
+      fmt.Printf("failed to create symmetric key: %s\n", err)
+      return
+    }
+    if _, ok := key.(jwk.SymmetricKey); !ok {
+      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+      return
+    }
+  }
+
+  // *rsa.PrivateKey -> jwk.RSAPrivateKey
+  // *rsa.PublicKey  -> jwk.RSAPublicKey
+  {
+    raw, err := rsa.GenerateKey(rand.Reader, 2048)
+    if err != nil {
+      fmt.Printf("failed to generate new RSA privatre key: %s\n", err)
+      return
+    }
+
+    key, err := jwk.New(raw)
+    if err != nil {
+      fmt.Printf("failed to create symmetric key: %s\n", err)
+      return
+    }
+    if _, ok := key.(jwk.RSAPrivateKey); !ok {
+      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+      return
+    }
+    // PublicKey is omitted for brevity
+  }
+
+  // *ecdsa.PrivateKey -> jwk.ECDSAPrivateKey
+  // *ecdsa.PublicKey  -> jwk.ECDSAPublicKey
+  {
+    raw, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+    if err != nil {
+      fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
+      return
+    }
+
+    key, err := jwk.New(raw)
+    if err != nil {
+      fmt.Printf("failed to create symmetric key: %s\n", err)
+      return
+    }
+    if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
+      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
+      return
+    }
+    // PublicKey is omitted for brevity
+  }
+
+  // OUTPUT:
+}
+```
+source: [examples/jwk_new_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_new_example_test.go)
 <!-- END INCLUDE -->
 
 ## Construct a specific key type from scratch
@@ -484,6 +578,77 @@ In such cases you would need to refetch the JWK periodically, which is a pain.
 `github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) tool to do this for you.
 
 <!-- INCLUDE(examples/jwk_auto_refresh_example_test.go) -->
+```go
+package examples
+
+import (
+  "context"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWK_AutoRefresh() {
+  ctx, cancel := context.WithCancel(context.Background())
+
+  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
+
+  // First, set up the `jwk.AutoRefresh` object. You need to pass it a
+  // `context.Context` object to control the lifecycle of the background fetching goroutine.
+  ar := jwk.NewAutoRefresh(ctx)
+
+  // Tell *jwk.AutoRefresh that we only want to refresh this JWKS
+  // when it needs to (based on Cache-Control or Expires header from
+  // the HTTP response). If the calculated minimum refresh interval is less
+  // than 15 minutes, don't go refreshing any earlier than 15 minutes.
+  ar.Configure(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
+
+  // Refresh the JWKS once before getting into the main loop.
+  // This allows you to check if the JWKS is available before we start
+  // a long-running program
+  _, err := ar.Refresh(ctx, googleCerts)
+  if err != nil {
+    fmt.Printf("failed to refresh google JWKS: %s\n", err)
+    return
+  }
+
+  // Pretend that this is your program's main loop
+MAIN:
+  for {
+    select {
+    case <-ctx.Done():
+      break MAIN
+    default:
+    }
+    keyset, err := ar.Fetch(ctx, googleCerts)
+    if err != nil {
+      fmt.Printf("failed to fetch google JWKS: %s\n", err)
+      return
+    }
+    _ = keyset
+    // The returned `keyset` will always be "reasonably" new. It is important that
+    // you always call `ar.Fetch()` before using the `keyset` as this is where the refreshing occurs.
+    //
+    // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
+    // immediately after it has been rotated in the remote source. But it should be close\
+    // enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
+    //
+    // If re-fetching the keyset fails, a cached version will be returned from the previous successful
+    // fetch upon calling `(jwk.AutoRefresh).Fetch()`.
+
+    // Do interesting stuff with the keyset... but here, we just
+    // sleep for a bit
+    time.Sleep(time.Second)
+
+    // Because we're a dummy program, we just cancel the loop now.
+    // If this were a real program, you prosumably loop forever
+    cancel()
+  }
+  // OUTPUT:
+}
+```
+source: [examples/jwk_auto_refresh_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_auto_refresh_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists
@@ -497,6 +662,90 @@ as well as `jwk.InsecureWhitelist` for when you explicitly want to allo all URLs
 If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement you own type of `jwk.Whitelist`.
 
 <!-- INCLUDE(examples/jwk_whitelist_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "encoding/json"
+  "fmt"
+  "net/http"
+  "net/http/httptest"
+  "os"
+  "regexp"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWK_Whitelist() {
+  srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, `{
+  		"keys": [
+        {"kty":"EC",
+         "crv":"P-256",
+         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+         "use":"enc",
+         "kid":"1"},
+        {"kty":"RSA",
+         "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+         "e":"AQAB",
+         "alg":"RS256",
+         "kid":"2011-04-29"}
+      ]
+    }`)
+  }))
+  defer srv.Close()
+
+  testcases := []struct {
+    Whitelist jwk.Whitelist
+    Error     bool
+  }{
+    // The first two whitelists are meant to prevent access to any other
+    // URLs other than www.google.com
+    {
+      Whitelist: jwk.NewMapWhitelist().Add(`https://www.googleapis.com/oauth2/v3/certs`),
+      Error:     true,
+    },
+    {
+      Whitelist: jwk.NewRegexpWhitelist().Add(regexp.MustCompile(`^https://www\.googleapis\.com/`)),
+      Error:     true,
+    },
+    // Thist whitelist allows anything
+    {
+      Whitelist: jwk.InsecureWhitelist{},
+    },
+  }
+
+  for _, tc := range testcases {
+    set, err := jwk.Fetch(
+      context.Background(),
+      srv.URL,
+      // This is necessary because httptest.Server is using a custom certificate
+      jwk.WithHTTPClient(srv.Client()),
+      // Pass the whitelist!
+      jwk.WithFetchWhitelist(tc.Whitelist),
+    )
+    if tc.Error {
+      if err == nil {
+        fmt.Printf("expected fetch to fail, but got no error\n")
+        return
+      }
+    } else {
+      if err != nil {
+        fmt.Printf("failed to fetch JWKS: %s\n", err)
+        return
+      }
+      json.NewEncoder(os.Stdout).Encode(set)
+    }
+  }
+
+  // OUTPUT:
+  // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
+}
+```
+source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_whitelist_example_test.go)
 <!-- END INCLUDE -->
 
 # Converting a jwk.Key to a raw key
