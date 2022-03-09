@@ -28,7 +28,7 @@ func ExampleJWT_ParseWithJKU() {
 		}
 		// too lazy to write a proper algorithm. just assign every
 		// time, and signingKey will end up being the last key generated
-		privkey, err := jwk.New(pk)
+		privkey, err := jwk.FromRaw(pk)
 		if err != nil {
 			fmt.Printf("failed to create jwk.Key: %s\n", err)
 			return

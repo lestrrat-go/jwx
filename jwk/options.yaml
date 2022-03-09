@@ -1,5 +1,7 @@
 package_name: jwk
 output: jwk/options_gen.go
+imports:
+  - github.com/lestrrat-go/backoff/v2
 interfaces:
   - name: AutoRefreshOption
     comment: |

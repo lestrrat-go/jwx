@@ -25,13 +25,13 @@ func TestHeaders(t *testing.T) {
 	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 		return
 	}
-	privKey, err := jwk.New(rawKey)
-	if !assert.NoError(t, err, `jwk.New should succeed`) {
+	privKey, err := jwk.FromRaw(rawKey)
+	if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 		return
 	}
 
-	pubKey, err := jwk.New(rawKey.PublicKey)
-	if !assert.NoError(t, err, `jwk.PublicKey should succeed`) {
+	pubKey, err := jwk.FromRaw(rawKey.PublicKey)
+	if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 		return
 	}
 

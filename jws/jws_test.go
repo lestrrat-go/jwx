@@ -45,7 +45,7 @@ func TestSanity(t *testing.T) {
     "kty": "oct",
     "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   }`))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
+		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
 		}
 
@@ -203,7 +203,7 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypt
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
 
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
-	jwkKey, err := jwk.New(signKey)
+	jwkKey, err := jwk.FromRaw(signKey)
 	if !assert.NoError(t, err, `jwk.New should succeed`) {
 		return
 	}
@@ -294,7 +294,7 @@ func TestRoundtrip(t *testing.T) {
 	t.Run("HMAC", func(t *testing.T) {
 		t.Parallel()
 		sharedkey := []byte("Avracadabra")
-		jwkKey, _ := jwk.New(sharedkey)
+		jwkKey, _ := jwk.FromRaw(sharedkey)
 		keys := map[string]interface{}{
 			"[]byte":  sharedkey,
 			"jwk.Key": jwkKey,
@@ -314,7 +314,7 @@ func TestRoundtrip(t *testing.T) {
 		if !assert.NoError(t, err, "ECDSA key generated") {
 			return
 		}
-		jwkKey, _ := jwk.New(key.PublicKey)
+		jwkKey, _ := jwk.FromRaw(key.PublicKey)
 		keys := map[string]interface{}{
 			"Verify(ecdsa.PublicKey)":  key.PublicKey,
 			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
@@ -334,7 +334,7 @@ func TestRoundtrip(t *testing.T) {
 		if !assert.NoError(t, err, "RSA key generated") {
 			return
 		}
-		jwkKey, _ := jwk.New(key.PublicKey)
+		jwkKey, _ := jwk.FromRaw(key.PublicKey)
 		keys := map[string]interface{}{
 			"Verify(rsa.PublicKey)":  key.PublicKey,
 			"Verify(*rsa.PublicKey)": &key.PublicKey,
@@ -355,7 +355,7 @@ func TestRoundtrip(t *testing.T) {
 			return
 		}
 		pubkey := key.Public()
-		jwkKey, _ := jwk.New(pubkey)
+		jwkKey, _ := jwk.FromRaw(pubkey)
 		keys := map[string]interface{}{
 			"Verify(ed25519.Public())": pubkey,
 			// Meh, this doesn't work
@@ -999,7 +999,7 @@ func TestPublicHeaders(t *testing.T) {
 	_ = signer // TODO
 
 	pubkey := key.PublicKey
-	pubjwk, err := jwk.New(&pubkey)
+	pubjwk, err := jwk.FromRaw(&pubkey)
 	if !assert.NoError(t, err, "NewRsaPublicKey should succeed") {
 		return
 	}
@@ -1073,9 +1073,9 @@ func TestVerifySet(t *testing.T) {
 
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
-		k1, _ := jwk.New([]byte("abracadavra"))
+		k1, _ := jwk.FromRaw([]byte("abracadavra"))
 		set.Add(k1)
-		k2, _ := jwk.New([]byte("opensasame"))
+		k2, _ := jwk.FromRaw([]byte("opensasame"))
 		set.Add(k2)
 		pubkey, _ := jwk.PublicKeyOf(privkey)
 		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)

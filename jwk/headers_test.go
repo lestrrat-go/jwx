@@ -25,7 +25,7 @@ func TestHeader(t *testing.T) {
 			"private":                     "boofoo",
 		}
 
-		h, err := jwk.New([]byte("dummy"))
+		h, err := jwk.FromRaw([]byte("dummy"))
 		if !assert.NoError(t, err, `jwk.New should succeed`) {
 			return
 		}
@@ -84,7 +84,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509URLKey:                dummy,
 		}
 
-		h, err := jwk.New([]byte("dummy"))
+		h, err := jwk.FromRaw([]byte("dummy"))
 		if !assert.NoError(t, err, `jwk.New should succeed`) {
 			return
 		}
@@ -113,7 +113,7 @@ func TestHeader(t *testing.T) {
 
 	t.Run("Algorithm", func(t *testing.T) {
 		t.Parallel()
-		h, err := jwk.New([]byte("dummy"))
+		h, err := jwk.FromRaw([]byte("dummy"))
 		if !assert.NoError(t, err, `jwk.New should succeed`) {
 			return
 		}

@@ -19,7 +19,7 @@ func TestKeyconv(t *testing.T) {
 			return
 		}
 		t.Run("PrivateKey", func(t *testing.T) {
-			jwkKey, _ := jwk.New(key)
+			jwkKey, _ := jwk.FromRaw(key)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
@@ -72,7 +72,7 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
-			jwkKey, _ := jwk.New(pubkey)
+			jwkKey, _ := jwk.FromRaw(pubkey)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
@@ -131,7 +131,7 @@ func TestKeyconv(t *testing.T) {
 		}
 
 		t.Run("PrivateKey", func(t *testing.T) {
-			jwkKey, _ := jwk.New(key)
+			jwkKey, _ := jwk.FromRaw(key)
 			testcases := []struct {
 				Src   interface{}
 				Error bool
@@ -184,7 +184,7 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
-			jwkKey, _ := jwk.New(pubkey)
+			jwkKey, _ := jwk.FromRaw(pubkey)
 			testcases := []struct {
 				Src   interface{}
 				Error bool

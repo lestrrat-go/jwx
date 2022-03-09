@@ -41,7 +41,8 @@ func writeComment(o *codegen.Output, comment string) bool {
 
 type Objects struct {
 	Output      string
-	PackageName string `yaml:"package_name"`
+	PackageName string   `yaml:"package_name"`
+	Imports     []string `yaml:"imports"`
 	Interfaces  []*struct {
 		Name         string
 		Comment      string
@@ -119,15 +120,16 @@ func genOptions(objects *Objects) error {
 
 	o.LL(`package %s`, objects.PackageName)
 
-	// Write all imports -- they will be pruned by golang.org/x/tools/imports eventually,
-	// so it's okay to be redundant
-	o.WriteImports(
+	imports := append(objects.Imports, []string{
 		`github.com/lestrrat-go/jwx/v2/jwa`,
 		`github.com/lestrrat-go/jwx/v2/jwe`,
 		`github.com/lestrrat-go/jwx/v2/jwk`,
 		`github.com/lestrrat-go/jwx/v2/jws`,
 		`github.com/lestrrat-go/jwx/v2/jwt`,
-	)
+	}...)
+	// Write all imports -- they will be pruned by golang.org/x/tools/imports eventually,
+	// so it's okay to be redundant
+	o.WriteImports(imports...)
 
 	o.LL(`type Option = option.Interface`)
 

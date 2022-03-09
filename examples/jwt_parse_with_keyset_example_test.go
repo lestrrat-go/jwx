@@ -26,7 +26,7 @@ func ExampleJWT_ParseWithKeySet() {
 			return
 		}
 		// This is the key we will use to sign
-		realKey, err := jwk.New(privKey)
+		realKey, err := jwk.FromRaw(privKey)
 		if err != nil {
 			fmt.Printf("failed to create JWK: %s\n", err)
 			return

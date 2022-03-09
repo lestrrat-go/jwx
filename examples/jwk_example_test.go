@@ -46,7 +46,7 @@ func ExampleJWK_Usage() {
 		_ = rawkey
 
 		// You can create jwk.Key from a raw key, too
-		fromRawKey, err := jwk.New(rawkey)
+		fromRawKey, err := jwk.FromRaw(rawkey)
 		if err != nil {
 			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
 			return
@@ -88,7 +88,7 @@ func ExampleJWK_New() {
 	// []byte -> jwk.SymmetricKey
 	{
 		raw := []byte("Lorem Ipsum")
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -108,7 +108,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create RSA key: %s\n", err)
 			return
@@ -129,7 +129,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create ECDSA key: %s\n", err)
 			return
@@ -155,7 +155,7 @@ func ExampleJWK_MarshalJSON() {
 		return
 	}
 
-	key, err := jwk.New(raw)
+	key, err := jwk.FromRaw(raw)
 	if err != nil {
 		fmt.Printf("failed to create ECDSA key: %s\n", err)
 		return

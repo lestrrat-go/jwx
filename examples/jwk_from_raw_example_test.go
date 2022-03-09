@@ -11,14 +11,14 @@ import (
 )
 
 func ExampleJWK_New() {
-	// First, THIS IS THE WRONG WAY TO USE jwk.New().
+	// First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
 	//
 	// Assume that the file contains a JWK in JSON format
 	//
 	//  buf, _ := os.ReadFile(file)
 	//  key, _ := json.New(buf)
 	//
-	// This is not right, because the jwk.New() function determines
+	// This is not right, because the jwk.FromRaw() function determines
 	// the type of `jwk.Key` to create based on the TYPE of the argument.
 	// In this case the type of `buf` is always []byte, and therefore
 	// it will always create a symmetric key.
@@ -34,7 +34,7 @@ func ExampleJWK_New() {
 	// []byte -> jwk.SymmetricKey
 	{
 		raw := []byte("Lorem Ipsum")
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -54,7 +54,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -75,7 +75,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
