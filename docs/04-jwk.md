@@ -518,48 +518,6 @@ func ExampleJWK_New() {
 source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_from_raw_example_test.go)
 <!-- END INCLUDE -->
 
-## Construct a specific key type from scratch
-
-Each of Symmetric, RSA, ECDSA, OKP key types have corresponding constructors to create an empty instance.
-These keys are completely empty, so if you tried using them without initialization, it will not work.
-
-```go
-key := jwk.NewSymmetricKey()
-key := jwk.NewECDSAPrivateKey()
-key := jwk.NewECDSAPublicKey()
-key := jwk.NewRSAPrivateKey()
-key := jwk.NewRSAPublicKey()
-key := jwk.NewOKPPrivateKey()
-key := jwk.NewOKPPublicKey()
-```
-
-For advanced users: Once you obtain these "empty" objects, you *can* use `json.Unmarshal()` to parse the JWK.
-
-```
-// OK
-key := jwk.NewRSAPrivateKey()
-if err := json.Unmarshal(src, key); err != nil {
-  return errors.New(`failed to unmarshal RSA key`)
-}
-
-// NOT OK
-var key jwk.Key // we can't do this because we don't know where to store the data
-if err := json.Unmarshal(src, &key); err !+ nil {
-  ...
-}
-```
-
-## Construct a specific key type from a raw key
-
-[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) already does this, but if for some reason you would like to initialize an already existing [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key), you can use the [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) method.
-
-```go
-privkey, err := rsa.GenerateKey(...)
-
-key := jwk.NewRSAPrivateKey()
-err := key.FromRaw(privkey)
-```
-
 # Fetching JWK Sets
 
 ## Parse a key from a remote resource
