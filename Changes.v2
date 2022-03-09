@@ -79,11 +79,14 @@ Changes
     by using `jwe.WithKeyProvider()`. Because this was the only consumer for
     `jwe.DecryptCtx`, this type has been removed as well.
 
+  * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
+    make it easier for the users what the input should be.
+
   * [jwk] `jwk.NewRSAPRivateKey()`, `jwk.NewECDSAPrivateKey()`, etc have been removed.
     There is no longer any way to create concrete types of `jwk.Key` 
 
-  * [jwk] `jwk.Key` types no longer supports direct unmarshaling via `json.Unmarshal()`,
-    because you can no longer instantiate specific `jwk.Key` types. You will need to
+  * [jwk] `jwk.Key` type no longer supports direct unmarshaling via `json.Unmarshal()`,
+    because you can no longer instantiate concrete `jwk.Key` types. You will need to
     use `jwk.ParseKey()`. See the documentation for ways to parse JWKs.
 
   * [jwk] `(jwk.Key).Algorithm()` is now of `jwk.KeyAlgorithm` type. This field used

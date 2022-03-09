@@ -35,7 +35,11 @@ func ExampleJWT_ParseWithKeySet() {
 		realKey.Set(jwk.AlgorithmKey, jwa.RS256)
 
 		// For demonstration purposes, we also create a bogus key
-		bogusKey := jwk.NewSymmetricKey()
+		bogusKey, err := jwk.FromRaw([]byte("bogus"))
+		if err != nil {
+			fmt.Printf("failed to create bogus JWK: %s\n", err)
+			return
+		}
 		bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature)
 		bogusKey.Set(jwk.KeyIDKey, "otherkey")
 
