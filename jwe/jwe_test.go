@@ -159,7 +159,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey([]byte(jwkstr))
+	privkey, err := jwk.ParseKey(jwkstr)
 	if !assert.NoError(t, err, `parsing jwk should succeed`) {
 		return
 	}
