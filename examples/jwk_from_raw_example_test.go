@@ -10,13 +10,13 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_New() {
+func ExampleJWK_FromRaw() {
 	// First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
 	//
 	// Assume that the file contains a JWK in JSON format
 	//
 	//  buf, _ := os.ReadFile(file)
-	//  key, _ := json.New(buf)
+	//  key, _ := jwk.FromRaw(buf)
 	//
 	// This is not right, because the jwk.FromRaw() function determines
 	// the type of `jwk.Key` to create based on the TYPE of the argument.

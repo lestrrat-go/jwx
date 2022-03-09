@@ -5,8 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
 	"log"
 	"time"
@@ -67,69 +65,6 @@ func ExampleJWK_Usage() {
 		_ = fromJSONKey
 		_ = fromRawKey
 	}
-	// OUTPUT:
-}
-
-func ExampleJWK_New() {
-	// New returns different underlying types of jwk.Key objects
-	// depending on the input value.
-
-	// []byte -> jwk.SymmetricKey
-	{
-		raw := []byte("Lorem Ipsum")
-		key, err := jwk.FromRaw(raw)
-		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.SymmetricKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
-	}
-
-	// *rsa.PrivateKey -> jwk.RSAPrivateKey
-	// *rsa.PublicKey  -> jwk.RSAPublicKey
-	{
-		raw, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			fmt.Printf("failed to generate new RSA private key: %s\n", err)
-			return
-		}
-
-		key, err := jwk.FromRaw(raw)
-		if err != nil {
-			fmt.Printf("failed to create RSA key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.RSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.RSAPrivateKey, got %T\n", key)
-			return
-		}
-		// PublicKey is omitted for brevity
-	}
-
-	// *ecdsa.PrivateKey -> jwk.ECDSAPrivateKey
-	// *ecdsa.PublicKey  -> jwk.ECDSAPublicKey
-	{
-		raw, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		if err != nil {
-			fmt.Printf("failed to generate new ECDSA private key: %s\n", err)
-			return
-		}
-
-		key, err := jwk.FromRaw(raw)
-		if err != nil {
-			fmt.Printf("failed to create ECDSA key: %s\n", err)
-			return
-		}
-		if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.ECDSAPrivateKey, got %T\n", key)
-			return
-		}
-		// PublicKey is omitted for brevity
-	}
-
 	// OUTPUT:
 }
 
