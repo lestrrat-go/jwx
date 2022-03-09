@@ -46,7 +46,7 @@ func ExampleJWK_Usage() {
 		_ = rawkey
 
 		// You can create jwk.Key from a raw key, too
-		fromRawKey, err := jwk.New(rawkey)
+		fromRawKey, err := jwk.FromRaw(rawkey)
 		if err != nil {
 			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
 			return
@@ -58,18 +58,7 @@ func ExampleJWK_Usage() {
 			log.Printf("failed to marshal key into JSON: %s", err)
 			return
 		}
-		log.Printf("%s", jsonbuf)
 
-		// If you know the underlying Key type (RSA, EC, Symmetric), you can
-		// create an empty instance first
-		//    key := jwk.NewRSAPrivateKey()
-		// ..and then use json.Unmarshal
-		//    json.Unmarshal(key, jsonbuf)
-		//
-		// but if you don't know the type first, you have an abstract type
-		// jwk.Key, which can't be used as the first argument to json.Unmarshal
-		//
-		// In this case, use jwk.Parse()
 		fromJSONKey, err := jwk.Parse(jsonbuf)
 		if err != nil {
 			log.Printf("failed to parse json: %s", err)
@@ -88,7 +77,7 @@ func ExampleJWK_New() {
 	// []byte -> jwk.SymmetricKey
 	{
 		raw := []byte("Lorem Ipsum")
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -108,7 +97,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create RSA key: %s\n", err)
 			return
@@ -129,7 +118,7 @@ func ExampleJWK_New() {
 			return
 		}
 
-		key, err := jwk.New(raw)
+		key, err := jwk.FromRaw(raw)
 		if err != nil {
 			fmt.Printf("failed to create ECDSA key: %s\n", err)
 			return
@@ -155,7 +144,7 @@ func ExampleJWK_MarshalJSON() {
 		return
 	}
 
-	key, err := jwk.New(raw)
+	key, err := jwk.FromRaw(raw)
 	if err != nil {
 		fmt.Printf("failed to create ECDSA key: %s\n", err)
 		return

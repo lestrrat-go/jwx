@@ -117,7 +117,7 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 func makeOKPPublicKey(v interface {
 	makePairs() []*HeaderPair
 }) (Key, error) {
-	newKey := NewOKPPublicKey()
+	newKey := newOKPPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
 	for _, pair := range v.makePairs() {

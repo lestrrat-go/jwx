@@ -282,7 +282,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 func TestNew(t *testing.T) {
 	t.Parallel()
-	k, err := jwk.New(nil)
+	k, err := jwk.FromRaw(nil)
 	if !assert.Nil(t, k, "key should be nil") {
 		return
 	}
@@ -878,9 +878,9 @@ func TestPublicKeyOf(t *testing.T) {
 				return
 			}
 
-			// Go through jwk.New
-			jwkKey, err := jwk.New(key.Key)
-			if !assert.NoError(t, err, `jwk.New should succeed`) {
+			// Go through jwk.FromRaw
+			jwkKey, err := jwk.FromRaw(key.Key)
+			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 				return
 			}
 
@@ -911,8 +911,8 @@ func TestPublicKeyOf(t *testing.T) {
 			if reflect.TypeOf(key.Key) == key.PublicKeyType {
 				continue
 			}
-			jwkKey, err := jwk.New(key.Key)
-			if !assert.NoError(t, err, `jwk.New should succeed`) {
+			jwkKey, err := jwk.FromRaw(key.Key)
+			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 				return
 			}
 			jwkKey.Set(jwk.KeyIDKey, fmt.Sprintf("key%d", count))
@@ -1038,8 +1038,8 @@ func TestRSA(t *testing.T) {
 			for _, raw := range []rsa.PublicKey{
 				{},
 			} {
-				_, err := jwk.New(raw)
-				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+				_, err := jwk.FromRaw(raw)
+				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
 					return
 				}
 			}
@@ -1104,8 +1104,8 @@ func TestRSA(t *testing.T) {
 					Primes: []*big.Int{{}, {}},
 				},
 			} {
-				_, err := jwk.New(raw)
-				if !assert.Error(t, err, `jwk.New should fail for empty key`) {
+				_, err := jwk.FromRaw(raw)
+				if !assert.Error(t, err, `jwk.FromRaw should fail for empty key`) {
 					return
 				}
 			}
@@ -1159,8 +1159,8 @@ func TestECDSA(t *testing.T) {
 					},
 				},
 			} {
-				_, err := jwk.New(raw)
-				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+				_, err := jwk.FromRaw(raw)
+				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
 					return
 				}
 			}
@@ -1199,8 +1199,8 @@ func TestECDSA(t *testing.T) {
 					X: &big.Int{},
 				},
 			} {
-				_, err := jwk.New(raw)
-				if !assert.Error(t, err, `jwk.New should fail for invalid key`) {
+				_, err := jwk.FromRaw(raw)
+				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
 					return
 				}
 			}
@@ -1233,12 +1233,12 @@ func TestECDSA(t *testing.T) {
 					return
 				}
 
-				privkey := jwk.NewECDSAPrivateKey()
-				if !assert.NoError(t, privkey.FromRaw(key), `privkey.FromRaw should succeed`) {
+				privkey, err := jwk.FromRaw(key)
+				if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 					return
 				}
-				pubkey := jwk.NewECDSAPublicKey()
-				if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey), `pubkey.FromRaw should succeed`) {
+				pubkey, err := jwk.FromRaw(key)
+				if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 					return
 				}
 
@@ -1358,21 +1358,6 @@ func TestCustomField(t *testing.T) {
 	t.Run("jwk.ParseKey", func(t *testing.T) {
 		key, err := jwk.ParseKey([]byte(src))
 		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-			return
-		}
-
-		v, ok := key.Get(`x-birthday`)
-		if !assert.True(t, ok, `key.Get("x-birthday") should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, expected, v, `values should match`) {
-			return
-		}
-	})
-	t.Run("json.Unmarshal", func(t *testing.T) {
-		key := jwk.NewRSAPublicKey()
-		if !assert.NoError(t, json.Unmarshal([]byte(src), key), `json.Unmarshal should succeed`) {
 			return
 		}
 
@@ -1791,8 +1776,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 
-		k, err := jwk.New([]byte("foobar"))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
+		k, err := jwk.FromRaw([]byte("foobar"))
+		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 			return
 		}
 		keys := []jwk.Key{k}

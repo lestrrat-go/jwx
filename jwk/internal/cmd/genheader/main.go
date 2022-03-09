@@ -287,9 +287,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("dc json.DecodeCtx")
 	o.L("}")
 
-	o.LL("func New%[1]s() %[1]s {", ifName)
-	o.L("return new%s()", ifName)
-	o.L("}")
 	o.LL("func new%s() *%s {", ifName, structName)
 	o.L("return &%s{", structName)
 	o.L("mu: &sync.RWMutex{},")

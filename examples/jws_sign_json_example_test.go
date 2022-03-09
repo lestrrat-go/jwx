@@ -12,7 +12,7 @@ func ExampleJWS_SignJSON() {
 	var keys []jwk.Key
 
 	for i := 0; i < 3; i++ {
-		key, err := jwk.New([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
+		key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
 		if err != nil {
 			fmt.Printf("failed to create key: %s\n", err)
 			return

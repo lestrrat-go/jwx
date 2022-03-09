@@ -11,17 +11,18 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Parse a key](#parse-a-key)
   * [Parse a key or set in PEM format](#parse-a-key-or-a-set-in-pem-format)
   * [Parse a key from a file](#parse-a-key-from-a-file)
-  * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
+  * [Parse a key as a struct field](#parse-a-key-as-a-struct-field)
 * [Construction](#construction)
-  * [Using jwk.New()](#using-jwknew)
+  * [Using jwk.FromRaw()](#using-jwkfromraw)
   * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
   * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
-* [Setting values to fields](#setting-values-to-fields)
 * [Fetching JWK Sets](#fetching-jwk-sets)
-  * [Fetching a JWK Set once](#fetching-a-jwk-set-once)
+  * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
   * [Using Whitelists](#using-whitelists)
-* [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
+* [Working with jwk.Key](#working-with-jwkkey)
+  * [Setting values to fields](#setting-values-to-fields)
+  * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
 ---
 
@@ -320,76 +321,33 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_readfile_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
-## Parse a key from a remote resource
+## Parse a key as a struct field
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
+As `jwk.Key` is an interface, it can't directly be used as an argument in `json.Unmarsshal`.
+For example, the following would fail:
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) described elsewhere in this document.
-
-<!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
-package examples
-
-import (
-  "context"
-  "encoding/json"
-  "fmt"
-  "net/http"
-  "net/http/httptest"
-  "os"
-
-  "github.com/lestrrat-go/jwx/v2/jwk"
-)
-
-func ExampleJWK_Fetch() {
-  srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
-    fmt.Fprintf(w, `{
-  		"keys": [
-        {"kty":"EC",
-         "crv":"P-256",
-         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-         "use":"enc",
-         "kid":"1"},
-        {"kty":"RSA",
-         "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-         "e":"AQAB",
-         "alg":"RS256",
-         "kid":"2011-04-29"}
-      ]
-    }`)
-  }))
-  defer srv.Close()
-
-  set, err := jwk.Fetch(
-    context.Background(),
-    srv.URL,
-    // This is necessary because httptest.Server is using a custom certificate
-    jwk.WithHTTPClient(srv.Client()),
-  )
-  if err != nil {
-    fmt.Printf("failed to fetch JWKS: %s\n", err)
-    return
-  }
-
-  json.NewEncoder(os.Stdout).Encode(set)
-  // OUTPUT:
-  // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
-}
+var key jwk.Key
+json.Unmarshal(data, &key) // error
 ```
-source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_fetch_example_test.go)
+
+This poses a problem when you want to use `jwk.Key` as a struct field in another struct
+that needs to handle `json.Unmarshal`. To overcome this, you can either define a custom
+`UnmarshalJSON([]byte) error` for your container struct, or you can use a "proxy" struct
+that will intercept the field holding the `jwk.Key`.
+
+<!-- INCLUDE(examples/jwk_struct_field_example_test.go) -->
 <!-- END INCLUDE -->
 
 # Construction
 
-## Using jwk.New()
+## Using jwk.FromRaw()
 
-Users can create a new key from scratch using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New).
+Users can create a new key from scratch using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw).
 
-[`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) requires the raw key as its argument.
+[`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) requires the raw key as its argument.
 There are other ways to creating keys from a raw key, but they require knowing its type in advance.
-Use [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) when you have a key type which you do not know its underlying type in advance.
+Use [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
 
@@ -403,7 +361,7 @@ It automatically creates the appropriate underlying key based on the given argum
 | x25519.PrivateKey | OKP Private Key | |
 | x25519.PubliKey | OKP Public Key | |
 
-<!-- INCLUDE(examples/jwk_new_example_test.go) -->
+<!-- INCLUDE(examples/jwk_from_raw_example_test.go) -->
 ```go
 package examples
 
@@ -542,29 +500,68 @@ key := jwk.NewRSAPrivateKey()
 err := key.FromRaw(privkey)
 ```
 
-## Setting values to fields
-
-Using [`jwk.New()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#New) or [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) allows you to populate the fields that are required to do perform the computations, but there are other fields that you may want to populate in a key. These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method.
-
-The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
-
-[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) may not alter the Key Type (`kty`) field of a key.
-
-the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
-
-```go
-key.Set(jwk.KeyIDKey, `my-awesome-key`)
-key.Set(`my-custom-field`, `unbelievable-value`)
-```
 # Fetching JWK Sets
 
-## Fetching a JWK Set once
+## Parse a key from a remote resource
 
-To fetch a JWK Set once, use `jwk.Fetch()`.
+To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) described elsewhere in this document.
+
+<!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
-set, err := jwk.Fetch(ctx, url, options...)
+package examples
+
+import (
+  "context"
+  "encoding/json"
+  "fmt"
+  "net/http"
+  "net/http/httptest"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWK_Fetch() {
+  srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, `{
+  		"keys": [
+        {"kty":"EC",
+         "crv":"P-256",
+         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+         "use":"enc",
+         "kid":"1"},
+        {"kty":"RSA",
+         "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+         "e":"AQAB",
+         "alg":"RS256",
+         "kid":"2011-04-29"}
+      ]
+    }`)
+  }))
+  defer srv.Close()
+
+  set, err := jwk.Fetch(
+    context.Background(),
+    srv.URL,
+    // This is necessary because httptest.Server is using a custom certificate
+    jwk.WithHTTPClient(srv.Client()),
+  )
+  if err != nil {
+    fmt.Printf("failed to fetch JWKS: %s\n", err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(set)
+  // OUTPUT:
+  // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
+}
 ```
+source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_fetch_example_test.go)
+<!-- END INCLUDE -->
 
 ## Auto-refreshing remote keys
 
@@ -748,7 +745,26 @@ func ExampleJWK_Whitelist() {
 source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_whitelist_example_test.go)
 <!-- END INCLUDE -->
 
-# Converting a jwk.Key to a raw key
+# Working with jwk.Key
+
+## Setting values to fields
+
+Using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
+
+These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method.
+
+The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
+
+[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) may not alter the Key Type (`kty`) field of a key.
+
+the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
+
+```go
+key.Set(jwk.KeyIDKey, `my-awesome-key`)
+key.Set(`my-custom-field`, `unbelievable-value`)
+```
+
+## Converting a jwk.Key to a raw key
 
 As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc) as "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v2/jwk#Raw) method.
 

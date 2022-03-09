@@ -79,12 +79,25 @@ Changes
     by using `jwe.WithKeyProvider()`. Because this was the only consumer for
     `jwe.DecryptCtx`, this type has been removed as well.
 
+  * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
+    make it easier for the users what the input should be.
+
+  * [jwk] `jwk.NewRSAPRivateKey()`, `jwk.NewECDSAPrivateKey()`, etc have been removed.
+    There is no longer any way to create concrete types of `jwk.Key` 
+
+  * [jwk] `jwk.Key` type no longer supports direct unmarshaling via `json.Unmarshal()`,
+    because you can no longer instantiate concrete `jwk.Key` types. You will need to
+    use `jwk.ParseKey()`. See the documentation for ways to parse JWKs.
+
   * [jwk] `(jwk.Key).Algorithm()` is now of `jwk.KeyAlgorithm` type. This field used
     to be `string` and therefore could not be passed directly to `jwt.Sign()`
     `jws.Sign()`, `jwe.Encrypt()`, et al. This is no longer the case, and
     now you can pass it directly. See 
     https://github.com/lestrrat-go/jwx/blob/v2/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
     for more details
+
+  * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
+    They represent something that can fetch a jwk.Set
 
   * [jws] `jws.Sign()` can now generate JWS messages in either compact or JSON
     forms. By default, the compact form is used. JSON format can be
@@ -96,9 +109,6 @@ Changes
 
   * [jws] `jws.WithCompact` and `jws.WithJSON` options have been added
     to control the serialization format.
-
-  * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
-    They represent something that can fetch a jwk.Set
 
   * [jws] jws.Verify()'s method signature has been changed to
 

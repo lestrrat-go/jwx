@@ -152,7 +152,7 @@ func (g X25519) Generate() (ByteSource, error) {
 // HeaderPopulate populates the header with the required EC-DSA public key
 // information ('epk' key)
 func (k ByteWithECPublicKey) Populate(h Setter) error {
-	key, err := jwk.New(k.PublicKey)
+	key, err := jwk.FromRaw(k.PublicKey)
 	if err != nil {
 		return fmt.Errorf(`failed to create JWK: %w`, err)
 	}
