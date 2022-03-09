@@ -47,10 +47,6 @@ type okpPublicKey struct {
 	dc                     json.DecodeCtx
 }
 
-func NewOKPPublicKey() OKPPublicKey {
-	return newOKPPublicKey()
-}
-
 func newOKPPublicKey() *okpPublicKey {
 	return &okpPublicKey{
 		mu:            &sync.RWMutex{},
@@ -582,10 +578,6 @@ type okpPrivateKey struct {
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
-}
-
-func NewOKPPrivateKey() OKPPrivateKey {
-	return newOKPPrivateKey()
 }
 
 func newOKPPrivateKey() *okpPrivateKey {

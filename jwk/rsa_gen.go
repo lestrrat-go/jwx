@@ -53,10 +53,6 @@ type rsaPublicKey struct {
 	dc                     json.DecodeCtx
 }
 
-func NewRSAPublicKey() RSAPublicKey {
-	return newRSAPublicKey()
-}
-
 func newRSAPublicKey() *rsaPublicKey {
 	return &rsaPublicKey{
 		mu:            &sync.RWMutex{},
@@ -593,10 +589,6 @@ type rsaPrivateKey struct {
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
-}
-
-func NewRSAPrivateKey() RSAPrivateKey {
-	return newRSAPrivateKey()
 }
 
 func newRSAPrivateKey() *rsaPrivateKey {

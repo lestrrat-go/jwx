@@ -66,55 +66,55 @@ func FromRaw(key interface{}) (Key, error) {
 
 	switch rawKey := ptr.(type) {
 	case *rsa.PrivateKey:
-		k := NewRSAPrivateKey()
+		k := newRSAPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *rsa.PublicKey:
-		k := NewRSAPublicKey()
+		k := newRSAPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *ecdsa.PrivateKey:
-		k := NewECDSAPrivateKey()
+		k := newECDSAPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case *ecdsa.PublicKey:
-		k := NewECDSAPublicKey()
+		k := newECDSAPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case ed25519.PrivateKey:
-		k := NewOKPPrivateKey()
+		k := newOKPPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case ed25519.PublicKey:
-		k := NewOKPPublicKey()
+		k := newOKPPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case x25519.PrivateKey:
-		k := NewOKPPrivateKey()
+		k := newOKPPrivateKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case x25519.PublicKey:
-		k := NewOKPPublicKey()
+		k := newOKPPublicKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
 		return k, nil
 	case []byte:
-		k := NewSymmetricKey()
+		k := newSymmetricKey()
 		if err := k.FromRaw(rawKey); err != nil {
 			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
 		}
@@ -619,19 +619,19 @@ func cloneKey(src Key) (Key, error) {
 	var dst Key
 	switch src.(type) {
 	case RSAPrivateKey:
-		dst = NewRSAPrivateKey()
+		dst = newRSAPrivateKey()
 	case RSAPublicKey:
-		dst = NewRSAPublicKey()
+		dst = newRSAPublicKey()
 	case ECDSAPrivateKey:
-		dst = NewECDSAPrivateKey()
+		dst = newECDSAPrivateKey()
 	case ECDSAPublicKey:
-		dst = NewECDSAPublicKey()
+		dst = newECDSAPublicKey()
 	case OKPPrivateKey:
-		dst = NewOKPPrivateKey()
+		dst = newOKPPrivateKey()
 	case OKPPublicKey:
-		dst = NewOKPPublicKey()
+		dst = newOKPPublicKey()
 	case SymmetricKey:
-		dst = NewSymmetricKey()
+		dst = newSymmetricKey()
 	default:
 		return nil, fmt.Errorf(`unknown key type %T`, src)
 	}

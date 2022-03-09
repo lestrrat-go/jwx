@@ -47,7 +47,7 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func (k *symmetricKey) PublicKey() (Key, error) {
-	newKey := NewSymmetricKey()
+	newKey := newSymmetricKey()
 
 	for _, pair := range k.makePairs() {
 		if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
