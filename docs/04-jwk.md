@@ -21,6 +21,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
   * [Using Whitelists](#using-whitelists)
 * [Working with jwk.Key](#working-with-jwkkey)
+  * [Working with key-specific methods](#working-with-key-specific-methods)
   * [Setting values to fields](#setting-values-to-fields)
   * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
 
@@ -805,6 +806,15 @@ source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/
 <!-- END INCLUDE -->
 
 # Working with jwk.Key
+
+## [Working with key-specific methods]
+
+While you would almost always be able to get away with working with just the `jwk.Key` interface, there might be times when you want to get to methods that are specific to a particular key type, such as an RSA key.
+
+In these cases it is possible to convert their types and get a more specific interface, such as `jwk.RSAPrivateKey`
+
+<!-- INCLUDE(examples/jwk_key_specific_methods_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Setting values to fields
 
