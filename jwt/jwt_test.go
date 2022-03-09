@@ -389,12 +389,12 @@ func TestJWTParseVerify(t *testing.T) {
 		})
 		t.Run("UseDefault with multiple keys should fail", func(t *testing.T) {
 			t.Parallel()
-			pubkey1 := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey1.FromRaw(&key.PublicKey)) {
+			pubkey1, err := jwk.FromRaw(&key.PublicKey)
+			if !assert.NoError(t, err) {
 				return
 			}
-			pubkey2 := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey2.FromRaw(&key.PublicKey)) {
+			pubkey2, err := jwk.FromRaw(&key.PublicKey)
+			if !assert.NoError(t, err) {
 				return
 			}
 
@@ -442,8 +442,8 @@ func TestJWTParseVerify(t *testing.T) {
 
 			signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
 
-			pubkey := jwk.NewRSAPublicKey()
-			if !assert.NoError(t, pubkey.FromRaw(&key.PublicKey)) {
+			pubkey, err := jwk.FromRaw(&key.PublicKey)
+			if !assert.NoError(t, err) {
 				return
 			}
 
@@ -653,8 +653,7 @@ func TestSignJWK(t *testing.T) {
 	priv, err := jwxtest.GenerateRsaKey()
 	assert.Nil(t, err)
 
-	key := jwk.NewRSAPrivateKey()
-	err = key.FromRaw(priv)
+	key, err := jwk.FromRaw(priv)
 	assert.Nil(t, err)
 
 	key.Set(jwk.KeyIDKey, "test")

@@ -80,6 +80,7 @@ Changes
     `jwe.DecryptCtx`, this type has been removed as well.
 
   * [jwk] `jwk.NewRSAPRivateKey()`, `jwk.NewECDSAPrivateKey()`, etc have been removed.
+    There is no longer any way to create concrete types of `jwk.Key` 
 
   * [jwk] `jwk.Key` types no longer supports direct unmarshaling via `json.Unmarshal()`,
     because you can no longer instantiate specific `jwk.Key` types. You will need to

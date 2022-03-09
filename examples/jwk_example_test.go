@@ -58,18 +58,7 @@ func ExampleJWK_Usage() {
 			log.Printf("failed to marshal key into JSON: %s", err)
 			return
 		}
-		log.Printf("%s", jsonbuf)
 
-		// If you know the underlying Key type (RSA, EC, Symmetric), you can
-		// create an empty instance first
-		//    key := jwk.NewRSAPrivateKey()
-		// ..and then use json.Unmarshal
-		//    json.Unmarshal(key, jsonbuf)
-		//
-		// but if you don't know the type first, you have an abstract type
-		// jwk.Key, which can't be used as the first argument to json.Unmarshal
-		//
-		// In this case, use jwk.Parse()
 		fromJSONKey, err := jwk.Parse(jsonbuf)
 		if err != nil {
 			log.Printf("failed to parse json: %s", err)

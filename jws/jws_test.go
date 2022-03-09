@@ -575,8 +575,8 @@ func TestEncode(t *testing.T) {
     "qi":"IYd7DHOhrWvxkwPQsRM2tOgrjbcrfvtQJipd-DlcxyVuuM9sQLdgjVk2oy26F0EmpScGLq2MowX7fhd_QJQ3ydy5cY7YIBi87w93IKLEdfnbJtoOPLUW0ITrJReOgo1cq9SbsxYawBgfp_gh6A5603k2-ZQwVK0JKSHuLFkuQ3U"
   }`
 
-		privkey := jwk.NewRSAPrivateKey()
-		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should be successful`) {
+		privkey, err := jwk.ParseKey([]byte(jwksrc))
+		if !assert.NoError(t, err, `parsing jwk should be successful`) {
 			return
 		}
 
@@ -652,8 +652,8 @@ func TestEncode(t *testing.T) {
     "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
     "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
   }`
-		privkey := jwk.NewECDSAPrivateKey()
-		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should succeed`) {
+		privkey, err := jwk.ParseKey([]byte(jwksrc))
+		if !assert.NoError(t, err, `parsing jwk should succeed`) {
 			return
 		}
 
@@ -737,8 +737,8 @@ func TestEncode(t *testing.T) {
 			return
 		}
 
-		privkey := jwk.NewOKPPrivateKey()
-		if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), privkey), `parsing jwk should succeed`) {
+		privkey, err := jwk.ParseKey([]byte(jwksrc))
+		if !assert.NoError(t, err, `parsing jwk should succeed`) {
 			return
 		}
 
@@ -1016,8 +1016,8 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
     "y":"CRKSqP-aYTIsqJfg_wZEEYUayUR5JhZaS2m4NLk2t1DfXZgfApAJ2lBO0vWKnUMp"
   }`
 
-	pubkey := jwk.NewECDSAPublicKey()
-	if !assert.NoError(t, json.Unmarshal([]byte(jwksrc), pubkey), `parsing jwk should be successful`) {
+	pubkey, err := jwk.ParseKey([]byte(jwksrc))
+	if !assert.NoError(t, err, `parsing jwk should be successful`) {
 		return
 	}
 
@@ -1421,117 +1421,6 @@ func TestRFC7797(t *testing.T) {
 	})
 }
 
-func TestAlgorithmsForKey(t *testing.T) {
-	testcases := []struct {
-		Name     string
-		Key      interface{}
-		Expected []jwa.SignatureAlgorithm
-	}{
-		{
-			Name:     "Octet sequence",
-			Key:      []byte("hello"),
-			Expected: []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512},
-		},
-		{
-			Name:     "rsa.PublicKey",
-			Key:      rsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "*rsa.PublicKey",
-			Key:      &rsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "jwk.RSAPublicKey",
-			Key:      jwk.NewRSAPublicKey(),
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "ecdsa.PublicKey",
-			Key:      ecdsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "*ecdsa.PublicKey",
-			Key:      &ecdsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "jwk.ECDSAPublicKey",
-			Key:      jwk.NewECDSAPublicKey(),
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "rsa.PrivateKey",
-			Key:      rsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "*rsa.PrivateKey",
-			Key:      &rsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "jwk.RSAPrivateKey",
-			Key:      jwk.NewRSAPrivateKey(),
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
-		},
-		{
-			Name:     "ecdsa.PrivateKey",
-			Key:      ecdsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "*ecdsa.PrivateKey",
-			Key:      &ecdsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "jwk.ECDSAPrivateKey",
-			Key:      jwk.NewECDSAPrivateKey(),
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
-		},
-		{
-			Name:     "ed25519.PublicKey",
-			Key:      ed25519.PublicKey(nil),
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
-		},
-		{
-			Name:     "x25519.PublicKey",
-			Key:      x25519.PublicKey(nil),
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
-		},
-	}
-
-	for _, tc := range testcases {
-		tc := tc
-
-		if hasES256K {
-			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
-				tc.Expected = append(tc.Expected, jwa.ES256K)
-			}
-		}
-
-		sort.Slice(tc.Expected, func(i, j int) bool {
-			return tc.Expected[i].String() < tc.Expected[j].String()
-		})
-		t.Run(tc.Name, func(t *testing.T) {
-			algs, err := jws.AlgorithmsForKey(tc.Key)
-			if !assert.NoError(t, err, `jws.AlgorithmsForKey should succeed`) {
-				return
-			}
-
-			sort.Slice(algs, func(i, j int) bool {
-				return algs[i].String() < algs[j].String()
-			})
-			if !assert.Equal(t, tc.Expected, algs, `results should match`) {
-				return
-			}
-		})
-	}
-}
-
 func TestGH485(t *testing.T) {
 	const payload = `eyJhIjoiYiJ9`
 	const protected = `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImNyaXQiOlsiZXhwIl0sImV4cCI6MCwiaXNzIjoiZm9vIiwibmJmIjowLCJpYXQiOjB9`
@@ -1823,4 +1712,133 @@ func TestJKU(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAlgorithmsForKey(t *testing.T) {
+	rsaprivkey, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaPrivateKey should succeed`) {
+		return
+	}
+	rsapubkey, err := rsaprivkey.PublicKey()
+	if !assert.NoError(t, err, `jwk (RSA) PublicKey() should succeed`) {
+		return
+	}
+
+	ecdsaprivkey, err := jwxtest.GenerateEcdsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaPrivateKey should succeed`) {
+		return
+	}
+	ecdsapubkey, err := ecdsaprivkey.PublicKey()
+	if !assert.NoError(t, err, `jwk (ECDSA) PublicKey() should succeed`) {
+		return
+	}
+
+	testcases := []struct {
+		Name     string
+		Key      interface{}
+		Expected []jwa.SignatureAlgorithm
+	}{
+		{
+			Name:     "Octet sequence",
+			Key:      []byte("hello"),
+			Expected: []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512},
+		},
+		{
+			Name:     "rsa.PublicKey",
+			Key:      rsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "*rsa.PublicKey",
+			Key:      &rsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "jwk.RSAPublicKey",
+			Key:      rsapubkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "ecdsa.PublicKey",
+			Key:      ecdsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "*ecdsa.PublicKey",
+			Key:      &ecdsa.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "jwk.ECDSAPublicKey",
+			Key:      ecdsapubkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "rsa.PrivateKey",
+			Key:      rsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "*rsa.PrivateKey",
+			Key:      &rsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "jwk.RSAPrivateKey",
+			Key:      rsapubkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+		},
+		{
+			Name:     "ecdsa.PrivateKey",
+			Key:      ecdsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "*ecdsa.PrivateKey",
+			Key:      &ecdsa.PrivateKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "jwk.ECDSAPrivateKey",
+			Key:      ecdsaprivkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+		},
+		{
+			Name:     "ed25519.PublicKey",
+			Key:      ed25519.PublicKey(nil),
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+		},
+		{
+			Name:     "x25519.PublicKey",
+			Key:      x25519.PublicKey(nil),
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+
+		if hasES256K {
+			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
+				tc.Expected = append(tc.Expected, jwa.ES256K)
+			}
+		}
+
+		sort.Slice(tc.Expected, func(i, j int) bool {
+			return tc.Expected[i].String() < tc.Expected[j].String()
+		})
+		t.Run(tc.Name, func(t *testing.T) {
+			algs, err := jws.AlgorithmsForKey(tc.Key)
+			if !assert.NoError(t, err, `jws.AlgorithmsForKey should succeed`) {
+				return
+			}
+
+			sort.Slice(algs, func(i, j int) bool {
+				return algs[i].String() < algs[j].String()
+			})
+			if !assert.Equal(t, tc.Expected, algs, `results should match`) {
+				return
+			}
+		})
+	}
 }
