@@ -39,4 +39,6 @@ func ExampleJWK_KeySpecificMethods() {
 	_ = rsakey.P()
 	_ = rsakey.Q()
 	_ = rsakey.QI()
+	// OUTPUT:
+	//
 }
