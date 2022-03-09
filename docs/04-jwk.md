@@ -337,6 +337,65 @@ that needs to handle `json.Unmarshal`. To overcome this, you can either define a
 that will intercept the field holding the `jwk.Key`.
 
 <!-- INCLUDE(examples/jwk_struct_field_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+type Container struct {
+  Key jwk.Key `json:"key"`
+}
+
+// This is only one way to parse a struct field whose dynamic
+// type is unknown at compile time. In this example we use
+// a proxy/wrapper to trick `Container` from attempting to
+// parse the `.Key` field, and intercept the value that
+// would have gone into the the `Container` struct into
+// `Proxy` struct's `.Key` struct field
+type Proxy struct {
+  Container
+  Key json.RawMessage `json:"key"`
+}
+
+func ExampleJWK_StructField() {
+  const src = `{
+    "key": {
+      "kty":"EC",
+      "crv":"P-256",
+      "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+      "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+      "use":"enc",
+      "kid":"1"
+    }
+  }`
+
+  var p Proxy
+  if err := json.Unmarshal([]byte(src), &p); err != nil {
+    fmt.Printf("failed to unmarshal from JSON: %s\n", err)
+    return
+  }
+
+  // Parse the intercepted `Proxy.Key` as a `jwk.Key`
+  // and assign it to `Container.Key`
+  key, err := jwk.ParseKey(p.Key)
+  if err != nil {
+    fmt.Printf("failed to parse key: %s\n", err)
+    return
+  }
+  p.Container.Key = key
+
+  json.NewEncoder(os.Stdout).Encode(p.Container)
+  // OUTPUT:
+  // {"key":{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}}
+}
+```
+source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_struct_field_example_test.go)
 <!-- END INCLUDE -->
 
 # Construction
@@ -376,14 +435,14 @@ import (
 )
 
 func ExampleJWK_New() {
-  // First, THIS IS THE WRONG WAY TO USE jwk.New().
+  // First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
   //
   // Assume that the file contains a JWK in JSON format
   //
   //  buf, _ := os.ReadFile(file)
   //  key, _ := json.New(buf)
   //
-  // This is not right, because the jwk.New() function determines
+  // This is not right, because the jwk.FromRaw() function determines
   // the type of `jwk.Key` to create based on the TYPE of the argument.
   // In this case the type of `buf` is always []byte, and therefore
   // it will always create a symmetric key.
@@ -399,7 +458,7 @@ func ExampleJWK_New() {
   // []byte -> jwk.SymmetricKey
   {
     raw := []byte("Lorem Ipsum")
-    key, err := jwk.New(raw)
+    key, err := jwk.FromRaw(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -419,7 +478,7 @@ func ExampleJWK_New() {
       return
     }
 
-    key, err := jwk.New(raw)
+    key, err := jwk.FromRaw(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -440,7 +499,7 @@ func ExampleJWK_New() {
       return
     }
 
-    key, err := jwk.New(raw)
+    key, err := jwk.FromRaw(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -455,7 +514,7 @@ func ExampleJWK_New() {
   // OUTPUT:
 }
 ```
-source: [examples/jwk_new_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_new_example_test.go)
+source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_from_raw_example_test.go)
 <!-- END INCLUDE -->
 
 ## Construct a specific key type from scratch
