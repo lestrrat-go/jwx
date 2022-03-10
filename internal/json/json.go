@@ -108,5 +108,5 @@ func (dc *decodeCtx) Registry() *Registry {
 func Dump(v interface{}) {
 	enc := NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(v)
+	_ = enc.Encode(v)
 }

@@ -159,7 +159,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 	r := NewRecipient()
 	if hdrs := b.headers; hdrs != nil {
-		r.SetHeaders(hdrs)
+		_ = r.SetHeaders(hdrs)
 	}
 
 	if err := r.Headers().Set(AlgorithmKey, b.alg); err != nil {
