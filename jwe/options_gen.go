@@ -90,9 +90,9 @@ type identKey struct{}
 type identKeyProvider struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
+type identPerRecipientHeaders struct{}
 type identPretty struct{}
 type identProtectedHeaders struct{}
-type identRecipientHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
 
@@ -120,16 +120,16 @@ func (identMessage) String() string {
 	return "WithMessage"
 }
 
+func (identPerRecipientHeaders) String() string {
+	return "WithPerRecipientHeaders"
+}
+
 func (identPretty) String() string {
 	return "WithPretty"
 }
 
 func (identProtectedHeaders) String() string {
 	return "WithProtectedHeaders"
-}
-
-func (identRecipientHeaders) String() string {
-	return "WithRecipientHeaders"
 }
 
 func (identRequireKid) String() string {

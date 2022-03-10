@@ -3,13 +3,14 @@
 In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v2/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
 
 * [Parsing](#parsing)
-  * [Parse a JWS encoded buffer into a jws.Message](#parse-a-jws-encoded-buffer-into-a-jwsmessage)
-  * [Parse a JWS encoded message stored in a file](#parse-a-jws-encoded-message-stored-in-a-file)
+  * [Parse a JWS message stored in memory](#parse-a-jws-message-stored-in-memory)
+  * [Parse a JWS message stored in a file](#parse-a-jws-message-stored-in-a-file)
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
   * [Generating a JWS message with detached payload](#generating-a-jws-message-with-detached-payload)
   * [Using cloud KMS services](#using-cloud-kms-services)
+  * [Including arbitrary headers](#including-arbitrary-headers)
 * [Verifying](#verifying)
   * [Verification using a single key](#verification-using-a-single-key)
   * [Verification using a JWKS](#verification-using-a-jwks)
@@ -29,9 +30,9 @@ verification. It is only provided such that it can be inspected -- there is no w
 to sign or verify using a parsed `jws.Message`. To do this, you would need to use
 `jws.Sign()` or `jws.Message()`.
 
-## Parse a JWS encoded buffer into a jws.Message
+## Parse a JWS message stored in memory
 
-You can parse a JWS buffer into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
+You can parse a JWS message in memory stored as `[]byte` into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
 
 <!-- INCLUDE(examples/jws_parse_example_test.go) -->
 ```go
@@ -72,7 +73,7 @@ func ExampleJWS_Parse() {
 source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_parse_example_test.go)
 <!-- END INCLUDE -->
 
-## Parse a JWS encoded message stored in a file
+## Parse a JWS message stored in a file
 
 To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
 
@@ -161,7 +162,7 @@ source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/b
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
 
-When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jwt.WithKey()` options:
+When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jws.WithKey()` options:
 
 <!-- INCLUDE(examples/jws_sign_json_example_test.go) -->
 ```go
@@ -245,18 +246,16 @@ func ExampleJWS_SignDetachedPayload() {
 source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
-## Including Arbitrary Headers to Compact Serialization
+## Including arbitrary headers
 
 By default, only some header fields are included in the result from `jws.Sign()`.
-If you want to include more headers fields in the resulting JWS, you will have to provide them via the `jws.WithHeaders()` option
+If you want to include more header fields in the resulting JWS, you will have to provide them via the `jws.WithProtectedHeaders()` option.
 
-```go
-hdrs := jws.NewHeaders()
-hdrs.Set(`arbitrary-key`, `value`)
-signed, _ := jws.Sign(payload, jws.WithKey(alg, key, jws.WithProtected(hdrs)))
-```
+While `jws.WithPublicHeaders()` exists to keep API symmetric and complete, for most
+cases you only want to use `jws.WithProtectedHeaders()`
 
-Even if you need to pass in custom headers, normally you should only need to set the protected headers.
+<!-- INCLUDE(examples/jws_sign_with_headers_example_test.go) -->
+<!-- END INCLUDE -->
 
 ## Using cloud KMS services
 
@@ -310,12 +309,11 @@ source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrr
 
 ## Verification using a JWKS
 
-To verify a payload using JWKS, by default you will need your payload and JWKS to have matching `alg` field.
+To verify a payload using JWKS, by default you will need your payload and JWKS to have matching `kid` and `alg` fields.
 
 The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
-Note that unlike in JWT, the `kid` is not required by default, although you _can_ make it so
-by passing `jws.WithRequireKid(true)`.
+The `kid` field by default must match between the JWS signature and the key in JWKS. This can be explictly disabled by specifying `jws.WithRequireKid(false)` suboption when using the `jws.WithKeySet()` option (i.e.: `jws.WithKeySet(keyset, jws.WithRequireKid(false))`)
 
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
 

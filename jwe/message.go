@@ -3,6 +3,9 @@ package jwe
 import (
 	"context"
 	"fmt"
+	"log"
+	"sort"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
@@ -189,90 +192,121 @@ type messageMarshalProxy struct {
 	EncryptedKey string          `json:"encrypted_key,omitempty"`
 }
 
+type jsonKV struct {
+	Key   string
+	Value string
+}
+
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	enc := json.NewEncoder(buf)
-	fmt.Fprintf(buf, `{`)
 
-	var wrote bool
-	if aad := m.AuthenticatedData(); len(aad) > 0 {
-		wrote = true
-		fmt.Fprintf(buf, `%#v:`, AuthenticatedDataKey)
-		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
-			return nil, fmt.Errorf(`failed to encode %s field: %w`, AuthenticatedDataKey, err)
-		}
-	}
+	var fields []jsonKV
+
 	if cipherText := m.CipherText(); len(cipherText) > 0 {
-		if wrote {
-			fmt.Fprintf(buf, `,`)
-		}
-		wrote = true
-		fmt.Fprintf(buf, `%#v:`, CipherTextKey)
+		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, CipherTextKey, err)
 		}
+		fields = append(fields, jsonKV{
+			Key:   CipherTextKey,
+			Value: strings.TrimSpace(buf.String()),
+		})
 	}
 
 	if iv := m.InitializationVector(); len(iv) > 0 {
-		if wrote {
-			fmt.Fprintf(buf, `,`)
-		}
-		wrote = true
-		fmt.Fprintf(buf, `%#v:`, InitializationVectorKey)
+		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, InitializationVectorKey, err)
 		}
+		fields = append(fields, jsonKV{
+			Key:   InitializationVectorKey,
+			Value: strings.TrimSpace(buf.String()),
+		})
 	}
 
+	var encodedProtectedHeaders []byte
 	if h := m.ProtectedHeaders(); h != nil {
-		encodedHeaders, err := h.Encode()
+		v, err := h.Encode()
 		if err != nil {
 			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
 		}
 
-		if len(encodedHeaders) > 2 {
-			if wrote {
-				fmt.Fprintf(buf, `,`)
-			}
-			wrote = true
-			fmt.Fprintf(buf, `%#v:%#v`, ProtectedHeadersKey, string(encodedHeaders))
+		encodedProtectedHeaders = v
+		if len(encodedProtectedHeaders) <= 2 { // '{}'
+			encodedProtectedHeaders = nil
+		} else {
+			fields = append(fields, jsonKV{
+				Key:   ProtectedHeadersKey,
+				Value: fmt.Sprintf("%q", encodedProtectedHeaders),
+			})
 		}
 	}
 
-	if recipients := m.Recipients(); len(recipients) > 0 {
-		if wrote {
-			fmt.Fprintf(buf, `,`)
+	if aad := m.AuthenticatedData(); len(aad) > 0 {
+		aad = base64.Encode(aad)
+		if encodedProtectedHeaders != nil {
+			tmp := append(encodedProtectedHeaders, '.')
+			aad = append(tmp, aad...)
 		}
+
+		buf.Reset()
+		if err := enc.Encode(aad); err != nil {
+			return nil, fmt.Errorf(`failed to encode %s field: %w`, AuthenticatedDataKey, err)
+		}
+		fields = append(fields, jsonKV{
+			Key:   AuthenticatedDataKey,
+			Value: strings.TrimSpace(buf.String()),
+		})
+	}
+
+	if recipients := m.Recipients(); len(recipients) > 0 {
 		if len(recipients) == 1 { // Use flattened format
-			fmt.Fprintf(buf, `%#v:`, HeadersKey)
-			if err := enc.Encode(recipients[0].Headers()); err != nil {
-				return nil, fmt.Errorf(`failed to encode %s field: %w`, HeadersKey, err)
+			if hdrs := recipients[0].Headers(); hdrs != nil {
+				buf.Reset()
+				if err := enc.Encode(hdrs); err != nil {
+					return nil, fmt.Errorf(`failed to encode %s field: %w`, HeadersKey, err)
+				}
+				fields = append(fields, jsonKV{
+					Key:   HeadersKey,
+					Value: strings.TrimSpace(buf.String()),
+				})
 			}
+
 			if ek := recipients[0].EncryptedKey(); len(ek) > 0 {
-				fmt.Fprintf(buf, `,%#v:`, EncryptedKeyKey)
+				buf.Reset()
 				if err := enc.Encode(base64.EncodeToString(ek)); err != nil {
 					return nil, fmt.Errorf(`failed to encode %s field: %w`, EncryptedKeyKey, err)
 				}
+				fields = append(fields, jsonKV{
+					Key:   EncryptedKeyKey,
+					Value: strings.TrimSpace(buf.String()),
+				})
 			}
 		} else {
-			fmt.Fprintf(buf, `%#v:`, RecipientsKey)
+			buf.Reset()
 			if err := enc.Encode(recipients); err != nil {
 				return nil, fmt.Errorf(`failed to encode %s field: %w`, RecipientsKey, err)
 			}
+			fields = append(fields, jsonKV{
+				Key:   RecipientsKey,
+				Value: strings.TrimSpace(buf.String()),
+			})
 		}
 	}
 
 	if tag := m.Tag(); len(tag) > 0 {
-		if wrote {
-			fmt.Fprintf(buf, `,`)
-		}
-		fmt.Fprintf(buf, `%#v:`, TagKey)
+		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, TagKey, err)
 		}
+		fields = append(fields, jsonKV{
+			Key:   TagKey,
+			Value: strings.TrimSpace(buf.String()),
+		})
 	}
 
 	if h := m.UnprotectedHeaders(); h != nil {
@@ -282,10 +316,26 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		}
 
 		if len(unprotected) > 2 {
-			fmt.Fprintf(buf, `,%#v:%#v`, UnprotectedHeadersKey, string(unprotected))
+			fields = append(fields, jsonKV{
+				Key:   UnprotectedHeadersKey,
+				Value: fmt.Sprintf("%q", unprotected),
+			})
 		}
 	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Key < fields[j].Key
+	})
+	buf.Reset()
+	fmt.Fprintf(buf, `{`)
+	for i, kv := range fields {
+		if i > 0 {
+			fmt.Fprintf(buf, `,`)
+		}
+		fmt.Fprintf(buf, `%q:%s`, kv.Key, kv.Value)
+	}
 	fmt.Fprintf(buf, `}`)
+	log.Printf("%s", buf.String())
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())

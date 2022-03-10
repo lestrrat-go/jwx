@@ -158,6 +158,9 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 	}
 
 	r := NewRecipient()
+	if hdrs := b.headers; hdrs != nil {
+		r.SetHeaders(hdrs)
+	}
 
 	if err := r.Headers().Set(AlgorithmKey, b.alg); err != nil {
 		return nil, nil, fmt.Errorf(`failed to set header: %w`, err)
@@ -269,8 +272,13 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	}
 
 	// We need to have at least one builder
-	if len(builders) == 0 {
+	switch l := len(builders); {
+	case l == 0:
 		return nil, fmt.Errorf(`jwe.Encrypt: missing key encryption builders: use jwe.WithKey() to specify one`)
+	case l > 1:
+		if format == fmtCompact {
+			return nil, fmt.Errorf(`jwe.Encrypt: cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
+		}
 	}
 
 	if useRawCEK {
@@ -348,13 +356,6 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 
 	msg := NewMessage()
 
-	decodedAad, err := base64.Decode(aad)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to decode base64: %w`, err)
-	}
-	if err := msg.Set(AuthenticatedDataKey, decodedAad); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, AuthenticatedDataKey, err)
-	}
 	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
 		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
 	}
@@ -498,6 +499,8 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 }
 
 func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, error) {
+	var tried int
+	var lastError error
 	for i, kp := range dctx.keyProviders {
 		var sink algKeySink
 		if err := kp.FetchKeys(ctx, &sink, recipient, dctx.msg); err != nil {
@@ -505,6 +508,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, e
 		}
 
 		for _, pair := range sink.list {
+			tried++
 			// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
 			// this may seem ugly, but we're trying to avoid declaring separate
 			// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
@@ -514,13 +518,14 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, e
 
 			decrypted, err := dctx.decryptKey(ctx, alg, key, recipient)
 			if err != nil {
+				lastError = err
 				continue
 			}
 
 			return decrypted, nil
 		}
 	}
-	return nil, fmt.Errorf(`jwe.Encrypt: failed to match any of the keys with recipient`)
+	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
 }
 
 func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
@@ -531,6 +536,7 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 		}
 		key = raw
 	}
+
 	dec := newDecrypter(alg, dctx.msg.protectedHeaders.ContentEncryption(), key).
 		AuthenticatedData(dctx.aad).
 		ComputedAuthenticatedData(dctx.computedAad).

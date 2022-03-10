@@ -15,9 +15,9 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithKeyProvider", identKeyProvider{}.String())
 	require.Equal(t, "WithMergeProtectedHeaders", identMergeProtectedHeaders{}.String())
 	require.Equal(t, "WithMessage", identMessage{}.String())
+	require.Equal(t, "WithPerRecipientHeaders", identPerRecipientHeaders{}.String())
 	require.Equal(t, "WithPretty", identPretty{}.String())
 	require.Equal(t, "WithProtectedHeaders", identProtectedHeaders{}.String())
-	require.Equal(t, "WithRecipientHeaders", identRecipientHeaders{}.String())
 	require.Equal(t, "WithRequireKid", identRequireKid{}.String())
 	require.Equal(t, "WithCompact", identSerialization{}.String())
 }

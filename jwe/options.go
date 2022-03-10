@@ -10,6 +10,8 @@ import (
 
 // Specify contents of the protected header. Some fields such as
 // "enc" and "zip" will be overwritten when encryption is performed.
+//
+// There is no equivalent for unprotected headers in this implementation
 func WithProtectedHeaders(h Headers) EncryptOption {
 	cloned, _ := h.Clone(context.Background())
 	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
@@ -32,8 +34,10 @@ type withKeySuboption struct {
 
 func (*withKeySuboption) withKeySuboption() {}
 
-func WithRecipientHeaders(hdr Headers) WithKeySuboption {
-	return &withKeySuboption{option.New(identRecipientHeaders{}, hdr)}
+// WithPerRecipientHeaders is used to pass header values for each recipient.
+// Note that these headers are by definition _unprotected_.
+func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
+	return &withKeySuboption{option.New(identPerRecipientHeaders{}, hdr)}
 }
 
 // WithKey is used to pass a static algorithm/key pair to either `jwe.Encrypt()` or `jwe.Decrypt()`.
@@ -42,13 +46,16 @@ func WithRecipientHeaders(hdr Headers) WithKeySuboption {
 // It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.SignatureAlgorithm`
 // types. It is this way so that the value in `(jwk.Key).Algorithm()` can be directly
 // passed to the option. If you specify other algorithm types such as `jwa.ContentEncryptionAlgorithm`,
-// then you will get an error when `jws.Sign()` or `jws.Verify()` is executed.
+// then you will get an error when `jwe.Encrypt()` or `jwe.Decrypt()` is executed.
+//
+// Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
+// to be tried.
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
-		case identRecipientHeaders{}:
+		case identPerRecipientHeaders{}:
 			hdr = option.Value().(Headers)
 		}
 	}
@@ -61,7 +68,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 }
 
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
-	var requireKid bool
+	requireKid := true
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {

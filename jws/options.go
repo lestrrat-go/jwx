@@ -111,7 +111,8 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 }
 
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
-	var requireKid, useDefault, inferAlgorithm bool
+	requireKid := true
+	var useDefault, inferAlgorithm bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {

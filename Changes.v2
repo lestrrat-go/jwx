@@ -24,6 +24,11 @@ Changes
     // example, but can be anything that fulfills jws.KeyProvider)
     jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
 
+  tl;dr for JWK users:
+
+    // jwk.New() was confusing. Renamed to fit the actual implementation
+    key, err := jwk.FromRaw(rawKey)
+
   * Module now requires go 1.17
 
   * Use of github.com/pkg/errors is no more. If you were relying on bevaior

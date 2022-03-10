@@ -28,6 +28,8 @@ type stdRecipient struct {
 	// At least one of the "header", "protected", and "unprotected" members
 	// MUST be present so that "alg" and "enc" Header Parameter values are
 	// conveyed for each recipient computation.
+	//
+	// JWX note: see Message.unprotectedHeaders
 	headers Headers
 
 	// encrypted_key
@@ -73,6 +75,12 @@ type Message struct {
 	//    value is non-empty; otherwise, it MUST be absent.  This value is
 	//    represented as an unencoded JSON object, rather than as a string.
 	//    These Header Parameter values are not integrity protected.
+	//
+	// JWX note: This field is NOT mutually exclusive with per-recipient
+	// headers within the implmentation because... it's too much work.
+	// It is _never_ populated (we don't provide a way to do this) upon encryption.
+	// When decrypting, if present its values are always merged with
+	// per-recipient header.
 	unprotectedHeaders Headers
 
 	// iv
