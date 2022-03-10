@@ -3,7 +3,6 @@ package jwe
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -335,7 +334,6 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		fmt.Fprintf(buf, `%q:%s`, kv.Key, kv.Value)
 	}
 	fmt.Fprintf(buf, `}`)
-	log.Printf("%s", buf.String())
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
