@@ -3,6 +3,7 @@ package json
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -102,4 +103,10 @@ func NewDecodeCtx(r *Registry) DecodeCtx {
 
 func (dc *decodeCtx) Registry() *Registry {
 	return dc.registry
+}
+
+func Dump(v interface{}) {
+	enc := NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(v)
 }

@@ -7,7 +7,6 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -107,52 +106,4 @@ func ExampleJWK_MarshalJSON() {
 	//   "x": "gvvRMqm1w5aHn7sVNA2QUJeOVcedUnmiug6VhU834gzS9k87crVwu9dz7uLOdoQl",
 	//   "y": "7fVF7b6J_6_g6Wu9RuJw8geWxEi5ja9Gp2TSdELm5u2E-M7IF-bsxqcdOj3n1n7N"
 	// }
-}
-
-func ExampleJWK_AutoRefresh() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
-	ar := jwk.NewAutoRefresh(ctx)
-
-	// Tell *jwk.AutoRefresh that we only want to refresh this JWKS
-	// when it needs to (based on Cache-Control or Expires header from
-	// the HTTP response). If the calculated minimum refresh interval is less
-	// than 15 minutes, don't go refreshing any earlier than 15 minutes.
-	ar.Configure(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
-
-	// Refresh the JWKS once before getting into the main loop.
-	// This allows you to check if the JWKS is available before we start
-	// a long-running program
-	_, err := ar.Refresh(ctx, googleCerts)
-	if err != nil {
-		fmt.Printf("failed to refresh google JWKS: %s\n", err)
-		return
-	}
-
-	// Pretend that this is your program's main loop
-MAIN:
-	for {
-		select {
-		case <-ctx.Done():
-			break MAIN
-		default:
-		}
-		keyset, err := ar.Fetch(ctx, googleCerts)
-		if err != nil {
-			fmt.Printf("failed to fetch google JWKS: %s\n", err)
-			return
-		}
-		_ = keyset
-
-		// Do interesting stuff with the keyset... but here, we just
-		// sleep for a bit
-		time.Sleep(time.Second)
-
-		// Because we're a dummy program, we just cancel the loop now.
-		// If this were a real program, you prosumably loop forever
-		cancel()
-	}
-	// OUTPUT:
 }

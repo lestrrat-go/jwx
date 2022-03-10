@@ -24,6 +24,11 @@ Changes
     // example, but can be anything that fulfills jws.KeyProvider)
     jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
 
+  tl;dr for JWK users:
+
+    // jwk.New() was confusing. Renamed to fit the actual implementation
+    key, err := jwk.FromRaw(rawKey)
+
   * Module now requires go 1.17
 
   * Use of github.com/pkg/errors is no more. If you were relying on bevaior
@@ -129,20 +134,22 @@ Changes
     verify the payload with.
 
   * [jws] jws.WithKeySet() has been added to specify a JWKS to be used for
-    verification.
+    verification. By default `kid` AND `alg` must match between the signature
+    and the key.
 
     The option can take further suboptions:
 
       jws.Parse(serialized,
         jws.WithKeySet(set,
-          // require `kid` to match
-          jws.WithRequireKid(true),
+          // by default `kid` is required. set false to disable.
+          jws.WithRequireKid(false),
           // optionally skip matching kid if there's exactly one key in set
           jws.WithUseDefault(true),
           // infer algorithm name from key type
           jws.WithInferAlgorithm(true),
         ),
       )
+
   * [jws] `jws.VerifuAuto` has been removed in favor of using
     `jws.WithVerifyAuto` option with `jws.Verify()`
 

@@ -136,10 +136,9 @@ type withKeySet struct {
 // WithKeySet forces the Parse method to verify the JWT message
 // using one of the keys in the given key set.
 //
-// Unlike the equivalent option in `jws` (`jws.WithKeySet`), the `jwt`
-// version by default requires that key IDs (`kid`) in the JWS message
-// and the JWK in the given `jwk.Set` match in order for the verification
-// to proceed.
+// Key IDs (`kid`) in the JWS message and the JWK in the given `jwk.Set`
+// must match in order for the key to be a candidate to be used for
+// verification.
 //
 // This is for security reasons. If you must disable it, you can do so by
 // specifying `jws.WithRequireKid(false)` in the suboptions. But we don't
@@ -159,7 +158,6 @@ type withKeySet struct {
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
 func WithKeySet(set jwk.Set, options ...interface{}) ParseOption {
-	options = append(append([]interface{}(nil), jws.WithRequireKid(true)), options...)
 	return &parseOption{option.New(identKeySet{}, &withKeySet{
 		set:     set,
 		options: options,

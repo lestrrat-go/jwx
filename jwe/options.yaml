@@ -30,7 +30,7 @@ options:
     skip_option: true
   - ident: ProtectedHeaders
     skip_option: true
-  - ident: RecipientHeaders
+  - ident: PerRecipientHeaders
     skip_option: true
   - ident: KeyProvider
     interface: DecryptOption
