@@ -255,6 +255,37 @@ While `jws.WithPublicHeaders()` exists to keep API symmetric and complete, for m
 cases you only want to use `jws.WithProtectedHeaders()`
 
 <!-- INCLUDE(examples/jws_sign_with_headers_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWS_SignWithHeaders() {
+  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  if err != nil {
+    fmt.Printf("failed to create key: %s\n", err)
+    return
+  }
+
+  hdrs := jws.NewHeaders()
+  hdrs.Set(`x-example`, true)
+  buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", buf)
+  // OUTPUT:
+  // eyJhbGciOiJIUzI1NiIsIngtZXhhbXBsZSI6dHJ1ZX0.TG9yZW0gaXBzdW0.G1_mZLeYsCNCpglWcdofgoU9HExBGEMW08qzvouAzBo
+}
+```
+source: [examples/jws_sign_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using cloud KMS services
@@ -319,7 +350,7 @@ For more discussion on why/how `alg`/`kid` values work, please read the [relevan
 
 <!-- INCLUDE(examples/jws_verify_with_keyset_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "crypto/rand"
@@ -361,8 +392,8 @@ func ExampleJWS_VerifyWithJWKSet() {
   // Up to this point, you probably will replace with a simple jwk.Fetch()
 
   // Now verify using the set.
-  if _, err := jws.Verify(signed, jws.WithKeySet(set)); err != nil {
-    fmt.Printf("Failed to verify using jwk.Set!: %s", err)
+  if _, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithRequireKid(false))); err != nil {
+    fmt.Printf("Failed to verify using jwk.Set: %s", err)
   }
 
   // OUTPUT:

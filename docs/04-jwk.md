@@ -55,7 +55,7 @@ If you have a key set, or are unsure if the source is a set or a single key, you
 
 <!-- INCLUDE(examples/jwk_parse_jwks_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "encoding/json"
@@ -102,7 +102,7 @@ If you are sure that the source only contains a single key, you can use [`jwk.Pa
 
 <!-- INCLUDE(examples/jwk_parse_key_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "encoding/json"
@@ -142,7 +142,7 @@ Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jw
 
 <!-- INCLUDE(examples/jwk_parse_with_pem_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "fmt"
@@ -258,7 +258,7 @@ source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/j
 
 <!-- INCLUDE(examples/jwk_readfile_with_pem_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "fmt"
@@ -423,7 +423,7 @@ It automatically creates the appropriate underlying key based on the given argum
 
 <!-- INCLUDE(examples/jwk_from_raw_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "crypto/ecdsa"
@@ -528,7 +528,7 @@ If you are going to be using this key repeatedly in a long running process, cons
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "context"
@@ -594,7 +594,7 @@ In such cases you would need to refetch the JWK periodically, which is a pain.
 
 <!-- INCLUDE(examples/jwk_auto_refresh_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "context"
