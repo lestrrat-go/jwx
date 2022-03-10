@@ -4,7 +4,7 @@ Changes
 [Incompatible Changes]
   These are changes that are incompatible with the v1.x.x version.
 
-  tl;dr for JWT users:
+  # tl;dr for JWT users:
 
     // most basic
     jwt.Parse(serialized, jwt.WithKey(alg, key))
@@ -24,10 +24,12 @@ Changes
     // example, but can be anything that fulfills jws.KeyProvider)
     jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
 
-  tl;dr for JWK users:
+  # tl;dr for JWK users:
 
     // jwk.New() was confusing. Renamed to fit the actual implementation
     key, err := jwk.FromRaw(rawKey)
+
+  # Module
 
   * Module now requires go 1.17
 
@@ -35,10 +37,13 @@ Changes
     that depends on the errors being an instance of github.com/pkg/errors
     then you need to change your code
 
-  * [jwe] `jwe.Compact()`'s signature has been changed to `Compact(*Message)`
+  # JWE
+
+  * [jwe] `jwe.Compact()`'s signature has changed to 
+    `jwe.Compact(*jwe.Message, ...jwe.CompactOption)`
 
   * [jwe] `jwe.JSON()` has been removed. You can generate JSON serialization
-    using `jwe.Encrypt(jwe.WitJSON())`
+    using `jwe.Encrypt(jwe.WitJSON())` or `json.Marshal(jwe.Message)`
 
   * [jwe] `(jwe.Message).Decrypt()` has been removed. Since formatting of the
     original serialized message matters (including whitespace), using a parsed
@@ -50,7 +55,7 @@ Changes
 
   * [jwe] `jwe.Encrypt()` can now accept multiple keys by passing multiple
     `jwe.WithKey()` options. This can be used with `jwe.WithJSON` to
-    create JWE messages with multiple signatures.
+    create JWE messages with multiple recipients.
 
   * [jwe] `jwe.DecryptEncryptOption()` has been renamed to `jwe.EncryptDecryptOption()`.
     This is so that it is more uniform with `jws` equivalent of `jws.SignVerifyOption()`
@@ -84,6 +89,8 @@ Changes
     by using `jwe.WithKeyProvider()`. Because this was the only consumer for
     `jwe.DecryptCtx`, this type has been removed as well.
 
+  # JWK
+
   * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
     make it easier for the users what the input should be.
 
@@ -103,6 +110,8 @@ Changes
 
   * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
     They represent something that can fetch a jwk.Set
+
+  # JWS
 
   * [jws] `jws.Sign()` can now generate JWS messages in either compact or JSON
     forms. By default, the compact form is used. JSON format can be
@@ -172,6 +181,8 @@ Changes
   * [jws] jws.WithKeyUsed has been added to allow users to retrieve
     the key used for verification. This is useful in cases you provided
     multiple keys and you want to know which one was successful
+
+  # JWT
 
   * [jwt] `jwt.Parse` can only parse raw JWT (JSON) or JWS (JSON or Compact).
     It no longer accepts JWE messages.
