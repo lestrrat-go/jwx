@@ -41,6 +41,7 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 }
 
 // WithKey is used to pass a static algorithm/key pair to either `jwe.Encrypt()` or `jwe.Decrypt()`.
+// either a raw key or `jwk.Key` may be passed as `key`.
 //
 // The `alg` parameter is the identifier for the key encryption algorithm that should be used.
 // It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.SignatureAlgorithm`
