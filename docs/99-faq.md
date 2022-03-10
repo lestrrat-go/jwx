@@ -76,7 +76,7 @@ After all, the only thing we can say is that you should check that you are parsi
 
 ## Why are you generating so many fields?
 
-Because a lot of the code is repetitive. For example, maintaining the 15 fields in a JWE header in all parts of the code (getter methods, setter methods, marshaling/unmarshaling) is doable but very very very cumbersome. We think that resources used to watching out for typos and other minor problems that may arise during maintenance is better spent elsewhere by automating generation of consistent code.
+Because a lot of the code is repetitive. For example, maintaining the 15 fields in a JWE header in all parts of the code (getter methods, setter methods, marshaling/unmarshaling) is doable but very very very cumbersome. We think that resources used for watching out for typos and other minor problems that may arise during maintenance is better spent elsewhere by automating generation of consistent code.
 
 ## Why is (jwk.Key).Algorithm() and jwa.KeyAlgorithm so confusing?
 
