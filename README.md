@@ -24,7 +24,7 @@ can be found in the [Description section](#description)
 
 # SYNOPSIS
 
-<!-- INCLUDE(examples/jwx_readme_examples_test.go) -->
+<!-- INCLUDE(examples/jwx_readme_example_test.go) -->
 <!-- END INCLUDE -->
 
 # How-to Documentation
