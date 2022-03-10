@@ -25,6 +25,32 @@ Also, be aware that a `jwe.Message` is not meant to be used for either decryptio
 You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#Message) object. In this mode, there is no decryption performed.
 
 <!-- INCLUDE(examples/jwe_parse_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwe"
+)
+
+func ExampleJWE_Parse() {
+  const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
+
+  msg, err := jwe.Parse([]byte(src))
+  if err != nil {
+    fmt.Printf("failed to parse JWE message: %s\n", err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(msg)
+  // OUTPUT:
+  // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
+}
+```
+source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWE message stored in a file
@@ -32,6 +58,43 @@ You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](
 To parse a JWE stored in a file, use [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#ReadFile). [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#ReadFile) accepts the same options as [`jwe.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#Parse).
 
 <!-- INCLUDE(examples/jwe_readfile_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "encoding/json"
+  "fmt"
+  "io/ioutil"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwe"
+)
+
+func ExampleJWE_ReadFile() {
+  const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
+
+  f, err := ioutil.TempFile(``, `jwe_readfile_example-*.jwe`)
+  if err != nil {
+    fmt.Printf("failed to create temporary file: %s\n", err)
+    return
+  }
+  defer os.Remove(f.Name())
+
+  f.Write([]byte(src))
+  f.Close()
+
+  msg, err := jwe.ReadFile(f.Name())
+  if err != nil {
+    fmt.Printf("failed to parse JWE message from file %q: %s\n", f.Name(), err)
+    return
+  }
+
+  json.NewEncoder(os.Stdout).Encode(msg)
+  // OUTPUT:
+  // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
+}
+```
+source: [examples/jwe_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 # Encrypting
@@ -44,6 +107,55 @@ Note that this would be [slightly different if you are encrypting JWTs](01-jwt.m
 using functions from the `jwt` package instead of `jws`.
 
 <!-- INCLUDE(examples/jwe_encrypt_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWE_Encrypt() {
+  rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to create raw private key: %s\n", err)
+    return
+  }
+  privkey, err := jwk.FromRaw(rawprivkey)
+  if err != nil {
+    fmt.Printf("failed to create private key: %s\n", err)
+    return
+  }
+
+  pubkey, err := privkey.PublicKey()
+  if err != nil {
+    fmt.Printf("failed to create public key:%s\n", err)
+    return
+  }
+
+  const payload = `Lorem ipsum`
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, pubkey))
+  if err != nil {
+    fmt.Printf("failed to encrypt payload: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, privkey))
+  if err != nil {
+    fmt.Printf("failed to decrypt payload: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+  // OUTPUT:
+  // Lorem ipsum
+}
+```
+source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWE message in JSON serialization format
@@ -53,6 +165,106 @@ Generally the only time you need to use a JSON serialization format is when you 
 When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
 
 <!-- INCLUDE(examples/jwe_encrypt_json_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWE_EncryptJSON() {
+  rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to create raw private key: %s\n", err)
+    return
+  }
+  privkey, err := jwk.FromRaw(rawprivkey)
+  if err != nil {
+    fmt.Printf("failed to create private key: %s\n", err)
+    return
+  }
+
+  pubkey, err := privkey.PublicKey()
+  if err != nil {
+    fmt.Printf("failed to create public key:%s\n", err)
+    return
+  }
+
+  const payload = `Lorem ipsum`
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithJSON(), jwe.WithKey(jwa.RSA_OAEP, pubkey))
+  if err != nil {
+    fmt.Printf("failed to encrypt payload: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, privkey))
+  if err != nil {
+    fmt.Printf("failed to decrypt payload: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+  // OUTPUT:
+  // Lorem ipsum
+}
+
+func ExampleJWE_EncryptJSONMulti() {
+  var privkeys []jwk.Key
+  var pubkeys []jwk.Key
+
+  for i := 0; i < 3; i++ {
+    rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
+    if err != nil {
+      fmt.Printf("failed to create raw private key: %s\n", err)
+      return
+    }
+    privkey, err := jwk.FromRaw(rawprivkey)
+    if err != nil {
+      fmt.Printf("failed to create private key: %s\n", err)
+      return
+    }
+    privkeys = append(privkeys, privkey)
+
+    pubkey, err := privkey.PublicKey()
+    if err != nil {
+      fmt.Printf("failed to create public key:%s\n", err)
+      return
+    }
+    pubkeys = append(pubkeys, pubkey)
+  }
+
+  options := []jwe.EncryptOption{jwe.WithJSON()}
+  for _, key := range pubkeys {
+    options = append(options, jwe.WithKey(jwa.RSA_OAEP, key))
+  }
+
+  const payload = `Lorem ipsum`
+  encrypted, err := jwe.Encrypt([]byte(payload), options...)
+  if err != nil {
+    fmt.Printf("failed to encrypt payload: %s\n", err)
+    return
+  }
+
+  for _, key := range privkeys {
+    decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, key))
+    if err != nil {
+      fmt.Printf("failed to decrypt payload: %s\n", err)
+      return
+    }
+    fmt.Printf("%s\n", decrypted)
+  }
+  // OUTPUT:
+  // Lorem ipsum
+  // Lorem ipsum
+  // Lorem ipsum
+}
+```
+source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -66,6 +278,59 @@ In order to provide extra headers to the encrypted message, you will need to use
 
 
 <!-- INCLUDE(examples/jwe_encrypt_with_headers_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/internal/json"
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwe"
+)
+
+func ExampleJWE_SignWithHeaders() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to create private key: %s\n", err)
+    return
+  }
+  const payload = "Lorem ipsum"
+
+  hdrs := jwe.NewHeaders()
+  hdrs.Set(`x-example`, true)
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)))
+  if err != nil {
+    fmt.Printf("failed to encrypt payload: %s\n", err)
+    return
+  }
+
+  msg, err := jwe.Parse(encrypted)
+  if err != nil {
+    fmt.Printf("failed to parse message: %s\n", err)
+    return
+  }
+
+  // NOTE: This is a bit tricky. Even though we specified a per-recipient
+  // header when executing jwe.Encrypt, the headers end up being in the
+  // global protected headers section. This is... by the books. JWE
+  // in Compact serialization asks us to shove the per-recipient
+  // headers in the protected header section, because there is nowhere
+  // else to store this information.
+  //
+  // If this were a full JWE JSON message, you might have to juggle
+  // between the global protected headers, global unprotected headers,
+  // and per-recipient unprotected headers
+  json.NewEncoder(os.Stdout).Encode(msg.ProtectedHeaders())
+
+  // OUTPUT:
+  // {"alg":"RSA-OAEP","enc":"A256GCM","x-example":true}
+}
+```
+source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 # Decrypting
@@ -78,6 +343,42 @@ It will automatically do the right thing whether it's serialized in compact form
 The `alg` must be explicitly specified.
 
 <!-- INCLUDE(examples/jwe_decrypt_with_key_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwe"
+)
+
+func ExampleJWE_VerifyWithKey() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to create private key: %s\n", err)
+    return
+  }
+  const payload = "Lorem ipsum"
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, privkey))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+  // OUTPUT:
+  // Lorem ipsum
+}
+```
+source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Decrypting using a JWKS
@@ -92,4 +393,52 @@ by passing `jwe.WithRequireKid(true)`.
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-decrypt-a-jwt-with-a-key-set-matching-kid)
 
 <!-- INCLUDE(examples/jwe_decrypt_with_keyset_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/rand"
+  "crypto/rsa"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v2/jwk"
+)
+
+func ExampleJWE_VerifyWithJWKSet() {
+  privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to create private key: %s\n", err)
+    return
+  }
+  const payload = "Lorem ipsum"
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey))
+  if err != nil {
+    fmt.Printf("failed to sign payload: %s\n", err)
+    return
+  }
+
+  // Create a JWK Set
+  set := jwk.NewSet()
+  // Add some bogus keys
+  k1, _ := jwk.FromRaw([]byte("abracadavra"))
+  set.Add(k1)
+  k2, _ := jwk.FromRaw([]byte("opensasame"))
+  set.Add(k2)
+  // Add the real thing
+  k3, _ := jwk.FromRaw(privkey)
+  k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP)
+  set.Add(k3)
+
+  // Up to this point, you probably will replace with a simple jwk.Fetch()
+
+  if _, err := jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false))); err != nil {
+    fmt.Printf("Failed to decrypt using jwk.Set: %s", err)
+  }
+
+  // OUTPUT:
+}
+```
+source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->
