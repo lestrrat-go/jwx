@@ -24,7 +24,7 @@ Also, be aware that a `jwe.Message` is not meant to be used for either decryptio
 
 You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#Message) object. In this mode, there is no decryption performed.
 
-<!-- INCLUDE(examples/jwe_parse_example.go) -->
+<!-- INCLUDE(examples/jwe_parse_example_test.go) -->
 <!-- END INCLUDE -->
 
 ## Parse a JWE message stored in a file
