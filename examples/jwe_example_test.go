@@ -12,24 +12,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe"
 )
 
-func ExampleJWE_Encrypt() {
-	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		log.Printf("failed to generate private key: %s", err)
-		return
-	}
-
-	payload := []byte("Lorem Ipsum")
-
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5, &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
-	if err != nil {
-		log.Printf("failed to encrypt payload: %s", err)
-		return
-	}
-	_ = encrypted
-	// OUTPUT:
-}
-
 func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
