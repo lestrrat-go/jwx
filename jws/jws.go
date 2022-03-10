@@ -150,7 +150,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf(`jws.Sign: expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, option.Value())
+				return nil, fmt.Errorf(`jws.Sign: expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
 			}
 			signer, err := makeSigner(alg, data.key, data.public, data.protected)
 			if err != nil {

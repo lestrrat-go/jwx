@@ -22,6 +22,11 @@ If you are using this module in your product or your company, please add  your p
 Some more in-depth discussion on why you might want to use this library over others
 can be found in the [Description section](#description)
 
+# SYNOPSIS
+
+<!-- INCLUDE(examples/jwx_readme_example_test.go) -->
+<!-- END INCLUDE -->
+
 # How-to Documentation
 
 * [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2)

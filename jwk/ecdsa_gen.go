@@ -51,6 +51,9 @@ type ecdsaPublicKey struct {
 	dc                     json.DecodeCtx
 }
 
+var _ ECDSAPublicKey = &ecdsaPublicKey{}
+var _ Key = &ecdsaPublicKey{}
+
 func newECDSAPublicKey() *ecdsaPublicKey {
 	return &ecdsaPublicKey{
 		mu:            &sync.RWMutex{},
@@ -613,6 +616,9 @@ type ecdsaPrivateKey struct {
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
+
+var _ ECDSAPrivateKey = &ecdsaPrivateKey{}
+var _ Key = &ecdsaPrivateKey{}
 
 func newECDSAPrivateKey() *ecdsaPrivateKey {
 	return &ecdsaPrivateKey{

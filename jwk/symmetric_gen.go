@@ -43,6 +43,9 @@ type symmetricKey struct {
 	dc                     json.DecodeCtx
 }
 
+var _ SymmetricKey = &symmetricKey{}
+var _ Key = &symmetricKey{}
+
 func newSymmetricKey() *symmetricKey {
 	return &symmetricKey{
 		mu:            &sync.RWMutex{},
