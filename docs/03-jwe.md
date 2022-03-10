@@ -65,7 +65,7 @@ In order to provide extra headers to the encrypted message, you will need to use
 `jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` suboption.
 
 
-<!-- INCLUDE(examples/jwe_encrypt_with_headers_example_Test.go) -->
+<!-- INCLUDE(examples/jwe_encrypt_with_headers_example_test.go) -->
 <!-- END INCLUDE -->
 
 # Decrypting
