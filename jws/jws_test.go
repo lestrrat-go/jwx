@@ -1111,7 +1111,7 @@ func TestVerifySet(t *testing.T) {
 				}
 
 				var used jwk.Key
-				verified, err := jws.Verify(signed, jws.WithKeySet(set), jws.WithKeyUsed(&used))
+				verified, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithRequireKid(false)), jws.WithKeyUsed(&used))
 				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}
