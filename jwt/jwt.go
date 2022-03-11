@@ -155,9 +155,12 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		}
 	}
 
-	if len(verifyOpts) == 0 && verification {
+	lvo := len(verifyOpts)
+	if lvo == 0 && verification {
 		return nil, fmt.Errorf(`jwt.Parse: no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
-	} else {
+	}
+
+	if lvo > 0 {
 		converted, err := toVerifyOptions(verifyOpts...)
 		if err != nil {
 			return nil, fmt.Errorf(`jwt.Parse: failed to convert options into jws.VerifyOption: %w`, err)
