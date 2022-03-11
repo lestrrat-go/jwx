@@ -75,14 +75,12 @@ package examples_test
 import (
   "fmt"
 
+  "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 func ExampleJWT_Parse() {
-  // Note: this JWT has NOT been verified because we have not
-  // passed jwt.WithKey() et al. You need to pass these values
-  // if you want the token to be parsed and verified in one go
-  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC))
+  tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
   if err != nil {
     fmt.Printf("%s\n", err)
     return
@@ -128,7 +126,7 @@ func ExampleJWT_ReadFile() {
   // Note: this JWT has NOT been verified because we have not
   // passed jwt.WithKey() et al. You need to pass these values
   // if you want the token to be parsed and verified in one go
-  tok, err := jwt.ReadFile(f.Name())
+  tok, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
     return
@@ -191,10 +189,8 @@ func ExampleJWT_ParseRequest_Authorization() {
   }
 
   for _, tc := range testcases {
-    // Note: this JWT has NOT been verified because we have not
-    // passed jwt.WithKey() et al. You need to pass these values
-    // if you want the token to be parsed and verified in one go
-    tok, err := jwt.ParseRequest(req, tc.options...)
+    options := append(tc.options, []jwt.ParseOption{jwt.WithVerify(false), jwt.WithValidate(false)}...)
+    tok, err := jwt.ParseRequest(req, options...)
     if err != nil {
       fmt.Printf("jwt.ParseRequest with options %#v failed: %s\n", tc.options, err)
       return
@@ -319,7 +315,7 @@ func ExampleJWT_ParseWithKey() {
     return
   }
 
-  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256, key))
+  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256, key), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("jwt.Parse failed: %s\n", err)
     return
@@ -700,7 +696,7 @@ func ExampleJWT_Validate() {
 
     // NOTE: This token has NOT been verified for demonstration
     // purposes. Use `jwt.WithKey()` or the like in your production code
-    _, err = jwt.Parse(buf, jwt.WithValidate(true))
+    _, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
     if err == nil {
       fmt.Printf("token should fail validation\n")
       return
@@ -837,7 +833,7 @@ func ExampleJWT_ValidateDetectErrorType() {
     // Case 1: Parsing error. We're not showing verification faiure
     // but it is about the same in the context of wanting to know
     // if it's a validation error or not
-    _, err := jwt.Parse(buf[:len(buf)-1], jwt.WithValidate(true))
+    _, err := jwt.Parse(buf[:len(buf)-1], jwt.WithVerify(false), jwt.WithValidate(true))
     if err == nil {
       fmt.Printf("token should fail parsing\n")
       return
@@ -853,7 +849,7 @@ func ExampleJWT_ValidateDetectErrorType() {
     // Case 2: Parsing works, validation fails
     // NOTE: This token has NOT been verified for demonstration
     // purposes. Use `jwt.WithKey()` or the like in your production code
-    _, err = jwt.Parse(buf, jwt.WithValidate(true))
+    _, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
     if err == nil {
       fmt.Printf("token should fail parsing\n")
       return
