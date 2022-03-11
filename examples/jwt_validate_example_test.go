@@ -38,7 +38,7 @@ func ExampleJWT_Validate() {
 
 		// NOTE: This token has NOT been verified for demonstration
 		// purposes. Use `jwt.WithKey()` or the like in your production code
-		_, err = jwt.Parse(buf, jwt.WithValidate(true))
+		_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
 		if err == nil {
 			fmt.Printf("token should fail validation\n")
 			return

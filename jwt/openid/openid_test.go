@@ -455,7 +455,7 @@ func TestOpenIDClaims(t *testing.T) {
 				return
 			}
 
-			tokenTmp, err := jwt.Parse(signed, jwt.WithToken(openid.New()), jwt.WithKey(alg, &key.PublicKey))
+			tokenTmp, err := jwt.Parse(signed, jwt.WithToken(openid.New()), jwt.WithKey(alg, &key.PublicKey), jwt.WithValidate(false))
 			if !assert.NoError(t, err, `parsing the token via jwt.Parse should succeed`) {
 				return
 			}

@@ -73,6 +73,24 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 	return parseBytes(s, options...)
 }
 
+// ParseInsecure is exactly the same as Parse(), but it disables
+// signature verification and token validation.
+//
+// You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
+// using this function. Providing these options would result in
+// an error
+func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
+	for _, option := range options {
+		switch option.Ident() {
+		case identVerify{}, identValidate{}:
+			return nil, fmt.Errorf(`jwt.ParseInsecure: jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+		}
+	}
+
+	options = append(options, WithVerify(false), WithValidate(false))
+	return Parse(s, options...)
+}
+
 // ParseReader calls Parse against an io.Reader
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
@@ -95,6 +113,16 @@ type parseCtx struct {
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	var ctx parseCtx
+
+	// Validation is turned on by default. You need to specify
+	// jwt.WithValidate(false) if you want to disable it
+	ctx.validate = true
+
+	// Verification is required (i.e., it is assumed that the incoming
+	// data is in JWS format) unless the user explicitly asks for
+	// it to be skipped.
+	verification := true
+
 	var verifyOpts []Option
 	for _, o := range options {
 		if v, ok := o.(ValidateOption); ok {
@@ -116,6 +144,8 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			ctx.pedantic = o.Value().(bool)
 		case identValidate{}:
 			ctx.validate = o.Value().(bool)
+		case identVerify{}:
+			verification = o.Value().(bool)
 		case identTypedClaim{}:
 			pair := o.Value().(claimPair)
 			if ctx.localReg == nil {
@@ -125,7 +155,9 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		}
 	}
 
-	if len(verifyOpts) > 0 {
+	if len(verifyOpts) == 0 && verification {
+		return nil, fmt.Errorf(`jwt.Parse: no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
+	} else {
 		converted, err := toVerifyOptions(verifyOpts...)
 		if err != nil {
 			return nil, fmt.Errorf(`jwt.Parse: failed to convert options into jws.VerifyOption: %w`, err)

@@ -122,6 +122,7 @@ type identSignOption struct{}
 type identToken struct{}
 type identValidate struct{}
 type identValidator struct{}
+type identVerify struct{}
 
 func (identAcceptableSkew) String() string {
 	return "WithAcceptableSkew"
@@ -173,6 +174,10 @@ func (identValidate) String() string {
 
 func (identValidator) String() string {
 	return "WithValidator"
+}
+
+func (identVerify) String() string {
+	return "WithVerify"
 }
 
 // WithAcceptableSkew specifies the duration in which exp and nbf
@@ -260,8 +265,13 @@ func WithToken(v Token) ParseOption {
 }
 
 // WithValidate is passed to `Parse()` method to denote that the
-// validation of the JWT token should be performed after a successful
-// parsing of the incoming payload.
+// validation of the JWT token should be performed (or not) after
+// a successful parsing of the incoming payload.
+//
+// This option is enabled by default.
+//
+// If you would like disable validation,
+// you must use `jwt.WithValidate(false)` or use `jwt.ParseInsecure()`
 func WithValidate(v bool) ParseOption {
 	return &parseOption{option.New(identValidate{}, v)}
 }
@@ -279,4 +289,19 @@ func WithValidate(v bool) ParseOption {
 //    err := jwt.Validate(token, jwt.WithValidator(validator))
 func WithValidator(v Validator) ValidateOption {
 	return &validateOption{option.New(identValidator{}, v)}
+}
+
+// WithVerify is passed to `Parse()` method to denote that the
+// signature verification should be performed after a successful
+// deserialization of the incoming payload.
+//
+// This option is enabled by default.
+//
+// If you do not provide any verification key sources, `jwt.Parse()`
+// would return an error.
+//
+// If you would like to only parse the JWT payload and not verify it,
+// you must use `jwt.WithVerify(false)` or use `jwt.ParseInsecure()`
+func WithVerify(v bool) ParseOption {
+	return &parseOption{option.New(identVerify{}, v)}
 }
