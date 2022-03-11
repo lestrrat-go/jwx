@@ -43,10 +43,8 @@ func ExampleJWT_ParseRequest_Authorization() {
 	}
 
 	for _, tc := range testcases {
-		// Note: this JWT has NOT been verified because we have not
-		// passed jwt.WithKey() et al. You need to pass these values
-		// if you want the token to be parsed and verified in one go
-		tok, err := jwt.ParseRequest(req, tc.options...)
+		options := append(tc.options, []jwt.ParseOption{jwt.WithVerify(false), jwt.WithValidate(false)}...)
+		tok, err := jwt.ParseRequest(req, options...)
 		if err != nil {
 			fmt.Printf("jwt.ParseRequest with options %#v failed: %s\n", tc.options, err)
 			return

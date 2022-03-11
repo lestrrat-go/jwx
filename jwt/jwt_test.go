@@ -64,7 +64,7 @@ func TestJWTParse(t *testing.T) {
 
 	t.Run("Parse (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.Parse(signed)
+		t2, err := jwt.ParseInsecure(signed)
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
@@ -74,7 +74,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("ParseString (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.ParseString(string(signed))
+		t2, err := jwt.ParseString(string(signed), jwt.WithVerify(false), jwt.WithValidate(false))
 		if !assert.NoError(t, err, `jwt.ParseString should succeed`) {
 			return
 		}
@@ -84,7 +84,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("ParseReader (no signature verification)", func(t *testing.T) {
 		t.Parallel()
-		t2, err := jwt.ParseReader(bytes.NewReader(signed))
+		t2, err := jwt.ParseReader(bytes.NewReader(signed), jwt.WithVerify(false), jwt.WithValidate(false))
 		if !assert.NoError(t, err, `jwt.ParseReader should succeed`) {
 			return
 		}
@@ -735,10 +735,10 @@ func TestReadFile(t *testing.T) {
 		return
 	}
 
-	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrat")); !assert.NoError(t, err, `jwt.ReadFile should succeed`) {
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrat")); !assert.NoError(t, err, `jwt.ReadFile should succeed`) {
 		return
 	}
-	if _, err := jwt.ReadFile(f.Name(), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat")); !assert.Error(t, err, `jwt.ReadFile should fail`) {
+	if _, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat")); !assert.Error(t, err, `jwt.ReadFile should fail`) {
 		return
 	}
 }
@@ -758,7 +758,7 @@ func TestCustomField(t *testing.T) {
 	src := b.String()
 
 	t.Run("jwt.Parse", func(t *testing.T) {
-		token, err := jwt.Parse([]byte(src))
+		token, err := jwt.ParseInsecure([]byte(src))
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			t.Logf("%q", src)
 			return
@@ -1133,7 +1133,8 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			got, err := jwt.Parse(signed, tc.Options...)
+			options := append(tc.Options, jwt.WithVerify(false))
+			got, err := jwt.Parse(signed, options...)
 			if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 				return
 			}

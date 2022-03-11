@@ -61,7 +61,7 @@ func ExampleJWX() {
 			req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
 			req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, signed))
 
-			verifiedToken, err := jwt.ParseRequest(req)
+			verifiedToken, err := jwt.ParseRequest(req, jwt.WithKey(jwa.RS256, pubkey))
 			if err != nil {
 				fmt.Printf("failed to verify token from HTTP request: %s\n", err)
 				return

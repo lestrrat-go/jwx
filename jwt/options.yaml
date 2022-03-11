@@ -100,8 +100,28 @@ options:
     argument_type: bool
     comment: |
       WithValidate is passed to `Parse()` method to denote that the
-      validation of the JWT token should be performed after a successful
-      parsing of the incoming payload.
+      validation of the JWT token should be performed (or not) after
+      a successful parsing of the incoming payload.
+
+      This option is enabled by default. 
+
+      If you would like disable validation,
+      you must use `jwt.WithValidate(false)` or use `jwt.ParseInsecure()`
+  - ident: Verify
+    interface: ParseOption
+    argument_type: bool
+    comment: |
+      WithVerify is passed to `Parse()` method to denote that the
+      signature verification should be performed after a successful
+      deserialization of the incoming payload.
+
+      This option is enabled by default.
+
+      If you do not provide any verification key sources, `jwt.Parse()`
+      would return an error.
+      
+      If you would like to only parse the JWT payload and not verify it,
+      you must use `jwt.WithVerify(false)` or use `jwt.ParseInsecure()`
   - ident: KeyProvider
     interface: ParseOption
     argument_type: jws.KeyProvider

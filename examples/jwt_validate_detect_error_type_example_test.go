@@ -29,7 +29,7 @@ func ExampleJWT_ValidateDetectErrorType() {
 		// Case 1: Parsing error. We're not showing verification faiure
 		// but it is about the same in the context of wanting to know
 		// if it's a validation error or not
-		_, err := jwt.Parse(buf[:len(buf)-1], jwt.WithValidate(true))
+		_, err := jwt.Parse(buf[:len(buf)-1], jwt.WithVerify(false), jwt.WithValidate(true))
 		if err == nil {
 			fmt.Printf("token should fail parsing\n")
 			return
@@ -45,7 +45,7 @@ func ExampleJWT_ValidateDetectErrorType() {
 		// Case 2: Parsing works, validation fails
 		// NOTE: This token has NOT been verified for demonstration
 		// purposes. Use `jwt.WithKey()` or the like in your production code
-		_, err = jwt.Parse(buf, jwt.WithValidate(true))
+		_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
 		if err == nil {
 			fmt.Printf("token should fail parsing\n")
 			return

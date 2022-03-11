@@ -22,7 +22,7 @@ func ExampleJWT_ReadFile() {
 	// Note: this JWT has NOT been verified because we have not
 	// passed jwt.WithKey() et al. You need to pass these values
 	// if you want the token to be parsed and verified in one go
-	tok, err := jwt.ReadFile(f.Name())
+	tok, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(false))
 	if err != nil {
 		fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
 		return

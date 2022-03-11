@@ -184,6 +184,13 @@ Changes
 
   # JWT
 
+  * [jwt] `jwt.Parse` now verifies the signature and validates the token
+    by default. You must disable it explicitly using `jwt.WithValidate(false)`
+    and/or `jwt.WithVerify(false)` if you only want to parse the JWT message.
+
+    If you don't want either, a convenience function `jwt.ParseInsecure`
+    has been added.
+
   * [jwt] `jwt.Parse` can only parse raw JWT (JSON) or JWS (JSON or Compact).
     It no longer accepts JWE messages.
 

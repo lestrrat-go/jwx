@@ -237,7 +237,7 @@ func TestToken(t *testing.T) {
 			return
 		}
 
-		newtok, err := jwt.Parse(buf)
+		newtok, err := jwt.ParseInsecure(buf)
 		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
 			return
 		}
