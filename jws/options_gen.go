@@ -192,8 +192,8 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 }
 
 // WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name
-// should be inferred by looking at the provided key, in case the key
-// does not have a proper `alg` header.
+// should be inferred by looking at the provided key, in case the JWS
+// message or the key does not have a proper `alg` header.
 //
 // Compared to providing explicit `alg` from the key this is slower, and
 // verification may fail to verify if some how our heuristics are wrong
@@ -205,9 +205,6 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 // It is highly recommended that you fix your key to contain a proper `alg`
 // header field instead of resorting to using this option, but sometimes
 // it just needs to happen.
-//
-// Your JWS payload will still need to have an `alg` field, and it must
-// match one of the candidates that this options produces for your key.
 func WithInferAlgorithmFromKey(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, v)}
 }
