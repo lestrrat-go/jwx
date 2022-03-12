@@ -110,6 +110,13 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 	}
 }
 
+// WithKeySet specifies a JWKS (jwk.Set) to use for verification.
+//
+// By default both `alg` and `kid` fields in the JWS _and_ the
+// key must match for a key in the JWKS to be considered to be used.
+//
+// The behavior can be tweaked by using the `jws.WithKeySetSuboption`
+// suboption types.
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	requireKid := true
 	var useDefault, inferAlgorithm bool
