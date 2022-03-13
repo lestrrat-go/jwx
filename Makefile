@@ -4,7 +4,6 @@ generate:
 	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
 
 generate-%:
-	@echo "> Generating for $(patsubst generate-%,%,$@)"
 	@go generate $(shell pwd -P)/$(patsubst generate-%,%,$@)
 
 realclean:

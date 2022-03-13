@@ -1,5 +1,5 @@
-//go:generate ./gen.sh
-//go:generate ./internal/cmd/genoptions/gen.sh
+//go:generate ./tools/cmd/genreadfile.sh
+//go:generate ./tools/cmd/genoptions.sh
 //go:generate stringer -type=FormatKind
 //go:generate mv formatkind_string.go formatkind_string_gen.go
 

@@ -37,6 +37,11 @@ Changes
     that depends on the errors being an instance of github.com/pkg/errors
     then you need to change your code
 
+  * File-generation tools have been moved out of internal/ directories.
+    These files pre-dates Go modules, and they were in internal/ in order
+    to avoid being listed in the `go doc` -- however, now that we can
+    make them separate modules this is no longer necessary.
+
   # JWE
 
   * [jwe] `jwe.Compact()`'s signature has changed to 
