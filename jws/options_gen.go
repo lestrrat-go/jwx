@@ -4,6 +4,7 @@ package jws
 
 import (
 	"context"
+	"io/fs"
 
 	"github.com/lestrrat-go/option"
 )
@@ -21,6 +22,30 @@ type compactOption struct {
 }
 
 func (*compactOption) compactOption() {}
+
+// ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+type ParseOption interface {
+	Option
+	readFileOption()
+}
+
+type parseOption struct {
+	Option
+}
+
+func (*parseOption) readFileOption() {}
+
+// ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
+type ReadFileOption interface {
+	Option
+	readFileOption()
+}
+
+type readFileOption struct {
+	Option
+}
+
+func (*readFileOption) readFileOption() {}
 
 // SignOption describes options that can be passed to `jws.Sign`
 type SignOption interface {
@@ -101,6 +126,7 @@ func (*withKeySuboption) withKeySuboption() {}
 type identContext struct{}
 type identDetached struct{}
 type identDetachedPayload struct{}
+type identFS struct{}
 type identInferAlgorithmFromKey struct{}
 type identKey struct{}
 type identKeyProvider struct{}
@@ -123,6 +149,10 @@ func (identDetached) String() string {
 
 func (identDetachedPayload) String() string {
 	return "WithDetachedPayload"
+}
+
+func (identFS) String() string {
+	return "WithFS"
 }
 
 func (identInferAlgorithmFromKey) String() string {
@@ -189,6 +219,11 @@ func WithDetached(v bool) CompactOption {
 // If you have to verify using this option, you should know exactly how and why this works.
 func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
+}
+
+// WithFS specifies the source `fs.FS` object to read the file from.
+func WithFS(v fs.FS) ReadFileOption {
+	return &readFileOption{option.New(identFS{}, v)}
 }
 
 // WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name

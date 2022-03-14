@@ -4,6 +4,7 @@ package jwt
 
 import (
 	"context"
+	"io/fs"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwe"
@@ -53,6 +54,18 @@ type parseOption struct {
 func (*parseOption) parseOption() {}
 
 func (*parseOption) readFileOption() {}
+
+// ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
+type ReadFileOption interface {
+	Option
+	readFileOption()
+}
+
+type readFileOption struct {
+	Option
+}
+
+func (*readFileOption) readFileOption() {}
 
 // SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
 // `jwt.Parse()`
@@ -113,6 +126,7 @@ type identAcceptableSkew struct{}
 type identClock struct{}
 type identContext struct{}
 type identEncryptOption struct{}
+type identFS struct{}
 type identFlattenAudience struct{}
 type identFormKey struct{}
 type identHeaderKey struct{}
@@ -138,6 +152,10 @@ func (identContext) String() string {
 
 func (identEncryptOption) String() string {
 	return "WithEncryptOption"
+}
+
+func (identFS) String() string {
+	return "WithFS"
 }
 
 func (identFlattenAudience) String() string {
@@ -207,6 +225,11 @@ func WithContext(v context.Context) ValidateOption {
 // need to use this.
 func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
 	return &encryptOption{option.New(identEncryptOption{}, v)}
+}
+
+// WithFS specifies the source `fs.FS` object to read the file from.
+func WithFS(v fs.FS) ReadFileOption {
+	return &readFileOption{option.New(identFS{}, v)}
 }
 
 // WithFlattenAudience specifies if the "aud" claim should be flattened
