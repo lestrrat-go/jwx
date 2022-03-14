@@ -27,12 +27,10 @@ std_fields:
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.5
   - name: x509CertChain
     getter: X509CertChain
-    getter_return_value: "[]*x509.Certificate"
-    type: CertificateChain
+    getter_return_value: "*cert.Chain"
+    type: "*cert.Chain"
     json: x5c
     is_std: true
-    hasAccept: true
-    hasGet: true
     noDeref: true
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.6
   - name: x509CertThumbprint

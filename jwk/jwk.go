@@ -235,6 +235,131 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 }
 
+const (
+	pmPrivateKey = `PRIVATE KEY`
+	pmPublicKey  = `PUBLIC KEY`
+)
+
+// EncodeX509 encodes the key into a byte sequence in ASN.1 DER format
+// suitable for to be PEM encoded. The key can be a jwk.Key or a raw key
+// instance, but it must be one of the types supported by `x509` package.
+//
+// This function will try to do the right thing depending on the key type
+// (i.e. switch between `x509.MarshalPKCS1PRivateKey` and `x509.MarshalECPrivateKey`),
+// but for public keys, it will always use `x509.MarshalPKIXPublicKey`.
+// Please manually perform the encoding if you need more fine grained control
+//
+// The first return value is the name that can be used for `(pem.Block).Type`.
+// The second return value is the encoded byte sequence.
+func EncodeX509(v interface{}) (string, []byte, error) {
+	// we can't import jwk, so just use the interface
+	if key, ok := v.(interface{ Raw(interface{}) error }); ok {
+		var raw interface{}
+		if err := key.Raw(&raw); err != nil {
+			return "", nil, fmt.Errorf(`failed to get raw key out of %T: %w`, key, err)
+		}
+
+		v = raw
+	}
+
+	// Try to convert it into a certificate
+	switch v := v.(type) {
+	case *rsa.PrivateKey:
+		return "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(v), nil
+	case *ecdsa.PrivateKey:
+		marshaled, err := x509.MarshalECPrivateKey(v)
+		if err != nil {
+			return "", nil, err
+		}
+		return "ECDSA PRIVATE KEY", marshaled, nil
+	case ed25519.PrivateKey:
+		marshaled, err := x509.MarshalPKCS8PrivateKey(v)
+		if err != nil {
+			return "", nil, err
+		}
+		return pmPrivateKey, marshaled, nil
+	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+		marshaled, err := x509.MarshalPKIXPublicKey(v)
+		if err != nil {
+			return "", nil, err
+		}
+		return pmPublicKey, marshaled, nil
+	default:
+		return "", nil, fmt.Errorf(`unsupported type %T for ASN.1 DER encoding`, v)
+	}
+}
+
+// EncodePEM encodes the key into a PEM encoded ASN.1 DER format.
+// The key can be a jwk.Key or a raw key instance, but it must be one of
+// the types supported by `x509` package.
+//
+// Internally, it uses the same routine as `jwk.EncodeX509()`, and therefore
+// the same caveats apply
+func EncodePEM(v interface{}) ([]byte, error) {
+	typ, marshaled, err := EncodeX509(v)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to encode key in x509: %w`, err)
+	}
+
+	block := &pem.Block{
+		Type:  typ,
+		Bytes: marshaled,
+	}
+	return pem.EncodeToMemory(block), nil
+}
+
+// DecodePEM decodes a key in PEM encoded ASN.1 DER format.
+// and returns a raw key
+func DecodePEM(src []byte) (interface{}, []byte, error) {
+	block, rest := pem.Decode(src)
+	if block == nil {
+		return nil, nil, fmt.Errorf(`failed to decode PEM data`)
+	}
+
+	switch block.Type {
+	// Handle the semi-obvious cases
+	case "RSA PRIVATE KEY":
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
+		}
+		return key, rest, nil
+	case "RSA PUBLIC KEY":
+		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
+		}
+		return key, rest, nil
+	case "EC PRIVATE KEY":
+		key, err := x509.ParseECPrivateKey(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)
+		}
+		return key, rest, nil
+	case pmPublicKey:
+		// XXX *could* return dsa.PublicKey
+		key, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse PKIX public key: %w`, err)
+		}
+		return key, rest, nil
+	case pmPrivateKey:
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
+		}
+		return key, rest, nil
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse certificate: %w`, err)
+		}
+		return cert.PublicKey, rest, nil
+	default:
+		return nil, nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
+	}
+}
+
 type SetFetcher interface {
 	Fetch(context.Context, string, ...FetchOption) (Set, error)
 }
@@ -340,59 +465,6 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 	return nil
 }
 
-// parsePEMEncodedRawKey parses a key in PEM encoded ASN.1 DER format. It tires its
-// best to determine the key type, but when it just can't, it will return
-// an error
-func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
-	block, rest := pem.Decode(src)
-	if block == nil {
-		return nil, nil, fmt.Errorf(`failed to decode PEM data`)
-	}
-
-	switch block.Type {
-	// Handle the semi-obvious cases
-	case "RSA PRIVATE KEY":
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
-		}
-		return key, rest, nil
-	case "RSA PUBLIC KEY":
-		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
-		}
-		return key, rest, nil
-	case "EC PRIVATE KEY":
-		key, err := x509.ParseECPrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)
-		}
-		return key, rest, nil
-	case "PUBLIC KEY":
-		// XXX *could* return dsa.PublicKey
-		key, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKIX public key: %w`, err)
-		}
-		return key, rest, nil
-	case "PRIVATE KEY":
-		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
-		}
-		return key, rest, nil
-	case "CERTIFICATE":
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse certificate: %w`, err)
-		}
-		return cert.PublicKey, rest, nil
-	default:
-		return nil, nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
-	}
-}
-
 type setDecodeCtx struct {
 	json.DecodeCtx
 	ignoreParseError bool
@@ -438,7 +510,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if parsePEM {
-		raw, _, err := parsePEMEncodedRawKey(data)
+		raw, _, err := DecodePEM(data)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 		}
@@ -536,7 +608,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	if parsePEM {
 		src = bytes.TrimSpace(src)
 		for len(src) > 0 {
-			raw, rest, err := parsePEMEncodedRawKey(src)
+			raw, rest, err := DecodePEM(src)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 			}
@@ -691,7 +763,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
-		return "PRIVATE KEY", buf, nil
+		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		var rawkey interface{}
 		if err := key.Raw(&rawkey); err != nil {
@@ -701,7 +773,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
 		}
-		return "PUBLIC KEY", buf, nil
+		return pmPublicKey, buf, nil
 	default:
 		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
 	}

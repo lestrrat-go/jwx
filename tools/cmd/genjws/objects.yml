@@ -28,7 +28,8 @@ fields:
     unexported_name: x509CertChain
     exported_name: X509CertChain
     getter: X509CertChain
-    type: "[]string"
+    type: "*cert.Chain"
+    noDeref: true
     json: x5c
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.6
   - name: x509CertThumbprint

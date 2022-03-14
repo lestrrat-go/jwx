@@ -326,6 +326,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			} else {
 				o.L("return h.%s", f.Name(false))
 			}
+		} else {
+			o.L(`return h.%s`, f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
@@ -569,7 +571,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 				name = kt.Prefix + f.Name(true)
 			}
 			o.L("case %sKey:", name)
-			o.L("var decoded %s", f.Type())
+			if IsPointer(f) {
+				o.L("var decoded %s", PointerElem(f))
+			} else {
+				o.L("var decoded %s", f.Type())
+			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", name)
 			o.L("}")

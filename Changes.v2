@@ -42,6 +42,13 @@ Changes
     to avoid being listed in the `go doc` -- however, now that we can
     make them separate modules this is no longer necessary.
 
+  * New package `cert` has been added to handle `x5c` certificate
+    chains, and to work with certificates
+      * cert.Chain to store base64 encoded ASN.1 DER format certificates
+      * cert.EncodeBase64 to encode ASN.1 DER format certificate using base64
+      * cert.Create to create a base64 encoded ASN.1 DER format certificates
+      * cert.Parse to parse base64 encoded ASN.1 DER format certificates
+
   # JWE
 
   * [jwe] `jwe.Compact()`'s signature has changed to 
@@ -94,6 +101,8 @@ Changes
     by using `jwe.WithKeyProvider()`. Because this was the only consumer for
     `jwe.DecryptCtx`, this type has been removed as well.
 
+  * [jwe] `x5c` field type has been changed to `*cert.Chain` instead of `[]string`
+
   # JWK
 
   * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
@@ -113,8 +122,11 @@ Changes
     https://github.com/lestrrat-go/jwx/blob/v2/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
     for more details
 
-  * [jwk] jwk.SetFetcher and jwk.SetFetchFunc has been added.
-    They represent something that can fetch a jwk.Set
+  * [jwk] `jwk.SetFetcher` and `jwk.SetFetchFunc` has been added.
+    They represent something that can fetch a `jwk.Set`
+
+  * [jwk] `jwk.CertificateChain` has been removed, use `*cert.Chain`
+  * [jwk] `x5c` field type has been changed to `*cert.Chain` instead of `[]*x509.Certificate`
 
   # JWS
 
@@ -186,6 +198,8 @@ Changes
   * [jws] jws.WithKeyUsed has been added to allow users to retrieve
     the key used for verification. This is useful in cases you provided
     multiple keys and you want to know which one was successful
+
+  * [jws] `x5c` field type has been changed to `*cert.Chain` instead of `[]string`
 
   # JWT
 

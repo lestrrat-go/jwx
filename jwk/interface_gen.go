@@ -5,8 +5,8 @@ package jwk
 import (
 	"context"
 	"crypto"
-	"crypto/x509"
 
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 )
 
@@ -106,7 +106,7 @@ type Key interface {
 	// X509URL returns `x58` of a JWK
 	X509URL() string
 	// X509CertChain returns `x5c` of a JWK
-	X509CertChain() []*x509.Certificate
+	X509CertChain() *cert.Chain
 	// X509CertThumbprint returns `x5t` of a JWK
 	X509CertThumbprint() string
 	// X509CertThumbprintS256 returns `x5t#S256` of a JWK

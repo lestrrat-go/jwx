@@ -73,6 +73,10 @@ func fieldHasAccept(f codegen.Field) bool {
 	return v
 }
 
+func IsPointer(f codegen.Field) bool {
+	return strings.HasPrefix(f.Type(), `*`)
+}
+
 func PointerElem(f codegen.Field) string {
 	return strings.TrimPrefix(f.Type(), `*`)
 }
@@ -334,7 +338,11 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("h.%s = decoded", f.Name(false))
 		} else {
 			o.L("case %sKey:", f.Name(true))
-			o.L("var decoded %s", f.Type())
+			if IsPointer(f) {
+				o.L("var decoded %s", PointerElem(f))
+			} else {
+				o.L("var decoded %s", f.Type())
+			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
