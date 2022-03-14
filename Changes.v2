@@ -103,6 +103,12 @@ Changes
 
   * [jwe] `x5c` field type has been changed to `*cert.Chain` instead of `[]string`
 
+  * [jwe] Method signature for `jwe.Parse()` has been changed to include options,
+    but options are currently not used
+
+  * [jwe] `jwe.ReadFile` now supports the option `jwe.WithFS` which allows you to
+    read data from arbitrary `fs.FS` objects
+
   # JWK
 
   * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
@@ -127,6 +133,9 @@ Changes
 
   * [jwk] `jwk.CertificateChain` has been removed, use `*cert.Chain`
   * [jwk] `x5c` field type has been changed to `*cert.Chain` instead of `[]*x509.Certificate`
+
+  * [jwk] `jwk.ReadFile` now supports the option `jwk.WithFS` which allows you to
+    read data from arbitrary `fs.FS` objects
 
   # JWS
 
@@ -201,6 +210,9 @@ Changes
 
   * [jws] `x5c` field type has been changed to `*cert.Chain` instead of `[]string`
 
+  * [jws] `jws.ReadFile` now supports the option `jws.WithFS` which allows you to
+    read data from arbitrary `fs.FS` objects
+
   # JWT
 
   * [jwt] `jwt.Parse` now verifies the signature and validates the token
@@ -258,3 +270,6 @@ Changes
   * [jwt] `jwt.WithSignOption` and `jwt.WithEncryptOption` have been added as
     escape hatches for options that are declared in `jws` and `jwe` packages
     but not in `jwt`
+
+  * [jwt] `jwt.ReadFile` now supports the option `jwt.WithFS` which allows you to
+    read data from arbitrary `fs.FS` objects
