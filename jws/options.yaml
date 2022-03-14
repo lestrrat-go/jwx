@@ -27,6 +27,14 @@ interfaces:
   - name: WithKeySetSuboption
     comment: |
       WithKeySetSuboption is a suboption passed to the WithKeySet() option
+  - name: ParseOption
+    methods:
+      - readFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+  - name: ReadFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
 options:
   - ident: Key
     skip_option: true
@@ -143,5 +151,9 @@ options:
       
       `jws.Sign()` will result in an error if `jws.WithPublic()` is used
       and the serialization format is compact serialization.
-
+  - ident: FS
+    interface: ReadFileOption
+    argument_type: fs.FS
+    comment: |
+      WithFS specifies the source `fs.FS` object to read the file from.
 

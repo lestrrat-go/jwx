@@ -23,8 +23,11 @@ interfaces:
       - readFileOption
     comment: |
       ParseOption is a type of Option that can be passed to `jwk.Parse()`
-      ParseOption also implmentsthe `ReadFileOPtion` and `AutoRefreshOption`,
+      ParseOption also implmentsthe `ReadFileOption` and `AutoRefreshOption`,
       and thus safely be passed to `jwk.ReadFile` and `(*jwk.AutoRefresh).Configure()`
+  - name: ReadFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
 options:
   - ident: HTTPClient
     interface: FetchOption
@@ -116,4 +119,8 @@ options:
       Again, DO NOT USE unless you have exhausted all other routes.
       When you use this option, you will not be able to tell if you are
       using a faulty JWKS, except for when there are JSON syntax errors.
-
+  - ident: FS
+    interface: ReadFileOption
+    argument_type: fs.FS
+    comment: |
+      WithFS specifies the source `fs.FS` object to read the file from.

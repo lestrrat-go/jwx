@@ -413,7 +413,10 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 
 // Parse parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
-func Parse(src []byte) (*Message, error) {
+//
+// Parse() currently does not take any options, but the API accepts it
+// in anticipation of future addition.
+func Parse(src []byte, _ ...ParseOption) (*Message, error) {
 	for i := 0; i < len(src); i++ {
 		r := rune(src[i])
 		if r >= utf8.RuneSelf {

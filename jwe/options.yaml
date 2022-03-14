@@ -23,6 +23,14 @@ interfaces:
   - name: WithKeySetSuboption
     comment: |
       WithKeySetSuboption is a suboption passed to the WithKeySet() option
+  - name: ParseOption
+    methods:
+      - readFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+  - name: ReadFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jwe.ReadFile`
 options:
   - ident: Key
     skip_option: true
@@ -92,3 +100,9 @@ options:
       WithMergeProtectedHeaders specify that when given multiple headers
       as options to `jwe.Encrypt`, these headers should be merged instead
       of overwritten
+  - ident: FS
+    interface: ReadFileOption
+    argument_type: fs.FS
+    comment: |
+      WithFS specifies the source `fs.FS` object to read the file from.
+

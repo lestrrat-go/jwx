@@ -3,6 +3,8 @@
 package jwe
 
 import (
+	"io/fs"
+
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/option"
 )
@@ -60,6 +62,30 @@ type encryptOption struct {
 
 func (*encryptOption) encryptOption() {}
 
+// ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+type ParseOption interface {
+	Option
+	readFileOption()
+}
+
+type parseOption struct {
+	Option
+}
+
+func (*parseOption) readFileOption() {}
+
+// ReadFileOption is a type of `Option` that can be passed to `jwe.ReadFile`
+type ReadFileOption interface {
+	Option
+	readFileOption()
+}
+
+type readFileOption struct {
+	Option
+}
+
+func (*readFileOption) readFileOption() {}
+
 // JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
 type WithJSONSuboption interface {
 	Option
@@ -86,6 +112,7 @@ func (*withKeySetSuboption) withKeySetSuboption() {}
 
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
+type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identMergeProtectedHeaders struct{}
@@ -102,6 +129,10 @@ func (identCompress) String() string {
 
 func (identContentEncryptionAlgorithm) String() string {
 	return "WithContentEncryption"
+}
+
+func (identFS) String() string {
+	return "WithFS"
 }
 
 func (identKey) String() string {
@@ -152,6 +183,11 @@ func WithCompress(v jwa.CompressionAlgorithm) EncryptOption {
 // JWE message content with. If not provided, `jwa.A256GCM` is used.
 func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 	return &encryptOption{option.New(identContentEncryptionAlgorithm{}, v)}
+}
+
+// WithFS specifies the source `fs.FS` object to read the file from.
+func WithFS(v fs.FS) ReadFileOption {
+	return &readFileOption{option.New(identFS{}, v)}
 }
 
 func WithKeyProvider(v KeyProvider) DecryptOption {

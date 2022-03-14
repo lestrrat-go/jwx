@@ -37,6 +37,9 @@ interfaces:
       ValidateOption describes an Option that can be passed to Validate().
       ValidateOption also implements ParseOption, therefore it may be
       safely passed to `Parse()` (and thus `jwt.ReadFile()`)
+  - name: ReadFileOption
+    comment: |
+      ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
 options:
   - ident: AcceptableSkew
     interface: ValidateOption
@@ -164,3 +167,9 @@ options:
            return nil
          })
          err := jwt.Validate(token, jwt.WithValidator(validator))
+  - ident: FS
+    interface: ReadFileOption
+    argument_type: fs.FS
+    comment: |
+      WithFS specifies the source `fs.FS` object to read the file from.
+

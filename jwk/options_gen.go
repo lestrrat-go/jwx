@@ -4,6 +4,7 @@ package jwk
 
 import (
 	"crypto"
+	"io/fs"
 	"time"
 
 	"github.com/lestrrat-go/backoff/v2"
@@ -55,7 +56,7 @@ func (*fetchOption) autoRefreshOption() {}
 func (*fetchOption) fetchOption() {}
 
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implmentsthe `ReadFileOPtion` and `AutoRefreshOption`,
+// ParseOption also implmentsthe `ReadFileOption` and `AutoRefreshOption`,
 // and thus safely be passed to `jwk.ReadFile` and `(*jwk.AutoRefresh).Configure()`
 type ParseOption interface {
 	Option
@@ -74,6 +75,19 @@ func (*parseOption) fetchOption() {}
 
 func (*parseOption) readFileOption() {}
 
+// ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
+type ReadFileOption interface {
+	Option
+	readFileOption()
+}
+
+type readFileOption struct {
+	Option
+}
+
+func (*readFileOption) readFileOption() {}
+
+type identFS struct{}
 type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
@@ -83,6 +97,10 @@ type identMinRefreshInterval struct{}
 type identPEM struct{}
 type identRefreshInterval struct{}
 type identThumbprintHash struct{}
+
+func (identFS) String() string {
+	return "WithFS"
+}
 
 func (identFetchBackoff) String() string {
 	return "WithFetchBackoff"
@@ -118,6 +136,11 @@ func (identRefreshInterval) String() string {
 
 func (identThumbprintHash) String() string {
 	return "WithThumbprintHash"
+}
+
+// WithFS specifies the source `fs.FS` object to read the file from.
+func WithFS(v fs.FS) ReadFileOption {
+	return &readFileOption{option.New(identFS{}, v)}
 }
 
 // WithFetchBackoff specifies the backoff policy to use when

@@ -2,18 +2,37 @@
 
 package jwe
 
-import "os"
+import (
+	"io/fs"
+	"os"
+)
 
-// ReadFileOption describes options that can be passed to ReadFile.
-// Currently there are no options available that can be passed to ReadFile, but
-// it is provided here for anticipated future additions
-type ReadFileOption interface {
-	Option
-	readFileOption()
+type sysFS struct{}
+
+func (sysFS) Open(path string) (fs.File, error) {
+	return os.Open(path)
 }
 
-func ReadFile(path string, _ ...ReadFileOption) (*Message, error) {
-	f, err := os.Open(path)
+func ReadFile(path string, options ...ReadFileOption) (*Message, error) {
+	var parseOptions []ParseOption
+	var readFileOptions []ReadFileOption
+	for _, option := range options {
+		if po, ok := option.(ParseOption); ok {
+			parseOptions = append(parseOptions, po)
+		} else {
+			readFileOptions = append(readFileOptions, option)
+		}
+	}
+
+	var srcFS fs.FS = sysFS{}
+	for _, option := range options {
+		switch option.Ident() {
+		case identFS{}:
+			srcFS = option.Value().(fs.FS)
+		}
+	}
+
+	f, err := srcFS.Open(path)
 	if err != nil {
 		return nil, err
 	}

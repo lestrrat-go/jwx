@@ -663,7 +663,10 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
-func Parse(buf []byte) (*Message, error) {
+//
+// Parse() currently does not take any options, but the API accepts it
+// in anticipation of future addition.
+func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 	return parseJSONOrCompact(buf, false)
 }
 

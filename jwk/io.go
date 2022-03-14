@@ -2,24 +2,37 @@
 
 package jwk
 
-import "os"
+import (
+	"io/fs"
+	"os"
+)
 
-// ReadFileOption describes options that can be passed to ReadFile.
-type ReadFileOption interface {
-	Option
-	readFileOption()
+type sysFS struct{}
+
+func (sysFS) Open(path string) (fs.File, error) {
+	return os.Open(path)
 }
 
 func ReadFile(path string, options ...ReadFileOption) (Set, error) {
 	var parseOptions []ParseOption
+	var readFileOptions []ReadFileOption
 	for _, option := range options {
-		switch option := option.(type) {
-		case ParseOption:
-			parseOptions = append(parseOptions, option)
+		if po, ok := option.(ParseOption); ok {
+			parseOptions = append(parseOptions, po)
+		} else {
+			readFileOptions = append(readFileOptions, option)
 		}
 	}
 
-	f, err := os.Open(path)
+	var srcFS fs.FS = sysFS{}
+	for _, option := range options {
+		switch option.Ident() {
+		case identFS{}:
+			srcFS = option.Value().(fs.FS)
+		}
+	}
+
+	f, err := srcFS.Open(path)
 	if err != nil {
 		return nil, err
 	}
