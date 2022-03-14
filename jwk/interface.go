@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"context"
-	"crypto/x509"
 	"net/http"
 	"sync"
 
@@ -23,10 +22,6 @@ const (
 	// this key should be used for encrypting
 	ForEncryption KeyUsageType = "enc"
 )
-
-type CertificateChain struct {
-	certs []*x509.Certificate
-}
 
 type KeyOperation string
 type KeyOperationList []KeyOperation

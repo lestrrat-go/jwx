@@ -235,6 +235,11 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 }
 
+const (
+	pmPrivateKey = `PRIVATE KEY`
+	pmPublicKey  = `PUBLIC KEY`
+)
+
 // EncodeX509 encodes the key into a byte sequence in ASN.1 DER format
 // suitable for to be PEM encoded. The key can be a jwk.Key or a raw key
 // instance, but it must be one of the types supported by `x509` package.
@@ -272,13 +277,13 @@ func EncodeX509(v interface{}) (string, []byte, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		return "PRIVATE KEY", marshaled, nil
+		return pmPrivateKey, marshaled, nil
 	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
 		marshaled, err := x509.MarshalPKIXPublicKey(v)
 		if err != nil {
 			return "", nil, err
 		}
-		return "PUBLIC KEY", marshaled, nil
+		return pmPublicKey, marshaled, nil
 	default:
 		return "", nil, fmt.Errorf(`unsupported type %T for ASN.1 DER encoding`, v)
 	}
@@ -331,14 +336,14 @@ func DecodePEM(src []byte) (interface{}, []byte, error) {
 			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)
 		}
 		return key, rest, nil
-	case "PUBLIC KEY":
+	case pmPublicKey:
 		// XXX *could* return dsa.PublicKey
 		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf(`failed to parse PKIX public key: %w`, err)
 		}
 		return key, rest, nil
-	case "PRIVATE KEY":
+	case pmPrivateKey:
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
@@ -758,7 +763,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
-		return "PRIVATE KEY", buf, nil
+		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		var rawkey interface{}
 		if err := key.Raw(&rawkey); err != nil {
@@ -768,7 +773,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
 		}
-		return "PUBLIC KEY", buf, nil
+		return pmPublicKey, buf, nil
 	default:
 		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
 	}
