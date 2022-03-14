@@ -70,7 +70,7 @@ func generateFile(def definition) error {
 	o.L(`return os.Open(path)`)
 	o.L(`}`)
 
-	o.L("func ReadFile(path string, options ...ReadFileOption) (%s, error) {", def.ReturnType)
+	o.LL("func ReadFile(path string, options ...ReadFileOption) (%s, error) {", def.ReturnType)
 	o.L("var parseOptions []ParseOption")
 	o.L(`var readFileOptions []ReadFileOption`)
 	o.L(`for _, option := range options {`)

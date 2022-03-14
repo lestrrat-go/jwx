@@ -12,6 +12,7 @@ type sysFS struct{}
 func (sysFS) Open(path string) (fs.File, error) {
 	return os.Open(path)
 }
+
 func ReadFile(path string, options ...ReadFileOption) (Token, error) {
 	var parseOptions []ParseOption
 	var readFileOptions []ReadFileOption
