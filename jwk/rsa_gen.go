@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
-	"crypto/x509"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/iter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
@@ -44,10 +44,10 @@ type rsaPublicKey struct {
 	keyOps                 *KeyOperationList // https://tools.ietf.org/html/rfc7517#section-4.3
 	keyUsage               *string           // https://tools.ietf.org/html/rfc7517#section-4.2
 	n                      []byte
-	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
-	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
-	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
-	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	x509CertChain          *cert.Chain // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
@@ -103,11 +103,8 @@ func (h *rsaPublicKey) N() []byte {
 	return h.n
 }
 
-func (h *rsaPublicKey) X509CertChain() []*x509.Certificate {
-	if h.x509CertChain != nil {
-		return h.x509CertChain.Get()
-	}
-	return nil
+func (h *rsaPublicKey) X509CertChain() *cert.Chain {
+	return h.x509CertChain
 }
 
 func (h *rsaPublicKey) X509CertThumbprint() string {
@@ -156,7 +153,7 @@ func (h *rsaPublicKey) makePairs() []*HeaderPair {
 		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
 	}
 	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
+		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
@@ -217,7 +214,7 @@ func (h *rsaPublicKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return h.x509CertChain.Get(), true
+		return h.x509CertChain, true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -303,12 +300,11 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSANKey, value)
 	case X509CertChainKey:
-		var acceptor CertificateChain
-		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, X509CertChainKey, err)
+		if v, ok := value.(*cert.Chain); ok {
+			h.x509CertChain = v
+			return nil
 		}
-		h.x509CertChain = &acceptor
-		return nil
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprint = &v
@@ -449,7 +445,7 @@ LOOP:
 					return fmt.Errorf(`failed to decode value for key %s: %w`, RSANKey, err)
 				}
 			case X509CertChainKey:
-				var decoded CertificateChain
+				var decoded cert.Chain
 				if err := dec.Decode(&decoded); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
@@ -585,10 +581,10 @@ type rsaPrivateKey struct {
 	p                      []byte
 	q                      []byte
 	qi                     []byte
-	x509CertChain          *CertificateChain // https://tools.ietf.org/html/rfc7515#section-4.1.6
-	x509CertThumbprint     *string           // https://tools.ietf.org/html/rfc7515#section-4.1.7
-	x509CertThumbprintS256 *string           // https://tools.ietf.org/html/rfc7515#section-4.1.8
-	x509URL                *string           // https://tools.ietf.org/html/rfc7515#section-4.1.5
+	x509CertChain          *cert.Chain // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
+	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
+	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]interface{}
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
@@ -668,11 +664,8 @@ func (h *rsaPrivateKey) QI() []byte {
 	return h.qi
 }
 
-func (h *rsaPrivateKey) X509CertChain() []*x509.Certificate {
-	if h.x509CertChain != nil {
-		return h.x509CertChain.Get()
-	}
-	return nil
+func (h *rsaPrivateKey) X509CertChain() *cert.Chain {
+	return h.x509CertChain
 }
 
 func (h *rsaPrivateKey) X509CertThumbprint() string {
@@ -739,7 +732,7 @@ func (h *rsaPrivateKey) makePairs() []*HeaderPair {
 		pairs = append(pairs, &HeaderPair{Key: RSAQIKey, Value: h.qi})
 	}
 	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: *(h.x509CertChain)})
+		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
 		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
@@ -830,7 +823,7 @@ func (h *rsaPrivateKey) Get(name string) (interface{}, bool) {
 		if h.x509CertChain == nil {
 			return nil, false
 		}
-		return h.x509CertChain.Get(), true
+		return h.x509CertChain, true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
 			return nil, false
@@ -952,12 +945,11 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAQIKey, value)
 	case X509CertChainKey:
-		var acceptor CertificateChain
-		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, X509CertChainKey, err)
+		if v, ok := value.(*cert.Chain); ok {
+			h.x509CertChain = v
+			return nil
 		}
-		h.x509CertChain = &acceptor
-		return nil
+		return fmt.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprint = &v
@@ -1140,7 +1132,7 @@ LOOP:
 					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAQIKey, err)
 				}
 			case X509CertChainKey:
-				var decoded CertificateChain
+				var decoded cert.Chain
 				if err := dec.Decode(&decoded); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}

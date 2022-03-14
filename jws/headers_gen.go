@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
@@ -41,7 +42,7 @@ type Headers interface {
 	JWKSetURL() string
 	KeyID() string
 	Type() string
-	X509CertChain() []string
+	X509CertChain() *cert.Chain
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
 	X509URL() string
@@ -68,7 +69,7 @@ type stdHeaders struct {
 	jwkSetURL              *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.2
 	keyID                  *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.4
 	typ                    *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.9
-	x509CertChain          []string                // https://tools.ietf.org/html/rfc7515#section-4.1.6
+	x509CertChain          *cert.Chain             // https://tools.ietf.org/html/rfc7515#section-4.1.6
 	x509CertThumbprint     *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
@@ -141,7 +142,7 @@ func (h *stdHeaders) Type() string {
 	return *(h.typ)
 }
 
-func (h *stdHeaders) X509CertChain() []string {
+func (h *stdHeaders) X509CertChain() *cert.Chain {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.x509CertChain
@@ -359,7 +360,7 @@ func (h *stdHeaders) setNoLock(name string, value interface{}) error {
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, TypeKey, value)
 	case X509CertChainKey:
-		if v, ok := value.([]string); ok {
+		if v, ok := value.(*cert.Chain); ok {
 			h.x509CertChain = v
 			return nil
 		}
@@ -492,11 +493,11 @@ LOOP:
 					return fmt.Errorf(`failed to decode value for key %s: %w`, TypeKey, err)
 				}
 			case X509CertChainKey:
-				var decoded []string
+				var decoded cert.Chain
 				if err := dec.Decode(&decoded); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
-				h.x509CertChain = decoded
+				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)

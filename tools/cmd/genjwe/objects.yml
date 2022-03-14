@@ -45,7 +45,7 @@ fields:
     unexported_name: x509CertChain
     exported_name: X509CertChain
     getter: X509CertChain
-    type: "[]string"
+    type: "*cert.Chain"
     json: x5c
   - name: x509CertThumbprint
     unexported_name: x509CertThumbprint

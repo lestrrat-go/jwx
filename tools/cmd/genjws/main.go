@@ -67,6 +67,11 @@ func boolFromField(f codegen.Field, field string) (bool, error) {
 	return b, nil
 }
 
+func fieldNoDeref(f codegen.Field) bool {
+	v, _ := boolFromField(f, "noDeref")
+	return v
+}
+
 func fieldHasAccept(f codegen.Field) bool {
 	v, _ := boolFromField(f, "hasAccept")
 	return v
@@ -110,7 +115,11 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("json.Unmarshaler")
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
-		o.L("%s() %s", f.GetterMethod(true), PointerElem(f))
+		if fieldNoDeref(f) {
+			o.L("%s() %s", f.GetterMethod(true), f.Type())
+		} else {
+			o.L("%s() %s", f.GetterMethod(true), PointerElem(f))
+		}
 	}
 
 	// These are used to iterate through all keys in a header
@@ -340,6 +349,13 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("h.%s = decoded", f.Name(false))
+		} else if fieldNoDeref(f) {
+			o.L("case %sKey:", f.Name(true))
+			o.L("var decoded %s", PointerElem(f))
+			o.L("if err := dec.Decode(&decoded); err != nil {")
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("}")
+			o.L("h.%s = &decoded", f.Name(false))
 		} else {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var decoded %s", f.Type())

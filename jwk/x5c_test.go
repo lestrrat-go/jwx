@@ -3,9 +3,9 @@ package jwk_test
 import (
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 
-	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,52 +17,33 @@ func Test_X5CHeader(t *testing.T) {
 	}
 
 	t.Run("Marshal/Unmarshal", func(t *testing.T) {
-		// The input contains padding. We can accept either as input, but only emit
-		// strings encoded with padding
-		certsNopad := make([]string, len(certs))
-		for i, cert := range certs {
-			for len(cert) > 0 && cert[len(cert)-1] == '=' {
-				cert = cert[:len(cert)-1]
-			}
-			certsNopad[i] = cert
-		}
-
 		expected, err := json.Marshal(certs)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
 		}
 
-		inputs := map[string][]string{
-			"with padding":    certs,
-			"without padding": certsNopad,
+		// Take the input, and create a json
+		jsonbuf, err := json.Marshal(certs)
+		if !assert.NoError(t, err, `json.Marshal should succeed (for input)`) {
+			return
 		}
-		for k, input := range inputs {
-			input := input
-			t.Run(k, func(t *testing.T) {
-				// Take the input, and create a json
-				jsonbuf, err := json.Marshal(input)
-				if !assert.NoError(t, err, `json.Marshal should succeed (for input)`) {
-					return
-				}
 
-				var c jwk.CertificateChain
-				if !assert.NoError(t, json.Unmarshal(jsonbuf, &c), `json.Unmarshal should succeed`) {
-					return
-				}
+		var c cert.Chain
+		if !assert.NoError(t, json.Unmarshal(jsonbuf, &c), `json.Unmarshal should succeed`) {
+			return
+		}
 
-				if !assert.Len(t, c.Get(), 3, `should have three certs`) {
-					return
-				}
+		if !assert.Equal(t, c.Len(), 3, `should have three certs`) {
+			return
+		}
 
-				buf, err := json.Marshal(c)
-				if !assert.NoError(t, err, `json.Marshal should succeed`) {
-					return
-				}
+		buf, err := json.Marshal(c)
+		if !assert.NoError(t, err, `json.Marshal should succeed`) {
+			return
+		}
 
-				if !assert.Equal(t, expected, buf, `json output should match`) {
-					return
-				}
-			})
+		if !assert.Equal(t, expected, buf, `json output should match`) {
+			return
 		}
 	})
 }

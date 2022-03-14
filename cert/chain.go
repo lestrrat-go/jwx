@@ -15,7 +15,7 @@ type Chain struct {
 	certificates [][]byte
 }
 
-func (cc *Chain) MarshalJSON() ([]byte, error) {
+func (cc Chain) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte('[')
 	for i, cert := range cc.certificates {
@@ -31,7 +31,7 @@ func (cc *Chain) MarshalJSON() ([]byte, error) {
 }
 
 func (cc *Chain) UnmarshalJSON(data []byte) error {
-	var tmp []json.RawMessage
+	var tmp []string
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return fmt.Errorf(`failed to unmarshal certificate chain: %w`, err)
 	}
