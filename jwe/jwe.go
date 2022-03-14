@@ -1,4 +1,4 @@
-//go:generate ./gen.sh
+//go:generate ../tools/cmd/genjwe.sh
 
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe
