@@ -17,6 +17,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
 	require.Equal(t, "WithMinRefreshInterval", identMinRefreshInterval{}.String())
 	require.Equal(t, "WithPEM", identPEM{}.String())
+	require.Equal(t, "WithPostFetch", identPostFetch{}.String())
 	require.Equal(t, "WithRefreshInterval", identRefreshInterval{}.String())
 	require.Equal(t, "WithThumbprintHash", identThumbprintHash{}.String())
 }

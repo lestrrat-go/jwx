@@ -95,6 +95,7 @@ type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMinRefreshInterval struct{}
 type identPEM struct{}
+type identPostFetch struct{}
 type identRefreshInterval struct{}
 type identThumbprintHash struct{}
 
@@ -128,6 +129,10 @@ func (identMinRefreshInterval) String() string {
 
 func (identPEM) String() string {
 	return "WithPEM"
+}
+
+func (identPostFetch) String() string {
+	return "WithPostFetch"
 }
 
 func (identRefreshInterval) String() string {
@@ -219,6 +224,12 @@ func WithMinRefreshInterval(v time.Duration) AutoRefreshOption {
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
 func WithPEM(v bool) ParseOption {
 	return &parseOption{option.New(identPEM{}, v)}
+}
+
+// WithPostFetch specifies the PostFetcher object to be used on the
+// jwk.Set object obtained in jwk.AutoRefresh
+func WithPostFetch(v PostFetcher) AutoRefreshOption {
+	return &autoRefreshOption{option.New(identPostFetch{}, v)}
 }
 
 // WithRefreshInterval specifies the static interval between refreshes

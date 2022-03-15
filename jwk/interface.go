@@ -153,3 +153,20 @@ type AutoRefreshError struct {
 type Whitelist interface {
 	IsAllowed(string) bool
 }
+
+// PostFetcher is an interface for things that wants to perform
+// some operation on the jwk.Set obtained in jwk.AutoRefresh
+type PostFetcher interface {
+	// PostFetch revceives the URL and the JWKS, after a successful
+	// fetch and parse in jwk.AutoRefresh.
+	//
+	// It should return a jwk.Set, optionally modified, to be stored
+	// in the cache within jwk.AutoRefresh object for subsequent use
+	PostFetch(string, Set) (Set, error)
+}
+
+type PostFetchFunc func(string, Set) (Set, error)
+
+func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
+	return f(u, set)
+}

@@ -384,3 +384,72 @@ func TestErrorSink(t *testing.T) {
 		})
 	}
 }
+
+func TestPostFetch(t *testing.T) {
+	set := jwk.NewSet()
+	for i := 0; i < 3; i++ {
+		key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
+		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+			return
+		}
+		set.Add(key)
+	}
+
+	testcases := []struct {
+		Name      string
+		Options   []jwk.AutoRefreshOption
+		ExpectKid bool
+	}{
+		{
+			Name: "No PostFetch",
+		},
+		{
+			Name: "With PostFetch",
+			Options: []jwk.AutoRefreshOption{jwk.WithPostFetch(jwk.PostFetchFunc(func(_ string, set jwk.Set) (jwk.Set, error) {
+				for i := 0; i < set.Len(); i++ {
+					key, _ := set.Get(i)
+					key.Set(jwk.KeyIDKey, fmt.Sprintf(`key-%d`, i))
+				}
+				return set, nil
+			}))},
+			ExpectKid: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(set)
+			}))
+			defer srv.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			ar := jwk.NewAutoRefresh(ctx)
+
+			ar.Configure(srv.URL, tc.Options...)
+			set, err := ar.Fetch(ctx, srv.URL)
+			if !assert.NoError(t, err, `ar.Fetch should succeed`) {
+				return
+			}
+
+			for i := 0; i < set.Len(); i++ {
+				key, _ := set.Get(i)
+				if tc.ExpectKid {
+					if !assert.NotEmpty(t, key.KeyID(), `key.KeyID should not be empty`) {
+						return
+					}
+				} else {
+					if !assert.Empty(t, key.KeyID(), `key.KeyID should be empty`) {
+						return
+					}
+				}
+			}
+		})
+	}
+}

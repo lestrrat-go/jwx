@@ -89,6 +89,8 @@ type target struct {
 
 	wl           Whitelist
 	parseOptions []ParseOption
+
+	postFetch PostFetcher
 }
 
 type resetTimerReq struct {
@@ -169,6 +171,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 	var hasRefreshInterval bool
 	var refreshInterval time.Duration
 	var wl Whitelist
+	var pf PostFetcher
 	var parseOptions []ParseOption
 	minRefreshInterval := time.Hour
 	bo := backoff.Null()
@@ -191,6 +194,8 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			httpcl = option.Value().(HTTPClient)
 		case identFetchWhitelist{}:
 			wl = option.Value().(Whitelist)
+		case identPostFetch{}:
+			pf = option.Value().(PostFetcher)
 		}
 	}
 
@@ -222,6 +227,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 		}
 
 		t.parseOptions = parseOptions
+		t.postFetch = pf
 	} else {
 		t = &target{
 			backoff:            bo,
@@ -235,6 +241,7 @@ func (af *AutoRefresh) Configure(url string, options ...AutoRefreshOption) {
 			timer:        time.NewTimer(24 * time.Hour),
 			wl:           wl,
 			parseOptions: parseOptions,
+			postFetch:    pf,
 		}
 		if hasRefreshInterval {
 			t.refreshInterval = &refreshInterval
@@ -495,6 +502,44 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 		return fmt.Errorf(`url "%s" is not registered`, url)
 	}
 
+	if err := af.fetchAndParse(ctx, t, url, enableBackoff); err != nil {
+		// At this point if err != nil, we know that there was something wrong
+		// in either the fetching or the parsing. Send this error to be processed,
+		// but take the extra mileage to not block regular processing by
+		// discarding the error if we fail to send it through the channel
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case af.errSink <- AutoRefreshError{Error: err, URL: url}:
+		default:
+		}
+
+		// We either failed to perform the HTTP GET, or we failed to parse the
+		// JWK set. Even in case of errors, we don't delete the old key.
+		// We persist the old key set, even if it may be stale so the user has something to work with
+		// TODO: maybe this behavior should be customizable?
+		return err
+	}
+	return nil
+}
+
+func (af *AutoRefresh) fetchAndParse(ctx context.Context, t *target, url string, enableBackoff bool) error {
+	var nextInterval time.Duration
+	// It doesn't matter if res was an error or not,
+	// we calculate the next interval to next fetch now and
+	// schedule our next fetch
+	// TODO: this is fugly
+	defer func() {
+		rtr := &resetTimerReq{
+			t: t,
+			d: nextInterval,
+		}
+		select {
+		case <-ctx.Done():
+		case af.resetTimerCh <- rtr:
+		}
+	}()
+
 	// In case the refresh fails due to errors in fetching/parsing the JWKS,
 	// we want to retry. Create a backoff object,
 	parseOptions := t.parseOptions
@@ -502,72 +547,56 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	if enableBackoff {
 		fetchOptions = append(fetchOptions, WithFetchBackoff(t.backoff))
 	}
+
 	if t.wl != nil {
 		fetchOptions = append(fetchOptions, WithFetchWhitelist(t.wl))
 	}
 
 	res, err := fetch(ctx, url, fetchOptions...)
-	if err == nil {
-		if res.StatusCode != http.StatusOK {
-			// now, can there be a remote resource that responds with a status code
-			// other than 200 and still be valid...? naaaaaaahhhhhh....
-			err = fmt.Errorf(`bad response status code (%d)`, res.StatusCode)
-		} else {
-			defer res.Body.Close()
-			keyset, parseErr := ParseReader(res.Body, parseOptions...)
-			if parseErr == nil {
-				// Got a new key set. replace the keyset in the target
-				af.muCache.Lock()
-				af.cache[url] = keyset
-				af.muCache.Unlock()
-				nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
-				rtr := &resetTimerReq{
-					t: t,
-					d: nextInterval,
-				}
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case af.resetTimerCh <- rtr:
-				}
-
-				now := time.Now()
-				t.lastRefresh = now.Local()
-				t.nextRefresh = now.Add(nextInterval).Local()
-				return nil
-			}
-			err = parseErr
-		}
-	}
-
-	// At this point if err != nil, we know that there was something wrong
-	// in either the fetching or the parsing. Send this error to be processed,
-	// but take the extra mileage to not block regular processing by
-	// discarding the error if we fail to send it through the channel
 	if err != nil {
-		select {
-		case af.errSink <- AutoRefreshError{Error: err, URL: url}:
-		default:
+		// (*1) This needs to be populated NOW to make sure that the
+		// resetTimerReq is fired from the defer()ed function
+		// even in this error case
+		nextInterval = calculateRefreshDuration(nil, t.refreshInterval, t.minRefreshInterval)
+		return fmt.Errorf(`failed to fetch JWK (%q): %w`, url, err)
+	}
+
+	// Unlike (*1) this doesn't have to be set now, but it's a good idea to do so
+	// as we just got all the necessary information to do so
+	nextInterval = calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+
+	if res.StatusCode != http.StatusOK {
+		// now, can there be a remote resource that responds with a status code
+		// other than 200 and still be valid...? naaaaaaahhhhhh....
+		return fmt.Errorf(`bad response status code in (%q): %d`, url, res.StatusCode)
+	}
+	defer res.Body.Close()
+
+	keyset, err := ParseReader(res.Body, parseOptions...)
+	if err != nil {
+		return fmt.Errorf(`failed to parse JWK (%q) in response body: %w`, url, err)
+	}
+
+	// Got a new key set.
+	// Give the user one last chance to mangle the result
+	if pf := t.postFetch; pf != nil {
+		tmp, err := pf.PostFetch(url, keyset)
+		if err != nil {
+			return fmt.Errorf(`failed to execute post fetch (%q): %w`, url, err)
 		}
+		keyset = tmp
 	}
 
-	// We either failed to perform the HTTP GET, or we failed to parse the
-	// JWK set. Even in case of errors, we don't delete the old key.
-	// We persist the old key set, even if it may be stale so the user has something to work with
-	// TODO: maybe this behavior should be customizable?
+	// Got a new key set. replace the keyset in the target
+	af.muCache.Lock()
+	af.cache[url] = keyset
+	af.muCache.Unlock()
 
-	// If we failed to get a single time, then queue another fetch in the future.
-	rtr := &resetTimerReq{
-		t: t,
-		d: calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval),
-	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case af.resetTimerCh <- rtr:
-	}
+	now := time.Now()
+	t.lastRefresh = now.Local()
+	t.nextRefresh = now.Add(nextInterval).Local()
 
-	return err
+	return nil
 }
 
 // ErrorSink sets a channel to receive JWK fetch errors, if any.
