@@ -386,6 +386,8 @@ func TestErrorSink(t *testing.T) {
 }
 
 func TestPostFetch(t *testing.T) {
+	t.Parallel()
+
 	set := jwk.NewSet()
 	for i := 0; i < 3; i++ {
 		key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
