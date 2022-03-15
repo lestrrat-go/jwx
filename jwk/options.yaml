@@ -124,3 +124,11 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
+  - ident: PostFetch
+    interface: AutoRefreshOption
+    argument_type: PostFetcher
+    comment: |
+      WithPostFetch specifies the PostFetcher object to be used on the
+      jwk.Set object obtained in jwk.AutoRefresh. This option can be used
+      to, for example, modify the jwk.Set to give it key IDs or algorithm
+      names after it has been fetched and parsed, but before it is cached.

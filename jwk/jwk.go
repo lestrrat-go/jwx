@@ -638,6 +638,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	if err := json.Unmarshal(src, s); err != nil {
 		return nil, fmt.Errorf(`failed to unmarshal JWK set: %w`, err)
 	}
+
 	return s, nil
 }
 

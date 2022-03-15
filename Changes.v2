@@ -137,6 +137,13 @@ Changes
   * [jwk] `jwk.ReadFile` now supports the option `jwk.WithFS` which allows you to
     read data from arbitrary `fs.FS` objects
 
+  * [jwk] Added `jwk.PostFetcher`, `jwk.PostFetchFunc`, and `jwk.WithPostFetch` to
+    allow users to get at the `jwk.Set` that was fetched in `jwk.AutoRefresh`.
+    This will make it possible for users to supply extra information and edit
+    `jwk.Set` after it has been fetched and parsed, but before it is cached.
+    You could, for example, modify the `alg` field so that it's easier to
+    work with when you use it in `jws.Verify` later.
+
   # JWS
 
   * [jws] `jws.Sign()` can now generate JWS messages in either compact or JSON
