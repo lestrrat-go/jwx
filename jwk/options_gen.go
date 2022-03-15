@@ -227,7 +227,9 @@ func WithPEM(v bool) ParseOption {
 }
 
 // WithPostFetch specifies the PostFetcher object to be used on the
-// jwk.Set object obtained in jwk.AutoRefresh
+// jwk.Set object obtained in jwk.AutoRefresh. This option can be used
+// to, for example, modify the jwk.Set to give it key IDs or algorithm
+// names after it has been fetched and parsed, but before it is cached.
 func WithPostFetch(v PostFetcher) AutoRefreshOption {
 	return &autoRefreshOption{option.New(identPostFetch{}, v)}
 }
