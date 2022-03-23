@@ -9,6 +9,7 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
+	require.Equal(t, "WithErrSink", identErrSink{}.String())
 	require.Equal(t, "WithFS", identFS{}.String())
 	require.Equal(t, "WithFetchBackoff", identFetchBackoff{}.String())
 	require.Equal(t, "WithFetchWhitelist", identFetchWhitelist{}.String())
@@ -17,7 +18,8 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
 	require.Equal(t, "WithMinRefreshInterval", identMinRefreshInterval{}.String())
 	require.Equal(t, "WithPEM", identPEM{}.String())
-	require.Equal(t, "WithPostFetch", identPostFetch{}.String())
+	require.Equal(t, "WithPostFetcher", identPostFetcher{}.String())
 	require.Equal(t, "WithRefreshInterval", identRefreshInterval{}.String())
+	require.Equal(t, "WithRefreshWindow", identRefreshWindow{}.String())
 	require.Equal(t, "WithThumbprintHash", identThumbprintHash{}.String())
 }

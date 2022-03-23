@@ -21,15 +21,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
+	"github.com/lestrrat-go/httprc"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v2/x25519"
-
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
+	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -272,7 +271,6 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 				name := name
 				testKey := testKey
 				t.Run(name, func(t *testing.T) {
-					t.Logf("testKey = %T", testKey)
 					verified, err := jws.Verify(signed, jws.WithKey(alg, testKey))
 					if !assert.NoError(t, err, "(%s) Verify is successful", alg) {
 						return
@@ -1463,16 +1461,7 @@ func TestJKU(t *testing.T) {
 	}
 	set := jwk.NewSet()
 	set.Add(pubkey)
-	backoffCount := 0
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Query().Get(`type`) {
-		case "backoff":
-			backoffCount++
-			if backoffCount == 1 {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
 	}))
@@ -1485,7 +1474,7 @@ func TestJKU(t *testing.T) {
 			Name         string
 			Error        bool
 			Query        string
-			Fetcher      func() jwk.SetFetcher
+			Fetcher      func() jwk.Fetcher
 			FetchOptions func() []jwk.FetchOption
 		}{
 			{
@@ -1516,36 +1505,19 @@ func TestJKU(t *testing.T) {
 				},
 			},
 			{
-				// Note: this test doesn't really test "backoff", but it tests
-				// that jku can be fetched again upon seeing a non-200 response.
-				// to be preceise we should be also checking for the timing, but
-				// I think that can be deferred to the tests in jwk package
-				Name:  "Backoff",
-				Error: false,
-				Query: "type=backoff",
-				FetchOptions: func() []jwk.FetchOption {
-					bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
-					return []jwk.FetchOption{
-						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-						jwk.WithFetchBackoff(bo),
-						jwk.WithHTTPClient(srv.Client()),
-					}
-				},
-			},
-			{
-				Name: "JWKSetFetcher",
-				Fetcher: func() jwk.SetFetcher {
-					ar := jwk.NewAutoRefresh(context.TODO())
-					return jwk.SetFetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
-						var aropts []jwk.AutoRefreshOption
+				Name: "JWKFetcher",
+				Fetcher: func() jwk.Fetcher {
+					c := jwk.NewCache(context.TODO())
+					return jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
+						var cacheopts []jwk.RegisterOption
 						for _, option := range options {
-							aropts = append(aropts, option)
+							cacheopts = append(cacheopts, option)
 						}
-						aropts = append(aropts, jwk.WithHTTPClient(srv.Client()))
-						aropts = append(aropts, jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}))
-						ar.Configure(u, aropts...)
+						cacheopts = append(cacheopts, jwk.WithHTTPClient(srv.Client()))
+						cacheopts = append(cacheopts, jwk.WithFetchWhitelist(httprc.InsecureWhitelist{}))
+						c.Register(u, cacheopts...)
 
-						return ar.Fetch(ctx, u)
+						return c.Get(ctx, u)
 					})
 				},
 			},
@@ -1570,7 +1542,7 @@ func TestJKU(t *testing.T) {
 					options = append(options, f()...)
 				}
 
-				var fetcher jwk.SetFetcher
+				var fetcher jwk.Fetcher
 				if f := tc.Fetcher; f != nil {
 					fetcher = f()
 				}

@@ -1430,18 +1430,18 @@ func TestVerifyAuto(t *testing.T) {
 	}
 
 	// now with AutoRefresh
-	ar := jwk.NewAutoRefresh(context.TODO())
+	c := jwk.NewCache(context.TODO())
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(
-			jwk.SetFetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
-				var aropts []jwk.AutoRefreshOption
+			jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
+				var registeropts []jwk.RegisterOption
 				// jwk.FetchOption is also an AutoRefreshOption, but the container
 				// doesn't match the signature... so... we need to convert them...
 				for _, option := range options {
-					aropts = append(aropts, option)
+					registeropts = append(registeropts, option)
 				}
-				ar.Configure(u, aropts...)
-				return ar.Fetch(ctx, u)
+				c.Register(u, registeropts...)
+				return c.Get(ctx, u)
 			}),
 			jwk.WithHTTPClient(srv.Client()),
 			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),

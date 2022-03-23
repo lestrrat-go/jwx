@@ -140,9 +140,9 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	})
 }
 
-func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) VerifyOption {
+func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) VerifyOption {
 	if f == nil {
-		f = jwk.SetFetchFunc(jwk.Fetch)
+		f = jwk.FetchFunc(jwk.Fetch)
 	}
 
 	// the option MUST start with a "disallow no whitelist" to force
