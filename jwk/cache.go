@@ -52,16 +52,16 @@ func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
 }
 
 // httprc.Transofmer that transforms the response into a JWKS
-type JWKSTransform struct {
+type jwksTransform struct {
 	postFetch    PostFetcher
 	parseOptions []ParseOption
 }
 
 // Default transform has no postFetch. This can be shared
 // by multiple fetchers
-var defaultTransform = &JWKSTransform{}
+var defaultTransform = &jwksTransform{}
 
-func (t *JWKSTransform) Transform(u string, res *http.Response) (interface{}, error) {
+func (t *jwksTransform) Transform(u string, res *http.Response) (interface{}, error) {
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read response body status: %w`, err)
@@ -142,12 +142,12 @@ func (c *Cache) Register(u string, options ...RegisterOption) error {
 		}
 	}
 
-	var t *JWKSTransform
+	var t *jwksTransform
 	if pf == nil && len(parseOptions) == 0 {
 		t = defaultTransform
 	} else {
 		// User-supplied PostFetcher is attached to the transformer
-		t = &JWKSTransform{
+		t = &jwksTransform{
 			postFetch:    pf,
 			parseOptions: parseOptions,
 		}
