@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/option"
 )
@@ -104,7 +103,6 @@ func (*registerOption) registerOption() {}
 
 type identErrSink struct{}
 type identFS struct{}
-type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
@@ -122,10 +120,6 @@ func (identErrSink) String() string {
 
 func (identFS) String() string {
 	return "WithFS"
-}
-
-func (identFetchBackoff) String() string {
-	return "WithFetchBackoff"
 }
 
 func (identFetchWhitelist) String() string {
@@ -179,15 +173,6 @@ func WithErrSink(v ErrSink) CacheOption {
 // WithFS specifies the source `fs.FS` object to read the file from.
 func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
-}
-
-// WithFetchBackoff specifies the backoff policy to use when
-// refreshing a JWKS from a remote server fails.
-//
-// This does not have any effect on initial `Fetch()`, or any of the `Refresh()` calls --
-// the backoff is applied ONLY on the background refreshing goroutine.
-func WithFetchBackoff(v backoff.Policy) FetchOption {
-	return &fetchOption{option.New(identFetchBackoff{}, v)}
 }
 
 // WithFetchWhitelist specifies the Whitelist object to use when

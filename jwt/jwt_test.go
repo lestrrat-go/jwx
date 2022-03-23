@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
@@ -1409,23 +1408,6 @@ func TestVerifyAuto(t *testing.T) {
 		Add(`https://github.com/lestrrat-go/jwx/v2`)
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
-		return
-	}
-
-	// now with backoff
-	bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
-	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(nil,
-			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-			jwk.WithHTTPClient(srv.Client()),
-			jwk.WithFetchBackoff(bo),
-		),
-	)
-	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-		return
-	}
-
-	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
 		return
 	}
 

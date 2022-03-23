@@ -291,8 +291,7 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 //   jwt.Parse(data, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(...)))
 //
 // See the list of available options that you can pass to `jwk.Fetch()`
-// in the `jwk` package, including specifying a backoff policy by via
-// `jwt.WithFetchBackoff()`
+// in the `jwk` package
 func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
 	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
 }

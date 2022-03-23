@@ -11,7 +11,6 @@ import (
 func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithErrSink", identErrSink{}.String())
 	require.Equal(t, "WithFS", identFS{}.String())
-	require.Equal(t, "WithFetchBackoff", identFetchBackoff{}.String())
 	require.Equal(t, "WithFetchWhitelist", identFetchWhitelist{}.String())
 	require.Equal(t, "WithHTTPClient", identHTTPClient{}.String())
 	require.Equal(t, "WithIgnoreParseError", identIgnoreParseError{}.String())

@@ -1,7 +1,5 @@
 package_name: jwk
 output: jwk/options_gen.go
-imports:
-  - github.com/lestrrat-go/backoff/v2
 interfaces:
   - name: CacheOption
     comment: |
@@ -39,15 +37,6 @@ options:
     comment: |
       WithHTTPClient allows users to specify the "net/http".Client object that
       is used when fetching jwk.Set objects.
-  - ident: FetchBackoff
-    interface: FetchOption
-    argument_type: backoff.Policy
-    comment: |
-      WithFetchBackoff specifies the backoff policy to use when
-      refreshing a JWKS from a remote server fails.
-      
-      This does not have any effect on initial `Fetch()`, or any of the `Refresh()` calls --
-      the backoff is applied ONLY on the background refreshing goroutine.
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash

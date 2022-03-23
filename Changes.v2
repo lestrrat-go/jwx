@@ -128,7 +128,7 @@ Changes
     https://github.com/lestrrat-go/jwx/blob/v2/docs/99-faq.md#why-is-jwkkeyalgorithm-and-jwakeyalgorithm-so-confusing
     for more details
 
-  * [jwk] `jwk.SetFetcher` and `jwk.SetFetchFunc` has been added.
+  * [jwk] `jwk.Fetcher` and `jwk.FetchFunc` has been added.
     They represent something that can fetch a `jwk.Set`
 
   * [jwk] `jwk.CertificateChain` has been removed, use `*cert.Chain`
@@ -138,11 +138,24 @@ Changes
     read data from arbitrary `fs.FS` objects
 
   * [jwk] Added `jwk.PostFetcher`, `jwk.PostFetchFunc`, and `jwk.WithPostFetch` to
-    allow users to get at the `jwk.Set` that was fetched in `jwk.AutoRefresh`.
+    allow users to get at the `jwk.Set` that was fetched in `jwk.Cache`.
     This will make it possible for users to supply extra information and edit
     `jwk.Set` after it has been fetched and parsed, but before it is cached.
     You could, for example, modify the `alg` field so that it's easier to
     work with when you use it in `jws.Verify` later.
+
+  * [jwk] Reworked `jwk.AutoRefresh` in terms of `github.com/lestrrat-go/httprc`
+    and renamed it `jwk.Cache`.
+
+  * [jwk] Reimplemented `jwk.Fetch` in terms of `github.com/lestrrat-go/httprc`.
+
+  * [jwk] Previously `jwk.Fetch` and `jwk.AutoRefresh` respected backoff options,
+    but this has been removed. This is to avoid unwanted clogging of the fetch workers
+    which is the default processing mode in `github.com/lestrrat-go/httprc`.
+
+    If you are using backoffs, you need to control your inputs more carefully so as to
+    not clog your fetch queue, and therefore you should be writing custom code that
+    suits your needs
 
   # JWS
 
@@ -198,11 +211,11 @@ Changes
   * [jws] `jws.WithVerifyAuto` has been added to enable verification
     using `jku`.
 
-    The first argument must be a jwk.SetFetcher object, but can be
+    The first argument must be a jwk.Fetcher object, but can be
     set to `nil` to use the default implementation which is `jwk.Fetch`
 
     The rest of the arguments are treated as options passed to the
-    `(jwk.SetFetcher).Fetch()` function.
+    `(jwk.Fetcher).Fetch()` function.
 
   * [jws] jws.WithKeyProvider() has been added to specify arbitrary
     code to specify which keys to try.

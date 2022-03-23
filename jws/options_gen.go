@@ -98,7 +98,7 @@ type withJSONSuboption struct {
 
 func (*withJSONSuboption) withJSONSuboption() {}
 
-// WithKeySetSuboption is a suboption passed to the WithKeySet() option
+// WithKeySetSuboption is a suboption passed to the `jws.WithKeySet()` option
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()
