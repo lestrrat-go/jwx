@@ -174,6 +174,24 @@ func (c *Cache) Get(ctx context.Context, u string) (Set, error) {
 	return set, nil
 }
 
+// Refresh is identical to Get(), except it always fetches the
+// specified resource anew, and updates the cached content
+//
+// Please refer to the documentation for `(httprc.Cache).Refresh` for
+// more details
+func (c *Cache) Refresh(ctx context.Context, u string) (Set, error) {
+	v, err := c.cache.Refresh(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+
+	set, ok := v.(Set)
+	if !ok {
+		return nil, fmt.Errorf(`cached object is not a Set (was %T)`, v)
+	}
+	return set, nil
+}
+
 // IsRegistered returns true if the given URL `u` has already been registered
 // in the cache.
 //
