@@ -17,7 +17,7 @@ If you are using this module in your product or your company, please add  your p
   * jwe.Parse/Encrypt/Decrypt
   * Arguments are organized as explicit required paramters and optional WithXXXX() style options.
 * Extra utilities
-  * `jwk.AutoRefresh` to always keep a JWKS up-to-date
+  * `jwk.Cache` to always keep a JWKS up-to-date
 
 Some more in-depth discussion on why you might want to use this library over others
 can be found in the [Description section](#description)

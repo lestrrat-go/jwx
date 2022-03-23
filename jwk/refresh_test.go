@@ -48,7 +48,7 @@ func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, e
 	return assert.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
 }
 
-func TestAutoRefresh(t *testing.T) {
+func TestCache(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Specify explicit refresh interval", func(t *testing.T) {
@@ -396,7 +396,7 @@ func TestErrorSink(t *testing.T) {
 			case <-timer.C:
 			}
 
-			cancel() // forcefully end context, and thus the AutoRefresh
+			cancel() // forcefully end context, and thus the Cache
 
 			// timing issues can cause this to be non-deterministic...
 			// we'll say it's okay as long as we're in +/- 1 range
