@@ -22,7 +22,7 @@ type Whitelist = httprc.Whitelist
 // Before retrieving the Set objects, the user must pre-register the
 // URLs they intend to use by calling `Register()`
 //
-//  c := jwkfetch.New(ctx)
+//  c := jwk.New(ctx)
 //  c.Register(url, options...)
 //
 // Once registered, you can call `Get()` to retrieve the Set object.
@@ -83,7 +83,7 @@ func (t *JWKSTransform) Transform(u string, res *http.Response) (interface{}, er
 	return set, nil
 }
 
-// NewCache creates a new `jwkfetch.Cache` object.
+// NewCache creates a new `jwk.Cache` object.
 //
 // Please refer to the documentation for `httprc.New` for more
 // details.
@@ -110,7 +110,7 @@ func NewCache(ctx context.Context, options ...CacheOption) *Cache {
 // This method is almost identical to `(httprc.Cache).Register`, except
 // it accepts some extra options.
 //
-// Use `jwkfetch.WithParser` to configure how the JWKS should be parsed,
+// Use `jwk.WithParser` to configure how the JWKS should be parsed,
 // such as passing it extra options.
 //
 // Please refer to the documentation for `(httprc.Cache).Register` for more

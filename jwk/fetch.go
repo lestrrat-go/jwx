@@ -41,7 +41,7 @@ func init() {
 // If you are using the same `jwk.Set` for long periods of time during
 // the lifecycle of your program, and would like to periodically refresh the
 // contents of the object with the data at the remote resource,
-// consider using `jwkfetch.Cache`, which automatically refreshes
+// consider using `jwk.Cache`, which automatically refreshes
 // jwk.Set objects asynchronously.
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var hrfopts []httprc.FetchOption
