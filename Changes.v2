@@ -147,6 +147,14 @@ Changes
   * [jwk] Reworked `jwk.AutoRefresh` in terms of `github.com/lestrrat-go/httprc`
     and renamed it `jwk.Cache`.
 
+    Major difference between `jwk.AutoRefresh` and `jwk.Cache` is that while
+    former used one `time.Timer` per resource, the latter uses a static timer
+    (based on `jwk.WithRefreshWindow()` value, default 15 minutes) that periodically
+    refreshes all resources that were due to be refreshed within that time frame.
+
+    This method may cause your updates to happen slightly later, but uses significantly
+    less resources and is less prone to clogging.
+
   * [jwk] Reimplemented `jwk.Fetch` in terms of `github.com/lestrrat-go/httprc`.
 
   * [jwk] Previously `jwk.Fetch` and `jwk.AutoRefresh` respected backoff options,
