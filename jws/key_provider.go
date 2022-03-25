@@ -188,7 +188,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 }
 
 type jkuProvider struct {
-	fetcher jwk.SetFetcher
+	fetcher jwk.Fetcher
 	options []jwk.FetchOption
 }
 

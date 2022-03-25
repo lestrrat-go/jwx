@@ -524,7 +524,7 @@ source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/j
 
 To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) described elsewhere in this document.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
@@ -590,9 +590,9 @@ Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.AutoRefresh`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#AutoRefresh) tool to do this for you.
+`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) tool to do this for you.
 
-<!-- INCLUDE(examples/jwk_auto_refresh_example_test.go) -->
+<!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
 package examples_test
 
@@ -604,20 +604,20 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_AutoRefresh() {
+func ExampleJWK_Cache() {
   ctx, cancel := context.WithCancel(context.Background())
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
-  // First, set up the `jwk.AutoRefresh` object. You need to pass it a
+  // First, set up the `jwk.Cache` object. You need to pass it a
   // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  ar := jwk.NewAutoRefresh(ctx)
+  ar := jwk.NewCache(ctx)
 
-  // Tell *jwk.AutoRefresh that we only want to refresh this JWKS
+  // Tell *jwk.Cache that we only want to refresh this JWKS
   // when it needs to (based on Cache-Control or Expires header from
   // the HTTP response). If the calculated minimum refresh interval is less
   // than 15 minutes, don't go refreshing any earlier than 15 minutes.
-  ar.Configure(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
+  ar.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
 
   // Refresh the JWKS once before getting into the main loop.
   // This allows you to check if the JWKS is available before we start
@@ -647,10 +647,10 @@ MAIN:
     //
     // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
     // immediately after it has been rotated in the remote source. But it should be close\
-    // enough, and should you need to forcefully refresh the token using the `(jwk.AutoRefresh).Refresh()` method.
+    // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
     //
     // If re-fetching the keyset fails, a cached version will be returned from the previous successful
-    // fetch upon calling `(jwk.AutoRefresh).Fetch()`.
+    // fetch upon calling `(jwk.Cache).Fetch()`.
 
     // Do interesting stuff with the keyset... but here, we just
     // sleep for a bit
@@ -670,7 +670,7 @@ source: [examples/jwk_auto_refresh_example_test.go](https://github.com/lestrrat-
 
 If you are fetching JWK Sets from a possibly untrusted source such as the URL in the`"jku"` field of a JWS message,
 you may have to perform some sort of whitelist checking. You can provide a `jwk.Whitelist` object to either
-`jwk.Fetch()` or `(*jwk.AutoRefresh).Configure()` methods to specify the use of a whitelist.
+`jwk.Fetch()` or `(*jwk.Cache).Register()` methods to specify the use of a whitelist.
 
 Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases,
 as well as `jwk.InsecureWhitelist` for when you explicitly want to allo all URLs.

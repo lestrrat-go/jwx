@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
@@ -1412,36 +1411,19 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 
-	// now with backoff
-	bo := backoff.NewConstantPolicy(backoff.WithInterval(500 * time.Millisecond))
-	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(nil,
-			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-			jwk.WithHTTPClient(srv.Client()),
-			jwk.WithFetchBackoff(bo),
-		),
-	)
-	if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-		return
-	}
-
-	if !assert.True(t, jwt.Equal(tok, parsed), `tokens should be equal`) {
-		return
-	}
-
-	// now with AutoRefresh
-	ar := jwk.NewAutoRefresh(context.TODO())
+	// now with Cache
+	c := jwk.NewCache(context.TODO())
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(
-			jwk.SetFetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
-				var aropts []jwk.AutoRefreshOption
-				// jwk.FetchOption is also an AutoRefreshOption, but the container
+			jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
+				var registeropts []jwk.RegisterOption
+				// jwk.FetchOption is also an CacheOption, but the container
 				// doesn't match the signature... so... we need to convert them...
 				for _, option := range options {
-					aropts = append(aropts, option)
+					registeropts = append(registeropts, option)
 				}
-				ar.Configure(u, aropts...)
-				return ar.Fetch(ctx, u)
+				c.Register(u, registeropts...)
+				return c.Get(ctx, u)
 			}),
 			jwk.WithHTTPClient(srv.Client()),
 			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),

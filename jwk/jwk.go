@@ -5,7 +5,6 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -17,9 +16,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"net/http"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
@@ -358,94 +355,6 @@ func DecodePEM(src []byte) (interface{}, []byte, error) {
 	default:
 		return nil, nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
 	}
-}
-
-type SetFetcher interface {
-	Fetch(context.Context, string, ...FetchOption) (Set, error)
-}
-
-type SetFetchFunc func(context.Context, string, ...FetchOption) (Set, error)
-
-func (f SetFetchFunc) Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
-	return f(ctx, urlstring, options...)
-}
-
-// Fetch fetches a JWK resource specified by a URL. The url must be
-// pointing to a resource that is supported by `net/http`.
-//
-// If you are using the same `jwk.Set` for long periods of time during
-// the lifecycle of your program, and would like to periodically refresh the
-// contents of the object with the data at the remote resource,
-// consider using `jwk.AutoRefresh`, which automatically refreshes
-// jwk.Set objects asynchronously.
-//
-// See the list of `jwk.FetchOption`s for various options to tweak the
-// behavior, including providing alternate HTTP Clients, setting a backoff,
-// and using whitelists.
-func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
-	res, err := fetch(ctx, urlstring, options...)
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	keyset, err := ParseReader(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to parse JWK set: %w`, err)
-	}
-	return keyset, nil
-}
-
-func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
-	var wl Whitelist
-	var httpcl HTTPClient = http.DefaultClient
-	bo := backoff.Null()
-	for _, option := range options {
-		//nolint:forcetypeassert
-		switch option.Ident() {
-		case identHTTPClient{}:
-			httpcl = option.Value().(HTTPClient)
-		case identFetchBackoff{}:
-			bo = option.Value().(backoff.Policy)
-		case identFetchWhitelist{}:
-			wl = option.Value().(Whitelist)
-		}
-	}
-
-	if wl != nil {
-		if !wl.IsAllowed(urlstring) {
-			return nil, fmt.Errorf(`url rejected by whitelist`)
-		}
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlstring, nil)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to new request to remote JWK: %w`, err)
-	}
-
-	b := bo.Start(ctx)
-	var lastError error
-	for backoff.Continue(b) {
-		res, err := httpcl.Do(req)
-		if err != nil {
-			lastError = fmt.Errorf(`failed to fetch remote JWK: %w`, err)
-			continue
-		}
-
-		if res.StatusCode != http.StatusOK {
-			lastError = fmt.Errorf("failed to fetch remote JWK (status = %d)", res.StatusCode)
-			continue
-		}
-		return res, nil
-	}
-
-	// It's possible for us to get here without populating lastError.
-	// e.g. what if we bailed out of `for backoff.Contineu(b)` without making
-	// a single request? or, <-ctx.Done() returned?
-	if lastError == nil {
-		lastError = fmt.Errorf(`fetching remote JWK did not complete`)
-	}
-	return nil, lastError
 }
 
 // ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,

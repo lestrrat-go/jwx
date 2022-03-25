@@ -276,7 +276,7 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 // method available is to use the keys available in the JWKS URL pointed
 // in the `jku` field.
 //
-// The first argument should either be `nil`, or your custom jwk.SetFetcher
+// The first argument should either be `nil`, or your custom jwk.Fetcher
 // object, which tells how the JWKS should be fetched. Leaving it to
 // `nil` is equivalent to specifying that `jwk.Fetch` should be used.
 //
@@ -291,8 +291,7 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 //   jwt.Parse(data, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(...)))
 //
 // See the list of available options that you can pass to `jwk.Fetch()`
-// in the `jwk` package, including specifying a backoff policy by via
-// `jwt.WithFetchBackoff()`
-func WithVerifyAuto(f jwk.SetFetcher, options ...jwk.FetchOption) ParseOption {
+// in the `jwk` package
+func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
 	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
 }

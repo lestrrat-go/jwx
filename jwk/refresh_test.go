@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
@@ -46,10 +45,10 @@ func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, e
 		}
 	}
 	fmt.Fprintf(&buf, "]")
-	return assert.Failf(t, `key.Get("accessCount") should be one of %s (got %d)`, buf.String(), v)
+	return assert.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
 }
 
-func TestAutoRefresh(t *testing.T) {
+func TestCache(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Specify explicit refresh interval", func(t *testing.T) {
@@ -76,8 +75,10 @@ func TestAutoRefresh(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		af := jwk.NewAutoRefresh(ctx)
-		af.Configure(srv.URL, jwk.WithRefreshInterval(3*time.Second))
+		af := jwk.NewCache(ctx, jwk.WithRefreshWindow(time.Second))
+		if !assert.NoError(t, af.Register(srv.URL, jwk.WithRefreshInterval(3*time.Second)), `af.Register should succeed`) {
+			return
+		}
 
 		retries := 5
 
@@ -87,8 +88,8 @@ func TestAutoRefresh(t *testing.T) {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
 				defer wg.Done()
-				ks, err := af.Fetch(ctx, srv.URL)
-				if !assert.NoError(t, err, `af.Fetch should succeed`) {
+				ks, err := af.Get(ctx, srv.URL)
+				if !assert.NoError(t, err, `af.Get should succeed`) {
 					return
 				}
 				if !checkAccessCount(t, ctx, ks, 1) {
@@ -101,8 +102,8 @@ func TestAutoRefresh(t *testing.T) {
 		wg.Wait()
 		t.Logf("Waiting for the refresh ...")
 		time.Sleep(4 * time.Second)
-		ks, err := af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch should succeed`) {
+		ks, err := af.Get(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
 		if !checkAccessCount(t, ctx, ks, 2) {
@@ -133,8 +134,11 @@ func TestAutoRefresh(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		af := jwk.NewAutoRefresh(ctx)
-		af.Configure(srv.URL, jwk.WithMinRefreshInterval(time.Second))
+		af := jwk.NewCache(ctx, jwk.WithRefreshWindow(time.Second))
+		if !assert.NoError(t, af.Register(srv.URL, jwk.WithMinRefreshInterval(time.Second)), `af.Register should succeed`) {
+			return
+		}
+
 		if !assert.True(t, af.IsRegistered(srv.URL), `af.IsRegistered should be true`) {
 			return
 		}
@@ -147,8 +151,8 @@ func TestAutoRefresh(t *testing.T) {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
 				defer wg.Done()
-				ks, err := af.Fetch(ctx, srv.URL)
-				if !assert.NoError(t, err, `af.Fetch should succeed`) {
+				ks, err := af.Get(ctx, srv.URL)
+				if !assert.NoError(t, err, `af.Get should succeed`) {
 					return
 				}
 
@@ -162,8 +166,8 @@ func TestAutoRefresh(t *testing.T) {
 		wg.Wait()
 		t.Logf("Waiting for the refresh ...")
 		time.Sleep(4 * time.Second)
-		ks, err := af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch should succeed`) {
+		ks, err := af.Get(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
 		if !checkAccessCount(t, ctx, ks, 2) {
@@ -198,13 +202,12 @@ func TestAutoRefresh(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		af := jwk.NewAutoRefresh(ctx)
-		bo := backoff.Constant(backoff.WithInterval(time.Second))
-		af.Configure(srv.URL, jwk.WithFetchBackoff(bo), jwk.WithMinRefreshInterval(1))
+		af := jwk.NewCache(ctx, jwk.WithRefreshWindow(time.Second))
+		af.Register(srv.URL, jwk.WithMinRefreshInterval(time.Second))
 
 		// First fetch should succeed
-		ks, err := af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch (#1) should succed`) {
+		ks, err := af.Get(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Get (#1) should succeed`) {
 			return
 		}
 		if !checkAccessCount(t, ctx, ks, 1) {
@@ -213,8 +216,8 @@ func TestAutoRefresh(t *testing.T) {
 
 		// enough time for 1 refresh to have occurred
 		time.Sleep(1500 * time.Millisecond)
-		ks, err = af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch (#2) should succeed`) {
+		ks, err = af.Get(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Get (#2) should succeed`) {
 			return
 		}
 		// Should be using the cached version
@@ -225,8 +228,8 @@ func TestAutoRefresh(t *testing.T) {
 		// enough time for 2 refreshes to have occurred
 		time.Sleep(2500 * time.Millisecond)
 
-		ks, err = af.Fetch(ctx, srv.URL)
-		if !assert.NoError(t, err, `af.Fetch (#3) should succeed`) {
+		ks, err = af.Get(ctx, srv.URL)
+		if !assert.NoError(t, err, `af.Get (#3) should succeed`) {
 			return
 		}
 		// should be new
@@ -272,32 +275,51 @@ func TestRefreshSnapshot(t *testing.T) {
 		t.SkipNow()
 	}
 
-	ar := jwk.NewAutoRefresh(ctx)
+	ar := jwk.NewCache(ctx, jwk.WithRefreshWindow(time.Second))
 	for _, url := range jwksURLs {
-		ar.Configure(url)
-	}
-
-	for _, url := range jwksURLs {
-		_, _ = ar.Refresh(ctx, url)
-	}
-
-	for target := range ar.Snapshot() {
-		t.Logf("%s last refreshed at %s, next refresh at %s", target.URL, target.LastRefresh, target.NextRefresh)
+		if !assert.NoError(t, ar.Register(url), `ar.Register should succeed`) {
+			return
+		}
 	}
 
 	for _, url := range jwksURLs {
-		ar.Remove(url)
+		_ = ar.Unregister(url)
 	}
 
-	if !assert.Len(t, ar.Snapshot(), 0, `there should be no URLs`) {
+	for _, target := range ar.Snapshot().Entries {
+		t.Logf("%s last refreshed at %s", target.URL, target.LastFetched)
+	}
+
+	for _, url := range jwksURLs {
+		ar.Unregister(url)
+	}
+
+	if !assert.Len(t, ar.Snapshot().Entries, 0, `there should be no URLs`) {
 		return
 	}
 
-	if !assert.Error(t, ar.Remove(`dummy`), `removing a non-existing url should be an error`) {
+	if !assert.Error(t, ar.Unregister(`dummy`), `removing a non-existing url should be an error`) {
 		return
 	}
 }
 
+type accumulateErrs struct {
+	mu   sync.RWMutex
+	errs []error
+}
+
+func (e *accumulateErrs) Error(err error) {
+	e.mu.Lock()
+	e.errs = append(e.errs, err)
+	e.mu.Unlock()
+}
+
+func (e *accumulateErrs) Len() int {
+	e.mu.RLock()
+	l := len(e.errs)
+	e.mu.RUnlock()
+	return l
+}
 func TestErrorSink(t *testing.T) {
 	t.Parallel()
 
@@ -309,26 +331,28 @@ func TestErrorSink(t *testing.T) {
 	set.Add(k)
 	testcases := []struct {
 		Name    string
-		Options func() []jwk.AutoRefreshOption
+		Options func() []jwk.RegisterOption
 		Handler http.Handler
 	}{
-		{
-			Name: "non-200 response",
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusForbidden)
-			}),
-		},
-		{
-			Name: "invalid JWK",
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"empty": "nonthingness"}`))
-			}),
-		},
+		/*
+			{
+				Name: "non-200 response",
+				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusForbidden)
+				}),
+			},
+			{
+				Name: "invalid JWK",
+				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"empty": "nonthingness"}`))
+				}),
+			},
+		*/
 		{
 			Name: `rejected by whitelist`,
-			Options: func() []jwk.AutoRefreshOption {
-				return []jwk.AutoRefreshOption{
+			Options: func() []jwk.RegisterOption {
+				return []jwk.RegisterOption{
 					jwk.WithFetchWhitelist(jwk.WhitelistFunc(func(_ string) bool {
 						return false
 					})),
@@ -350,19 +374,21 @@ func TestErrorSink(t *testing.T) {
 			srv := httptest.NewServer(tc.Handler)
 			defer srv.Close()
 
-			ar := jwk.NewAutoRefresh(ctx)
+			var errSink accumulateErrs
+			ar := jwk.NewCache(ctx, jwk.WithErrSink(&errSink), jwk.WithRefreshWindow(time.Second))
 
-			var options []jwk.AutoRefreshOption
+			var options []jwk.RegisterOption
 			if f := tc.Options; f != nil {
 				options = f()
 			}
-			options = append(options, jwk.WithRefreshInterval(500*time.Millisecond))
-			ar.Configure(srv.URL, options...)
-			ch := make(chan jwk.AutoRefreshError, 256) // big buffer
-			ar.ErrorSink(ch)
-			ar.Fetch(ctx, srv.URL)
+			options = append(options, jwk.WithRefreshInterval(time.Second))
+			if !assert.NoError(t, ar.Register(srv.URL, options...), `ar.Register should succeed`) {
+				return
+			}
 
-			timer := time.NewTimer(3 * time.Second)
+			_, _ = ar.Get(ctx, srv.URL)
+
+			timer := time.NewTimer(6 * time.Second)
 
 			select {
 			case <-ctx.Done():
@@ -370,11 +396,11 @@ func TestErrorSink(t *testing.T) {
 			case <-timer.C:
 			}
 
-			cancel() // forcefully end context, and thus the AutoRefresh
+			cancel() // forcefully end context, and thus the Cache
 
 			// timing issues can cause this to be non-deterministic...
 			// we'll say it's okay as long as we're in +/- 1 range
-			l := len(ch)
+			l := errSink.Len()
 			if !assert.True(t, l <= 7, "number of errors shold be less than or equal to 7 (%d)", l) {
 				return
 			}
@@ -399,7 +425,7 @@ func TestPostFetch(t *testing.T) {
 
 	testcases := []struct {
 		Name      string
-		Options   []jwk.AutoRefreshOption
+		Options   []jwk.RegisterOption
 		ExpectKid bool
 	}{
 		{
@@ -407,7 +433,7 @@ func TestPostFetch(t *testing.T) {
 		},
 		{
 			Name: "With PostFetch",
-			Options: []jwk.AutoRefreshOption{jwk.WithPostFetch(jwk.PostFetchFunc(func(_ string, set jwk.Set) (jwk.Set, error) {
+			Options: []jwk.RegisterOption{jwk.WithPostFetcher(jwk.PostFetchFunc(func(_ string, set jwk.Set) (jwk.Set, error) {
 				for i := 0; i < set.Len(); i++ {
 					key, _ := set.Get(i)
 					key.Set(jwk.KeyIDKey, fmt.Sprintf(`key-%d`, i))
@@ -432,10 +458,10 @@ func TestPostFetch(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
 
-			ar := jwk.NewAutoRefresh(ctx)
+			ar := jwk.NewCache(ctx)
 
-			ar.Configure(srv.URL, tc.Options...)
-			set, err := ar.Fetch(ctx, srv.URL)
+			ar.Register(srv.URL, tc.Options...)
+			set, err := ar.Get(ctx, srv.URL)
 			if !assert.NoError(t, err, `ar.Fetch should succeed`) {
 				return
 			}

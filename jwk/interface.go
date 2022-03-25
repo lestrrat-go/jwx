@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"context"
-	"net/http"
 	"sync"
 
 	"github.com/lestrrat-go/iter/arrayiter"
@@ -127,12 +126,6 @@ type PublicKeyer interface {
 	PublicKey() (Key, error)
 }
 
-// HTTPClient specifies the minimum interface that is required for our JWK
-// fetching tools.
-type HTTPClient interface {
-	Do(*http.Request) (*http.Response, error)
-}
-
 type DecodeCtx interface {
 	json.DecodeCtx
 	IgnoreParseError() bool
@@ -140,33 +133,4 @@ type DecodeCtx interface {
 type KeyWithDecodeCtx interface {
 	SetDecodeCtx(DecodeCtx)
 	DecodeCtx() DecodeCtx
-}
-
-type AutoRefreshError struct {
-	Error error
-	URL   string
-}
-
-// Whitelist is an interface for a set of URL whitelists. When provided
-// to JWK fetching operations, urls are checked against this object, and
-// the object must return true for urls to be fetched.
-type Whitelist interface {
-	IsAllowed(string) bool
-}
-
-// PostFetcher is an interface for things that wants to perform
-// some operation on the jwk.Set obtained in jwk.AutoRefresh
-type PostFetcher interface {
-	// PostFetch revceives the URL and the JWKS, after a successful
-	// fetch and parse in jwk.AutoRefresh.
-	//
-	// It should return a jwk.Set, optionally modified, to be stored
-	// in the cache within jwk.AutoRefresh object for subsequent use
-	PostFetch(string, Set) (Set, error)
-}
-
-type PostFetchFunc func(string, Set) (Set, error)
-
-func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
-	return f(u, set)
 }

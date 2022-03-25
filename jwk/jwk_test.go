@@ -1872,12 +1872,13 @@ func TestFetch(t *testing.T) {
 
 			wl := tc.Whitelist()
 
-			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/v2`, jwk.WithFetchWhitelist(wl))
+			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
 			if tc.Error {
 				if !assert.Error(t, err, `jwk.Fetch should fail`) {
 					return
 				}
 				if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
+					t.Logf("error was %q", err.Error())
 					return
 				}
 			}
@@ -1953,10 +1954,10 @@ func TestGH567(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			ar := jwk.NewAutoRefresh(ctx)
-			ar.Configure(srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
+			c := jwk.NewCache(ctx)
+			c.Register(srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
 
-			set, err := ar.Fetch(ctx, srv.URL)
+			set, err := c.Get(ctx, srv.URL)
 			if ignoreParseError {
 				if !assert.NoError(t, err, `ar.Fetch should succeed`) {
 					return

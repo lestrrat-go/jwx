@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/option"
 )
@@ -25,43 +24,46 @@ type assignKeyIDOption struct {
 
 func (*assignKeyIDOption) assignKeyIDOption() {}
 
-// AutoRefreshOption is a type of Option that can be passed to the
-// AutoRefresh object.
-type AutoRefreshOption interface {
+// CacheOption is a type of Option that can be passed to the
+// `jwk.Cache` object.
+type CacheOption interface {
 	Option
-	autoRefreshOption()
+	cacheOption()
 }
 
-type autoRefreshOption struct {
+type cacheOption struct {
 	Option
 }
 
-func (*autoRefreshOption) autoRefreshOption() {}
+func (*cacheOption) cacheOption() {}
 
 // FetchOption is a type of Option that can be passed to `jwk.Fetch()`
-// FetchOption also implements the `AutoRefreshOption`, and thus can
-// safely be passed to `(*jwk.AutoRefresh).Configure()`
+// FetchOption also implements the `CacheOption`, and thus can
+// safely be passed to `(*jwk.Cache).Configure()`
 type FetchOption interface {
 	Option
-	autoRefreshOption()
 	fetchOption()
+	parseOption()
+	registerOption()
 }
 
 type fetchOption struct {
 	Option
 }
 
-func (*fetchOption) autoRefreshOption() {}
-
 func (*fetchOption) fetchOption() {}
 
+func (*fetchOption) parseOption() {}
+
+func (*fetchOption) registerOption() {}
+
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implmentsthe `ReadFileOption` and `AutoRefreshOption`,
-// and thus safely be passed to `jwk.ReadFile` and `(*jwk.AutoRefresh).Configure()`
+// ParseOption also implmentsthe `ReadFileOption` and `CacheOption`,
+// and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
 type ParseOption interface {
 	Option
-	autoRefreshOption()
 	fetchOption()
+	registerOption()
 	readFileOption()
 }
 
@@ -69,9 +71,9 @@ type parseOption struct {
 	Option
 }
 
-func (*parseOption) autoRefreshOption() {}
-
 func (*parseOption) fetchOption() {}
+
+func (*parseOption) registerOption() {}
 
 func (*parseOption) readFileOption() {}
 
@@ -87,24 +89,37 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
+// RegisterOption desribes options that can be passed to `(jwk.Cache).Register()`
+type RegisterOption interface {
+	Option
+	registerOption()
+}
+
+type registerOption struct {
+	Option
+}
+
+func (*registerOption) registerOption() {}
+
+type identErrSink struct{}
 type identFS struct{}
-type identFetchBackoff struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMinRefreshInterval struct{}
 type identPEM struct{}
-type identPostFetch struct{}
+type identPostFetcher struct{}
 type identRefreshInterval struct{}
+type identRefreshWindow struct{}
 type identThumbprintHash struct{}
+
+func (identErrSink) String() string {
+	return "WithErrSink"
+}
 
 func (identFS) String() string {
 	return "WithFS"
-}
-
-func (identFetchBackoff) String() string {
-	return "WithFetchBackoff"
 }
 
 func (identFetchWhitelist) String() string {
@@ -131,16 +146,28 @@ func (identPEM) String() string {
 	return "WithPEM"
 }
 
-func (identPostFetch) String() string {
-	return "WithPostFetch"
+func (identPostFetcher) String() string {
+	return "WithPostFetcher"
 }
 
 func (identRefreshInterval) String() string {
 	return "WithRefreshInterval"
 }
 
+func (identRefreshWindow) String() string {
+	return "WithRefreshWindow"
+}
+
 func (identThumbprintHash) String() string {
 	return "WithThumbprintHash"
+}
+
+// WithErrSink specifies the `httprc.ErrSink` object that handles errors
+// that occurred during the cache's execution.
+//
+// See the documentation in `httprc.WithErrSink` for more details.
+func WithErrSink(v ErrSink) CacheOption {
+	return &cacheOption{option.New(identErrSink{}, v)}
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.
@@ -148,18 +175,9 @@ func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
 }
 
-// WithFetchBackoff specifies the backoff policy to use when
-// refreshing a JWKS from a remote server fails.
-//
-// This does not have any effect on initial `Fetch()`, or any of the `Refresh()` calls --
-// the backoff is applied ONLY on the background refreshing goroutine.
-func WithFetchBackoff(v backoff.Policy) FetchOption {
-	return &fetchOption{option.New(identFetchBackoff{}, v)}
-}
-
 // WithFetchWhitelist specifies the Whitelist object to use when
 // fetching JWKs from a remote source. This option can be passed
-// to both `jwk.Fetch()`, `jwk.NewAutoRefresh()`, and `(*jwk.AutoRefresh).Configure()`
+// to both `jwk.Fetch()`, `jwk.NewCache()`, and `(*jwk.Cache).Configure()`
 func WithFetchWhitelist(v Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, v)}
 }
@@ -199,7 +217,7 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 }
 
 // WithMinRefreshInterval specifies the minimum refresh interval to be used
-// when using AutoRefresh. This value is ONLY used if you did not specify
+// when using `jwk.Cache`. This value is ONLY used if you did not specify
 // a user-supplied static refresh interval via `WithRefreshInterval`.
 //
 // This value is used as a fallback value when tokens are refreshed.
@@ -217,8 +235,8 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // value specified by this option as the next refresh timing
 //
 // If unspecified, the minimum refresh interval is 1 hour
-func WithMinRefreshInterval(v time.Duration) AutoRefreshOption {
-	return &autoRefreshOption{option.New(identMinRefreshInterval{}, v)}
+func WithMinRefreshInterval(v time.Duration) RegisterOption {
+	return &registerOption{option.New(identMinRefreshInterval{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
@@ -226,22 +244,29 @@ func WithPEM(v bool) ParseOption {
 	return &parseOption{option.New(identPEM{}, v)}
 }
 
-// WithPostFetch specifies the PostFetcher object to be used on the
-// jwk.Set object obtained in jwk.AutoRefresh. This option can be used
+// WithPostFetcher specifies the PostFetcher object to be used on the
+// jwk.Set object obtained in `jwk.Cache`. This option can be used
 // to, for example, modify the jwk.Set to give it key IDs or algorithm
 // names after it has been fetched and parsed, but before it is cached.
-func WithPostFetch(v PostFetcher) AutoRefreshOption {
-	return &autoRefreshOption{option.New(identPostFetch{}, v)}
+func WithPostFetcher(v PostFetcher) RegisterOption {
+	return &registerOption{option.New(identPostFetcher{}, v)}
 }
 
 // WithRefreshInterval specifies the static interval between refreshes
-// of jwk.Set objects controlled by jwk.AutoRefresh.
+// of jwk.Set objects controlled by jwk.Cache.
 //
 // Providing this option overrides the adaptive token refreshing based
 // on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
 // and refreshes will *always* happen in this interval.
-func WithRefreshInterval(v time.Duration) AutoRefreshOption {
-	return &autoRefreshOption{option.New(identRefreshInterval{}, v)}
+func WithRefreshInterval(v time.Duration) RegisterOption {
+	return &registerOption{option.New(identRefreshInterval{}, v)}
+}
+
+// WithRefreshWindow specifies the interval between checks for refreshes.
+//
+// See the documentation in `httprc.WithRefreshWindow` for more details.
+func WithRefreshWindow(v time.Duration) CacheOption {
+	return &cacheOption{option.New(identRefreshWindow{}, v)}
 }
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
