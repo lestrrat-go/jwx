@@ -2,7 +2,7 @@
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
-If you are using this module in your product or your company, please add  your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/tree/v2/wiki/Users)! It really helps keeping up our motivation.
+If you are using this module in your product or your company, please add  your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)! It really helps keeping up our motivation.
 
 # Features
 
