@@ -1,6 +1,6 @@
 # How to JWx That
 
-Here you will find bits and pieces of code explaining how to perform certain Javascript Object Signing and Encryption (JOSE) operations using https://github.com/lestrrat-go/jwx/tree/v2 for Go.
+Here you will find bits and pieces of code explaining how to perform certain Javascript Object Signing and Encryption (JOSE) operations using [`github.com/lestrrat-go/jwx/v2`](https://github.com/lestrrat-go/jwx/tree/v2).
 
 If you would rather see code, try the [examples directory](../examples)
 
