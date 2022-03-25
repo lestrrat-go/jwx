@@ -406,11 +406,13 @@ func TestOpenIDClaims(t *testing.T) {
 	var tokens []openidTokTestCase
 
 	{ // one with Set()
-		token := openid.New()
+		b := openid.NewBuilder()
 		for name, value := range data {
-			if !assert.NoError(t, token.Set(name, value), `token.Set should succeed`) {
-				return
-			}
+			b.Claim(name, value)
+		}
+		token, err := b.Build()
+		if !assert.NoError(t, err, `b.Build() should succeed`) {
+			return
 		}
 		tokens = append(tokens, openidTokTestCase{Name: `token constructed by calling Set()`, Token: token})
 	}
