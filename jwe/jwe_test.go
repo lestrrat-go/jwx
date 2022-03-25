@@ -244,24 +244,40 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 			options := tc.Options
 			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
 
-			for i, option := range options {
-				t.Logf("%d: %s", i, option)
-			}
-
 			encrypted, err := jwe.Encrypt(plaintext, options...)
 			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
 				return
 			}
 			t.Logf("%s", encrypted)
 
-			plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawkey))
-			if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-				return
-			}
+			t.Run("WithKey", func(t *testing.T) {
+				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawkey))
+				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+					return
+				}
 
-			if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-				return
-			}
+				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+					return
+				}
+			})
+			t.Run("WithKeySet", func(t *testing.T) {
+				pkJwk, err := jwk.FromRaw(rawkey)
+				if !assert.NoError(t, err, `jwk.New should succeed`) {
+					return
+				}
+				// Keys are not going to be selected without an algorithm
+				_ = pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP)
+				set := jwk.NewSet()
+				set.Add(pkJwk)
+				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)))
+				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
+					return
+				}
+
+				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+					return
+				}
+			})
 		})
 	}
 
