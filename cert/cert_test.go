@@ -41,7 +41,7 @@ func TestCert(t *testing.T) {
 	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
 	extraExtensionData := []byte("extra extension")
-	oidExtensionSubjectKeyId := []int{2, 5, 29, 14}
+	oidExtensionSubjectKeyID := []int{2, 5, 29, 14}
 
 	commonName := "test.example.com"
 	template := x509.Certificate{
@@ -107,7 +107,7 @@ func TestCert(t *testing.T) {
 			},
 			// This extension should override the SubjectKeyId, above.
 			{
-				Id:       oidExtensionSubjectKeyId,
+				Id:       oidExtensionSubjectKeyID,
 				Critical: false,
 				Value:    []byte{0x04, 0x04, 4, 3, 2, 1},
 			},
