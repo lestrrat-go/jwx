@@ -1,6 +1,7 @@
 package jwe_test
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -438,7 +439,7 @@ func TestEncode_X25519(t *testing.T) {
 }
 
 func Test_GHIssue207(t *testing.T) {
-	// const plaintext = "hi\n"
+	const plaintext = "hi\n"
 	var testcases = []struct {
 		Algorithm  jwa.KeyEncryptionAlgorithm
 		Key        string
@@ -482,13 +483,10 @@ func Test_GHIssue207(t *testing.T) {
 				return
 			}
 
-			/* XXX This needs a jwe.KeyProvider option
-			msg, err := jwe.ParseString(tc.Data)
-			if !assert.NoError(t, err, `jwe.ParseString should succeed`) {
-				return
-			}
-
-			decrypted, err := msg.Decrypt(((msg.Recipients())[0]).Headers().Algorithm(), &key)
+			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
+				sink.Key(r.Headers().Algorithm(), &key)
+				return nil
+			})))
 			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
 				return
 			}
@@ -496,7 +494,6 @@ func Test_GHIssue207(t *testing.T) {
 			if !assert.Equal(t, string(decrypted), plaintext, `plaintext should match`) {
 				return
 			}
-			*/
 		})
 	}
 }
