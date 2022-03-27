@@ -7,9 +7,9 @@ assignees: ''
 
 ---
 
-**Disclaimer**
+**Contribution Guidelines**
 
-Before filing an issue, please read the contents of [DISCLAIMERS.md](https://github.com/lestrrat-go/jwx/blob/main/DISCLAIMERS.md), and follow its instructions.
+Before filing an issue, please read the contents of [CONTRIBUTING.md](https://github.com/lestrrat-go/jwx/blob/v1/.gthub/CONTRIBUTING.md), and follow its instructions.
 
 **Abstract**
 Please describe concisely what you want to accomplish, including prerequisite information. Please remember that if _you_ cannot articulate the problem, we cannot guess what you are thinking.
@@ -24,6 +24,3 @@ Please describe alternative solutions that you have considered, and pros/cons be
 
 **Additional context**
 Add any other context or screenshots about the feature request here. Please delete this section if unnecessary.
-
-**Sponsors**
-Are you sponsoring the authors? If so, let us know. Otherwise, please delete this section.

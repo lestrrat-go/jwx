@@ -7,6 +7,6 @@ assignees: ''
 
 ---
 
-**Disclaimer**
+**Contribution Guidelines**
 
-Before filing an issue, please read the contents of [DISCLAIMERS.md](https://github.com/lestrrat-go/jwx/blob/main/DISCLAIMERS.md), and follow its instructions.
+Before filing an issue, please read the contents of [CONTRIBUTING.md](https://github.com/lestrrat-go/jwx/blob/v1/.gthub/CONTRIBUTING.md), and follow its instructions.
