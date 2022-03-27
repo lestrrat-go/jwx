@@ -1,6 +1,6 @@
 # CONTRIBUTING
 
-🎉 Thank you for considering to contribute to this project! 🎉
+❤❤❤🎉 Thank you for considering to contribute to this project! 🎉❤❤❤
 
 The following is a set of guidelines that we ask you to follow when you contribute to this project.
 
@@ -14,15 +14,16 @@ The following is a set of guidelines that we ask you to follow when you contribu
 * [Pull Requests](#pull-requests)
   * [Branches](#branches)
   * [Generated Files](#generated-files)
+  * [Test Cases](#test-cases)
 
 # tl;dr
 
 * 📕 Please read this Guideline in its entirety once, if at least to check the headings.
 * 🙋 Please be nice, and please be aware that we are not providing this software as a hobby.
-* Open-ended questions and inquiries go to [Discussions](https://github.com/lestrrat-go/jwx/discussions).
-* Actionable, specific technical questions go to [Issues](https://github.com/lestrrat-go/jwx/issues).
-* Please always include (pseudo)code for any technical questions/issues.
-* Issues, PR, and other posts may be closed or not addressed if you do not follow these guidelines
+* 💬 Open-ended questions and inquiries go to [Discussions](https://github.com/lestrrat-go/jwx/discussions).
+* 🖥️ Actionable, specific technical questions go to [Issues](https://github.com/lestrrat-go/jwx/issues).
+* 📝 Please always include (pseudo)code for any technical questions/issues.
+* 🔒 Issues, PR, and other posts may be closed or not addressed if you do not follow these guidelines
 
 # Please Be Nice
 
@@ -109,3 +110,14 @@ Usually these files are generated basede on a rule file (such as a YAML file).
 When you craft a pull request, you should include both changes to the rule file(s)
 and the generated file(s). The CI will run `go generate` and make sure that
 there are no extra `diff`s that have not been commited.
+
+## Test Cases
+
+In general any code change must be accompanied with test case.
+
+It is obviously very important to test the functionality. But adding test cases
+also gives you the opportunity to check for yourself how the new code should/can
+be used in practice. Test cases also act as a great way to communicate any
+assumptions or requirements that your code needs in order to function properly.
+
+
