@@ -11,15 +11,14 @@
 //    JWA (https://tools.ietf.org/html/rfc7518)
 //    JWT (https://tools.ietf.org/html/rfc7519)
 //
-// The primary focus of this library tool set is to implement the extremely
-// flexible OAuth2 / OpenID Connect protocols.
-//
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
 // online documentation for this module.
 // You can find the examples in Github at https://github.com/lestrrat-go/jwx/examples
 //
 // You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx)
+//
+// FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v2/docs)
 package jwx
 
 import (
