@@ -109,6 +109,10 @@ Changes
   * [jwe] `jwe.ReadFile` now supports the option `jwe.WithFS` which allows you to
     read data from arbitrary `fs.FS` objects
 
+  * [jwe] jwe.WithKeyUsed has been added to allow users to retrieve
+    the key used for decryption. This is useful in cases you provided
+    multiple keys and you want to know which one was successful
+
   # JWK
 
   * [jwk] `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will

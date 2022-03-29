@@ -105,4 +105,18 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
+  - ident: KeyUsed
+    interface: DecryptOption
+    argument_type: 'interface{}'
+    comment: |
+      WithKeyUsed allows you to specify the `jwe.Decrypt()` function to
+      return the key used for decryption. This may be useful when
+      you specify multiple key sources or if you pass a `jwk.Set`
+      and you want to know which key was successful at decrypting the
+      signature.
+      
+      `v` must be a pointer to an empty `interface{}`. Do not use
+      `jwk.Key` here unless you are 100% sure that all keys that you
+      have provided are instances of `jwk.Key` (remember that the
+      jwx API allows users to specify a raw key such as *rsa.PublicKey)
 

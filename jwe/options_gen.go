@@ -115,6 +115,7 @@ type identContentEncryptionAlgorithm struct{}
 type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
+type identKeyUsed struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
 type identPerRecipientHeaders struct{}
@@ -141,6 +142,10 @@ func (identKey) String() string {
 
 func (identKeyProvider) String() string {
 	return "WithKeyProvider"
+}
+
+func (identKeyUsed) String() string {
+	return "WithKeyUsed"
 }
 
 func (identMergeProtectedHeaders) String() string {
@@ -192,6 +197,20 @@ func WithFS(v fs.FS) ReadFileOption {
 
 func WithKeyProvider(v KeyProvider) DecryptOption {
 	return &decryptOption{option.New(identKeyProvider{}, v)}
+}
+
+// WithKeyUsed allows you to specify the `jwe.Decrypt()` function to
+// return the key used for decryption. This may be useful when
+// you specify multiple key sources or if you pass a `jwk.Set`
+// and you want to know which key was successful at decrypting the
+// signature.
+//
+// `v` must be a pointer to an empty `interface{}`. Do not use
+// `jwk.Key` here unless you are 100% sure that all keys that you
+// have provided are instances of `jwk.Key` (remember that the
+// jwx API allows users to specify a raw key such as *rsa.PublicKey)
+func WithKeyUsed(v interface{}) DecryptOption {
+	return &decryptOption{option.New(identKeyUsed{}, v)}
 }
 
 // WithMergeProtectedHeaders specify that when given multiple headers
