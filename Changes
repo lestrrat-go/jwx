@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.2.21 30 Mar 2022
+[Bug fixes]
+  * [jwk] RSA keys without p and q can now be parsed.
+
 v1.2.20 03 Mar 2022
 [Miscellaneous]
   * Dependency on golang.org/x/crypto has been upgraded to
