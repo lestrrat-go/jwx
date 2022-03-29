@@ -25,7 +25,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 
 	l := len(rawKey.Primes)
 
-	if l < 1 && l > 2 {
+	if l < 0 /* I know, I'm being paranoid */ || l > 2 {
 		return fmt.Errorf(`invalid number of primes in rsa.PrivateKey: need 1 or 2, got %d`, len(rawKey.Primes))
 	}
 
