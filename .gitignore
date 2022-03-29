@@ -33,3 +33,5 @@ coverage.out
 
 # I redirect my test output to files named "out" way too often
 out
+
+cmd/jwx/jwx
