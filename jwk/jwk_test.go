@@ -24,6 +24,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/jose"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v2/jws"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -2005,4 +2006,44 @@ func TestAvailableCurves(t *testing.T) {
 func TestCurveForAlgorithm(t *testing.T) {
 	// Not much to test here, but this silences the linters
 	_, _ = jwk.CurveForAlgorithm(jwa.P521)
+}
+
+func TestGH664(t *testing.T) {
+	privkey, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`) {
+		return
+	}
+
+	// nuke p and q, dp, dq, qi
+	privkey.Primes = nil //privkey.Primes[:1]
+	privkey.Precomputed.Dp = nil
+	privkey.Precomputed.Dq = nil
+	privkey.Precomputed.Qinv = nil
+	privkey.Precomputed.CRTValues = nil
+
+	jwkPrivkey, err := jwk.FromRaw(privkey)
+	if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+		return
+	}
+
+	buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
+	parsed, err := jwk.ParseKey(buf)
+	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+		return
+	}
+
+	payload := []byte(`hello , world!`)
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, parsed))
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, privkey.PublicKey))
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, payload, verified, `verified content should match`) {
+		return
+	}
 }
