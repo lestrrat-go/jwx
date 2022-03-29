@@ -2014,36 +2014,50 @@ func TestGH664(t *testing.T) {
 		return
 	}
 
+	// first, test a stupid case where Primes > 2
+	privkey.Primes = append(privkey.Primes, &big.Int{})
+	_, err = jwk.FromRaw(privkey)
+	if !assert.Error(t, err, `jwk.FromRaw should fail`) {
+		return
+	}
+
+	privkey.Primes = privkey.Primes[:2]
+
 	// nuke p and q, dp, dq, qi
-	privkey.Primes = nil //privkey.Primes[:1]
-	privkey.Precomputed.Dp = nil
-	privkey.Precomputed.Dq = nil
-	privkey.Precomputed.Qinv = nil
-	privkey.Precomputed.CRTValues = nil
+	for i := 0; i < 3; i++ {
+		i := i
+		t.Run(fmt.Sprintf("Check what happens when primes are reduced to %d", i), func(t *testing.T) {
+			privkey.Primes = privkey.Primes[:i]
+			privkey.Precomputed.Dp = nil
+			privkey.Precomputed.Dq = nil
+			privkey.Precomputed.Qinv = nil
+			privkey.Precomputed.CRTValues = nil
 
-	jwkPrivkey, err := jwk.FromRaw(privkey)
-	if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
-		return
-	}
+			jwkPrivkey, err := jwk.FromRaw(privkey)
+			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+				return
+			}
 
-	buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
-	parsed, err := jwk.ParseKey(buf)
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
+			buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
+			parsed, err := jwk.ParseKey(buf)
+			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+				return
+			}
 
-	payload := []byte(`hello , world!`)
-	signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, parsed))
-	if !assert.NoError(t, err, `jws.Sign should succeed`) {
-		return
-	}
+			payload := []byte(`hello , world!`)
+			signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, parsed))
+			if !assert.NoError(t, err, `jws.Sign should succeed`) {
+				return
+			}
 
-	verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, privkey.PublicKey))
-	if !assert.NoError(t, err, `jws.Verify should succeed`) {
-		return
-	}
+			verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, privkey.PublicKey))
+			if !assert.NoError(t, err, `jws.Verify should succeed`) {
+				return
+			}
 
-	if !assert.Equal(t, payload, verified, `verified content should match`) {
-		return
+			if !assert.Equal(t, payload, verified, `verified content should match`) {
+				return
+			}
+		})
 	}
 }
