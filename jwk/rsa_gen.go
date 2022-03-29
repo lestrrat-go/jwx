@@ -1180,12 +1180,6 @@ LOOP:
 	if h.n == nil {
 		return errors.Errorf(`required field n is missing`)
 	}
-	if h.p == nil {
-		return errors.Errorf(`required field p is missing`)
-	}
-	if h.q == nil {
-		return errors.Errorf(`required field q is missing`)
-	}
 	return nil
 }
 
