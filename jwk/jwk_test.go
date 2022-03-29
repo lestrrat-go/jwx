@@ -23,6 +23,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jose"
 	"github.com/lestrrat-go/jwx/internal/json"
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -2006,4 +2007,44 @@ func TestGH567(t *testing.T) {
 			return
 		}
 	})
+}
+
+func TestGH664(t *testing.T) {
+	privkey, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`) {
+		return
+	}
+
+	// nuke p and q, dp, dq, qi
+	privkey.Primes = nil //privkey.Primes[:1]
+	privkey.Precomputed.Dp = nil
+	privkey.Precomputed.Dq = nil
+	privkey.Precomputed.Qinv = nil
+	privkey.Precomputed.CRTValues = nil
+
+	jwkPrivkey, err := jwk.New(privkey)
+	if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+		return
+	}
+
+	buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
+	parsed, err := jwk.ParseKey(buf)
+	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+		return
+	}
+
+	payload := []byte(`hello , world!`)
+	signed, err := jws.Sign(payload, jwa.RS256, parsed)
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+
+	verified, err := jws.Verify(signed, jwa.RS256, privkey.PublicKey)
+	if !assert.NoError(t, err, `jws.Verify should succeed`) {
+		return
+	}
+
+	if !assert.Equal(t, payload, verified, `verified content should match`) {
+		return
+	}
 }

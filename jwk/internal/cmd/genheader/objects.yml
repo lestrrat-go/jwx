@@ -67,10 +67,8 @@ key_types:
             required: true
           - name: p
             type: "[]byte"
-            required: true
           - name: q
             type: "[]byte"
-            required: true
           - name: dp
             getter: DP
             exported_name: DP
