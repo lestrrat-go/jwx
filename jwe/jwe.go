@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
@@ -403,6 +404,7 @@ type decryptCtx struct {
 // `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var keyProviders []KeyProvider
+	var keyUsed interface{}
 
 	var dst *Message
 	//nolint:forcetypeassert
@@ -412,6 +414,8 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 			dst = option.Value().(*Message)
 		case identKeyProvider{}:
 			keyProviders = append(keyProviders, option.Value().(KeyProvider))
+		case identKeyUsed{}:
+			keyUsed = option.Value()
 		case identKey{}:
 			pair := option.Value().(*withKey)
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
@@ -483,7 +487,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 	var lastError error
 	for _, recipient := range recipients {
-		decrypted, err := dctx.try(ctx, recipient)
+		decrypted, err := dctx.try(ctx, recipient, keyUsed)
 		if err != nil {
 			lastError = err
 			continue
@@ -498,7 +502,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients (last error = %w)`, lastError)
 }
 
-func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, error) {
+func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed interface{}) ([]byte, error) {
 	var tried int
 	var lastError error
 	for i, kp := range dctx.keyProviders {
@@ -522,6 +526,11 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient) ([]byte, e
 				continue
 			}
 
+			if keyUsed != nil {
+				if err := blackmagic.AssignIfCompatible(keyUsed, key); err != nil {
+					return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, keyUsed, err)
+				}
+			}
 			return decrypted, nil
 		}
 	}

@@ -269,12 +269,18 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				_ = pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP)
 				set := jwk.NewSet()
 				set.Add(pkJwk)
-				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)))
+
+				var used interface{}
+				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
 				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
 					return
 				}
 
 				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
+					return
+				}
+
+				if !assert.Equal(t, pkJwk, used) {
 					return
 				}
 			})
