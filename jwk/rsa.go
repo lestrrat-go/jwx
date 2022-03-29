@@ -22,21 +22,27 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	}
 	k.d = d
 
-	if len(rawKey.Primes) < 2 {
-		return fmt.Errorf(`invalid number of primes in rsa.PrivateKey: need 2, got %d`, len(rawKey.Primes))
+	l := len(rawKey.Primes)
+
+	if l < 0 /* I know, I'm being paranoid */ || l > 2 {
+		return fmt.Errorf(`invalid number of primes in rsa.PrivateKey: need 1 or 2, got %d`, len(rawKey.Primes))
 	}
 
-	p, err := bigIntToBytes(rawKey.Primes[0])
-	if err != nil {
-		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
+	if l > 0 {
+		p, err := bigIntToBytes(rawKey.Primes[0])
+		if err != nil {
+			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
+		}
+		k.p = p
 	}
-	k.p = p
 
-	q, err := bigIntToBytes(rawKey.Primes[1])
-	if err != nil {
-		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
+	if l > 1 {
+		q, err := bigIntToBytes(rawKey.Primes[1])
+		if err != nil {
+			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
+		}
+		k.q = q
 	}
-	k.q = q
 
 	// dp, dq, qi are optional values
 	if v, err := bigIntToBytes(rawKey.Precomputed.Dp); err == nil {

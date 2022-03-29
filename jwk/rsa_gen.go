@@ -1179,12 +1179,6 @@ LOOP:
 	if h.n == nil {
 		return fmt.Errorf(`required field n is missing`)
 	}
-	if h.p == nil {
-		return fmt.Errorf(`required field p is missing`)
-	}
-	if h.q == nil {
-		return fmt.Errorf(`required field q is missing`)
-	}
 	return nil
 }
 
