@@ -16,6 +16,7 @@ var encryptCtxPool = sync.Pool{
 }
 
 func getEncryptCtx() *encryptCtx {
+	//nolint:forcetypeassert
 	return encryptCtxPool.Get().(*encryptCtx)
 }
 
