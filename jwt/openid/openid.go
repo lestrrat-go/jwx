@@ -19,8 +19,10 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
 	for _, pair := range t.makePairs() {
-		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		//nolint:forcetypeassert
+		key := pair.Key.(string)
+		if err := dst.Set(key, pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %s`, key)
 		}
 	}
 	return dst, nil

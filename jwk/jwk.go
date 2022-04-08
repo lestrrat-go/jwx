@@ -624,8 +624,10 @@ func cloneKey(src Key) (Key, error) {
 	}
 
 	for _, pair := range src.makePairs() {
-		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		//nolint:forcetypeassert
+		key := pair.Key.(string)
+		if err := dst.Set(key, pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %q`, key)
 		}
 	}
 	return dst, nil

@@ -63,6 +63,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var formkeys []string
 	var parseOptions []ParseOption
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHeaderKey{}:
 			hdrkeys = append(hdrkeys, option.Value().(string))

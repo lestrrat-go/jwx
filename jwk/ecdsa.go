@@ -149,8 +149,10 @@ func makeECDSAPublicKey(v interface {
 		case ECDSADKey:
 			continue
 		default:
-			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			//nolint:forcetypeassert
+			key := pair.Key.(string)
+			if err := newKey.Set(key, pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %q`, key)
 			}
 		}
 	}
