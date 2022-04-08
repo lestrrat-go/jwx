@@ -1,6 +1,17 @@
 Changes
 =======
 
+v1.2.22 08 Apr 2022
+[Bug fixes]
+  * [jws] jws.Verify was ignoring the `b64` header when it was present
+    in the protected headers (#681). Now the following should work:
+
+      jws.Sign(..., jws.WithDetachedPayload(payload))
+      // previously payload had to be base64 encoded
+      jws.Verify(..., jws.WithDetachedPayload(payload))
+
+    (note: v2 branch was not affected)
+
 v1.2.21 30 Mar 2022
 [Bug fixes]
   * [jwk] RSA keys without p and q can now be parsed.
