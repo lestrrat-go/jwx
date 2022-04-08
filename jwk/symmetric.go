@@ -50,8 +50,10 @@ func (k *symmetricKey) PublicKey() (Key, error) {
 	newKey := newSymmetricKey()
 
 	for _, pair := range k.makePairs() {
-		if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set field %s: %w`, pair.Key, err)
+		//nolint:forcetypeassert
+		key := pair.Key.(string)
+		if err := newKey.Set(key, pair.Value); err != nil {
+			return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
 		}
 	}
 	return newKey, nil

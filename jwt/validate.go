@@ -203,6 +203,7 @@ func SetValidationCtxClock(ctx context.Context, cl Clock) context.Context {
 // the current validation context. This value will always be available
 // during validation of tokens.
 func ValidationCtxClock(ctx context.Context) Clock {
+	//nolint:forcetypeassert
 	return ctx.Value(identValidationCtxClock{}).(Clock)
 }
 
@@ -211,6 +212,7 @@ func SetValidationCtxSkew(ctx context.Context, dur time.Duration) context.Contex
 }
 
 func ValidationCtxSkew(ctx context.Context) time.Duration {
+	//nolint:forcetypeassert
 	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
 }
 

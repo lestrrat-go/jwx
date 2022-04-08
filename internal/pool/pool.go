@@ -15,6 +15,7 @@ func allocBytesBuffer() interface{} {
 }
 
 func GetBytesBuffer() *bytes.Buffer {
+	//nolint:forcetypeassert
 	return bytesBufferPool.Get().(*bytes.Buffer)
 }
 
@@ -32,6 +33,7 @@ func allocBigInt() interface{} {
 }
 
 func GetBigInt() *big.Int {
+	//nolint:forcetypeassert
 	return bigIntPool.Get().(*big.Int)
 }
 
@@ -48,6 +50,7 @@ func allocKeyToErrorMap() interface{} {
 }
 
 func GetKeyToErrorMap() map[string]error {
+	//nolint:forcetypeassert
 	return keyToErrorMapPool.Get().(map[string]error)
 }
 
