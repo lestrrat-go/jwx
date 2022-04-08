@@ -15,4 +15,4 @@ require (
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 )
 
-retract v1.2.16
+retract v1.2.16 // Packaging problems.

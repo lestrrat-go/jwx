@@ -165,6 +165,7 @@ func Sign(payload []byte, alg jwa.SignatureAlgorithm, key interface{}, options .
 func SignMulti(payload []byte, options ...Option) ([]byte, error) {
 	var signers []*payloadSigner
 	for _, o := range options {
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identPayloadSigner{}:
 			signers = append(signers, o.Value().(*payloadSigner))

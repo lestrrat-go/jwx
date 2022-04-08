@@ -28,11 +28,14 @@ linters:
     - gofumpt
     - golint #deprecated
     - gomnd
+    - gomoddirectives # I think it's broken
     - gosec
     - govet
     - interfacer # deprecated
     - ifshort
+    - ireturn # No, I _LIKE_ returning interfaces
     - lll
+    - maintidx # Do this in code review
     - maligned # deprecated
     - makezero
     - nakedret
@@ -42,7 +45,8 @@ linters:
     - scopelint # deprecated
     - tagliatelle
     - testpackage
-    - thelper
+    - thelper    # Tests are fine
+    - varnamelen # Short names are ok
     - wrapcheck
     - wsl
 
@@ -63,9 +67,15 @@ issues:
     - path: internal/codegen/codegen.go
       linters:
         - errcheck
+    - path: internal/jwxtest/jwxtest.go
+      linters:
+        - errcheck
+        - errchkjson
+        - forcetypeassert
     - path: /*_test.go
       linters:
         - errcheck
+        - errchkjson
         - forcetypeassert
     - path: /*_example_test.go
       linters:

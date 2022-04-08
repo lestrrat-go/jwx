@@ -81,10 +81,12 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		}
 
 		prt := NewHeaders()
+		//nolint:forcetypeassert
 		prt.(*stdHeaders).SetDecodeCtx(s.DecodeCtx())
 		if err := json.Unmarshal(src, prt); err != nil {
 			return errors.Wrap(err, `failed to unmarshal protected headers`)
 		}
+		//nolint:forcetypeassert
 		prt.(*stdHeaders).SetDecodeCtx(nil)
 		s.protected = prt
 	}
@@ -305,10 +307,12 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 				return errors.Wrap(err, `failed to base64 decode flattened protected headers`)
 			}
 			prt := NewHeaders()
+			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(m.DecodeCtx())
 			if err := json.Unmarshal(decoded, prt); err != nil {
 				return errors.Wrap(err, `failed to unmarshal flattened protected headers`)
 			}
+			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(nil)
 			sig.protected = prt
 		}

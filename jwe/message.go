@@ -395,8 +395,10 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		m.rawProtectedHeaders = base64.Encode(protectedHeadersRaw)
 	}
 
-	if !proxy.UnprotectedHeaders.(isZeroer).isZero() {
-		m.unprotectedHeaders = proxy.UnprotectedHeaders
+	if iz, ok := proxy.UnprotectedHeaders.(isZeroer); ok {
+		if !iz.isZero() {
+			m.unprotectedHeaders = proxy.UnprotectedHeaders
+		}
 	}
 
 	if len(m.recipients) == 0 {

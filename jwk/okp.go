@@ -85,6 +85,7 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 	switch alg {
 	case jwa.Ed25519:
 		ret := ed25519.NewKeyFromSeed(dbuf)
+		//nolint:forcetypeassert
 		if !bytes.Equal(xbuf, ret.Public().(ed25519.PublicKey)) {
 			return nil, errors.Errorf(`invalid x value given d value`)
 		}
@@ -94,6 +95,7 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 		if err != nil {
 			return nil, errors.Wrap(err, `unable to construct x25519 private key from seed`)
 		}
+		//nolint:forcetypeassert
 		if !bytes.Equal(xbuf, ret.Public().(x25519.PublicKey)) {
 			return nil, errors.Errorf(`invalid x value given d value`)
 		}
@@ -126,8 +128,10 @@ func makeOKPPublicKey(v interface {
 		case OKPDKey:
 			continue
 		default:
-			if err := newKey.Set(pair.Key.(string), pair.Value); err != nil {
-				return nil, errors.Wrapf(err, `failed to set field %s`, pair.Key)
+			//nolint:forcetypeassert
+			key := pair.Key.(string)
+			if err := newKey.Set(key, pair.Value); err != nil {
+				return nil, errors.Wrapf(err, `failed to set field %q`, key)
 			}
 		}
 	}

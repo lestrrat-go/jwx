@@ -61,6 +61,7 @@ var ecpointBufferPool = sync.Pool{
 }
 
 func getCrvFixedBuffer(size int) []byte {
+	//nolint:forcetypeassert
 	buf := *(ecpointBufferPool.Get().(*[]byte))
 	if size > ec521BufferSize && cap(buf) < size {
 		buf = append(buf, make([]byte, size-cap(buf))...)
