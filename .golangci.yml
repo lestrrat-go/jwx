@@ -28,6 +28,7 @@ linters:
     - gofumpt
     - golint #deprecated
     - gomnd
+    - gomoddirectives # I think it's broken
     - gosec
     - govet
     - interfacer # deprecated
