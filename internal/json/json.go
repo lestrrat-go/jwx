@@ -108,5 +108,6 @@ func (dc *decodeCtx) Registry() *Registry {
 func Dump(v interface{}) {
 	enc := NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
+	//nolint:errchkjson
 	_ = enc.Encode(v)
 }

@@ -66,9 +66,15 @@ issues:
     - path: internal/codegen/codegen.go
       linters:
         - errcheck
+    - path: internal/jwxtest/jwxtest.go
+      linters:
+        - errcheck
+        - errchkjson
+        - forcetypeassert
     - path: /*_test.go
       linters:
         - errcheck
+        - errchkjson
         - forcetypeassert
     - path: /*_example_test.go
       linters:
