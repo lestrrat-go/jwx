@@ -52,6 +52,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 			continue
 		}
 
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
 			hrfopts = append(hrfopts, httprc.WithHTTPClient(option.Value().(HTTPClient)))

@@ -22,6 +22,7 @@ func (fn MapVisitorFunc) Visit(s string, v interface{}) error {
 
 func WalkMap(ctx context.Context, src mapiter.Source, visitor MapVisitor) error {
 	return mapiter.Walk(ctx, src, mapiter.VisitorFunc(func(k, v interface{}) error {
+		//nolint:forcetypeassert
 		return visitor.Visit(k.(string), v)
 	}))
 }

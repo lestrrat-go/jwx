@@ -90,6 +90,7 @@ func (t *jwksTransform) Transform(u string, res *http.Response) (interface{}, er
 func NewCache(ctx context.Context, options ...CacheOption) *Cache {
 	var hrcopts []httprc.CacheOption
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identRefreshWindow{}:
 			hrcopts = append(hrcopts, httprc.WithRefreshWindow(option.Value().(time.Duration)))
