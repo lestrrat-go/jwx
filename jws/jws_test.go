@@ -1778,3 +1778,20 @@ func TestJKU(t *testing.T) {
 		}
 	})
 }
+
+func TestGH681(t *testing.T) {
+	privkey, err := jwxtest.GenerateRsaKey()
+	if !assert.NoError(t, err, "failed to create private key") {
+		return
+	}
+
+	buf, err := jws.Sign(nil, jwa.RS256, privkey, jws.WithDetachedPayload([]byte("Lorem ipsum")))
+	if !assert.NoError(t, err, "failed to sign payload") {
+		return
+	}
+
+	_, err = jws.Verify(buf, jwa.RS256, &privkey.PublicKey, jws.WithDetachedPayload([]byte("Lorem ipsum")))
+	if !assert.NoError(t, err, "failed to verify JWS message") {
+		return
+	}
+}

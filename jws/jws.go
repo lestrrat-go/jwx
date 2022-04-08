@@ -476,16 +476,6 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, `failed extract from compact serialization format`)
 	}
 
-	verifyBuf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(verifyBuf)
-
-	verifyBuf.Write(protected)
-	verifyBuf.WriteByte('.')
-	if len(payload) == 0 && ctx.detachedPayload != nil {
-		payload = ctx.detachedPayload
-	}
-	verifyBuf.Write(payload)
-
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to decode signature`)
@@ -500,6 +490,20 @@ func (ctx *verifyCtx) verifyCompact(signed []byte) ([]byte, error) {
 	if err := json.Unmarshal(decodedProtected, hdr); err != nil {
 		return nil, errors.Wrap(err, `failed to decode headers`)
 	}
+
+	verifyBuf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(verifyBuf)
+
+	verifyBuf.Write(protected)
+	verifyBuf.WriteByte('.')
+	if len(payload) == 0 && ctx.detachedPayload != nil {
+		if getB64Value(hdr) {
+			payload = base64.Encode(ctx.detachedPayload)
+		} else {
+			payload = ctx.detachedPayload
+		}
+	}
+	verifyBuf.Write(payload)
 
 	if !ctx.useJKU {
 		if hdr.KeyID() != "" {
