@@ -95,10 +95,8 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 			switch e := e.(type) {
 			case error:
 				err = e
-			case string:
-				err = fmt.Errorf("%s", e)
 			default:
-				err = fmt.Errorf("%w", e)
+				err = fmt.Errorf("%s", e)
 			}
 			err = fmt.Errorf(`failed to encrypt: %w`, err)
 		}
@@ -141,10 +139,8 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 			switch e := e.(type) {
 			case error:
 				err = e
-			case string:
-				err = fmt.Errorf(`%s`, e)
 			default:
-				err = fmt.Errorf("%w", e)
+				err = fmt.Errorf(`%s`, e)
 			}
 			err = fmt.Errorf(`failed to decrypt: %w`, err)
 			return
