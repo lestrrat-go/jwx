@@ -243,21 +243,16 @@ jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)
 * [jws] `jws.WithCompact` and `jws.WithJSON` options have been added
   to control the serialization format.
 
-* [jws] jws.Verify()'s method signature has been changed to
-
-```go
-jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)
-```
-
+* [jws] jws.Verify()'s method signature has been changed to `jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)`
+  These options can be stacked. Therefore, you could configure the
+  verification process to attempt a static key pair, a JWKS, and only
+  try other forms if the first two fails, for example.
+ 
   - For static key pair, use `jws.WithKey()`
   - For static JWKS, use `jws.WithKeySet()`
   - For enabling verification using `jku`, use `jws.WithVerifyAuto()`
   - For custom, possibly dynamic key provisioning, use `jws.WithKeyProvider()`
 
-  These options can be stacked. Therefore, you could configure the
-  verification process to attempt a static key pair, a JWKS, and only
-  try other forms if the first two fails, for example.
- 
 * [jws] jws.WithVerify() has been removed.
 
 * [jws] jws.WithKey() has been added to specify an algorithm + key to
