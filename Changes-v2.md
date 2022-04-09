@@ -11,7 +11,7 @@ These are changes that are incompatible with the v1.x.x version.
 
 ```go
 // most basic
-jwt.Parse(serialized, jwt.WithKey(alg, key))
+jwt.Parse(serialized, jwt.WithKey(alg, key)) // NOTE: verification and validation are ENABLED by default!
 jwt.Sign(token, jwt.WithKey(alg,key))
 
 // with a jwk.Set
@@ -137,7 +137,9 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
 * [jwe] jwe.Decrypt()'s method signature has been changed to
 
-    jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)
+```go
+jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)
+```
 
   - For static key pair, use `jwe.WithKey()`
   - For static JWKS, use `jwe.WithKeySet()` (NOTE: InferAlgorithmFromKey like in `jws` package is NOT supported)
@@ -243,7 +245,9 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
 * [jws] jws.Verify()'s method signature has been changed to
 
-    jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)
+```go
+jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)
+```
 
   - For static key pair, use `jws.WithKey()`
   - For static JWKS, use `jws.WithKeySet()`
@@ -265,16 +269,18 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
   The option can take further suboptions:
 
-    jws.Parse(serialized,
-      jws.WithKeySet(set,
-        // by default `kid` is required. set false to disable.
-        jws.WithRequireKid(false),
-        // optionally skip matching kid if there's exactly one key in set
-        jws.WithUseDefault(true),
-        // infer algorithm name from key type
-        jws.WithInferAlgorithm(true),
-      ),
-    )
+```go
+jws.Parse(serialized,
+  jws.WithKeySet(set,
+    // by default `kid` is required. set false to disable.
+    jws.WithRequireKid(false),
+    // optionally skip matching kid if there's exactly one key in set
+    jws.WithUseDefault(true),
+    // infer algorithm name from key type
+    jws.WithInferAlgorithm(true),
+  ),
+)
+```
 
 * [jws] `jws.VerifuAuto` has been removed in favor of using
   `jws.WithVerifyAuto` option with `jws.Verify()`
@@ -326,29 +332,30 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 * [jwt] `jwt.UseDefault()` has been removed. You should use `jws.WithUseDefault()`
   as a suboption in the `jwt.WithKeySet()` option.
 
-    jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithUseDefault(true)))
+```go
+jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithUseDefault(true)))
+```
 
 * [jwt] `jwt.InferAlgorithmFromKey()` has been removed. You should use
   `jws.WithInferAlgorithmFromKey()` as a suboption in the `jwt.WithKeySet()` option.
 
-    jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true)))
+```go
+jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true)))
+```
 
-* [jwt] jwt.WithKeySetProvider has been removed. The original purpose was to
-  use the JWT data (such as `iss`) to figure out which key to use for
-  verification. However, this can easily be implemented as follows:
-https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes.v2
-    msg, _ := jws.Parse(serialized) // no verification
-    token, _ := jwt.Parse(msg.Payload()) // no verification
-    switch token.Issuer() {
-    case jwt.IssuerKey:
-      _, err := jws.Verify(serialized, jwt.WithKeySet(set))
-      if err != nil {
-        ...
-      }
-    }
+* [jwt] jwt.WithKeySetProvider has been removed. Use `jwt.WithKeyProvider()`
+  instead. If jwt.WithKeyProvider seems a bit complicated,  use a combination of
+  JWS parse, no-verify/validate JWT parse, and an extra JWS verify:
 
-  Also, this really... is not safe. You are using an unverified payload
-  to verify the JWS.
+```go
+msg, _ := jws.Parse(signed)
+token, _ := jwt.Parse(msg.Payload(), jwt.WithVerify(false), jwt.WithValidate(false))
+// Get information out of token, for example, `iss`
+switch token.Issuer() {
+case ...:
+  jws.Verify(signed, jwt.WithKey(...))
+}
+```
 
 * [jws] Remove `jws.WithPayloadSigner()`. This should be completely repleceable
   using `jws.WithKey()`
