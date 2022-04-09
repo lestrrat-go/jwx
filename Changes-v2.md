@@ -10,80 +10,80 @@ These are changes that are incompatible with the v1.x.x version.
 ## JWT 
 
 ```go
-    // most basic
-    jwt.Parse(serialized, jwt.WithKey(alg, key))
-    jwt.Sign(token, jwt.WithKey(alg,key))
+// most basic
+jwt.Parse(serialized, jwt.WithKey(alg, key))
+jwt.Sign(token, jwt.WithKey(alg,key))
 
-    // with a jwk.Set
-    jwt.Parse(serialized, jwt.WithKeySet(set))
+// with a jwk.Set
+jwt.Parse(serialized, jwt.WithKeySet(set))
 
-    // UseDefault/InferAlgorithm with JWKS
-    jwt.Parse(serialized, jwt.WithKeySet(set,
-      jws.WithUseDefault(true), jws.WithInferAlgorithm(true))
+// UseDefault/InferAlgorithm with JWKS
+jwt.Parse(serialized, jwt.WithKeySet(set,
+  jws.WithUseDefault(true), jws.WithInferAlgorithm(true))
 
-    // Use `jku`
-    jwt.Parse(serialized, jwt.WithVerifyAuto(...))
+// Use `jku`
+jwt.Parse(serialized, jwt.WithVerifyAuto(...))
 
-    // Any other custom key provisioning (using functions in this
-    // example, but can be anything that fulfills jws.KeyProvider)
-    jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
+// Any other custom key provisioning (using functions in this
+// example, but can be anything that fulfills jws.KeyProvider)
+jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(...)))
 ```
 
 ## JWK
 
 ```go
-    // jwk.New() was confusing. Renamed to fit the actual implementation
-    key, err := jwk.FromRaw(rawKey)
+// jwk.New() was confusing. Renamed to fit the actual implementation
+key, err := jwk.FromRaw(rawKey)
 
-    // Algorithm() now returns jwa.KeyAlgorithm type. `jws.Sign()`
-    // and other function that receive JWK algorithm names accept
-    // this new type, so you can use the same key and do the following
-    // (previosly you needed to type assert)
-    jws.Sign(payload, jws.WithKey(key.Algorithm(), key))
+// Algorithm() now returns jwa.KeyAlgorithm type. `jws.Sign()`
+// and other function that receive JWK algorithm names accept
+// this new type, so you can use the same key and do the following
+// (previosly you needed to type assert)
+jws.Sign(payload, jws.WithKey(key.Algorithm(), key))
 
-    // If you need the specific type, type assert
-    key.Algorithm().(jwa.SignatureAlgorithm)
+// If you need the specific type, type assert
+key.Algorithm().(jwa.SignatureAlgorithm)
 
-    // jwk.AutoRefresh is no more. Use jwk.Cache
-    cache := jwk.NewCache(ctx, options...)
+// jwk.AutoRefresh is no more. Use jwk.Cache
+cache := jwk.NewCache(ctx, options...)
 
-    // Certificate chains are no longer jwk.CertificateChain type, but
-    // *(github.com/lestrrat-go/jwx/cert).Chain
-    cc := key.X509CertChain() // this is *cert.Chain now
+// Certificate chains are no longer jwk.CertificateChain type, but
+// *(github.com/lestrrat-go/jwx/cert).Chain
+cc := key.X509CertChain() // this is *cert.Chain now
 ```
 
 ## JWS
 
 ```go
-    // basic
-    jws.Sign(payload, jws.WithKey(alg, key))
-    jws.Sign(payload, jws.WithKey(alg, key), jws.WithKey(alg, key), jws.WithJSON(true))
-    jws.Verify(signed, jws.WithKey(alg, key))
+// basic
+jws.Sign(payload, jws.WithKey(alg, key))
+jws.Sign(payload, jws.WithKey(alg, key), jws.WithKey(alg, key), jws.WithJSON(true))
+jws.Verify(signed, jws.WithKey(alg, key))
 
-    // other ways to pass the key
-    jws.Sign(payload, jws.WithKeySet(jwks))
-    jws.Sign(payload, jws.WithKeyProvider(kp))
+// other ways to pass the key
+jws.Sign(payload, jws.WithKeySet(jwks))
+jws.Sign(payload, jws.WithKeyProvider(kp))
 
-    // retrieve the key that succeeded in verifying
-    var keyUsed interface{}
-    jws.Verify(signed, jws.WithKeySet(jwks), jws.WithKeyUsed(&keyUsed))
+// retrieve the key that succeeded in verifying
+var keyUsed interface{}
+jws.Verify(signed, jws.WithKeySet(jwks), jws.WithKeyUsed(&keyUsed))
 ```
 
 ## JWE 
 
 ```go
-    // basic
-    jwe.Encrypt(payload, jwe.WithKey(alg, key)) // other defaults are infered
-    jwe.Encrypt(payload, jwe.WithKey(alg, key), jwe.WithKey(alg, key), jwe.WithJSON(true))
-    jwe.Decrypt(encrypted, jwe.WithKey(alg, key))
+// basic
+jwe.Encrypt(payload, jwe.WithKey(alg, key)) // other defaults are infered
+jwe.Encrypt(payload, jwe.WithKey(alg, key), jwe.WithKey(alg, key), jwe.WithJSON(true))
+jwe.Decrypt(encrypted, jwe.WithKey(alg, key))
 
-    // other ways to pass the key
-    jwe.Encrypt(payload, jwe.WithKeySet(jwks))
-    jwe.Encrypt(payload, jwe.WithKeyProvider(kp))
+// other ways to pass the key
+jwe.Encrypt(payload, jwe.WithKeySet(jwks))
+jwe.Encrypt(payload, jwe.WithKeyProvider(kp))
 
-    // retrieve the key that succeeded in decrypting
-    var keyUsed interface{}
-    jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
+// retrieve the key that succeeded in decrypting
+var keyUsed interface{}
+jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 ```
 
 # Detailed List of Changes
