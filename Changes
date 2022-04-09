@@ -2,8 +2,16 @@ Changes
 =======
 
 v2 has many incompatibilities with v1. To see the full list of differences between
-v1 and v2, please read the Changes.v2 file
+v1 and v2, please read the Changes.v2 file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
-v2.0.0-alpha1 - 4 Apr 2022
+v2.0.0-beta1 - 09 Apr 2022
+[Miscellaneous]
+  * Renamed Changes.v2 to Changes-v2.md
+  * Housecleaning for lint action.
+  * While v2 was not affected, ported over equivalent test for #681 to catch
+    regressions in the future.
+  * Please note that there is no stability guarantees on pre-releases.
+
+v2.0.0-alpha1 - 04 Apr 2022
   * Initial pre-release of v2 line. Please note that there is no stability guarantees
     on pre-releases.
