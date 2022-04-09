@@ -135,19 +135,14 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 * [jwe] `jwe.WithCompact` and `jwe.WithJSON` options have been added
   to control the serialization format.
 
-* [jwe] jwe.Decrypt()'s method signature has been changed to
-
-```go
-jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)
-```
+* [jwe] jwe.Decrypt()'s method signature has been changed to `jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)`.
+  These options can be stacked. Therefore, you could configure the
+  verification process to attempt a static key pair, a JWKS, and only
+  try other forms if the first two fails, for example.
 
   - For static key pair, use `jwe.WithKey()`
   - For static JWKS, use `jwe.WithKeySet()` (NOTE: InferAlgorithmFromKey like in `jws` package is NOT supported)
   - For custom, possibly dynamic key provisioning, use `jwe.WithKeyProvider()`
-
-  These options can be stacked. Therefore, you could configure the
-  verification process to attempt a static key pair, a JWKS, and only
-  try other forms if the first two fails, for example.
 
 * [jwe] jwe.Decrypter has been unexported. Users did not need this.
  
@@ -243,7 +238,7 @@ jwt.Decrypt([]byte, ...jwe.DecryptOption) ([]byte, error)
 * [jws] `jws.WithCompact` and `jws.WithJSON` options have been added
   to control the serialization format.
 
-* [jws] jws.Verify()'s method signature has been changed to `jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)`
+* [jws] jws.Verify()'s method signature has been changed to `jwt.Verify([]byte, ...jws.VerifyOption) ([]byte, error)`.
   These options can be stacked. Therefore, you could configure the
   verification process to attempt a static key pair, a JWKS, and only
   try other forms if the first two fails, for example.
