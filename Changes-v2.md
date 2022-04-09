@@ -1,9 +1,9 @@
-Changes
-=======
-
-# Incompatible Changes
+# Incompatible Changes from v1 to v2
 
 These are changes that are incompatible with the v1.x.x version.
+
+* [tl;dr](#tldr) - If you don't feel like reading the details -- but you will read the details, right?
+* [Detailed List of Changes](#detailed-list-of-changes) - A comprehensive list of changes from v1 to v2
 
 # tl;dr
 
@@ -71,7 +71,7 @@ These are changes that are incompatible with the v1.x.x version.
 
 ## JWE 
 
-``go
+```go
     // basic
     jwe.Encrypt(payload, jwe.WithKey(alg, key)) // other defaults are infered
     jwe.Encrypt(payload, jwe.WithKey(alg, key), jwe.WithKey(alg, key), jwe.WithJSON(true))
