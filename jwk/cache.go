@@ -22,7 +22,7 @@ type Whitelist = httprc.Whitelist
 // Before retrieving the Set objects, the user must pre-register the
 // URLs they intend to use by calling `Register()`
 //
-//  c := jwk.New(ctx)
+//  c := jwk.NewCache(ctx)
 //  c.Register(url, options...)
 //
 // Once registered, you can call `Get()` to retrieve the Set object.
