@@ -489,9 +489,9 @@ func (af *AutoRefresh) refreshLoop(ctx context.Context) {
 func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableBackoff bool) error {
 	af.muRegistry.RLock()
 	t, ok := af.registry[url]
-	af.muRegistry.RUnlock()
 
 	if !ok {
+		af.muRegistry.RUnlock()
 		return errors.Errorf(`url "%s" is not registered`, url)
 	}
 
@@ -505,6 +505,7 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 	if t.wl != nil {
 		fetchOptions = append(fetchOptions, WithFetchWhitelist(t.wl))
 	}
+	af.muRegistry.RUnlock()
 
 	res, err := fetch(ctx, url, fetchOptions...)
 	if err == nil {
@@ -520,7 +521,9 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 				af.muCache.Lock()
 				af.cache[url] = keyset
 				af.muCache.Unlock()
+				af.muRegistry.RLock()
 				nextInterval := calculateRefreshDuration(res, t.refreshInterval, t.minRefreshInterval)
+				af.muRegistry.RUnlock()
 				rtr := &resetTimerReq{
 					t: t,
 					d: nextInterval,
@@ -532,8 +535,10 @@ func (af *AutoRefresh) doRefreshRequest(ctx context.Context, url string, enableB
 				}
 
 				now := time.Now()
+				af.muRegistry.Lock()
 				t.lastRefresh = now.Local()
 				t.nextRefresh = now.Add(nextInterval).Local()
+				af.muRegistry.Unlock()
 				return nil
 			}
 			err = parseErr
