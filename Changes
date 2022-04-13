@@ -1,6 +1,13 @@
 Changes
 =======
 
+v1.2.23 13 Apr 2022
+[Bug fixes]
+  * [jwk] jwk.AutoRefresh had a race condition when `Configure()` was
+    called concurrently (#686)
+    (It has been patched correctly, but we may come back to revisit
+     the design choices in the near future)
+
 v1.2.22 08 Apr 2022
 [Bug fixes]
   * [jws] jws.Verify was ignoring the `b64` header when it was present

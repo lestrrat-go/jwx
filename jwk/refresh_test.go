@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:revive,golint
@@ -383,4 +384,51 @@ func TestErrorSink(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAutoRefreshRace(t *testing.T) {
+	k, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+		return
+	}
+	set := jwk.NewSet()
+	set.Add(k)
+
+	// set up a server that always success since we need to update the registered target
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(k)
+	}))
+	defer srv.Close()
+
+	// configure a unique auto-refresh
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	ar := jwk.NewAutoRefresh(ctx)
+	ch := make(chan jwk.AutoRefreshError, 256) // big buffer
+	ar.ErrorSink(ch)
+
+	wg := sync.WaitGroup{}
+	routineErr := make(chan error, 20)
+
+	// execute a bunch of parallel refresh forcing the requests to the server
+	// need to simulate configure happening also in the goroutine since this is
+	// the cause of races when refresh is updating the registered targets
+	for i := 0; i < 5000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx := context.Background()
+
+			ar.Configure(srv.URL, jwk.WithRefreshInterval(500*time.Millisecond))
+			_, err := ar.Refresh(ctx, srv.URL)
+
+			if err != nil {
+				routineErr <- err
+			}
+		}()
+	}
+	wg.Wait()
+
+	require.Len(t, routineErr, 0)
 }
