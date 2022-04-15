@@ -310,6 +310,7 @@ func (cs *CachedSet) Index(key Key) int {
 }
 
 func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
+	//nolint:contextcheck
 	set, err := cs.cached()
 	if err != nil {
 		return arrayiter.New(nil)
@@ -319,6 +320,7 @@ func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
 }
 
 func (cs *CachedSet) Iterate(ctx context.Context) HeaderIterator {
+	//nolint:contextcheck
 	set, err := cs.cached()
 	if err != nil {
 		return mapiter.New(nil)

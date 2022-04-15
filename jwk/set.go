@@ -312,10 +312,9 @@ func (s *set) Clone() (Set, error) {
 	return s2, nil
 }
 
-func (set *set) makePairs() []*HeaderPair {
-	var pairs []*HeaderPair
-
-	for k, v := range set.privateParams {
+func (s *set) makePairs() []*HeaderPair {
+	pairs := make([]*HeaderPair, 0, len(s.privateParams))
+	for k, v := range s.privateParams {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
 	sort.Slice(pairs, func(i, j int) bool {
@@ -325,8 +324,8 @@ func (set *set) makePairs() []*HeaderPair {
 	return pairs
 }
 
-func (set *set) Iterate(ctx context.Context) HeaderIterator {
-	pairs := set.makePairs()
+func (s *set) Iterate(ctx context.Context) HeaderIterator {
+	pairs := s.makePairs()
 	ch := make(chan *HeaderPair, len(pairs))
 	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
 		defer close(ch)

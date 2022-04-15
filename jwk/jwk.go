@@ -143,7 +143,9 @@ func PublicSetOf(v Set) (Set, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to get public key of %T: %w`, k, err)
 		}
-		newSet.AddKey(pubKey)
+		if err := newSet.AddKey(pubKey); err != nil {
+			return nil, fmt.Errorf(`failed to add key to public key set: %w`, err)
+		}
 	}
 
 	return newSet, nil
@@ -525,7 +527,9 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, fmt.Errorf(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
-			s.AddKey(key)
+			if err := s.AddKey(key); err != nil {
+				return nil, fmt.Errorf(`failed to add jwk.Key to set: %w`, err)
+			}
 			src = bytes.TrimSpace(rest)
 		}
 		return s, nil
@@ -641,7 +645,9 @@ func Pem(v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case Key:
 		set = NewSet()
-		set.AddKey(v)
+		if err := set.AddKey(v); err != nil {
+			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
+		}
 	case Set:
 		set = v
 	default:
