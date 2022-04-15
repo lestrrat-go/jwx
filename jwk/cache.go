@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/httprc"
 	"github.com/lestrrat-go/iter/arrayiter"
+	"github.com/lestrrat-go/iter/mapiter"
 )
 
 type Transformer = httprc.Transformer
@@ -215,7 +216,13 @@ func (c *Cache) Snapshot() *httprc.Snapshot {
 	return c.cache.Snapshot()
 }
 
-// CachedSet is a thin shim over jwk.Cache that
+// CachedSet is a thin shim over jwk.Cache that allows the user to cloack
+// jwk.Cache as if it's a `jwk.Set`. Behind the scenes, the `jwk.Set` is
+// retrieved from the `jwk.Cache` for every operation.
+//
+// Since `jwk.CachedSet` always deals with a cached version of the `jwk.Set`,
+// all operations that mutate the object (such as AddKey(), RemoveKey(), et. al)
+// are no-ops and return an error.
 //
 // Note that since this is a utility shim over `jwk.Cache`, you _will_ lose
 // the ability to control the finer details (such as controlling how long to
@@ -239,27 +246,29 @@ func (cs *CachedSet) cached() (Set, error) {
 }
 
 // Add is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (_ *CachedSet) Add(_ Key) bool {
-	// TODO: Add() should be renamed to AddKey() error
-	panic(`(jwk.Cachedset).Add: jwk.CachedSet is immutable`)
+func (*CachedSet) AddKey(_ Key) error {
+	return fmt.Errorf(`(jwk.Cachedset).AddKey: jwk.CachedSet is immutable`)
 }
 
 // Clear is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (_ *CachedSet) Clear() {
-	// TODO: Clear() should be renamed to Clear() error
-	panic(`(jwk.CachedSet).Clear: jwk.CachedSet is immutable`)
+func (*CachedSet) Clear() error {
+	return fmt.Errorf(`(jwk.CachedSet).Clear: jwk.CachedSet is immutable`)
 }
 
 // Set is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (_ *CachedSet) Set(_ string, _ interface{}) error {
-	// TODO: Set() should be renamed to SetField(string, interface{}) error
-	panic(`(jwk.CachedSet).Set: jwk.CachedSet is immutable`)
+func (*CachedSet) Set(_ string, _ interface{}) error {
+	return fmt.Errorf(`(jwk.CachedSet).Set: jwk.CachedSet is immutable`)
 }
 
 // Remove is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (_ *CachedSet) Remove(_ Key) bool {
+func (*CachedSet) Remove(_ string) error {
 	// TODO: Remove() should be renamed to Remove(string) error
-	panic(`(jwk.CachedSet).Remove: jwk.CachedSet is immutable`)
+	return fmt.Errorf(`(jwk.CachedSet).Remove: jwk.CachedSet is immutable`)
+}
+
+// RemoveKey is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
+func (*CachedSet) RemoveKey(_ Key) error {
+	return fmt.Errorf(`(jwk.CachedSet).RemoveKey: jwk.CachedSet is immutable`)
 }
 
 func (cs *CachedSet) Clone() (Set, error) {
@@ -271,22 +280,24 @@ func (cs *CachedSet) Clone() (Set, error) {
 	return set.Clone()
 }
 
-func (cs *CachedSet) Field(name string) (interface{}, bool) {
+// Get returns the value of non-Key field stored in the jwk.Set
+func (cs *CachedSet) Get(name string) (interface{}, bool) {
 	set, err := cs.cached()
 	if err != nil {
 		return nil, false
 	}
 
-	return set.Field(name)
+	return set.Get(name)
 }
 
-func (cs *CachedSet) Get(idx int) (Key, bool) {
+// Key returns the Key at the specified index
+func (cs *CachedSet) Key(idx int) (Key, bool) {
 	set, err := cs.cached()
 	if err != nil {
 		return nil, false
 	}
 
-	return set.Get(idx)
+	return set.Key(idx)
 }
 
 func (cs *CachedSet) Index(key Key) int {
@@ -298,10 +309,19 @@ func (cs *CachedSet) Index(key Key) int {
 	return set.Index(key)
 }
 
-func (cs *CachedSet) Iterate(ctx context.Context) KeyIterator {
+func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
 	set, err := cs.cached()
 	if err != nil {
 		return arrayiter.New(nil)
+	}
+
+	return set.Keys(ctx)
+}
+
+func (cs *CachedSet) Iterate(ctx context.Context) HeaderIterator {
+	set, err := cs.cached()
+	if err != nil {
+		return mapiter.New(nil)
 	}
 
 	return set.Iterate(ctx)

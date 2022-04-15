@@ -24,7 +24,7 @@ func TestSet(t *testing.T) {
 		if !assert.NoError(t, err, `key generation should succeed`) {
 			return
 		}
-		if !assert.True(t, set.Add(k), `set.Add should succeed`) {
+		if !assert.NoError(t, set.AddKey(k), `set.AddKey should succeed`) {
 			return
 		}
 		keys = append(keys, k)
@@ -41,7 +41,7 @@ func TestSet(t *testing.T) {
 	}
 
 	for _, k := range keys {
-		if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
+		if !assert.NoError(t, set.RemoveKey(k), `set.RemoveKey should succeed`) {
 			return
 		}
 	}
@@ -55,7 +55,7 @@ func TestSet(t *testing.T) {
 		if !assert.NoError(t, err, `key generation should succeed`) {
 			return
 		}
-		if !assert.True(t, set.Add(k), `set.Add should succeed`) {
+		if !assert.NoError(t, set.AddKey(k), `set.Add should succeed`) {
 			return
 		}
 	}

@@ -174,6 +174,17 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 * `jwk.New()` has been renamed to `jwk.FromRaw()`, which hopefully will
   make it easier for the users what the input should be.
 
+* `jwk.Set` has many interface changes:
+  * Changed methods to match jwk.Key and its semantics:
+    * Field is now Get() (returns values for arbitrary fields other than keys). Fetching a key is done via Key()
+    * Remove() now removes arbitrary fields, not keys. to remove keys, use RemoveKey()
+    * Iterate has been added to iterate through all non-key fields.
+  * Add is now AddKey(Key) string
+  * Get is now Key(int) (Key, bool)
+  * Remove is now RemoveKey(Key) error
+  * Iterate is now Keys(context.Context) KeyIterator
+  * Clear is now Clear() error
+
 * `jwk.NewRSAPRivateKey()`, `jwk.NewECDSAPrivateKey()`, etc have been removed.
   There is no longer any way to create concrete types of `jwk.Key` 
 
