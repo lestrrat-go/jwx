@@ -185,6 +185,17 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
   * Iterate is now Keys(context.Context) KeyIterator
   * Clear is now Clear() error
 
+* `jwk.CachedSet` has been added. You can create a `jwk.Set` that is backed by
+  `jwk.Cache` so you can do this:
+
+```go
+cache := jkw.NewCache(ctx)
+cachedSet := jwk.NewCachedSet(cache, jwksURI)
+
+// cachedSet is always the refreshed, cached version from jwk.Cache
+jws.Verify(signed, jws.WithKeySet(cachedSet))
+```
+
 * `jwk.NewRSAPRivateKey()`, `jwk.NewECDSAPrivateKey()`, etc have been removed.
   There is no longer any way to create concrete types of `jwk.Key` 
 
