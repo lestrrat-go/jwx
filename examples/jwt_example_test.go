@@ -73,7 +73,7 @@ func ExampleJWT_ParseWithJWKS() {
 
 			// This JWKS can *only* have 1 key.
 			keyset = jwk.NewSet()
-			keyset.Add(pubKey)
+			keyset.AddKey(pubKey)
 		}
 
 		{
