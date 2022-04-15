@@ -118,7 +118,6 @@ func TestCache(t *testing.T) {
 				return
 			}
 		}
-
 	})
 	t.Run("Specify explicit refresh interval", func(t *testing.T) {
 		t.Parallel()
