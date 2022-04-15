@@ -313,7 +313,7 @@ func TestParse(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			for iter := set.Iterate(ctx); iter.Next(ctx); {
+			for iter := set.Keys(ctx); iter.Next(ctx); {
 				pair := iter.Pair()
 				if !assert.True(t, reflect.TypeOf(pair.Value).AssignableTo(expected), "key should be a %s", expected) {
 					return
@@ -331,7 +331,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for iter := set.Iterate(context.TODO()); iter.Next(context.TODO()); {
+			for iter := set.Keys(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
 				key := pair.Value.(jwk.Key)
 
@@ -651,7 +651,7 @@ func TestRoundtrip(t *testing.T) {
 		if !assert.NoError(t, err, `tc.generate should succeed`) {
 			return
 		}
-		if !assert.True(t, ks1.Add(key), `ks1.Add should succeed`) {
+		if !assert.NoError(t, ks1.AddKey(key), `ks1.Add should succeed`) {
 			return
 		}
 	}
@@ -928,7 +928,7 @@ func TestPublicKeyOf(t *testing.T) {
 				Key:           jwkKey,
 				PublicKeyType: key.PublicKeyType,
 			})
-			set.Add(jwkKey)
+			set.AddKey(jwkKey)
 			count++
 		}
 
@@ -938,7 +938,7 @@ func TestPublicKeyOf(t *testing.T) {
 		}
 
 		for i, key := range setKeys {
-			setKey, ok := newSet.Get(i)
+			setKey, ok := newSet.Key(i)
 			if !assert.True(t, ok, `element %d should be present`, i) {
 				return
 			}
@@ -1523,7 +1523,7 @@ func TestTypedFields(t *testing.T) {
 	t.Run("Set", func(t *testing.T) {
 		s := jwk.NewSet()
 		for _, key := range keys {
-			s.Add(key)
+			s.AddKey(key)
 		}
 
 		serialized, err := json.Marshal(s)
@@ -1542,7 +1542,7 @@ func TestTypedFields(t *testing.T) {
 					return
 				}
 
-				for iter := got.Iterate(ctx); iter.Next(ctx); {
+				for iter := got.Keys(ctx); iter.Next(ctx); {
 					pair := iter.Pair()
 					key, _ := pair.Value.(jwk.Key)
 					v, ok := key.Get("typed-field")
@@ -1576,7 +1576,7 @@ func TestGH412(t *testing.T) {
 
 		kid := "key-" + strconv.Itoa(i)
 		k.Set(jwk.KeyIDKey, kid)
-		base.Add(k)
+		base.AddKey(k)
 		kids[kid] = struct{}{}
 	}
 
@@ -1593,12 +1593,12 @@ func TestGH412(t *testing.T) {
 				return
 			}
 
-			k, ok := set.Get(idx)
+			k, ok := set.Key(idx)
 			if !assert.True(t, ok, `set.Get should succeed`) {
 				return
 			}
 
-			if !assert.True(t, set.Remove(k), `set.Remove should succeed`) {
+			if !assert.True(t, set.RemoveKey(k), `set.Remove should succeed`) {
 				return
 			}
 			t.Logf("deleted key %s", k.KeyID())
@@ -1616,7 +1616,7 @@ func TestGH412(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			for iter := set.Iterate(ctx); iter.Next(ctx); {
+			for iter := set.Keys(ctx); iter.Next(ctx); {
 				pair := iter.Pair()
 				key := pair.Value.(jwk.Key)
 				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
@@ -1641,7 +1641,7 @@ func TestGH491(t *testing.T) {
 	}
 
 	// there should be 2 keys , get the first key
-	k, _ := keys.Get(0)
+	k, _ := keys.Key(0)
 	ops := k.KeyOps()
 	if !assert.Equal(t, jwk.KeyOperationList{jwk.KeyOpDeriveKey}, ops, `k.KeyOps should match`) {
 		return
@@ -1677,17 +1677,17 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok := set.Field(`renewal_kid`)
-			if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
+			v, ok := set.Get(`renewal_kid`)
+			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
 				return
 			}
 
-			if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
+			if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
 				return
 			}
 
-			key, ok := set.Get(0)
-			if !assert.True(t, ok, `set.Get(0) should return ok = true`) {
+			key, ok := set.Key(0)
+			if !assert.True(t, ok, `set.Key(0) should return ok = true`) {
 				return
 			}
 
@@ -1737,12 +1737,12 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok := set.Field(`renewal_kid`)
-			if !assert.True(t, ok, `set.Field("renewal_kid") should return ok = true`) {
+			v, ok := set.Get(`renewal_kid`)
+			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
 				return
 			}
 
-			if !assert.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`) {
+			if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
 				return
 			}
 		}
@@ -1768,7 +1768,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 
-		v, ok := set.Field(`renewal_kid`)
+		v, ok := set.Get(`renewal_kid`)
 		if !assert.True(t, ok, `set.Get("renewal_kid") should succeed`) {
 			return
 		}
@@ -1811,9 +1811,9 @@ func TestFetch(t *testing.T) {
 		return
 	}
 	set := jwk.NewSet()
-	set.Add(k1)
-	set.Add(k2)
-	set.Add(k3)
+	set.AddKey(k1)
+	set.AddKey(k2)
+	set.AddKey(k3)
 
 	expected, err := json.MarshalIndent(set, "", "  ")
 	if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {

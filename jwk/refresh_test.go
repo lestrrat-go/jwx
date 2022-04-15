@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -18,10 +17,10 @@ import (
 )
 
 //nolint:revive,golint
-func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected ...int) bool {
+func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
-	iter := src.Iterate(ctx)
+	iter := src.Keys(ctx)
 	iter.Next(ctx)
 
 	key := iter.Pair().Value.(jwk.Key)
@@ -328,7 +327,7 @@ func TestErrorSink(t *testing.T) {
 		return
 	}
 	set := jwk.NewSet()
-	set.Add(k)
+	_ = set.AddKey(k)
 	testcases := []struct {
 		Name    string
 		Options func() []jwk.RegisterOption
@@ -420,7 +419,7 @@ func TestPostFetch(t *testing.T) {
 		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 			return
 		}
-		set.Add(key)
+		_ = set.AddKey(key)
 	}
 
 	testcases := []struct {
@@ -435,7 +434,7 @@ func TestPostFetch(t *testing.T) {
 			Name: "With PostFetch",
 			Options: []jwk.RegisterOption{jwk.WithPostFetcher(jwk.PostFetchFunc(func(_ string, set jwk.Set) (jwk.Set, error) {
 				for i := 0; i < set.Len(); i++ {
-					key, _ := set.Get(i)
+					key, _ := set.Key(i)
 					key.Set(jwk.KeyIDKey, fmt.Sprintf(`key-%d`, i))
 				}
 				return set, nil
@@ -467,7 +466,7 @@ func TestPostFetch(t *testing.T) {
 			}
 
 			for i := 0; i < set.Len(); i++ {
-				key, _ := set.Get(i)
+				key, _ := set.Key(i)
 				if tc.ExpectKid {
 					if !assert.NotEmpty(t, key.KeyID(), `key.KeyID should not be empty`) {
 						return

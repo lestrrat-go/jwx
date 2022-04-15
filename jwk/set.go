@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/lestrrat-go/iter/arrayiter"
+	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
@@ -37,7 +38,7 @@ func (s *set) Set(n string, v interface{}) error {
 	return nil
 }
 
-func (s *set) Field(n string) (interface{}, bool) {
+func (s *set) Get(n string) (interface{}, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -45,7 +46,7 @@ func (s *set) Field(n string) (interface{}, bool) {
 	return v, ok
 }
 
-func (s *set) Get(idx int) (Key, bool) {
+func (s *set) Key(idx int) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -79,18 +80,26 @@ func (s *set) Index(key Key) int {
 	return s.indexNL(key)
 }
 
-func (s *set) Add(key Key) bool {
+func (s *set) AddKey(key Key) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if i := s.indexNL(key); i > -1 {
-		return false
+		return fmt.Errorf(`(jwk.Set).AddKey: key already exists`)
 	}
 	s.keys = append(s.keys, key)
-	return true
+	return nil
 }
 
-func (s *set) Remove(key Key) bool {
+func (s *set) Remove(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.privateParams, name)
+	return nil
+}
+
+func (s *set) RemoveKey(key Key) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -110,14 +119,16 @@ func (s *set) Remove(key Key) bool {
 	return false
 }
 
-func (s *set) Clear() {
+func (s *set) Clear() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.keys = nil
+	s.privateParams = make(map[string]interface{})
+	return nil
 }
 
-func (s *set) Iterate(ctx context.Context) KeyIterator {
+func (s *set) Keys(ctx context.Context) KeyIterator {
 	ch := make(chan *KeyPair, s.Len())
 	go iterate(ctx, s.keys, ch)
 	return arrayiter.New(ch)
@@ -264,7 +275,7 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 
 	n := s.Len()
 	for i := 0; i < n; i++ {
-		key, ok := s.Get(i)
+		key, ok := s.Key(i)
 		if !ok {
 			return nil, false
 		}
@@ -299,4 +310,33 @@ func (s *set) Clone() (Set, error) {
 		s2.keys[i] = s.keys[i]
 	}
 	return s2, nil
+}
+
+func (set *set) makePairs() []*HeaderPair {
+	var pairs []*HeaderPair
+
+	for k, v := range set.privateParams {
+		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		//nolint:forcetypeassert
+		return pairs[i].Key.(string) < pairs[j].Key.(string)
+	})
+	return pairs
+}
+
+func (set *set) Iterate(ctx context.Context) HeaderIterator {
+	pairs := set.makePairs()
+	ch := make(chan *HeaderPair, len(pairs))
+	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
+		defer close(ch)
+		for _, pair := range pairs {
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- pair:
+			}
+		}
+	}(ctx, ch, pairs)
+	return mapiter.New(ch)
 }
