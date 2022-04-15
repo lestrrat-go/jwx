@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc"
+	"github.com/lestrrat-go/iter/arrayiter"
 )
 
 type Transformer = httprc.Transformer
@@ -212,4 +213,114 @@ func (c *Cache) Unregister(u string) error {
 
 func (c *Cache) Snapshot() *httprc.Snapshot {
 	return c.cache.Snapshot()
+}
+
+// CachedSet is a thin shim over jwk.Cache that
+//
+// Note that since this is a utility shim over `jwk.Cache`, you _will_ lose
+// the ability to control the finer details (such as controlling how long to
+// wait for in case of a fetch failure using `context.Context`)
+type CachedSet struct {
+	cache *Cache
+	url   string
+}
+
+var _ Set = &CachedSet{}
+
+func NewCachedSet(cache *Cache, url string) Set {
+	return &CachedSet{
+		cache: cache,
+		url:   url,
+	}
+}
+
+func (cs *CachedSet) cached() (Set, error) {
+	return cs.cache.Get(context.Background(), cs.url)
+}
+
+// Add is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
+func (_ *CachedSet) Add(_ Key) bool {
+	// TODO: Add() should be renamed to AddKey() error
+	panic(`(jwk.Cachedset).Add: jwk.CachedSet is immutable`)
+}
+
+// Clear is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
+func (_ *CachedSet) Clear() {
+	// TODO: Clear() should be renamed to Clear() error
+	panic(`(jwk.CachedSet).Clear: jwk.CachedSet is immutable`)
+}
+
+// Set is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
+func (_ *CachedSet) Set(_ string, _ interface{}) error {
+	// TODO: Set() should be renamed to SetField(string, interface{}) error
+	panic(`(jwk.CachedSet).Set: jwk.CachedSet is immutable`)
+}
+
+// Remove is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
+func (_ *CachedSet) Remove(_ Key) bool {
+	// TODO: Remove() should be renamed to Remove(string) error
+	panic(`(jwk.CachedSet).Remove: jwk.CachedSet is immutable`)
+}
+
+func (cs *CachedSet) Clone() (Set, error) {
+	set, err := cs.cached()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to get cached jwk.Set: %w`, err)
+	}
+
+	return set.Clone()
+}
+
+func (cs *CachedSet) Field(name string) (interface{}, bool) {
+	set, err := cs.cached()
+	if err != nil {
+		return nil, false
+	}
+
+	return set.Field(name)
+}
+
+func (cs *CachedSet) Get(idx int) (Key, bool) {
+	set, err := cs.cached()
+	if err != nil {
+		return nil, false
+	}
+
+	return set.Get(idx)
+}
+
+func (cs *CachedSet) Index(key Key) int {
+	set, err := cs.cached()
+	if err != nil {
+		return -1
+	}
+
+	return set.Index(key)
+}
+
+func (cs *CachedSet) Iterate(ctx context.Context) KeyIterator {
+	set, err := cs.cached()
+	if err != nil {
+		return arrayiter.New(nil)
+	}
+
+	return set.Iterate(ctx)
+}
+
+func (cs *CachedSet) Len() int {
+	set, err := cs.cached()
+	if err != nil {
+		return -1
+	}
+
+	return set.Len()
+}
+
+func (cs *CachedSet) LookupKeyID(kid string) (Key, bool) {
+	set, err := cs.cached()
+	if err != nil {
+		return nil, false
+	}
+
+	return set.LookupKeyID(kid)
 }

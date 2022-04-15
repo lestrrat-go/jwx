@@ -81,8 +81,6 @@ type Set interface {
 	// specify, and there is no way of knowing what type they could be.
 	Set(string, interface{}) error
 
-	// Remove removes the field associated with the specified key.
-	// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.
 	// Index returns the index where the given key exists, -1 otherwise
 	Index(Key) int
 
