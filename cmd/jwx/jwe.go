@@ -98,7 +98,7 @@ func makeJweEncryptCmd() *cli.Command {
 		if keyset.Len() != 1 {
 			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
-		key, _ := keyset.Get(0)
+		key, _ := keyset.Key(0)
 
 		pubkey, err := jwk.PublicKeyOf(key)
 		if err != nil {
@@ -151,7 +151,7 @@ func makeJweDecryptCmd() *cli.Command {
 		if keyset.Len() != 1 {
 			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
-		key, _ := keyset.Get(0)
+		key, _ := keyset.Key(0)
 
 		var decrypted []byte
 
