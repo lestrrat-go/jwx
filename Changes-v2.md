@@ -90,7 +90,7 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
 ## Module
 
-* Module now requires go 1.17
+* Module now requires go 1.16
 
 * Use of github.com/pkg/errors is no more. If you were relying on bevaior
   that depends on the errors being an instance of github.com/pkg/errors
