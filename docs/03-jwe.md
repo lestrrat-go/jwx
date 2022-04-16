@@ -416,13 +416,13 @@ func ExampleJWE_VerifyWithJWKSet() {
   set := jwk.NewSet()
   // Add some bogus keys
   k1, _ := jwk.FromRaw([]byte("abracadavra"))
-  set.Add(k1)
+  set.AddKey(k1)
   k2, _ := jwk.FromRaw([]byte("opensasame"))
-  set.Add(k2)
+  set.AddKey(k2)
   // Add the real thing
   k3, _ := jwk.FromRaw(privkey)
   k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP)
-  set.Add(k3)
+  set.AddKey(k3)
 
   // Up to this point, you probably will replace with a simple jwk.Fetch()
 
