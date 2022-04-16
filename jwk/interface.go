@@ -54,9 +54,8 @@ type Set interface {
 	AddKey(Key) error
 
 	// Clear resets the list of keys associated with this set, emptying the
-	// internal list of `jwk.Key`s
-	// This method will be changed in the future to clear all contents in the
-	// `jwk.Set` instead of just the keys.
+	// internal list of `jwk.Key`s, as well as clearing any other non-key
+	// fields
 	Clear() error
 
 	// Get returns the key at index `idx`. If the index is out of range,
