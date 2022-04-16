@@ -135,7 +135,7 @@ func PublicSetOf(v Set) (Set, error) {
 
 	n := v.Len()
 	for i := 0; i < n; i++ {
-		k, ok := v.Get(i)
+		k, ok := v.Key(i)
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
 		}
@@ -143,7 +143,9 @@ func PublicSetOf(v Set) (Set, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to get public key of %T: %w`, k, err)
 		}
-		newSet.Add(pubKey)
+		if err := newSet.AddKey(pubKey); err != nil {
+			return nil, fmt.Errorf(`failed to add key to public key set: %w`, err)
+		}
 	}
 
 	return newSet, nil
@@ -525,7 +527,9 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, fmt.Errorf(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
-			s.Add(key)
+			if err := s.AddKey(key); err != nil {
+				return nil, fmt.Errorf(`failed to add jwk.Key to set: %w`, err)
+			}
 			src = bytes.TrimSpace(rest)
 		}
 		return s, nil
@@ -641,7 +645,9 @@ func Pem(v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case Key:
 		set = NewSet()
-		set.Add(v)
+		if err := set.AddKey(v); err != nil {
+			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
+		}
 	case Set:
 		set = v
 	default:
@@ -650,7 +656,7 @@ func Pem(v interface{}) ([]byte, error) {
 
 	var ret []byte
 	for i := 0; i < set.Len(); i++ {
-		key, _ := set.Get(i)
+		key, _ := set.Key(i)
 		typ, buf, err := asnEncode(key)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)

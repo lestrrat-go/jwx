@@ -2,7 +2,7 @@ name: Auto-Doc
 on:
   pull_request:
     branches:
-      - v2
+      - develop/v2
     types:
       - closed
 
@@ -17,4 +17,6 @@ jobs:
       - name: Process markdown files
         run: |
           find . -name '*.md' | xargs perl tools/autodoc.pl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  

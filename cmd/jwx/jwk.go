@@ -76,7 +76,7 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 				return fmt.Errorf(`failed to marshal keyset into JSON format: %w`, err)
 			}
 		} else {
-			key, _ := keyset.Get(0)
+			key, _ := keyset.Key(0)
 			if err := dumpJSON(dst, key); err != nil {
 				return fmt.Errorf(`failed to marshal key into JSON format: %w`, err)
 			}
@@ -203,7 +203,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		}
 
 		keyset := jwk.NewSet()
-		keyset.Add(key)
+		keyset.AddKey(key)
 
 		if c.Bool("public-key") {
 			pubks, err := jwk.PublicSetOf(keyset)

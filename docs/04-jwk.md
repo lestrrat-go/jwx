@@ -524,7 +524,7 @@ source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/j
 
 To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) described elsewhere in this document.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
@@ -590,7 +590,7 @@ Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) tool to do this for you.
+`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) to do this for you.
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -667,6 +667,52 @@ MAIN:
 }
 ```
 source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+<!-- END INCLUDE -->
+
+<!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWK_CachedSet() {
+  ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
+
+  // The first steps are the same as examples/jwk_cache_example_test.go
+  c := jwk.NewCache(ctx)
+  c.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
+  _, err := c.Refresh(ctx, googleCerts)
+  if err != nil {
+    fmt.Printf("failed to refresh google JWKS: %s\n", err)
+    return
+  }
+
+  cached := jwk.NewCachedSet(c, googleCerts)
+
+  // cached fulfills the jwk.Set interface.
+  var _ jwk.Set = cached
+
+  // That means you can pass it to things like jws.WithKeySet,
+  // allowing you to pretend as if you are using the result of
+  //
+  //   jwk.Fetch(ctx, googleCerts)
+  //
+  // But you are instead using a cached (and periodically refreshed)
+  // for each operation.
+  _ = jws.WithKeySet(cached)
+}
+```
+source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists

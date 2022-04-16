@@ -51,8 +51,8 @@ func ExampleJWT_ParseWithKeySet() {
 		// all of the public keys
 		{
 			privset := jwk.NewSet()
-			privset.Add(realKey)
-			privset.Add(bogusKey)
+			privset.AddKey(realKey)
+			privset.AddKey(bogusKey)
 			v, err := jwk.PublicSetOf(privset)
 			if err != nil {
 				fmt.Printf("failed to create public JWKS: %s\n", err)

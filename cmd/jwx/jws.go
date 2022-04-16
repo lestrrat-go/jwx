@@ -183,7 +183,7 @@ func makeJwsVerifyCmd() *cli.Command {
 			}
 
 			ctx := context.Background()
-			for iter := keyset.Iterate(ctx); iter.Next(ctx); {
+			for iter := keyset.Keys(ctx); iter.Next(ctx); {
 				pair := iter.Pair()
 				key := pair.Value.(jwk.Key)
 				payload, err := jws.Verify(buf, jws.WithKey(alg, key))
@@ -232,7 +232,7 @@ func makeJwsSignCmd() *cli.Command {
 		if keyset.Len() != 1 {
 			return fmt.Errorf(`jwk file must contain exactly one key`)
 		}
-		key, _ := keyset.Get(0)
+		key, _ := keyset.Key(0)
 
 		src, err := getSource(c.Args().Get(0))
 		if err != nil {

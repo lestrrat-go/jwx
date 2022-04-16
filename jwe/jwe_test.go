@@ -268,7 +268,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				// Keys are not going to be selected without an algorithm
 				_ = pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP)
 				set := jwk.NewSet()
-				set.Add(pkJwk)
+				set.AddKey(pkJwk)
 
 				var used interface{}
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))

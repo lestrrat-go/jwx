@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -18,10 +17,10 @@ import (
 )
 
 //nolint:revive,golint
-func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, expected ...int) bool {
+func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
-	iter := src.Iterate(ctx)
+	iter := src.Keys(ctx)
 	iter.Next(ctx)
 
 	key := iter.Pair().Value.(jwk.Key)
@@ -51,6 +50,75 @@ func checkAccessCount(t *testing.T, ctx context.Context, src arrayiter.Source, e
 func TestCache(t *testing.T) {
 	t.Parallel()
 
+	t.Run("CachedSet", func(t *testing.T) {
+		const numKeys = 3
+		t.Parallel()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		set := jwk.NewSet()
+		for i := 0; i < numKeys; i++ {
+			key, err := jwxtest.GenerateRsaJwk()
+			if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
+				return
+			}
+			if !assert.NoError(t, set.AddKey(key), `set.AddKey should succeed`) {
+				return
+			}
+		}
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			hdrs := w.Header()
+			hdrs.Set(`Content-Type`, `application/json`)
+			hdrs.Set(`Cache-Control`, `max-age=5`)
+
+			json.NewEncoder(w).Encode(set)
+		}))
+		defer srv.Close()
+
+		af := jwk.NewCache(ctx, jwk.WithRefreshWindow(time.Second))
+		if !assert.NoError(t, af.Register(srv.URL), `af.Register should succeed`) {
+			return
+		}
+
+		cached := jwk.NewCachedSet(af, srv.URL)
+		if !assert.Error(t, cached.Set("bogus", nil), `cached.Set should be an error`) {
+			return
+		}
+		if !assert.Error(t, cached.Remove("bogus"), `cached.Remove should be an error`) {
+			return
+		}
+		if !assert.Error(t, cached.AddKey(nil), `cached.AddKey should be an error`) {
+			return
+		}
+		if !assert.Error(t, cached.RemoveKey(nil), `cached.RemoveKey should be an error`) {
+			return
+		}
+		if !assert.Equal(t, set.Len(), cached.Len(), `value of Len() should be the same`) {
+			return
+		}
+
+		iter := set.Keys(ctx)
+		citer := cached.Keys(ctx)
+		for i := 0; i < numKeys; i++ {
+			k, err := set.Key(i)
+			ck, cerr := cached.Key(i)
+			if !assert.Equal(t, k, ck, `key %d should match`, i) {
+				return
+			}
+			if !assert.Equal(t, err, cerr, `error %d should match`, i) {
+				return
+			}
+
+			if !assert.Equal(t, iter.Next(ctx), citer.Next(ctx), `iter.Next should match`) {
+				return
+			}
+
+			if !assert.Equal(t, iter.Pair(), citer.Pair(), `iter.Pair should match`) {
+				return
+			}
+		}
+	})
 	t.Run("Specify explicit refresh interval", func(t *testing.T) {
 		t.Parallel()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -328,7 +396,7 @@ func TestErrorSink(t *testing.T) {
 		return
 	}
 	set := jwk.NewSet()
-	set.Add(k)
+	_ = set.AddKey(k)
 	testcases := []struct {
 		Name    string
 		Options func() []jwk.RegisterOption
@@ -420,7 +488,7 @@ func TestPostFetch(t *testing.T) {
 		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 			return
 		}
-		set.Add(key)
+		_ = set.AddKey(key)
 	}
 
 	testcases := []struct {
@@ -435,7 +503,7 @@ func TestPostFetch(t *testing.T) {
 			Name: "With PostFetch",
 			Options: []jwk.RegisterOption{jwk.WithPostFetcher(jwk.PostFetchFunc(func(_ string, set jwk.Set) (jwk.Set, error) {
 				for i := 0; i < set.Len(); i++ {
-					key, _ := set.Get(i)
+					key, _ := set.Key(i)
 					key.Set(jwk.KeyIDKey, fmt.Sprintf(`key-%d`, i))
 				}
 				return set, nil
@@ -467,7 +535,7 @@ func TestPostFetch(t *testing.T) {
 			}
 
 			for i := 0; i < set.Len(); i++ {
-				key, _ := set.Get(i)
+				key, _ := set.Key(i)
 				if tc.ExpectKid {
 					if !assert.NotEmpty(t, key.KeyID(), `key.KeyID should not be empty`) {
 						return

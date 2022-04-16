@@ -280,30 +280,30 @@ func TestJWTParseVerify(t *testing.T) {
 							switch i {
 							case 0:
 								name = "Lone key"
-								set.Add(pubkey)
+								set.AddKey(pubkey)
 							case 1:
 								name = "Two keys, correct one at the end"
-								set.Add(dummyKey)
-								set.Add(pubkey)
+								set.AddKey(dummyKey)
+								set.AddKey(pubkey)
 							case 2:
 								name = "Two keys, correct one at the beginning"
-								set.Add(pubkey)
-								set.Add(dummyKey)
+								set.AddKey(pubkey)
+								set.AddKey(dummyKey)
 							case 3:
 								name = "Three keys, correct one at the end"
-								set.Add(dummyKey)
-								set.Add(dummyKey)
-								set.Add(pubkey)
+								set.AddKey(dummyKey)
+								set.AddKey(dummyKey)
+								set.AddKey(pubkey)
 							case 4:
 								name = "Three keys, correct one at the middle"
-								set.Add(dummyKey)
-								set.Add(pubkey)
-								set.Add(dummyKey)
+								set.AddKey(dummyKey)
+								set.AddKey(pubkey)
+								set.AddKey(dummyKey)
 							case 5:
 								name = "Three keys, correct one at the beginning"
-								set.Add(pubkey)
-								set.Add(dummyKey)
-								set.Add(dummyKey)
+								set.AddKey(pubkey)
+								set.AddKey(dummyKey)
+								set.AddKey(dummyKey)
 							}
 
 							t.Run(name, func(t *testing.T) {
@@ -356,7 +356,7 @@ func TestJWTParseVerify(t *testing.T) {
 			pubkey.Set(jwk.AlgorithmKey, jwa.HS256)
 			pubkey.Set(jwk.KeyIDKey, kid)
 			set := jwk.NewSet()
-			set.Add(pubkey)
+			set.AddKey(pubkey)
 
 			_, err = jwt.Parse(signed, jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true), jws.WithUseDefault(true)))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
@@ -377,7 +377,7 @@ func TestJWTParseVerify(t *testing.T) {
 				t.Fatal("Failed to sign JWT")
 			}
 			set := jwk.NewSet()
-			set.Add(pubkey)
+			set.AddKey(pubkey)
 			t2, err := jwt.Parse(signedNoKid, jwt.WithKeySet(set, jws.WithUseDefault(true)))
 			if !assert.NoError(t, err, `jwt.Parse with key set should succeed`) {
 				return
@@ -404,8 +404,8 @@ func TestJWTParseVerify(t *testing.T) {
 				t.Fatal("Failed to sign JWT")
 			}
 			set := jwk.NewSet()
-			set.Add(pubkey1)
-			set.Add(pubkey2)
+			set.AddKey(pubkey1)
+			set.AddKey(pubkey2)
 			_, err = jwt.Parse(signedNoKid, jwt.WithKeySet(set, jws.WithUseDefault(true)))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
 				return
@@ -449,7 +449,7 @@ func TestJWTParseVerify(t *testing.T) {
 			pubkey.Set(jwk.KeyIDKey, kid)
 
 			set := jwk.NewSet()
-			set.Add(pubkey)
+			set.AddKey(pubkey)
 			_, err = jwt.Parse(signedButNot, jwt.WithKeySet(set))
 			// This should fail
 			if !assert.Error(t, err, `jwt.Parse with key set + alg=none should fail`) {
@@ -855,7 +855,7 @@ func TestParseRequest(t *testing.T) {
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				set := jwk.NewSet()
-				set.Add(pubkey)
+				set.AddKey(pubkey)
 				return jwt.ParseRequest(req, jwt.WithKeySet(set))
 			},
 		},
@@ -1059,7 +1059,7 @@ func TestGH375(t *testing.T) {
 	verifyKey.Set(jwk.AlgorithmKey, jwa.RS256) // != jwa.RS512
 
 	ks := jwk.NewSet()
-	ks.Add(verifyKey)
+	ks.AddKey(verifyKey)
 
 	_, err = jwt.Parse(signed, jwt.WithKeySet(ks))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
@@ -1355,7 +1355,7 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 	set := jwk.NewSet()
-	set.Add(pubkey)
+	set.AddKey(pubkey)
 	backoffCount := 0
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Query().Get(`type`) {

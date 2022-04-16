@@ -15,7 +15,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/stretchr/testify v1.7.1 // indirect
 	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/tools v0.0.0-20200918232735-d647fc253266 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
