@@ -5,6 +5,12 @@ use File::Temp;
 # Accept a list of filenames, and process them
 # if any of them has a diff, commit it
 
+# Use GITHUB_REF, but if the ref is develop/v\d, then use v\d
+my $link_ref = $ENV{GITHUB_REF};
+if ($link_ref =~ /^develop\/(v\d+)$/) {
+    $link_ref = $1;
+}
+
 my @files = @ARGV;
 my @has_diff;
 for my $filename (@files) {
@@ -36,7 +42,8 @@ for my $filename (@files) {
         $content =~ s{^(\t+)}{"  " x length($1)}gsme;
         $output->print($content);
         $output->print("```\n");
-        $output->print("source: [$include_filename](https://github.com/lestrrat-go/jwx/blob/$ENV{GITHUB_REF}/$include_filename)\n");
+
+        $output->print("source: [$include_filename](https://github.com/lestrrat-go/jwx/blob/$link_ref/$include_filename)\n");
     
         # now we need to skip copying until the end of INCLUDE
         $skip_until_end = 1;
