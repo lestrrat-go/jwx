@@ -17,4 +17,6 @@ jobs:
       - name: Process markdown files
         run: |
           find . -name '*.md' | xargs perl tools/autodoc.pl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  
