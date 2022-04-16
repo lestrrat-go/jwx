@@ -670,6 +670,49 @@ source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/
 <!-- END INCLUDE -->
 
 <!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWK_CachedSet() {
+  ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
+
+  // The first steps are the same as examples/jwk_cache_example_test.go
+  c := jwk.NewCache(ctx)
+  c.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
+  _, err := c.Refresh(ctx, googleCerts)
+  if err != nil {
+    fmt.Printf("failed to refresh google JWKS: %s\n", err)
+    return
+  }
+
+  cached := jwk.NewCachedSet(c, googleCerts)
+
+  // cached fulfills the jwk.Set interface.
+  var _ jwk.Set = cached
+
+  // That means you can pass it to things like jws.WithKeySet,
+  // allowing you to pretend as if you are using the result of
+  //
+  //   jwk.Fetch(ctx, googleCerts)
+  //
+  // But you are instead using a cached (and periodically refreshed)
+  // for each operation.
+  _ = jws.WithKeySet(cached)
+}
+```
+source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists
