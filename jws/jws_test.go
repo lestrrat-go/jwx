@@ -1072,12 +1072,12 @@ func TestVerifySet(t *testing.T) {
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
 		k1, _ := jwk.FromRaw([]byte("abracadavra"))
-		set.Add(k1)
+		set.AddKey(k1)
 		k2, _ := jwk.FromRaw([]byte("opensasame"))
-		set.Add(k2)
+		set.AddKey(k2)
 		pubkey, _ := jwk.PublicKeyOf(privkey)
 		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
-		set.Add(pubkey)
+		set.AddKey(pubkey)
 		return set
 	}
 
@@ -1460,7 +1460,7 @@ func TestJKU(t *testing.T) {
 		return
 	}
 	set := jwk.NewSet()
-	set.Add(pubkey)
+	set.AddKey(pubkey)
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
@@ -1598,7 +1598,7 @@ func TestJKU(t *testing.T) {
 			if !assert.Equal(t, pubkey.KeyID(), key.KeyID(), `key ID should be populated`) {
 				return
 			}
-			set.Add(pubkey)
+			set.AddKey(pubkey)
 		}
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)

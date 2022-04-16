@@ -45,7 +45,7 @@ func ExampleJWT_ParseWithJKU() {
 			fmt.Printf("failed to create public key: %s\n", err)
 			return
 		}
-		set.Add(pubkey)
+		set.AddKey(pubkey)
 	}
 
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

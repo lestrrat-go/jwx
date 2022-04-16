@@ -143,7 +143,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, r Recipient
 	}
 
 	for i := 0; i < kp.set.Len(); i++ {
-		key, _ := kp.set.Get(i)
+		key, _ := kp.set.Key(i)
 		if err := kp.selectKey(sink, key, r, msg); err != nil {
 			continue
 		}

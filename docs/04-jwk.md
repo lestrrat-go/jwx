@@ -524,7 +524,7 @@ source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/j
 
 To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) described elsewhere in this document.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
@@ -590,7 +590,7 @@ Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) tool to do this for you.
+`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) to do this for you.
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -667,6 +667,9 @@ MAIN:
 }
 ```
 source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+<!-- END INCLUDE -->
+
+<!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
 <!-- END INCLUDE -->
 
 ## Using Whitelists

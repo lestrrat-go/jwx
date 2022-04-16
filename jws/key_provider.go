@@ -165,7 +165,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 			// if we got here, then useDefault == true AND there is exactly
 			// one key in the set.
-			key, _ = kp.set.Get(0)
+			key, _ = kp.set.Key(0)
 		} else {
 			// Otherwise we better be able to look up the key, baby.
 			v, ok := kp.set.LookupKeyID(wantedKid)
@@ -179,7 +179,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	}
 
 	for i := 0; i < kp.set.Len(); i++ {
-		key, _ := kp.set.Get(i)
+		key, _ := kp.set.Key(i)
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue
 		}

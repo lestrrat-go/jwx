@@ -28,14 +28,14 @@ func ExampleJWS_VerifyWithJWKSet() {
 	set := jwk.NewSet()
 	// Add some bogus keys
 	k1, _ := jwk.FromRaw([]byte("abracadavra"))
-	set.Add(k1)
+	set.AddKey(k1)
 	k2, _ := jwk.FromRaw([]byte("opensasame"))
-	set.Add(k2)
-	// Add the real thing
+	set.AddKey(k2)
+	// AddKey the real thing
 	pubkey, _ := jwk.PublicRawKeyOf(privkey)
 	k3, _ := jwk.FromRaw(pubkey)
 	k3.Set(jwk.AlgorithmKey, jwa.RS256)
-	set.Add(k3)
+	set.AddKey(k3)
 
 	// Up to this point, you probably will replace with a simple jwk.Fetch()
 
