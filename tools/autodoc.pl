@@ -63,7 +63,9 @@ if (!$ENV{AUTODOC_DRYRUN}) {
         system("git", "remote", "set-url", "origin", "https://github-actions:$ENV{GITHUB_TOKEN}\@github.com/$ENV{GITHUB_REPOSITORY}") == 0 or die $!;
         system("git", "config", "--global", "user.name", "$ENV{GITHUB_ACTOR}") == 0 or die $!;
         system("git", "config", "--global", "user.email", "$ENV{GITHUB_ACTOR}\@users.noreply.github.com") == 0 or die $!;
+        system("git", "switch", "-c", "autodoc-pr-$ENV{GITHUB_HEAD_REF}") == 0 or die $!;
         system("git", "commit", "-F", $commit_message_file->filename, @files) == 0 or die $!;
-        system("git", "push", "origin", "HEAD:$ENV{GITHUB_REF}") == 0 or die $!;
+        system("git", "push", "origin", "HEAD:$ENV{GITHUB_HEAD_REF}") == 0 or die $!;
+        system("gh", "pr", "create", "--fill") == 0 or die $!;
     }
 }
