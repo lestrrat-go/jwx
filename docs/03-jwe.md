@@ -50,7 +50,7 @@ func ExampleJWE_Parse() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_parse_example_test.go)
+source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWE message stored in a file
@@ -94,7 +94,7 @@ func ExampleJWE_ReadFile() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_readfile_example_test.go)
+source: [examples/jwe_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 # Encrypting
@@ -155,7 +155,7 @@ func ExampleJWE_Encrypt() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_example_test.go)
+source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_encrypt_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWE message in JSON serialization format
@@ -264,7 +264,7 @@ func ExampleJWE_EncryptJSONMulti() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_json_example_test.go)
+source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_encrypt_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -330,7 +330,7 @@ func ExampleJWE_SignWithHeaders() {
   // {"alg":"RSA-OAEP","enc":"A256GCM","x-example":true}
 }
 ```
-source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_with_headers_example_test.go)
+source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_encrypt_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 # Decrypting
@@ -371,7 +371,7 @@ func ExampleJWE_VerifyWithKey() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_key_example_test.go)
+source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_decrypt_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Decrypting using a JWKS
@@ -416,13 +416,13 @@ func ExampleJWE_VerifyWithJWKSet() {
   set := jwk.NewSet()
   // Add some bogus keys
   k1, _ := jwk.FromRaw([]byte("abracadavra"))
-  set.Add(k1)
+  set.AddKey(k1)
   k2, _ := jwk.FromRaw([]byte("opensasame"))
-  set.Add(k2)
+  set.AddKey(k2)
   // Add the real thing
   k3, _ := jwk.FromRaw(privkey)
   k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP)
-  set.Add(k3)
+  set.AddKey(k3)
 
   // Up to this point, you probably will replace with a simple jwk.Fetch()
 
@@ -433,5 +433,5 @@ func ExampleJWE_VerifyWithJWKSet() {
   // OUTPUT:
 }
 ```
-source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_keyset_example_test.go)
+source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->

@@ -93,7 +93,7 @@ func ExampleJWK_ParseJWKS() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_jwks_example_test.go)
+source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_parse_jwks_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key
@@ -133,7 +133,7 @@ func ExampleJWK_ParseKey() {
   // {"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}
 }
 ```
-source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_key_example_test.go)
+source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_parse_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key or a set in PEM format
@@ -192,7 +192,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}
 }
 ```
-source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_with_pem_example_test.go)
+source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_parse_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key from a file
@@ -251,7 +251,7 @@ func ExampleJWK_ReadFile() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_readfile_example_test.go)
+source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 `jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
@@ -319,7 +319,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"keys":[{"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}]}
 }
 ```
-source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_readfile_with_pem_example_test.go)
+source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_readfile_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key as a struct field
@@ -396,7 +396,7 @@ func ExampleJWK_StructField() {
   // {"key":{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}}
 }
 ```
-source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_struct_field_example_test.go)
+source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_struct_field_example_test.go)
 <!-- END INCLUDE -->
 
 # Construction
@@ -515,7 +515,7 @@ func ExampleJWK_FromRaw() {
   // OUTPUT:
 }
 ```
-source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_from_raw_example_test.go)
+source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_from_raw_example_test.go)
 <!-- END INCLUDE -->
 
 # Fetching JWK Sets
@@ -578,7 +578,7 @@ func ExampleJWK_Fetch() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_fetch_example_test.go)
+source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_fetch_example_test.go)
 <!-- END INCLUDE -->
 
 ## Auto-refreshing remote keys
@@ -666,10 +666,53 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 <!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v2/jws"
+)
+
+func ExampleJWK_CachedSet() {
+  ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
+
+  // The first steps are the same as examples/jwk_cache_example_test.go
+  c := jwk.NewCache(ctx)
+  c.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
+  _, err := c.Refresh(ctx, googleCerts)
+  if err != nil {
+    fmt.Printf("failed to refresh google JWKS: %s\n", err)
+    return
+  }
+
+  cached := jwk.NewCachedSet(c, googleCerts)
+
+  // cached fulfills the jwk.Set interface.
+  var _ jwk.Set = cached
+
+  // That means you can pass it to things like jws.WithKeySet,
+  // allowing you to pretend as if you are using the result of
+  //
+  //   jwk.Fetch(ctx, googleCerts)
+  //
+  // But you are instead using a cached (and periodically refreshed)
+  // for each operation.
+  _ = jws.WithKeySet(cached)
+}
+```
+source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists
@@ -766,7 +809,7 @@ func ExampleJWK_Whitelist() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_whitelist_example_test.go)
+source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_whitelist_example_test.go)
 <!-- END INCLUDE -->
 
 # Working with jwk.Key
@@ -824,7 +867,7 @@ func ExampleJWK_KeySpecificMethods() {
   //
 }
 ```
-source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_key_specific_methods_example_test.go)
+source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_key_specific_methods_example_test.go)
 <!-- END INCLUDE -->
 
 ## Setting values to fields

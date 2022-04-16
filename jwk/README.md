@@ -102,7 +102,7 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 Parse and use a JWK key:
@@ -219,5 +219,5 @@ func ExampleJWK_MarshalJSON() {
   // }
 }
 ```
-source: [examples/jwk_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_example_test.go)
+source: [examples/jwk_example_test.go](https://github.com/lestrrat-go/jwx/blob/develop/v2/examples/jwk_example_test.go)
 <!-- END INCLUDE -->
