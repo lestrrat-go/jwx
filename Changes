@@ -2,10 +2,13 @@ Changes
 =======
 
 v2 has many incompatibilities with v1. To see the full list of differences between
-v1 and v2, please read the Changes.v2 file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
+v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
 v2.0.0-beta2 - 16 Apr 2022
 [jwk]
+  * Updated `jwk.Set` API and reflected pending changes from v1 which were
+    left over. Please see Changes-v2.md file for details.
+
   * Added `jwk.CachedSet`, a shim over `jwk.Cache` that allows you to
     have to write wrappers around `jwk.Cache` that retrieves a particular
     `jwk.Set` out of it. You can use it to, for example, pass `jwk.CachedSet`
