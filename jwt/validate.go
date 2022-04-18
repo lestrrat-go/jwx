@@ -119,7 +119,7 @@ func MinDeltaIs(c1, c2 string, dur time.Duration) Validator {
 	}
 }
 
-func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
+func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) ValidationError {
 	clock := ValidationCtxClock(ctx) // MUST be populated
 	skew := ValidationCtxSkew(ctx)   // MUST be populated
 	// We don't check if the claims already exist, because we already did that
@@ -142,6 +142,7 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 type ValidationError interface {
 	error
 	isValidationError()
+	Unwrap() error
 }
 
 func NewValidationError(err error) ValidationError {
@@ -154,6 +155,9 @@ type validationError struct {
 }
 
 func (validationError) isValidationError() {}
+func (err *validationError) Unwrap() error {
+	return err.error
+}
 
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
@@ -161,34 +165,31 @@ var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
 // is not satisfied
-func ErrTokenExpired() error {
+func ErrTokenExpired() ValidationError {
 	return errTokenExpired
 }
 
 // ErrInvalidIssuedAt returns the immutable error used when `iat` claim
 // is not satisfied
-func ErrInvalidIssuedAt() error {
+func ErrInvalidIssuedAt() ValidationError {
 	return errInvalidIssuedAt
 }
 
-func ErrTokenNotYetValid() error {
+func ErrTokenNotYetValid() ValidationError {
 	return errTokenNotYetValid
 }
 
 // Validator describes interface to validate a Token.
 type Validator interface {
 	// Validate should return an error if a required conditions is not met.
-	// This method will be changed in the next major release to return
-	// jwt.ValidationError instead of error to force users to return
-	// a validation error even for user-specified validators
-	Validate(context.Context, Token) error
+	Validate(context.Context, Token) ValidationError
 }
 
 // ValidatorFunc is a type of Validator that does not have any
 // state, that is implemented as a function
-type ValidatorFunc func(context.Context, Token) error
+type ValidatorFunc func(context.Context, Token) ValidationError
 
-func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) error {
+func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) ValidationError {
 	return vf(ctx, tok)
 }
 
@@ -227,7 +228,7 @@ func IsExpirationValid() Validator {
 	return ValidatorFunc(isExpirationValid)
 }
 
-func isExpirationValid(ctx context.Context, t Token) error {
+func isExpirationValid(ctx context.Context, t Token) ValidationError {
 	if tv := t.Expiration(); !tv.IsZero() && tv.Unix() != 0 {
 		clock := ValidationCtxClock(ctx) // MUST be populated
 		now := clock.Now().Truncate(time.Second)
@@ -251,7 +252,7 @@ func IsIssuedAtValid() Validator {
 	return ValidatorFunc(isIssuedAtValid)
 }
 
-func isIssuedAtValid(ctx context.Context, t Token) error {
+func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
 	if tv := t.IssuedAt(); !tv.IsZero() && tv.Unix() != 0 {
 		clock := ValidationCtxClock(ctx) // MUST be populated
 		now := clock.Now().Truncate(time.Second)
@@ -275,7 +276,7 @@ func IsNbfValid() Validator {
 	return ValidatorFunc(isNbfValid)
 }
 
-func isNbfValid(ctx context.Context, t Token) error {
+func isNbfValid(ctx context.Context, t Token) ValidationError {
 	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
 		clock := ValidationCtxClock(ctx) // MUST be populated
 		now := clock.Now().Truncate(time.Second)
@@ -319,7 +320,7 @@ func IsValidationError(err error) bool {
 	}
 }
 
-func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
+func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationError {
 	v, ok := t.Get(ccs.name)
 	if !ok {
 		return NewValidationError(fmt.Errorf(`claim %q not found`, ccs.name))
@@ -356,7 +357,7 @@ func ClaimValueIs(name string, value interface{}) Validator {
 	return &claimValueIs{name: name, value: value}
 }
 
-func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
+func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 	v, ok := t.Get(cv.name)
 	if !ok {
 		return NewValidationError(fmt.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
@@ -375,7 +376,7 @@ func IsRequired(name string) Validator {
 
 type isRequired string
 
-func (ir isRequired) Validate(_ context.Context, t Token) error {
+func (ir isRequired) Validate(_ context.Context, t Token) ValidationError {
 	_, ok := t.Get(string(ir))
 	if !ok {
 		return NewValidationError(fmt.Errorf(`%q not satisfied: required claim not found`, string(ir)))

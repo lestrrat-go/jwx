@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleJWT_ValidateValidator() {
-	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
 		if t.IssuedAt().Month() != 8 {
 			return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
 		}

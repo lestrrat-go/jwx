@@ -397,10 +397,10 @@ func TestClaimValidator(t *testing.T) {
 	t.Parallel()
 	const myClaim = "my-claim"
 	err0 := errors.New(myClaim + " does not exist")
-	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) error {
+	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) jwt.ValidationError {
 		_, ok := tok.Get(myClaim)
 		if !ok {
-			return err0
+			return jwt.NewValidationError(err0)
 		}
 		return nil
 	})

@@ -90,7 +90,7 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
 ## Module
 
-* Module now requires go 1.17
+* Module now requires go 1.16
 
 * Use of github.com/pkg/errors is no more. If you were relying on bevaior
   that depends on the errors being an instance of github.com/pkg/errors
@@ -306,6 +306,9 @@ jws.Parse(serialized,
   The rest of the arguments are treated as options passed to the
   `(jwk.Fetcher).Fetch()` function.
 
+* Remove `jws.WithPayloadSigner()`. This should be completely repleceable
+  using `jws.WithKey()`
+
 * jws.WithKeyProvider() has been added to specify arbitrary
   code to specify which keys to try.
 
@@ -341,6 +344,10 @@ jws.Parse(serialized,
 * `jwt.WithVerify()` has been renamed to `jwt.WithKey()`. The option can
   be used for signing, encryption, and parsing.
 
+* `jwt.Validator` has been changed to return `jwt.ValidationError`.
+  If you provide a custom validator, you should wrap the error with
+  `jwt.NewValidationError()`
+
 * `jwt.UseDefault()` has been removed. You should use `jws.WithUseDefault()`
   as a suboption in the `jwt.WithKeySet()` option.
 
@@ -369,11 +376,6 @@ case ...:
 }
 ```
 
-* Remove `jws.WithPayloadSigner()`. This should be completely repleceable
-  using `jws.WithKey()`
-
-* `jwt.Sign()` has been changed so that it works more like the new `jws.Sign()`
-
 * `jwt.WithHeaders` and `jwt.WithJwsHeaders` have been removed.
   You should be able to use the new `jwt.WithKey` option to pass headers
 
@@ -383,3 +385,6 @@ case ...:
 
 * `jwt.ReadFile` now supports the option `jwt.WithFS` which allows you to
   read data from arbitrary `fs.FS` objects
+
+* `jwt.Sign()` has been changed so that it works more like the new `jws.Sign()`
+
