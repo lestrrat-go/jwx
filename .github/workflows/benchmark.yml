@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.17.x', '1.16.x' ]
+        go: [ '>=1.18.0', '>=1.17.0', '>=1.16.0' ]
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
@@ -24,9 +24,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install Go stable version
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+          check-latest: true
       - name: Install benchstat
         run: |
           go install golang.org/x/perf/cmd/benchstat@latest
