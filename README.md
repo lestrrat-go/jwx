@@ -188,7 +188,7 @@ That is, if you need to not only parse JWTs, but also to control JWKs, or
 if you need to handle payloads that are NOT JWTs, you should probably consider
 using this module. You should also note that JWT is built _on top_ of those
 other technologies. You simply cannot have a complete JWT package without
-implementing the entirety of JWS/JWS/JWK, which this library does.
+implementing the entirety of JWS/JWE/JWK, which this library does.
 
 Next, from an implementation perspective, this module differs significantly
 from others in that it tries very hard to expose only the APIs, and not the
