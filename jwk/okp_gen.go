@@ -376,6 +376,8 @@ func (k *okpPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *okpPublicKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.crv = nil
 	h.keyID = nil
@@ -928,6 +930,8 @@ func (k *okpPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *okpPrivateKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.crv = nil
 	h.d = nil

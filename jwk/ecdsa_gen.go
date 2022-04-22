@@ -400,6 +400,8 @@ func (k *ecdsaPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.crv = nil
 	h.keyID = nil
@@ -982,6 +984,8 @@ func (k *ecdsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.crv = nil
 	h.d = nil

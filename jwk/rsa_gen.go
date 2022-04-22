@@ -379,6 +379,8 @@ func (k *rsaPublicKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.e = nil
 	h.keyID = nil
@@ -1036,6 +1038,8 @@ func (k *rsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.d = nil
 	h.dp = nil

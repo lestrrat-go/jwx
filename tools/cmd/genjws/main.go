@@ -54,29 +54,6 @@ func yaml2json(fn string) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func boolFromField(f codegen.Field, field string) (bool, error) {
-	v, ok := f.Extra(field)
-	if !ok {
-		return false, fmt.Errorf("%q does not exist in %q", field, f.Name(true))
-	}
-
-	b, ok := v.(bool)
-	if !ok {
-		return false, fmt.Errorf("%q should be a bool in %q", field, f.Name(true))
-	}
-	return b, nil
-}
-
-func fieldNoDeref(f codegen.Field) bool {
-	v, _ := boolFromField(f, "noDeref")
-	return v
-}
-
-func fieldHasAccept(f codegen.Field) bool {
-	v, _ := boolFromField(f, "hasAccept")
-	return v
-}
-
 func IsPointer(f codegen.Field) bool {
 	return strings.HasPrefix(f.Type(), `*`)
 }
@@ -115,7 +92,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("json.Unmarshaler")
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
-		if fieldNoDeref(f) {
+		if f.Bool(`noDeref`) {
 			o.L("%s() %s", f.GetterMethod(true), f.Type())
 		} else {
 			o.L("%s() %s", f.GetterMethod(true), PointerElem(f))
@@ -175,6 +152,14 @@ func generateHeaders(obj *codegen.Object) error {
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
+
+	o.LL("func (h *stdHeaders) clear() {")
+	for _, f := range obj.Fields() {
+		o.L("h.%s = nil", f.Name(false))
+	}
+	o.L("h.privateParams = nil")
+	o.L("h.raw = nil")
+	o.L("}")
 
 	o.LL("func (h *stdHeaders) DecodeCtx() DecodeCtx{")
 	o.L("h.mu.RLock()")
@@ -254,7 +239,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
-		if fieldHasAccept(f) {
+		if f.Bool(`hasAccept`) {
 			o.L("var acceptor %s", PointerElem(f))
 			o.L("if err := acceptor.Accept(value); err != nil {")
 			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %sKey, err)", f.Name(true))
@@ -297,10 +282,9 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
-	for _, f := range obj.Fields() {
-		o.L("h.%s = nil", f.Name(false))
-	}
-
+	o.L("h.mu.Lock()")
+	o.L("defer h.mu.Unlock()")
+	o.L("h.clear()")
 	o.L("dec := json.NewDecoder(bytes.NewReader(buf))")
 	o.L("LOOP:")
 	o.L("for {")
@@ -349,7 +333,7 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("h.%s = decoded", f.Name(false))
-		} else if fieldNoDeref(f) {
+		} else if f.Bool(`noDeref`) {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var decoded %s", PointerElem(f))
 			o.L("if err := dec.Decode(&decoded); err != nil {")
