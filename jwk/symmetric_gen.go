@@ -349,6 +349,8 @@ func (k *symmetricKey) SetDecodeCtx(dc json.DecodeCtx) {
 }
 
 func (h *symmetricKey) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.algorithm = nil
 	h.keyID = nil
 	h.keyOps = nil
