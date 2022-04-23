@@ -1293,7 +1293,7 @@ func TestGH430(t *testing.T) {
 
 func TestGH706(t *testing.T) {
 	tok := jwt.New()
-	if !assert.ErrorIs(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), &jwt.RequiredClaimValidationError{}, `jwt.Validate should fail`) {
+	if !assert.ErrorIs(t, jwt.ErrMissingRequiredClaim(""), jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
 		return
 	}
 }
