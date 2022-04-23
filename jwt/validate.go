@@ -159,21 +159,21 @@ func (err *validationError) Unwrap() error {
 	return err.error
 }
 
-type errMissingRequiredClaim struct {
+type missingRequiredClaimError struct {
 	claim string
 }
 
-func (err *errMissingRequiredClaim) Error() string {
+func (err *missingRequiredClaimError) Error() string {
 	return fmt.Sprintf("%q not satisfied: required claim not found", err.claim)
 }
 
-func (err *errMissingRequiredClaim) Is(target error) bool {
-	_, ok := target.(*errMissingRequiredClaim)
+func (err *missingRequiredClaimError) Is(target error) bool {
+	_, ok := target.(*missingRequiredClaimError)
 	return ok
 }
 
-func (err *errMissingRequiredClaim) isValidationError() {}
-func (*errMissingRequiredClaim) Unwrap() error          { return nil }
+func (err *missingRequiredClaimError) isValidationError() {}
+func (*missingRequiredClaimError) Unwrap() error          { return nil }
 
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
@@ -197,7 +197,7 @@ func ErrTokenNotYetValid() ValidationError {
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
 func ErrMissingRequiredClaim(name string) ValidationError {
-	return &errMissingRequiredClaim{claim: name}
+	return &missingRequiredClaimError{claim: name}
 }
 
 // Validator describes interface to validate a Token.
