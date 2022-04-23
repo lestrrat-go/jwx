@@ -159,6 +159,19 @@ func (err *validationError) Unwrap() error {
 	return err.error
 }
 
+type RequiredClaimValidationError struct {
+	claim string
+}
+
+func (err *RequiredClaimValidationError) Error() string {
+	return fmt.Sprintf("%q not satisfied: required claim not found", err.claim)
+}
+
+func (err *RequiredClaimValidationError) Is(target error) bool {
+	_, ok := target.(*RequiredClaimValidationError)
+	return ok
+}
+
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
 var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
@@ -379,7 +392,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) ValidationError {
 	_, ok := t.Get(string(ir))
 	if !ok {
-		return NewValidationError(fmt.Errorf(`%q not satisfied: required claim not found`, string(ir)))
+		return NewValidationError(&RequiredClaimValidationError{claim: string(ir)})
 	}
 	return nil
 }
