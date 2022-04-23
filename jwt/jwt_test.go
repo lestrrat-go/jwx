@@ -1291,6 +1291,13 @@ func TestGH430(t *testing.T) {
 	}
 }
 
+func TestGH706(t *testing.T) {
+	tok := jwt.New()
+	if !assert.ErrorIs(t, jwt.Validate(tok, jwt.WithRequiredClaim("foo")), &jwt.RequiredClaimValidationError{}, `jwt.Validate should fail`) {
+		return
+	}
+}
+
 func TestBenHigginsByPassRegression(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
