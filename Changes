@@ -4,6 +4,21 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.0 - 24 Apr 2022
+  * This i the first v2 release, which represents a set of design changes
+    that were learnt over the previous 2 years. As a result the v2 API
+    should be much more consistent and uniform across packages, and
+    should be much more flexible to accomodate real-world needs.
+    
+    For a complete list of changes, please see the Changes-v2.md file,
+    or check the diff at https://github.com/lestrrat-go/jwx/compare/v1...v2
+
+[Miscellaneous]
+  * Minor house cleaning on code generation tools
+
+[jwt]
+  * `jwt.ErrMissingRequiredClaim()` has been added
+
 v2.0.0-beta2 - 16 Apr 2022
 [jwk]
   * Updated `jwk.Set` API and reflected pending changes from v1 which were

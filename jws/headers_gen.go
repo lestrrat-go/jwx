@@ -175,6 +175,22 @@ func (h *stdHeaders) X509URL() string {
 	return *(h.x509URL)
 }
 
+func (h *stdHeaders) clear() {
+	h.algorithm = nil
+	h.contentType = nil
+	h.critical = nil
+	h.jwk = nil
+	h.jwkSetURL = nil
+	h.keyID = nil
+	h.typ = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	h.privateParams = nil
+	h.raw = nil
+}
+
 func (h *stdHeaders) DecodeCtx() DecodeCtx {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -425,17 +441,9 @@ func (h *stdHeaders) Remove(key string) error {
 }
 
 func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
-	h.algorithm = nil
-	h.contentType = nil
-	h.critical = nil
-	h.jwk = nil
-	h.jwkSetURL = nil
-	h.keyID = nil
-	h.typ = nil
-	h.x509CertChain = nil
-	h.x509CertThumbprint = nil
-	h.x509CertThumbprintS256 = nil
-	h.x509URL = nil
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.clear()
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {

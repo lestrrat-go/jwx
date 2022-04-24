@@ -92,60 +92,6 @@ func _main() error {
 	return nil
 }
 
-func boolFromField(f codegen.Field, field string) (bool, error) {
-	v, ok := f.Extra(field)
-	if !ok {
-		return false, fmt.Errorf("%q does not exist in %q", field, f.Name(true))
-	}
-
-	b, ok := v.(bool)
-	if !ok {
-		return false, fmt.Errorf("%q should be a bool in %q", field, f.Name(true))
-	}
-	return b, nil
-}
-
-func stringFromField(f codegen.Field, field string) (string, error) {
-	v, ok := f.Extra(field)
-	if !ok {
-		return "", fmt.Errorf("%q does not exist in %q", field, f.Name(true))
-	}
-
-	s, ok := v.(string)
-	if !ok {
-		return "", fmt.Errorf("%q should be a string in %q", field, f.Name(true))
-	}
-	return s, nil
-}
-
-func fieldIsStd(f codegen.Field) bool {
-	v, _ := boolFromField(f, `is_std`)
-	return v
-}
-
-func fieldNoDeref(f codegen.Field) bool {
-	v, _ := boolFromField(f, "noDeref")
-	return v
-}
-
-func fieldHasGet(f codegen.Field) bool {
-	v, _ := boolFromField(f, "hasGet")
-	return v
-}
-
-func fieldHasAccept(f codegen.Field) bool {
-	v, _ := boolFromField(f, "hasAccept")
-	return v
-}
-
-func fieldGetterReturnValue(f codegen.Field) string {
-	if v, err := stringFromField(f, `getter_return_value`); err == nil {
-		return v
-	}
-
-	return f.Type()
-}
-
 func IsPointer(f codegen.Field) bool {
 	return strings.HasPrefix(f.Type(), `*`)
 }
@@ -164,43 +110,6 @@ func fieldStorageTypeIsIndirect(s string) bool {
 	return s == "KeyOperationList" || !(strings.HasPrefix(s, `*`) || strings.HasPrefix(s, `[]`) || strings.HasSuffix(s, `List`))
 }
 
-func stringFromObject(o *codegen.Object, field string) (string, error) {
-	v, ok := o.Extra(field)
-	if !ok {
-		return "", fmt.Errorf("%q does not exist in %q", field, o.Name(true))
-	}
-
-	s, ok := v.(string)
-	if !ok {
-		return "", fmt.Errorf("%q should be a string in %q", field, o.Name(true))
-	}
-	return s, nil
-}
-
-func objectRawKeyType(obj *codegen.Object) string {
-	v, err := stringFromObject(obj, "raw_key_type")
-	if err != nil {
-		panic(err.Error())
-	}
-	return v
-}
-
-func objectStructName(o *codegen.Object) string {
-	v, err := stringFromObject(o, `struct_name`)
-	if err != nil {
-		return ""
-	}
-	return v
-}
-
-func objectInterface(o *codegen.Object) string {
-	v, err := stringFromObject(o, `interface`)
-	if err != nil {
-		return ""
-	}
-	return v
-}
-
 type Constant struct {
 	Name  string
 	Value string
@@ -217,7 +126,7 @@ func generateKeyType(kt *KeyType) error {
 	seen := make(map[string]struct{})
 	for _, obj := range kt.Objects {
 		for _, f := range obj.Fields() {
-			if fieldIsStd(f) {
+			if f.Bool(`is_std`) {
 				continue
 			}
 			n := f.Name(true)
@@ -241,7 +150,7 @@ func generateKeyType(kt *KeyType) error {
 
 	for _, obj := range kt.Objects {
 		if err := generateObject(o, kt, obj); err != nil {
-			return fmt.Errorf(`failed to generate object %s: %w`, obj.Name(true))
+			return fmt.Errorf(`failed to generate object %s: %w`, obj.Name(true), err)
 		}
 	}
 
@@ -256,19 +165,19 @@ func generateKeyType(kt *KeyType) error {
 
 func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	ifName := kt.Prefix + obj.Name(true)
-	if v := objectInterface(obj); v != "" {
+	if v := obj.String(`interface`); v != "" {
 		ifName = v
 	}
 	structName := strings.ToLower(kt.Prefix) + obj.Name(true)
-	if v := objectStructName(obj); v != "" {
+	if v := obj.String(`struct_name`); v != "" {
 		structName = v
 	}
 
 	o.LL("type %s interface {", ifName)
 	o.L("Key")
-	o.L("FromRaw(%s) error", objectRawKeyType(obj))
+	o.L("FromRaw(%s) error", obj.MustString(`raw_key_type`))
 	for _, f := range obj.Fields() {
-		if fieldIsStd(f) {
+		if f.Bool(`is_std`) {
 			continue
 		}
 		o.L("%s() %s", f.GetterMethod(true), f.Type())
@@ -303,16 +212,16 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	for _, f := range obj.Fields() {
 		o.LL("func (h *%s) %s() ", structName, f.GetterMethod(true))
-		if v := fieldGetterReturnValue(f); v != "" {
+		if v := f.String(`getter_return_value`); v != "" {
 			o.R("%s", v)
-		} else if IsPointer(f) && fieldNoDeref(f) {
+		} else if IsPointer(f) && f.Bool(`noDeref`) {
 			o.R("%s", f.Type())
 		} else {
 			o.R("%s", PointerElem(f))
 		}
 		o.R(" {")
 
-		if fieldHasGet(f) {
+		if f.Bool(`hasGet`) {
 			o.L("if h.%s != nil {", f.Name(false))
 			o.L("return h.%s.Get()", f.Name(false))
 			o.L("}")
@@ -341,7 +250,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("pairs = append(pairs, &HeaderPair{Key: \"kty\", Value: %s})", kt.KeyType)
 	for _, f := range obj.Fields() {
 		var keyName string
-		if fieldIsStd(f) {
+		if f.Bool(`is_std`) {
 			keyName = f.Name(true) + "Key"
 		} else {
 			keyName = kt.Prefix + f.Name(true) + "Key"
@@ -371,7 +280,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("case KeyTypeKey:")
 	o.L("return h.KeyType(), true")
 	for _, f := range obj.Fields() {
-		if fieldIsStd(f) {
+		if f.Bool(`is_std`) {
 			o.L("case %sKey:", f.Name(true))
 		} else {
 			o.L("case %s%sKey:", kt.Prefix, f.Name(true))
@@ -380,7 +289,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		o.L("if h.%s == nil {", f.Name(false))
 		o.L("return nil, false")
 		o.L("}")
-		if fieldHasGet(f) {
+		if f.Bool(`hasGet`) {
 			o.L("return h.%s.Get(), true", f.Name(false))
 		} else if fieldStorageTypeIsIndirect(f.Type()) {
 			o.L("return *(h.%s), true", f.Name(false))
@@ -406,7 +315,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return nil") // This is not great, but we just ignore it
 	for _, f := range obj.Fields() {
 		var keyName string
-		if fieldIsStd(f) {
+		if f.Bool(`is_std`) {
 			keyName = f.Name(true) + "Key"
 		} else {
 			keyName = kt.Prefix + f.Name(true) + "Key"
@@ -440,7 +349,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.L("default:")
 			o.L("return fmt.Errorf(`invalid key usage type %%s`, v)")
 			o.L("}")
-		} else if fieldHasAccept(f) {
+		} else if f.Bool(`hasAccept`) {
 			o.L("var acceptor %s", f.Type())
 			o.L("if err := acceptor.Accept(value); err != nil {")
 			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %s, err)", keyName)
@@ -478,7 +387,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("switch key {")
 	for _, f := range obj.Fields() {
 		var keyName string
-		if fieldIsStd(f) {
+		if f.Bool(`is_std`) {
 			keyName = f.Name(true) + "Key"
 		} else {
 			keyName = kt.Prefix + f.Name(true) + "Key"
@@ -509,6 +418,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h *%s) UnmarshalJSON(buf []byte) error {", structName)
+	o.L(`h.mu.Lock()`)
+	o.L(`defer h.mu.Unlock()`)
 	for _, f := range obj.Fields() {
 		o.L("h.%s = nil", f.Name(false))
 	}
@@ -769,9 +680,9 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 			o.L("// This is why there exists a `jwa.KeyAlgorithm` type that encompases both types.")
 		}
 		o.L("%s() ", f.GetterMethod(true))
-		if v := fieldGetterReturnValue(f); v != "" {
+		if v := f.String(`getter_return_value`); v != "" {
 			o.R("%s", v)
-		} else if IsPointer(f) && fieldNoDeref(f) {
+		} else if IsPointer(f) && f.Bool(`noDeref`) {
 			o.R("%s", f.Type())
 		} else {
 			o.R("%s", PointerElem(f))

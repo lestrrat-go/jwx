@@ -462,8 +462,6 @@ LOOP:
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')

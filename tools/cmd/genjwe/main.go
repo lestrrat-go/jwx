@@ -55,24 +55,6 @@ func yaml2json(fn string) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func boolFromField(f codegen.Field, field string) (bool, error) {
-	v, ok := f.Extra(field)
-	if !ok {
-		return false, fmt.Errorf("%q does not exist in %q", field, f.Name(true))
-	}
-
-	b, ok := v.(bool)
-	if !ok {
-		return false, fmt.Errorf("%q should be a bool in %q", field, f.Name(true))
-	}
-	return b, nil
-}
-
-func fieldHasAccept(f codegen.Field) bool {
-	v, _ := boolFromField(f, "hasAccept")
-	return v
-}
-
 func IsPointer(f codegen.Field) bool {
 	return strings.HasPrefix(f.Type(), `*`)
 }
@@ -234,7 +216,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
-		if fieldHasAccept(f) {
+		if f.Bool(`hasAccept`) {
 			o.L("var acceptor %s", PointerElem(f))
 			o.L("if err := acceptor.Accept(value); err != nil {")
 			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %sKey, err)", f.Name(true))
