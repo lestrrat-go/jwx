@@ -223,12 +223,12 @@ func ErrTokenNotYetValid() ValidationError {
 	return errTokenNotYetValid
 }
 
-func ErrInvalidAudience(err error) ValidationError {
-	return &invalidAudienceError{error: err}
+func ErrInvalidAudience() ValidationError {
+	return &invalidAudienceError{}
 }
 
-func ErrInvalidIssuer(err error) ValidationError {
-	return &invalidIssuerError{error: err}
+func ErrInvalidIssuer() ValidationError {
+	return &invalidIssuerError{}
 }
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
@@ -405,7 +405,7 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 func audienceClaimContainsString(value string) Validator {
 	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
 		if err := ClaimContainsString(AudienceKey, value).Validate(ctx, token); err != nil {
-			return ErrInvalidAudience(err.Unwrap())
+			return &invalidAudienceError{error: err.Unwrap()}
 		}
 		return nil
 	})
@@ -440,7 +440,7 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 func issuerClaimValueIs(value string) Validator {
 	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
 		if err := ClaimValueIs(IssuerKey, value).Validate(ctx, token); err != nil {
-			return ErrInvalidIssuer(err.Unwrap())
+			return &invalidIssuerError{error: err.Unwrap()}
 		}
 		return nil
 	})
