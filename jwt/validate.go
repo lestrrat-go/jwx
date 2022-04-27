@@ -400,9 +400,9 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 	return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
 }
 
-// AudienceClaimContainsString can be used to check if the audience claim, which is
+// audienceClaimContainsString can be used to check if the audience claim, which is
 // expected to be a list of strings, contains `value`.
-func AudienceClaimContainsString(value string) Validator {
+func audienceClaimContainsString(value string) Validator {
 	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
 		if err := ClaimContainsString(AudienceKey, value).Validate(ctx, token); err != nil {
 			return ErrInvalidAudience(err.Unwrap())
@@ -435,9 +435,9 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 	return nil
 }
 
-// IssuerClaimValueIs creates a Validator that checks if the issuer claim
+// issuerClaimValueIs creates a Validator that checks if the issuer claim
 // matches `value`.
-func IssuerClaimValueIs(value string) Validator {
+func issuerClaimValueIs(value string) Validator {
 	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
 		if err := ClaimValueIs(IssuerKey, value).Validate(ctx, token); err != nil {
 			return ErrInvalidIssuer(err.Unwrap())
