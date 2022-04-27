@@ -743,7 +743,7 @@ func ExampleJWT_ValidateIssuer() {
   }
   fmt.Printf("%s\n", err)
   // OUTPUT:
-  // "iss" not satisfied
+  // "iss" not satisfied: values do not match
 }
 ```
 source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_issuer_example_test.go)

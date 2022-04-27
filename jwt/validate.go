@@ -175,11 +175,37 @@ func (err *missingRequiredClaimError) Is(target error) bool {
 func (err *missingRequiredClaimError) isValidationError() {}
 func (*missingRequiredClaimError) Unwrap() error          { return nil }
 
+type invalidAudienceError struct {
+	error
+}
+
+func (err *invalidAudienceError) Is(target error) bool {
+	_, ok := target.(*invalidAudienceError)
+	return ok
+}
+
+func (err *invalidAudienceError) isValidationError() {}
+func (err *invalidAudienceError) Unwrap() error {
+	return err.error
+}
+
+type invalidIssuerError struct {
+	error
+}
+
+func (err *invalidIssuerError) Is(target error) bool {
+	_, ok := target.(*invalidIssuerError)
+	return ok
+}
+
+func (err *invalidIssuerError) isValidationError() {}
+func (err *invalidIssuerError) Unwrap() error {
+	return err.error
+}
+
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
 var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
-var errTokenInvalidAudience = NewValidationError(fmt.Errorf(`"aud" not satisfied`))
-var errTokenInvalidIssuer = NewValidationError(fmt.Errorf(`"iss" not satisfied`))
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
 // is not satisfied
@@ -197,12 +223,12 @@ func ErrTokenNotYetValid() ValidationError {
 	return errTokenNotYetValid
 }
 
-func ErrTokenInvalidAudience() ValidationError {
-	return errTokenInvalidAudience
+func ErrInvalidAudience(err error) ValidationError {
+	return &invalidAudienceError{error: err}
 }
 
-func ErrTokenInvalidIssuer() ValidationError {
-	return errTokenInvalidIssuer
+func ErrInvalidIssuer(err error) ValidationError {
+	return &invalidIssuerError{error: err}
 }
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
@@ -339,11 +365,15 @@ func ClaimContainsString(name, value string) Validator {
 // IsValidationError returns true if the error is a validation error
 func IsValidationError(err error) bool {
 	switch err {
-	case errTokenExpired, errTokenNotYetValid, errInvalidIssuedAt, errTokenInvalidAudience, errTokenInvalidIssuer:
+	case errTokenExpired, errTokenNotYetValid, errInvalidIssuedAt:
 		return true
 	default:
 		switch err.(type) {
 		case *validationError:
+			return true
+		case *invalidAudienceError:
+			return true
+		case *invalidIssuerError:
 			return true
 		default:
 			return false
@@ -370,33 +400,15 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 	return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
 }
 
-type audienceClaimContainsString struct {
-	value string
-}
-
 // AudienceClaimContainsString can be used to check if the audience claim, which is
 // expected to be a list of strings, contains `value`.
 func AudienceClaimContainsString(value string) Validator {
-	return audienceClaimContainsString{value: value}
-}
-
-func (ccs audienceClaimContainsString) Validate(_ context.Context, t Token) ValidationError {
-	v, ok := t.Get(AudienceKey)
-	if !ok {
-		return NewValidationError(fmt.Errorf(`claim %q not found`, AudienceKey))
-	}
-
-	list, ok := v.([]string)
-	if !ok {
-		return NewValidationError(fmt.Errorf(`claim %q must be a []string (got %T)`, AudienceKey, v))
-	}
-
-	for _, v := range list {
-		if v == ccs.value {
-			return nil
+	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
+		if err := ClaimContainsString(AudienceKey, value).Validate(ctx, token); err != nil {
+			return ErrInvalidAudience(err.Unwrap())
 		}
-	}
-	return ErrTokenInvalidAudience()
+		return nil
+	})
 }
 
 type claimValueIs struct {
@@ -426,22 +438,12 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 // IssuerClaimValueIs creates a Validator that checks if the issuer claim
 // matches `value`.
 func IssuerClaimValueIs(value string) Validator {
-	return &issuerClaimValueIs{value: value}
-}
-
-type issuerClaimValueIs struct {
-	value string
-}
-
-func (cv *issuerClaimValueIs) Validate(_ context.Context, t Token) ValidationError {
-	v, ok := t.Get(IssuerKey)
-	if !ok {
-		return NewValidationError(fmt.Errorf(`%[1]q not satisfied: claim %[1]q does not exist`, IssuerKey))
-	}
-	if v != cv.value {
-		return ErrTokenInvalidIssuer()
-	}
-	return nil
+	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
+		if err := ClaimValueIs(IssuerKey, value).Validate(ctx, token); err != nil {
+			return ErrInvalidIssuer(err.Unwrap())
+		}
+		return nil
+	})
 }
 
 // IsRequired creates a Validator that checks if the required claim `name`

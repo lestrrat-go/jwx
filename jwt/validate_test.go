@@ -3,6 +3,7 @@ package jwt_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -92,7 +93,7 @@ func TestGHIssue10(t *testing.T) {
 			return
 		}
 
-		if !assert.ErrorIs(t, err, jwt.ErrTokenInvalidIssuer(), "error should be jwt.ErrTokenInvalidIssuer") {
+		if !assert.ErrorIs(t, err, jwt.ErrInvalidIssuer(fmt.Errorf("")), "error should be jwt.ErrInvalidIssuer") {
 			return
 		}
 
@@ -157,7 +158,7 @@ func TestGHIssue10(t *testing.T) {
 			if !assert.Error(t, err, "token.Validate should fail") {
 				return
 			}
-			if !assert.ErrorIs(t, err, jwt.ErrTokenInvalidAudience(), `error should be ErrTokenInvalidAudience`) {
+			if !assert.ErrorIs(t, err, jwt.ErrInvalidAudience(fmt.Errorf("")), `error should be ErrInvalidAudience`) {
 				return
 			}
 			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
