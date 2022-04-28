@@ -248,6 +248,11 @@ func ErrInvalidIssuer() ValidationError {
 }
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
+//
+// Note: In hindsight, this function should not have been used as a constructor,
+// but rather a place holder for an opaque error value that could be passed to
+// errors.Is(). The signature of this function will be changed in a future
+// major version.
 func ErrMissingRequiredClaim(name string) ValidationError {
 	return &missingRequiredClaimError{claim: name}
 }
