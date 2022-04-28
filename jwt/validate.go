@@ -220,6 +220,8 @@ func (err *invalidIssuerError) Error() string {
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
 var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
+var errInvalidAudience = &invalidAudienceError{}
+var errInvalidIssuer = &invalidIssuerError{}
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
 // is not satisfied
@@ -238,11 +240,11 @@ func ErrTokenNotYetValid() ValidationError {
 }
 
 func ErrInvalidAudience() ValidationError {
-	return &invalidAudienceError{}
+	return errInvalidAudience
 }
 
 func ErrInvalidIssuer() ValidationError {
-	return &invalidIssuerError{}
+	return errInvalidIssuer
 }
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
