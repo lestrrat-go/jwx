@@ -189,6 +189,13 @@ func (err *invalidAudienceError) Unwrap() error {
 	return err.error
 }
 
+func (err *invalidAudienceError) Error() string {
+	if err.error == nil {
+		return `"aud" not satisfied`
+	}
+	return err.error.Error()
+}
+
 type invalidIssuerError struct {
 	error
 }
@@ -201,6 +208,13 @@ func (err *invalidIssuerError) Is(target error) bool {
 func (err *invalidIssuerError) isValidationError() {}
 func (err *invalidIssuerError) Unwrap() error {
 	return err.error
+}
+
+func (err *invalidIssuerError) Error() string {
+	if err.error == nil {
+		return `"iss" not satisfied`
+	}
+	return err.error.Error()
 }
 
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
