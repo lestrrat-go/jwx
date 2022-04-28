@@ -383,13 +383,7 @@ func IsValidationError(err error) bool {
 		return true
 	default:
 		switch err.(type) {
-		case *validationError:
-			return true
-		case *invalidAudienceError:
-			return true
-		case *invalidIssuerError:
-			return true
-		case *missingRequiredClaimError:
+		case *validationError, *invalidAudienceError, *invalidIssuerError, *missingRequiredClaimError:
 			return true
 		default:
 			return false
