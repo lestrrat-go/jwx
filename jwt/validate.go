@@ -389,6 +389,8 @@ func IsValidationError(err error) bool {
 			return true
 		case *invalidIssuerError:
 			return true
+		case *missingRequiredClaimError:
+			return true
 		default:
 			return false
 		}
