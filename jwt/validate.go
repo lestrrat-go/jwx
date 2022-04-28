@@ -175,6 +175,48 @@ func (err *missingRequiredClaimError) Is(target error) bool {
 func (err *missingRequiredClaimError) isValidationError() {}
 func (*missingRequiredClaimError) Unwrap() error          { return nil }
 
+type invalidAudienceError struct {
+	error
+}
+
+func (err *invalidAudienceError) Is(target error) bool {
+	_, ok := target.(*invalidAudienceError)
+	return ok
+}
+
+func (err *invalidAudienceError) isValidationError() {}
+func (err *invalidAudienceError) Unwrap() error {
+	return err.error
+}
+
+func (err *invalidAudienceError) Error() string {
+	if err.error == nil {
+		return `"aud" not satisfied`
+	}
+	return err.error.Error()
+}
+
+type invalidIssuerError struct {
+	error
+}
+
+func (err *invalidIssuerError) Is(target error) bool {
+	_, ok := target.(*invalidIssuerError)
+	return ok
+}
+
+func (err *invalidIssuerError) isValidationError() {}
+func (err *invalidIssuerError) Unwrap() error {
+	return err.error
+}
+
+func (err *invalidIssuerError) Error() string {
+	if err.error == nil {
+		return `"iss" not satisfied`
+	}
+	return err.error.Error()
+}
+
 var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
 var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
 var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
@@ -193,6 +235,14 @@ func ErrInvalidIssuedAt() ValidationError {
 
 func ErrTokenNotYetValid() ValidationError {
 	return errTokenNotYetValid
+}
+
+func ErrInvalidAudience() ValidationError {
+	return &invalidAudienceError{}
+}
+
+func ErrInvalidIssuer() ValidationError {
+	return &invalidIssuerError{}
 }
 
 // ErrMissingRequiredClaim creates a new error for missing required claims.
@@ -335,6 +385,10 @@ func IsValidationError(err error) bool {
 		switch err.(type) {
 		case *validationError:
 			return true
+		case *invalidAudienceError:
+			return true
+		case *invalidIssuerError:
+			return true
 		default:
 			return false
 		}
@@ -352,17 +406,23 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 		return NewValidationError(fmt.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
 	}
 
-	var found bool
 	for _, v := range list {
 		if v == ccs.value {
-			found = true
-			break
+			return nil
 		}
 	}
-	if !found {
-		return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
-	}
-	return nil
+	return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
+}
+
+// audienceClaimContainsString can be used to check if the audience claim, which is
+// expected to be a list of strings, contains `value`.
+func audienceClaimContainsString(value string) Validator {
+	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
+		if err := ClaimContainsString(AudienceKey, value).Validate(ctx, token); err != nil {
+			return &invalidAudienceError{error: err.Unwrap()}
+		}
+		return nil
+	})
 }
 
 type claimValueIs struct {
@@ -387,6 +447,17 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 		return NewValidationError(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
 	}
 	return nil
+}
+
+// issuerClaimValueIs creates a Validator that checks if the issuer claim
+// matches `value`.
+func issuerClaimValueIs(value string) Validator {
+	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
+		if err := ClaimValueIs(IssuerKey, value).Validate(ctx, token); err != nil {
+			return &invalidIssuerError{error: err.Unwrap()}
+		}
+		return nil
+	})
 }
 
 // IsRequired creates a Validator that checks if the required claim `name`
