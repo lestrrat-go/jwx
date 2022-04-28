@@ -1292,8 +1292,12 @@ func TestGH430(t *testing.T) {
 }
 
 func TestGH706(t *testing.T) {
-	tok := jwt.New()
-	if !assert.ErrorIs(t, jwt.ErrMissingRequiredClaim(""), jwt.Validate(tok, jwt.WithRequiredClaim("foo")), `jwt.Validate should fail`) {
+	err := jwt.Validate(jwt.New(), jwt.WithRequiredClaim("foo"))
+	if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+		return
+	}
+
+	if !assert.ErrorIs(t, err, jwt.ErrMissingRequiredClaim(""), `jwt.Validate should fail`) {
 		return
 	}
 }
