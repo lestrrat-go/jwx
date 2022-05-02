@@ -74,7 +74,6 @@ package examples_test
 import (
   "encoding/json"
   "fmt"
-  "io/ioutil"
   "os"
 
   "github.com/lestrrat-go/jwx/v2/jws"
@@ -82,7 +81,7 @@ import (
 
 func ExampleJWS_ReadFile() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
-  f, err := ioutil.TempFile(``, `jws_readfile-*.jws`)
+  f, err := os.CreateTemp(``, `jws_readfile-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
