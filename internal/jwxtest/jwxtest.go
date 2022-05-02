@@ -167,7 +167,7 @@ func WriteJSONFile(template string, v interface{}) (string, func(), error) {
 }
 
 func DumpFile(t *testing.T, file string) {
-	buf, err := io.ReadFile(file)
+	buf, err := os.ReadFile(file)
 	if !assert.NoError(t, err, `failed to read file %s for debugging`, file) {
 		return
 	}
