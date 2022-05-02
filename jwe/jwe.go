@@ -10,7 +10,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
@@ -698,7 +697,7 @@ func ParseString(s string) (*Message, error) {
 
 // ParseReader is the same as Parse, but takes an io.Reader.
 func ParseReader(src io.Reader) (*Message, error) {
-	buf, err := ioutil.ReadAll(src)
+	buf, err := io.ReadAll(src)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
 	}

@@ -9,10 +9,10 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -722,8 +722,8 @@ func TestSignTyp(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := ioutil.TempFile("", "test-read-file-*.jwt")
-	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+	f, err := os.CreateTemp("", "test-read-file-*.jwt")
+	if !assert.NoError(t, err, `os.CreateTemp should succeed`) {
 		return
 	}
 	defer f.Close()

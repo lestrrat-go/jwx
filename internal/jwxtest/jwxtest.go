@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -168,7 +167,7 @@ func WriteJSONFile(template string, v interface{}) (string, func(), error) {
 }
 
 func DumpFile(t *testing.T, file string) {
-	buf, err := ioutil.ReadFile(file)
+	buf, err := io.ReadFile(file)
 	if !assert.NoError(t, err, `failed to read file %s for debugging`, file) {
 		return
 	}
@@ -217,7 +216,7 @@ func DumpFile(t *testing.T, file string) {
 }
 
 func CreateTempFile(template string) (*os.File, func(), error) {
-	file, err := ioutil.TempFile("", template)
+	file, err := os.CreateTemp("", template)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
@@ -237,7 +236,7 @@ func ReadFile(file string) ([]byte, error) {
 	}
 	defer f.Close()
 
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read from key file %s: %w`, file, err)
 	}

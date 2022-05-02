@@ -14,7 +14,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
@@ -559,7 +558,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 	// meh, there's no way to tell if a stream has "ended" a single
 	// JWKs except when we encounter an EOF, so just... ReadAll
-	buf, err := ioutil.ReadAll(src)
+	buf, err := io.ReadAll(src)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
 	}

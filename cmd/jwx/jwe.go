@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
@@ -71,7 +71,7 @@ func makeJweEncryptCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
@@ -139,7 +139,7 @@ func makeJweDecryptCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
