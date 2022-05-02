@@ -2,7 +2,6 @@ package examples_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
@@ -38,7 +37,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-	f, err := ioutil.TempFile(``, `jwk_readfile_with_pem-*.jwk`)
+	f, err := os.CreateTemp(``, `jwk_readfile_with_pem-*.jwk`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return

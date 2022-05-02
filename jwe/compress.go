@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"compress/flate"
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
 
 func uncompress(plaintext []byte) ([]byte, error) {
-	return ioutil.ReadAll(flate.NewReader(bytes.NewReader(plaintext)))
+	return io.ReadAll(flate.NewReader(bytes.NewReader(plaintext)))
 }
 
 func compress(plaintext []byte) ([]byte, error) {

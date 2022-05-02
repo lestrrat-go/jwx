@@ -3,7 +3,6 @@ package examples_test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -26,7 +25,7 @@ func ExampleJWK_ReadFile() {
     ]
   }`
 
-	f, err := ioutil.TempFile(``, `jwk_readfile-*.jwk`)
+	f, err := os.CreateTemp(``, `jwk_readfile-*.jwk`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return

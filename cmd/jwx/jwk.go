@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -254,7 +253,7 @@ func makeJwkFormatCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
