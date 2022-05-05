@@ -222,39 +222,65 @@ var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
 var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
 var errInvalidAudience = &invalidAudienceError{}
 var errInvalidIssuer = &invalidIssuerError{}
+var errRequiredClaim = &missingRequiredClaimError{}
 
 // ErrTokenExpired returns the immutable error used when `exp` claim
-// is not satisfied
+// is not satisfied.
+//
+// The return value should only be used for comparison using `errors.Is()`
 func ErrTokenExpired() ValidationError {
 	return errTokenExpired
 }
 
 // ErrInvalidIssuedAt returns the immutable error used when `iat` claim
 // is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
 func ErrInvalidIssuedAt() ValidationError {
 	return errInvalidIssuedAt
 }
 
+// ErrTokenNotYetValid returns the immutable error used when `nbf` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
 func ErrTokenNotYetValid() ValidationError {
 	return errTokenNotYetValid
 }
 
+// ErrInvalidAudience returns the immutable error used when `aud` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
 func ErrInvalidAudience() ValidationError {
 	return errInvalidAudience
 }
 
+// ErrInvalidAudience returns the immutable error used when `iss` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
 func ErrInvalidIssuer() ValidationError {
 	return errInvalidIssuer
 }
 
-// ErrMissingRequiredClaim creates a new error for missing required claims.
+// ErrMissingRequiredClaim should not have been exported, and will be
+// removed in a future release. Use `ErrRequiredClaim()` instead to get
+// an error to be used in `errors.Is()`
 //
-// Note: In hindsight, this function should not have been used as a constructor,
-// but rather a place holder for an opaque error value that could be passed to
-// errors.Is(). The signature of this function will be changed in a future
-// major version.
+// This function should not have been implemented as a constructor.
+// but rather a means to retrieve an opaque and immutable error value
+// that could be passed to `errors.Is()`.
 func ErrMissingRequiredClaim(name string) ValidationError {
 	return &missingRequiredClaimError{claim: name}
+}
+
+// ErrInvalidAudience returns the immutable error used when the claim
+// specified by `jwt.IsRequired()` is not present.
+//
+// The return value should only be used for comparison using `errors.Is()`
+func ErrRequiredClaim() ValidationError {
+	return errRequiredClaim
 }
 
 // Validator describes interface to validate a Token.
@@ -475,7 +501,7 @@ func (ir isRequired) Validate(_ context.Context, t Token) ValidationError {
 	name := string(ir)
 	_, ok := t.Get(name)
 	if !ok {
-		return ErrMissingRequiredClaim(name)
+		return &missingRequiredClaimError{claim: name}
 	}
 	return nil
 }
