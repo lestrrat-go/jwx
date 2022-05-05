@@ -395,8 +395,9 @@ func isNbfValid(ctx context.Context, t Token) ValidationError {
 }
 
 type claimContainsString struct {
-	name  string
-	value string
+	name    string
+	value   string
+	makeErr func(error) ValidationError
 }
 
 // ClaimContainsString can be used to check if the claim called `name`, which is
@@ -404,8 +405,9 @@ type claimContainsString struct {
 // implementation this will probably only work for `aud` fields.
 func ClaimContainsString(name, value string) Validator {
 	return claimContainsString{
-		name:  name,
-		value: value,
+		name:    name,
+		value:   value,
+		makeErr: NewValidationError,
 	}
 }
 
@@ -427,12 +429,12 @@ func IsValidationError(err error) bool {
 func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationError {
 	v, ok := t.Get(ccs.name)
 	if !ok {
-		return NewValidationError(fmt.Errorf(`claim %q not found`, ccs.name))
+		return ccs.makeErr(fmt.Errorf(`claim %q not found`, ccs.name))
 	}
 
 	list, ok := v.([]string)
 	if !ok {
-		return NewValidationError(fmt.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
+		return ccs.makeErr(fmt.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
 	}
 
 	for _, v := range list {
@@ -440,23 +442,27 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 			return nil
 		}
 	}
-	return NewValidationError(fmt.Errorf(`%q not satisfied`, ccs.name))
+	return ccs.makeErr(fmt.Errorf(`%q not satisfied`, ccs.name))
+}
+
+func makeInvalidAudienceError(err error) ValidationError {
+	return &invalidAudienceError{error: err}
 }
 
 // audienceClaimContainsString can be used to check if the audience claim, which is
 // expected to be a list of strings, contains `value`.
 func audienceClaimContainsString(value string) Validator {
-	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
-		if err := ClaimContainsString(AudienceKey, value).Validate(ctx, token); err != nil {
-			return &invalidAudienceError{error: err.Unwrap()}
-		}
-		return nil
-	})
+	return claimContainsString{
+		name:    AudienceKey,
+		value:   value,
+		makeErr: makeInvalidAudienceError,
+	}
 }
 
 type claimValueIs struct {
-	name  string
-	value interface{}
+	name    string
+	value   interface{}
+	makeErr func(error) ValidationError
 }
 
 // ClaimValueIs creates a Validator that checks if the value of claim `name`
@@ -464,29 +470,36 @@ type claimValueIs struct {
 // and therefore complex comparisons may fail using this code. If you
 // need to do more, use a custom Validator.
 func ClaimValueIs(name string, value interface{}) Validator {
-	return &claimValueIs{name: name, value: value}
+	return &claimValueIs{
+		name:    name,
+		value:   value,
+		makeErr: NewValidationError,
+	}
 }
 
 func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
 	v, ok := t.Get(cv.name)
 	if !ok {
-		return NewValidationError(fmt.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
+		return cv.makeErr(fmt.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
 	}
 	if v != cv.value {
-		return NewValidationError(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
+		return cv.makeErr(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
 	}
 	return nil
+}
+
+func makeIssuerClaimError(err error) ValidationError {
+	return &invalidIssuerError{error: err}
 }
 
 // issuerClaimValueIs creates a Validator that checks if the issuer claim
 // matches `value`.
 func issuerClaimValueIs(value string) Validator {
-	return ValidatorFunc(func(ctx context.Context, token Token) ValidationError {
-		if err := ClaimValueIs(IssuerKey, value).Validate(ctx, token); err != nil {
-			return &invalidIssuerError{error: err.Unwrap()}
-		}
-		return nil
-	})
+	return &claimValueIs{
+		name:    IssuerKey,
+		value:   value,
+		makeErr: makeIssuerClaimError,
+	}
 }
 
 // IsRequired creates a Validator that checks if the required claim `name`
