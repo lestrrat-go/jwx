@@ -131,6 +131,8 @@ type identFlattenAudience struct{}
 type identFormKey struct{}
 type identHeaderKey struct{}
 type identKeyProvider struct{}
+type identNumericDateFormatPrecision struct{}
+type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
 type identSignOption struct{}
 type identToken struct{}
@@ -172,6 +174,14 @@ func (identHeaderKey) String() string {
 
 func (identKeyProvider) String() string {
 	return "WithKeyProvider"
+}
+
+func (identNumericDateFormatPrecision) String() string {
+	return "WithNumericDateFormatPrecision"
+}
+
+func (identNumericDateParsePrecision) String() string {
+	return "WithNumericDateParsePrecision"
 }
 
 func (identPedantic) String() string {
@@ -266,6 +276,20 @@ func WithHeaderKey(v string) ParseOption {
 // for `jws.KeyProvider` in the `jws` package for details on how this works.
 func WithKeyProvider(v jws.KeyProvider) ParseOption {
 	return &parseOption{option.New(identKeyProvider{}, v)}
+}
+
+// WithNumericDateFormatPrecision sets the precision up to which the
+// library uses to format fractional dates found in the numeric date
+// fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+func WithNumericDateFormatPrecision(v int) GlobalOption {
+	return &globalOption{option.New(identNumericDateFormatPrecision{}, v)}
+}
+
+// WithNumericDateParsePrecision sets the precision up to which the
+// library uses to parse fractional dates found in the numeric date
+// fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+func WithNumericDateParsePrecision(v int) GlobalOption {
+	return &globalOption{option.New(identNumericDateParsePrecision{}, v)}
 }
 
 // WithPedantic enables pedantic mode for parsing JWTs. Currently this only

@@ -18,6 +18,8 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithFormKey", identFormKey{}.String())
 	require.Equal(t, "WithHeaderKey", identHeaderKey{}.String())
 	require.Equal(t, "WithKeyProvider", identKeyProvider{}.String())
+	require.Equal(t, "WithNumericDateFormatPrecision", identNumericDateFormatPrecision{}.String())
+	require.Equal(t, "WithNumericDateParsePrecision", identNumericDateParsePrecision{}.String())
 	require.Equal(t, "WithPedantic", identPedantic{}.String())
 	require.Equal(t, "WithSignOption", identSignOption{}.String())
 	require.Equal(t, "WithToken", identToken{}.String())
