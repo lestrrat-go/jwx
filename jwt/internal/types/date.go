@@ -53,7 +53,7 @@ func intToTime(v interface{}, t *time.Time) bool {
 func parseNumericString(x string) (time.Time, error) {
 	var t time.Time
 	var fractional string
-	var whole string = x
+	whole := x
 	if i := strings.IndexRune(x, '.'); i > 0 {
 		if ParsePrecision == 0 {
 			fractional = ""

@@ -18,8 +18,8 @@ import (
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
-	var parsePrecision uint32 = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
-	var formatPrecision uint32 = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
+	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
+	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 
 	//nolint:forcetypeassert
 	for _, option := range options {

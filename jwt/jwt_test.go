@@ -1596,5 +1596,4 @@ func TestFractional(t *testing.T) {
 		}
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 	})
-
 }
