@@ -51,35 +51,36 @@ func intToTime(v interface{}, t *time.Time) bool {
 }
 
 func parseNumericString(x string) (time.Time, error) {
-	var t time.Time
+	var t time.Time // empty time for empty return value
 	var fractional string
 	whole := x
 	if i := strings.IndexRune(x, '.'); i > 0 {
-		if ParsePrecision == 0 {
-			fractional = ""
-		} else {
-			fractional = x[i:]
+		if ParsePrecision > 0 && len(x) > i+1 {
+			fractional = x[i+1:]
 		}
 
-		if int(ParsePrecision) < len(fractional)-1 {
-			fractional = fractional[:int(ParsePrecision)+1]
+		if int(ParsePrecision) < len(fractional) {
+			fractional = fractional[:int(ParsePrecision)]
+			for len(fractional) < int(MaxPrecision) {
+				fractional = fractional + "0"
+			}
 		}
 		whole = x[:i]
 	}
 	n, err := strconv.ParseInt(whole, 10, 64)
 	if err != nil {
-		return t, fmt.Errorf(`failed to parse alue %#v: %w`, x, err)
+		return t, fmt.Errorf(`failed to parse whole value %q: %w`, whole, err)
 	}
-	t = time.Unix(n, 0).UTC()
+	var nsecs int64
 	if fractional != "" {
-		s2 := strings.TrimSuffix(t.Format(time.RFC3339), `Z`) + fractional + `Z`
-		t2, err := time.Parse(time.RFC3339, s2)
+		v, err := strconv.ParseInt(fractional, 10, 64)
 		if err != nil {
-			return t, fmt.Errorf(`failed to convert json value %q to time.Time: %w`, x, err)
+			return t, fmt.Errorf(`failed to parse fractional value %q: %w`, fractional, err)
 		}
-		t = t2
+		nsecs = v
 	}
-	return t, nil
+
+	return time.Unix(n, nsecs).UTC(), nil
 }
 
 func (n *NumericDate) Accept(v interface{}) error {
