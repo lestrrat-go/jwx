@@ -49,8 +49,8 @@ const (
 // are stored in _both_ the resulting `jwk.Set` object and the `jwk.Key` object .
 //
 type Set interface {
-	// AddKey adds the specified key. If the key already exists in the set, it is
-	// not added (but no error is returned).
+	// AddKey adds the specified key. If the key already exists in the set,
+	// an error is returned.
 	AddKey(Key) error
 
 	// Clear resets the list of keys associated with this set, emptying the
