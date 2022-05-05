@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.2.24 05 May 2022
+[Security]
+  * Upgrade golang.org/x/crypto (#724)
+
 v1.2.23 13 Apr 2022
 [Bug fixes]
   * [jwk] jwk.AutoRefresh had a race condition when `Configure()` was
