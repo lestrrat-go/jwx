@@ -1297,7 +1297,7 @@ func TestGH706(t *testing.T) {
 		return
 	}
 
-	if !assert.ErrorIs(t, err, jwt.ErrMissingRequiredClaim(""), `jwt.Validate should fail`) {
+	if !assert.ErrorIs(t, err, jwt.ErrRequiredClaim(), `jwt.Validate should fail`) {
 		return
 	}
 }
