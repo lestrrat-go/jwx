@@ -1503,16 +1503,16 @@ func TestFractional(t *testing.T) {
 				Expected: fmt.Sprintf(`%d`, aLongLongTimeAgo),
 			},
 			{
-				Input:    types.NumericDate{time.Unix(0, 1).UTC()},
+				Input:    types.NumericDate{Time: time.Unix(0, 1).UTC()},
 				Expected: "0",
 			},
 			{
-				Input:     types.NumericDate{time.Unix(0, 1).UTC()},
+				Input:     types.NumericDate{Time: time.Unix(0, 1).UTC()},
 				Precision: 9,
 				Expected:  "0.000000001",
 			},
 			{
-				Input:     types.NumericDate{time.Unix(0, 100000000).UTC()},
+				Input:     types.NumericDate{Time: time.Unix(0, 100000000).UTC()},
 				Precision: 9,
 				Expected:  "0.100000000",
 			},
