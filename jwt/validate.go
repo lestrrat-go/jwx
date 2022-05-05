@@ -240,7 +240,7 @@ func ErrInvalidIssuedAt() ValidationError {
 	return errInvalidIssuedAt
 }
 
-// ErrTokenNotYetValid returns the immutable error used wehn `nbf` claim
+// ErrTokenNotYetValid returns the immutable error used when `nbf` claim
 // is not satisfied
 //
 // The return value should only be used for comparison using `errors.Is()`
