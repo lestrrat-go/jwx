@@ -179,7 +179,7 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
     * Field is now Get() (returns values for arbitrary fields other than keys). Fetching a key is done via Key()
     * Remove() now removes arbitrary fields, not keys. to remove keys, use RemoveKey()
     * Iterate has been added to iterate through all non-key fields.
-  * Add is now AddKey(Key) string
+  * Add is now AddKey(Key) string, and returns an error when the same key is added
   * Get is now Key(int) (Key, bool)
   * Remove is now RemoveKey(Key) error
   * Iterate is now Keys(context.Context) KeyIterator
