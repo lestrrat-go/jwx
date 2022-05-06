@@ -14,6 +14,7 @@ const (
 	MaxPrecision     uint32 = 9 // nanosecond level
 )
 
+var Pedantic uint32
 var ParsePrecision = DefaultPrecision
 var FormatPrecision = DefaultPrecision
 
@@ -52,6 +53,27 @@ func intToTime(v interface{}, t *time.Time) bool {
 
 func parseNumericString(x string) (time.Time, error) {
 	var t time.Time // empty time for empty return value
+
+	// Only check for the escape hatch if it's the pedantic
+	// flag is off
+	if Pedantic != 1 {
+		// This is an escape hatch for non-conformant providers
+		// that gives us RFC3339 instead of epoch time
+		for _, r := range x {
+			// 0x30 = '0', 0x39 = '9', 0x2E = '.'
+			if (r >= 0x30 && r <= 0x39) || r == 0x2E {
+				continue
+			}
+
+			// if it got here, then it probably isn't epoch time
+			tv, err := time.Parse(time.RFC3339, x)
+			if err != nil {
+				return t, fmt.Errorf(`value is not number of seconds since the epoch, and attempt to parse it as RFC3339 timestamp failed: %w`, err)
+			}
+			return tv, nil
+		}
+	}
+
 	var fractional string
 	whole := x
 	if i := strings.IndexRune(x, '.'); i > 0 {
