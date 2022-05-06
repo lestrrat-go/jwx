@@ -256,7 +256,7 @@ func ErrInvalidAudience() ValidationError {
 	return errInvalidAudience
 }
 
-// ErrInvalidAudience returns the immutable error used when `iss` claim
+// ErrInvalidIssuer returns the immutable error used when `iss` claim
 // is not satisfied
 //
 // The return value should only be used for comparison using `errors.Is()`
