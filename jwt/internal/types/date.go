@@ -14,7 +14,7 @@ const (
 	MaxPrecision     uint32 = 9 // nanosecond level
 )
 
-var Pedantic uint32 = 0
+var Pedantic uint32
 var ParsePrecision = DefaultPrecision
 var FormatPrecision = DefaultPrecision
 
