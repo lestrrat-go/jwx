@@ -56,11 +56,12 @@ func parseNumericString(x string) (time.Time, error) {
 	whole := x
 	if i := strings.IndexRune(x, '.'); i > 0 {
 		if ParsePrecision > 0 && len(x) > i+1 {
-			fractional = x[i+1:]
-		}
-
-		if int(ParsePrecision) < len(fractional) {
-			fractional = fractional[:int(ParsePrecision)]
+			fractional = x[i+1:] // everything after the '.'
+			if int(ParsePrecision) < len(fractional) {
+				// Remove insignificant digits
+				fractional = fractional[:int(ParsePrecision)]
+			}
+			// Replace missing fractional diits with zeros
 			for len(fractional) < int(MaxPrecision) {
 				fractional = fractional + "0"
 			}
