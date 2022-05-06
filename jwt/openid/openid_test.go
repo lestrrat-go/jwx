@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 	"github.com/lestrrat-go/jwx/v2/jwt/openid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const aLongLongTimeAgo = 233431200
@@ -675,4 +676,33 @@ func TestKeys(t *testing.T) {
 	at.Equal(`updated_at`, openid.UpdatedAtKey)
 	at.Equal(`website`, openid.WebsiteKey)
 	at.Equal(`zoneinfo`, openid.ZoneinfoKey)
+}
+
+func TestGH734(t *testing.T) {
+	const src = `{
+    "nickname": "miniscruff",
+    "updated_at": "2022-05-06T04:57:24.367Z",
+    "email_verified": true
+  }`
+
+	expected, _ := time.Parse(time.RFC3339, "2022-05-06T04:57:24.367Z")
+	for _, pedantic := range []bool{true, false} {
+		t.Run(fmt.Sprintf("pedantic=%t", pedantic), func(t *testing.T) {
+			jwt.Settings(jwt.WithNumericDateParsePedantic(pedantic))
+			tok := openid.New()
+			_, err := jwt.Parse(
+				[]byte(src),
+				jwt.WithToken(tok),
+				jwt.WithVerify(false),
+				jwt.WithValidate(false),
+			)
+			if pedantic {
+				require.Error(t, err, `jwt.Parse should fail for pedantic parser`)
+			} else {
+				require.NoError(t, err, `jwt.Parse should succeed`)
+				require.Equal(t, expected, tok.UpdatedAt(), `updated_at should match`)
+			}
+		})
+	}
+	jwt.Settings(jwt.WithNumericDateParsePedantic(false))
 }

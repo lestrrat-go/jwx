@@ -18,6 +18,7 @@ import (
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
+	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 
@@ -26,6 +27,8 @@ func Settings(options ...GlobalOption) {
 		switch option.Ident() {
 		case identFlattenAudience{}:
 			flattenAudienceBool = option.Value().(bool)
+		case identNumericDateParsePedantic{}:
+			parsePedantic = option.Value().(bool)
 		case identNumericDateParsePrecision{}:
 			v := option.Value().(int)
 			// only accept this value if it's in our desired range
@@ -52,6 +55,17 @@ func Settings(options ...GlobalOption) {
 		v := atomic.LoadUint32(&types.FormatPrecision)
 		if v != formatPrecision {
 			atomic.CompareAndSwapUint32(&types.FormatPrecision, v, formatPrecision)
+		}
+	}
+
+	{
+		v := atomic.LoadUint32(&types.Pedantic)
+		if (v == 1) != parsePedantic {
+			var newVal uint32
+			if parsePedantic {
+				newVal = 1
+			}
+			atomic.CompareAndSwapUint32(&types.Pedantic, v, newVal)
 		}
 	}
 

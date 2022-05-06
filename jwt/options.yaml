@@ -186,4 +186,16 @@ options:
       WithNumericDateFormatPrecision sets the precision up to which the
       library uses to format fractional dates found in the numeric date
       fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+  - ident: NumericDateParsePedantic
+    interface: GlobalOption
+    argument_type: bool
+    comment: |
+      WithNumericDateParsePedantic specifies if the parser should behave
+      in a pedantic manner when parsing numeric dates. Normally fields that
+      are defined to have `numeric date` type expect seconds since epoch
+      (with an optional fraction part), but by setting this to `false`
+      the parser tries to parse it as RFC3339 when unexpected characters
+      are found in the value.  Default is `false`, and RFC3339 timestamps are
+      also parsed along with seconds since epoch.
+
 
