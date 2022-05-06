@@ -106,14 +106,13 @@ package examples_test
 
 import (
   "fmt"
-  "io/ioutil"
   "os"
 
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 func ExampleJWT_ReadFile() {
-  f, err := ioutil.TempFile(``, `jwt_readfile-*.jws`)
+  f, err := os.CreateTemp(``, `jwt_readfile-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return

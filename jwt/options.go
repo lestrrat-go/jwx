@@ -167,7 +167,7 @@ func WithKeySet(set jwk.Set, options ...interface{}) ParseOption {
 // WithIssuer specifies that expected issuer value. If not specified,
 // the value of issuer is not verified at all.
 func WithIssuer(s string) ValidateOption {
-	return WithValidator(ClaimValueIs(IssuerKey, s))
+	return WithValidator(issuerClaimValueIs(s))
 }
 
 // WithSubject specifies that expected subject value. If not specified,
@@ -187,7 +187,7 @@ func WithJwtID(s string) ValidateOption {
 // matches this value.  If not specified, the value of issuer is not
 // verified at all.
 func WithAudience(s string) ValidateOption {
-	return WithValidator(ClaimContainsString(AudienceKey, s))
+	return WithValidator(audienceClaimContainsString(s))
 }
 
 // WithClaimValue specifies the expected value for a given claim

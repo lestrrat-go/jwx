@@ -22,16 +22,6 @@ func TestGHIssue10(t *testing.T) {
 		BuildFunc  func(v string) (jwt.Token, error)
 	}{
 		{
-			ClaimName:  jwt.IssuerKey,
-			ClaimValue: `github.com/lestrrat-go/jwx/v2`,
-			OptionFunc: jwt.WithIssuer,
-			BuildFunc: func(v string) (jwt.Token, error) {
-				return jwt.NewBuilder().
-					Issuer(v).
-					Build()
-			},
-		},
-		{
 			ClaimName:  jwt.JwtIDKey,
 			ClaimValue: `my-sepcial-key`,
 			OptionFunc: jwt.WithJwtID,
@@ -77,6 +67,39 @@ func TestGHIssue10(t *testing.T) {
 			}
 		})
 	}
+	t.Run(jwt.IssuerKey, func(t *testing.T) {
+		t.Parallel()
+		t1, err := jwt.NewBuilder().
+			Issuer("github.com/lestrrat-go/jwx/v2").
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
+			return
+		}
+
+		// This should succeed, because WithIssuer is not provided in the
+		// optional parameters
+		if !assert.NoError(t, jwt.Validate(t1), "jwt.Validate should succeed") {
+			return
+		}
+
+		// This should succeed, because WithIssuer is provided with same value
+		if !assert.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "jwt.Validate should succeed") {
+			return
+		}
+
+		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
+		if !assert.Error(t, err, "jwt.Validate should fail") {
+			return
+		}
+
+		if !assert.ErrorIs(t, err, jwt.ErrInvalidIssuer(), "error should be jwt.ErrInvalidIssuer") {
+			return
+		}
+
+		if !assert.True(t, jwt.IsValidationError(err), "error should be a validation error") {
+			return
+		}
+	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
@@ -134,7 +157,7 @@ func TestGHIssue10(t *testing.T) {
 			if !assert.Error(t, err, "token.Validate should fail") {
 				return
 			}
-			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
+			if !assert.ErrorIs(t, err, jwt.ErrInvalidAudience(), `error should be ErrInvalidAudience`) {
 				return
 			}
 			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {

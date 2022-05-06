@@ -3,10 +3,19 @@ package types
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
+
+const (
+	DefaultPrecision uint32 = 0 // second level
+	MaxPrecision     uint32 = 9 // nanosecond level
+)
+
+var ParsePrecision = DefaultPrecision
+var FormatPrecision = DefaultPrecision
 
 // NumericDate represents the date format used in the 'nbf' claim
 type NumericDate struct {
@@ -20,7 +29,7 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
-func numericToTime(v interface{}, t *time.Time) bool {
+func intToTime(v interface{}, t *time.Time) bool {
 	var n int64
 	switch x := v.(type) {
 	case int64:
@@ -33,10 +42,6 @@ func numericToTime(v interface{}, t *time.Time) bool {
 		n = int64(x)
 	case int:
 		n = int64(x)
-	case float32:
-		n = int64(x)
-	case float64:
-		n = int64(x)
 	default:
 		return false
 	}
@@ -45,32 +50,98 @@ func numericToTime(v interface{}, t *time.Time) bool {
 	return true
 }
 
+func parseNumericString(x string) (time.Time, error) {
+	var t time.Time // empty time for empty return value
+	var fractional string
+	whole := x
+	if i := strings.IndexRune(x, '.'); i > 0 {
+		if ParsePrecision > 0 && len(x) > i+1 {
+			fractional = x[i+1:] // everything after the '.'
+			if int(ParsePrecision) < len(fractional) {
+				// Remove insignificant digits
+				fractional = fractional[:int(ParsePrecision)]
+			}
+			// Replace missing fractional diits with zeros
+			for len(fractional) < int(MaxPrecision) {
+				fractional = fractional + "0"
+			}
+		}
+		whole = x[:i]
+	}
+	n, err := strconv.ParseInt(whole, 10, 64)
+	if err != nil {
+		return t, fmt.Errorf(`failed to parse whole value %q: %w`, whole, err)
+	}
+	var nsecs int64
+	if fractional != "" {
+		v, err := strconv.ParseInt(fractional, 10, 64)
+		if err != nil {
+			return t, fmt.Errorf(`failed to parse fractional value %q: %w`, fractional, err)
+		}
+		nsecs = v
+	}
+
+	return time.Unix(n, nsecs).UTC(), nil
+}
+
 func (n *NumericDate) Accept(v interface{}) error {
 	var t time.Time
-
 	switch x := v.(type) {
-	case string:
-		i, err := strconv.ParseInt(x[:], 10, 64)
+	case float32:
+		tv, err := parseNumericString(fmt.Sprintf(`%.9f`, x))
 		if err != nil {
-			return fmt.Errorf(`invalid epoch value %#v`, x)
+			return fmt.Errorf(`failed to accept float32 %.9f: %w`, x, err)
 		}
-		t = time.Unix(i, 0)
-
+		t = tv
+	case float64:
+		tv, err := parseNumericString(fmt.Sprintf(`%.9f`, x))
+		if err != nil {
+			return fmt.Errorf(`failed to accept float32 %.9f: %w`, x, err)
+		}
+		t = tv
 	case json.Number:
-		intval, err := x.Int64()
+		tv, err := parseNumericString(x.String())
 		if err != nil {
-			return fmt.Errorf(`failed to convert json value %#v to int64: %w`, x, err)
+			return fmt.Errorf(`failed to accept json.Number %q: %w`, x.String(), err)
 		}
-		t = time.Unix(intval, 0)
+		t = tv
+	case string:
+		tv, err := parseNumericString(x)
+		if err != nil {
+			return fmt.Errorf(`failed to accept string %q: %w`, x, err)
+		}
+		t = tv
 	case time.Time:
 		t = x
 	default:
-		if !numericToTime(v, &t) {
+		if !intToTime(v, &t) {
 			return fmt.Errorf(`invalid type %T`, v)
 		}
 	}
 	n.Time = t.UTC()
 	return nil
+}
+
+func (n NumericDate) String() string {
+	if FormatPrecision == 0 {
+		return strconv.FormatInt(n.Unix(), 10)
+	}
+
+	// This is cheating,but it's better (easier) than doing floating point math
+	// We basically munge with strings after formatting an integer balue
+	// for nanoseconds since epoch
+	s := strconv.FormatInt(n.UnixNano(), 10)
+	for len(s) < int(MaxPrecision) {
+		s = "0" + s
+	}
+
+	slwhole := len(s) - int(MaxPrecision)
+	s = s[:slwhole] + "." + s[slwhole:slwhole+int(FormatPrecision)]
+	if s[0] == '.' {
+		s = "0" + s
+	}
+
+	return s
 }
 
 // MarshalJSON translates from internal representation to JSON NumericDate
@@ -79,7 +150,8 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	if n.IsZero() {
 		return json.Marshal(nil)
 	}
-	return json.Marshal(n.Unix())
+
+	return json.Marshal(n.String())
 }
 
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
