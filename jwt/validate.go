@@ -275,7 +275,7 @@ func ErrMissingRequiredClaim(name string) ValidationError {
 	return &missingRequiredClaimError{claim: name}
 }
 
-// ErrInvalidAudience returns the immutable error used when the claim
+// ErrRequiredClaim returns the immutable error used when the claim
 // specified by `jwt.IsRequired()` is not present.
 //
 // The return value should only be used for comparison using `errors.Is()`
