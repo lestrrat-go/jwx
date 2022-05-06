@@ -172,4 +172,18 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
+  - ident: NumericDateParsePrecision
+    interface: GlobalOption
+    argument_type: int
+    comment: |
+      WithNumericDateParsePrecision sets the precision up to which the
+      library uses to parse fractional dates found in the numeric date
+      fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+  - ident: NumericDateFormatPrecision
+    interface: GlobalOption
+    argument_type: int
+    comment: |
+      WithNumericDateFormatPrecision sets the precision up to which the
+      library uses to format fractional dates found in the numeric date
+      fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
 

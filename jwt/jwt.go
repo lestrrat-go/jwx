@@ -12,27 +12,58 @@ import (
 	"github.com/lestrrat-go/jwx/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jws"
+	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 )
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudienceBool bool
+	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
+	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identFlattenAudience{}:
 			flattenAudienceBool = option.Value().(bool)
+		case identNumericDateParsePrecision{}:
+			v := option.Value().(int)
+			// only accept this value if it's in our desired range
+			if v >= 0 && v <= int(types.MaxPrecision) {
+				parsePrecision = uint32(v)
+			}
+		case identNumericDateFormatPrecision{}:
+			v := option.Value().(int)
+			// only accept this value if it's in our desired range
+			if v >= 0 && v <= int(types.MaxPrecision) {
+				formatPrecision = uint32(v)
+			}
 		}
 	}
 
-	v := atomic.LoadUint32(&json.FlattenAudience)
-	if (v == 1) != flattenAudienceBool {
-		var newVal uint32
-		if flattenAudienceBool {
-			newVal = 1
+	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
+		v := atomic.LoadUint32(&types.ParsePrecision)
+		if v != parsePrecision {
+			atomic.CompareAndSwapUint32(&types.ParsePrecision, v, parsePrecision)
 		}
-		atomic.CompareAndSwapUint32(&json.FlattenAudience, v, newVal)
+	}
+
+	if formatPrecision <= types.MaxPrecision { // remember we set default to max + 1
+		v := atomic.LoadUint32(&types.FormatPrecision)
+		if v != formatPrecision {
+			atomic.CompareAndSwapUint32(&types.FormatPrecision, v, formatPrecision)
+		}
+	}
+
+	{
+		v := atomic.LoadUint32(&json.FlattenAudience)
+		if (v == 1) != flattenAudienceBool {
+			var newVal uint32
+			if flattenAudienceBool {
+				newVal = 1
+			}
+			atomic.CompareAndSwapUint32(&json.FlattenAudience, v, newVal)
+		}
 	}
 }
 

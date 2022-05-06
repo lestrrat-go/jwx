@@ -23,12 +23,14 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwe"
+	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 /* This is commented out, because it is intended to cause compilation errors */
@@ -1481,5 +1483,117 @@ func TestSerializer(t *testing.T) {
 		if !assert.Error(t, err, `Serialize() should succeedl`) {
 			return
 		}
+	})
+}
+
+func TestFractional(t *testing.T) {
+	t.Run("FormatPrecision", func(t *testing.T) {
+		var nd types.NumericDate
+		jwt.Settings(jwt.WithNumericDateParsePrecision(int(types.MaxPrecision)))
+		s := fmt.Sprintf("%d.100000001", aLongLongTimeAgo)
+		_ = nd.Accept(s)
+		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
+		testcases := []struct {
+			Input     types.NumericDate
+			Expected  string
+			Precision int
+		}{
+			{
+				Input:    nd,
+				Expected: fmt.Sprintf(`%d`, aLongLongTimeAgo),
+			},
+			{
+				Input:    types.NumericDate{Time: time.Unix(0, 1).UTC()},
+				Expected: "0",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(0, 1).UTC()},
+				Precision: 9,
+				Expected:  "0.000000001",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(0, 100000000).UTC()},
+				Precision: 9,
+				Expected:  "0.100000000",
+			},
+		}
+
+		for i := 1; i <= int(types.MaxPrecision); i++ {
+			fractional := (fmt.Sprintf(`%d`, 100000001))[:i]
+			testcases = append(testcases, struct {
+				Input     types.NumericDate
+				Expected  string
+				Precision int
+			}{
+				Input:     nd,
+				Precision: i,
+				Expected:  fmt.Sprintf(`%d.%s`, aLongLongTimeAgo, fractional),
+			})
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
+				jwt.Settings(jwt.WithNumericDateFormatPrecision(tc.Precision))
+				require.Equal(t, tc.Expected, tc.Input.String())
+			})
+		}
+		jwt.Settings(jwt.WithNumericDateFormatPrecision(0))
+	})
+	t.Run("ParsePrecision", func(t *testing.T) {
+		const template = `{"iat":"%s"}`
+
+		testcases := []struct {
+			Input     string
+			Expected  time.Time
+			Precision int
+		}{
+			{
+				Input:    "0",
+				Expected: time.Unix(0, 0).UTC(),
+			},
+			{
+				Input:    "0.000000001",
+				Expected: time.Unix(0, 0).UTC(),
+			},
+			{
+				Input:    fmt.Sprintf("%d.111111111", aLongLongTimeAgo),
+				Expected: time.Unix(aLongLongTimeAgo, 0).UTC(),
+			},
+			{
+				// Max precision
+				Input:     fmt.Sprintf("%d.100000001", aLongLongTimeAgo),
+				Precision: int(types.MaxPrecision),
+				Expected:  time.Unix(aLongLongTimeAgo, 100000001).UTC(),
+			},
+		}
+
+		for i := 1; i < int(types.MaxPrecision); i++ {
+			testcases = append(testcases, struct {
+				Input     string
+				Expected  time.Time
+				Precision int
+			}{
+				Input:     fmt.Sprintf("%d.100000001", aLongLongTimeAgo),
+				Precision: i,
+				Expected:  time.Unix(aLongLongTimeAgo, 100000000).UTC(),
+			})
+		}
+
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
+				jwt.Settings(jwt.WithNumericDateParsePrecision(tc.Precision))
+				tok, err := jwt.Parse(
+					[]byte(fmt.Sprintf(template, tc.Input)),
+					jwt.WithVerify(false),
+					jwt.WithValidate(false),
+				)
+				require.NoError(t, err, `jwt.Parse should succeed`)
+
+				require.Equal(t, tc.Expected, tok.IssuedAt(), `iat should match`)
+			})
+		}
+		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 	})
 }
