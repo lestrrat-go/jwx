@@ -4,6 +4,14 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.2 - UNRELEASED
+  * [jwt] RFC3339 timestamps are also accepted for Numeric Date types in JWT tokens.
+    This allows users to parse servers that errnously use RFC3339 timestamps in
+    some pre-defined fields. You can change this behavior by setting 
+    `jwt.WithNumericDateParsePedantic` to `false`
+  * [jwt] `jwt.WithNumericDateParsePedantic` has been added. This is a global
+    option that is set using `jwt.Settings`
+
 v2.0.1 - 06 May 2022
   * [jwk] `jwk.Set` had erronously been documented as not returning an error
     when the same key already exists in the set. This is a behavior change
