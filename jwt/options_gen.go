@@ -291,12 +291,14 @@ func WithNumericDateFormatPrecision(v int) GlobalOption {
 }
 
 // WithNumericDateParsePedantic specifies if the parser should behave
-// in a pedantic manner when parsing numeric dates. Normally fields that
-// are defined to have `numeric date` type expect seconds since epoch
-// (with an optional fraction part), but by setting this to `false`
-// the parser tries to parse it as RFC3339 when unexpected characters
-// are found in the value.  Default is `false`, and RFC3339 timestamps are
-// also parsed along with seconds since epoch.
+// in a pedantic manner when parsing numeric dates. Normally this library
+// attempts to interpret timestamps as a numeric value representing
+// number of seconds (with an optional fractional part), but if that fails
+// it tries to parse using a RFC3339 parser. This allows us to parse
+// payloads from non-comforming servers.
+//
+// However, when you set WithNumericDateParePedantic to `true`, the
+// RFC3339 parser is not tried, and we expect a numeric value strictly
 func WithNumericDateParsePedantic(v bool) GlobalOption {
 	return &globalOption{option.New(identNumericDateParsePedantic{}, v)}
 }
