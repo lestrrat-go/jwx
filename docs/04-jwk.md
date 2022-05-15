@@ -31,7 +31,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 
 ## JWK / Key
 
-Used to describe a JWK key, possibly of typeRSA, ECDSA, OKP, or Symmetric.
+Used to describe a JWK key, possibly of type RSA, ECDSA, OKP, or Symmetric.
 
 ## JWK Set / Set
 
@@ -46,6 +46,18 @@ and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Read
 Used to describe the underlying raw key that a JWK represents. For example, an RSA JWK can
 represent rsa.PrivateKey/rsa.PublicKey, ECDSA JWK can represent ecdsa.PrivateKey/ecdsa.PublicKey,
 and so forth
+
+---
+
+The table below shows the matrix of key types and their respective `jwk.Key` and "raw" types.
+If given anything else, `jwk.FromRaw` will return an error.
+
+|           | `jwk.Key` Type                               | Raw Key Type                              |
+|-----------|----------------------------------------------|-------------------------------------------|
+| RSA       | `jwk.RSAPublicKey` / `jwk.RSAPrivateKey`     | `*rsa.PublicKey` / `*rsa.PublicKey`       |
+| ECDSA     | `jwk.ECDSAPublicKey` / `jwk.ECDSAPrivateKey` | `*ecdsa.PublicKey` / `*ecdsa.PublicKey`   |
+| OKP       | `jwk.OKPPublicKey` / `jwk.OKPPrivateKey`     | `ed25519.PublicKey` / `ed25519.PublicKey` |
+| Symmetric | `jwk.SymmetricKey`                           | []byte                                    |
 
 # Parsing
 
