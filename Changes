@@ -8,7 +8,7 @@ v2.0.2 - UNRELEASED
 [Bug Fixes][Security]
   * [jwe] An old bug from at least 5 years ago exited in AES-CBC unpadding,
     where the unpad operation might remove more bytes than necessary (#744)
-    This affects all jwx code that is available before v2.0.2 and v1.2.24.
+    This affects all jwx code that is available before v2.0.2 and v1.2.25.
 
 [New Features]
   * [jwt] RFC3339 timestamps are also accepted for Numeric Date types in JWT tokens.
