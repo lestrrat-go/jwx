@@ -35,23 +35,36 @@ func pad(buf []byte, n int) []byte {
 func unpad(buf []byte, n int) ([]byte, error) {
 	lbuf := len(buf)
 	rem := lbuf % n
+
+	// First, `buf` must be a multiple of `n`
 	if rem != 0 {
 		return nil, errors.Errorf("input buffer must be multiple of block size %d", n)
 	}
 
-	count := 0
+	// Find the last byte, which is the encoded padding
+	// i.e. 0x1 == 1 byte worth of padding
 	last := buf[lbuf-1]
-	for i := lbuf - 1; i >= 0; i-- {
-		if buf[i] != last {
-			break
-		}
-		count++
-	}
-	if count != int(last) {
-		return nil, errors.New("invalid padding")
+
+	// This is the number of padding bytes that we expect
+	expected := int(last)
+
+	if expected == 0 || /* we _have_ to have padding here. therefore, 0x0 is not an option */
+		expected > n || /* we also must make sure that we don't go over the block size (n) */
+		expected > lbuf /* finally, it can't be more than the buffer itself. unlikely, but could happen */ {
+		return nil, fmt.Errorf(`invalid padding byte at the end of buffer`)
 	}
 
-	return buf[:lbuf-int(last)], nil
+	// start i = 1 because we have already established that expected == int(last) where
+	// last = buf[lbuf-1].
+	//
+	// we also don't check against lbuf-i in range, because we have established expected <= lbuf
+	for i := 1; i < expected; i++ {
+		if buf[lbuf-i] != last {
+			return nil, errors.New(`invalid padding`)
+		}
+	}
+
+	return buf[:lbuf-expected], nil
 }
 
 type Hmac struct {
