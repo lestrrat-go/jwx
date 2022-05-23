@@ -48,7 +48,7 @@ jobs:
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
-        if: matrix.go == '1.17.x'
+        if: matrix.go == '1.18'
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out

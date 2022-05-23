@@ -50,7 +50,7 @@ func ExampleJWK_FromRaw() {
 	{
 		raw, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
-			fmt.Printf("failed to generate new RSA privatre key: %s\n", err)
+			fmt.Printf("failed to generate new RSA private key: %s\n", err)
 			return
 		}
 
@@ -71,7 +71,7 @@ func ExampleJWK_FromRaw() {
 	{
 		raw, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 		if err != nil {
-			fmt.Printf("failed to generate new ECDSA privatre key: %s\n", err)
+			fmt.Printf("failed to generate new ECDSA private key: %s\n", err)
 			return
 		}
 

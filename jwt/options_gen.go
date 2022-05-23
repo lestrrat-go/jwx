@@ -132,6 +132,7 @@ type identFormKey struct{}
 type identHeaderKey struct{}
 type identKeyProvider struct{}
 type identNumericDateFormatPrecision struct{}
+type identNumericDateParsePedantic struct{}
 type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
 type identSignOption struct{}
@@ -178,6 +179,10 @@ func (identKeyProvider) String() string {
 
 func (identNumericDateFormatPrecision) String() string {
 	return "WithNumericDateFormatPrecision"
+}
+
+func (identNumericDateParsePedantic) String() string {
+	return "WithNumericDateParsePedantic"
 }
 
 func (identNumericDateParsePrecision) String() string {
@@ -283,6 +288,19 @@ func WithKeyProvider(v jws.KeyProvider) ParseOption {
 // fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
 func WithNumericDateFormatPrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateFormatPrecision{}, v)}
+}
+
+// WithNumericDateParsePedantic specifies if the parser should behave
+// in a pedantic manner when parsing numeric dates. Normally this library
+// attempts to interpret timestamps as a numeric value representing
+// number of seconds (with an optional fractional part), but if that fails
+// it tries to parse using a RFC3339 parser. This allows us to parse
+// payloads from non-comforming servers.
+//
+// However, when you set WithNumericDateParePedantic to `true`, the
+// RFC3339 parser is not tried, and we expect a numeric value strictly
+func WithNumericDateParsePedantic(v bool) GlobalOption {
+	return &globalOption{option.New(identNumericDateParsePedantic{}, v)}
 }
 
 // WithNumericDateParsePrecision sets the precision up to which the
