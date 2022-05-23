@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.25 23 May 2022
+[Bug Fixes][Security]
+  * [jwe] An old bug from at least 7 years ago existed in handling AES-CBC unpadding,
+    where the unpad operation might remove more bytes than necessary (#744)
+    This affects all jwx code that is available before v2.0.2 and v1.2.25. 
+
 v1.2.24 05 May 2022
 [Security]
   * Upgrade golang.org/x/crypto (#724)
