@@ -168,11 +168,21 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			key, _ = kp.set.Key(0)
 		} else {
 			// Otherwise we better be able to look up the key, baby.
-			v, ok := kp.set.LookupKeyID(wantedKid)
+			ok := false
+			for iter := kp.set.Keys(context.TODO()); iter.Next(context.TODO()); {
+				pair := iter.Pair()
+				key = pair.Value.(jwk.Key)
+				if key.KeyID() == wantedKid {
+					if err := kp.selectKey(sink, key, sig, msg); err != nil {
+						continue
+					}
+					ok = true
+				}
+			}
 			if !ok {
 				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
 			}
-			key = v
+			return nil
 		}
 
 		return kp.selectKey(sink, key, sig, msg)

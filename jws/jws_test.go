@@ -1065,6 +1065,55 @@ func TestReadFile(t *testing.T) {
 	}
 }
 
+func TestVerifyNonUniqueKid(t *testing.T) {
+	t.Parallel()
+	const payload = "Lorem ipsum"
+	const kid = "notUniqueKid"
+	privateKey, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+		return
+	}
+	_ = privateKey.Set(jwk.KeyIDKey, kid)
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privateKey))
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+	correctKey, _ := jwk.PublicKeyOf(privateKey)
+	_ = correctKey.Set(jwk.AlgorithmKey, jwa.RS256)
+
+	makeSet := func(wrongKey jwk.Key) jwk.Set {
+		set := jwk.NewSet()
+		_ = set.AddKey(wrongKey)
+		_ = set.AddKey(correctKey)
+		return set
+	}
+
+	t.Run(`match 2 keys via same "kid"`, func(t *testing.T) {
+		t.Parallel()
+		privateKey, _ := jwxtest.GenerateRsaJwk()
+		wrongKey, _ := jwk.PublicKeyOf(privateKey)
+		_ = wrongKey.Set(jwk.KeyIDKey, kid)
+		_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS256)
+		set := makeSet(wrongKey)
+		_, err = jws.Verify(signed, jws.WithKeySet(set))
+		if !assert.NoError(t, err, `jws.Verify should succeed`) {
+			return
+		}
+	})
+	t.Run(`match 2 keys via same "kid" and different "alg"`, func(t *testing.T) {
+		t.Parallel()
+		privateKey, _ := jwxtest.GenerateEcdsaKey(jwa.P256)
+		wrongKey, _ := jwk.PublicKeyOf(privateKey)
+		_ = wrongKey.Set(jwk.KeyIDKey, kid)
+		_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K)
+		set := makeSet(wrongKey)
+		_, err = jws.Verify(signed, jws.WithKeySet(set))
+		if !assert.NoError(t, err, `jws.Verify should succeed`) {
+			return
+		}
+	})
+}
+
 func TestVerifySet(t *testing.T) {
 	t.Parallel()
 	const payload = "Lorem ipsum"
