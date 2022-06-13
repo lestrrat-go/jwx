@@ -4,6 +4,11 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.3 - 13 Jun 2022
+[Bug Fixes]
+  * [jwk] Update dependency on github.com/lestrrat-go/httprc to v1.0.2 to
+    avoid unintended blocking in the update goroutine for jwk.Cache
+
 v2.0.2 - 23 May 2022
 [Bug Fixes][Security]
   * [jwe] An old bug from at least 7 years ago existed in handling AES-CBC unpadding,
