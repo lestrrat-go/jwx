@@ -1142,7 +1142,7 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 			// Try matching in different orders
 			for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
 				var usedKey jwk.Key
-				_, err = jws.Verify(signed, jws.WithKeySet(set), jws.WithKeyUsed(&usedKey))
+				_, err = jws.Verify(signed, jws.WithKeySet(set, jws.WithMultipleKeysPerKeyID(true)), jws.WithKeyUsed(&usedKey))
 				if !assert.NoError(t, err, `jws.Verify should succeed`) {
 					return
 				}

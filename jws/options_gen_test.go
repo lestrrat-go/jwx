@@ -18,6 +18,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithKeyProvider", identKeyProvider{}.String())
 	require.Equal(t, "WithKeyUsed", identKeyUsed{}.String())
 	require.Equal(t, "WithMessage", identMessage{}.String())
+	require.Equal(t, "WithMultipleKeysPerKeyID", identMultipleKeysPerKeyID{}.String())
 	require.Equal(t, "WithPretty", identPretty{}.String())
 	require.Equal(t, "WithProtectedHeaders", identProtectedHeaders{}.String())
 	require.Equal(t, "WithPublicHeaders", identPublicHeaders{}.String())
