@@ -119,7 +119,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 // suboption types.
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	requireKid := true
-	var useDefault, inferAlgorithm bool
+	var useDefault, inferAlgorithm, multipleKeysPerKeyID bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
@@ -127,16 +127,19 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 			requireKid = option.Value().(bool)
 		case identUseDefault{}:
 			useDefault = option.Value().(bool)
+		case identMultipleKeysPerKeyID{}:
+			multipleKeysPerKeyID = option.Value().(bool)
 		case identInferAlgorithmFromKey{}:
 			inferAlgorithm = option.Value().(bool)
 		}
 	}
 
 	return WithKeyProvider(&keySetProvider{
-		set:            set,
-		requireKid:     requireKid,
-		useDefault:     useDefault,
-		inferAlgorithm: inferAlgorithm,
+		set:                  set,
+		requireKid:           requireKid,
+		useDefault:           useDefault,
+		multipleKeysPerKeyID: multipleKeysPerKeyID,
+		inferAlgorithm:       inferAlgorithm,
 	})
 }
 
