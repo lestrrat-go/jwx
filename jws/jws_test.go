@@ -30,6 +30,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" + ` "http://example.com/is_root":true}`
@@ -1062,6 +1063,92 @@ func TestReadFile(t *testing.T) {
 
 	if _, err := jws.ReadFile(f.Name()); !assert.NoError(t, err, `jws.ReadFile should succeed`) {
 		return
+	}
+}
+
+func TestVerifyNonUniqueKid(t *testing.T) {
+	t.Parallel()
+	const payload = "Lorem ipsum"
+	const kid = "notUniqueKid"
+	privateKey, err := jwxtest.GenerateRsaJwk()
+	if !assert.NoError(t, err, "jwxtest.GenerateJwk should succeed") {
+		return
+	}
+	_ = privateKey.Set(jwk.KeyIDKey, kid)
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privateKey))
+	if !assert.NoError(t, err, `jws.Sign should succeed`) {
+		return
+	}
+	correctKey, _ := jwk.PublicKeyOf(privateKey)
+	_ = correctKey.Set(jwk.AlgorithmKey, jwa.RS256)
+
+	makeSet := func(keys ...jwk.Key) jwk.Set {
+		set := jwk.NewSet()
+		for _, key := range keys {
+			_ = set.AddKey(key)
+		}
+		return set
+	}
+
+	testcases := []struct {
+		Name string
+		Key  func() jwk.Key // Generates the "wrong" key
+	}{
+		{
+			Name: `match 2 keys via same "kid"`,
+			Key: func() jwk.Key {
+				privateKey, _ := jwxtest.GenerateRsaJwk()
+				wrongKey, _ := jwk.PublicKeyOf(privateKey)
+				_ = wrongKey.Set(jwk.KeyIDKey, kid)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS256)
+				return wrongKey
+			},
+		},
+		{
+			Name: `match 2 keys via same "kid", same key value but different alg`,
+			Key: func() jwk.Key {
+				wrongKey, _ := correctKey.Clone()
+				_ = wrongKey.Set(jwk.KeyIDKey, kid)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512)
+				return wrongKey
+			},
+		},
+		{
+			Name: `match 2 keys via same "kid", same key type but different alg`,
+			Key: func() jwk.Key {
+				privateKey, _ := jwxtest.GenerateRsaJwk()
+				wrongKey, _ := jwk.PublicKeyOf(privateKey)
+				_ = wrongKey.Set(jwk.KeyIDKey, kid)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512)
+				return wrongKey
+			},
+		},
+		{
+			Name: `match 2 keys via same "kid" and different key type / alg`,
+			Key: func() jwk.Key {
+				privateKey, _ := jwxtest.GenerateEcdsaKey(jwa.P256)
+				wrongKey, _ := jwk.PublicKeyOf(privateKey)
+				_ = wrongKey.Set(jwk.KeyIDKey, kid)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K)
+				return wrongKey
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			wrongKey := tc.Key()
+			// Try matching in different orders
+			for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
+				var usedKey jwk.Key
+				_, err = jws.Verify(signed, jws.WithKeySet(set, jws.WithMultipleKeysPerKeyID(true)), jws.WithKeyUsed(&usedKey))
+				if !assert.NoError(t, err, `jws.Verify should succeed`) {
+					return
+				}
+				require.Equal(t, usedKey, correctKey)
+			}
+		})
 	}
 }
 

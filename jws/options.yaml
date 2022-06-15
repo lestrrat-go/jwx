@@ -117,9 +117,18 @@ options:
     interface: WithKeySetSuboption
     argument_type: bool
     comment: |
-      WithrequiredKid specifies whether the keys in the jwk.Set should
+      WithRequiredKid specifies whether the keys in the jwk.Set should
       only be matched if the target JWS message's Key ID and the Key ID
       in the given key matches.
+  - ident: MultipleKeysPerKeyID
+    interface: WithKeySetSuboption
+    argument_type: bool
+    comment: |
+      WithMultipleKeysPerKeyID specifies if we should expect multiple keys
+      to match against a key ID. By default it is assumed that key IDs are
+      unique, i.e. for a given key ID, the key set only contains a single
+      key that has the matching ID. When this option is set to true,
+      multiple keys that match the same key ID in the set can be tried.
   - ident: Pretty
     interface: WithJSONSuboption
     argument_type: bool
