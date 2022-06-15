@@ -151,8 +151,6 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
 	if kp.requireKid {
-		var key jwk.Key
-
 		wantedKid := sig.ProtectedHeaders().KeyID()
 		if wantedKid == "" {
 			// If the kid is NOT specified... kp.useDefault needs to be true, and the
@@ -165,29 +163,31 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 			// if we got here, then useDefault == true AND there is exactly
 			// one key in the set.
-			key, _ = kp.set.Key(0)
-		} else {
-			// Otherwise we better be able to look up the key, baby.
-			ok := false
-			for iter := kp.set.Keys(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				key = pair.Value.(jwk.Key)
-				if key.KeyID() == wantedKid {
-					if err := kp.selectKey(sink, key, sig, msg); err != nil {
-						continue
-					}
-					ok = true
-				}
-			}
-			if !ok {
-				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
-			}
-			return nil
+			key, _ := kp.set.Key(0)
+			return kp.selectKey(sink, key, sig, msg)
 		}
 
-		return kp.selectKey(sink, key, sig, msg)
+		// Otherwise we better be able to look up the key, baby.
+		var ok bool
+		for i := 0; i < kp.set.Len(); i++ {
+			key, _ := kp.set.Key(i)
+			if key.KeyID() != wantedKid {
+				continue
+			}
+
+			if err := kp.selectKey(sink, key, sig, msg); err != nil {
+				continue
+			}
+			ok = true
+			// continue processing so that we try all keys with the same key ID
+		}
+		if !ok {
+			return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
+		}
+		return nil
 	}
 
+	// Otherwise just try all keys
 	for i := 0; i < kp.set.Len(); i++ {
 		key, _ := kp.set.Key(i)
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {
