@@ -4,6 +4,18 @@ package jwx
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[UnknownFormat-0]
+	_ = x[JWE-1]
+	_ = x[JWS-2]
+	_ = x[JWK-3]
+	_ = x[JWKS-4]
+	_ = x[JWT-5]
+}
+
 const _FormatKind_name = "UnknownFormatJWEJWSJWKJWKSJWT"
 
 var _FormatKind_index = [...]uint8{0, 13, 16, 19, 22, 26, 29}
