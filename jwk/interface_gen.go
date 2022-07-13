@@ -88,7 +88,7 @@ type Key interface {
 	// If the key is already a public key, it returns a new copy minus the disallowed fields as above.
 	PublicKey() (Key, error)
 
-	// KeyType returns the `kid` of a JWK
+	// KeyType returns the `kty` of a JWK
 	KeyType() jwa.KeyType
 	// KeyUsage returns `use` of a JWK
 	KeyUsage() string

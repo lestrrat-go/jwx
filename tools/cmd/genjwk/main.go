@@ -669,7 +669,7 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.L("// All fields are copied onto the new public key, except for those that are not allowed.")
 	o.L("//\n// If the key is already a public key, it returns a new copy minus the disallowed fields as above.")
 	o.L("PublicKey() (Key, error)")
-	o.LL("// KeyType returns the `kid` of a JWK")
+	o.LL("// KeyType returns the `kty` of a JWK")
 	o.L("KeyType() jwa.KeyType")
 	for _, f := range fields {
 		o.L("// %s returns `%s` of a JWK", f.GetterMethod(true), f.JSON())
