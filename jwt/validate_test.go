@@ -108,7 +108,7 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.IssuedAtKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should suceed`) {
+		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
