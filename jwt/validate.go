@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 )
@@ -44,6 +45,8 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
 	ctx := context.Background()
+	trunc := time.Second
+
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration
 	var validators = []Validator{
@@ -58,6 +61,8 @@ func Validate(t Token, options ...ValidateOption) error {
 			clock = o.Value().(Clock)
 		case identAcceptableSkew{}:
 			skew = o.Value().(time.Duration)
+		case identTruncation{}:
+			trunc = o.Value().(time.Duration)
 		case identContext{}:
 			ctx = o.Value().(context.Context)
 		case identValidator{}:
@@ -83,6 +88,7 @@ func Validate(t Token, options ...ValidateOption) error {
 
 	ctx = SetValidationCtxSkew(ctx, skew)
 	ctx = SetValidationCtxClock(ctx, clock)
+	ctx = SetValidationCtxTruncation(ctx, trunc)
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
 			return err
@@ -124,8 +130,8 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) ValidationErro
 	skew := ValidationCtxSkew(ctx)   // MUST be populated
 	// We don't check if the claims already exist, because we already did that
 	// by piggybacking on `required` check.
-	t1 := timeClaim(t, clock, iitr.c1).Truncate(time.Second)
-	t2 := timeClaim(t, clock, iitr.c2).Truncate(time.Second)
+	t1 := timeClaim(t, clock, iitr.c1)
+	t2 := timeClaim(t, clock, iitr.c2)
 	if iitr.less { // t1 - t2 <= iitr.dur
 		// t1 - t2 < iitr.dur + skew
 		if t1.Sub(t2) > iitr.dur+skew {
@@ -299,9 +305,18 @@ func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) ValidationError
 
 type identValidationCtxClock struct{}
 type identValidationCtxSkew struct{}
+type identValidationCtxTruncation struct{}
 
 func SetValidationCtxClock(ctx context.Context, cl Clock) context.Context {
 	return context.WithValue(ctx, identValidationCtxClock{}, cl)
+}
+
+func SetValidationCtxTruncation(ctx context.Context, dur time.Duration) context.Context {
+	return context.WithValue(ctx, identValidationCtxTruncation{}, dur)
+}
+
+func SetValidationCtxSkew(ctx context.Context, dur time.Duration) context.Context {
+	return context.WithValue(ctx, identValidationCtxSkew{}, dur)
 }
 
 // ValidationCtxClock returns the Clock object associated with
@@ -312,13 +327,14 @@ func ValidationCtxClock(ctx context.Context) Clock {
 	return ctx.Value(identValidationCtxClock{}).(Clock)
 }
 
-func SetValidationCtxSkew(ctx context.Context, dur time.Duration) context.Context {
-	return context.WithValue(ctx, identValidationCtxSkew{}, dur)
-}
-
 func ValidationCtxSkew(ctx context.Context) time.Duration {
 	//nolint:forcetypeassert
 	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
+}
+
+func ValidationCtxTruncation(ctx context.Context) time.Duration {
+	//nolint:forcetypeassert
+	return ctx.Value(identValidationCtxTruncation{}).(time.Duration)
 }
 
 // IsExpirationValid is one of the default validators that will be executed.
@@ -333,14 +349,21 @@ func IsExpirationValid() Validator {
 }
 
 func isExpirationValid(ctx context.Context, t Token) ValidationError {
-	if tv := t.Expiration(); !tv.IsZero() && tv.Unix() != 0 {
-		clock := ValidationCtxClock(ctx) // MUST be populated
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		skew := ValidationCtxSkew(ctx) // MUST be populated
-		if !now.Before(ttv.Add(skew)) {
-			return ErrTokenExpired()
-		}
+	tv := t.Expiration()
+	if tv.IsZero() || tv.Unix() == 0 {
+		return nil
+	}
+
+	clock := ValidationCtxClock(ctx)      // MUST be populated
+	skew := ValidationCtxSkew(ctx)        // MUST be populated
+	trunc := ValidationCtxTruncation(ctx) // MUST be populated
+
+	now := clock.Now().Truncate(trunc)
+	ttv := tv.Truncate(trunc)
+
+	// expiration date must be after NOW
+	if !now.Before(ttv.Add(skew)) {
+		return ErrTokenExpired()
 	}
 	return nil
 }
@@ -357,14 +380,21 @@ func IsIssuedAtValid() Validator {
 }
 
 func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
-	if tv := t.IssuedAt(); !tv.IsZero() && tv.Unix() != 0 {
-		clock := ValidationCtxClock(ctx) // MUST be populated
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		skew := ValidationCtxSkew(ctx) // MUST be populated
-		if now.Before(ttv.Add(-1 * skew)) {
-			return ErrInvalidIssuedAt()
-		}
+	tv := t.IssuedAt()
+	if tv.IsZero() || tv.Unix() == 0 {
+		return nil
+	}
+
+	clock := ValidationCtxClock(ctx)      // MUST be populated
+	skew := ValidationCtxSkew(ctx)        // MUST be populated
+	trunc := ValidationCtxTruncation(ctx) // MUST be populated
+
+	now := clock.Now().Truncate(trunc)
+	ttv := tv.Truncate(trunc)
+
+	log.Printf("now = %s, ttv = %s, skew = %s, trunc = %s", now.UTC(), ttv, skew, trunc)
+	if now.Before(ttv.Add(-1 * skew)) {
+		return ErrInvalidIssuedAt()
 	}
 	return nil
 }
@@ -381,15 +411,24 @@ func IsNbfValid() Validator {
 }
 
 func isNbfValid(ctx context.Context, t Token) ValidationError {
-	if tv := t.NotBefore(); !tv.IsZero() && tv.Unix() != 0 {
-		clock := ValidationCtxClock(ctx) // MUST be populated
-		now := clock.Now().Truncate(time.Second)
-		ttv := tv.Truncate(time.Second)
-		skew := ValidationCtxSkew(ctx) // MUST be populated
-		// now cannot be before t, so we check for now > t - skew
-		if !now.Equal(ttv) && !now.After(ttv.Add(-1*skew)) {
-			return ErrTokenNotYetValid()
-		}
+	tv := t.NotBefore()
+	if tv.IsZero() || tv.Unix() == 0 {
+		return nil
+	}
+
+	clock := ValidationCtxClock(ctx)      // MUST be populated
+	skew := ValidationCtxSkew(ctx)        // MUST be populated
+	trunc := ValidationCtxTruncation(ctx) // MUST be populated
+
+	// Truncation always happens even for trunc = 0 because
+	// we also use this to strip monotonic clocks
+	now := clock.Now().Truncate(trunc)
+	ttv := tv.Truncate(trunc)
+
+	// "now" cannot be before t - skew, so we check for now > t - skew
+	ttv = ttv.Add(-1 * skew)
+	if now.Before(ttv) {
+		return ErrTokenNotYetValid()
 	}
 	return nil
 }

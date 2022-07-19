@@ -132,6 +132,7 @@ type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identMessage struct{}
+type identMultipleKeysPerKeyID struct{}
 type identPretty struct{}
 type identProtectedHeaders struct{}
 type identPublicHeaders struct{}
@@ -173,6 +174,10 @@ func (identKeyUsed) String() string {
 
 func (identMessage) String() string {
 	return "WithMessage"
+}
+
+func (identMultipleKeysPerKeyID) String() string {
+	return "WithMultipleKeysPerKeyID"
 }
 
 func (identPretty) String() string {
@@ -268,6 +273,15 @@ func WithMessage(v *Message) VerifyOption {
 	return &verifyOption{option.New(identMessage{}, v)}
 }
 
+// WithMultipleKeysPerKeyID specifies if we should expect multiple keys
+// to match against a key ID. By default it is assumed that key IDs are
+// unique, i.e. for a given key ID, the key set only contains a single
+// key that has the matching ID. When this option is set to true,
+// multiple keys that match the same key ID in the set can be tried.
+func WithMultipleKeysPerKeyID(v bool) WithKeySetSuboption {
+	return &withKeySetSuboption{option.New(identMultipleKeysPerKeyID{}, v)}
+}
+
 // WithPretty specifies whether the JSON output should be formatted and
 // indented
 func WithPretty(v bool) WithJSONSuboption {
@@ -293,7 +307,7 @@ func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
 }
 
-// WithrequiredKid specifies whether the keys in the jwk.Set should
+// WithRequiredKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWS message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {

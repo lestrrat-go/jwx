@@ -48,7 +48,7 @@ func (cc *Chain) UnmarshalJSON(data []byte) error {
 // stored. `false` will be returned in the second argument if
 // the corresponding index is out of range.
 func (cc *Chain) Get(index int) ([]byte, bool) {
-	if index < 0 || index > len(cc.certificates) {
+	if index < 0 || index >= len(cc.certificates) {
 		return nil, false
 	}
 

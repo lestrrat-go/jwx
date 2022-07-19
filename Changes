@@ -4,6 +4,36 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.4 - 19 Jul 2022
+[Bug Fixes]
+  * [jwk] github.com/lestrrat-go/httprc, which jwk.Cache depends on,
+    had a problem with inserting URLs to be re-fetched into its queue.
+    As a result it could have been the case that some JWKS were not
+    updated properly. Please upgrade if you use jwk.Cache.
+
+  * [jwk] cert.Get could fail with an out of bounds index look up
+
+  * [jwk] Fix doc buglet in `KeyType()` method
+
+[New Features]
+  * [jws] Add `jws.WithMultipleKeysPerKeyID()` sub-option to allow non-unique
+    key IDs in a given JWK set. By default we assume that a key ID is unique
+    within a key set, but enabling this option allows you to handle JWK sets
+    that contain multiple keys that contain the same key ID.
+
+  * [jwt] Before v2.0.1, sub-second accuracy for time based fields
+    (i.e. `iat`, `exp`, `nbf`) were not respected. Because of this the code
+    to evaluate this code had always truncated any-subsecond portion
+    of these fields, and therefore no sub-second comparisons worked.
+    A new option for validation `jwt.WithTruncation()` has been added
+    to workaround this. This option controls the value used to truncate
+    the time fields. When set to 0, sub-second comparison would be
+    possible.
+    FIY, truncatation will still happen because we do not want to
+    use the monotonic clocks when making comparisons. It's just that
+    truncating using `0` as its argument effectively only strips out
+    the monotonic clock
+
 v2.0.3 - 13 Jun 2022
 [Bug Fixes]
   * [jwk] Update dependency on github.com/lestrrat-go/httprc to v1.0.2 to

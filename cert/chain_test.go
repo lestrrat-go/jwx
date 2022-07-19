@@ -5,6 +5,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var certBytes = []byte(`MIICdDCCAd2gAwIBAgIUEpq1vvAyaiEKhgEE/UKykUcnXi4wDQYJKoZIhvcNAQEL
@@ -70,5 +71,10 @@ func TestChain(t *testing.T) {
 		if !assert.True(t, c.Equal(goldenCert), `certificates should match`) {
 			return
 		}
+	}
+
+	for _, i := range []int{-1, chain.Len()} {
+		_, ok := chain.Get(i)
+		require.False(t, ok, `out of bounds should properly error`)
 	}
 }

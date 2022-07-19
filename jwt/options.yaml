@@ -47,6 +47,15 @@ options:
     comment: |
       WithAcceptableSkew specifies the duration in which exp and nbf
       claims may differ by. This value should be positive
+  - ident: Truncation
+    interface: ValidateOption
+    argument_type: time.Duration
+    comment: |
+      WithTruncation speficies the amount that should be used when
+      truncating time values used during time-based validation routines.
+      By default time values are truncated down to second accuracy.
+      If you want to use sub-second accuracy, you will need to set
+      this value to 0.
   - ident: Clock
     interface: ValidateOption
     argument_type: Clock
