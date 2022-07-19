@@ -137,6 +137,7 @@ type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
 type identSignOption struct{}
 type identToken struct{}
+type identTruncation struct{}
 type identValidate struct{}
 type identValidator struct{}
 type identVerify struct{}
@@ -199,6 +200,10 @@ func (identSignOption) String() string {
 
 func (identToken) String() string {
 	return "WithToken"
+}
+
+func (identTruncation) String() string {
+	return "WithTruncation"
 }
 
 func (identValidate) String() string {
@@ -327,6 +332,15 @@ func WithSignOption(v jws.SignOption) SignOption {
 // when parsing JWT tokensthat is used when parsing
 func WithToken(v Token) ParseOption {
 	return &parseOption{option.New(identToken{}, v)}
+}
+
+// WithTruncation speficies the amount that should be used when
+// truncating time values used during time-based validation routines.
+// By default time values are truncated down to second accuracy.
+// If you want to use sub-second accuracy, you will need to set
+// this value to 0.
+func WithTruncation(v time.Duration) ValidateOption {
+	return &validateOption{option.New(identTruncation{}, v)}
 }
 
 // WithValidate is passed to `Parse()` method to denote that the

@@ -3,12 +3,14 @@ package jwt_test
 import (
 	"context"
 	"errors"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGHIssue10(t *testing.T) {
@@ -102,27 +104,70 @@ func TestGHIssue10(t *testing.T) {
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
-		t1 := jwt.New()
-		t1.Set(jwt.IssuedAtKey, time.Now().Add(365*24*time.Second))
+		tm := time.Now()
+		t1, err := jwt.NewBuilder().
+			Claim(jwt.IssuedAtKey, tm).
+			Build()
+		if !assert.NoError(t, err, `jwt.NewBuilder should suceed`) {
+			return
+		}
 
-		t.Run(`iat too far in the past`, func(t *testing.T) {
-			err := jwt.Validate(t1)
-			if !assert.Error(t, err, `jwt.Validate should fail`) {
-				return
-			}
+		testcases := []struct {
+			Name    string
+			Options []jwt.ValidateOption
+			Error   bool
+		}{
+			{
+				Name:  `clock is set to before iat`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Hour) })),
+				},
+			},
+			{
+				// This works because the sub-second difference is rounded
+				Name: `clock is set to some sub-seconds before iat`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+				},
+			},
+			{
+				Name:  `clock is set to some sub-seconds before iat (trunc = 0)`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
+				},
+			},
+		}
 
-			if !assert.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`) {
-				return
-			}
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				log.Printf("%s", tc.Name)
+				err := jwt.Validate(t1, tc.Options...)
+				if !tc.Error {
+					assert.NoError(t, err, `jwt.Validate should succeed`)
+					return
+				}
 
-			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
-				return
-			}
+				if !assert.Error(t, err, `jwt.Validate should fail`) {
+					return
+				}
 
-			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-				return
-			}
-		})
+				if !assert.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`) {
+					return
+				}
+
+				if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
+					return
+				}
+
+				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+					return
+				}
+			})
+		}
 	})
 	t.Run(jwt.AudienceKey, func(t *testing.T) {
 		t.Parallel()
@@ -219,40 +264,61 @@ func TestGHIssue10(t *testing.T) {
 			},
 			{ // This should succeed, because we have given a time
 				// that is well enough into the future
-				Name: `clock is set to after time in nbf`,
+				Name: `clock is set to some time after in nbf`,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Hour) })),
 				},
 			},
 			{ // This should succeed, the time == NotBefore time
-				// Note, this may fail if you are return a monotonic clock
+				// Note, this could fail if you are returning a monotonic clock
+				// and we didn't do something about it
 				Name: `clock is set to the same time as nbf`,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm })),
+				},
+			},
+			{
+				Name:  `clock is set to some subseconds before nbf`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
+				},
+			},
+			{
+				Name: `clock is set to some subseconds before nbf (but truncation = default)`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+				},
+			},
+			{
+				Name: `clock is set to some subseconds after nbf`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
+					jwt.WithTruncation(0),
 				},
 			},
 		}
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				if tc.Error {
-					err := jwt.Validate(t1, tc.Options...)
-					if !assert.Error(t, err, "token.Validate should fail") {
-						return
-					}
-					if !assert.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`) {
-						return
-					}
-					if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpierd`) {
-						return
-					}
-					if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-						return
-					}
-				} else {
-					if !assert.NoError(t, jwt.Validate(t1, tc.Options...), "token.Validate should succeed") {
-						return
-					}
+				err := jwt.Validate(t1, tc.Options...)
+				if !tc.Error {
+					assert.NoError(t, err, "token.Validate should succeed")
+					return
+				}
+
+				if !assert.Error(t, err, "token.Validate should fail") {
+					return
+				}
+				if !assert.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`) {
+					return
+				}
+				if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpierd`) {
+					return
+				}
+				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+					return
 				}
 			})
 		}
@@ -265,49 +331,81 @@ func TestGHIssue10(t *testing.T) {
 			// issuedat = 1 Hr before current time
 			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
 			// valid for 2 minutes only from IssuedAt
-			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
+			Claim(jwt.ExpirationKey, tm).
 			Build()
 		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
 		}
 
-		// This should fail, because exp is set in the past
-		t.Run("exp set in the past", func(t *testing.T) {
-			t.Parallel()
-			err := jwt.Validate(t1)
-			if !assert.Error(t, err, "token.Validate should fail") {
-				return
-			}
-			if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`) {
-				return
-			}
-			if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
-				return
-			}
-			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-				return
-			}
-		})
-		// This should succeed, because we have given big skew
-		// that is well enough to get us accepted
-		t.Run("exp is set in the past, but acceptable skew is large", func(t *testing.T) {
-			t.Parallel()
-			if !assert.NoError(t, jwt.Validate(t1, jwt.WithAcceptableSkew(time.Hour)), "token.Validate should succeed (1)") {
-				return
-			}
-		})
+		testcases := []struct {
+			Name    string
+			Options []jwt.ValidateOption
+			Error   bool
+		}{
+			{
+				Name:  `clock is not modified (exp < now)`,
+				Error: true,
+			},
+			{
+				Name: `clock is set to some time before exp`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Hour) })),
+				},
+			},
+			{ // This should fail, the time == Expiration.
+				// Note, this could fail if you are returning a monotonic clock
+				// and we didn't do something about it
+				Name:  `clock is set to same time as exp`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm })),
+				},
+			},
+			{
+				Name:  `clock is set to some subseconds after exp`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
+					jwt.WithTruncation(0),
+				},
+			},
+			{
+				Name:  `clock is set to some subseconds after exp (but truncation = default)`,
+				Error: true,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
+				},
+			},
+			{
+				Name: `clock is set to some subseconds before exp`,
+				Options: []jwt.ValidateOption{
+					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
+				},
+			},
+		}
 
-		// This should succeed, because we have given a time
-		// that is well enough into the past
-		t.Run("exp is set in the past, but clock is also set in the past", func(t *testing.T) {
-			t.Parallel()
-			clock := jwt.ClockFunc(func() time.Time {
-				return tm.Add(-59 * time.Minute)
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				err := jwt.Validate(t1, tc.Options...)
+				if !tc.Error {
+					assert.NoError(t, err, `jwt.Validate should succeed`)
+					return
+				}
+
+				require.Error(t, err, `jwt.Validate should fail`)
+				if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should not be ErrTokenNotYetValid`) {
+					return
+				}
+				if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpierd`) {
+					return
+				}
+				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
+					return
+				}
 			})
-			if !assert.NoError(t, jwt.Validate(t1, jwt.WithClock(clock)), "token.Validate should succeed (2)") {
-				return
-			}
-		})
+		}
 	})
 	t.Run("Unix zero times", func(t *testing.T) {
 		t.Parallel()
