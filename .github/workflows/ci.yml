@@ -49,9 +49,9 @@ jobs:
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
         if: matrix.go == '1.18'
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.out
+          files: ./coverage.out
       - name: Check difference between generation code and commit code
         run: make check_diffs
  
