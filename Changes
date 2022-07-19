@@ -13,6 +13,8 @@ v2.0.4 - UNRELEASED
 
   * [jwk] cert.Get could fail with an out of bounds index look up
 
+  * [jwk] Fix doc buglet in `KeyType()` method
+
 [New Features]
   * [jws] Add `jws.WithMultipleKeysPerKeyID()` sub-option to allow non-unique
     key IDs in a given JWK set. By default we assume that a key ID is unique
