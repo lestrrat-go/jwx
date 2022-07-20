@@ -3,7 +3,6 @@ package jwt
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 )
@@ -392,7 +391,6 @@ func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
 	now := clock.Now().Truncate(trunc)
 	ttv := tv.Truncate(trunc)
 
-	log.Printf("now = %s, ttv = %s, skew = %s, trunc = %s", now.UTC(), ttv, skew, trunc)
 	if now.Before(ttv.Add(-1 * skew)) {
 		return ErrInvalidIssuedAt()
 	}
