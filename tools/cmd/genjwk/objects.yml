@@ -22,7 +22,7 @@ std_fields:
     getter: X509URL
     unexported_name: x509URL
     exported_name: X509URL
-    json: x58
+    json: x5u
     is_std: true
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.5
   - name: x509CertChain
