@@ -12,6 +12,7 @@ jobs:
           check-latest: true
       - uses: golangci/golangci-lint-action@v2
         with:
+          skip-cache: true
           version: v1.45.2
       - name: Run go vet
         run: |
