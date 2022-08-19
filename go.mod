@@ -3,8 +3,8 @@ module github.com/lestrrat-go/jwx/v2
 go 1.16
 
 require (
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1
-	github.com/goccy/go-json v0.9.10
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
+	github.com/goccy/go-json v0.9.11
 	github.com/lestrrat-go/blackmagic v1.0.1
 	github.com/lestrrat-go/httprc v1.0.4
 	github.com/lestrrat-go/iter v1.0.2
