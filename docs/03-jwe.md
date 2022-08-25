@@ -270,9 +270,9 @@ source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-
 
 By default, only some header fields are included in the result from `jwe.Encrypt()`.
 
-For protected headers, you can use the jws.
+For global protected headers, you can use the `jwe.WithProtectedHeaders()` option.
 
-In order to provide extra headers to the encrypted message, you will need to use
+In order to provide extra headers to the encrypted message such as `apu` and `apv`, you will need to use
 `jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` suboption.
 
 

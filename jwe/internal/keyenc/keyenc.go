@@ -210,12 +210,12 @@ func (kw PBES2Encrypt) Encrypt(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES
-func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, keyif interface{}) (*ECDHESEncrypt, error) {
+func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, keyif interface{}, apu, apv []byte) (*ECDHESEncrypt, error) {
 	var generator keygen.Generator
 	var err error
 	switch key := keyif.(type) {
 	case *ecdsa.PublicKey:
-		generator, err = keygen.NewEcdhes(alg, enc, keysize, key)
+		generator, err = keygen.NewEcdhes(alg, enc, keysize, key, apu, apv)
 	case x25519.PublicKey:
 		generator, err = keygen.NewX25519(alg, enc, keysize, key)
 	default:

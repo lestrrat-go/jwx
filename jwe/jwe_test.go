@@ -22,6 +22,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -780,11 +781,6 @@ func TestGH554(t *testing.T) {
 		return
 	}
 
-	{
-		buf, _ := json.MarshalIndent(msg, "", "  ")
-		t.Logf("%s", buf)
-	}
-
 	recipients := msg.Recipients()
 
 	// The epk must have the same key ID as the original
@@ -792,4 +788,34 @@ func TestGH554(t *testing.T) {
 	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
 		return
 	}
+}
+
+func TestGH803(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
+
+	payload := []byte("Lorem Ipsum")
+	apu := []byte(`Alice`)
+	apv := []byte(`Bob`)
+	hdrs := jwe.NewHeaders()
+	hdrs.Set(jwe.AgreementPartyUInfoKey, apu)
+	hdrs.Set(jwe.AgreementPartyVInfoKey, apv)
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.ECDH_ES, privateKey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)),
+		jwe.WithContentEncryption(jwa.A128GCM),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	var msg jwe.Message
+	decrypted, err := jwe.Decrypt(
+		encrypted,
+		jwe.WithKey(jwa.ECDH_ES, privateKey),
+		jwe.WithMessage(&msg),
+	)
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+	require.Equal(t, payload, decrypted, `decrypt messages match`)
+	require.Equal(t, apu, msg.ProtectedHeaders().AgreementPartyUInfo())
+	require.Equal(t, apv, msg.ProtectedHeaders().AgreementPartyVInfo())
 }
