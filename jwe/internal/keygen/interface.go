@@ -26,6 +26,8 @@ type Ecdhes struct {
 	keysize   int
 	algorithm jwa.KeyEncryptionAlgorithm
 	enc       jwa.ContentEncryptionAlgorithm
+	apu       []byte
+	apv       []byte
 }
 
 // X25519KeyGenerate generates keys using ECDH-ES algorithm / X25519 curve

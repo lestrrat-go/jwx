@@ -127,7 +127,13 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 		switch key := rawKey.(type) {
 		case x25519.PublicKey:
-			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, rawKey)
+			var apu, apv []byte
+			if hdrs := b.headers; hdrs != nil {
+				apu = hdrs.AgreementPartyUInfo()
+				apv = hdrs.AgreementPartyVInfo()
+			}
+
+			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, rawKey, apu, apv)
 			if err != nil {
 				return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
 			}
@@ -137,7 +143,14 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 			if err := keyconv.ECDSAPublicKey(&pubkey, rawKey); err != nil {
 				return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, key, err)
 			}
-			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, &pubkey)
+
+			var apu, apv []byte
+			if hdrs := b.headers; hdrs != nil {
+				apu = hdrs.AgreementPartyUInfo()
+				apv = hdrs.AgreementPartyVInfo()
+			}
+
+			v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, &pubkey, apu, apv)
 			if err != nil {
 				return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
 			}
@@ -592,7 +605,6 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 		if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
 			dec.AgreementPartyUInfo(apu)
 		}
-
 		if apv := h2.AgreementPartyVInfo(); len(apv) > 0 {
 			dec.AgreementPartyVInfo(apv)
 		}
