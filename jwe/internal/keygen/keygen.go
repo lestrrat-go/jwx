@@ -55,12 +55,14 @@ func (g Random) Generate() (ByteSource, error) {
 }
 
 // NewEcdhes creates a new key generator using ECDH-ES
-func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdsa.PublicKey) (*Ecdhes, error) {
+func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdsa.PublicKey, apu, apv []byte) (*Ecdhes, error) {
 	return &Ecdhes{
 		algorithm: alg,
 		enc:       enc,
 		keysize:   keysize,
 		pubkey:    pubkey,
+		apu:       apu,
+		apv:       apv,
 	}, nil
 }
 
@@ -89,7 +91,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
 	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
 	defer ecutil.ReleaseECPointBuffer(zBytes)
-	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
+	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, g.apu, g.apv, pubinfo, []byte{})
 	kek := make([]byte, g.keysize)
 	if _, err := kdf.Read(kek); err != nil {
 		return nil, fmt.Errorf(`failed to read kdf: %w`, err)
