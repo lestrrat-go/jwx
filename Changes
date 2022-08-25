@@ -4,6 +4,22 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.6 - UNRELEASED
+[Bug fixes][Security]
+  * [jwe] Agreement Party UInfo and VInfo (apv/apu) were not properly being
+    passed to the functions to compute the aad when encrypting using ECDH-ES
+    family of algorithms. Therefore, when using apu/apv, messages encrypted
+    via this module would have failed to be properly decrypted.
+
+    Please note that bogus encrypted messages would not have succeed being
+    decrypted (i.e. this problem does not allow spoofed messages to be decrypted).
+    Therefore this would not have caused unwanted data to to creep in --
+    however it did pose problems for data to be sent and decrypted from this module
+    when using ECDH-ES with apu/apv.
+
+    While not extensively tested, we believe this regression was introduced
+    with the v2 release.
+
 v2.0.5 - 11 Aug 2022
 [Bug fixes]
   * [jwt] Remove stray debug log
