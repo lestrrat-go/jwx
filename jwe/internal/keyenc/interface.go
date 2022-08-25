@@ -52,8 +52,6 @@ type ECDHESEncrypt struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	keyID     string
 	generator keygen.Generator
-	apu       []byte
-	apv       []byte
 }
 
 // ECDHESDecrypt decrypts keys using ECDH-ES.
