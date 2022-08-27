@@ -52,6 +52,8 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
+      - name: Run make tidy
+        run: make tidy
       - name: Check difference between generation code and commit code
         run: make check_diffs
  
