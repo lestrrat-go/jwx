@@ -126,7 +126,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 	keys := make([]interface{}, 0, 6)
 
-	keys = append(keys, []byte("abra cadabra"))
+	keys = append(keys, []byte("abracadabra"))
 
 	rsaPrivKey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, "RSA key generated") {
@@ -1454,7 +1454,7 @@ func TestVerifyAuto(t *testing.T) {
 func TestSerializer(t *testing.T) {
 	t.Run(`Invalid sign suboption`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Sign(jwt.WithKey(jwa.HS256, []byte("abracadavra"), jwe.WithCompress(jwa.Deflate))).
+			Sign(jwt.WithKey(jwa.HS256, []byte("abracadabra"), jwe.WithCompress(jwa.Deflate))).
 			Serialize(jwt.New())
 		if !assert.Error(t, err, `Serialize() should fail`) {
 			return
@@ -1462,7 +1462,7 @@ func TestSerializer(t *testing.T) {
 	})
 	t.Run(`Invalid SignatureAglrotihm`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadavra"))).
+			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadabra"))).
 			Serialize(jwt.New())
 		if !assert.Error(t, err, `Serialize() should succeedl`) {
 			return
@@ -1470,7 +1470,7 @@ func TestSerializer(t *testing.T) {
 	})
 	t.Run(`Invalid encrypt suboption`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadavra"), jws.WithPretty(true))).
+			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadabra"), jws.WithPretty(true))).
 			Serialize(jwt.New())
 		if !assert.Error(t, err, `Serialize() should fail`) {
 			return
@@ -1478,7 +1478,7 @@ func TestSerializer(t *testing.T) {
 	})
 	t.Run(`Invalid KeyEncryptionAglrotihm`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.HS256, []byte("abracadavra"))).
+			Encrypt(jwt.WithKey(jwa.HS256, []byte("abracadabra"))).
 			Serialize(jwt.New())
 		if !assert.Error(t, err, `Serialize() should succeedl`) {
 			return

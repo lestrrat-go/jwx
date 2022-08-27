@@ -30,7 +30,7 @@ func ExampleJWK_KeySpecificMethods() {
 	// We won't print these values, because each time they are
 	// generated the contents will be different, and thus our
 	// tests would fail. But here you can see that once you
-	// onvert the type you can access the RSA-specific methods
+	// convert the type you can access the RSA-specific methods
 	_ = rsakey.D()
 	_ = rsakey.DP()
 	_ = rsakey.DQ()

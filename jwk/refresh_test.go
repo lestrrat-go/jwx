@@ -484,7 +484,7 @@ func TestPostFetch(t *testing.T) {
 
 	set := jwk.NewSet()
 	for i := 0; i < 3; i++ {
-		key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
+		key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
 		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
 			return
 		}

@@ -29,7 +29,7 @@ func ExampleJWT_Validate() {
 	}
 
 	{
-		// Case 2: USing jwt.Parse()
+		// Case 2: Using jwt.Parse()
 		buf, err := json.Marshal(tok)
 		if err != nil {
 			fmt.Printf("failed to serialize token: %s\n", err)

@@ -128,7 +128,7 @@ import (
 )
 
 func ExampleJWS_Sign() {
-  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -169,7 +169,7 @@ func ExampleJWS_SignJSON() {
   var keys []jwk.Key
 
   for i := 0; i < 3; i++ {
-    key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadavra-%d`, i)))
+    key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
     if err != nil {
       fmt.Printf("failed to create key: %s\n", err)
       return
@@ -215,7 +215,7 @@ import (
 func ExampleJWS_SignDetachedPayload() {
   payload := `$.02`
 
-  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
@@ -256,7 +256,7 @@ import (
 )
 
 func ExampleJWS_SignWithHeaders() {
-  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -308,7 +308,7 @@ import (
 func ExampleJWS_VerifyWithKey() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
 
-  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -368,9 +368,9 @@ func ExampleJWS_VerifyWithJWKSet() {
   // Create a JWK Set
   set := jwk.NewSet()
   // Add some bogus keys
-  k1, _ := jwk.FromRaw([]byte("abracadavra"))
+  k1, _ := jwk.FromRaw([]byte("abracadabra"))
   set.AddKey(k1)
-  k2, _ := jwk.FromRaw([]byte("opensasame"))
+  k2, _ := jwk.FromRaw([]byte("opensesame"))
   set.AddKey(k2)
   // AddKey the real thing
   pubkey, _ := jwk.PublicRawKeyOf(privkey)
@@ -411,7 +411,7 @@ func ExampleJWS_VerifyDetachedPayload() {
   serialized := `eyJhbGciOiJIUzI1NiJ9..eOOVjre9XHILxvHaJpH-ZCb1TiiiTZLOY0Jhr7mwDns`
   payload := `$.02`
 
-  key, err := jwk.FromRaw([]byte(`abracadavra`))
+  key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return

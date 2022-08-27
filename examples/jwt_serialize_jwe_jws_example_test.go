@@ -33,7 +33,7 @@ func ExampleJWT_SerializeJWEJWS() {
 		return
 	}
 
-	signkey, err := jwk.FromRaw([]byte(`abracadavra`))
+	signkey, err := jwk.FromRaw([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

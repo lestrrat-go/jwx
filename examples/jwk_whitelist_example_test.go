@@ -47,7 +47,7 @@ func ExampleJWK_Whitelist() {
 			Whitelist: jwk.NewRegexpWhitelist().Add(regexp.MustCompile(`^https://www\.googleapis\.com/`)),
 			Error:     true,
 		},
-		// Thist whitelist allows anything
+		// This whitelist allows anything
 		{
 			Whitelist: jwk.InsecureWhitelist{},
 		},
