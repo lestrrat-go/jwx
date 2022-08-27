@@ -22,5 +22,5 @@ func ExampleJWS_Sign() {
 	}
 	fmt.Printf("%s\n", buf)
 	// OUTPUT:
-	// eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo
+	// eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0
 }

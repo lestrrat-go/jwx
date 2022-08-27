@@ -9,7 +9,7 @@ import (
 )
 
 func ExampleJWS_VerifyWithKey() {
-	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
+	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
 	key, err := jwk.FromRaw([]byte(`abracadabra`))
 	if err != nil {

@@ -24,5 +24,5 @@ func ExampleJWS_SignWithHeaders() {
 	}
 	fmt.Printf("%s\n", buf)
 	// OUTPUT:
-	// eyJhbGciOiJIUzI1NiIsIngtZXhhbXBsZSI6dHJ1ZX0.TG9yZW0gaXBzdW0.G1_mZLeYsCNCpglWcdofgoU9HExBGEMW08qzvouAzBo
+	// eyJhbGciOiJIUzI1NiIsIngtZXhhbXBsZSI6dHJ1ZX0.TG9yZW0gaXBzdW0.9nIX0hN7u1b97UcjmrVvd5y1ubkQp_1gz1V3Mkkcm14
 }

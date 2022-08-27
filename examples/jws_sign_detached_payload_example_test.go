@@ -25,5 +25,5 @@ func ExampleJWS_SignDetachedPayload() {
 
 	fmt.Printf("%s\n", serialized)
 	// OUTPUT:
-	// eyJhbGciOiJIUzI1NiJ9..eOOVjre9XHILxvHaJpH-ZCb1TiiiTZLOY0Jhr7mwDns
+	// eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk
 }
