@@ -2064,7 +2064,7 @@ func TestGH664(t *testing.T) {
 }
 
 func TestGH730(t *testing.T) {
-	key, err := jwk.FromRaw([]byte(`abracadavra`))
+	key, err := jwk.FromRaw([]byte(`abracadabra`))
 	require.NoError(t, err, `jwk.FromRaw should succeed`)
 	set := jwk.NewSet()
 	require.NoError(t, set.AddKey(key), `first AddKey should succeed`)

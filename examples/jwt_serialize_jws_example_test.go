@@ -19,7 +19,7 @@ func ExampleJWT_SerializeJWS() {
 		return
 	}
 
-	rawKey := []byte(`abracadavra`)
+	rawKey := []byte(`abracadabra`)
 	jwkKey, err := jwk.FromRaw(rawKey)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
@@ -45,6 +45,6 @@ func ExampleJWT_SerializeJWS() {
 	}
 
 	// OUTPUT:
-	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.rTlpyVnHFWosNud7seqlsvhM8UoXUIAKfdWHySFO5Ro
-	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.rTlpyVnHFWosNud7seqlsvhM8UoXUIAKfdWHySFO5Ro
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
 }

@@ -264,7 +264,7 @@ Suppose we have `symmetric.jwk` containing the following:
 }
 ```
 
-And suppose we would like to verify the contents of the file `signed.jws`, whith this message which has been signed using `HS256`.
+And suppose we would like to verify the contents of the file `signed.jws`, with this message which has been signed using `HS256`.
 
 ```
 eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
@@ -285,7 +285,7 @@ Then the following command will verify the JWS message and display the decoded p
 jwx jws verify --key [keyfile] --match-kid FILE
 ```
 
-Suupose we have `set.jwk` containing the following JWK set:
+Suppose we have `set.jwk` containing the following JWK set:
 
 ```json
 {

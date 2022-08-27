@@ -26,7 +26,7 @@ func ExampleJWT_ValidateDetectErrorType() {
 	}
 
 	{
-		// Case 1: Parsing error. We're not showing verification faiure
+		// Case 1: Parsing error. We're not showing verification failure
 		// but it is about the same in the context of wanting to know
 		// if it's a validation error or not
 		_, err := jwt.Parse(buf[:len(buf)-1], jwt.WithVerify(false), jwt.WithValidate(true))
