@@ -1158,9 +1158,9 @@ func TestVerifySet(t *testing.T) {
 
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
-		k1, _ := jwk.FromRaw([]byte("abracadavra"))
+		k1, _ := jwk.FromRaw([]byte("abracadabra"))
 		set.AddKey(k1)
-		k2, _ := jwk.FromRaw([]byte("opensasame"))
+		k2, _ := jwk.FromRaw([]byte("opensesame"))
 		set.AddKey(k2)
 		pubkey, _ := jwk.PublicKeyOf(privkey)
 		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)

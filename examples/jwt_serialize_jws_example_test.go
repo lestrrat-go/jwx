@@ -19,7 +19,7 @@ func ExampleJWT_SerializeJWS() {
 		return
 	}
 
-	rawKey := []byte(`abracadavra`)
+	rawKey := []byte(`abracadabra`)
 	jwkKey, err := jwk.FromRaw(rawKey)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)

@@ -16,7 +16,7 @@ type Container struct {
 // type is unknown at compile time. In this example we use
 // a proxy/wrapper to trick `Container` from attempting to
 // parse the `.Key` field, and intercept the value that
-// would have gone into the the `Container` struct into
+// would have gone into the `Container` struct into
 // `Proxy` struct's `.Key` struct field
 type Proxy struct {
 	Container

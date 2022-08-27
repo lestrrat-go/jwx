@@ -9,7 +9,7 @@ import (
 )
 
 func ExampleJWS_SignWithHeaders() {
-	key, err := jwk.FromRaw([]byte(`abracadavra`))
+	key, err := jwk.FromRaw([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)
 		return

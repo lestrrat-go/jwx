@@ -84,7 +84,7 @@ func Setup() error {
 	}
 
 	{
-		v, err := jwk.FromRaw([]byte(`abracadavra`))
+		v, err := jwk.FromRaw([]byte(`abracadabra`))
 		if err != nil {
 			return fmt.Errorf(`failed to create jwk.Key from symmetric key: %w`, err)
 		}
