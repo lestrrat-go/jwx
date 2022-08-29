@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
@@ -24,12 +26,28 @@ func main() {
 	}
 }
 
+var reLooksLikeCodeBlock = regexp.MustCompile(`^\s\s+`)
+
 func writeComment(o *codegen.Output, comment string) bool {
 	comment = strings.TrimSpace(comment)
 	if comment == "" {
 		return false
 	}
 	for i, line := range strings.Split(comment, "\n") {
+		if reLooksLikeCodeBlock.MatchString(line) {
+			o.L("//")
+			var nonSpace int
+			for j, r := range line {
+				if !unicode.IsSpace(r) {
+					nonSpace = j
+					break
+				}
+				o.R("\t")
+			}
+			o.R(line[nonSpace:])
+			continue
+		}
+
 		if i == 0 {
 			o.LL(`// %s`, line)
 		} else {
