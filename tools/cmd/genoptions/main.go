@@ -26,7 +26,7 @@ func main() {
 	}
 }
 
-var reLooksLikeCodeBlock = regexp.MustCompile(`^\s\s+`)
+var reLooksLikeCodeBlock = regexp.MustCompile(`^\s+`)
 
 func writeComment(o *codegen.Output, comment string) bool {
 	comment = strings.TrimSpace(comment)
