@@ -110,7 +110,7 @@ func _main() error {
 		},
 		{
 			name:     `EllipticCurveAlgorithm`,
-			comment:  ` EllipticCurveAlgorithm represents the algorithms used for EC keys`,
+			comment:  `EllipticCurveAlgorithm represents the algorithms used for EC keys`,
 			filename: `elliptic_gen.go`,
 			elements: []element{
 				{

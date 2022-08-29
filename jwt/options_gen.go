@@ -360,10 +360,10 @@ func WithValidate(v bool) ParseOption {
 // For example, in order to validate tokens that are only valid during August, you would write
 //
 //	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
-//	  if time.Now().Month() != 8 {
-//	    return fmt.Errorf(`tokens are only valid during August!`)
-//	  }
-//	  return nil
+//	 if time.Now().Month() != 8 {
+//	   return fmt.Errorf(`tokens are only valid during August!`)
+//	 }
+//	 return nil
 //	})
 //	err := jwt.Validate(token, jwt.WithValidator(validator))
 func WithValidator(v Validator) ValidateOption {

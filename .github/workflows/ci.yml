@@ -53,7 +53,6 @@ jobs:
         with:
           file: ./coverage.out
       - name: Run gofmt
-        if: matrix.go == '1.19'
         run: ./tools/cmd/gofmt.sh
       - name: Check difference between generation code and commit code
         run: make check_diffs
