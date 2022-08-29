@@ -5,6 +5,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Parsing](#parsing)
   * [Parse a JWS message stored in memory](#parse-a-jws-message-stored-in-memory)
   * [Parse a JWS message stored in a file](#parse-a-jws-message-stored-in-a-file)
+  * [Parse a JWS message and access JWS headers](#parse-a-jws-message-and-access-jws-headers)
 * [Signing](#signing)
   * [Generating a JWS message in compact serialization format](#generating-a-jws-message-in-compact-serialization-format)
   * [Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)
@@ -104,6 +105,17 @@ func ExampleJWS_ReadFile() {
 }
 ```
 source: [examples/jws_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_readfile_example_test.go)
+<!-- END INCLUDE -->
+
+## Parse a JWS message and access JWS headers
+
+Note: If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](#parse-and-verify-a-jwt-using-arbitrary-keys).
+
+While a lot of documentation in the wild treat as if a JWT message encoded in base64 is... a JWT message, in truth it is a JWT message enveloped in a JWS message. Therefore in order to access the JWS headers of a JWT message you will need to work witha `jws.Message` object, which you can obtain from parsing the JWS payload. You will need to understand [the structure of a generic JWS message](https://www.rfc-editor.org/rfc/rfc7515#section-7.2.1).
+
+Below sample code extracts the `kid` field of a single-signature JWS message:
+
+<!-- INCLUDE(examples/jws_use_jws_header_test.go) -->
 <!-- END INCLUDE -->
 
 # Signing
