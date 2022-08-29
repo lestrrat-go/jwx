@@ -30,18 +30,18 @@ import (
 // The first thing that `jwe.Decrypt()` needs to do is to collect the
 // KeyProviders from the option list that the user provided (presented in pseudocode):
 //
-//   keyProviders := filterKeyProviders(options)
+//	keyProviders := filterKeyProviders(options)
 //
 // Then, remember that a JWE message may contain multiple recipients in the
 // message. For each recipient, we call on the KeyProviders to give us
 // the key(s) to use on this signature:
 //
-//   for r in msg.Recipients {
-//     for kp in keyProviders {
-//       kp.FetcKeys(ctx, sink, r, msg)
-//       ...
-//     }
-//   }
+//	for r in msg.Recipients {
+//	  for kp in keyProviders {
+//	    kp.FetcKeys(ctx, sink, r, msg)
+//	    ...
+//	  }
+//	}
 //
 // The `sink` argument passed to the KeyProvider is a temporary storage
 // for the keys (either a jwk.Key or a "raw" key). The `KeyProvider`
@@ -54,17 +54,17 @@ import (
 // you should execute the necessary checks or retrieval of keys, and
 // then send the key(s) to the sink:
 //
-//   sink.Key(alg, key)
+//	sink.Key(alg, key)
 //
 // These keys are then retrieved and tried for each signature, until
 // a match is found:
 //
-//   keys := sink.Keys()
-//   for key in keys {
-//     if decryptJWEKey(recipient.EncryptedKey(), key) {
-//       return OK
-//     }
-//   }
+//	keys := sink.Keys()
+//	for key in keys {
+//	  if decryptJWEKey(recipient.EncryptedKey(), key) {
+//	    return OK
+//	  }
+//	}
 type KeyProvider interface {
 	FetchKeys(context.Context, KeySink, Recipient, *Message) error
 }

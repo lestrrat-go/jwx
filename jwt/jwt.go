@@ -445,14 +445,13 @@ func (t *stdToken) Clone() (Token, error) {
 //
 // In that case you would register a custom field as follows
 //
-//   jwt.RegisterCustomField(`x-birthday`, timeT)
+//	jwt.RegisterCustomField(`x-birthday`, timeT)
 //
 // Then `token.Get("x-birthday")` will still return an `interface{}`,
 // but you can convert its type to `time.Time`
 //
-//   bdayif, _ := token.Get(`x-birthday`)
-//   bday := bdayif.(time.Time)
-//
+//	bdayif, _ := token.Get(`x-birthday`)
+//	bday := bdayif.(time.Time)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

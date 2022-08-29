@@ -4,7 +4,7 @@
 // In order to use OpenID claims, you specify the token to use in the
 // jwt.Parse method
 //
-//    jwt.Parse(data, jwt.WithToken(openid.New())
+//	jwt.Parse(data, jwt.WithToken(openid.New())
 package openid
 
 import (
@@ -39,14 +39,13 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 //
 // In that case you would register a custom field as follows
 //
-//   jwt.RegisterCustomField(`x-birthday`, timeT)
+//	jwt.RegisterCustomField(`x-birthday`, timeT)
 //
 // Then `token.Get("x-birthday")` will still return an `interface{}`,
 // but you can convert its type to `time.Time`
 //
-//   bdayif, _ := token.Get(`x-birthday`)
-//   bday := bdayif.(time.Time)
-//
+//	bdayif, _ := token.Get(`x-birthday`)
+//	bday := bdayif.(time.Time)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

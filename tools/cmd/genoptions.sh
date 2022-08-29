@@ -11,7 +11,7 @@ echo "👉 Generating options..."
 
 DIR=tools/cmd/genoptions
 pushd "$DIR" > /dev/null
-go build -o .genoptions main.go
+GOWORK=off go build -o .genoptions main.go
 popd > /dev/null
 
 EXE="$DIR/.genoptions"

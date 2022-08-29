@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/goccy/go-yaml"
 	"github.com/lestrrat-go/codegen"
@@ -24,12 +26,28 @@ func main() {
 	}
 }
 
+var reLooksLikeCodeBlock = regexp.MustCompile(`^\s+`)
+
 func writeComment(o *codegen.Output, comment string) bool {
 	comment = strings.TrimSpace(comment)
 	if comment == "" {
 		return false
 	}
 	for i, line := range strings.Split(comment, "\n") {
+		if reLooksLikeCodeBlock.MatchString(line) {
+			o.L("//")
+			var nonSpace int
+			for j, r := range line {
+				if !unicode.IsSpace(r) {
+					nonSpace = j
+					break
+				}
+				o.R("\t")
+			}
+			o.R(line[nonSpace:])
+			continue
+		}
+
 		if i == 0 {
 			o.LL(`// %s`, line)
 		} else {
@@ -179,12 +197,19 @@ func genOptions(objects *Objects) error {
 		seen := make(map[string]struct{})
 		for _, option := range objects.Options {
 			_, ok := seen[option.Ident]
-			if !ok {
-				o.LL(`func (ident%s) String() string {`, option.Ident)
-				o.L(`return %q`, option.OptionName)
-				o.L(`}`)
-				seen[option.Ident] = struct{}{}
+			if ok {
+				continue
 			}
+
+			// WithCompact is a weird case....
+			optionName := option.OptionName
+			if option.OptionName == `WithCompact` {
+				optionName = `WithSerialization`
+			}
+			o.LL(`func (ident%s) String() string {`, option.Ident)
+			o.L(`return %q`, optionName)
+			o.L(`}`)
+			seen[option.Ident] = struct{}{}
 		}
 	}
 
@@ -238,7 +263,12 @@ func genOptionTests(objects *Objects) error {
 			continue
 		}
 
-		o.L(`require.Equal(t, %q, ident%s{}.String())`, option.OptionName, option.Ident)
+		// WithCompact is a weird case....
+		optionName := option.OptionName
+		if option.OptionName == `WithCompact` {
+			optionName = `WithSerialization`
+		}
+		o.L(`require.Equal(t, %q, ident%s{}.String())`, optionName, option.Ident)
 		seen[option.Ident] = struct{}{}
 	}
 
