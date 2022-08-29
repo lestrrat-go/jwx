@@ -1067,7 +1067,6 @@ func TestReadFile(t *testing.T) {
 }
 
 func TestVerifyNonUniqueKid(t *testing.T) {
-	t.Parallel()
 	const payload = "Lorem ipsum"
 	const kid = "notUniqueKid"
 	privateKey, err := jwxtest.GenerateRsaJwk()
