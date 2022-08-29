@@ -245,7 +245,12 @@ func genOptionTests(objects *Objects) error {
 			continue
 		}
 
-		o.L(`require.Equal(t, %q, ident%s{}.String())`, option.OptionName, option.Ident)
+		// WithCompact is a weird case....
+		optionName := option.OptionName
+		if option.OptionName == `WithCompact` {
+			optionName = `WithSerialization`
+		}
+		o.L(`require.Equal(t, %q, ident%s{}.String())`, optionName, option.Ident)
 		seen[option.Ident] = struct{}{}
 	}
 
