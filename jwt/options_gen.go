@@ -361,7 +361,7 @@ func WithValidate(v bool) ParseOption {
 //
 //	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
 //	 if time.Now().Month() != 8 {
-//	   return fmt.Errorf(`tokens are only valid during August!`)
+//	  return fmt.Errorf(`tokens are only valid during August!`)
 //	 }
 //	 return nil
 //	})
