@@ -686,7 +686,7 @@ func ExampleJWT_Validate() {
   }
 
   {
-    // Case 2: USing jwt.Parse()
+    // Case 2: Using jwt.Parse()
     buf, err := json.Marshal(tok)
     if err != nil {
       fmt.Printf("failed to serialize token: %s\n", err)
@@ -829,7 +829,7 @@ func ExampleJWT_ValidateDetectErrorType() {
   }
 
   {
-    // Case 1: Parsing error. We're not showing verification faiure
+    // Case 1: Parsing error. We're not showing verification failure
     // but it is about the same in the context of wanting to know
     // if it's a validation error or not
     _, err := jwt.Parse(buf[:len(buf)-1], jwt.WithVerify(false), jwt.WithValidate(true))
@@ -967,8 +967,8 @@ func ExampleJWT_SerializeJWS() {
   }
 
   // OUTPUT:
-  // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.rTlpyVnHFWosNud7seqlsvhM8UoXUIAKfdWHySFO5Ro
-  // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.rTlpyVnHFWosNud7seqlsvhM8UoXUIAKfdWHySFO5Ro
+  // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
+  // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
 }
 ```
 source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jws_example_test.go)
