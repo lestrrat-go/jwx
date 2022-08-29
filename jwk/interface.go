@@ -48,6 +48,7 @@ const (
 // If a resource contains a single JWK instead of a JWK set, private parameters
 // are stored in _both_ the resulting `jwk.Set` object and the `jwk.Key` object .
 //
+//nolint:interfacebloat
 type Set interface {
 	// AddKey adds the specified key. If the key already exists in the set,
 	// an error is returned.

@@ -40,6 +40,8 @@ linters:
     - nakedret
     - nestif
     - nlreturn
+    - nonamedreturns # visit this back later
+    - nosnakecase
     - paralleltest
     - scopelint # deprecated
     - tagliatelle
@@ -60,6 +62,10 @@ issues:
       text: "don't use an underscore in package name"
       linters:
         - revive
+    - path: /*.go
+      linters:
+        - contextcheck
+        - exhaustruct
     - path: /main.go
       linters:
         - errcheck

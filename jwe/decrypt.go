@@ -22,6 +22,7 @@ import (
 
 // decrypter is responsible for taking various components to decrypt a message.
 // its operation is not concurrency safe. You must provide locking yourself
+//
 //nolint:govet
 type decrypter struct {
 	aad         []byte

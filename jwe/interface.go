@@ -49,15 +49,16 @@ type stdRecipient struct {
 // For example, it is totally valid for if the protected header's
 // integrity was calculated using a non-standard line breaks:
 //
-//    {"a dummy":
-//      "protected header"}
+//	{"a dummy":
+//	  "protected header"}
 //
 // Once parsed, though, we can only serialize the protected header as:
 //
-//    {"a dummy":"protected header"}
+//	{"a dummy":"protected header"}
 //
 // which would obviously result in a contradicting integrity value
 // if we tried to re-calculate it from a parsed message.
+//
 //nolint:govet
 type Message struct {
 	// Comments on each field are taken from https://datatracker.ietf.org/doc/html/rfc7516
