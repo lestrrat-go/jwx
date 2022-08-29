@@ -4,6 +4,18 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.7 - UNRELEASED
+[Miscellaneous]
+  * Go Workspaces have been enabled within this module.
+    - When developing, modules will refer to the main jwx module that they
+      are part of. This allows us to explicitly specify the dependency version
+      in, for example, ./cmd/jwx/go.mod but still develop against the local version.
+    - If you are using `goimports` and other tools, you might want to upgrade
+      binaries -- for example, when using vim-go's auto-format-on-save feature,
+      my old binaries took well over 5~10 seconds to compute the import paths.
+      This was fixed when I switched to using go1.19, and upgraded the binaries
+      used by vim-go
+
 v2.0.6 - 25 Aug 2022
 [Bug fixes][Security]
   * [jwe] Agreement Party UInfo and VInfo (apv/apu) were not properly being
