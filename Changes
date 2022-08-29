@@ -6,6 +6,9 @@ v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jw
 
 v2.0.7 - UNRELEASED
 [Miscellaneous]
+  * WithCompact's stringification should have been that of the
+    internal indentity struct ("WithSerialization"), but it was
+    wrongly producing "WithCompact". This has been fixed.
   * Go Workspaces have been enabled within this module.
     - When developing, modules will refer to the main jwx module that they
       are part of. This allows us to explicitly specify the dependency version
