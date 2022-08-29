@@ -1,4 +1,4 @@
-.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy
+.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy jwx
 generate: 
 	@go generate
 	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
@@ -79,3 +79,5 @@ imports:
 tidy:
 	./scripts/tidy.sh
 
+jwx:
+	@./tools/cmd/install-jwx.sh

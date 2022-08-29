@@ -1,8 +1,21 @@
 # The `jwx` command line tool
 
 `jwx` command line tool performs set of common operations involving JSON Object Signing and Encryption (JOSE).
+This is provided as a sample application of sorts, and thus does not get much updates. As of this writing
+it is not possible to install this command using `go install`. Instead, install it by executing the following
+commands:
 
-I highly recommend [github.com/latchset/jose](https://github.com/latchset/jose) for the same purpose, but you might prefer to use `jwx` for its pure-Go implementation.
+```sh
+git clone https://github.com/lestrrat-go/jwx.git
+cd jwx
+make jwx
+```
+
+This will install the `jwx` tool in $GOBIN (or $GOPATH/bin, if $GOBIN is not available).
+
+If you do a lot of JOSE related work on the command line, we highly recommend [github.com/latchset/jose](https://github.com/latchset/jose) for the same purpose, unless you might prefer to use `jwx` for its pure-Go implementation.
+
+# Usage
 
 All examples use the "full" name for command names and option names, but you can use the short forms interchangeably.
 
