@@ -45,6 +45,8 @@ jobs:
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
+      - name: make tidy
+        run: make tidy
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
@@ -52,8 +54,6 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
-      - name: Run gofmt
-        run: ./tools/cmd/gofmt.sh
       - name: Check difference between generation code and commit code
         run: make check_diffs
  

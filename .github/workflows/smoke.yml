@@ -41,9 +41,9 @@ jobs:
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
+      - name: make tidy
+        run: make tidy
       - name: Run smoke tests
         run: make smoke-${{ matrix.go_tags }}
       - name: Check difference between generation code and commit code
         run: make check_diffs
-      - name: Run go mod tidy
-        run: go mod tidy
