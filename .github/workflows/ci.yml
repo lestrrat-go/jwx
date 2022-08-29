@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'all']
-        go: [ '1.18', '1.17', '1.16' ]
+        go: [ '1.19', '1.18', '1.17' ]
     name: "Test [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
@@ -48,7 +48,7 @@ jobs:
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
-        if: matrix.go == '1.18'
+        if: matrix.go == '1.19'
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.out
