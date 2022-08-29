@@ -109,7 +109,7 @@ source: [examples/jws_readfile_example_test.go](https://github.com/lestrrat-go/j
 
 ## Parse a JWS message and access JWS headers
 
-Note: If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](#parse-and-verify-a-jwt-using-arbitrary-keys).
+Note: If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](./01-jwt.md#parse-and-verify-a-jwt-using-arbitrary-keys).
 
 While a lot of documentation in the wild treat as if a JWT message encoded in base64 is... a JWT message, in truth it is a JWT message enveloped in a JWS message. Therefore in order to access the JWS headers of a JWT message you will need to work witha `jws.Message` object, which you can obtain from parsing the JWS payload. You will need to understand [the structure of a generic JWS message](https://www.rfc-editor.org/rfc/rfc7515#section-7.2.1).
 
