@@ -19,4 +19,4 @@ go build -o "$install_dir/jwx" .
 
 popd > /dev/null
 
-echo "Intalled jwx in $install_dir/jwx"
+echo "Installed jwx in $install_dir/jwx"
