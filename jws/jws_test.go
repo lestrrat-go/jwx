@@ -1136,19 +1136,18 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-			wrongKey := tc.Key()
-			// Try matching in different orders
-			for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
+		tc := tc
+		wrongKey := tc.Key()
+		for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
+			set := set
+			t.Run(tc.Name, func(t *testing.T) {
+				// Try matching in different orders
 				var usedKey jwk.Key
 				_, err = jws.Verify(signed, jws.WithKeySet(set, jws.WithMultipleKeysPerKeyID(true)), jws.WithKeyUsed(&usedKey))
-				if !assert.NoError(t, err, `jws.Verify should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jws.Verify should succeed`)
 				require.Equal(t, usedKey, correctKey)
-			}
-		})
+			})
+		}
 	}
 }
 
