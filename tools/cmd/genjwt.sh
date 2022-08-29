@@ -10,7 +10,7 @@ set -e
 echo "👉 Generating JWT files..."
 DIR=../tools/cmd/genjwt
 pushd "$DIR" > /dev/null
-go build -o .genjwt main.go
+GOWORK=off go build -o .genjwt main.go
 popd > /dev/null
 
 EXE="${DIR}/.genjwt"

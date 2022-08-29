@@ -1,3 +1,4 @@
+//go:build jwx_es256k
 // +build jwx_es256k
 
 package jwa_test

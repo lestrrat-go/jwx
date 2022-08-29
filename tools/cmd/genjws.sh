@@ -10,7 +10,7 @@ set -e
 echo "👉 Generating JWS files..."
 DIR=../tools/cmd/genjws
 pushd "$DIR" > /dev/null
-go build -o .genjws main.go
+GOWORK=off go build -o .genjws main.go
 popd > /dev/null
 
 EXE="${DIR}/.genjws"

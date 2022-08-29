@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-//  EllipticCurveAlgorithm represents the algorithms used for EC keys
+// EllipticCurveAlgorithm represents the algorithms used for EC keys
 type EllipticCurveAlgorithm string
 
 // Supported values for EllipticCurveAlgorithm

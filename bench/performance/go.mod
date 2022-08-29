@@ -1,7 +1,5 @@
 module github.com/lestrrat-go/jwx/v2/bench/performance
 
-go 1.15
+go 1.16
 
-replace github.com/lestrrat-go/jwx/v2 => ../..
-
-require github.com/lestrrat-go/jwx/v2 v2.0.0-00010101000000-000000000000
+require github.com/lestrrat-go/jwx/v2 v2.0.6

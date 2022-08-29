@@ -24,8 +24,8 @@ type Whitelist = httprc.Whitelist
 // Before retrieving the Set objects, the user must pre-register the
 // URLs they intend to use by calling `Register()`
 //
-//  c := jwk.NewCache(ctx)
-//  c.Register(url, options...)
+//	c := jwk.NewCache(ctx)
+//	c.Register(url, options...)
 //
 // Once registered, you can call `Get()` to retrieve the Set object.
 //
@@ -310,7 +310,6 @@ func (cs *CachedSet) Index(key Key) int {
 }
 
 func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
-	//nolint:contextcheck
 	set, err := cs.cached()
 	if err != nil {
 		return arrayiter.New(nil)
@@ -320,7 +319,6 @@ func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
 }
 
 func (cs *CachedSet) Iterate(ctx context.Context) HeaderIterator {
-	//nolint:contextcheck
 	set, err := cs.cached()
 	if err != nil {
 		return mapiter.New(nil)
