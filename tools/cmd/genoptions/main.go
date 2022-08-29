@@ -179,12 +179,19 @@ func genOptions(objects *Objects) error {
 		seen := make(map[string]struct{})
 		for _, option := range objects.Options {
 			_, ok := seen[option.Ident]
-			if !ok {
-				o.LL(`func (ident%s) String() string {`, option.Ident)
-				o.L(`return %q`, option.OptionName)
-				o.L(`}`)
-				seen[option.Ident] = struct{}{}
+			if ok {
+				continue
 			}
+
+			// WithCompact is a weird case....
+			optionName := option.OptionName
+			if option.OptionName == `WithCompact` {
+				optionName = `WithSerialization`
+			}
+			o.LL(`func (ident%s) String() string {`, option.Ident)
+			o.L(`return %q`, optionName)
+			o.L(`}`)
+			seen[option.Ident] = struct{}{}
 		}
 	}
 

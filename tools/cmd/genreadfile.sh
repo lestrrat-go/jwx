@@ -6,6 +6,7 @@
 set -e
 
 echo "👉 Generating ReadFile() for each package..."
+export GOWORK=off
 DIR="tools/cmd/genreadfile"
 pushd "$DIR" > /dev/null
 go build -o .genreadfile main.go

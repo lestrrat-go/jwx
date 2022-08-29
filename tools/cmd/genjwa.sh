@@ -11,7 +11,7 @@ echo "👉 Generating JWA files..."
 DIR=../tools/cmd/genjwa
 
 pushd "$DIR" > /dev/null
-go build -o .genjwa main.go
+GOWORK=off go build -o .genjwa main.go
 popd > /dev/null
 
 EXE="${DIR}/.genjwa"

@@ -10,7 +10,7 @@ set -e
 echo "👉 Generating JWK files..."
 DIR=../tools/cmd/genjwk
 pushd "$DIR" > /dev/null
-go build -o .genjwk main.go
+GOWORK=off go build -o .genjwk main.go
 popd > /dev/null
 
 EXE="${DIR}/.genjwk"

@@ -2,6 +2,7 @@
 generate: 
 	@go generate
 	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
+	@./tools/cmd/gofmt.sh
 
 generate-%:
 	@go generate $(shell pwd -P)/$(patsubst generate-%,%,$@)

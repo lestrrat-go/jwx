@@ -173,7 +173,7 @@ func (identRequireKid) String() string {
 }
 
 func (identSerialization) String() string {
-	return "WithCompact"
+	return "WithSerialization"
 }
 
 // WithCompress specifies the compression algorithm to use when encrypting
