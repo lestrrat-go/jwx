@@ -26,6 +26,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
 * [Working with JWT](#working-with-jwt)
+  * [Access JWS headers](#access-jws-headers)
   * [Get/Set fields](#getset-fields)
 
 ---
@@ -1105,6 +1106,12 @@ source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestr
 <!-- END INCLUDE -->
 
 # Working with JWT
+
+## Access JWS headers
+
+Note: If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](#parse-and-verify-a-jwt-using-arbitrary-keys).
+
+In order to access JWS headers such as `kid`, `alg`, etc, Please [look at the JWS documentation for it](./02-jws.md#parse-a-jws-message-and-access-jws-headers).
 
 ## Get/Set fields
 
