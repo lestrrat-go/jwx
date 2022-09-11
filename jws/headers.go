@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
 )
 
 // Iterate returns a channel that successively returns all the
@@ -27,11 +26,11 @@ func (h *stdHeaders) Iterate(ctx context.Context) Iterator {
 }
 
 func (h *stdHeaders) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
+	return mapiter.WalkMap(ctx, h, visitor)
 }
 
 func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+	return mapiter.AsStrIfaceMap(ctx, h)
 }
 
 func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
@@ -113,8 +112,8 @@ type set struct {
 	privateParams map[string]interface{}
 }
 
-type HeaderVisitor = iter.MapVisitor
-type HeaderVisitorFunc = iter.MapVisitorFunc
+type HeaderVisitor = mapiter.StrKeyVisitor
+type HeaderVisitorFunc = mapiter.StrKeyVisitorFunc
 type HeaderPair = mapiter.Pair
 type HeaderIterator = mapiter.Iterator
 type KeyPair = arrayiter.Pair
