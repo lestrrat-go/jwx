@@ -584,11 +584,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h *%s) Walk(ctx context.Context, visitor HeaderVisitor) error {", structName)
-	o.L("return iter.WalkMap(ctx, h, visitor)")
+	o.L("return mapiter.WalkMap(ctx, h, visitor)")
 	o.L("}")
 
 	o.LL("func (h *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", structName)
-	o.L("return iter.AsMap(ctx, h)")
+	o.L("return mapiter.AsStrIfaceMap(ctx, h)")
 	o.L("}")
 
 	return nil

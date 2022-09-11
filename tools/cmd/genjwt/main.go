@@ -546,11 +546,11 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (t *%s) Walk(ctx context.Context, visitor Visitor) error {", obj.Name(false))
-	o.L("return iter.WalkMap(ctx, t, visitor)")
+	o.L("return mapiter.WalkMap(ctx, t, visitor)")
 	o.L("}")
 
 	o.LL("func (t *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", obj.Name(false))
-	o.L("return iter.AsMap(ctx, t)")
+	o.L("return mapiter.AsStrIfaceMap(ctx, t)")
 	o.L("}")
 
 	if err := o.WriteFile(obj.MustString(`filename`), codegen.WithFormatCode(true)); err != nil {
