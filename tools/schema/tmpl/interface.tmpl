@@ -1,0 +1,11 @@
+{{ define "ext/object/header" }}
+
+{{ comment .Comment "Token" }}
+type Token interface {
+{{- range $i, $field := .Fields }}
+  {{ comment $field.GetComment $field.GetName }}
+  {{ $field.GetName }}() {{ $field.GetUserFacingType }}
+{{- end }}
+}
+
+{{ end }}

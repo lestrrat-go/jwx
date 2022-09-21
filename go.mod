@@ -9,6 +9,7 @@ require (
 	github.com/lestrrat-go/httprc v1.0.4
 	github.com/lestrrat-go/iter v1.0.2
 	github.com/lestrrat-go/option v1.0.0
+	github.com/lestrrat-go/sketch v0.0.0-20220921073432-c5157e3aaec0
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 )
