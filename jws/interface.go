@@ -72,7 +72,7 @@ type Iterator = mapiter.Iterator
 // Signer generates the signature for a given payload.
 type Signer interface {
 	// Sign creates a signature for the given payload.
-	// The scond argument is the key used for signing the payload, and is usually
+	// The second argument is the key used for signing the payload, and is usually
 	// the private key type associated with the signature method. For example,
 	// for `jwa.RSXXX` and `jwa.PSXXX` types, you need to pass the
 	// `*"crypto/rsa".PrivateKey` type.
