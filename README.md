@@ -22,6 +22,9 @@ If you are using this module in your product or your company, please add  your p
 Some more in-depth discussion on why you might want to use this library over others
 can be found in the [Description section](#description)
 
+If you are using v0 or v1, you are strongly encouraged to migrate to using v2
+(the version that comes with the README you are reading).
+
 # SYNOPSIS
 
 <!-- INCLUDE(examples/jwx_readme_example_test.go) -->
