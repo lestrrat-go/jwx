@@ -1136,7 +1136,8 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 
 	for _, tc := range testcases {
 		tc := tc
-		wrongKey := tc.Key()
+		wrongKey, err := tc.Key().Clone()
+		require.NoError(t, err, `cloning wrong key should succeed`)
 		for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
 			set := set
 			t.Run(tc.Name, func(t *testing.T) {
