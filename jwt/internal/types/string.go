@@ -2,24 +2,35 @@ package types
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
-type StringList []string
+type Audience []string
 
-func (l StringList) Get() []string {
-	return []string(l)
+func (aud Audience) MarshalJSON() ([]byte, error) {
+	var val interface{}
+	if len(aud) == 1 && atomic.LoadUint32(&json.FlattenAudience) == 1 {
+		val = aud[0]
+	} else {
+		val = []string(aud) // convert to raw []string to avoid recursion
+	}
+	return json.Marshal(val)
 }
 
-func (l *StringList) Accept(v interface{}) error {
+func (aud Audience) Get() []string {
+	return []string(aud)
+}
+
+func (aud *Audience) Accept(v interface{}) error {
 	switch x := v.(type) {
 	case string:
-		*l = StringList([]string{x})
+		*aud = Audience([]string{x})
 	case []string:
-		*l = StringList(x)
+		*aud = Audience(x)
 	case []interface{}:
-		list := make(StringList, len(x))
+		list := make(Audience, len(x))
 		for i, e := range x {
 			if s, ok := e.(string); ok {
 				list[i] = s
@@ -27,17 +38,17 @@ func (l *StringList) Accept(v interface{}) error {
 			}
 			return fmt.Errorf(`invalid list element type %T`, e)
 		}
-		*l = list
+		*aud = list
 	default:
 		return fmt.Errorf(`invalid type: %T`, v)
 	}
 	return nil
 }
 
-func (l *StringList) UnmarshalJSON(data []byte) error {
+func (aud *Audience) UnmarshalJSON(data []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal data: %w`, err)
 	}
-	return l.Accept(v)
+	return aud.Accept(v)
 }

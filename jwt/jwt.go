@@ -422,6 +422,7 @@ func Equal(t1, t2 Token) bool {
 	return bytes.Equal(j1, j2)
 }
 
+/*
 func (t *stdToken) Clone() (Token, error) {
 	dst := New()
 
@@ -434,6 +435,7 @@ func (t *stdToken) Clone() (Token, error) {
 	}
 	return dst, nil
 }
+*/
 
 // RegisterCustomField allows users to specify that a private field
 // be decoded as an instance of the specified type. This option has
@@ -454,4 +456,9 @@ func (t *stdToken) Clone() (Token, error) {
 //	bday := bdayif.(time.Time)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
+}
+
+// New creates an empty token
+func New() Token {
+	return &stdToken{}
 }

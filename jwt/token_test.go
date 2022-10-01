@@ -1,7 +1,6 @@
 package jwt_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -35,16 +35,11 @@ func TestHeader(t *testing.T) {
 		t.Parallel()
 		h := jwt.New()
 		for k, v := range values {
-			if !assert.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k) {
-				return
-			}
-			got, ok := h.Get(k)
-			if !assert.True(t, ok, `h.Get should succeed for key %#v`, k) {
-				return
-			}
-			if !reflect.DeepEqual(v, got) {
-				t.Fatalf("Values do not match: (%v, %v)", v, got)
-			}
+			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
+
+			var got interface{}
+			require.NoError(t, h.Get(k, &got), `h.Get should succeed for key %#v`, k)
+			require.Equal(t, v, got, `values from h.Set and h.Get should match`)
 		}
 	})
 
@@ -78,15 +73,12 @@ func TestHeader(t *testing.T) {
 			t.Fatalf("Setting %s value failed", "default")
 		}
 		for k := range values {
-			_, ok := h.Get(k)
-			if ok {
-				t.Fatalf("Getting %s value should have failed", k)
-			}
+			require.False(t, h.Has(k), "getting %s value should have failed", k)
 		}
-		_, ok := h.Get("default")
-		if !ok {
-			t.Fatal("Failed to get default value")
-		}
+		require.True(t, h.Has("default"), "getting 'default' should succeed")
+		var v interface{}
+		require.NoError(t, h.Get("default", &v), "getting 'default' should succeed")
+		require.Equal(t, dummy, v, `values for 'default' should match`)
 	})
 
 	t.Run("GetError", func(t *testing.T) {
@@ -209,10 +201,8 @@ func TestToken(t *testing.T) {
 	t.Run("Get", func(t *testing.T) {
 		rv := reflect.ValueOf(tok)
 		for k, kdef := range def {
-			getval, ok := tok.Get(k)
-			if !assert.True(t, ok, `tok.Get(%s) should succeed`, k) {
-				return
-			}
+			var getval interface{}
+			require.NoError(t, tok.Get(k, &getval), `tok.Get(%s) should succeed`, k)
 
 			if mname := kdef.Method; mname != "" {
 				method := rv.MethodByName(mname)
@@ -242,47 +232,18 @@ func TestToken(t *testing.T) {
 			return
 		}
 
-		m1, err := tok.AsMap(context.TODO())
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
-			return
-		}
-
-		m2, err := newtok.AsMap(context.TODO())
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, m1, m2, `tokens should match`) {
-			return
-		}
+		require.True(t, jwt.Equal(tok, newtok), `tokens should match`)
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		ctx := context.TODO()
-
 		newtok, err := tok.Clone()
 		if !assert.NoError(t, err, `tok.Clone should succeed`) {
 			return
 		}
 
-		for iter := tok.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			newtok.Remove(pair.Key.(string))
+		for _, k := range tok.Keys() {
+			newtok.Remove(k)
 		}
 
-		m, err := newtok.AsMap(ctx)
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
-			return
-		}
-
-		if !assert.Len(t, m, 0, `toks should have 0 tok`) {
-			return
-		}
-
-		for iter := tok.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, newtok.Set(pair.Key.(string), pair.Value), `newtok.Set should succeed`) {
-				return
-			}
-		}
+		require.Len(t, newtok.Keys(), 0, `newtok should have 0 fields`)
 	})
 }

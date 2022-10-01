@@ -610,13 +610,13 @@ func TestUnmarshalJSON(t *testing.T) {
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
 			return
 		}
-		aud, ok := t1.Get(jwt.AudienceKey)
-		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
+		var aud []string
+		if !assert.NoError(t, t1.Get(jwt.AudienceKey, &aud), `jwt.Get(jwt.AudienceKey) should succeed`) {
 			t.Logf("%#v", t1)
 			return
 		}
 
-		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+		if !assert.Equal(t, aud, []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
 			return
 		}
 	})
@@ -765,8 +765,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := token.Get(`x-birthday`)
-		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
+		var v interface{}
+		if !assert.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`) {
 			return
 		}
 
@@ -780,8 +780,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := token.Get(`x-birthday`)
-		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
+		var v interface{}
+		if !assert.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`) {
 			return
 		}
 
@@ -1140,8 +1140,8 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 				return
 			}
 
-			v, ok := got.Get("typed-claim")
-			if !assert.True(t, ok, `got.Get() should succeed`) {
+			var v interface{}
+			if !assert.NoError(t, got.Get("typed-claim", &v), `got.Get() should succeed`) {
 				return
 			}
 			claim, err := tc.PostProcess(t, v)

@@ -464,14 +464,9 @@ func IsValidationError(err error) bool {
 }
 
 func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationError {
-	v, ok := t.Get(ccs.name)
-	if !ok {
-		return ccs.makeErr(fmt.Errorf(`claim %q not found`, ccs.name))
-	}
-
-	list, ok := v.([]string)
-	if !ok {
-		return ccs.makeErr(fmt.Errorf(`claim %q must be a []string (got %T)`, ccs.name, v))
+	var list []string
+	if err := t.Get(ccs.name, &list); err != nil {
+		return ccs.makeErr(fmt.Errorf(`failed to retrieve claim %q: %w`, ccs.name, err))
 	}
 
 	for _, v := range list {
@@ -515,9 +510,9 @@ func ClaimValueIs(name string, value interface{}) Validator {
 }
 
 func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
-	v, ok := t.Get(cv.name)
-	if !ok {
-		return cv.makeErr(fmt.Errorf(`%q not satisfied: claim %q does not exist`, cv.name, cv.name))
+	var v interface{}
+	if err := t.Get(cv.name, &v); err != nil {
+		return cv.makeErr(fmt.Errorf(`%[1]q not satisfied: failed to retrieve claim %[1]q: %[2]w`, cv.name, err))
 	}
 	if v != cv.value {
 		return cv.makeErr(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
@@ -549,8 +544,7 @@ type isRequired string
 
 func (ir isRequired) Validate(_ context.Context, t Token) ValidationError {
 	name := string(ir)
-	_, ok := t.Get(name)
-	if !ok {
+	if !t.Has(name) {
 		return &missingRequiredClaimError{claim: name}
 	}
 	return nil

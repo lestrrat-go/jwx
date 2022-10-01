@@ -168,12 +168,12 @@ func (n NumericDate) String() string {
 
 // MarshalJSON translates from internal representation to JSON NumericDate
 // See https://tools.ietf.org/html/rfc7519#page-6
-func (n *NumericDate) MarshalJSON() ([]byte, error) {
+func (n NumericDate) MarshalJSON() ([]byte, error) {
 	if n.IsZero() {
 		return json.Marshal(nil)
 	}
 
-	return json.Marshal(n.String())
+	return []byte(n.String()), nil
 }
 
 func (n *NumericDate) UnmarshalJSON(data []byte) error {

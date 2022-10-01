@@ -1,0 +1,83 @@
+{{ define "files/per-run/interface.go" }}
+package {{ .Package }}
+// Token represents a generic JWT token.
+// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`
+// methods but their types are not taken into consideration at all. If you have non-standard
+// claims that you must frequently access, consider creating accessors functions
+// like the following
+//
+// func SetFoo(tok jwt.Token) error
+// func GetFoo(tok jwt.Token) (*Customtyp, error)
+//
+// Embedding jwt.Token into another struct is not recommended, because
+// jwt.Token needs to handle private claims, and this really does not
+// work well when it is embedded in other structure
+type Token interface {
+{{- /* jwt packages only has one schema, so we can safely use the first one */ -}}
+{{- range $i, $field := (index .Schemas 0).Fields }}
+{{- if $field.GetIsExtension }}{{ continue }}{{ end }}
+  {{ comment $field.GetComment $field }}
+  {{ $field.GetName }}() {{ $field.GetType.GetApparentType }}
+{{- end }}
+
+{{- range $i, $field := (index .Schemas 0).Fields }}
+{{- if $field.GetIsExtension }}{{ continue }}{{ end }}
+  // Has{{ $field.GetName }} returns true if the `{{ $field.GetJSON }}` field
+  // of the Token has been populated
+  Has{{ $field.GetName }}() bool
+{{- end }}
+	// Get retrieves the value of the corresponding field in the token, such as
+	// `nbf`, `exp`, `iat`, and other user-defined fields.
+	//
+	// The first argument to `Get` must be the JSON field name, not the
+	// Go structure's field name.
+	//
+	// The second argument must be a pointer to either a raw `interface{}`
+	// or a Go variable capable of holding the value of the field. For example
+	// for a field that should contain a `string`, you can declared a variable
+	// `var s string` and pass a pointer to it as `&s`. For fields which you
+	// do not know the type of, you can declared a variable such as `var v interface{}`
+	// and pass a pointer to it as `&v'. If the second argument is not of
+	// a proper type, an error is returned.
+	//
+	// If the field does not exist in the token, `Get` will return an error.
+	//
+	// Note that this method only retrieves values for the JWT, not JWE or JWS.
+	// If you need to access fields like `alg`, `kid`, `jku`, etc, you need
+	// to access the corresponding fields in the JWS/JWE message. For this,
+	// you will need to access them by directly parsing the payload using
+	// `jws.Parse` and `jwe.Parse`
+	Get(string, interface{}) error
+
+	// Set assigns a value to the corresponding field in the token.
+	//
+	// The first argument to `Set` must be the JSON field name, not the
+	// Go structure's field name.
+	//
+	// The second argument is the value to be set. For pre-defined fields such
+	// as `nbf`, `iat`, `iss` the value must be of specific types.
+	// See the builder or the getter methods for pre-defined types to learn what
+	// the types for these pre-defined fields must be.
+	//
+	// For extra fields, `Set` accepts any value.
+	Set(string, interface{}) error
+
+	// Has returns true if the corresponding field is populated in the token.
+	//
+	// The first argument to `Has` must be the JSON field name, not the
+	// Go structure's field name.
+	Has(string) bool
+
+	// Remove removes the corresponding field from the Token.
+	//
+	// The first argument to `Remove` must be the JSON field name, not the
+	// Go structure's field name.
+	Remove(string) error
+
+	// Clone returns a new Token with the same content
+	Clone() (Token, error)
+
+	// Keys returns the list of all keys in the token
+	Keys() []string
+}
+{{ end }}
