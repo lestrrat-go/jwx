@@ -23,7 +23,7 @@ type NumericDate struct {
 	time.Time
 }
 
-func (n *NumericDate) Get() time.Time {
+func (n *NumericDate) GetValue() time.Time {
 	if n == nil {
 		return (time.Time{}).UTC()
 	}
@@ -106,7 +106,7 @@ func parseNumericString(x string) (time.Time, error) {
 	return time.Unix(n, nsecs).UTC(), nil
 }
 
-func (n *NumericDate) Accept(v interface{}) error {
+func (n *NumericDate) AcceptValue(v interface{}) error {
 	var t time.Time
 	switch x := v.(type) {
 	case float32:
@@ -183,7 +183,7 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	}
 
 	var n2 NumericDate
-	if err := n2.Accept(v); err != nil {
+	if err := n2.AcceptValue(v); err != nil {
 		return fmt.Errorf(`invalid value for NumericDate: %w`, err)
 	}
 	*n = n2

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"log"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -59,24 +58,21 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 			if raw {
 				return blackmagic.AssignIfCompatible(dst, val)
 			}
-			return blackmagic.AssignIfCompatible(dst, val.Get())
+			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
 	case ExpirationKey:
 		if val := v.expiration; val != nil {
 			if raw {
-				log.Printf("Expiration raw %[1]T %#[1]v", *val)
 				return blackmagic.AssignIfCompatible(dst, *val)
 			}
-				log.Printf("Expiration NOT raw %#v", *val)
-
-			return blackmagic.AssignIfCompatible(dst, val.Get())
+			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
 	case IssuedAtKey:
 		if val := v.issuedAt; val != nil {
 			if raw {
 				return blackmagic.AssignIfCompatible(dst, *val)
 			}
-			return blackmagic.AssignIfCompatible(dst, val.Get())
+			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
 	case IssuerKey:
 		if val := v.issuer; val != nil {
@@ -91,7 +87,7 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 			if raw {
 				return blackmagic.AssignIfCompatible(dst, *val)
 			}
-			return blackmagic.AssignIfCompatible(dst, val.Get())
+			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
 	case SubjectKey:
 		if val := v.subject; val != nil {
@@ -116,19 +112,19 @@ func (v *stdToken) Set(key string, value interface{}) error {
 	switch key {
 	case AudienceKey:
 		var object types.Audience
-		if err := object.Accept(value); err != nil {
+		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.audience = object
 	case ExpirationKey:
 		var object types.NumericDate
-		if err := object.Accept(value); err != nil {
+		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.expiration = &object
 	case IssuedAtKey:
 		var object types.NumericDate
-		if err := object.Accept(value); err != nil {
+		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.issuedAt = &object
@@ -146,7 +142,7 @@ func (v *stdToken) Set(key string, value interface{}) error {
 		v.jwtID = &converted
 	case NotBeforeKey:
 		var object types.NumericDate
-		if err := object.Accept(value); err != nil {
+		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.notBefore = &object
@@ -282,7 +278,7 @@ func (v *stdToken) Audience() []string {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.audience; val != nil {
-		return val.Get()
+		return val.GetValue()
 	}
 	return nil
 }
@@ -292,7 +288,7 @@ func (v *stdToken) Expiration() time.Time {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.expiration; val != nil {
-		return val.Get()
+		return val.GetValue()
 	}
 	return time.Time{}
 }
@@ -302,7 +298,7 @@ func (v *stdToken) IssuedAt() time.Time {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.issuedAt; val != nil {
-		return val.Get()
+		return val.GetValue()
 	}
 	return time.Time{}
 }
@@ -332,7 +328,7 @@ func (v *stdToken) NotBefore() time.Time {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.notBefore; val != nil {
-		return val.Get()
+		return val.GetValue()
 	}
 	return time.Time{}
 }
@@ -374,10 +370,15 @@ func (v *stdToken) Remove(key string) error {
 	return nil
 }
 
-func (v *stdToken) Clone() (Token, error) {
+func (v *stdToken) Clone(dst interface{}) error {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return &stdToken{
+
+	extra := make(map[string]interface{})
+	for key, val := range v.extra {
+		extra[key] = val
+	}
+	return blackmagic.AssignIfCompatible(dst, &stdToken{
 		audience:   v.audience,
 		expiration: v.expiration,
 		issuedAt:   v.issuedAt,
@@ -386,7 +387,8 @@ func (v *stdToken) Clone() (Token, error) {
 		notBefore:  v.notBefore,
 		subject:    v.subject,
 		dc:         v.dc,
-	}, nil
+		extra:      extra,
+	})
 }
 
 // MarshalJSON serializes stdToken into JSON.
@@ -413,7 +415,6 @@ func (v *stdToken) MarshalJSON() ([]byte, error) {
 			return nil, fmt.Errorf(`failed to encode map key name: %w`, err)
 		}
 		buf.WriteByte(':')
-		log.Printf("Encoding %q %#v", k, val)
 		if err := enc.Encode(val); err != nil {
 			return nil, fmt.Errorf(`failed to encode map value for %q: %w`, k, err)
 		}
@@ -595,6 +596,11 @@ func (b *Builder) MustBuild() Token {
 		panic(err)
 	}
 	return object
+}
+
+// New creates an empty token
+func New() Token {
+	return &stdToken{}
 }
 
 func (v *stdToken) DecodeCtx() DecodeCtx {

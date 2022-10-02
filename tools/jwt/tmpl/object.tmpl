@@ -1,5 +1,10 @@
 {{ define "ext/object/footer" }}
 {{- $objectName := .Name }}
+// New creates an empty token
+func New() {{ $.BuilderResultType }} {
+  return &{{ $objectName }}{}
+}
+
 func (v *{{ $objectName }}) DecodeCtx() DecodeCtx {
   v.mu.RLock()
   defer v.mu.RUnlock()

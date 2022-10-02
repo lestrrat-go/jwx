@@ -180,7 +180,7 @@ func (t *AddressClaim) Set(key string, value interface{}) error {
 	}
 }
 
-func (t *AddressClaim) Accept(v interface{}) error {
+func (t *AddressClaim) AcceptValue(v interface{}) error {
 	switch v := v.(type) {
 	case AddressClaim:
 		*t = v

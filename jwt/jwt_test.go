@@ -1491,7 +1491,7 @@ func TestFractional(t *testing.T) {
 		var nd types.NumericDate
 		jwt.Settings(jwt.WithNumericDateParsePrecision(int(types.MaxPrecision)))
 		s := fmt.Sprintf("%d.100000001", aLongLongTimeAgo)
-		_ = nd.Accept(s)
+		_ = nd.AcceptValue(s)
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 		testcases := []struct {
 			Input     types.NumericDate

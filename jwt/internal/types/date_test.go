@@ -10,12 +10,13 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDate(t *testing.T) {
 	t.Run("Get from a nil NumericDate", func(t *testing.T) {
 		var n *types.NumericDate
-		if !assert.Equal(t, time.Time{}, n.Get()) {
+		if !assert.Equal(t, time.Time{}, n.GetValue()) {
 			return
 		}
 	})
@@ -100,14 +101,9 @@ func TestDate(t *testing.T) {
 				if !assert.NoError(t, err) {
 					return
 				}
-				v, ok := t1.Get(jwt.IssuedAtKey)
-				if !assert.True(t, ok) {
-					return
-				}
-				realized := v.(time.Time)
-				if !assert.Equal(t, tc.Expected, realized) {
-					return
-				}
+				var v time.Time
+				require.NoError(t, t1.Get(jwt.IssuedAtKey, &v), `t1.Get(IssuedAt) should succeed`)
+				require.Equal(t, tc.Expected, v)
 			})
 		}
 	})

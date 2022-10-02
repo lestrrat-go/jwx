@@ -8,14 +8,12 @@
 package openid
 
 import (
-	"fmt"
-
 	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 var registry = json.NewRegistry()
 
+/*
 func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
@@ -28,6 +26,7 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	}
 	return dst, nil
 }
+*/
 
 // RegisterCustomField allows users to specify that a private field
 // be decoded as an instance of the specified type. This option has

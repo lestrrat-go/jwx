@@ -19,11 +19,11 @@ func (aud Audience) MarshalJSON() ([]byte, error) {
 	return json.Marshal(val)
 }
 
-func (aud Audience) Get() []string {
+func (aud Audience) GetValue() []string {
 	return []string(aud)
 }
 
-func (aud *Audience) Accept(v interface{}) error {
+func (aud *Audience) AcceptValue(v interface{}) error {
 	switch x := v.(type) {
 	case string:
 		*aud = Audience([]string{x})
@@ -50,5 +50,5 @@ func (aud *Audience) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal data: %w`, err)
 	}
-	return aud.Accept(v)
+	return aud.AcceptValue(v)
 }

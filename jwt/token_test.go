@@ -235,8 +235,8 @@ func TestToken(t *testing.T) {
 		require.True(t, jwt.Equal(tok, newtok), `tokens should match`)
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		newtok, err := tok.Clone()
-		if !assert.NoError(t, err, `tok.Clone should succeed`) {
+		var newtok jwt.Token
+		if !assert.NoError(t, tok.Clone(&newtok), `tok.Clone should succeed`) {
 			return
 		}
 

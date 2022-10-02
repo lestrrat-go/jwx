@@ -457,8 +457,3 @@ func (t *stdToken) Clone() (Token, error) {
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
-
-// New creates an empty token
-func New() Token {
-	return &stdToken{}
-}

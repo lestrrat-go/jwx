@@ -74,8 +74,10 @@ type Token interface {
 	// Go structure's field name.
 	Remove(string) error
 
-	// Clone returns a new Token with the same content
-	Clone() (Token, error)
+	// Clone creates a new Token with the same content, and sets
+	// the value into the first argument. The first argument must
+	// be a pointer to a variable that can hold the resulting type
+	Clone(interface{}) error
 
 	// Keys returns the list of all keys in the token
 	Keys() []string

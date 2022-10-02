@@ -1,4 +1,4 @@
-package jwt
+package openid
 
 import "time"
 
@@ -15,26 +15,84 @@ import "time"
 // jwt.Token needs to handle private claims, and this really does not
 // work well when it is embedded in other structure
 type Token interface {
-	// Audience represents the `aud` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.3
+	Address() *AddressClaim
+
 	Audience() []string
-	// Expiration represents the `exp` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.4
+
+	Birthdate() *BirthdateClaim
+
+	Email() string
+
+	EmailVerified() bool
+
 	Expiration() time.Time
-	// IssuedAt represents the `iat` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.6
+
+	FamilyName() string
+
+	Gender() string
+
+	GivenName() string
+
 	IssuedAt() time.Time
-	// Issuer represents the `iss` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.1
+
 	Issuer() string
-	// JwtID represents the `jti` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.7
+
 	JwtID() string
-	// NotBefore represents the `nbf` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.5
+
+	Locale() string
+
+	MiddleName() string
+
+	Name() string
+
+	Nickname() string
+
 	NotBefore() time.Time
-	// Subject represents the `sub` field as described in https://tools.ietf.org/html/rfc7519#section-4.1.2
+
+	PhoneNumber() string
+
+	PhoneNumberVerified() bool
+
+	Picture() string
+
+	PreferredUsername() string
+
+	Profile() string
+
 	Subject() string
+
+	UpdatedAt() time.Time
+
+	Website() string
+
+	Zoneinfo() string
+	// HasAddress returns true if the `address` field
+	// of the Token has been populated
+	HasAddress() bool
 	// HasAudience returns true if the `aud` field
 	// of the Token has been populated
 	HasAudience() bool
+	// HasBirthdate returns true if the `birthdate` field
+	// of the Token has been populated
+	HasBirthdate() bool
+	// HasEmail returns true if the `email` field
+	// of the Token has been populated
+	HasEmail() bool
+	// HasEmailVerified returns true if the `email_verified` field
+	// of the Token has been populated
+	HasEmailVerified() bool
 	// HasExpiration returns true if the `exp` field
 	// of the Token has been populated
 	HasExpiration() bool
+	// HasFamilyName returns true if the `family_name` field
+	// of the Token has been populated
+	HasFamilyName() bool
+	// HasGender returns true if the `gender` field
+	// of the Token has been populated
+	HasGender() bool
+	// HasGivenName returns true if the `given_name` field
+	// of the Token has been populated
+	HasGivenName() bool
 	// HasIssuedAt returns true if the `iat` field
 	// of the Token has been populated
 	HasIssuedAt() bool
@@ -44,12 +102,48 @@ type Token interface {
 	// HasJwtID returns true if the `jti` field
 	// of the Token has been populated
 	HasJwtID() bool
+	// HasLocale returns true if the `locale` field
+	// of the Token has been populated
+	HasLocale() bool
+	// HasMiddleName returns true if the `middle_name` field
+	// of the Token has been populated
+	HasMiddleName() bool
+	// HasName returns true if the `name` field
+	// of the Token has been populated
+	HasName() bool
+	// HasNickname returns true if the `nickname` field
+	// of the Token has been populated
+	HasNickname() bool
 	// HasNotBefore returns true if the `nbf` field
 	// of the Token has been populated
 	HasNotBefore() bool
+	// HasPhoneNumber returns true if the `phone_number` field
+	// of the Token has been populated
+	HasPhoneNumber() bool
+	// HasPhoneNumberVerified returns true if the `phone_number_verified` field
+	// of the Token has been populated
+	HasPhoneNumberVerified() bool
+	// HasPicture returns true if the `picture` field
+	// of the Token has been populated
+	HasPicture() bool
+	// HasPreferredUsername returns true if the `preferred_username` field
+	// of the Token has been populated
+	HasPreferredUsername() bool
+	// HasProfile returns true if the `profile` field
+	// of the Token has been populated
+	HasProfile() bool
 	// HasSubject returns true if the `sub` field
 	// of the Token has been populated
 	HasSubject() bool
+	// HasUpdatedAt returns true if the `updated_at` field
+	// of the Token has been populated
+	HasUpdatedAt() bool
+	// HasWebsite returns true if the `website` field
+	// of the Token has been populated
+	HasWebsite() bool
+	// HasZoneinfo returns true if the `zoneinfo` field
+	// of the Token has been populated
+	HasZoneinfo() bool
 	// Get retrieves the value of the corresponding field in the token, such as
 	// `nbf`, `exp`, `iat`, and other user-defined fields.
 	//

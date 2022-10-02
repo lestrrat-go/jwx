@@ -1,7 +1,6 @@
 package openid_test
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -122,8 +121,8 @@ func TestAdressClaim(t *testing.T) {
 
 func TestOpenIDClaims(t *testing.T) {
 	getVerify := func(token openid.Token, key string, expected interface{}) bool {
-		v, ok := token.Get(key)
-		if !assert.True(t, ok, `token.Get %#v should succeed`, key) {
+		var v interface{}
+		if !assert.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key) {
 			return false
 		}
 		return assert.Equal(t, v, expected)
@@ -147,10 +146,10 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
-				if err := n.Accept(v); err != nil {
+				if err := n.AcceptValue(v); err != nil {
 					panic(err)
 				}
-				return n.Get()
+				return n.GetValue()
 			},
 			Check: func(token openid.Token) {
 				assert.Equal(t, token.Expiration(), expectedTokenTime)
@@ -161,10 +160,10 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
-				if err := n.Accept(v); err != nil {
+				if err := n.AcceptValue(v); err != nil {
 					panic(err)
 				}
-				return n.Get()
+				return n.GetValue()
 			},
 			Check: func(token openid.Token) {
 				assert.Equal(t, token.Expiration(), expectedTokenTime)
@@ -189,10 +188,10 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: tokenTime,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
-				if err := n.Accept(v); err != nil {
+				if err := n.AcceptValue(v); err != nil {
 					panic(err)
 				}
-				return n.Get()
+				return n.GetValue()
 			},
 			Check: func(token openid.Token) {
 				assert.Equal(t, token.NotBefore(), expectedTokenTime)
@@ -294,14 +293,14 @@ func TestOpenIDClaims(t *testing.T) {
 			Key:   openid.BirthdateKey,
 			Expected: func(v interface{}) interface{} {
 				var b openid.BirthdateClaim
-				if err := b.Accept(v); err != nil {
+				if err := b.AcceptValue(v); err != nil {
 					panic(err)
 				}
 				return &b
 			},
 			Check: func(token openid.Token) {
 				var b openid.BirthdateClaim
-				b.Accept("2015-11-04")
+				b.AcceptValue("2015-11-04")
 				assert.Equal(t, token.Birthdate(), &b)
 			},
 		},
@@ -365,10 +364,10 @@ func TestOpenIDClaims(t *testing.T) {
 			Key:   openid.UpdatedAtKey,
 			Expected: func(v interface{}) interface{} {
 				var n types.NumericDate
-				if err := n.Accept(v); err != nil {
+				if err := n.AcceptValue(v); err != nil {
 					panic(err)
 				}
-				return n.Get()
+				return n.GetValue()
 			},
 			Check: func(token openid.Token) {
 				assert.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
@@ -378,8 +377,8 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: `dummy`,
 			Key:   `dummy`,
 			Check: func(token openid.Token) {
-				v, ok := token.Get(`dummy`)
-				if !assert.True(t, ok, `token.Get should return valid value`) {
+				var v interface{}
+				if !assert.NoError(t, token.Get(`dummy`, &v), `token.Get should return valid value`) {
 					return
 				}
 				if !assert.Equal(t, `dummy`, v, `values should match`) {
@@ -492,52 +491,24 @@ func TestOpenIDClaims(t *testing.T) {
 		})
 	}
 
-	t.Run("Iterator", func(t *testing.T) {
+	t.Run("Keys", func(t *testing.T) {
 		v := tokens[0].Token
-		t.Run("Iterate", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				seen[pair.Key.(string)] = pair.Value
-
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
-			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("Walk", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			v.Walk(context.TODO(), openid.VisitorFunc(func(key string, value interface{}) error {
-				seen[key] = value
-				return nil
-			}))
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("AsMap", func(t *testing.T) {
-			seen, err := v.AsMap(context.TODO())
-			if !assert.NoError(t, err, `v.AsMap should succeed`) {
-				return
-			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
+		seen := make(map[string]interface{})
+		for _, key := range v.Keys() {
+			var val interface{}
+			require.NoError(t, v.Get(key, &val), `v.Get for %q should succeed`, key)
+			seen[key] = val
+		}
+		if !assert.Equal(t, expected, seen, `values should match`) {
+			return
+		}
 		t.Run("Clone", func(t *testing.T) {
-			cloned, err := v.Clone()
-			if !assert.NoError(t, err, `v.Clone should succeed`) {
-				return
-			}
-
+			var cloned openid.Token
+			require.NoError(t, v.Clone(&cloned), `v.Clone should succeed`)
 			if !assert.True(t, jwt.Equal(v, cloned), `values should match`) {
+				buf1, _ := json.MarshalIndent(v, "", "  ")
+				buf2, _ := json.MarshalIndent(cloned, "", "  ")
+				assert.JSONEq(t, string(buf1), string(buf2))
 				return
 			}
 		})
@@ -642,7 +613,7 @@ func TestBirthdateClaim(t *testing.T) {
 	t.Run("invalid accept", func(t *testing.T) {
 		t.Parallel()
 		var b openid.BirthdateClaim
-		if !assert.Error(t, b.Accept(nil)) {
+		if !assert.Error(t, b.AcceptValue(nil)) {
 			return
 		}
 	})

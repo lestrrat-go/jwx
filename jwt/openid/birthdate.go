@@ -51,7 +51,7 @@ func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf(`failed to unmarshal JSON string for birthdate claim: %w`, err)
 	}
 
-	if err := b.Accept(s); err != nil {
+	if err := b.AcceptValue(s); err != nil {
 		return fmt.Errorf(`failed to accept JSON value for birthdate claim: %w`, err)
 	}
 	return nil
@@ -64,10 +64,10 @@ func tointptr(v int64) *int {
 
 var birthdateRx = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})$`)
 
-// Accepts a value read from JSON, and converts it to a BirthdateClaim.
+// AcceptValue accepts a value read from JSON, and converts it to a BirthdateClaim.
 // This method DOES NOT verify the correctness of a date.
 // Consumers should check for validity of dates such as Apr 31 et al
-func (b *BirthdateClaim) Accept(v interface{}) error {
+func (b *BirthdateClaim) AcceptValue(v interface{}) error {
 	b.year = nil
 	b.month = nil
 	b.day = nil

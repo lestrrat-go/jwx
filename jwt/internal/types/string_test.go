@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStringList_Accept(t *testing.T) {
+func TestAudience_AcceptValue(t *testing.T) {
 	t.Parallel()
 
-	var x types.StringList
+	var x types.Audience
 	interfaceList := make([]interface{}, 0)
 	interfaceList = append(interfaceList, "first")
 	interfaceList = append(interfaceList, "second")
-	if !assert.NoError(t, x.Accept(interfaceList), "failed to convert []interface{} into StringList") {
+	if !assert.NoError(t, x.AcceptValue(interfaceList), "failed to convert []interface{} into StringList") {
 		return
 	}
 }
