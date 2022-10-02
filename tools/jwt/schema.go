@@ -37,6 +37,7 @@ func (JWT) CloneResultType() string {
 
 func (JWT) Imports() []string {
 	return []string{
+		"github.com/lestrrat-go/jwx/v2/internal/json",
 		"github.com/lestrrat-go/jwx/v2/jwt/internal/types",
 	}
 }
@@ -107,6 +108,7 @@ func (OpenID) CloneResultType() string {
 
 func (OpenID) Imports() []string {
 	return []string{
+		"github.com/lestrrat-go/jwx/v2/internal/json",
 		"github.com/lestrrat-go/jwx/v2/jwt/internal/types",
 	}
 }

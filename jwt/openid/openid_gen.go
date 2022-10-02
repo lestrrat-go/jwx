@@ -3,13 +3,13 @@ package openid
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 )
 
