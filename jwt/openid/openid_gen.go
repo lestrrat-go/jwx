@@ -1347,7 +1347,6 @@ type Builder struct {
 func NewBuilder() *Builder {
 	return &Builder{}
 }
-
 func (b *Builder) initialize() {
 	b.err = nil
 	b.object = &stdToken{}

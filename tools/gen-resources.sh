@@ -1,6 +1,7 @@
 #!/bin/sh
 
 DIR=$(cd $(dirname $0)/..; pwd -P)
+set -e
 
 sketch -d $DIR/jwt \
 	--exclude-symbol='^object\.method\.decodeExtraField$' \

@@ -42,11 +42,11 @@ func (JWT) Imports() []string {
 	}
 }
 
-func (s JWT) MethodName(name string) string {
+func (s JWT) SymbolName(name string) string {
 	if name == "builder.method.SetField" {
 		return "Claim"
 	}
-	return s.Base.MethodName(name)
+	return s.Base.SymbolName(name)
 }
 
 func (JWT) Fields() []*schema.FieldSpec {
@@ -113,11 +113,11 @@ func (OpenID) Imports() []string {
 	}
 }
 
-func (s OpenID) MethodName(name string) string {
+func (s OpenID) SymbolName(name string) string {
 	if name == "builder.method.SetField" {
 		return "Claim"
 	}
-	return s.Base.MethodName(name)
+	return s.Base.SymbolName(name)
 }
 
 func (OpenID) Fields() []*schema.FieldSpec {
