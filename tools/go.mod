@@ -2,7 +2,7 @@ module github.com/lestrrat-go/jwx/tools
 
 go 1.19
 
-require github.com/lestrrat-go/sketch v0.0.0-20221005123203-c22f1cc3d309
+require github.com/lestrrat-go/sketch v0.0.0-20221005132030-1e95c85fe782
 
 require (
 	github.com/lestrrat-go/byteslice v0.0.0-20221004100519-1da846d06c9e // indirect
