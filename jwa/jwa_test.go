@@ -6,6 +6,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type stringer struct {
@@ -35,8 +36,9 @@ func TestSanity(t *testing.T) {
 
 func TestKeyAlgorithmFrom(t *testing.T) {
 	testcases := []struct {
-		Input interface{}
-		Error bool
+		Input     interface{}
+		IsUnknown bool
+		Error     bool
 	}{
 		{
 			Input: jwa.RS256,
@@ -46,6 +48,13 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		},
 		{
 			Input: jwa.A128CBC_HS256,
+		},
+		{
+			Input:     "my-awesome-algorithm",
+			IsUnknown: true,
+		},
+		{
+			Input: 1.1,
 			Error: true,
 		},
 	}
@@ -53,16 +62,18 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(fmt.Sprintf("%T", tc.Input), func(t *testing.T) {
-			alg := jwa.KeyAlgorithmFrom(tc.Input)
+			alg, err := jwa.KeyAlgorithmFrom(tc.Input)
 			if tc.Error {
-				if !assert.IsType(t, alg, jwa.InvalidKeyAlgorithm(""), `key should be invalid`) {
-					return
-				}
-			} else {
-				if !assert.Equal(t, alg, tc.Input, `key should be valid`) {
-					return
-				}
+				require.Error(t, err, `trying to convert value %#v should be an error`, tc.Input)
+				return
 			}
+
+			if tc.IsUnknown {
+				require.IsType(t, alg, jwa.UnknownKeyAlgorithm(""), `key should be unknown`)
+				return
+			}
+
+			require.Equal(t, alg, tc.Input)
 		})
 	}
 }

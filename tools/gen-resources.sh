@@ -3,16 +3,23 @@
 DIR=$(cd $(dirname $0)/..; pwd -P)
 
 sketch -d $DIR/jwt \
-	--exclude='^object\.method\.decodeExtraField$' \
+	--exclude-symbol='^object\.method\.decodeExtraField$' \
 	--exclude-schema='^OpenID$' \
 	--tmpl-dir=$DIR/tools/jwt/tmpl \
 	--verbose \
-        $DIR/tools/jwt
+	$DIR/tools/jwt
 
 sketch -d $DIR/jwt/openid \
-	--exclude='^object\.method\.decodeExtraField$' \
+	--exclude-symbol='^object\.method\.decodeExtraField$' \
 	--exclude-schema='^JWT$' \
 	--tmpl-dir=$DIR/tools/jwt/tmpl \
 	--verbose \
-        $DIR/tools/jwt
+	$DIR/tools/jwt
 
+sketch -d $DIR/jwk \
+	--dev-mode --dev-path=$DIR/../sketch \
+	--exclude-symbol='^builder\..+' \
+	--exclude-symbol='^object\.method\.decodeExtraField$' \
+	--tmpl-dir=$DIR/tools/jwk/tmpl \
+	--verbose \
+	$DIR/tools/jwk

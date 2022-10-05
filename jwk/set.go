@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
@@ -38,12 +39,15 @@ func (s *set) Set(n string, v interface{}) error {
 	return nil
 }
 
-func (s *set) Get(n string) (interface{}, bool) {
+func (s *set) Get(n string, dst interface{}) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	v, ok := s.privateParams[n]
-	return v, ok
+	if ok {
+		return blackmagic.AssignIfCompatible(dst, v)
+	}
+	return fmt.Errorf(`key %q not found`, n)
 }
 
 func (s *set) Key(idx int) (Key, bool) {
@@ -295,7 +299,14 @@ func (s *set) DecodeCtx() DecodeCtx {
 func (s *set) SetDecodeCtx(dc DecodeCtx) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.dc = dc
+
+	if dcfs, ok := dc.(dcForSet); ok {
+		s.dc = dcfs
+	} else {
+		s.dc = &setDecodeCtx{
+			DecodeCtx: dc,
+		}
+	}
 }
 
 func (s *set) Clone() (Set, error) {

@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestX509CertChain(t *testing.T) {
@@ -34,11 +34,8 @@ func TestX509CertChain(t *testing.T) {
 				return
 			}
 
-			v, ok := key.Get(X509CertChainKey)
-			if !assert.True(t, ok, "Get for x5c should succeed") {
-				return
-			}
-			gotcerts := v.(*cert.Chain)
+			var gotcerts cert.Chain
+			require.NoError(t, key.Get(X509CertChainKey, &gotcerts), "Get for x5c should succeed")
 			if !assert.Equal(t, gotcerts.Len(), 3, `should have 3 cert`) {
 				return
 			}
@@ -48,9 +45,9 @@ func TestX509CertChain(t *testing.T) {
 
 func TestIterator(t *testing.T) {
 	commonValues := map[string]interface{}{
-		AlgorithmKey: jwa.KeyAlgorithmFrom("dummy"),
+		AlgorithmKey: jwa.RS256,
 		KeyIDKey:     "dummy-kid",
-		KeyUsageKey:  "dummy-usage",
+		KeyUsageKey:  ForSignature.String(),
 		KeyOpsKey:    KeyOperationList{KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits},
 		"private":    "dummy-private",
 	}
@@ -59,36 +56,10 @@ func TestIterator(t *testing.T) {
 		t.Helper()
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				seen[pair.Key.(string)] = pair.Value
-
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
-			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("Walk", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			v.Walk(context.TODO(), HeaderVisitorFunc(func(key string, value interface{}) error {
-				seen[key] = value
-				return nil
-			}))
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("AsMap", func(t *testing.T) {
-			seen, err := v.AsMap(context.TODO())
-			if !assert.NoError(t, err, `v.AsMap should succeed`) {
-				return
+			for _, key := range v.Keys() {
+				var val interface{}
+				require.NoError(t, v.Get(key, &val), `v.Get should succeed`)
+				seen[key] = val
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
 				return

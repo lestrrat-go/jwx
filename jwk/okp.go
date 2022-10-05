@@ -7,10 +7,14 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
+
+var _ OKPPrivateKey = &okpPrivateKey{}
+var _ OKPPublicKey = &okpPublicKey{}
 
 func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 	k.mu.Lock()
@@ -19,11 +23,17 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PublicKey:
-		k.x = rawKey
+		if k.x == nil {
+			k.x = byteslice.New()
+		}
+		k.x.SetBytes([]byte(rawKey))
 		crv = jwa.Ed25519
 		k.crv = &crv
 	case x25519.PublicKey:
-		k.x = rawKey
+		if k.x == nil {
+			k.x = byteslice.New()
+		}
+		k.x.SetBytes([]byte(rawKey))
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
@@ -40,13 +50,27 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PrivateKey:
-		k.d = rawKey.Seed()
-		k.x = rawKey.Public().(ed25519.PublicKey) //nolint:forcetypeassert
+		if k.d == nil {
+			k.d = byteslice.New()
+		}
+		k.d.SetBytes(rawKey.Seed())
+
+		if k.x == nil {
+			k.x = byteslice.New()
+		}
+		k.x.SetBytes([]byte(rawKey.Public().(ed25519.PublicKey))) //nolint:forcetypeassert
 		crv = jwa.Ed25519
 		k.crv = &crv
 	case x25519.PrivateKey:
-		k.d = rawKey.Seed()
-		k.x = rawKey.Public().(x25519.PublicKey) //nolint:forcetypeassert
+		if k.d == nil {
+			k.d = byteslice.New()
+		}
+		k.d.SetBytes(rawKey.Seed())
+
+		if k.x == nil {
+			k.x = byteslice.New()
+		}
+		k.x.SetBytes([]byte(rawKey.Public().(x25519.PublicKey))) //nolint:forcetypeassert
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
@@ -72,7 +96,7 @@ func (k *okpPublicKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	pubk, err := buildOKPPublicKey(k.Crv(), k.x)
+	pubk, err := buildOKPPublicKey(k.Crv(), k.x.Bytes())
 	if err != nil {
 		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
@@ -108,7 +132,7 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	privk, err := buildOKPPrivateKey(k.Crv(), k.x, k.d)
+	privk, err := buildOKPPrivateKey(k.Crv(), k.x.Bytes(), k.d.Bytes())
 	if err != nil {
 		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
@@ -117,19 +141,23 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 }
 
 func makeOKPPublicKey(v interface {
-	makePairs() []*HeaderPair
+	Get(string, interface{}) error
+	Keys() []string
 }) (Key, error) {
 	newKey := newOKPPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, pair := range v.makePairs() {
-		switch pair.Key {
+	for _, key := range v.Keys() {
+		switch key {
 		case OKPDKey:
 			continue
 		default:
-			//nolint:forcetypeassert
-			key := pair.Key.(string)
-			if err := newKey.Set(key, pair.Value); err != nil {
+			var val interface{}
+			if err := v.Get(key, &val); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve value for field %q: %w`, key, err)
+			}
+
+			if err := newKey.Set(key, val); err != nil {
 				return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
 			}
 		}
@@ -165,7 +193,7 @@ func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return okpThumbprint(
 		hash,
 		k.Crv().String(),
-		base64.EncodeToString(k.x),
+		base64.EncodeToString(k.x.Bytes()),
 	), nil
 }
 
@@ -178,6 +206,6 @@ func (k okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return okpThumbprint(
 		hash,
 		k.Crv().String(),
-		base64.EncodeToString(k.x),
+		base64.EncodeToString(k.x.Bytes()),
 	), nil
 }

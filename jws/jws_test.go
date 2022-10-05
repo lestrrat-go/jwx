@@ -1106,7 +1106,8 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 		{
 			Name: `match 2 keys via same "kid", same key value but different alg`,
 			Key: func() jwk.Key {
-				wrongKey, _ := correctKey.Clone()
+				var wrongKey jwk.Key
+				_ = correctKey.Clone(&wrongKey)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
 				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512)
 				return wrongKey
@@ -1136,8 +1137,8 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 
 	for _, tc := range testcases {
 		tc := tc
-		wrongKey, err := tc.Key().Clone()
-		require.NoError(t, err, `cloning wrong key should succeed`)
+		var wrongKey jwk.Key
+		require.NoError(t, tc.Key().Clone(&wrongKey), `cloning wrong key should succeed`)
 		for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
 			set := set
 			t.Run(tc.Name, func(t *testing.T) {

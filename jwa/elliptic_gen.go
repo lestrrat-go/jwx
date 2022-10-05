@@ -69,7 +69,7 @@ func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
 		tmp = EllipticCurveAlgorithm(s)
 	}
 	if _, ok := allEllipticCurveAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.EllipticCurveAlgorithm value %#v`, value)
 	}
 
 	*v = tmp

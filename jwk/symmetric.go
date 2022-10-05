@@ -5,8 +5,11 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 )
+
+var _ SymmetricKey = &symmetricKey{}
 
 func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	k.mu.Lock()
@@ -16,7 +19,10 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 		return fmt.Errorf(`non-empty []byte key required`)
 	}
 
-	k.octets = rawKey
+	if k.octets == nil {
+		k.octets = byteslice.New()
+	}
+	k.octets.SetBytes(rawKey)
 
 	return nil
 }
@@ -26,7 +32,10 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 func (k *symmetricKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
-	return blackmagic.AssignIfCompatible(v, k.octets)
+	if k.octets == nil {
+		return nil
+	}
+	return blackmagic.AssignIfCompatible(v, k.octets.Bytes())
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
@@ -48,13 +57,8 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 func (k *symmetricKey) PublicKey() (Key, error) {
 	newKey := newSymmetricKey()
-
-	for _, pair := range k.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := newKey.Set(key, pair.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
-		}
+	if err := k.Clone(newKey); err != nil {
+		return nil, err
 	}
 	return newKey, nil
 }

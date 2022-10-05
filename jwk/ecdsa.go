@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -36,10 +37,10 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	defer ecutil.ReleaseECPointBuffer(xbuf)
 	defer ecutil.ReleaseECPointBuffer(ybuf)
 
-	k.x = make([]byte, len(xbuf))
-	copy(k.x, xbuf)
-	k.y = make([]byte, len(ybuf))
-	copy(k.y, ybuf)
+	k.x = &byteslice.Type{}
+	k.x.SetBytes(xbuf)
+	k.y = &byteslice.Type{}
+	k.y.SetBytes(ybuf)
 
 	var crv jwa.EllipticCurveAlgorithm
 	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
@@ -73,12 +74,12 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	defer ecutil.ReleaseECPointBuffer(ybuf)
 	defer ecutil.ReleaseECPointBuffer(dbuf)
 
-	k.x = make([]byte, len(xbuf))
-	copy(k.x, xbuf)
-	k.y = make([]byte, len(ybuf))
-	copy(k.y, ybuf)
-	k.d = make([]byte, len(dbuf))
-	copy(k.d, dbuf)
+	k.x = &byteslice.Type{}
+	k.x.SetBytes(xbuf)
+	k.y = &byteslice.Type{}
+	k.y.SetBytes(ybuf)
+	k.d = &byteslice.Type{}
+	k.d.SetBytes(dbuf)
 
 	var crv jwa.EllipticCurveAlgorithm
 	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
@@ -111,7 +112,7 @@ func (k *ecdsaPublicKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
+	pubk, err := buildECDSAPublicKey(k.Crv(), k.x.Bytes(), k.y.Bytes())
 	if err != nil {
 		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
@@ -123,14 +124,14 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
+	pubk, err := buildECDSAPublicKey(k.Crv(), k.x.Bytes(), k.y.Bytes())
 	if err != nil {
 		return fmt.Errorf(`failed to build public key: %w`, err)
 	}
 
 	var key ecdsa.PrivateKey
 	var d big.Int
-	d.SetBytes(k.d)
+	d.SetBytes(k.d.Bytes())
 	key.D = &d
 	key.PublicKey = *pubk
 
@@ -138,19 +139,23 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 }
 
 func makeECDSAPublicKey(v interface {
-	makePairs() []*HeaderPair
+	Get(string, interface{}) error
+	Keys() []string
 }) (Key, error) {
 	newKey := newECDSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, pair := range v.makePairs() {
-		switch pair.Key {
+	for _, key := range v.Keys() {
+		switch key {
 		case ECDSADKey:
 			continue
 		default:
-			//nolint:forcetypeassert
-			key := pair.Key.(string)
-			if err := newKey.Set(key, pair.Value); err != nil {
+			var val interface{}
+			if err := v.Get(key, &val); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve value for field %q: %w`, key, err)
+			}
+
+			if err := newKey.Set(key, val); err != nil {
 				return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
 			}
 		}

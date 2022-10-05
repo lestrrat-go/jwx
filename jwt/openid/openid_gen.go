@@ -117,7 +117,7 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 	case ExpirationKey:
 		if val := v.expiration; val != nil {
 			if raw {
-				return blackmagic.AssignIfCompatible(dst, *val)
+				return blackmagic.AssignIfCompatible(dst, val)
 			}
 			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
@@ -136,7 +136,7 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 	case IssuedAtKey:
 		if val := v.issuedAt; val != nil {
 			if raw {
-				return blackmagic.AssignIfCompatible(dst, *val)
+				return blackmagic.AssignIfCompatible(dst, val)
 			}
 			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
@@ -167,7 +167,7 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 	case NotBeforeKey:
 		if val := v.notBefore; val != nil {
 			if raw {
-				return blackmagic.AssignIfCompatible(dst, *val)
+				return blackmagic.AssignIfCompatible(dst, val)
 			}
 			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}
@@ -198,7 +198,7 @@ func (v *stdToken) getNoLock(key string, dst interface{}, raw bool) error {
 	case UpdatedAtKey:
 		if val := v.updatedAt; val != nil {
 			if raw {
-				return blackmagic.AssignIfCompatible(dst, *val)
+				return blackmagic.AssignIfCompatible(dst, val)
 			}
 			return blackmagic.AssignIfCompatible(dst, val.GetValue())
 		}

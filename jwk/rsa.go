@@ -8,9 +8,13 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
+
+var _ keyWithDecodeCtx = &rsaPrivateKey{}
+var _ keyWithDecodeCtx = &rsaPublicKey{}
 
 func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	k.mu.Lock()
@@ -20,7 +24,10 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	if err != nil {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
-	k.d = d
+	if k.d == nil {
+		k.d = byteslice.New()
+	}
+	k.d.SetBytes(d)
 
 	l := len(rawKey.Primes)
 
@@ -33,7 +40,10 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 		if err != nil {
 			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 		}
-		k.p = p
+		if k.p == nil {
+			k.p = byteslice.New()
+		}
+		k.p.SetBytes(p)
 	}
 
 	if l > 1 {
@@ -41,18 +51,30 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 		if err != nil {
 			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 		}
-		k.q = q
+		if k.q == nil {
+			k.q = byteslice.New()
+		}
+		k.q.SetBytes(q)
 	}
 
 	// dp, dq, qi are optional values
 	if v, err := bigIntToBytes(rawKey.Precomputed.Dp); err == nil {
-		k.dp = v
+		if k.dp == nil {
+			k.dp = byteslice.New()
+		}
+		k.dp.SetBytes(v)
 	}
 	if v, err := bigIntToBytes(rawKey.Precomputed.Dq); err == nil {
-		k.dq = v
+		if k.dq == nil {
+			k.dq = byteslice.New()
+		}
+		k.dq.SetBytes(v)
 	}
 	if v, err := bigIntToBytes(rawKey.Precomputed.Qinv); err == nil {
-		k.qi = v
+		if k.qi == nil {
+			k.qi = byteslice.New()
+		}
+		k.qi.SetBytes(v)
 	}
 
 	// public key part
@@ -60,8 +82,15 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	if err != nil {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
-	k.n = n
-	k.e = e
+	if k.n == nil {
+		k.n = byteslice.New()
+	}
+	k.n.SetBytes(n)
+
+	if k.e == nil {
+		k.e = byteslice.New()
+	}
+	k.e.SetBytes(e)
 
 	return nil
 }
@@ -91,8 +120,15 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 	if err != nil {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
-	k.n = n
-	k.e = e
+	if k.n == nil {
+		k.n = byteslice.New()
+	}
+	k.n.SetBytes(n)
+
+	if k.e == nil {
+		k.e = byteslice.New()
+	}
+	k.e.SetBytes(e)
 
 	return nil
 }
@@ -103,25 +139,25 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 
 	var d, q, p big.Int // note: do not use from sync.Pool
 
-	d.SetBytes(k.d)
-	q.SetBytes(k.q)
-	p.SetBytes(k.p)
+	d.SetBytes(k.d.Bytes())
+	q.SetBytes(k.q.Bytes())
+	p.SetBytes(k.p.Bytes())
 
 	// optional fields
 	var dp, dq, qi *big.Int
-	if len(k.dp) > 0 {
+	if k.dp.Len() > 0 {
 		dp = &big.Int{} // note: do not use from sync.Pool
-		dp.SetBytes(k.dp)
+		dp.SetBytes(k.dp.Bytes())
 	}
 
-	if len(k.dq) > 0 {
+	if k.dq.Len() > 0 {
 		dq = &big.Int{} // note: do not use from sync.Pool
-		dq.SetBytes(k.dq)
+		dq.SetBytes(k.dq.Bytes())
 	}
 
-	if len(k.qi) > 0 {
+	if k.qi.Len() > 0 {
 		qi = &big.Int{} // note: do not use from sync.Pool
-		qi.SetBytes(k.qi)
+		qi.SetBytes(k.qi.Bytes())
 	}
 
 	var key rsa.PrivateKey
@@ -162,8 +198,8 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	e := pool.GetBigInt()
 	defer pool.ReleaseBigInt(e)
 
-	n.SetBytes(k.n)
-	e.SetBytes(k.e)
+	n.SetBytes(k.n.Bytes())
+	e.SetBytes(k.e.Bytes())
 
 	key.N = n
 	key.E = int(e.Int64())
@@ -172,19 +208,23 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 }
 
 func makeRSAPublicKey(v interface {
-	makePairs() []*HeaderPair
+	Keys() []string
+	Get(string, interface{}) error
 }) (Key, error) {
 	newKey := newRSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, pair := range v.makePairs() {
-		switch pair.Key {
+	for _, key := range v.Keys() {
+		switch key {
 		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
 			continue
 		default:
-			//nolint:forcetypeassert
-			key := pair.Key.(string)
-			if err := newKey.Set(key, pair.Value); err != nil {
+			var val interface{}
+			if err := v.Get(key, &val); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve value for field %q: %w`, key, err)
+			}
+
+			if err := newKey.Set(key, val); err != nil {
 				return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
 			}
 		}

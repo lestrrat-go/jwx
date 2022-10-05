@@ -1,12 +1,12 @@
 package jwk_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHeader(t *testing.T) {
@@ -35,10 +35,8 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			got, ok := h.Get(k)
-			if !assert.True(t, ok, "Get works for '%s'", k) {
-				return
-			}
+			var got interface{}
+			require.NoError(t, h.Get(k, &got), `h.Get should succeed`)
 
 			if !assert.Equal(t, v, got, "values match '%s'", k) {
 				return
@@ -51,19 +49,11 @@ func TestHeader(t *testing.T) {
 
 		t.Run("Private params", func(t *testing.T) {
 			t.Parallel()
-			pp, err := h.AsMap(context.Background())
-			if !assert.NoError(t, err, `h.AsMap should succeed`) {
-				return
-			}
+			require.True(t, h.Has(`private`), `key "private" should exist`)
 
-			v, ok := pp["private"]
-			if !assert.True(t, ok, "key 'private' should exists") {
-				return
-			}
-
-			if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
-				return
-			}
+			var val interface{}
+			require.NoError(t, h.Get(`private`, &val), `h.Get should succeed`)
+			require.Equal(t, val, "boofoo", "value for 'private' should match")
 		})
 	})
 	t.Run("RoundtripError", func(t *testing.T) {
@@ -97,6 +87,7 @@ func TestHeader(t *testing.T) {
 		if !assert.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`) {
 			return
 		}
+
 		if !assert.Empty(t, h.Algorithm().String(), "Algorithm should be empty string") {
 			return
 		}
@@ -122,14 +113,9 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			got, ok := h.Get("alg")
-			if !assert.True(t, ok, "Get for alg should succeed") {
-				return
-			}
-
-			if !assert.Equal(t, value, got, "values match") {
-				return
-			}
+			var got interface{}
+			require.NoError(t, h.Get("alg", &got), `h.Get should succeed`)
+			require.Equal(t, value, got, "values match")
 		}
 	})
 }

@@ -24,8 +24,8 @@ func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected .
 	iter.Next(ctx)
 
 	key := iter.Pair().Value.(jwk.Key)
-	v, ok := key.Get(`accessCount`)
-	if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
+	var v interface{}
+	if !assert.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`) {
 		return false
 	}
 

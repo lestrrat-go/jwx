@@ -17,6 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestShowBuildInfo(t *testing.T) {
@@ -127,14 +128,9 @@ func TestJoseCompatibility(t *testing.T) {
 				Raw:      rsa.PrivateKey{},
 				Template: `{"alg": "RS256", "x-jwx": 1234}`,
 				VerifyKey: func(ctx context.Context, t *testing.T, key jwk.Key) bool {
-					m, err := key.AsMap(ctx)
-					if !assert.NoError(t, err, `key.AsMap() should succeed`) {
-						return false
-					}
-
-					if !assert.Equal(t, float64(1234), m["x-jwx"], `private parameters should match`) {
-						return false
-					}
+					var f float64
+					require.NoError(t, key.Get("x-jwx", &f), `key.Get should succeed`)
+					require.Equal(t, float64(1234), f, `private parameter should match`)
 
 					return true
 				},

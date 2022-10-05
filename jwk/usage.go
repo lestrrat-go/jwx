@@ -6,6 +6,10 @@ func (k KeyUsageType) String() string {
 	return string(k)
 }
 
+func (k KeyUsageType) Get() string {
+	return k.String()
+}
+
 func (k *KeyUsageType) Accept(v interface{}) error {
 	switch v := v.(type) {
 	case KeyUsageType:
@@ -14,7 +18,7 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 			*k = v
 			return nil
 		default:
-			return fmt.Errorf("invalid key usage type %s", v)
+			return fmt.Errorf("invalid key usage type %q", v)
 		}
 	case string:
 		switch v {
@@ -22,9 +26,9 @@ func (k *KeyUsageType) Accept(v interface{}) error {
 			*k = KeyUsageType(v)
 			return nil
 		default:
-			return fmt.Errorf("invalid key usage type %s", v)
+			return fmt.Errorf("invalid key usage type %q", v)
 		}
 	}
 
-	return fmt.Errorf("invalid value for key usage type %s", v)
+	return fmt.Errorf("invalid value for key usage type %q", v)
 }

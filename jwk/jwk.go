@@ -535,7 +535,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	}
 
 	if localReg != nil || ignoreParseError {
-		dcKs, ok := s.(KeyWithDecodeCtx)
+		dcKs, ok := s.(keyWithDecodeCtx)
 		if !ok {
 			return nil, fmt.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
@@ -575,7 +575,7 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 // section of the key, if it already doesn't have one. It uses Key.Thumbprint
 // method with crypto.SHA256 as the default hashing algorithm
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
-	if _, ok := key.Get(KeyIDKey); ok {
+	if key.Has(KeyIDKey) {
 		return nil
 	}
 
@@ -621,10 +621,12 @@ func cloneKey(src Key) (Key, error) {
 		return nil, fmt.Errorf(`unknown key type %T`, src)
 	}
 
-	for _, pair := range src.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
+	for _, key := range src.Keys() {
+		var val interface{}
+		if err := src.Get(key, &val); err != nil {
+			return nil, fmt.Errorf(`failed to retrieve %q: %w`, key, err)
+		}
+		if err := dst.Set(key, val); err != nil {
 			return nil, fmt.Errorf(`failed to set %q: %w`, key, err)
 		}
 	}

@@ -59,7 +59,7 @@ func init() {
 	commonDef = map[string]keyDef{
 		jwk.AlgorithmKey: {
 			Method: "Algorithm",
-			Value:  jwa.KeyAlgorithmFrom("random-algorithm"),
+			Value:  jwa.ES256,
 		},
 		jwk.KeyIDKey: {
 			Method: "KeyID",
@@ -183,10 +183,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 			k := k
 			kdef := kdef
 			t.Run(k, func(t *testing.T) {
-				getval, ok := key.Get(k)
-				if !assert.True(t, ok, `key.Get(%s) should succeed`, k) {
-					return
-				}
+				var getval interface{}
+				require.NoError(t, key.Get(k, &getval), `key.Get should succeed`)
 				expected := kdef.Expected
 				if expected == nil {
 					expected = kdef.Value
@@ -214,29 +212,20 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("Roundtrip", func(t *testing.T) {
-		buf, err := json.Marshal(key)
+		buf1, err := json.Marshal(key)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
 		}
 
-		newkey, err := jwk.ParseKey(buf)
+		newkey, err := jwk.ParseKey(buf1)
 		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
 		}
 
-		m1, err := key.AsMap(context.TODO())
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
+		buf2, err := json.Marshal(newkey)
+		require.NoError(t, err, `json.Marshal should succeed`)
 
-		m2, err := newkey.AsMap(context.TODO())
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, m1, m2, `keys should match`) {
-			return
-		}
+		require.Equal(t, buf1, buf2, `keys should match`)
 	})
 	t.Run("Raw", func(t *testing.T) {
 		typ := expectedRawKeyType(key)
@@ -256,32 +245,17 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		ctx := context.TODO()
+		var cloned jwk.Key
+		require.NoError(t, key.Clone(&cloned), `key.Clone should succeed`)
 
-		newkey, err := key.Clone()
-		if !assert.NoError(t, err, `key.Clone should succeed`) {
+		for _, k := range key.Keys() {
+			var val interface{}
+			require.NoError(t, key.Get(k, &val), `key.Get should succed`)
+			require.NoError(t, cloned.Remove(k), `key.Remove should succeed`)
+		}
+
+		if !assert.Len(t, cloned.Keys(), 1, `keys should have 1 key (kty remains)`) {
 			return
-		}
-
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			newkey.Remove(pair.Key.(string))
-		}
-
-		m, err := newkey.AsMap(ctx)
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
-
-		if !assert.Len(t, m, 1, `keys should have 1 key (kty remains)`) {
-			return
-		}
-
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, newkey.Set(pair.Key.(string), pair.Value), `newkey.Set should succeed`) {
-				return
-			}
 		}
 	})
 }
@@ -963,7 +937,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 func TestIssue207(t *testing.T) {
 	t.Parallel()
-	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
+	const src = `{"kty":"EC","alg":"ECDH-ES","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
 
 	// Using a loop here because we're using sync.Pool
 	// just for sanity.
@@ -986,7 +960,7 @@ func TestIssue207(t *testing.T) {
 
 func TestIssue270(t *testing.T) {
 	t.Parallel()
-	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
+	const src = `{"kty":"EC","alg":"ECDH-ES","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
 	k, err := jwk.ParseKey([]byte(src))
 	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 		return
@@ -1367,8 +1341,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := key.Get(`x-birthday`)
-		if !assert.True(t, ok, `key.Get("x-birthday") should succeed`) {
+		var v interface{}
+		if !assert.NoError(t, key.Get(`x-birthday`, &v), `key.Get("x-birthday") should succeed`) {
 			return
 		}
 
@@ -1504,8 +1478,8 @@ func TestTypedFields(t *testing.T) {
 						return
 					}
 
-					v, ok := got.Get("typed-field")
-					if !assert.True(t, ok, `got.Get() should succeed`) {
+					var v interface{}
+					if !assert.NoError(t, got.Get("typed-field", &v), `got.Get() should succeed`) {
 						return
 					}
 					field, err := tc.PostProcess(t, v)
@@ -1546,8 +1520,8 @@ func TestTypedFields(t *testing.T) {
 				for iter := got.Keys(ctx); iter.Next(ctx); {
 					pair := iter.Pair()
 					key, _ := pair.Value.(jwk.Key)
-					v, ok := key.Get("typed-field")
-					if !assert.True(t, ok, `key.Get() should succeed`) {
+					var v interface{}
+					if !assert.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`) {
 						return
 					}
 					field, err := tc.PostProcess(t, v)
@@ -1635,7 +1609,7 @@ func TestGH412(t *testing.T) {
 }
 
 func TestGH491(t *testing.T) {
-	msg := `{"keys":[{"alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"kty":"EC","x":"AEFldixpd6xWI1rPigk_i_fW_9SLXh3q3h_CbmRIJ2vmnneWnfylvg37q9_BeSxhLpTQkq580tP-7QiOoNem4ubg","y":"AD8MroFIWQI4nm1rVKOb0ImO0Y7EzPt1HTQfZxagv2IoMez8H_vV7Ra9fU7lJhoe3v-Th6x3-4540FodeIxxiphn"},{"alg":"ES512","crv":"P-521","key_ops":["verify"],"kty":"EC","x":"AFZApUzXzvjVJCZQX1De3LUudI7fiWZcZS3t4F2yrxn0tItCYIZrfygPiCZfV1hVKa3WuH2YMrISZUPrSgi_RN2d","y":"ASEyw-_9xcwNBnvpT7thmAF5qHv9-UPYf38AC7y5QBVejQH_DO1xpKzlTbrHCz0jrMeEir8TyW5ywZIYnqGzPBpn"}]}`
+	msg := `{"keys":[{"alg":"ECDH-ES","crv":"P-521","key_ops":["deriveKey"],"kty":"EC","x":"AEFldixpd6xWI1rPigk_i_fW_9SLXh3q3h_CbmRIJ2vmnneWnfylvg37q9_BeSxhLpTQkq580tP-7QiOoNem4ubg","y":"AD8MroFIWQI4nm1rVKOb0ImO0Y7EzPt1HTQfZxagv2IoMez8H_vV7Ra9fU7lJhoe3v-Th6x3-4540FodeIxxiphn"},{"alg":"ES512","crv":"P-521","key_ops":["verify"],"kty":"EC","x":"AFZApUzXzvjVJCZQX1De3LUudI7fiWZcZS3t4F2yrxn0tItCYIZrfygPiCZfV1hVKa3WuH2YMrISZUPrSgi_RN2d","y":"ASEyw-_9xcwNBnvpT7thmAF5qHv9-UPYf38AC7y5QBVejQH_DO1xpKzlTbrHCz0jrMeEir8TyW5ywZIYnqGzPBpn"}]}`
 	keys, err := jwk.Parse([]byte(msg))
 	if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 		return
@@ -1677,9 +1651,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 			if !assert.Equal(t, 1, set.Len(), `set.Len() should be 1`) {
 				return
 			}
-
-			v, ok := set.Get(`renewal_kid`)
-			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
+			var v interface{}
+			if !assert.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`) {
 				return
 			}
 
@@ -1692,8 +1665,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok = key.Get(`renewal_kid`)
-			if !assert.True(t, ok, `key.Get("renewal_kid") should return ok = true`) {
+			if !assert.NoError(t, key.Get(`renewal_kid`, &v), `key.Get("renewal_kid") should return ok = true`) {
 				return
 			}
 
@@ -1738,8 +1710,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok := set.Get(`renewal_kid`)
-			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
+			var v string
+			if !assert.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`) {
 				return
 			}
 
@@ -1769,8 +1741,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 
-		v, ok := set.Get(`renewal_kid`)
-		if !assert.True(t, ok, `set.Get("renewal_kid") should succeed`) {
+		var v string
+		if !assert.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should succeed`) {
 			return
 		}
 
