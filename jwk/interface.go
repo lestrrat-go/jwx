@@ -220,8 +220,9 @@ type Key interface {
 
 	// Algorithm returns the value of the `alg` field
 	//
-	// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.
-	// This is why there exists a `jwa.KeyAlgorithm` type that encompases both types.
+	// This field may contain either `jwk.SignatureAlgorithm`, `jwk.KeyEncryptionAlgorithm`,
+	// `jwk.ContentEncryptionAlgorithm`, or `jwk.UnknownKeyAlgorithm`. Because this field
+	// needs to field multiple types, the type returned is an interface
 	Algorithm() jwa.KeyAlgorithm
 	// KeyID returns `kid` of a JWK
 	KeyID() string

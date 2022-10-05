@@ -600,39 +600,6 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	return nil
 }
 
-func cloneKey(src Key) (Key, error) {
-	var dst Key
-	switch src.(type) {
-	case RSAPrivateKey:
-		dst = newRSAPrivateKey()
-	case RSAPublicKey:
-		dst = newRSAPublicKey()
-	case ECDSAPrivateKey:
-		dst = newECDSAPrivateKey()
-	case ECDSAPublicKey:
-		dst = newECDSAPublicKey()
-	case OKPPrivateKey:
-		dst = newOKPPrivateKey()
-	case OKPPublicKey:
-		dst = newOKPPublicKey()
-	case SymmetricKey:
-		dst = newSymmetricKey()
-	default:
-		return nil, fmt.Errorf(`unknown key type %T`, src)
-	}
-
-	for _, key := range src.Keys() {
-		var val interface{}
-		if err := src.Get(key, &val); err != nil {
-			return nil, fmt.Errorf(`failed to retrieve %q: %w`, key, err)
-		}
-		if err := dst.Set(key, val); err != nil {
-			return nil, fmt.Errorf(`failed to set %q: %w`, key, err)
-		}
-	}
-	return dst, nil
-}
-
 // Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
 // using either PKCS8 for private keys and PKIX for public keys.
 // If you need to encode using PKCS1 or SEC1, you must do it yourself.
