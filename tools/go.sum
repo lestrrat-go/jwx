@@ -1,9 +1,11 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+github.com/lestrrat-go/byteslice v0.0.0-20221004100519-1da846d06c9e h1:Z1L/59v50pHQSFoeW3PGrc0fBuSlu3NvDcc4ufTTmgw=
+github.com/lestrrat-go/byteslice v0.0.0-20221004100519-1da846d06c9e/go.mod h1:Kad4+yzV9rRszIkptSm5stvJ+IBRn8GJHQq+CMrnpow=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
-github.com/lestrrat-go/sketch v0.0.0-20221002133026-e3e06e290ebd h1:7fs0KkdRWDAXuo1ZOmTlxSgHGYrBkKnhIxLoXojAYRY=
-github.com/lestrrat-go/sketch v0.0.0-20221002133026-e3e06e290ebd/go.mod h1:rwQw0UH4p+FZ4S+/bj/jiUqKGss84j96de7hXXTMuA4=
+github.com/lestrrat-go/sketch v0.0.0-20221005123203-c22f1cc3d309 h1:YpGYyW2zz0tB99q4F4TM54E3gXWElr35ymiKr/S0mvU=
+github.com/lestrrat-go/sketch v0.0.0-20221005123203-c22f1cc3d309/go.mod h1:ePIMFYCMoSlVuZTrwdKOzCfNiUwOSYCRzU+LQdDrvHk=
 github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b h1:3laG8JWIeDGb7lf00nMRznLdCHy0aZPd/CGz7Okn1SY=
 github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b/go.mod h1:mPFmD3Wuy0ddyPFvllLq4sUpGfE40T3VE8kWWS8fxGA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
