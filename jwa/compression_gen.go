@@ -58,7 +58,7 @@ func (v *CompressionAlgorithm) Accept(value interface{}) error {
 		tmp = CompressionAlgorithm(s)
 	}
 	if _, ok := allCompressionAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.CompressionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.CompressionAlgorithm value %#v`, value)
 	}
 
 	*v = tmp

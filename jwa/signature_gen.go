@@ -84,7 +84,7 @@ func (v *SignatureAlgorithm) Accept(value interface{}) error {
 		tmp = SignatureAlgorithm(s)
 	}
 	if _, ok := allSignatureAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.SignatureAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.SignatureAlgorithm value %#v`, value)
 	}
 
 	*v = tmp

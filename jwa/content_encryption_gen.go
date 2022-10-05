@@ -66,7 +66,7 @@ func (v *ContentEncryptionAlgorithm) Accept(value interface{}) error {
 		tmp = ContentEncryptionAlgorithm(s)
 	}
 	if _, ok := allContentEncryptionAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.ContentEncryptionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.ContentEncryptionAlgorithm value %#v`, value)
 	}
 
 	*v = tmp

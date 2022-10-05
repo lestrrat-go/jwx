@@ -63,7 +63,7 @@ func (v *KeyType) Accept(value interface{}) error {
 		tmp = KeyType(s)
 	}
 	if _, ok := allKeyTypes[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.KeyType value`)
+		return fmt.Errorf(`invalid jwa.KeyType value %#v`, value)
 	}
 
 	*v = tmp

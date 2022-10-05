@@ -444,7 +444,7 @@ func (t typ) Generate() error {
 	o.L("}")
 
 	o.L("if _, ok := all%ss[tmp]; !ok {", t.name)
-	o.L("return fmt.Errorf(`invalid jwa.%s value`)", t.name)
+	o.L("return fmt.Errorf(`invalid jwa.%s value %%#v`, value)", t.name)
 	o.L("}")
 
 	o.LL("*v = tmp")

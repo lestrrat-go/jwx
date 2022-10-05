@@ -88,7 +88,7 @@ func (v *KeyEncryptionAlgorithm) Accept(value interface{}) error {
 		tmp = KeyEncryptionAlgorithm(s)
 	}
 	if _, ok := allKeyEncryptionAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.KeyEncryptionAlgorithm value`)
+		return fmt.Errorf(`invalid jwa.KeyEncryptionAlgorithm value %#v`, value)
 	}
 
 	*v = tmp
