@@ -186,7 +186,7 @@ func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -210,7 +210,7 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 

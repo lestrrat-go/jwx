@@ -243,7 +243,7 @@ func (k *rsaPublicKey) PublicKey() (Key, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -254,7 +254,7 @@ func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return rsaThumbprint(hash, &key.PublicKey)
 }
 
-func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
