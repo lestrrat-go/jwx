@@ -18,7 +18,6 @@ sketch -d $DIR/jwt/openid \
 	$DIR/tools/jwt
 
 sketch -d $DIR/jwk \
-	--dev-mode --dev-path=$DIR/../sketch \
 	--exclude-symbol='^builder\..+' \
 	--exclude-symbol='^object\.method\.decodeExtraField$' \
 	--tmpl-dir=$DIR/tools/jwk/tmpl \
