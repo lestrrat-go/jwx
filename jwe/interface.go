@@ -2,9 +2,15 @@ package jwe
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
+
+type DecodeCtx = json.DecodeCtx
 
 // Recipient holds the encrypted key and hints to decrypt the key
 type Recipient interface {
@@ -158,3 +164,32 @@ type Visitor = iter.MapVisitor
 type VisitorFunc = iter.MapVisitorFunc
 type HeaderPair = mapiter.Pair
 type Iterator = mapiter.Iterator
+
+type Headers interface {
+	AgreementPartyUInfo() []byte
+	AgreementPartyVInfo() []byte
+	Algorithm() jwa.KeyEncryptionAlgorithm
+	Compression() jwa.CompressionAlgorithm
+	ContentEncryption() jwa.ContentEncryptionAlgorithm
+	ContentType() string
+	Critical() []string
+	EphemeralPublicKey() jwk.Key
+	JWK() jwk.Key
+	JWKSetURL() string
+	KeyID() string
+	Type() string
+	X509CertChain() *cert.Chain
+	X509CertThumbprint() string
+	X509CertThumbprintS256() string
+	X509URL() string
+	Keys() []string
+	Get(string, interface{}) error
+	Set(string, interface{}) error
+	Has(string) bool
+	Remove(string) error
+	Encode() ([]byte, error)
+	Decode([]byte) error
+	Clone(interface{}) error
+	Copy(Headers) error
+	Merge(Headers) (Headers, error)
+}

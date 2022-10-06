@@ -698,10 +698,10 @@ LOOP:
 		}
 	}
 	if v.crv == nil {
-		return fmt.Errorf(`required field crv is missing`)
+		return fmt.Errorf(`required field crv is missing for object okpPublicKey`)
 	}
 	if v.x == nil {
-		return fmt.Errorf(`required field x is missing`)
+		return fmt.Errorf(`required field x is missing for object okpPublicKey`)
 	}
 
 	if extra != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Pin represents the structured clevis data which can be used to decrypt the jwe message
@@ -86,10 +87,8 @@ func TestGH402(t *testing.T) {
 				return
 			}
 
-			v, ok := m.ProtectedHeaders().Get("clevis")
-			if !assert.True(t, ok, `m.Get("clevis") should be true`) {
-				return
-			}
+			var v Pin
+			require.NoError(t, m.ProtectedHeaders().Get("clevis", &v), `m.Get("clevis") should be true`)
 
 			if !assert.IsType(t, Pin{}, v, `result of m.Get("clevis") should be an instance of Pin{}`) {
 				return

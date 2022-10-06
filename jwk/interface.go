@@ -216,7 +216,6 @@ type Key interface {
 	KeyUsage() string
 	// KeyOps returns `key_ops` of a JWK
 	KeyOps() KeyOperationList
-	// Algorithm returns `alg` of a JWK
 
 	// Algorithm returns the value of the `alg` field
 	//

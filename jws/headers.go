@@ -1,45 +1,34 @@
 package jws
 
 import (
-	"context"
 	"fmt"
-
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
 )
 
-// Iterate returns a channel that successively returns all the
-// header name and values.
-func (h *stdHeaders) Iterate(ctx context.Context) Iterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
+func (v *stdHeaders) rawBuffer() []byte {
+	return v.raw
+}
+
+func (v *stdHeaders) UnmarshalJSON(data []byte) error {
+	if err := v.unmarshalJSON(data); err != nil {
+		return err
+	}
+	v.raw = data
+	return nil
+}
+
+// Copy copies the values tored in the header to `dst`. Existing
+// values stored in `dst` are preserved, except when fields with the same
+// name are present. In such cases the old value stored in `dst` is
+// overwritten.
+func (v *stdHeaders) Copy(dst Headers) error {
+	for _, key := range v.Keys() {
+		var val interface{}
+		if err := v.Get(key, &val); err != nil {
+			return fmt.Errorf(`failed to get header %q during copy: %w`, key, err)
 		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
 
-func (h *stdHeaders) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
-}
-
-func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
-	for _, pair := range h.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return fmt.Errorf(`failed to set header %q: %w`, key, err)
+		if err := dst.Set(key, val); err != nil {
+			return fmt.Errorf(`failed to set header %q during copy: %w`, key, err)
 		}
 	}
 	return nil
@@ -48,24 +37,24 @@ func (h *stdHeaders) Copy(ctx context.Context, dst Headers) error {
 // mergeHeaders merges two headers, and works even if the first Header
 // object is nil. This is not exported because ATM it felt like this
 // function is not frequently used, and MergeHeaders seemed a clunky name
-func mergeHeaders(ctx context.Context, h1, h2 Headers) (Headers, error) {
+func mergeHeaders(h1, h2 Headers) (Headers, error) {
 	h3 := NewHeaders()
 
 	if h1 != nil {
-		if err := h1.Copy(ctx, h3); err != nil {
-			return nil, fmt.Errorf(`failed to copy headers from first Header: %w`, err)
+		if err := h1.Copy(h3); err != nil {
+			return nil, fmt.Errorf(`failed to copy headers from first Header during merge: %w`, err)
 		}
 	}
 
 	if h2 != nil {
-		if err := h2.Copy(ctx, h3); err != nil {
-			return nil, fmt.Errorf(`failed to copy headers from second Header: %w`, err)
+		if err := h2.Copy(h3); err != nil {
+			return nil, fmt.Errorf(`failed to copy headers from second Header during merge: %w`, err)
 		}
 	}
 
 	return h3, nil
 }
 
-func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
-	return mergeHeaders(ctx, h, h2)
+func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
+	return mergeHeaders(h, h2)
 }

@@ -528,3 +528,33 @@ func TestFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestBoink(t *testing.T) {
+	const encrypted = `{
+                      "ciphertext": "SDib5IzpMAtVgvI",
+                      "encrypted_key": "PsWDQtmaDGNumsv2AfombQ",
+                      "header": {
+                        "alg": "A128GCMKW",
+                        "iv": "/3IqKOyEgfqGuh8c",
+                        "tag": "iceTlIJmU2sFvVsBrxiSxA=="
+                      },
+                      "iv": "OivKmbqSwWhDeJGj",
+                      "protected": "eyJhbGciOiJBMTI4R0NNS1ciLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiIvM0lxS095RWdmcUd1aDhjIiwidGFnIjoiaWNlVGxJSm1VMnNGdlZzQnJ4aVN4QT09In0",
+                      "tag": "a8_Cw53gmsG0ogVfIhGO-A"
+                    }`
+	const keysrc = `{
+                      "alg": "A128GCMKW",
+                      "k": "hSo0nwxYYKbke4AmKdq9-w",
+                      "key_ops": [
+                        "wrapKey",
+                        "unwrapKey"
+                      ],
+                      "kty": "oct"
+                    }`
+	key, err := jwk.ParseKey([]byte(keysrc))
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+	decrypted, err := jwe.Decrypt([]byte(encrypted), jwe.WithKey(jwa.A128GCMKW, key))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+	t.Logf("%s", decrypted)
+}

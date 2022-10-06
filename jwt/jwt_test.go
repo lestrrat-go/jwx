@@ -426,11 +426,10 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 
 			dummyHeader := jws.NewHeaders()
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			for iter := hdrs.Iterate(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				dummyHeader.Set(pair.Key.(string), pair.Value)
+			for _, key := range hdrs.Keys() {
+				var val interface{}
+				require.NoError(t, hdrs.Get(key, &val), `hdrs.Get should succeed`)
+				require.NoError(t, dummyHeader.Set(key, val), `dummyHeader.Set should succeed`)
 			}
 			dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
 

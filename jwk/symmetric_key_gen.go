@@ -663,7 +663,7 @@ LOOP:
 		}
 	}
 	if v.octets == nil {
-		return fmt.Errorf(`required field k is missing`)
+		return fmt.Errorf(`required field k is missing for object symmetricKey`)
 	}
 
 	if extra != nil {

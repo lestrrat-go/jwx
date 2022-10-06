@@ -754,13 +754,13 @@ LOOP:
 		}
 	}
 	if v.crv == nil {
-		return fmt.Errorf(`required field crv is missing`)
+		return fmt.Errorf(`required field crv is missing for object okpPrivateKey`)
 	}
 	if v.d == nil {
-		return fmt.Errorf(`required field d is missing`)
+		return fmt.Errorf(`required field d is missing for object okpPrivateKey`)
 	}
 	if v.x == nil {
-		return fmt.Errorf(`required field x is missing`)
+		return fmt.Errorf(`required field x is missing for object okpPrivateKey`)
 	}
 
 	if extra != nil {

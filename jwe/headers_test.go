@@ -1,7 +1,6 @@
 package jwe_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var zeroval reflect.Value
@@ -125,20 +125,15 @@ func TestHeaders(t *testing.T) {
 
 	t.Run("Set/Get", func(t *testing.T) {
 		h := jwe.NewHeaders()
-		ctx := context.Background()
-
-		for iter := base.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, h.Set(pair.Key.(string), pair.Value), `h.Set should be successful`) {
-				return
-			}
+		for _, key := range base.Keys() {
+			var val interface{}
+			require.NoError(t, base.Get(key, &val), `h.Get should be successful`)
+			require.NoError(t, h.Set(key, val), `h.Set should be successful`)
 		}
 		for _, tc := range data {
 			var values []interface{}
-			viaGet, ok := h.Get(tc.Key)
-			if !assert.True(t, ok, "value for %s should exist", tc.Key) {
-				return
-			}
+			var viaGet interface{}
+			require.NoError(t, h.Get(tc.Key, &viaGet), "value for %s should exist", tc.Key)
 			values = append(values, viaGet)
 
 			if method := tc.Method; method != "" {
@@ -163,22 +158,6 @@ func TestHeaders(t *testing.T) {
 					return
 				}
 			}
-		}
-	})
-	t.Run("PrivateParams", func(t *testing.T) {
-		h := base
-		pp, err := h.AsMap(context.Background())
-		if !assert.NoError(t, err, `h.AsMap should succeed`) {
-			return
-		}
-
-		v, ok := pp["private"]
-		if !assert.True(t, ok, "key 'private' should exists") {
-			return
-		}
-
-		if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
-			return
 		}
 	})
 	t.Run("Encode", func(t *testing.T) {
@@ -214,53 +193,22 @@ func TestHeaders(t *testing.T) {
 		v := base
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				seen[pair.Key.(string)] = pair.Value
-
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
+			for _, key := range v.Keys() {
+				var val interface{}
+				require.NoError(t, v.Get(key, &val), `v.Get should succeed`)
+				seen[key] = val
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("Walk", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			v.Walk(context.TODO(), jwk.HeaderVisitorFunc(func(key string, value interface{}) error {
-				seen[key] = value
-				return nil
-			}))
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("AsMap", func(t *testing.T) {
-			m, err := v.AsMap(context.TODO())
-			if !assert.NoError(t, err, `v.AsMap should succeed`) {
-				return
-			}
-			if !assert.Equal(t, expected, m, `values should match`) {
 				return
 			}
 		})
 		t.Run("Remove", func(t *testing.T) {
 			h := base
-			for iter := h.Iterate(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				h.Remove(pair.Key.(string))
+			for _, key := range h.Keys() {
+				h.Remove(key)
 			}
 
-			m, err := h.AsMap(context.TODO())
-			if !assert.NoError(t, err, `h.AsMap should succeed`) {
-				return
-			}
-			if !assert.Len(t, m, 0, `len should be zero`) {
+			if !assert.Len(t, h.Keys(), 0, `len should be zero`) {
 				return
 			}
 		})

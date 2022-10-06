@@ -1,8 +1,6 @@
 package jwe
 
 import (
-	"context"
-
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/option"
@@ -13,7 +11,8 @@ import (
 //
 // There is no equivalent for unprotected headers in this implementation
 func WithProtectedHeaders(h Headers) EncryptOption {
-	cloned, _ := h.Clone(context.Background())
+	var cloned Headers
+	_ = h.Clone(&cloned)
 	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
 }
 

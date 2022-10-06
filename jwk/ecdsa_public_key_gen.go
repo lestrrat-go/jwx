@@ -745,13 +745,13 @@ LOOP:
 		}
 	}
 	if v.crv == nil {
-		return fmt.Errorf(`required field crv is missing`)
+		return fmt.Errorf(`required field crv is missing for object ecdsaPublicKey`)
 	}
 	if v.x == nil {
-		return fmt.Errorf(`required field x is missing`)
+		return fmt.Errorf(`required field x is missing for object ecdsaPublicKey`)
 	}
 	if v.y == nil {
-		return fmt.Errorf(`required field y is missing`)
+		return fmt.Errorf(`required field y is missing for object ecdsaPublicKey`)
 	}
 
 	if extra != nil {

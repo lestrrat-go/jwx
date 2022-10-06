@@ -21,7 +21,7 @@ func init() {
 	}
 
 	for alg, h := range algs {
-		hmacSignFuncs[alg] = makeHMACSignFunc(h)
+		hmacSignFuncs[alg] = makeHMACSignFunc(alg, h)
 	}
 }
 
@@ -32,11 +32,11 @@ func newHMACSigner(alg jwa.SignatureAlgorithm) Signer {
 	}
 }
 
-func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
+func makeHMACSignFunc(alg jwa.SignatureAlgorithm, hfunc func() hash.Hash) hmacSignFunc {
 	return func(payload []byte, key []byte) ([]byte, error) {
 		h := hmac.New(hfunc, key)
 		if _, err := h.Write(payload); err != nil {
-			return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
+			return nil, fmt.Errorf(`failed to write payload using hmac(%s): %w`, alg.String(), err)
 		}
 		return h.Sum(nil), nil
 	}

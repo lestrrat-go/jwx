@@ -1,5 +1,3 @@
-//go:generate ../tools/cmd/genjwe.sh
-
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe
 
@@ -272,8 +270,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 			if !mergeProtected || protected == nil {
 				protected = v
 			} else {
-				ctx := context.TODO()
-				merged, err := protected.Merge(ctx, v)
+				merged, err := protected.Merge(v)
 				if err != nil {
 					return nil, fmt.Errorf(`jwe.Encrypt: failed to merge headers: %w`, err)
 				}
@@ -350,7 +347,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := protected.Merge(context.TODO(), recipients[0].Headers())
+		h, err := protected.Merge(recipients[0].Headers())
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Encrypt: failed to merge protected headers: %w`, err)
 		}
@@ -451,12 +448,11 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	}
 
 	// Process things that are common to the message
-	ctx := context.TODO()
-	h, err := msg.protectedHeaders.Clone(ctx)
-	if err != nil {
+	var h Headers
+	if err := msg.protectedHeaders.Clone(&h); err != nil {
 		return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
 	}
-	h, err = h.Merge(ctx, msg.unprotectedHeaders)
+	h, err = h.Merge(msg.unprotectedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge headers for message decryption: %w`, err)
 	}
@@ -499,6 +495,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 	var lastError error
 	for _, recipient := range recipients {
+		ctx := context.TODO()
 		decrypted, err := dctx.try(ctx, recipient, keyUsed)
 		if err != nil {
 			lastError = err
@@ -569,21 +566,21 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 		return nil, fmt.Errorf(`jwe.Decrypt: key and recipient algorithms do not match`)
 	}
 
-	h2, err := dctx.protectedHeaders.Clone(ctx)
-	if err != nil {
+	var h2 Headers
+	if err := dctx.protectedHeaders.Clone(&h2); err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
 	}
 
-	h2, err = h2.Merge(ctx, recipient.Headers())
+	h2, err := h2.Merge(recipient.Headers())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to copy headers (2): %w`, err)
 	}
 
 	switch alg {
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		epkif, ok := h2.Get(EphemeralPublicKeyKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'epk' field`)
+		var epkif jwk.Key
+		if err := h2.Get(EphemeralPublicKeyKey, &epkif); err != nil {
+			return nil, fmt.Errorf(`failed to get 'epk' field: %w`, err)
 		}
 		switch epk := epkif.(type) {
 		case jwk.ECDSAPublicKey:
@@ -609,56 +606,40 @@ func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlg
 			dec.AgreementPartyVInfo(apv)
 		}
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-		ivB64, ok := h2.Get(InitializationVectorKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'iv' field`)
+		var ivB64 string
+		if err := h2.Get(InitializationVectorKey, &ivB64); err != nil {
+			return nil, fmt.Errorf(`failed to get 'iv' field: %w`, err)
 		}
-		ivB64Str, ok := ivB64.(string)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'iv': %T", ivB64)
+		var tagB64 string
+		if err := h2.Get(TagKey, &tagB64); err != nil {
+			return nil, fmt.Errorf(`failed to get 'tag' field: %w`, err)
 		}
-		tagB64, ok := h2.Get(TagKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'tag' field`)
-		}
-		tagB64Str, ok := tagB64.(string)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'tag': %T", tagB64)
-		}
-		iv, err := base64.DecodeString(ivB64Str)
+		iv, err := base64.DecodeString(ivB64)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
 		}
-		tag, err := base64.DecodeString(tagB64Str)
+		tag, err := base64.DecodeString(tagB64)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
 		}
 		dec.KeyInitializationVector(iv)
 		dec.KeyTag(tag)
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-		saltB64, ok := h2.Get(SaltKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'p2s' field`)
+		var saltB64 string
+		if err := h2.Get(SaltKey, &saltB64); err != nil {
+			return nil, fmt.Errorf(`failed to get 'p2s' field: %w`, err)
 		}
-		saltB64Str, ok := saltB64.(string)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'p2s': %T", saltB64)
-		}
-
-		count, ok := h2.Get(CountKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'p2c' field`)
-		}
-		countFlt, ok := count.(float64)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
-		}
-		salt, err := base64.DecodeString(saltB64Str)
+		salt, err := base64.DecodeString(saltB64)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to b64-decode 'salt': %w`, err)
 		}
+
+		var count float64
+		if err := h2.Get(CountKey, &count); err != nil {
+			return nil, fmt.Errorf(`failed to get 'p2c' field: %w`, err)
+		}
 		dec.KeySalt(salt)
-		dec.KeyCount(int(countFlt))
+		dec.KeyCount(int(count))
 	}
 
 	plaintext, err := dec.Decrypt(recipient.EncryptedKey(), dctx.msg.cipherText)

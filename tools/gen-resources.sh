@@ -23,3 +23,20 @@ sketch -d $DIR/jwk \
 	--tmpl-dir=$DIR/tools/jwk/tmpl \
 	--verbose \
 	$DIR/tools/jwk
+
+sketch -d $DIR/jws \
+	--dev-mode --dev-path=$DIR/../sketch \
+	--exclude-symbol='^builder\..+' \
+	--exclude-symbol='^object\.method\.decodeExtraField$' \
+	--tmpl-dir=$DIR/tools/jws/tmpl \
+	--verbose \
+	$DIR/tools/jws
+
+sketch -d $DIR/jwe \
+	--dev-mode --dev-path=$DIR/../sketch \
+	--exclude-symbol='^builder\..+' \
+	--exclude-symbol='^object\.method\.decodeExtraField$' \
+	--tmpl-dir=$DIR/tools/jwe/tmpl \
+	--verbose \
+	$DIR/tools/jwe
+

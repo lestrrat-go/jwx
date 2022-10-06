@@ -98,8 +98,9 @@ func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, err
 }
 
 type genericHeader interface {
-	Get(string) (interface{}, bool)
+	Get(string, interface{}) error
 	Set(string, interface{}) error
+	Has(string) bool
 }
 
 func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
@@ -110,7 +111,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 
 	if ctx.Step() == 1 {
 		// We are executed immediately after json marshaling
-		if _, ok := hdrs.Get(typKey); !ok {
+		if !hdrs.Has(typKey) {
 			if err := hdrs.Set(typKey, `JWT`); err != nil {
 				return fmt.Errorf(`failed to set %s key to "JWT": %w`, typKey, err)
 			}
@@ -149,11 +150,10 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 
 		// JWTs MUST NOT use b64 = false
 		// https://datatracker.ietf.org/doc/html/rfc7797#section-7
-		if v, ok := hdrs.Get("b64"); ok {
-			if bval, bok := v.(bool); bok {
-				if !bval { // b64 = false
-					return nil, fmt.Errorf(`b64 cannot be false for JWTs`)
-				}
+		var b64 bool
+		if err := hdrs.Get("b64", &b64); err == nil {
+			if !b64 { // b64 = false
+				return nil, fmt.Errorf(`b64 cannot be false for JWTs`)
 			}
 		}
 	}

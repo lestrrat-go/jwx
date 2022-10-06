@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -62,7 +61,7 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.WriteString(`{"header":`)
-	hdrbuf, err := r.headers.MarshalJSON()
+	hdrbuf, err := json.Marshal(r.headers)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to marshal recipient header: %w`, err)
 	}
@@ -456,8 +455,8 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error {
 	// Recipients in this case should not contain the content encryption key,
 	// so move that out
-	hdrs, err := protected.Clone(context.TODO())
-	if err != nil {
+	var hdrs Headers
+	if err := protected.Clone(&hdrs); err != nil {
 		return fmt.Errorf(`failed to clone headers: %w`, err)
 	}
 
@@ -503,16 +502,15 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 		return nil, fmt.Errorf(`invalid protected header`)
 	}
 
-	ctx := context.TODO()
-	hcopy, err := m.protectedHeaders.Clone(ctx)
-	if err != nil {
+	var hcopy Headers
+	if err := m.protectedHeaders.Clone(&hcopy); err != nil {
 		return nil, fmt.Errorf(`failed to copy protected header: %w`, err)
 	}
-	hcopy, err = hcopy.Merge(ctx, m.unprotectedHeaders)
+	hcopy, err := hcopy.Merge(m.unprotectedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge unprotected header: %w`, err)
 	}
-	hcopy, err = hcopy.Merge(ctx, recipient.Headers())
+	hcopy, err = hcopy.Merge(recipient.Headers())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge recipient header: %w`, err)
 	}

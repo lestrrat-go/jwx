@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/crypto/curve25519"
 
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/concatkdf"
@@ -168,11 +169,11 @@ func (k ByteWithECPublicKey) Populate(h Setter) error {
 // HeaderPopulate populates the header with the required AES GCM
 // parameters ('iv' and 'tag')
 func (k ByteWithIVAndTag) Populate(h Setter) error {
-	if err := h.Set("iv", k.IV); err != nil {
+	if err := h.Set("iv", byteslice.From(k.IV)); err != nil {
 		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
-	if err := h.Set("tag", k.Tag); err != nil {
+	if err := h.Set("tag", byteslice.From(k.Tag)); err != nil {
 		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
@@ -186,7 +187,7 @@ func (k ByteWithSaltAndCount) Populate(h Setter) error {
 		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 
-	if err := h.Set("p2s", k.Salt); err != nil {
+	if err := h.Set("p2s", byteslice.From(k.Salt)); err != nil {
 		return fmt.Errorf(`failed to write header: %w`, err)
 	}
 

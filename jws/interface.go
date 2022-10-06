@@ -2,13 +2,36 @@ package jws
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
+	"github.com/lestrrat-go/jwx/v2/cert"
 	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-type DecodeCtx interface {
-	CollectRaw() bool
+type Headers interface {
+	Algorithm() jwa.SignatureAlgorithm
+	ContentType() string
+	Critical() []string
+	JWK() jwk.Key
+	JWKSetURL() string
+	KeyID() string
+	Type() string
+	X509CertChain() *cert.Chain
+	X509CertThumbprint() string
+	X509CertThumbprintS256() string
+	X509URL() string
+	Copy(Headers) error
+	Clone(interface{}) error
+	Get(string, interface{}) error
+	Has(string) bool
+	Keys() []string
+	Set(string, interface{}) error
+	Remove(string) error
+	Merge(Headers) (Headers, error)
 }
+
+type DecodeCtx = json.DecodeCtx
 
 // Message represents a full JWS encoded message. Flattened serialization
 // is not supported as a struct, but rather it's represented as a

@@ -41,7 +41,7 @@ jobs:
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - name: Install sketch
-        run: go install github.com/lestrrat-go/sketch/cmd/sketch@1e95c85fe782b4fed83a5bbca0ff92b91303bcfa
+        run: go install github.com/lestrrat-go/sketch/cmd/sketch@368518e
       - run: make generate
       - name: make tidy
         run: make tidy

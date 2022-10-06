@@ -379,17 +379,13 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 }
 
 // get the value of b64 header field.
-// If the field does not exist, returns true (default)
+// If the field does not exist or the value is not a boolean, returns true (the default behavior).
+//
 // Otherwise return the value specified by the header field.
 func getB64Value(hdr Headers) bool {
-	b64raw, ok := hdr.Get("b64")
-	if !ok {
+	var b64 bool
+	if err := hdr.Get("b64", &b64); err != nil {
 		return true // default
-	}
-
-	b64, ok := b64raw.(bool) // default
-	if !ok {
-		return false
 	}
 	return b64
 }

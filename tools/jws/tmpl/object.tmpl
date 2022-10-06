@@ -1,0 +1,42 @@
+{{- define "ext/object/header" }}
+{{- $objectName := .Name }}
+func NewHeaders() Headers {
+  return &{{ $objectName }}{}
+}
+
+func (v *{{ $objectName }}) DecodeCtx() DecodeCtx {
+  v.mu.RLock()
+  defer v.mu.RUnlock()
+  return v.dc
+}
+
+func (v *{{ $objectName }}) SetDecodeCtx(dc DecodeCtx) {
+  v.mu.Lock()
+  defer v.mu.Unlock()
+  v.dc = dc
+}
+
+func (v *{{ $objectName }}) decodeExtraField(name string, dec *json.Decoder, dst interface{}) error {
+  if dc := v.dc; dc != nil {
+    if localReg := dc.Registry(); localReg != nil {
+      decoded, err := localReg.Decode(dec, name)
+      if err == nil {
+        if err := blackmagic.AssignIfCompatible(dst, decoded); err != nil {
+          return fmt.Errorf(`failed to assign decoded value for %q: %w`, name, err)
+        }
+        return nil
+      }
+    }
+  }
+
+  decoded, err := registry.Decode(dec, name)
+  if err == nil {
+    if err := blackmagic.AssignIfCompatible(dst, decoded); err != nil {
+      return fmt.Errorf(`failed to assign decoded value for %q: %w`, name, err)
+    }
+    return nil
+  }
+
+  return fmt.Errorf(`failed to decode field %q: %w`, name, err)
+}
+{{- end }}

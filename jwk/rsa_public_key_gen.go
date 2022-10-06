@@ -702,10 +702,10 @@ LOOP:
 		}
 	}
 	if v.e == nil {
-		return fmt.Errorf(`required field e is missing`)
+		return fmt.Errorf(`required field e is missing for object rsaPublicKey`)
 	}
 	if v.n == nil {
-		return fmt.Errorf(`required field n is missing`)
+		return fmt.Errorf(`required field n is missing for object rsaPublicKey`)
 	}
 
 	if extra != nil {
