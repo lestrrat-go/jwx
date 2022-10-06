@@ -529,7 +529,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			key := pair.key
 
-			decrypted, err := dctx.decryptKey(ctx, alg, key, recipient)
+			decrypted, err := dctx.decryptKey(alg, key, recipient)
 			if err != nil {
 				lastError = err
 				continue
@@ -546,7 +546,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
 }
 
-func (dctx *decryptCtx) decryptKey(ctx context.Context, alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
+func (dctx *decryptCtx) decryptKey(alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
