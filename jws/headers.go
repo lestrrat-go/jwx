@@ -55,6 +55,6 @@ func mergeHeaders(h1, h2 Headers) (Headers, error) {
 	return h3, nil
 }
 
-func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
-	return mergeHeaders(h, h2)
+func (v *stdHeaders) Merge(h2 Headers) (Headers, error) {
+	return mergeHeaders(v, h2)
 }
