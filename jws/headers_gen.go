@@ -3,13 +3,13 @@ package jws
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/cert"
+	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
