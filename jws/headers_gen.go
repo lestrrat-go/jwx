@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
 	"sync"
 
@@ -158,8 +157,6 @@ func (v *stdHeaders) getNoLock(key string, dst interface{}, raw bool) error {
 	}
 	return fmt.Errorf(`no such key %q`, key)
 }
-
-var rawByteSliceType = reflect.TypeOf([]byte(nil))
 
 // Set sets the value of the specified field. The name must be a JSON
 // field name, not the Go name
@@ -665,7 +662,7 @@ LOOP:
 				}
 				val, err := jwk.ParseKey(ifaceSrc)
 				if err != nil {
-					return fmt.Errorf(`failed to accept value for %q: %w`, JWKKey, err)
+					return fmt.Errorf(`failed to decode interface value for %q: %w`, JWKKey, err)
 				}
 				v.jwk = val
 			case JWKSetURLKey:

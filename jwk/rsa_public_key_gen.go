@@ -68,7 +68,7 @@ func (v *rsaPublicKey) decodeExtraField(name string, dec *json.Decoder, dst inte
 
 type rsaPublicKey struct {
 	mu                     sync.RWMutex
-	algorithm              *jwa.KeyAlgorithm
+	algorithm              jwa.KeyAlgorithm
 	keyID                  *string
 	keyOps                 *KeyOperationList
 	keyUsage               *KeyUsageType
@@ -97,7 +97,7 @@ func (v *rsaPublicKey) getNoLock(key string, dst interface{}, raw bool) error {
 	switch key {
 	case AlgorithmKey:
 		if val := v.algorithm; val != nil {
-			return blackmagic.AssignIfCompatible(dst, *val)
+			return blackmagic.AssignIfCompatible(dst, val)
 		}
 	case KeyIDKey:
 		if val := v.keyID; val != nil {
@@ -168,7 +168,7 @@ func (v *rsaPublicKey) Set(key string, value interface{}) error {
 		if err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
-		v.algorithm = &object
+		v.algorithm = object
 	case KeyIDKey:
 		converted, ok := value.(string)
 		if !ok {
@@ -230,6 +230,7 @@ func (v *rsaPublicKey) Set(key string, value interface{}) error {
 		if v.extra == nil {
 			v.extra = make(map[string]interface{})
 		}
+
 		v.extra[key] = value
 	}
 	return nil
@@ -395,7 +396,7 @@ func (v *rsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.algorithm; val != nil {
-		return *val
+		return val
 	}
 	return jwa.UnknownKeyAlgorithm("")
 }
@@ -524,9 +525,12 @@ func (v *rsaPublicKey) Clone(dst interface{}) error {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 
-	extra := make(map[string]interface{})
-	for key, val := range v.extra {
-		extra[key] = val
+	var extra map[string]interface{}
+	if len(v.extra) > 0 {
+		extra = make(map[string]interface{})
+		for key, val := range v.extra {
+			extra[key] = val
+		}
 	}
 	return blackmagic.AssignIfCompatible(dst, &rsaPublicKey{
 		algorithm:              v.algorithm,
@@ -620,13 +624,14 @@ LOOP:
 			case AlgorithmKey:
 				var acceptValue interface{}
 				if err := dec.Decode(&acceptValue); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, AlgorithmKey, err)
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AlgorithmKey, err)
 				}
-				val, err := jwa.KeyAlgorithmFrom(acceptValue)
+				var val jwa.KeyAlgorithm
+				val, err = jwa.KeyAlgorithmFrom(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, AlgorithmKey, err)
 				}
-				v.algorithm = &val
+				v.algorithm = val
 			case KeyIDKey:
 				var val string
 				if err := dec.Decode(&val); err != nil {
@@ -640,17 +645,27 @@ LOOP:
 				}
 				v.keyOps = &val
 			case KeyTypeKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, KeyTypeKey, err)
+				}
 				var val jwa.KeyType
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, KeyTypeKey, err)
+				err = val.Accept(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, KeyTypeKey, err)
 				}
 				if val != jwa.RSA {
 					return fmt.Errorf(`field %q must be jwa.RSA (got %#v)`, tok, val)
 				}
 			case KeyUsageKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, KeyUsageKey, err)
+				}
 				var val KeyUsageType
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, KeyUsageKey, err)
+				err = val.Accept(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, KeyUsageKey, err)
 				}
 				v.keyUsage = &val
 			case X509CertChainKey:
@@ -678,15 +693,25 @@ LOOP:
 				}
 				v.x509URL = &val
 			case RSAEKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAEKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, RSAEKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, RSAEKey, err)
 				}
 				v.e = &val
 			case RSANKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSANKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, RSANKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, RSANKey, err)
 				}
 				v.n = &val
 			default:

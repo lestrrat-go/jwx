@@ -4,7 +4,6 @@ package jwe
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"sort"
 	"sync"
 
@@ -195,8 +194,6 @@ func (v *stdHeaders) getNoLock(key string, dst interface{}, raw bool) error {
 	}
 	return fmt.Errorf(`no such key %q`, key)
 }
-
-var rawByteSliceType = reflect.TypeOf([]byte(nil))
 
 // Set sets the value of the specified field. The name must be a JSON
 // field name, not the Go name
@@ -833,15 +830,25 @@ LOOP:
 		case string:
 			switch tok {
 			case AgreementPartyUInfoKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AgreementPartyUInfoKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, AgreementPartyUInfoKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, AgreementPartyUInfoKey, err)
 				}
 				v.agreementPartyUInfo = &val
 			case AgreementPartyVInfoKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AgreementPartyVInfoKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, AgreementPartyVInfoKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, AgreementPartyVInfoKey, err)
 				}
 				v.agreementPartyVInfo = &val
 			case AlgorithmKey:
@@ -881,7 +888,7 @@ LOOP:
 				}
 				val, err := jwk.ParseKey(ifaceSrc)
 				if err != nil {
-					return fmt.Errorf(`failed to accept value for %q: %w`, EphemeralPublicKeyKey, err)
+					return fmt.Errorf(`failed to decode interface value for %q: %w`, EphemeralPublicKeyKey, err)
 				}
 				v.ephemeralPublicKey = val
 			case JWKKey:
@@ -891,7 +898,7 @@ LOOP:
 				}
 				val, err := jwk.ParseKey(ifaceSrc)
 				if err != nil {
-					return fmt.Errorf(`failed to accept value for %q: %w`, JWKKey, err)
+					return fmt.Errorf(`failed to decode interface value for %q: %w`, JWKKey, err)
 				}
 				v.jwk = val
 			case JWKSetURLKey:

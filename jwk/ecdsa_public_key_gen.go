@@ -69,7 +69,7 @@ func (v *ecdsaPublicKey) decodeExtraField(name string, dec *json.Decoder, dst in
 
 type ecdsaPublicKey struct {
 	mu                     sync.RWMutex
-	algorithm              *jwa.KeyAlgorithm
+	algorithm              jwa.KeyAlgorithm
 	keyID                  *string
 	keyOps                 *KeyOperationList
 	keyUsage               *KeyUsageType
@@ -99,7 +99,7 @@ func (v *ecdsaPublicKey) getNoLock(key string, dst interface{}, raw bool) error 
 	switch key {
 	case AlgorithmKey:
 		if val := v.algorithm; val != nil {
-			return blackmagic.AssignIfCompatible(dst, *val)
+			return blackmagic.AssignIfCompatible(dst, val)
 		}
 	case KeyIDKey:
 		if val := v.keyID; val != nil {
@@ -174,7 +174,7 @@ func (v *ecdsaPublicKey) Set(key string, value interface{}) error {
 		if err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
-		v.algorithm = &object
+		v.algorithm = object
 	case KeyIDKey:
 		converted, ok := value.(string)
 		if !ok {
@@ -242,6 +242,7 @@ func (v *ecdsaPublicKey) Set(key string, value interface{}) error {
 		if v.extra == nil {
 			v.extra = make(map[string]interface{})
 		}
+
 		v.extra[key] = value
 	}
 	return nil
@@ -419,7 +420,7 @@ func (v *ecdsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	if val := v.algorithm; val != nil {
-		return *val
+		return val
 	}
 	return jwa.UnknownKeyAlgorithm("")
 }
@@ -559,9 +560,12 @@ func (v *ecdsaPublicKey) Clone(dst interface{}) error {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 
-	extra := make(map[string]interface{})
-	for key, val := range v.extra {
-		extra[key] = val
+	var extra map[string]interface{}
+	if len(v.extra) > 0 {
+		extra = make(map[string]interface{})
+		for key, val := range v.extra {
+			extra[key] = val
+		}
 	}
 	return blackmagic.AssignIfCompatible(dst, &ecdsaPublicKey{
 		algorithm:              v.algorithm,
@@ -657,13 +661,14 @@ LOOP:
 			case AlgorithmKey:
 				var acceptValue interface{}
 				if err := dec.Decode(&acceptValue); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, AlgorithmKey, err)
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AlgorithmKey, err)
 				}
-				val, err := jwa.KeyAlgorithmFrom(acceptValue)
+				var val jwa.KeyAlgorithm
+				val, err = jwa.KeyAlgorithmFrom(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, AlgorithmKey, err)
 				}
-				v.algorithm = &val
+				v.algorithm = val
 			case KeyIDKey:
 				var val string
 				if err := dec.Decode(&val); err != nil {
@@ -677,17 +682,27 @@ LOOP:
 				}
 				v.keyOps = &val
 			case KeyTypeKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, KeyTypeKey, err)
+				}
 				var val jwa.KeyType
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, KeyTypeKey, err)
+				err = val.Accept(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, KeyTypeKey, err)
 				}
 				if val != jwa.EC {
 					return fmt.Errorf(`field %q must be jwa.EC (got %#v)`, tok, val)
 				}
 			case KeyUsageKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, KeyUsageKey, err)
+				}
 				var val KeyUsageType
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, KeyUsageKey, err)
+				err = val.Accept(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, KeyUsageKey, err)
 				}
 				v.keyUsage = &val
 			case X509CertChainKey:
@@ -715,21 +730,36 @@ LOOP:
 				}
 				v.x509URL = &val
 			case ECDSACrvKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSACrvKey, err)
+				}
 				var val jwa.EllipticCurveAlgorithm
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, ECDSACrvKey, err)
+				err = val.Accept(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSACrvKey, err)
 				}
 				v.crv = &val
 			case ECDSAXKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSAXKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, ECDSAXKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSAXKey, err)
 				}
 				v.x = &val
 			case ECDSAYKey:
+				var acceptValue interface{}
+				if err := dec.Decode(&acceptValue); err != nil {
+					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSAYKey, err)
+				}
 				var val byteslice.Type
-				if err := dec.Decode(&val); err != nil {
-					return fmt.Errorf(`failed to decode value for %q: %w`, ECDSAYKey, err)
+				err = val.AcceptValue(acceptValue)
+				if err != nil {
+					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSAYKey, err)
 				}
 				v.y = &val
 			default:

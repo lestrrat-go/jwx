@@ -4,8 +4,8 @@ github.com/lestrrat-go/byteslice v0.0.0-20221006133306-54e5792539ff h1:+DLytau90
 github.com/lestrrat-go/byteslice v0.0.0-20221006133306-54e5792539ff/go.mod h1:Kad4+yzV9rRszIkptSm5stvJ+IBRn8GJHQq+CMrnpow=
 github.com/lestrrat-go/option v1.0.0 h1:WqAWL8kh8VcSoD6xjSH34/1m8yxluXQbDeKNfvFeEO4=
 github.com/lestrrat-go/option v1.0.0/go.mod h1:5ZHFbivi4xwXxhxY9XHDe2FHo6/Z7WWmtT7T5nBBp3I=
-github.com/lestrrat-go/sketch v0.0.0-20221006134257-368518edb43a h1:HNW1VatKYYGGlR7u9Gcq+rMmL1cli414shCH54FaT3I=
-github.com/lestrrat-go/sketch v0.0.0-20221006134257-368518edb43a/go.mod h1:xhQ1f0Jp8vUXAK5/3c/FCj/u/vbWyaMrgOUERCdvYvE=
+github.com/lestrrat-go/sketch v0.0.0-20221006140356-788ec917cb05 h1:rJMqiixIuCN1hTK/RFlcmricq27oKqFpNIicO2/FLMA=
+github.com/lestrrat-go/sketch v0.0.0-20221006140356-788ec917cb05/go.mod h1:xhQ1f0Jp8vUXAK5/3c/FCj/u/vbWyaMrgOUERCdvYvE=
 github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b h1:3laG8JWIeDGb7lf00nMRznLdCHy0aZPd/CGz7Okn1SY=
 github.com/lestrrat-go/xstrings v0.0.0-20210804220435-4dd8b234342b/go.mod h1:mPFmD3Wuy0ddyPFvllLq4sUpGfE40T3VE8kWWS8fxGA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
