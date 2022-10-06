@@ -15,6 +15,7 @@ type Headers struct {
 
 func (Headers) Imports() []string {
 	return []string{
+		"github.com/lestrrat-go/jwx/v2/internal/json",
 		"github.com/lestrrat-go/jwx/v2/jwa",
 		"github.com/lestrrat-go/jwx/v2/jwk",
 	}
