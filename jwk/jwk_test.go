@@ -285,14 +285,10 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				if !assert.True(t, reflect.TypeOf(pair.Value).AssignableTo(expected), "key should be a %s", expected) {
-					return
-				}
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key(%d) should succeed`, i)
+				require.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected)
 			}
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
@@ -306,9 +302,9 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for iter := set.Keys(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key(%d) should succeed`, i)
 
 				switch key := key.(type) {
 				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
@@ -1509,17 +1505,14 @@ func TestTypedFields(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
 				got, err := jwk.Parse(serialized, tc.Options...)
 				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 					return
 				}
 
-				for iter := got.Keys(ctx); iter.Next(ctx); {
-					pair := iter.Pair()
-					key, _ := pair.Value.(jwk.Key)
+				for i := 0; i < got.Len(); i++ {
+					key, ok := got.Key(i)
+					require.True(t, ok, `got.Key(%d) should suceed`, i)
 					var v interface{}
 					if !assert.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`) {
 						return
@@ -1559,11 +1552,8 @@ func TestGH412(t *testing.T) {
 		idx := i
 		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
-			set, err := base.Clone()
-			if !assert.NoError(t, err, `base.Clone() should succeed`) {
-				return
-			}
-
+			var set jwk.Set
+			require.NoError(t, base.Clone(&set), `base.Clone() should succeed`)
 			if !assert.Equal(t, max, set.Len(), `set.Len should be %d`, max) {
 				return
 			}
@@ -1590,10 +1580,9 @@ func TestGH412(t *testing.T) {
 				expected[k] = struct{}{}
 			}
 
-			ctx := context.Background()
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key(%d) should succeed`, i)
 				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
 					return
 				}

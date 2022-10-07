@@ -14,16 +14,15 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:revive,golint
 func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
-	iter := src.Keys(ctx)
-	iter.Next(ctx)
-
-	key := iter.Pair().Value.(jwk.Key)
+	key, ok := src.Key(0)
+	require.True(t, ok, `src.Key(0) should succeed`)
 	var v interface{}
 	if !assert.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`) {
 		return false
@@ -98,8 +97,6 @@ func TestCache(t *testing.T) {
 			return
 		}
 
-		iter := set.Keys(ctx)
-		citer := cached.Keys(ctx)
 		for i := 0; i < numKeys; i++ {
 			k, err := set.Key(i)
 			ck, cerr := cached.Key(i)
@@ -107,14 +104,6 @@ func TestCache(t *testing.T) {
 				return
 			}
 			if !assert.Equal(t, err, cerr, `error %d should match`, i) {
-				return
-			}
-
-			if !assert.Equal(t, iter.Next(ctx), citer.Next(ctx), `iter.Next should match`) {
-				return
-			}
-
-			if !assert.Equal(t, iter.Pair(), citer.Pair(), `iter.Pair should match`) {
 				return
 			}
 		}
