@@ -7,6 +7,9 @@ import (
 	"fmt"
 )
 
+// TODO: tr to do away with this
+var RawURLEncoding = base64.RawURLEncoding
+
 func Encode(src []byte) []byte {
 	enc := base64.RawURLEncoding
 	dst := make([]byte, enc.EncodedLen(len(src)))

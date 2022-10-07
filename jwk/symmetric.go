@@ -20,9 +20,10 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	}
 
 	if k.octets == nil {
-		k.octets = byteslice.New()
+		k.octets = byteslice.New(rawKey)
+	} else {
+		k.octets.SetBytes(rawKey)
 	}
-	k.octets.SetBytes(rawKey)
 
 	return nil
 }

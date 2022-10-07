@@ -23,17 +23,22 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PublicKey:
+		xbuf := []byte(rawKey)
 		if k.x == nil {
-			k.x = byteslice.New()
+			k.x = byteslice.New(xbuf)
+		} else {
+			k.x.SetBytes(xbuf)
 		}
-		k.x.SetBytes([]byte(rawKey))
 		crv = jwa.Ed25519
 		k.crv = &crv
 	case x25519.PublicKey:
+		xbuf := []byte(rawKey)
 		if k.x == nil {
-			k.x = byteslice.New()
+			k.x = byteslice.New(xbuf)
+		} else {
+			k.x.SetBytes(xbuf)
 		}
-		k.x.SetBytes([]byte(rawKey))
+
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
@@ -50,27 +55,35 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PrivateKey:
+		dbuf := rawKey.Seed()
 		if k.d == nil {
-			k.d = byteslice.New()
+			k.d = byteslice.New(dbuf)
+		} else {
+			k.d.SetBytes(dbuf)
 		}
-		k.d.SetBytes(rawKey.Seed())
 
+		xbuf := []byte(rawKey.Public().(ed25519.PublicKey)) //nolint:forcetypeassert
 		if k.x == nil {
-			k.x = byteslice.New()
+			k.x = byteslice.New(xbuf)
+		} else {
+			k.x.SetBytes(xbuf)
 		}
-		k.x.SetBytes([]byte(rawKey.Public().(ed25519.PublicKey))) //nolint:forcetypeassert
 		crv = jwa.Ed25519
 		k.crv = &crv
 	case x25519.PrivateKey:
+		dbuf := rawKey.Seed()
 		if k.d == nil {
-			k.d = byteslice.New()
+			k.d = byteslice.New(dbuf)
+		} else {
+			k.d.SetBytes(dbuf)
 		}
-		k.d.SetBytes(rawKey.Seed())
 
+		xbuf := []byte(rawKey.Public().(x25519.PublicKey)) //nolint:forcetypeassert
 		if k.x == nil {
-			k.x = byteslice.New()
+			k.x = byteslice.New(xbuf)
+		} else {
+			k.x.SetBytes(xbuf)
 		}
-		k.x.SetBytes([]byte(rawKey.Public().(x25519.PublicKey))) //nolint:forcetypeassert
 		crv = jwa.X25519
 		k.crv = &crv
 	default:

@@ -14,12 +14,17 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
+
+func init() {
+	byteslice.SetGlobalB64Encoder(base64.RawURLEncoding)
+}
 
 var registry = json.NewRegistry()
 

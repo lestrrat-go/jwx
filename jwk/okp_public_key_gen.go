@@ -76,7 +76,7 @@ type okpPublicKey struct {
 	x509CertThumbprintS256 *string
 	x509URL                *string
 	crv                    *jwa.EllipticCurveAlgorithm
-	x                      *byteslice.Type
+	x                      *byteslice.Buffer
 	dc                     DecodeCtx
 	extra                  map[string]interface{}
 }
@@ -217,7 +217,7 @@ func (v *okpPublicKey) Set(key string, value interface{}) error {
 		}
 		v.crv = &object
 	case OKPXKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -704,7 +704,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, OKPXKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, OKPXKey, err)

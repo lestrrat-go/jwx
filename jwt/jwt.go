@@ -3,15 +3,21 @@ package jwt
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"sync/atomic"
 
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 )
+
+func init() {
+	byteslice.SetGlobalB64Encoder(base64.RawURLEncoding)
+}
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {

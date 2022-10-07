@@ -85,14 +85,14 @@ type rsaPrivateKey struct {
 	x509CertThumbprint     *string
 	x509CertThumbprintS256 *string
 	x509URL                *string
-	d                      *byteslice.Type
-	dp                     *byteslice.Type
-	dq                     *byteslice.Type
-	e                      *byteslice.Type
-	n                      *byteslice.Type
-	p                      *byteslice.Type
-	q                      *byteslice.Type
-	qi                     *byteslice.Type
+	d                      *byteslice.Buffer
+	dp                     *byteslice.Buffer
+	dq                     *byteslice.Buffer
+	e                      *byteslice.Buffer
+	n                      *byteslice.Buffer
+	p                      *byteslice.Buffer
+	q                      *byteslice.Buffer
+	qi                     *byteslice.Buffer
 	dc                     DecodeCtx
 	extra                  map[string]interface{}
 }
@@ -287,49 +287,49 @@ func (v *rsaPrivateKey) Set(key string, value interface{}) error {
 		}
 		v.x509URL = &converted
 	case RSADKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.d = &object
 	case RSADPKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.dp = &object
 	case RSADQKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.dq = &object
 	case RSAEKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.e = &object
 	case RSANKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.n = &object
 	case RSAPKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.p = &object
 	case RSAQKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.q = &object
 	case RSAQIKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -958,7 +958,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSADKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSADKey, err)
@@ -969,7 +969,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSADPKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSADPKey, err)
@@ -980,7 +980,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSADQKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSADQKey, err)
@@ -991,7 +991,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAEKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSAEKey, err)
@@ -1002,7 +1002,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSANKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSANKey, err)
@@ -1013,7 +1013,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAPKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSAPKey, err)
@@ -1024,7 +1024,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAQKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSAQKey, err)
@@ -1035,7 +1035,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAQIKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSAQIKey, err)

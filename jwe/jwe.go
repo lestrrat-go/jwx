@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
@@ -21,6 +22,10 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
+
+func init() {
+	byteslice.SetGlobalB64Encoder(base64.RawURLEncoding)
+}
 
 const (
 	fmtInvalid = iota

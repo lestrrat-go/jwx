@@ -37,6 +37,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/byteslice"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
@@ -659,6 +660,8 @@ var rawKeyToKeyType = make(map[reflect.Type]jwa.KeyType)
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
 
 func init() {
+	byteslice.SetGlobalB64Encoder(base64.RawURLEncoding)
+
 	rawKeyToKeyType[reflect.TypeOf([]byte(nil))] = jwa.OctetSeq
 	rawKeyToKeyType[reflect.TypeOf(ed25519.PublicKey(nil))] = jwa.OKP
 	rawKeyToKeyType[reflect.TypeOf(rsa.PublicKey{})] = jwa.RSA

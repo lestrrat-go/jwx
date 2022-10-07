@@ -37,9 +37,9 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	defer ecutil.ReleaseECPointBuffer(xbuf)
 	defer ecutil.ReleaseECPointBuffer(ybuf)
 
-	k.x = &byteslice.Type{}
+	k.x = &byteslice.Buffer{}
 	k.x.SetBytes(xbuf)
-	k.y = &byteslice.Type{}
+	k.y = &byteslice.Buffer{}
 	k.y.SetBytes(ybuf)
 
 	var crv jwa.EllipticCurveAlgorithm
@@ -74,12 +74,9 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	defer ecutil.ReleaseECPointBuffer(ybuf)
 	defer ecutil.ReleaseECPointBuffer(dbuf)
 
-	k.x = &byteslice.Type{}
-	k.x.SetBytes(xbuf)
-	k.y = &byteslice.Type{}
-	k.y.SetBytes(ybuf)
-	k.d = &byteslice.Type{}
-	k.d.SetBytes(dbuf)
+	k.x = byteslice.New(xbuf)
+	k.y = byteslice.New(ybuf)
+	k.d = byteslice.New(dbuf)
 
 	var crv jwa.EllipticCurveAlgorithm
 	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {

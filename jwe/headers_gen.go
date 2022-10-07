@@ -57,8 +57,8 @@ func (v *stdHeaders) decodeExtraField(name string, dec *json.Decoder, dst interf
 
 type stdHeaders struct {
 	mu                     sync.RWMutex
-	agreementPartyUInfo    *byteslice.Type
-	agreementPartyVInfo    *byteslice.Type
+	agreementPartyUInfo    *byteslice.Buffer
+	agreementPartyVInfo    *byteslice.Buffer
 	algorithm              *jwa.KeyEncryptionAlgorithm
 	compression            *jwa.CompressionAlgorithm
 	contentType            *string
@@ -202,13 +202,13 @@ func (v *stdHeaders) Set(key string, value interface{}) error {
 	defer v.mu.Unlock()
 	switch key {
 	case AgreementPartyUInfoKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.agreementPartyUInfo = &object
 	case AgreementPartyVInfoKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -834,7 +834,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AgreementPartyUInfoKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, AgreementPartyUInfoKey, err)
@@ -845,7 +845,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, AgreementPartyVInfoKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, AgreementPartyVInfoKey, err)

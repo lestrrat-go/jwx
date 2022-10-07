@@ -79,9 +79,9 @@ type ecdsaPrivateKey struct {
 	x509CertThumbprintS256 *string
 	x509URL                *string
 	crv                    *jwa.EllipticCurveAlgorithm
-	d                      *byteslice.Type
-	x                      *byteslice.Type
-	y                      *byteslice.Type
+	d                      *byteslice.Buffer
+	x                      *byteslice.Buffer
+	y                      *byteslice.Buffer
 	dc                     DecodeCtx
 	extra                  map[string]interface{}
 }
@@ -247,19 +247,19 @@ func (v *ecdsaPrivateKey) Set(key string, value interface{}) error {
 		}
 		v.crv = &object
 	case ECDSADKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.d = &object
 	case ECDSAXKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.x = &object
 	case ECDSAYKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -796,7 +796,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSADKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSADKey, err)
@@ -807,7 +807,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSAXKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSAXKey, err)
@@ -818,7 +818,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, ECDSAYKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, ECDSAYKey, err)

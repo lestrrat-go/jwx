@@ -25,9 +25,10 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	if k.d == nil {
-		k.d = byteslice.New()
+		k.d = byteslice.New(d)
+	} else {
+		k.d.SetBytes(d)
 	}
-	k.d.SetBytes(d)
 
 	l := len(rawKey.Primes)
 
@@ -41,9 +42,10 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 		}
 		if k.p == nil {
-			k.p = byteslice.New()
+			k.p = byteslice.New(p)
+		} else {
+			k.p.SetBytes(p)
 		}
-		k.p.SetBytes(p)
 	}
 
 	if l > 1 {
@@ -52,29 +54,33 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 			return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 		}
 		if k.q == nil {
-			k.q = byteslice.New()
+			k.q = byteslice.New(q)
+		} else {
+			k.q.SetBytes(q)
 		}
-		k.q.SetBytes(q)
 	}
 
 	// dp, dq, qi are optional values
 	if v, err := bigIntToBytes(rawKey.Precomputed.Dp); err == nil {
 		if k.dp == nil {
-			k.dp = byteslice.New()
+			k.dp = byteslice.New(v)
+		} else {
+			k.dp.SetBytes(v)
 		}
-		k.dp.SetBytes(v)
 	}
 	if v, err := bigIntToBytes(rawKey.Precomputed.Dq); err == nil {
 		if k.dq == nil {
-			k.dq = byteslice.New()
+			k.dq = byteslice.New(v)
+		} else {
+			k.dq.SetBytes(v)
 		}
-		k.dq.SetBytes(v)
 	}
 	if v, err := bigIntToBytes(rawKey.Precomputed.Qinv); err == nil {
 		if k.qi == nil {
-			k.qi = byteslice.New()
+			k.qi = byteslice.New(v)
+		} else {
+			k.qi.SetBytes(v)
 		}
-		k.qi.SetBytes(v)
 	}
 
 	// public key part
@@ -83,14 +89,16 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	if k.n == nil {
-		k.n = byteslice.New()
+		k.n = byteslice.New(n)
+	} else {
+		k.n.SetBytes(n)
 	}
-	k.n.SetBytes(n)
 
 	if k.e == nil {
-		k.e = byteslice.New()
+		k.e = byteslice.New(e)
+	} else {
+		k.e.SetBytes(e)
 	}
-	k.e.SetBytes(e)
 
 	return nil
 }
@@ -121,14 +129,16 @@ func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
 	if k.n == nil {
-		k.n = byteslice.New()
+		k.n = byteslice.New(n)
+	} else {
+		k.n.SetBytes(n)
 	}
-	k.n.SetBytes(n)
 
 	if k.e == nil {
-		k.e = byteslice.New()
+		k.e = byteslice.New(e)
+	} else {
+		k.e.SetBytes(e)
 	}
-	k.e.SetBytes(e)
 
 	return nil
 }

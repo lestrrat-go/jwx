@@ -74,7 +74,7 @@ type symmetricKey struct {
 	x509CertThumbprint     *string
 	x509CertThumbprintS256 *string
 	x509URL                *string
-	octets                 *byteslice.Type
+	octets                 *byteslice.Buffer
 	dc                     DecodeCtx
 	extra                  map[string]interface{}
 }
@@ -213,7 +213,7 @@ func (v *symmetricKey) Set(key string, value interface{}) error {
 		}
 		v.x509URL = &converted
 	case SymmetricOctetsKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -664,7 +664,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, SymmetricOctetsKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, SymmetricOctetsKey, err)

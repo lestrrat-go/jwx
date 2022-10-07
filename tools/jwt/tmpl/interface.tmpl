@@ -1,5 +1,6 @@
 {{ define "files/per-run/interface.go" }}
 package {{ .Package }}
+
 // Token represents a generic JWT token.
 // which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`
 // methods but their types are not taken into consideration at all. If you have non-standard

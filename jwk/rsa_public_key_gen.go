@@ -76,8 +76,8 @@ type rsaPublicKey struct {
 	x509CertThumbprint     *string
 	x509CertThumbprintS256 *string
 	x509URL                *string
-	e                      *byteslice.Type
-	n                      *byteslice.Type
+	e                      *byteslice.Buffer
+	n                      *byteslice.Buffer
 	dc                     DecodeCtx
 	extra                  map[string]interface{}
 }
@@ -215,13 +215,13 @@ func (v *rsaPublicKey) Set(key string, value interface{}) error {
 		}
 		v.x509URL = &converted
 	case RSAEKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
 		v.e = &object
 	case RSANKey:
-		var object byteslice.Type
+		var object byteslice.Buffer
 		if err := object.AcceptValue(value); err != nil {
 			return fmt.Errorf(`failed to accept value: %w`, err)
 		}
@@ -697,7 +697,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSAEKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSAEKey, err)
@@ -708,7 +708,7 @@ LOOP:
 				if err := dec.Decode(&acceptValue); err != nil {
 					return fmt.Errorf(`failed to decode vlaue for %q: %w`, RSANKey, err)
 				}
-				var val byteslice.Type
+				var val byteslice.Buffer
 				err = val.AcceptValue(acceptValue)
 				if err != nil {
 					return fmt.Errorf(`failed to accept value for %q: %w`, RSANKey, err)
