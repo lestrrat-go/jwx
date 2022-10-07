@@ -82,10 +82,12 @@ func ExampleJWE_ComplexDecrypt() {
 	// I would personally recommend creating a real type for your specific needs
 	// instead of passing adhoc closures. YMMV.
 	kp := func(ctx context.Context, sink jwe.KeySink, _ jwe.Recipient, msg *jwe.Message) error {
-		rawhint, _ := msg.ProtectedHeaders().Get(`jwx-hints`)
-		//nolint:forcetypeassert
-		hint, ok := rawhint.(string)
-		if ok && hint == `foobar` {
+		var hint string
+		if err := msg.ProtectedHeaders().Get(`jwx-hints`, &hint); err != nil {
+			return fmt.Errorf(`could not find "jwx-hints" field`)
+		}
+
+		if hint == `foobar` {
 			// This is where we are setting the key to be used.
 			//
 			// In real life you would look up the key or something.
@@ -99,7 +101,7 @@ func ExampleJWE_ComplexDecrypt() {
 		}
 
 		// If there were errors, just return it, and the whole jwe.Decrypt will fail.
-		return fmt.Errorf(`invalid value for jwx-hints: %s`, rawhint)
+		return fmt.Errorf(`invalid value for jwx-hints: %s`, hint)
 	}
 
 	// Calling jwe.Decrypt with the extra argument of jwe.WithPostParser().

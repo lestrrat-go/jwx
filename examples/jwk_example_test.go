@@ -30,9 +30,12 @@ func ExampleJWK_Usage() {
 		log.Printf("%s", jsonbuf)
 	}
 
-	for it := set.Iterate(context.Background()); it.Next(context.Background()); {
-		pair := it.Pair()
-		key := pair.Value.(jwk.Key)
+	for i := 0; i < set.Len(); i++ {
+		key, ok := set.Key(i)
+		if !ok {
+			log.Printf("failed to retrieve key %d", i)
+			return
+		}
 
 		var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
 		if err := key.Raw(&rawkey); err != nil {

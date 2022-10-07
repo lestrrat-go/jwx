@@ -117,6 +117,7 @@ func ExampleJWT_Sign_WithImportJWK() {
 	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
 	t.Set(jwt.IssuedAtKey, time.Unix(500, 0))
+	t.Set(`privateClaimKey`, `foobar`)
 
 	buf, err := json.MarshalIndent(t, "", "  ")
 	if err != nil {
@@ -126,8 +127,9 @@ func ExampleJWT_Sign_WithImportJWK() {
 
 	fmt.Printf("%s\n", buf)
 
-	if v, ok := t.Get(`privateClaimKey`); ok {
-		fmt.Printf("privateClaimKey -> '%s'\n", v)
+	var pc string
+	if err := t.Get(`privateClaimKey`, &pc); err == nil {
+		fmt.Printf("privateClaimKey -> '%s'\n", pc)
 	}
 
 	//convert jwk in bytes and return a new key
@@ -205,8 +207,9 @@ func ExampleJWT_Token() {
 	fmt.Printf("%s\n", buf)
 	fmt.Printf("aud -> '%s'\n", t.Audience())
 	fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
-	if v, ok := t.Get(`privateClaimKey`); ok {
-		fmt.Printf("privateClaimKey -> '%s'\n", v)
+	var pc string
+	if err := t.Get(`privateClaimKey`, &pc); err == nil {
+		fmt.Printf("privateClaimKey -> '%s'\n", pc)
 	}
 	fmt.Printf("sub -> '%s'\n", t.Subject())
 
