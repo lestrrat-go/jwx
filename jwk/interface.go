@@ -169,8 +169,8 @@ type Key interface {
 	// the object
 	Has(string) bool
 
-	// Keys returns the list of JSON field names stored in the object.
-	Keys() []string
+	// FieldNames returns the list of JSON field names stored in the object.
+	FieldNames() []string
 
 	// Set sets the value of a single field. Note that certain fields,
 	// notably "kty", cannot be altered, but will not return an error

@@ -248,13 +248,13 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		var cloned jwk.Key
 		require.NoError(t, key.Clone(&cloned), `key.Clone should succeed`)
 
-		for _, k := range key.Keys() {
+		for _, k := range key.FieldNames() {
 			var val interface{}
 			require.NoError(t, key.Get(k, &val), `key.Get should succed`)
 			require.NoError(t, cloned.Remove(k), `key.Remove should succeed`)
 		}
 
-		if !assert.Len(t, cloned.Keys(), 1, `keys should have 1 key (kty remains)`) {
+		if !assert.Len(t, cloned.FieldNames(), 1, `keys should have 1 key (kty remains)`) {
 			return
 		}
 	})

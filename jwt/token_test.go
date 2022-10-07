@@ -240,10 +240,10 @@ func TestToken(t *testing.T) {
 			return
 		}
 
-		for _, k := range tok.Keys() {
+		for _, k := range tok.FieldNames() {
 			newtok.Remove(k)
 		}
 
-		require.Len(t, newtok.Keys(), 0, `newtok should have 0 fields`)
+		require.Len(t, newtok.FieldNames(), 0, `newtok should have 0 fields`)
 	})
 }

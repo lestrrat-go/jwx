@@ -125,7 +125,7 @@ func TestHeaders(t *testing.T) {
 
 	t.Run("Set/Get", func(t *testing.T) {
 		h := jwe.NewHeaders()
-		for _, key := range base.Keys() {
+		for _, key := range base.FieldNames() {
 			var val interface{}
 			require.NoError(t, base.Get(key, &val), `h.Get should be successful`)
 			require.NoError(t, h.Set(key, val), `h.Set should be successful`)
@@ -193,7 +193,7 @@ func TestHeaders(t *testing.T) {
 		v := base
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for _, key := range v.Keys() {
+			for _, key := range v.FieldNames() {
 				var val interface{}
 				require.NoError(t, v.Get(key, &val), `v.Get should succeed`)
 				seen[key] = val
@@ -204,11 +204,11 @@ func TestHeaders(t *testing.T) {
 		})
 		t.Run("Remove", func(t *testing.T) {
 			h := base
-			for _, key := range h.Keys() {
+			for _, key := range h.FieldNames() {
 				h.Remove(key)
 			}
 
-			if !assert.Len(t, h.Keys(), 0, `len should be zero`) {
+			if !assert.Len(t, h.FieldNames(), 0, `len should be zero`) {
 				return
 			}
 		})

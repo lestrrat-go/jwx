@@ -182,7 +182,7 @@ type Headers interface {
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
 	X509URL() string
-	Keys() []string
+	FieldNames() []string
 	Get(string, interface{}) error
 	Set(string, interface{}) error
 	Has(string) bool

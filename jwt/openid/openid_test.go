@@ -494,7 +494,7 @@ func TestOpenIDClaims(t *testing.T) {
 	t.Run("Keys", func(t *testing.T) {
 		v := tokens[0].Token
 		seen := make(map[string]interface{})
-		for _, key := range v.Keys() {
+		for _, key := range v.FieldNames() {
 			var val interface{}
 			require.NoError(t, v.Get(key, &val), `v.Get for %q should succeed`, key)
 			seen[key] = val

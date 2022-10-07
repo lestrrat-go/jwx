@@ -153,14 +153,11 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, privk)
 }
 
-func makeOKPPublicKey(v interface {
-	Get(string, interface{}) error
-	Keys() []string
-}) (Key, error) {
+func makeOKPPublicKey(v iteratable) (Key, error) {
 	newKey := newOKPPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, key := range v.Keys() {
+	for _, key := range v.FieldNames() {
 		switch key {
 		case OKPDKey:
 			continue

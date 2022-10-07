@@ -135,14 +135,11 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeECDSAPublicKey(v interface {
-	Get(string, interface{}) error
-	Keys() []string
-}) (Key, error) {
+func makeECDSAPublicKey(v iteratable) (Key, error) {
 	newKey := newECDSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, key := range v.Keys() {
+	for _, key := range v.FieldNames() {
 		switch key {
 		case ECDSADKey:
 			continue

@@ -25,7 +25,7 @@ type Headers interface {
 	Clone(interface{}) error
 	Get(string, interface{}) error
 	Has(string) bool
-	Keys() []string
+	FieldNames() []string
 	Set(string, interface{}) error
 	Remove(string) error
 	Merge(Headers) (Headers, error)

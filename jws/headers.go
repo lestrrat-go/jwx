@@ -21,7 +21,7 @@ func (v *stdHeaders) UnmarshalJSON(data []byte) error {
 // name are present. In such cases the old value stored in `dst` is
 // overwritten.
 func (v *stdHeaders) Copy(dst Headers) error {
-	for _, key := range v.Keys() {
+	for _, key := range v.FieldNames() {
 		var val interface{}
 		if err := v.Get(key, &val); err != nil {
 			return fmt.Errorf(`failed to get header %q during copy: %w`, key, err)

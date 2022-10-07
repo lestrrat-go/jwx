@@ -26,6 +26,11 @@ func init() {
 	byteslice.SetGlobalB64Encoder(base64.RawURLEncoding)
 }
 
+type iteratable interface {
+	Get(string, interface{}) error
+	FieldNames() []string
+}
+
 var registry = json.NewRegistry()
 
 func bigIntToBytes(n *big.Int) ([]byte, error) {

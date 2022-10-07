@@ -217,14 +217,11 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeRSAPublicKey(v interface {
-	Keys() []string
-	Get(string, interface{}) error
-}) (Key, error) {
+func makeRSAPublicKey(v iteratable) (Key, error) {
 	newKey := newRSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, key := range v.Keys() {
+	for _, key := range v.FieldNames() {
 		switch key {
 		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
 			continue

@@ -426,7 +426,7 @@ func TestJWTParseVerify(t *testing.T) {
 			}
 
 			dummyHeader := jws.NewHeaders()
-			for _, key := range hdrs.Keys() {
+			for _, key := range hdrs.FieldNames() {
 				var val interface{}
 				require.NoError(t, hdrs.Get(key, &val), `hdrs.Get should succeed`)
 				require.NoError(t, dummyHeader.Set(key, val), `dummyHeader.Set should succeed`)

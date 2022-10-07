@@ -56,7 +56,7 @@ func TestIterator(t *testing.T) {
 		t.Helper()
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for _, key := range v.Keys() {
+			for _, key := range v.FieldNames() {
 				var val interface{}
 				require.NoError(t, v.Get(key, &val), `v.Get should succeed`)
 				seen[key] = val

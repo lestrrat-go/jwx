@@ -353,9 +353,9 @@ func (v *stdHeaders) Has(name string) bool {
 	}
 }
 
-// Keys returns a slice of string comprising of JSON field names whose values
+// FieldNames returns a slice of string comprising of JSON field names whose values
 // are present in the object.
-func (v *stdHeaders) Keys() []string {
+func (v *stdHeaders) FieldNames() []string {
 	keys := make([]string, 0, 18)
 	if v.agreementPartyUInfo != nil {
 		keys = append(keys, AgreementPartyUInfoKey)
@@ -761,7 +761,7 @@ func (v *stdHeaders) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	buf.WriteByte('{')
-	for i, k := range v.Keys() {
+	for i, k := range v.FieldNames() {
 		var val interface{}
 		if err := v.getNoLock(k, &val, true); err != nil {
 			return nil, fmt.Errorf(`failed to retrieve value for field %q: %w`, k, err)

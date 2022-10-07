@@ -149,7 +149,7 @@ func TestHeader(t *testing.T) {
 		v := base
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for _, key := range v.Keys() {
+			for _, key := range v.FieldNames() {
 				var val interface{}
 				require.NoError(t, v.Get(key, &val), `v.Get should succeed`)
 				seen[key] = val
@@ -160,11 +160,11 @@ func TestHeader(t *testing.T) {
 		})
 		t.Run("Remove", func(t *testing.T) {
 			h := base
-			for _, key := range h.Keys() {
+			for _, key := range h.FieldNames() {
 				h.Remove(key)
 			}
 
-			keys := h.Keys()
+			keys := h.FieldNames()
 			if !assert.Len(t, keys, 0, `len should be zero`) {
 				return
 			}

@@ -80,7 +80,7 @@ type Token interface {
 	// be a pointer to a variable that can hold the resulting type
 	Clone(interface{}) error
 
-	// Keys returns the list of all keys in the token
-	Keys() []string
+	// FieldNames returns the list of all keys in the token
+	FieldNames() []string
 }
 {{ end }}
