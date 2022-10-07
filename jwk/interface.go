@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"context"
 	"crypto"
 	"sync"
 
@@ -80,6 +79,10 @@ type Set interface {
 	// specify, and there is no way of knowing what type they could be.
 	Set(string, interface{}) error
 
+	// FieldNames returns the list of all non-key fields that exist in
+	// this set.
+	FieldNames() []string
+
 	// RemoveKey removes the specified non-key field from the set.
 	// Keys may not be removed using this method.
 	Remove(string) error
@@ -99,21 +102,15 @@ type Set interface {
 	// RemoveKey removes the key from the set.
 	RemoveKey(Key) error
 
-	// Keys creates an iterator to iterate through all keys in the set.
-	Keys(context.Context) KeyIterator
-
-	// Iterate creates an iterator to iterate through all fields other than the keys
-	Iterate(context.Context) HeaderIterator
-
 	// Clone create a new set with identical keys. Keys themselves are not cloned.
-	Clone() (Set, error)
+	Clone(interface{}) error
 }
 
 type set struct {
-	keys          []Key
-	mu            sync.RWMutex
-	dc            dcForSet
-	privateParams map[string]interface{}
+	keys  []Key
+	mu    sync.RWMutex
+	dc    dcForSet
+	extra map[string]interface{}
 }
 
 type HeaderVisitor = iter.MapVisitor

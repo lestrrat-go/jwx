@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
@@ -18,7 +17,7 @@ const keysKey = `keys` // appease linter
 // NewSet creates and empty `jwk.Set` object
 func NewSet() Set {
 	return &set{
-		privateParams: make(map[string]interface{}),
+		extra: make(map[string]interface{}),
 	}
 }
 
@@ -35,7 +34,7 @@ func (s *set) Set(n string, v interface{}) error {
 		return nil
 	}
 
-	s.privateParams[n] = v
+	s.extra[n] = v
 	return nil
 }
 
@@ -43,7 +42,7 @@ func (s *set) Get(n string, dst interface{}) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	v, ok := s.privateParams[n]
+	v, ok := s.extra[n]
 	if ok {
 		return blackmagic.AssignIfCompatible(dst, v)
 	}
@@ -99,7 +98,7 @@ func (s *set) Remove(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.privateParams, name)
+	delete(s.extra, name)
 	return nil
 }
 
@@ -128,27 +127,19 @@ func (s *set) Clear() error {
 	defer s.mu.Unlock()
 
 	s.keys = nil
-	s.privateParams = make(map[string]interface{})
+	s.extra = make(map[string]interface{})
 	return nil
 }
 
-func (s *set) Keys(ctx context.Context) KeyIterator {
-	ch := make(chan *KeyPair, s.Len())
-	go iterate(ctx, s.keys, ch)
-	return arrayiter.New(ch)
-}
+func (s *set) FieldNames() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
-	defer close(ch)
-
-	for i, key := range keys {
-		pair := &KeyPair{Index: i, Value: key}
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
+	keys := make([]string, 0, len(s.extra))
+	for key := range s.extra {
+		keys = append(keys, key)
 	}
+	return keys
 }
 
 func (s *set) MarshalJSON() ([]byte, error) {
@@ -160,7 +151,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	enc := json.NewEncoder(buf)
 
 	fields := []string{keysKey}
-	for k := range s.privateParams {
+	for k := range s.extra {
 		fields = append(fields, k)
 	}
 	sort.Strings(fields)
@@ -172,7 +163,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(buf, `%q:`, field)
 		if field != keysKey {
-			if err := enc.Encode(s.privateParams[field]); err != nil {
+			if err := enc.Encode(s.extra[field]); err != nil {
 				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
@@ -199,7 +190,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.privateParams = make(map[string]interface{})
+	s.extra = make(map[string]interface{})
 	s.keys = nil
 
 	var options []ParseOption
@@ -253,7 +244,7 @@ LOOP:
 				if err := dec.Decode(&v); err != nil {
 					return fmt.Errorf(`failed to decode value for key %q: %w`, tok, err)
 				}
-				s.privateParams[tok] = v
+				s.extra[tok] = v
 			}
 		}
 	}
@@ -309,20 +300,26 @@ func (s *set) SetDecodeCtx(dc DecodeCtx) {
 	}
 }
 
-func (s *set) Clone() (Set, error) {
-	s2 := &set{}
-
+func (s *set) Clone(dst interface{}) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	s2 := &set{}
 	s2.keys = make([]Key, len(s.keys))
 	copy(s2.keys, s.keys)
-	return s2, nil
+
+	if len(s.extra) > 0 {
+		s2.extra = make(map[string]interface{})
+		for k, v := range s.extra {
+			s2.extra[k] = v
+		}
+	}
+	return blackmagic.AssignIfCompatible(dst, s2)
 }
 
 func (s *set) makePairs() []*HeaderPair {
-	pairs := make([]*HeaderPair, 0, len(s.privateParams))
-	for k, v := range s.privateParams {
+	pairs := make([]*HeaderPair, 0, len(s.extra))
+	for k, v := range s.extra {
 		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
 	}
 	sort.Slice(pairs, func(i, j int) bool {

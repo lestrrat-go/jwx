@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc"
-	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/iter/mapiter"
 )
 
 type Transformer = httprc.Transformer
@@ -332,13 +330,13 @@ func (*CachedSet) RemoveKey(_ Key) error {
 	return fmt.Errorf(`(jwk.CachedSet).RemoveKey: jwk.CachedSet is immutable`)
 }
 
-func (cs *CachedSet) Clone() (Set, error) {
+func (cs *CachedSet) Clone(dst interface{}) error {
 	set, err := cs.cached()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to get cached jwk.Set: %w`, err)
+		return fmt.Errorf(`failed to get cached jwk.Set: %w`, err)
 	}
 
-	return set.Clone()
+	return set.Clone(dst)
 }
 
 // Get returns the value of non-Key field stored in the jwk.Set
@@ -370,22 +368,12 @@ func (cs *CachedSet) Index(key Key) int {
 	return set.Index(key)
 }
 
-func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
+func (cs *CachedSet) FieldNames() []string {
 	set, err := cs.cached()
 	if err != nil {
-		return arrayiter.New(nil)
+		return nil
 	}
-
-	return set.Keys(ctx)
-}
-
-func (cs *CachedSet) Iterate(ctx context.Context) HeaderIterator {
-	set, err := cs.cached()
-	if err != nil {
-		return mapiter.New(nil)
-	}
-
-	return set.Iterate(ctx)
+	return set.FieldNames()
 }
 
 func (cs *CachedSet) Len() int {
