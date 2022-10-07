@@ -7,7 +7,8 @@ import (
 	"fmt"
 )
 
-// TODO: tr to do away with this
+// RawURLEncoding is TODO: tr to do away with this, and this comment
+// looks like this because the linter is really annoying
 var RawURLEncoding = base64.RawURLEncoding
 
 func Encode(src []byte) []byte {
