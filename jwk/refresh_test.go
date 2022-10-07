@@ -18,7 +18,7 @@ import (
 )
 
 //nolint:revive,golint
-func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected ...int) bool {
+func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
 	key, ok := src.Key(0)
@@ -149,7 +149,7 @@ func TestCache(t *testing.T) {
 				if !assert.NoError(t, err, `af.Get should succeed`) {
 					return
 				}
-				if !checkAccessCount(t, ctx, ks, 1) {
+				if !checkAccessCount(t, ks, 1) {
 					return
 				}
 			}()
@@ -163,7 +163,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 2) {
+		if !checkAccessCount(t, ks, 2) {
 			return
 		}
 	})
@@ -213,7 +213,7 @@ func TestCache(t *testing.T) {
 					return
 				}
 
-				if !checkAccessCount(t, ctx, ks, 1) {
+				if !checkAccessCount(t, ks, 1) {
 					return
 				}
 			}()
@@ -227,7 +227,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 2) {
+		if !checkAccessCount(t, ks, 2) {
 			return
 		}
 	})
@@ -267,7 +267,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get (#1) should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 1) {
+		if !checkAccessCount(t, ks, 1) {
 			return
 		}
 
@@ -278,7 +278,7 @@ func TestCache(t *testing.T) {
 			return
 		}
 		// Should be using the cached version
-		if !checkAccessCount(t, ctx, ks, 1) {
+		if !checkAccessCount(t, ks, 1) {
 			return
 		}
 
@@ -290,7 +290,7 @@ func TestCache(t *testing.T) {
 			return
 		}
 		// should be new
-		if !checkAccessCount(t, ctx, ks, 4, 5) {
+		if !checkAccessCount(t, ks, 4, 5) {
 			return
 		}
 	})

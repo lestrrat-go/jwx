@@ -1512,7 +1512,7 @@ func TestTypedFields(t *testing.T) {
 
 				for i := 0; i < got.Len(); i++ {
 					key, ok := got.Key(i)
-					require.True(t, ok, `got.Key(%d) should suceed`, i)
+					require.True(t, ok, `got.Key(%d) should succeed`, i)
 					var v interface{}
 					if !assert.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`) {
 						return
