@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:revive,golint
 func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
