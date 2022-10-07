@@ -8,7 +8,6 @@ require (
 	github.com/lestrrat-go/blackmagic v1.0.2-0.20220926062815-509018abad40
 	github.com/lestrrat-go/byteslice v0.0.0-20221007013458-55ef0707fc94
 	github.com/lestrrat-go/httprc v1.0.4
-	github.com/lestrrat-go/iter v1.0.2
 	github.com/lestrrat-go/option v1.0.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f

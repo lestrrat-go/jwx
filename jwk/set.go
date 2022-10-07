@@ -2,12 +2,10 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
@@ -315,32 +313,4 @@ func (s *set) Clone(dst interface{}) error {
 		}
 	}
 	return blackmagic.AssignIfCompatible(dst, s2)
-}
-
-func (s *set) makePairs() []*HeaderPair {
-	pairs := make([]*HeaderPair, 0, len(s.extra))
-	for k, v := range s.extra {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		//nolint:forcetypeassert
-		return pairs[i].Key.(string) < pairs[j].Key.(string)
-	})
-	return pairs
-}
-
-func (s *set) Iterate(ctx context.Context) HeaderIterator {
-	pairs := s.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
 }

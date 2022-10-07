@@ -4,10 +4,7 @@ import (
 	"crypto"
 	"sync"
 
-	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v2/cert"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 )
@@ -112,13 +109,6 @@ type set struct {
 	dc    dcForSet
 	extra map[string]interface{}
 }
-
-type HeaderVisitor = iter.MapVisitor
-type HeaderVisitorFunc = iter.MapVisitorFunc
-type HeaderPair = mapiter.Pair
-type HeaderIterator = mapiter.Iterator
-type KeyPair = arrayiter.Pair
-type KeyIterator = arrayiter.Iterator
 
 type PublicKeyer interface {
 	// PublicKey creates the corresponding PublicKey type for this object.
