@@ -72,7 +72,7 @@ type Whitelist = httprc.Whitelist
 // fresh without extra intervention from the developer.
 //
 // Notice that for these recommended use-cases the requirement to check
-// the validity or the availability of the JWKS objects are non-existant,
+// the validity or the availability of the JWKS objects are non-existent,
 // as it is expected that they will be available and will be valid. The
 // caching mechanism can hide intermittent connectivity problems as well
 // as keep the objects mostly fresh.
