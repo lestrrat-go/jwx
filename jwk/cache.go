@@ -34,6 +34,10 @@ type Whitelist = httprc.Whitelist
 //
 // Once registered, you can call `Get()` to retrieve the Set object.
 //
+// All JWKS objects that are retrieved via this mechanism should be
+// treated read-only, as they are shared among all consumers, as well
+// as the `jwk.Cache` object.
+//
 // There are cases where `jwk.Cache` and `jwk.CachedSet` should and
 // should not be used.
 //
