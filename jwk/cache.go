@@ -166,6 +166,16 @@ func NewCache(ctx context.Context, options ...CacheOption) *Cache {
 //
 // Please refer to the documentation for `(httprc.Cache).Register` for more
 // details.
+//
+// Register does not check for the validity of the url being registered.
+// If you need to make sure that a url is valid before entering your main
+// loop, call `Refresh` once to make sure the JWKS is available.
+//
+//	_ = cache.Register(url)
+//	if _, err := cache.Refresh(ctx, url); err != nil {
+//	  // url is not a valid JWKS
+//	  panic(err)
+//	}
 func (c *Cache) Register(u string, options ...RegisterOption) error {
 	var hrropts []httprc.RegisterOption
 	var pf PostFetcher
