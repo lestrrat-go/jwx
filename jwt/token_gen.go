@@ -108,11 +108,10 @@ type stdToken struct {
 // possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf" and "sub".
 // Convenience accessors are provided for these standard claims
 func New() Token {
-	optionsVal := defaultOptions.Value()
 	return &stdToken{
 		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
-		options:       TokenOptionSet(optionsVal),
+		options:       DefaultOptionSet(),
 	}
 }
 

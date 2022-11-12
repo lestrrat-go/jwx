@@ -148,8 +148,8 @@ type Token interface {
 	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
-	Options() *TokenOptionSet
-	SetOptions(TokenOptionSet)
+	Options() *jwt.TokenOptionSet
+	SetOptions(jwt.TokenOptionSet)
 	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
 	Walk(context.Context, Visitor) error
@@ -157,8 +157,8 @@ type Token interface {
 }
 type stdToken struct {
 	mu                  *sync.RWMutex
-	dc                  DecodeCtx      // per-object context for decoding
-	options             TokenOptionSet // per-object option
+	dc                  DecodeCtx          // per-object context for decoding
+	options             jwt.TokenOptionSet // per-object option
 	address             *AddressClaim
 	audience            types.StringList // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	birthdate           *BirthdateClaim
@@ -192,19 +192,18 @@ type stdToken struct {
 // possible claims. Standard claims include"address", "aud", "birthdate", "email", "email_verified", "exp", "family_name", "gender", "given_name", "iat", "iss", "jti", "locale", "middle_name", "name", "nickname", "nbf", "phone_number", "phone_number_verified", "picture", "preferred_username", "profile", "sub", "updated_at", "website" and "zoneinfo".
 // Convenience accessors are provided for these standard claims
 func New() Token {
-	optionsVal := defaultOptions.Value()
 	return &stdToken{
 		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
-		options:       TokenOptionSet(optionsVal),
+		options:       jwt.DefaultOptionSet(),
 	}
 }
 
-func (t *stdToken) Options() *TokenOptionSet {
+func (t *stdToken) Options() *jwt.TokenOptionSet {
 	return &t.options
 }
 
-func (t *stdToken) SetOptions(set TokenOptionSet) {
+func (t *stdToken) SetOptions(set jwt.TokenOptionSet) {
 	t.options = set
 }
 
@@ -1188,7 +1187,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteString(`":`)
 		switch f {
 		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(FlattenAudience)); err != nil {
+			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
 				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 			}
 			continue

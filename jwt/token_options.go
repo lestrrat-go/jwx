@@ -23,6 +23,10 @@ func (o TokenOptionSet) Value() uint64 {
 	return uint64(o)
 }
 
+func DefaultOptionSet() TokenOptionSet {
+	return TokenOptionSet(defaultOptions.Value())
+}
+
 func (o *TokenOptionSet) Enable(flag TokenOption) {
 	*o = TokenOptionSet(o.Value() | uint64(flag))
 }
