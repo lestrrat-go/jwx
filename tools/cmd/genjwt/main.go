@@ -155,6 +155,9 @@ func generateToken(obj *codegen.Object) error {
 	o.L("// for the types of each of these fields")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
+
+	o.L("Options() *TokenOptionSet")
+	o.L("SetOptions(TokenOptionSet)")
 	if obj.String(`package`) != "jwt" {
 		o.L("Clone() (jwt.Token, error)")
 	} else {

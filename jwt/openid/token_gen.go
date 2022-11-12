@@ -148,6 +148,8 @@ type Token interface {
 	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
+	Options() *TokenOptionSet
+	SetOptions(TokenOptionSet)
 	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
 	Walk(context.Context, Visitor) error

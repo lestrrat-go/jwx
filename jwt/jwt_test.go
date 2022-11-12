@@ -973,6 +973,51 @@ func TestParseRequest(t *testing.T) {
 
 func TestGHIssue368(t *testing.T) {
 	// DO NOT RUN THIS IN PARALLEL
+	t.Run("Per-object control of flatten audience", func(t *testing.T) {
+		for _, globalFlatten := range []bool{true, false} {
+			globalFlatten := globalFlatten
+			for _, perObjectFlatten := range []bool{true, false} {
+				perObjectFlatten := perObjectFlatten
+				// per-object settings always wins
+				t.Run(fmt.Sprintf("Global=%t, Per-Object=%t", globalFlatten, perObjectFlatten), func(t *testing.T) {
+					defer jwt.Settings(jwt.WithFlattenAudience(false))
+					jwt.Settings(jwt.WithFlattenAudience(globalFlatten))
+
+					tok, _ := jwt.NewBuilder().
+						Audience([]string{"hello"}).
+						Build()
+
+					if perObjectFlatten {
+						tok.Options().Enable(jwt.FlattenAudience)
+					} else {
+						tok.Options().Disable(jwt.FlattenAudience)
+					}
+					buf, err := json.MarshalIndent(tok, "", "  ")
+					if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+						return
+					}
+
+					var expected string
+					if perObjectFlatten {
+						expected = `{
+  "aud": "hello"
+}`
+					} else {
+						expected = `{
+  "aud": [
+    "hello"
+  ]
+}`
+					}
+
+					if !assert.Equal(t, expected, string(buf), `output should match`) {
+						return
+					}
+				})
+			}
+		}
+	})
+
 	for _, flatten := range []bool{true, false} {
 		flatten := flatten
 		t.Run(fmt.Sprintf("Test serialization (WithFlattenAudience(%t))", flatten), func(t *testing.T) {
