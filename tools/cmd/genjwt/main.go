@@ -168,6 +168,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("type %s struct {", obj.Name(false))
 	o.L("mu *sync.RWMutex")
 	o.L("dc DecodeCtx // per-object context for decoding")
+	o.L("options TokenOptionSet // per-object option")
 	for _, f := range fields {
 		if c := f.Comment(); c != "" {
 			o.L("%s %s // %s", f.Name(false), fieldStorageType(f.Type()), c)
@@ -192,10 +193,20 @@ func generateToken(obj *codegen.Object) error {
 
 	o.R(".\n// Convenience accessors are provided for these standard claims")
 	o.L("func New() %s {", obj.String(`interface`))
+	o.L("optionsVal := defaultOptions.Value()")
 	o.L("return &%s{", obj.Name(false))
 	o.L("mu: &sync.RWMutex{},")
 	o.L("privateClaims: make(map[string]interface{}),")
+	o.L("options: TokenOptionSet(optionsVal),")
 	o.L("}")
+	o.L("}")
+
+	o.LL("func (t *%s) Options() *TokenOptionSet {", obj.Name(false))
+	o.L("return &t.options")
+	o.L("}")
+
+	o.LL("func (t *%s) SetOptions(set TokenOptionSet) {", obj.Name(false))
+	o.L("t.options = set")
 	o.L("}")
 
 	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", obj.Name(false))
@@ -493,7 +504,7 @@ func generateToken(obj *codegen.Object) error {
 	// Handle cases that need specialized handling
 	o.L("switch f {")
 	o.L("case AudienceKey:")
-	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {")
+	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(FlattenAudience)); err != nil {")
 	o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
 	o.L("}")
 	o.L("continue")

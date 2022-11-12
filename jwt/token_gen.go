@@ -91,6 +91,7 @@ type Token interface {
 type stdToken struct {
 	mu            *sync.RWMutex
 	dc            DecodeCtx          // per-object context for decoding
+	options       TokenOptionSet     // per-object option
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	expiration    *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.4
 	issuedAt      *types.NumericDate // https://tools.ietf.org/html/rfc7519#section-4.1.6
@@ -105,10 +106,20 @@ type stdToken struct {
 // possible claims. Standard claims include"aud", "exp", "iat", "iss", "jti", "nbf" and "sub".
 // Convenience accessors are provided for these standard claims
 func New() Token {
+	optionsVal := defaultOptions.Value()
 	return &stdToken{
 		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
+		options:       TokenOptionSet(optionsVal),
 	}
+}
+
+func (t *stdToken) Options() *TokenOptionSet {
+	return &t.options
+}
+
+func (t *stdToken) SetOptions(set TokenOptionSet) {
+	t.options = set
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
@@ -476,7 +487,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteString(`":`)
 		switch f {
 		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {
+			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(FlattenAudience)); err != nil {
 				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 			}
 			continue
