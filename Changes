@@ -5,6 +5,26 @@ v2 has many incompatibilities with v1. To see the full list of differences betwe
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
 v2.0.7 - UNRELEASED
+[New features]
+  * [jwt] `jwt.Settings(jwt.WithFlattenedAudience(true))` has a slightly
+    different semantic than before. Instead of changing a global variable,
+    it now specifies that the default value of each per-token option for
+    `jwt.FlattenAudience` is true.
+
+    Therefore, this is what happens:
+
+       // No global settings
+       tok := jwt.New()
+       tok.Options.IsEnabled(jwt.FlattenAudience) // false
+
+       // With global settings
+       jwt.Settings(jwt.WithFlattenedAudience(true))
+       tok := jwt.New()
+       tok.Options.IsEnabled(jwt.FlattenAudience) // true
+       // But you can still turn FlattenAudience off for this
+       // token alone
+       tok.Options.Disable(jwt.FlattenAudience)
+
 [Miscellaneous]
   * WithCompact's stringification should have been that of the
     internal indentity struct ("WithSerialization"), but it was
