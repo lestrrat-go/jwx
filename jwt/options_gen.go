@@ -252,15 +252,12 @@ func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
 }
 
-// WithFlattenAudience specifies if the "aud" claim should be flattened
-// to a single string upon the token being serialized to JSON.
+// WithFlattenAudience specifies the the `jwt.FlattenAudience` option on
+// every token defaults to enabled. You can still disable this on a per-object
+// basis using the `jwt.Options().Disable(jwt.FlattenAudience)` method call.
 //
-// This is sometimes important when a JWT consumer does not understand that
-// the "aud" claim can actually take the form of an array of strings.
-//
-// The default value is `false`, which means that "aud" claims are always
-// rendered as a arrays of strings. This setting has a global effect,
-// and will change the behavior for all JWT serialization.
+// See the documentation for `jwt.TokenOptionSet`, `(jwt.Token).Options`, and
+// `jwt.FlattenAudience` for more details
 func WithFlattenAudience(v bool) GlobalOption {
 	return &globalOption{option.New(identFlattenAudience{}, v)}
 }
