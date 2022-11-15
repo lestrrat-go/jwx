@@ -61,7 +61,8 @@ func ExampleJWT_FlattenAudience() {
 			return
 		}
 
-		// This would flatten the "aud" claim
+		// This would flatten the "aud" claim if the appropriate
+		// line above has been uncommented
 		json.NewEncoder(os.Stdout).Encode(tok)
 
 		// This would force this particular object not to flatten the

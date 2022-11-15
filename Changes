@@ -26,6 +26,24 @@ v2.0.7 - UNRELEASED
        // token alone
        tok.Options.Disable(jwt.FlattenAudience)
 
+    Note that while unlikely to happen for users relying on the old behavior,
+    this change DOES introduce timing issues: whereas old versions switched the
+    JSON marshaling for ALL tokens immediately after calling `jwt.Settings`,
+    the new behavior does NOT affect tokens that have been created before the
+    call to `jwt.Settings` (but marshaled afterwards).
+
+    So the following may happen:
+
+      // < v2.0.7
+      tok := jwt.New() 
+      jwt.Settings(jwt.WithFlattenedAudience(true))
+      json.Marshal(tok) // flatten = on
+
+      // >= v2.0.7
+      tok := jwt.New() // flatten = off
+      jwt.Settings(jwt.WithFlattenedAudience(true))
+      json.Marshal(tok) // flatten is still off
+
 [Miscellaneous]
   * WithCompact's stringification should have been that of the
     internal indentity struct ("WithSerialization"), but it was
