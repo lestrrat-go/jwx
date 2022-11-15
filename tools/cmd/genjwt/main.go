@@ -161,7 +161,10 @@ func generateToken(obj *codegen.Object) error {
 		pkgPrefix = `jwt.`
 	}
 
-	o.LL("// Options returns the per-token options associated with this token")
+	o.LL("// Options returns the per-token options associated with this token.")
+	o.L("// The options set value will be copied when the token is cloned via `Clone()`")
+	o.L("// but it will not survive when the token goes through marshaling/unmarshaling")
+	o.L("// such as `json.Marshal` and `json.Unmarshal`")
 	o.L("Options() *%sTokenOptionSet", pkgPrefix)
 	o.L("Clone() (%sToken, error)", pkgPrefix)
 	o.L("Iterate(context.Context) Iterator")

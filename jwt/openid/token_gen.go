@@ -149,7 +149,10 @@ type Token interface {
 	Set(string, interface{}) error
 	Remove(string) error
 
-	// Options returns the per-token options associated with this token
+	// Options returns the per-token options associated with this token.
+	// The options set value will be copied when the token is cloned via `Clone()`
+	// but it will not survive when the token goes through marshaling/unmarshaling
+	// such as `json.Marshal` and `json.Unmarshal`
 	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
