@@ -8,7 +8,8 @@ type TokenOptionSet uint64
 var defaultOptions TokenOptionSet
 var defaultOptionsMu sync.RWMutex
 
-// TokenOption describes a single token option
+// TokenOption describes a single token option that can be set on
+// the per-token option set (TokenOptionSet)
 type TokenOption uint64
 
 const (
