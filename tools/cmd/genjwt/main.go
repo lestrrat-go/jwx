@@ -155,11 +155,18 @@ func generateToken(obj *codegen.Object) error {
 	o.L("// for the types of each of these fields")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
-	if obj.String(`package`) != "jwt" {
-		o.L("Clone() (jwt.Token, error)")
-	} else {
-		o.L("Clone() (Token, error)")
+
+	var pkgPrefix string
+	if obj.String(`package`) != `jwt` {
+		pkgPrefix = `jwt.`
 	}
+
+	o.LL("// Options returns the per-token options associated with this token.")
+	o.L("// The options set value will be copied when the token is cloned via `Clone()`")
+	o.L("// but it will not survive when the token goes through marshaling/unmarshaling")
+	o.L("// such as `json.Marshal` and `json.Unmarshal`")
+	o.L("Options() *%sTokenOptionSet", pkgPrefix)
+	o.L("Clone() (%sToken, error)", pkgPrefix)
 	o.L("Iterate(context.Context) Iterator")
 	o.L("Walk(context.Context, Visitor) error")
 	o.L("AsMap(context.Context) (map[string]interface{}, error)")
@@ -168,6 +175,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("type %s struct {", obj.Name(false))
 	o.L("mu *sync.RWMutex")
 	o.L("dc DecodeCtx // per-object context for decoding")
+	o.L("options %sTokenOptionSet // per-object option", pkgPrefix)
 	for _, f := range fields {
 		if c := f.Comment(); c != "" {
 			o.L("%s %s // %s", f.Name(false), fieldStorageType(f.Type()), c)
@@ -195,7 +203,12 @@ func generateToken(obj *codegen.Object) error {
 	o.L("return &%s{", obj.Name(false))
 	o.L("mu: &sync.RWMutex{},")
 	o.L("privateClaims: make(map[string]interface{}),")
+	o.L("options: %sDefaultOptionSet(),", pkgPrefix)
 	o.L("}")
+	o.L("}")
+
+	o.LL("func (t *%s) Options() *%sTokenOptionSet {", obj.Name(false), pkgPrefix)
+	o.L("return &t.options")
 	o.L("}")
 
 	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", obj.Name(false))
@@ -493,7 +506,7 @@ func generateToken(obj *codegen.Object) error {
 	// Handle cases that need specialized handling
 	o.L("switch f {")
 	o.L("case AudienceKey:")
-	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {")
+	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(%sFlattenAudience)); err != nil {", pkgPrefix)
 	o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
 	o.L("}")
 	o.L("continue")

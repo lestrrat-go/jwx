@@ -1063,7 +1063,7 @@ The examples below shoud both be valid, but apparently there are systems that do
 }
 ```
 
-To workaround these problematic parsers, you may use the `jwt.Settings()` function with the `jwt.WithFlattenAudience(true)` option. The following example shows you how to force all calls to marshal JWT tokens to flatten the `aud` field when it can. This has **global effect**.
+To workaround these problematic parsers, you may use enable the option `jwt.FlattenAudience` on each token that you would like to see this behavior. If you do this for _all_ (or most) tokens, you may opt to change the global default value by settings `jwt.WithFlattenAudience(true)` option via `jwt.Settings()`. 
 
 <!-- INCLUDE(examples/jwt_flatten_audience_example_test.go) -->
 ```go
