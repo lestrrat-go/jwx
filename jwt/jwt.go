@@ -425,6 +425,7 @@ func Equal(t1, t2 Token) bool {
 func (t *stdToken) Clone() (Token, error) {
 	dst := New()
 
+	dst.Options().Set(*(t.Options()))
 	for _, pair := range t.makePairs() {
 		//nolint:forcetypeassert
 		key := pair.Key.(string)

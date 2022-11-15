@@ -1642,3 +1642,20 @@ func TestFractional(t *testing.T) {
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 	})
 }
+
+func TestGH836(t *testing.T) {
+	// tests on TokenOptionSet are found elsewhere.
+
+	t1 := jwt.New()
+	t1.Options().Enable(jwt.FlattenAudience)
+
+	require.True(t, t1.Options().IsEnabled(jwt.FlattenAudience), `flag should be enabled`)
+
+	t2, err := t1.Clone()
+	require.NoError(t, err, `t1.Clone should succeed`)
+
+	require.True(t, t2.Options().IsEnabled(jwt.FlattenAudience), `cloned token should have same settings`)
+
+	t2.Options().Disable(jwt.FlattenAudience)
+	require.True(t, t1.Options().IsEnabled(jwt.FlattenAudience), `flag should be enabled (t2.Options should have no effect on t1.Options)`)
+}

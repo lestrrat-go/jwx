@@ -47,6 +47,8 @@ v2.0.7 - UNRELEASED
     It is recommended that you only set the global setting once at the
     very beginning of your program to avoid problems.
 
+    Also note that `Clone()` copies the settings as well.
+
 [Miscellaneous]
   * WithCompact's stringification should have been that of the
     internal indentity struct ("WithSerialization"), but it was
