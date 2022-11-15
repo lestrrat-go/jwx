@@ -44,6 +44,9 @@ v2.0.7 - UNRELEASED
       jwt.Settings(jwt.WithFlattenedAudience(true))
       json.Marshal(tok) // flatten is still off
 
+    It is recommended that you only set the global setting once at the
+    very beginning of your program to avoid problems.
+
 [Miscellaneous]
   * WithCompact's stringification should have been that of the
     internal indentity struct ("WithSerialization"), but it was

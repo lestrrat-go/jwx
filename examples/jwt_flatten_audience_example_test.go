@@ -52,6 +52,12 @@ func ExampleJWT_FlattenAudience() {
 		//
 		//   from: {"aud":["foo"]}
 		//   to  : {"aud":"foo"}
+		//
+		// Please note that it is recommended you ONLY set the jwt.Settings(jwt.WithFlattenedAudience(true))
+		// once at the beginning of your main program (probably in an `init()` function)
+		// so that you do not need to worry about causing issues depending
+		// on when tokens are created relative to the time when
+		// the global setting is changed.
 
 		tok, err := jwt.NewBuilder().
 			Audience([]string{`foo`}).
