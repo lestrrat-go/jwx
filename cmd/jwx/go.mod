@@ -3,7 +3,7 @@ module github.com/lestrrat-go/jwx/v2/cmd/jwx
 go 1.17
 
 require (
-	github.com/lestrrat-go/jwx/v2 v2.0.6
+	github.com/lestrrat-go/jwx/v2 v2.0.7
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 )

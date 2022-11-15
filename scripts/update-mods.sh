@@ -8,13 +8,14 @@ if [[ -z "$TAG" ]]; then
 fi
 
 # Make sure Changes file contains an entry for this release
-relentry=$(grep "$TAG" Changes)
+relentry=$(grep "$TAG" Changes | head -n 1)
 if [[ "$?" -ne 0 ]]; then
 	echo "$TAG does not exist in Changes file";
 	exit 1;
 fi
 
 reldate=${relentry#$TAG - }
+reldate=${reldate//['$\t\n\r']}
 parseddate=$(date --date="$reldate" "+%d %b %Y")
 
 if [[ "$reldate" != "$parseddate" ]]; then
@@ -27,13 +28,8 @@ for dir in ./cmd/jwx ./examples ./bench/performance; do
 	echo "👉 $dir"
 	pushd $dir > /dev/null
 
-	go mod edit -require=github.com/lestrrat-go/jwx/v2@"$TAG"
+	go get github.com/lestrrat-go/jwx/v2@"$TAG"
 	go mod tidy
 
 	popd > /dev/null
 done
-
-# set up tag
-git tag "$TAG"
-
-echo "tag $TAG has been created. Make sure to commit/push/push --tags afterwards"
