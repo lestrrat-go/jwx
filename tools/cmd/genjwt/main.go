@@ -161,8 +161,8 @@ func generateToken(obj *codegen.Object) error {
 		pkgPrefix = `jwt.`
 	}
 
+	o.LL("// Options returns the per-token options associated with this token")
 	o.L("Options() *%sTokenOptionSet", pkgPrefix)
-	o.L("SetOptions(%sTokenOptionSet)", pkgPrefix)
 	o.L("Clone() (%sToken, error)", pkgPrefix)
 	o.L("Iterate(context.Context) Iterator")
 	o.L("Walk(context.Context, Visitor) error")
@@ -206,10 +206,6 @@ func generateToken(obj *codegen.Object) error {
 
 	o.LL("func (t *%s) Options() *%sTokenOptionSet {", obj.Name(false), pkgPrefix)
 	o.L("return &t.options")
-	o.L("}")
-
-	o.LL("func (t *%s) SetOptions(set %sTokenOptionSet) {", obj.Name(false), pkgPrefix)
-	o.L("t.options = set")
 	o.L("}")
 
 	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", obj.Name(false))

@@ -47,6 +47,18 @@ func DefaultOptionSet() TokenOptionSet {
 	return TokenOptionSet(defaultOptions.Value())
 }
 
+// Clear sets all bits to zero, effectively disabling all options
+func (o *TokenOptionSet) Clear() {
+	*o = TokenOptionSet(uint64(0))
+}
+
+// Set sets the value of this option set, effectively *replacing*
+// the entire option set with the new value. This is NOT the same
+// as Enable/Disable.
+func (o *TokenOptionSet) Set(s TokenOptionSet) {
+	*o = s
+}
+
 // Enable sets the appropriate value to enable the option in the
 // option set
 func (o *TokenOptionSet) Enable(flag TokenOption) {

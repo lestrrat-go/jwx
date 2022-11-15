@@ -148,8 +148,9 @@ type Token interface {
 	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
+
+	// Options returns the per-token options associated with this token
 	Options() *jwt.TokenOptionSet
-	SetOptions(jwt.TokenOptionSet)
 	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
 	Walk(context.Context, Visitor) error
@@ -201,10 +202,6 @@ func New() Token {
 
 func (t *stdToken) Options() *jwt.TokenOptionSet {
 	return &t.options
-}
-
-func (t *stdToken) SetOptions(set jwt.TokenOptionSet) {
-	t.options = set
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
