@@ -973,6 +973,51 @@ func TestParseRequest(t *testing.T) {
 
 func TestGHIssue368(t *testing.T) {
 	// DO NOT RUN THIS IN PARALLEL
+	t.Run("Per-object control of flatten audience", func(t *testing.T) {
+		for _, globalFlatten := range []bool{true, false} {
+			globalFlatten := globalFlatten
+			for _, perObjectFlatten := range []bool{true, false} {
+				perObjectFlatten := perObjectFlatten
+				// per-object settings always wins
+				t.Run(fmt.Sprintf("Global=%t, Per-Object=%t", globalFlatten, perObjectFlatten), func(t *testing.T) {
+					defer jwt.Settings(jwt.WithFlattenAudience(false))
+					jwt.Settings(jwt.WithFlattenAudience(globalFlatten))
+
+					tok, _ := jwt.NewBuilder().
+						Audience([]string{"hello"}).
+						Build()
+
+					if perObjectFlatten {
+						tok.Options().Enable(jwt.FlattenAudience)
+					} else {
+						tok.Options().Disable(jwt.FlattenAudience)
+					}
+					buf, err := json.MarshalIndent(tok, "", "  ")
+					if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
+						return
+					}
+
+					var expected string
+					if perObjectFlatten {
+						expected = `{
+  "aud": "hello"
+}`
+					} else {
+						expected = `{
+  "aud": [
+    "hello"
+  ]
+}`
+					}
+
+					if !assert.Equal(t, expected, string(buf), `output should match`) {
+						return
+					}
+				})
+			}
+		}
+	})
+
 	for _, flatten := range []bool{true, false} {
 		flatten := flatten
 		t.Run(fmt.Sprintf("Test serialization (WithFlattenAudience(%t))", flatten), func(t *testing.T) {
@@ -1596,4 +1641,21 @@ func TestFractional(t *testing.T) {
 		}
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 	})
+}
+
+func TestGH836(t *testing.T) {
+	// tests on TokenOptionSet are found elsewhere.
+
+	t1 := jwt.New()
+	t1.Options().Enable(jwt.FlattenAudience)
+
+	require.True(t, t1.Options().IsEnabled(jwt.FlattenAudience), `flag should be enabled`)
+
+	t2, err := t1.Clone()
+	require.NoError(t, err, `t1.Clone should succeed`)
+
+	require.True(t, t2.Options().IsEnabled(jwt.FlattenAudience), `cloned token should have same settings`)
+
+	t2.Options().Disable(jwt.FlattenAudience)
+	require.True(t, t1.Options().IsEnabled(jwt.FlattenAudience), `flag should be enabled (t2.Options should have no effect on t1.Options)`)
 }

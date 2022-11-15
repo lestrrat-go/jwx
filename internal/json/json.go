@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 )
@@ -69,9 +68,9 @@ func AssignNextStringToken(dst **string, dec *Decoder) error {
 // up how signatures are calculated)
 var FlattenAudience uint32
 
-func EncodeAudience(enc *Encoder, aud []string) error {
+func EncodeAudience(enc *Encoder, aud []string, flatten bool) error {
 	var val interface{}
-	if len(aud) == 1 && atomic.LoadUint32(&FlattenAudience) == 1 {
+	if len(aud) == 1 && flatten {
 		val = aud[0]
 	} else {
 		val = aud

@@ -148,6 +148,12 @@ type Token interface {
 	// for the types of each of these fields
 	Set(string, interface{}) error
 	Remove(string) error
+
+	// Options returns the per-token options associated with this token.
+	// The options set value will be copied when the token is cloned via `Clone()`
+	// but it will not survive when the token goes through marshaling/unmarshaling
+	// such as `json.Marshal` and `json.Unmarshal`
+	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
 	Iterate(context.Context) Iterator
 	Walk(context.Context, Visitor) error
@@ -155,7 +161,8 @@ type Token interface {
 }
 type stdToken struct {
 	mu                  *sync.RWMutex
-	dc                  DecodeCtx // per-object context for decoding
+	dc                  DecodeCtx          // per-object context for decoding
+	options             jwt.TokenOptionSet // per-object option
 	address             *AddressClaim
 	audience            types.StringList // https://tools.ietf.org/html/rfc7519#section-4.1.3
 	birthdate           *BirthdateClaim
@@ -192,7 +199,12 @@ func New() Token {
 	return &stdToken{
 		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]interface{}),
+		options:       jwt.DefaultOptionSet(),
 	}
+}
+
+func (t *stdToken) Options() *jwt.TokenOptionSet {
+	return &t.options
 }
 
 func (t *stdToken) Get(name string) (interface{}, bool) {
@@ -1175,7 +1187,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		buf.WriteString(`":`)
 		switch f {
 		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string)); err != nil {
+			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
 				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 			}
 			continue

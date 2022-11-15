@@ -1,4 +1,5 @@
 //go:generate ../tools/cmd/genjwt.sh
+//go:generate stringer -type=TokenOption -output=token_options_gen.go
 
 // Package jwt implements JSON Web Tokens as described in https://tools.ietf.org/html/rfc7519
 package jwt
@@ -70,14 +71,13 @@ func Settings(options ...GlobalOption) {
 	}
 
 	{
-		v := atomic.LoadUint32(&json.FlattenAudience)
-		if (v == 1) != flattenAudienceBool {
-			var newVal uint32
-			if flattenAudienceBool {
-				newVal = 1
-			}
-			atomic.CompareAndSwapUint32(&json.FlattenAudience, v, newVal)
+		defaultOptionsMu.Lock()
+		if flattenAudienceBool {
+			defaultOptions.Enable(FlattenAudience)
+		} else {
+			defaultOptions.Disable(FlattenAudience)
 		}
+		defaultOptionsMu.Unlock()
 	}
 }
 
@@ -425,6 +425,7 @@ func Equal(t1, t2 Token) bool {
 func (t *stdToken) Clone() (Token, error) {
 	dst := New()
 
+	dst.Options().Set(*(t.Options()))
 	for _, pair := range t.makePairs() {
 		//nolint:forcetypeassert
 		key := pair.Key.(string)
