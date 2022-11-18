@@ -18,12 +18,12 @@ jobs:
     name: "Smoke [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Check documentation generator
         run: |
           find . -name '*.md' | xargs env AUTODOC_DRYRUN=1 perl tools/autodoc.pl
       - name: Cache Go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
