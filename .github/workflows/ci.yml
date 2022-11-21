@@ -42,6 +42,8 @@ jobs:
           echo "::add-path::$(go env GOPATH)/bin"
       - name: Install stringer
         run: go install golang.org/x/tools/cmd/stringer@latest
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate

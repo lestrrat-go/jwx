@@ -11,58 +11,58 @@ realclean:
 	rm coverage.out
 
 test-cmd:
-	go test -v -race $(TESTOPTS)
+	env TESTOPTS="$(TESTOPTS)" ./tools/test.sh
 
 test:
-	$(MAKE) TESTOPTS=./... test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench/performance test-cmd
+	$(MAKE) test-stdlib TESTOPTS=
+
+test-stdlib:
+	$(MAKE) test-cmd TESTOPTS=
+
+test-goccy:
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_goccy"
+
+test-es256k:
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k"
+
+test-alltags:
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k"
 
 cover-cmd:
-	$(MAKE) test-cmd 
-	$(MAKE) -f $(PWD)/Makefile -C examples TESTOPTS= test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench/performance TESTOPTS= test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx TESTOPTS= test-cmd
-	@# This is NOT cheating. tools to generate code, and tools to
-	@# run tests don't need to be included in the final result.
-	@cat coverage.out.tmp | grep -v "internal/jose" | grep -v "internal/jwxtest" | grep -v "internal/cmd" > coverage.out
-	@rm coverage.out.tmp
+	env MODE=cover ./tools/test.sh
 
 cover:
 	$(MAKE) cover-stdlib
 
 cover-stdlib:
-	$(MAKE) cover-cmd TESTOPTS="-coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+	$(MAKE) cover-cmd TESTOPTS=
 
 cover-goccy:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy"
 
 cover-es256k:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_es256k -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_es256k"
 
-cover-all:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k -coverpkg=./... -coverprofile=coverage.out.tmp ./..."
+cover-alltags:
+	$(MAKE) cover-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k"
 
 smoke-cmd:
-	$(MAKE) test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C examples test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C bench/performance test-cmd
-	$(MAKE) -f $(PWD)/Makefile -C cmd/jwx test-cmd
+	env MODE=short ./tools/test.sh
 
 smoke:
 	$(MAKE) smoke-stdlib
 
 smoke-stdlib:
-	$(MAKE) smoke-cmd TESTOPTS="-short ./..."
+	$(MAKE) smoke-cmd TESTOPTS=
 
 smoke-goccy:
-	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_goccy"
 
 smoke-es256k:
-	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_es256k ./..."
+	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_es256k"
 
-smoke-all:
-	$(MAKE) smoke-cmd TESTOPTS="-short -tags jwx_goccy,jwx_es256k ./..."
+smoke-alltags:
+	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k"
 
 viewcover:
 	go tool cover -html=coverage.out
