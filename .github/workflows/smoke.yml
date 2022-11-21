@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go_tags: [ 'stdlib', 'goccy', 'es256k', 'all' ]
+        go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags' ]
         go: [ '1.19', '1.18', '1.17' ]
     name: "Smoke [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
@@ -38,6 +38,8 @@ jobs:
           check-latest: true
       - name: Install stringer
         run: go install golang.org/x/tools/cmd/stringer@latest
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
       - run: make generate
