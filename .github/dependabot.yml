@@ -15,9 +15,8 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "develop/v1"
-  - package-echosystem: "github-acitons"
+  - package-ecosystem: "github-acitons"
     directory: "/"
     schedule:
       interval: "daily"
     target-branch: "develop/v2"
-
