@@ -279,7 +279,7 @@ OUTER:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these
 			if ctx.pedantic {
-				return nil, fmt.Errorf(`unknwon JWT format (pedantic)`)
+				return nil, fmt.Errorf(`unknown JWT format (pedantic)`)
 			}
 
 			if i == 0 {
