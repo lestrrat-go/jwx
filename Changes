@@ -11,6 +11,9 @@ v2.0.8 UNRELEASED
     such as `ScalarMult` were called using points that are not on the
     elliptic curve being used. This has been fixed to verify that the
     point being used is actually on the curve before such computations (#840)
+[Miscellaneous]
+  * `jwx.GuessFormat` now returns `jwx.InvalidFormat` when the heuristics
+    is sure that the buffer format is invalid.
 
 v2.0.7 - 15 Nov 2022
 [New features]
