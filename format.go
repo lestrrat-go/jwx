@@ -7,8 +7,15 @@ import (
 
 type FormatKind int
 
+// These constants describe the result from guessing the format
+// of the incoming buffer.
 const (
-	UnknownFormat FormatKind = iota
+	// InvalidFormat is returned when the format of the incoming buffer
+	// has been deemed conclusively invalid
+	InvalidFormat FormatKind = iota
+	// UnknownFormat is returned when GuessFormat was not able to conclusively
+	// determine the format of the
+	UnknownFormat
 	JWE
 	JWS
 	JWK
@@ -66,7 +73,7 @@ func GuessFormat(payload []byte) FormatKind {
 		case 4:
 			return JWE
 		default:
-			return UnknownFormat
+			return InvalidFormat
 		}
 	}
 

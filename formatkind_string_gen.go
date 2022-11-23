@@ -8,17 +8,18 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[UnknownFormat-0]
-	_ = x[JWE-1]
-	_ = x[JWS-2]
-	_ = x[JWK-3]
-	_ = x[JWKS-4]
-	_ = x[JWT-5]
+	_ = x[InvalidFormat-0]
+	_ = x[UnknownFormat-1]
+	_ = x[JWE-2]
+	_ = x[JWS-3]
+	_ = x[JWK-4]
+	_ = x[JWKS-5]
+	_ = x[JWT-6]
 }
 
-const _FormatKind_name = "UnknownFormatJWEJWSJWKJWKSJWT"
+const _FormatKind_name = "InvalidFormatUnknownFormatJWEJWSJWKJWKSJWT"
 
-var _FormatKind_index = [...]uint8{0, 13, 16, 19, 22, 26, 29}
+var _FormatKind_index = [...]uint8{0, 13, 26, 29, 32, 35, 39, 42}
 
 func (i FormatKind) String() string {
 	if i < 0 || i >= FormatKind(len(_FormatKind_index)-1) {

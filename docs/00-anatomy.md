@@ -50,6 +50,16 @@ The signed content can be encoded in two different formats. The most common one 
 eyJhbGciOiJFUzI1NiJ9.SGVsbG8sIFdvcmxkCg.3q5N5JyFphiJolUZuBuUZhuWDfmLDR__rZe3lnuaxWe3bfrfvJS9HmUUhie56NqkyN7vjOl8hm6tzJKTc2oNsg
 ```
 
+Please note that a JWS message may take three forms: compact, full JSON, and flattened JSON serialization.
+
+```mermaid
+graph TD
+    RawData[Raw Data] --> |"three base64 encoded segments,<br/> concatenated with ."| Compact[Compact Serialization]
+    RawData --> | JSON | JSON[JSON Serialization]
+    JSON --> |"does NOT have'signature'"| FullJSON[Full JSON Serialization]
+    JSON --> |"has 'signature'"| Flat[Flattened JSON Serialization]
+```
+
 JWS is implemented in github.com/lestrrat-go/jwx/v2/jws package. This package provides ways to sign arbitrary payload into JWS message, and ways to verify them.
 
 ## Documentation for `github.com/lestrrat-go/jwx/v2/jws`

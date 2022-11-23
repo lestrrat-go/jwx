@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1658,4 +1659,11 @@ func TestGH836(t *testing.T) {
 
 	t2.Options().Disable(jwt.FlattenAudience)
 	require.True(t, t1.Options().IsEnabled(jwt.FlattenAudience), `flag should be enabled (t2.Options should have no effect on t1.Options)`)
+}
+
+func TestGH850(t *testing.T) {
+	var testToken = `eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNjY2MDkxMzczLCJmb28iOiJiYXIifQ.3GWevx1z2_uCBB9Vj-D0rsT_CMsMeP9GP2rEqGDWpesoG8nHEjAXJOEQV1jOVkkCtTnS18JhcQdb7dW4i-zmqg.trailing-rubbish`
+
+	_, err := jwt.Parse([]byte(testToken), jwt.WithVerify(false))
+	require.True(t, errors.Is(err, jwt.ErrInvalidJWT()))
 }
