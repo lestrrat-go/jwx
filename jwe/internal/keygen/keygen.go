@@ -88,6 +88,9 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, uint32(g.keysize)*8)
 
+	if !priv.PublicKey.Curve.IsOnCurve(g.pubkey.X, g.pubkey.Y) {
+		return nil, fmt.Errorf(`public key used does not contain a point (X,Y) on the curve`)
+	}
 	z, _ := priv.PublicKey.Curve.ScalarMult(g.pubkey.X, g.pubkey.Y, priv.D.Bytes())
 	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
 	defer ecutil.ReleaseECPointBuffer(zBytes)

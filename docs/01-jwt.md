@@ -1159,9 +1159,14 @@ source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestr
 
 ## Access JWS headers
 
-Note: If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](#parse-and-verify-a-jwt-using-arbitrary-keys).
+The RFC defines JWS as an envelope to JWT (JWS can carry any payload, you just happened to assign a JWT to it). A JWT is just a bag of arbitrary key/value pairs, where some of them are predefined for validation. This means that JWS headers are NOT part of a JWT -- and thus you will not be able to access them through the `jwt.Token` itself.
 
-In order to access JWS headers such as `kid`, `alg`, etc, Please [look at the JWS documentation for it](./02-jws.md#parse-a-jws-message-and-access-jws-headers).
+If you need to access these JWS headers while parsing JWS signed JWT, you will need to reach into the tools defined in the `jws` package.
+
+* If you are considering using JWS header fields to decide on which key to use for verification, consider [using a `jwt.KeyProvider`](#parse-and-verify-a-jwt-using-arbitrary-keys).
+* If you are looking for ways to 
+
+Please [look at the JWS documentation for it](./02-jws.md#parse-a-jws-message-and-access-jws-headers) .
 
 ## Get/Set fields
 

@@ -819,3 +819,25 @@ func TestGH803(t *testing.T) {
 	require.Equal(t, apu, msg.ProtectedHeaders().AgreementPartyUInfo())
 	require.Equal(t, apv, msg.ProtectedHeaders().AgreementPartyVInfo())
 }
+
+func TestGH840(t *testing.T) {
+	// Go 1.19+ panics if elliptic curve operations are called against
+	// a point that's _NOT_ on the curve
+	untrustedJWK := []byte(`{
+		"kty": "EC",
+		"crv": "P-256",
+		"x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqx7D4",
+		"y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
+	}`)
+
+	privkey, err := jwk.ParseKey(untrustedJWK)
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+	pubkey, err := privkey.PublicKey()
+	require.NoError(t, err, `privkey.PublicKey should succeed`)
+
+	const payload = `Lorem ipsum`
+	_, err = jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A128KW, pubkey))
+	require.Error(t, err, `jwe.Encrypt should fail (instead of panic)`)
+}

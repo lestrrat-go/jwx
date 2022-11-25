@@ -172,6 +172,10 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 		}
 	}
 
+	if !pubkey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
+		return fmt.Errorf(`public key used does not contain a point (X,Y) on the curve`)
+	}
+
 	r := pool.GetBigInt()
 	s := pool.GetBigInt()
 	defer pool.ReleaseBigInt(r)
