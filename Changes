@@ -8,9 +8,15 @@ v2.0.8 UNRELEASED
 [Security Fixes]
   * [jws][jwe] Starting from go 1.19, code related to elliptic algorithms
     panics (instead of returning an error) when certain methods
-    such as `ScalarMult` were called using points that are not on the
-    elliptic curve being used. This has been fixed to verify that the
-    point being used is actually on the curve before such computations (#840)
+    such as `ScalarMult` are called using points that are not on the
+    elliptic curve being used.
+
+    Using inputs that cause this condition, and you accept unverified JWK
+    from the outside it may be possible for a third-party to cause panics
+    in your program.
+
+    This has been fixed by verifying that the point being used is actually
+    on the curve before such computations (#840)
 [Miscellaneous]
   * `jwx.GuessFormat` now returns `jwx.InvalidFormat` when the heuristics
     is sure that the buffer format is invalid.
