@@ -4,7 +4,7 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
-v2.0.8 UNRELEASED
+v2.0.8 - 25 Nov 2022
 [Security Fixes]
   * [jws][jwe] Starting from go 1.19, code related to elliptic algorithms
     panics (instead of returning an error) when certain methods
