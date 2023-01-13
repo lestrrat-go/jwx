@@ -28,6 +28,8 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Munge APT Repositories
+        run: curl --connect-timeout 1 https://azure.archive.ubuntu.com || sudo sed -i 's/azure\.//' /etc/apt/sources.list
       - name: Install Go stable version
         uses: actions/setup-go@v3
         with:
