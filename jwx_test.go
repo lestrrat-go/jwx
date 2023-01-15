@@ -17,6 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestShowBuildInfo(t *testing.T) {
@@ -173,43 +174,57 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jwe", func(t *testing.T) {
+		// For some reason "jose" does not come with RSA-OAEP on some platforms.
+		// In order to avoid doing this in an ad-hoc way, we're just going to
+		// ask our jose package for the algorithms that it supports, and generate
+		// the list dynamically
+
 		t.Parallel()
-		tests := []interopTest{
-			{jwa.RSA1_5, jwa.A128GCM},
-			{jwa.RSA1_5, jwa.A128CBC_HS256},
-			{jwa.RSA1_5, jwa.A256CBC_HS512},
-			{jwa.RSA_OAEP, jwa.A128GCM},
-			{jwa.RSA_OAEP, jwa.A128CBC_HS256},
-			{jwa.RSA_OAEP, jwa.A256CBC_HS512},
-			{jwa.RSA_OAEP_256, jwa.A128GCM},
-			{jwa.RSA_OAEP_256, jwa.A128CBC_HS256},
-			{jwa.RSA_OAEP_256, jwa.A256CBC_HS512},
-			{jwa.ECDH_ES, jwa.A128GCM},
-			{jwa.ECDH_ES, jwa.A256GCM},
-			{jwa.ECDH_ES, jwa.A128CBC_HS256},
-			{jwa.ECDH_ES, jwa.A256CBC_HS512},
-			{jwa.ECDH_ES_A128KW, jwa.A128GCM},
-			{jwa.ECDH_ES_A128KW, jwa.A128CBC_HS256},
-			{jwa.ECDH_ES_A256KW, jwa.A256GCM},
-			{jwa.ECDH_ES_A256KW, jwa.A256CBC_HS512},
-			{jwa.A128KW, jwa.A128GCM},
-			{jwa.A128KW, jwa.A128CBC_HS256},
-			{jwa.A256KW, jwa.A256GCM},
-			{jwa.A256KW, jwa.A256CBC_HS512},
-			{jwa.A128GCMKW, jwa.A128GCM},
-			{jwa.A128GCMKW, jwa.A128CBC_HS256},
-			{jwa.A256GCMKW, jwa.A256GCM},
-			{jwa.A256GCMKW, jwa.A256CBC_HS512},
-			{jwa.PBES2_HS256_A128KW, jwa.A128GCM},
-			{jwa.PBES2_HS256_A128KW, jwa.A128CBC_HS256},
-			{jwa.PBES2_HS384_A192KW, jwa.A192GCM},
-			{jwa.PBES2_HS384_A192KW, jwa.A192CBC_HS384},
-			{jwa.PBES2_HS512_A256KW, jwa.A256GCM},
-			{jwa.PBES2_HS512_A256KW, jwa.A256CBC_HS512},
-			{jwa.DIRECT, jwa.A128GCM},
-			{jwa.DIRECT, jwa.A128CBC_HS256},
-			{jwa.DIRECT, jwa.A256GCM},
-			{jwa.DIRECT, jwa.A256CBC_HS512},
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		set, err := jose.Algorithms(ctx, t)
+		require.NoError(t, err)
+
+		var tests []interopTest
+
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256} {
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256, jwa.A256CBC_HS512} {
+				tests = append(tests, interopTest{keyenc, contentenc})
+			}
+		}
+
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.A128KW, jwa.A128GCMKW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS256_A128KW, jwa.DIRECT} {
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256} {
+				tests = append(tests, interopTest{keyenc, contentenc})
+			}
+		}
+
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A256KW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS512_A256KW, jwa.DIRECT} {
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A256GCM, jwa.A256CBC_HS512} {
+				tests = append(tests, interopTest{keyenc, contentenc})
+			}
+		}
+
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.PBES2_HS384_A192KW} {
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A192GCM, jwa.A192CBC_HS384} {
+				tests = append(tests, interopTest{keyenc, contentenc})
+			}
 		}
 
 		for _, test := range tests {
@@ -426,7 +441,7 @@ func TestGuessFormat(t *testing.T) {
 	}{
 		{
 			Name:     "Raw String",
-			Expected: jwx.UnknownFormat,
+			Expected: jwx.InvalidFormat,
 			Source:   []byte(`Hello, World`),
 		},
 		{
@@ -436,7 +451,7 @@ func TestGuessFormat(t *testing.T) {
 		},
 		{
 			Name:     "Random JSON Array",
-			Expected: jwx.UnknownFormat,
+			Expected: jwx.InvalidFormat,
 			Source:   []byte(`["random", "JSON"]`),
 		},
 		{
