@@ -1,6 +1,7 @@
 package jose
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -80,6 +81,41 @@ func RunJoseCommand(ctx context.Context, t *testing.T, args []string, outw, errw
 	}
 
 	return nil
+}
+
+type AlgorithmSet struct {
+	data map[string]struct{}
+}
+
+func NewAlgorithmSet() *AlgorithmSet {
+	return &AlgorithmSet{
+		data: make(map[string]struct{}),
+	}
+}
+
+func (set *AlgorithmSet) Add(s string) {
+	set.data[s] = struct{}{}
+}
+
+func (set *AlgorithmSet) Has(s string) bool {
+	_, ok := set.data[s]
+	return ok
+}
+
+func Algorithms(ctx context.Context, t *testing.T) (*AlgorithmSet, error) {
+	var buf bytes.Buffer
+	if err := RunJoseCommand(ctx, t, []string{"alg"}, &buf, nil); err != nil {
+		return nil, fmt.Errorf(`failed to generate jose tool's supported algorithms: %w`, err)
+	}
+
+	set := NewAlgorithmSet()
+
+	scanner := bufio.NewScanner(&buf)
+	for scanner.Scan() {
+		alg := scanner.Text()
+		set.Add(alg)
+	}
+	return set, nil
 }
 
 // GenerateJwk creates a new key using the jose tool, and returns its filename and
