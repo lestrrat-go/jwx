@@ -188,34 +188,42 @@ func TestJoseCompatibility(t *testing.T) {
 		var tests []interopTest
 
 		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256} {
-			if set.Has(keyenc.String()) {
-				for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256, jwa.A256CBC_HS512} {
-					tests = append(tests, interopTest{keyenc, contentenc})
-				}
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256, jwa.A256CBC_HS512} {
+				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
 		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.A128KW, jwa.A128GCMKW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS256_A128KW, jwa.DIRECT} {
-			if set.Has(keyenc.String()) {
-				for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256} {
-					tests = append(tests, interopTest{keyenc, contentenc})
-				}
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256} {
+				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
 		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A256KW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS512_A256KW, jwa.DIRECT} {
-			if set.Has(keyenc.String()) {
-				for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A256GCM, jwa.A256CBC_HS512} {
-					tests = append(tests, interopTest{keyenc, contentenc})
-				}
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A256GCM, jwa.A256CBC_HS512} {
+				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
 		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.PBES2_HS384_A192KW} {
-			if set.Has(keyenc.String()) {
-				for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A192GCM, jwa.A192CBC_HS384} {
-					tests = append(tests, interopTest{keyenc, contentenc})
-				}
+			if !set.Has(keyenc.String()) {
+				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
+				continue
+			}
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A192GCM, jwa.A192CBC_HS384} {
+				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
