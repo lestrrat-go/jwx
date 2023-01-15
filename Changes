@@ -1,6 +1,11 @@
 Changes
 =======
 
+v1.2.26 - UNRELEASED
+[Miscellaneous]
+  * JWE tests now only run algorithms that are supported by the underlying
+    `jose` tool
+
 v1.2.25 23 May 2022
 [Bug Fixes][Security]
   * [jwe] An old bug from at least 7 years ago existed in handling AES-CBC unpadding,
