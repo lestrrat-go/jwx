@@ -441,7 +441,7 @@ func TestGuessFormat(t *testing.T) {
 	}{
 		{
 			Name:     "Raw String",
-			Expected: jwx.UnknownFormat,
+			Expected: jwx.InvalidFormat,
 			Source:   []byte(`Hello, World`),
 		},
 		{
@@ -451,7 +451,7 @@ func TestGuessFormat(t *testing.T) {
 		},
 		{
 			Name:     "Random JSON Array",
-			Expected: jwx.UnknownFormat,
+			Expected: jwx.InvalidFormat,
 			Source:   []byte(`["random", "JSON"]`),
 		},
 		{
