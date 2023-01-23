@@ -5,4 +5,4 @@ goccy:
 	go test -bench . -benchmem -count 5 -timeout 60m -tags jwx_goccy | tee goccy.txt
 
 benchstat:
-	benchstat -sort -delta stdlib.txt goccy.txt
+	benchstat stdlib.txt goccy.txt
