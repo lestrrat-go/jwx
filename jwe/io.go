@@ -14,15 +14,6 @@ func (sysFS) Open(path string) (fs.File, error) {
 }
 
 func ReadFile(path string, options ...ReadFileOption) (*Message, error) {
-	var parseOptions []ParseOption
-	var readFileOptions []ReadFileOption
-	for _, option := range options {
-		if po, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, po)
-		} else {
-			readFileOptions = append(readFileOptions, option)
-		}
-	}
 
 	var srcFS fs.FS = sysFS{}
 	for _, option := range options {
