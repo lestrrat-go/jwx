@@ -71,15 +71,14 @@ func generateFile(def definition) error {
 	o.L(`}`)
 
 	o.LL("func ReadFile(path string, options ...ReadFileOption) (%s, error) {", def.ReturnType)
-	o.L("var parseOptions []ParseOption")
-	o.L(`var readFileOptions []ReadFileOption`)
-	o.L(`for _, option := range options {`)
-	o.L(`if po, ok := option.(ParseOption); ok {`)
-	o.L(`parseOptions = append(parseOptions, po)`)
-	o.L(`} else {`)
-	o.L(`readFileOptions = append(readFileOptions, option)`)
-	o.L(`}`)
-	o.L(`}`)
+	if def.ParseOptions {
+		o.L("var parseOptions []ParseOption")
+		o.L(`for _, option := range options {`)
+		o.L(`if po, ok := option.(ParseOption); ok {`)
+		o.L(`parseOptions = append(parseOptions, po)`)
+		o.L(`}`)
+		o.L(`}`)
+	}
 	o.LL(`var srcFS fs.FS = sysFS{}`)
 	o.L("for _, option := range options {")
 	o.L(`switch option.Ident() {`)
