@@ -234,9 +234,11 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 }
 
 const (
-	pmPrivateKey   = `PRIVATE KEY`
-	pmPublicKey    = `PUBLIC KEY`
-	pmECPrivateKey = `EC PRIVATE KEY`
+	pmPrivateKey    = `PRIVATE KEY`
+	pmPublicKey     = `PUBLIC KEY`
+	pmECPrivateKey  = `EC PRIVATE KEY`
+	pmRSAPublicKey  = `RSA PUBLIC KEY`
+	pmRSAPrivateKey = `RSA PRIVATE KEY`
 )
 
 // EncodeX509 encodes the key into a byte sequence in ASN.1 DER format
@@ -264,7 +266,7 @@ func EncodeX509(v interface{}) (string, []byte, error) {
 	// Try to convert it into a certificate
 	switch v := v.(type) {
 	case *rsa.PrivateKey:
-		return "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(v), nil
+		return pmRSAPrivateKey, x509.MarshalPKCS1PrivateKey(v), nil
 	case *ecdsa.PrivateKey:
 		marshaled, err := x509.MarshalECPrivateKey(v)
 		if err != nil {
@@ -317,13 +319,13 @@ func DecodePEM(src []byte) (interface{}, []byte, error) {
 
 	switch block.Type {
 	// Handle the semi-obvious cases
-	case "RSA PRIVATE KEY":
+	case pmRSAPrivateKey:
 		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
 		}
 		return key, rest, nil
-	case "RSA PUBLIC KEY":
+	case pmRSAPublicKey:
 		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
