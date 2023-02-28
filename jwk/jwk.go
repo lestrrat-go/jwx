@@ -234,8 +234,9 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 }
 
 const (
-	pmPrivateKey = `PRIVATE KEY`
-	pmPublicKey  = `PUBLIC KEY`
+	pmPrivateKey   = `PRIVATE KEY`
+	pmPublicKey    = `PUBLIC KEY`
+	pmECPrivateKey = `EC PRIVATE KEY`
 )
 
 // EncodeX509 encodes the key into a byte sequence in ASN.1 DER format
@@ -269,7 +270,7 @@ func EncodeX509(v interface{}) (string, []byte, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		return "ECDSA PRIVATE KEY", marshaled, nil
+		return pmECPrivateKey, marshaled, nil
 	case ed25519.PrivateKey:
 		marshaled, err := x509.MarshalPKCS8PrivateKey(v)
 		if err != nil {
@@ -328,7 +329,7 @@ func DecodePEM(src []byte) (interface{}, []byte, error) {
 			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
 		}
 		return key, rest, nil
-	case "EC PRIVATE KEY":
+	case pmECPrivateKey:
 		key, err := x509.ParseECPrivateKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)

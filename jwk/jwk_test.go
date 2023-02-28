@@ -2070,3 +2070,25 @@ func TestGH730(t *testing.T) {
 	require.NoError(t, set.AddKey(key), `first AddKey should succeed`)
 	require.Error(t, set.AddKey(key), `second AddKey should fail`)
 }
+
+func TestECDSAPEM(t *testing.T) {
+	// go make an EC key at https://mkjwk.org/
+	key, err := jwk.ParseKey([]byte(`{
+		"kty": "EC",
+		"d": "zqYPTs5gMEwtidOqjlFJSk6L4BQSfhCJX6FTgbuuiE0",
+		"crv": "P-256",
+		"x": "AYwhwiE1hXWdfwu-HlBSsY5Chxycu-LyE6WsZ_w2DO4",
+		"y": "zumemGclMFkimMsKMXlLdKYWtLle58e4N9hDPcN7lig"
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pem, err := jwk.EncodePEM(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = jwk.ParseKey(pem, jwk.WithPEM(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
