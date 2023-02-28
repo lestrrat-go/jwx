@@ -214,28 +214,65 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("Roundtrip", func(t *testing.T) {
-		buf, err := json.Marshal(key)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
+		var supportsPEM bool
+		switch key.KeyType() {
+		case jwa.OKP, jwa.OctetSeq:
+		default:
+			supportsPEM = true
 		}
 
-		newkey, err := jwk.ParseKey(buf)
-		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-			return
-		}
+		for _, usePEM := range []bool{true, false} {
+			if usePEM && !supportsPEM {
+				continue
+			}
+			t.Run(fmt.Sprintf("WithPEM(%t)", usePEM), func(t *testing.T) {
+				var buf []byte
+				if usePEM {
+					pem, err := jwk.EncodePEM(key)
+					if !assert.NoError(t, err, `jwk.EncodePEM should succeed`) {
+						return
+					}
+					buf = pem
+				} else {
+					jsonbuf, err := json.Marshal(key)
+					if !assert.NoError(t, err, `json.Marshal should succeed`) {
+						return
+					}
+					buf = jsonbuf
+				}
 
-		m1, err := key.AsMap(context.TODO())
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
+				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
+				if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
+					return
+				}
 
-		m2, err := newkey.AsMap(context.TODO())
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
+				m1, err := key.AsMap(context.TODO())
+				if !assert.NoError(t, err, `key.AsMap should succeed`) {
+					return
+				}
 
-		if !assert.Equal(t, m1, m2, `keys should match`) {
-			return
+				m2, err := newkey.AsMap(context.TODO())
+				if !assert.NoError(t, err, `key.AsMap should succeed`) {
+					return
+				}
+
+				// PEM does not preserve these keys
+				if usePEM {
+					delete(m1, `private`)
+					delete(m1, jwk.AlgorithmKey)
+					delete(m1, jwk.KeyIDKey)
+					delete(m1, jwk.KeyOpsKey)
+					delete(m1, jwk.KeyUsageKey)
+					delete(m1, jwk.X509CertChainKey)
+					delete(m1, jwk.X509CertThumbprintKey)
+					delete(m1, jwk.X509CertThumbprintS256Key)
+					delete(m1, jwk.X509URLKey)
+				}
+
+				if !assert.Equal(t, m1, m2, `keys should match`) {
+					return
+				}
+			})
 		}
 	})
 	t.Run("Raw", func(t *testing.T) {
@@ -2071,6 +2108,7 @@ func TestGH730(t *testing.T) {
 	require.Error(t, set.AddKey(key), `second AddKey should fail`)
 }
 
+// This test was lifted from #875. See tests under Roundtrip/WithPEM(true) for other key types
 func TestECDSAPEM(t *testing.T) {
 	// go make an EC key at https://mkjwk.org/
 	key, err := jwk.ParseKey([]byte(`{
