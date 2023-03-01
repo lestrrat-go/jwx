@@ -9,5 +9,5 @@ require (
 	github.com/lestrrat-go/jwx v1.2.15
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	golang.org/x/crypto v0.6.0
 )
