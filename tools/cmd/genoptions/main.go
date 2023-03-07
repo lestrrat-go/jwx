@@ -255,6 +255,12 @@ func genOptionTests(objects *Objects) error {
 
 	o.LL(`package %s`, objects.PackageName)
 
+	imports := append(objects.Imports, []string{
+		`testing`,
+		`github.com/stretchr/testify/require`,
+	}...)
+	o.WriteImports(imports...)
+
 	o.LL(`func TestOptionIdent(t *testing.T) {`)
 	seen := make(map[string]struct{})
 	for _, option := range objects.Options {
