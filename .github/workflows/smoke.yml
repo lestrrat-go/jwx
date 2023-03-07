@@ -28,6 +28,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
+            ~/.cache/bazel
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -49,3 +50,6 @@ jobs:
         run: make smoke-${{ matrix.go_tags }}
       - name: Check difference between generation code and commit code
         run: make check_diffs
+      - uses: bazelbuild/setup-bazelisk@v2
+      - run: bazel build //...
+
