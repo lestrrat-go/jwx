@@ -1,0 +1,45 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "openid",
+    srcs = [
+        "address.go",
+        "birthdate.go",
+        "builder_gen.go",
+        "interface.go",
+        "openid.go",
+        "token_gen.go",
+    ],
+    importpath = "github.com/lestrrat-go/jwx/v2/jwt/openid",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/base64",
+        "//internal/iter",
+        "//internal/json",
+        "//internal/pool",
+        "//jwt",
+        "//jwt/internal/types",
+        "@com_github_lestrrat_go_iter//mapiter:go_default_library",
+    ],
+)
+
+go_test(
+    name = "openid_test",
+    srcs = ["openid_test.go"],
+    deps = [
+        ":openid",
+        "//internal/json",
+        "//internal/jwxtest",
+        "//jwa",
+        "//jwt",
+        "//jwt/internal/types",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":openid",
+    visibility = ["//visibility:public"],
+)
