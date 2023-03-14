@@ -13,6 +13,7 @@ v2.0.9 - UNRELEASED
   * Banners for generated files have been modified to allow tools to pick them up (#867)
   * Remove unused variables around ReadFileOption (#866)
   * Fix test failures
+  * Support bazel out of the box
 
 v2.0.8 - 25 Nov 2022
 [Security Fixes]
