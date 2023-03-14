@@ -11,20 +11,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-        make tidy
+          make tidy
       - run: |
-        make test
+          make test
       - run: |
-        bazel run //:gazelle-update-repos
+          bazel run //:gazelle-update-repos
       - run: |
-        bazel build //...
+          bazel build //...
       - run: |
-        git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
-        git add .
-        git commit -m "Run tidy / bazel+gazelle"
-        git push
-        gh pr review --approve "$PR_URL"
-        gh pr merge --auto --merge "$PR_URL"
+          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Run tidy / bazel+gazelle"
+          git push
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --merge "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
