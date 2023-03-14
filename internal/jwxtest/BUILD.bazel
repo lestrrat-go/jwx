@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "jwxtest",
+    srcs = ["jwxtest.go"],
+    importpath = "github.com/lestrrat-go/jwx/v2/internal/jwxtest",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/ecutil",
+        "//jwa",
+        "//jwe",
+        "//jwk",
+        "//jws",
+        "//x25519",
+        "@com_github_stretchr_testify//assert",
+    ],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":jwxtest",
+    visibility = ["//:__subpackages__"],
+)
