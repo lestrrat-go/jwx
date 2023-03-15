@@ -81,8 +81,7 @@ MAIN:
       return
     }
     _ = keyset
-    // The returned `keyset` will always be "reasonably" new. It is important that
-    // you always call `ar.Fetch()` before using the `keyset` as this is where the refreshing occurs.
+    // The returned `keyset` will always be "reasonably" new.
     //
     // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
     // immediately after it has been rotated in the remote source. But it should be close\
