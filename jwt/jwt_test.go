@@ -1667,3 +1667,17 @@ func TestGH850(t *testing.T) {
 	_, err := jwt.Parse([]byte(testToken), jwt.WithVerify(false))
 	require.True(t, errors.Is(err, jwt.ErrInvalidJWT()))
 }
+
+func TestGH888(t *testing.T) {
+	token, err := jwt.NewBuilder().
+		Subject("foo").
+		Issuer("bar").
+		Build()
+
+	require.NoError(t, err, `jwt.Builder should succeed`)
+
+	signed, err := jwt.Sign(token, jwt.WithKey(jwa.NoSignature, nil))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	require.Equal(t, `eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJiYXIiLCJzdWIiOiJiYXIifQ.`, string(signed))
+}
