@@ -151,6 +151,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			if !ok {
 				return nil, fmt.Errorf(`jws.Sign: expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
 			}
+
+			// No, we don't accept "none" here.
+			if alg == jwa.NoSignature {
+				return nil, fmt.Errorf(`jws.Sign: "none" (jwa.NoSignature) cannot be used with jws.WithKey`)
+			}
+
 			signer, err := makeSigner(alg, data.key, data.public, data.protected)
 			if err != nil {
 				return nil, fmt.Errorf(`jws.Sign: failed to create signer: %w`, err)
