@@ -67,7 +67,7 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
-// SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
+// SignEncryptParseOption describes an Option that can be passed to both `jwt.Sign()` or
 // `jwt.Parse()`
 type SignEncryptParseOption interface {
 	Option
