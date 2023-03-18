@@ -139,11 +139,19 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	format := fmtCompact
 	var signers []*payloadSigner
 	var detached bool
+	var noneSignature *payloadSigner
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
 			format = option.Value().(int)
+		case identInsecureNoSignature{}:
+			data := option.Value().(*withInsecureNoSignature)
+			// only the last one is used (we overwrite previous values)
+			noneSignature = &payloadSigner{
+				signer:    noneSigner{},
+				protected: data.protected,
+			}
 		case identKey{}:
 			data := option.Value().(*withKey)
 
@@ -169,6 +177,10 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			}
 			payload = option.Value().([]byte)
 		}
+	}
+
+	if noneSignature != nil {
+		signers = append(signers, noneSignature)
 	}
 
 	lsigner := len(signers)
