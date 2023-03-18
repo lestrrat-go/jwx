@@ -70,10 +70,10 @@ func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 
 type noneSigner struct{}
 
-func (_ noneSigner) Algorithm() jwa.SignatureAlgorithm {
+func (noneSigner) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.NoSignature
 }
 
-func (_ noneSigner) Sign([]byte, interface{}) ([]byte, error) {
+func (noneSigner) Sign([]byte, interface{}) ([]byte, error) {
 	return nil, nil
 }
