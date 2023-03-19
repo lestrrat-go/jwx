@@ -1688,5 +1688,8 @@ func TestGH888(t *testing.T) {
 		require.NoError(t, err, `jwt.Sign should succeed`)
 
 		require.Equal(t, `eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJiYXIiLCJzdWIiOiJmb28ifQ.`, string(signed))
+
+		_, err = jwt.Parse(signed)
+		require.Error(t, err, `jwt.Parse with alg=none should fail`)
 	})
 }

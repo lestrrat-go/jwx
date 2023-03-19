@@ -1983,8 +1983,9 @@ func TestGH888(t *testing.T) {
 	_, err = jws.Verify(signed, jws.WithKey(jwa.NoSignature, nil))
 	require.Error(t, err, `jws.Verify should fail`)
 
+	// Note: you can't do jws.Verify(..., jws.WithInsecureNoSignature())
+
 	verified, err := jws.Verify(signed, jws.WithKey(jwa.HS256, []byte(`bar`)))
 	require.NoError(t, err, `jws.Verify should succeed`)
-
 	require.Equal(t, []byte(`foo`), verified)
 }

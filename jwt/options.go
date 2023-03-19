@@ -298,6 +298,6 @@ func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
 	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
 }
 
-func WithInsecureNoSignature() SignEncryptParseOption {
+func WithInsecureNoSignature() SignOption {
 	return &signEncryptParseOption{option.New(identInsecureNoSignature{}, nil)}
 }

@@ -184,7 +184,7 @@ func (w *withInsecureNoSignature) Protected(v Headers) Headers {
 // "none" by accident)
 //
 // TODO: create specific sub-option set for this option
-func WithInsecureNoSignature(options ...WithKeySuboption) SignVerifyOption {
+func WithInsecureNoSignature(options ...WithKeySuboption) SignOption {
 	var protected Headers
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -194,7 +194,7 @@ func WithInsecureNoSignature(options ...WithKeySuboption) SignVerifyOption {
 		}
 	}
 
-	return &signVerifyOption{
+	return &signOption{
 		option.New(identInsecureNoSignature{},
 			&withInsecureNoSignature{
 				protected: protected,
