@@ -14,6 +14,16 @@ v2.0.9 - UNRELEASED
   * Remove unused variables around ReadFileOption (#866)
   * Fix test failures
   * Support bazel out of the box
+  * Now you can create JWS messages using `{"alg":"none"}`, by calling `jws.Sign()`
+    with `jws.WithInsecureNoSignature()` option. (#888, #890).
+
+    Note that there is no way to call
+    `jws.Verify()` while allowing `{"alg":"none"}` as you wouldn't be _verifying_
+    the message if we allowed the "none" algorithm. `jws.Parse()` will parse such
+    messages witout verification.
+
+    `jwt` also allows you to sign using alg="none", but there's no symmetrical
+    way to verify such messages.
 
 v2.0.8 - 25 Nov 2022
 [Security Fixes]

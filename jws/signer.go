@@ -67,3 +67,13 @@ func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 	}
 	return nil, fmt.Errorf(`unsupported signature algorithm "%s"`, alg)
 }
+
+type noneSigner struct{}
+
+func (noneSigner) Algorithm() jwa.SignatureAlgorithm {
+	return jwa.NoSignature
+}
+
+func (noneSigner) Sign([]byte, interface{}) ([]byte, error) {
+	return nil, nil
+}

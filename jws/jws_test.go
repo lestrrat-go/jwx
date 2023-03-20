@@ -1951,3 +1951,41 @@ func TestGH840(t *testing.T) {
 	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
 	require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
 }
+
+func TestGH888(t *testing.T) {
+	// This should fail because we're passing multiple keys (i.e. multiple signatures)
+	// and yet we haven't specified JSON serialization
+	_, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)))
+	require.Error(t, err, `jws.Sign with multiple keys (including alg=none) should fail`)
+
+	// This should pass because we can now have multiple signaures with JSON serialization
+	signed, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)), jws.WithJSON())
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	message, err := jws.Parse(signed)
+	require.NoError(t, err, `jws.Parse should succeed`)
+
+	// Look for alg=none signature
+	var foundNoSignature bool
+	for _, sig := range message.Signatures() {
+		if sig.ProtectedHeaders().Algorithm() != jwa.NoSignature {
+			continue
+		}
+
+		require.Nil(t, sig.Signature(), `signature must be nil for alg=none`)
+		foundNoSignature = true
+	}
+	require.True(t, foundNoSignature, `signature with no signature was found`)
+
+	_, err = jws.Verify(signed)
+	require.Error(t, err, `jws.Verify should fail`)
+
+	_, err = jws.Verify(signed, jws.WithKey(jwa.NoSignature, nil))
+	require.Error(t, err, `jws.Verify should fail`)
+
+	// Note: you can't do jws.Verify(..., jws.WithInsecureNoSignature())
+
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.HS256, []byte(`bar`)))
+	require.NoError(t, err, `jws.Verify should succeed`)
+	require.Equal(t, []byte(`foo`), verified)
+}
