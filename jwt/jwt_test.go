@@ -1667,3 +1667,29 @@ func TestGH850(t *testing.T) {
 	_, err := jwt.Parse([]byte(testToken), jwt.WithVerify(false))
 	require.True(t, errors.Is(err, jwt.ErrInvalidJWT()))
 }
+
+func TestGH888(t *testing.T) {
+	// Use of "none" is insecure, and we just don't allow it by default.
+	// In order to allow none, we must tell jwx that we actually want it.
+	token, err := jwt.NewBuilder().
+		Subject("foo").
+		Issuer("bar").
+		Build()
+
+	require.NoError(t, err, `jwt.Builder should succeed`)
+
+	// 1) "none" must be triggered by its own option. Can't use jwt.WithKey(jwa.NoSignature, ...)
+	t.Run("jwt.Sign(token, jwt.WithKey(jwa.NoSignature)) should fail", func(t *testing.T) {
+		_, err := jwt.Sign(token, jwt.WithKey(jwa.NoSignature, nil))
+		require.Error(t, err, `jwt.Sign with jwt.WithKey should fail`)
+	})
+	t.Run("jwt.Sign(token, jwt.WithInsecureNoSignature())", func(t *testing.T) {
+		signed, err := jwt.Sign(token, jwt.WithInsecureNoSignature())
+		require.NoError(t, err, `jwt.Sign should succeed`)
+
+		require.Equal(t, `eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJiYXIiLCJzdWIiOiJmb28ifQ.`, string(signed))
+
+		_, err = jwt.Parse(signed)
+		require.Error(t, err, `jwt.Parse with alg=none should fail`)
+	})
+}
