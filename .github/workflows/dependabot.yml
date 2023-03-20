@@ -1,7 +1,7 @@
 name: merge dependabot
 on: 
   pull_request:
-    types: [labeld]
+    types: [labeled]
 
 jobs:
   merge:
