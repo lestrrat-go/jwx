@@ -10,6 +10,7 @@ The following is a set of guidelines that we ask you to follow when you contribu
 * [Please Be Nice](#please-be-nice)
 * [Please Use Correct Medium (GitHub Issues / Discussions)](#please-use-correct-medium-github-issues--discussions)
 * [Please Include (Pseudo)code for Any Technical Issues](#please-include-pseudocode-for-any-technical-issues)
+* [Reviewer/Reviewee Guidelines](#reviewer-reviewee-guidelines)
 * [Brown M&M Clause](#brown-mm-clause)
 * [Pull Requests](#pull-requests)
   * [Branches](#branches)
@@ -27,10 +28,11 @@ The following is a set of guidelines that we ask you to follow when you contribu
 
 # Please Be Nice
 
+[Main source; if wording differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
+
 Please be nice when you contact us.
 
-We are very glad that you find this project useful, and we intend to provide software
-that help you.
+We are very glad that you find this project useful, and we intend to provide software that help you.
 
 You do not have to thank us, but please bare in mind that this is an opensource project that is provided **as-is**.
 This means that we are **NOT** obligated to support you, work for you, do your homework/research for you,
@@ -46,14 +48,17 @@ We are willing to help, but only as long as you are being nice to us.
 
 # Please Use Correct Medium (GitHub Issues / Discussions)
 
+[Main source; this is a specialized version copied from the main source](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
+
 This project uses [GitHub Issues](https://github.com/lestrrat-go/jwx/issues) to deal with technical issues
-including bug reports, proposing new API, and otherwise issues that
-are directly actionable.
+including bug reports, proposing new API, and otherwise issues that are directly actionable.
 
 Inquiries, questions about the usage, maintenance policies, and other open-ended
 questions/discussions should be posted to [GitHub Discussions](https://github.com/lestrrat-go/jwx/discussions).
 
 # Please Include (Pseudo)code for Any Technical Issues
+
+[Main source; if wording differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
 Your report should contain clear, concise description of the issue that you are facing.
 However, at the same time please always include (pseudo)code in report.
@@ -74,6 +79,11 @@ no better way to convey what you are trying to do than to provide
 your code.
 
 Please help us help you by providing us with a reproducible code.
+
+# Reviewer/Reviewee Guidelines
+
+If you are curious about what what gets reviewed and why some decisions
+are made the way they are, please read [this document](https://github.com/lestrrat-go/contributions/blob/main/Reviews.md) to get some insight into the thinking process.
 
 # Brown M&M Clause
 

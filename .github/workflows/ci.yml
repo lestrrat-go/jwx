@@ -22,12 +22,13 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
+            ~/.cache/bazel
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install Go stable version
         if: matrix.go != 'tip'
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
@@ -58,4 +59,5 @@ jobs:
           file: ./coverage.out
       - name: Check difference between generation code and commit code
         run: make check_diffs
- 
+      - uses: bazelbuild/setup-bazelisk@v2
+      - run: bazel build //...
