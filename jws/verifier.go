@@ -23,6 +23,10 @@ var verifierDB map[jwa.SignatureAlgorithm]VerifierFactory
 // For example, if you would like to provide a custom verifier for
 // jwa.EdDSA, use this function to register a `VerifierFactory`
 // (probably in your `init()`)
+//
+// Unlike the `UnregisterVerifier` function, this function automatically
+// calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
+// in the known algorithms database.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 	jwa.RegisterSignatureAlgorithm(alg)
 	verifierDB[alg] = f
@@ -31,12 +35,12 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 // UnregisterVerifier removes the signer factory associated with
 // the given algorithm.
 //
-// Note that the algorithm itself is not unregistered from the
-// known algorithms database. This is because the algorithm may
-// still be required for verification (however unlikely, it is
-// still possible). Therefore, in order to completely remove
-// the algorithm, you must call `jwa.UnregisterSignatureAlgorithm`
-// yourself.
+// Note that when you call this function, the algorithm itself is
+// not automatically unregistered from the known algorithms database.
+// This is because the algorithm may/ still be required for signing or
+// some other operation (however unlikely, it is still possible).
+// Therefore, in order to/ completely remove the algorithm, you must
+// call `jwa.UnregisterSignatureAlgorithm` yourself.
 func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 	delete(verifierDB, alg)
 }
