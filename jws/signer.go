@@ -37,9 +37,9 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 //
 // Note that when you call this function, the algorithm itself is
 // not automatically unregistered from the known algorithms database.
-// This is because the algorithm may/ still be required for verification or
+// This is because the algorithm may still be required for verification or
 // some other operation (however unlikely, it is still possible).
-// Therefore, in order to/ completely remove the algorithm, you must
+// Therefore, in order to completely remove the algorithm, you must
 // call `jwa.UnregisterSignatureAlgorithm` yourself.
 
 func UnregisterSigner(alg jwa.SignatureAlgorithm) {
