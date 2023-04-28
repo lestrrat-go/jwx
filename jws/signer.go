@@ -23,8 +23,26 @@ var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 // For example, if you would like to provide a custom signer for
 // jwa.EdDSA, use this function to register a `SignerFactory`
 // (probably in your `init()`)
+//
+// Unlike the `UnregisterSigner` function, this function automatically
+// calles `jwa.RegisterSignatureAlgorithm` to register the algorithm
+// in the known algorithms database.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
+	jwa.RegisterSignatureAlgorithm(alg)
 	signerDB[alg] = f
+}
+
+// UnregisterSigner removes the signer factory associated with
+// the given algorithm.
+//
+// Note that the algorithm itself is not unregistered from the
+// known algorithms database. This is because the algorithm may
+// still be required for verification (however unlikely, it is
+// still possible). Therefore, in order to completely remove
+// the algorithm, you must call `jwa.UnregisterSignatureAlgorithm`
+// yourself.
+func UnregisterSigner(alg jwa.SignatureAlgorithm) {
+	delete(signerDB, alg)
 }
 
 func init() {

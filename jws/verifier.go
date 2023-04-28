@@ -24,7 +24,21 @@ var verifierDB map[jwa.SignatureAlgorithm]VerifierFactory
 // jwa.EdDSA, use this function to register a `VerifierFactory`
 // (probably in your `init()`)
 func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
+	jwa.RegisterSignatureAlgorithm(alg)
 	verifierDB[alg] = f
+}
+
+// UnregisterVerifier removes the signer factory associated with
+// the given algorithm.
+//
+// Note that the algorithm itself is not unregistered from the
+// known algorithms database. This is because the algorithm may
+// still be required for verification (however unlikely, it is
+// still possible). Therefore, in order to completely remove
+// the algorithm, you must call `jwa.UnregisterSignatureAlgorithm`
+// yourself.
+func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
+	delete(verifierDB, alg)
 }
 
 func init() {
