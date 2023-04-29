@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 )
@@ -15,6 +16,7 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 	return fn()
 }
 
+var muSignerDB sync.RWMutex
 var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 
 // RegisterSigner is used to register a factory object that creates
@@ -29,7 +31,9 @@ var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 // in the known algorithms database.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 	jwa.RegisterSignatureAlgorithm(alg)
+	muSignerDB.Lock()
 	signerDB[alg] = f
+	muSignerDB.Unlock()
 }
 
 // UnregisterSigner removes the signer factory associated with
@@ -41,9 +45,10 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 // some other operation (however unlikely, it is still possible).
 // Therefore, in order to completely remove the algorithm, you must
 // call `jwa.UnregisterSignatureAlgorithm` yourself.
-
 func UnregisterSigner(alg jwa.SignatureAlgorithm) {
+	muSignerDB.Lock()
 	delete(signerDB, alg)
+	muSignerDB.Unlock()
 }
 
 func init() {
@@ -80,7 +85,10 @@ func init() {
 
 // NewSigner creates a signer that signs payloads using the given signature algorithm.
 func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
+	muSignerDB.RLock()
 	f, ok := signerDB[alg]
+	muSignerDB.RUnlock()
+
 	if ok {
 		return f.Create()
 	}
