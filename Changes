@@ -4,6 +4,18 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.10 - UNRELEASED
+[Bug fixes]
+  * Registering JWS signers/verifiers did not work since v2.0.0, because the
+    way we handle algorithm names changed in 2aa98ce6884187180a7145b73da78c859dd46c84.
+    (We previously thought that this would be checked by the example code, but it
+     apparently failed to flag us properly)
+
+    The logic behind managing the internal database has been fixed, and
+    `jws.RegisterSigner` and `jws.RegisterVerifier` now properly hooks into the new
+    `jwa.RegisterSignatureAlgorithm` to automatically register new algorithm names
+    (#910, #911)
+
 v2.0.9 - 21 Mar 2023
 [Security Fixes]
   * Updated use of golang.org/x/crypto to v0.7.0
