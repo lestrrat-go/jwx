@@ -8,8 +8,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -1988,4 +1990,57 @@ func TestGH888(t *testing.T) {
 	verified, err := jws.Verify(signed, jws.WithKey(jwa.HS256, []byte(`bar`)))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, []byte(`foo`), verified)
+}
+
+// Some stuff required for testing #910
+// The original code used an external library to sign/verify, but here
+// we just use a simple SHA256 digest here so that we don't force
+// users to download an optional dependency
+type s256SignerVerifier struct{}
+
+const sha256Algo jwa.SignatureAlgorithm = "SillyTest256"
+
+func (s256SignerVerifier) Algorithm() jwa.SignatureAlgorithm {
+	return sha256Algo
+}
+
+func (s256SignerVerifier) Sign(payload []byte, _ interface{}) ([]byte, error) {
+	h := sha256.Sum256(payload)
+	return h[:], nil
+}
+
+func (s256SignerVerifier) Verify(payload, signature []byte, _ interface{}) error {
+	h := sha256.Sum256(payload)
+	if !bytes.Equal(h[:], signature) {
+		return errors.New("invalid signature")
+	}
+	return nil
+}
+
+func TestGH910(t *testing.T) {
+	// Note: This has global effect. You can't run this in parallel with other tests
+	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
+		return s256SignerVerifier{}, nil
+	}))
+	defer jws.UnregisterSigner(sha256Algo)
+
+	jws.RegisterVerifier(sha256Algo, jws.VerifierFactoryFn(func() (jws.Verifier, error) {
+		return s256SignerVerifier{}, nil
+	}))
+	defer jws.UnregisterVerifier(sha256Algo)
+	defer jwa.UnregisterSignatureAlgorithm(sha256Algo)
+
+	var sa jwa.SignatureAlgorithm
+	require.NoError(t, sa.Accept(sha256Algo.String()), `jwa.SignatureAlgorithm.Accept should succeed`)
+
+	// Now that we have established that the signature algorithm works,
+	// we can proceed with the test
+	const src = `Lorem Ipsum`
+	signed, err := jws.Sign([]byte(src), jws.WithKey(sha256Algo, nil))
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	verified, err := jws.Verify(signed, jws.WithKey(sha256Algo, nil))
+	require.NoError(t, err, `jws.Verify should succeed`)
+
+	require.Equal(t, src, string(verified), `verified payload should match`)
 }

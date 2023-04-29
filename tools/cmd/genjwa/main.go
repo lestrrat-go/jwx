@@ -400,19 +400,48 @@ func (t typ) Generate() error {
 	}
 	o.L(")") // end const
 
-	o.L("var all%[1]ss = map[%[1]s]struct{} {", t.name)
+	// Register%s and related tools are provided so users can register their own types.
+	// This triggers some re-building of data structures that are otherwise
+	// reused for efficiency
+	o.LL("var mu%[1]ss sync.RWMutex", t.name)
+	o.L("var all%[1]ss map[%[1]s]struct{}", t.name)
+	o.L("var list%[1]s []%[1]s", t.name)
+
+	o.LL("func init() {")
+	o.L("mu%[1]ss.Lock()", t.name)
+	o.L("defer mu%[1]ss.Unlock()", t.name)
+	o.L("all%[1]ss = make(map[%[1]s]struct{})", t.name)
 	for _, e := range t.elements {
 		if !e.invalid {
-			o.L("%s: {},", e.name)
+			o.L("all%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
 		}
 	}
+	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
 
-	o.LL("var list%sOnce sync.Once", t.name)
-	o.L("var list%[1]s []%[1]s", t.name)
-	o.LL("// %[1]ss returns a list of all available values for %[1]s", t.name)
-	o.L("func %[1]ss() []%[1]s {", t.name)
-	o.L("list%sOnce.Do(func() {", t.name)
+	o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
+	o.L("// Duplicates will silently be ignored")
+	o.L("func Register%[1]s(v %[1]s) {", t.name)
+	o.L("mu%[1]ss.Lock()", t.name)
+	o.L("defer mu%[1]ss.Unlock()", t.name)
+	o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
+	o.L("all%[1]ss[v] = struct{}{}", t.name)
+	o.L("rebuild%[1]s()", t.name)
+	o.L("}")
+	o.L("}")
+
+	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
+	o.L("// Non-existentn entries will silently be ignored")
+	o.L("func Unregister%[1]s(v %[1]s) {", t.name)
+	o.L("mu%[1]ss.Lock()", t.name)
+	o.L("defer mu%[1]ss.Unlock()", t.name)
+	o.L("if _, ok := all%[1]ss[v]; ok {", t.name)
+	o.L("delete(all%[1]ss, v)", t.name)
+	o.L("rebuild%[1]s()", t.name)
+	o.L("}")
+	o.L("}")
+
+	o.LL("func rebuild%[1]s() {", t.name)
 	o.L("list%[1]s = make([]%[1]s, 0, len(all%[1]ss))", t.name)
 	o.L("for v := range all%ss {", t.name)
 	o.L("list%[1]s = append(list%[1]s, v)", t.name)
@@ -420,7 +449,12 @@ func (t typ) Generate() error {
 	o.L("sort.Slice(list%s, func(i, j int) bool {", t.name)
 	o.L("return string(list%[1]s[i]) < string(list%[1]s[j])", t.name)
 	o.L("})")
-	o.L("})")
+	o.L("}")
+
+	o.LL("// %[1]ss returns a list of all available values for %[1]s", t.name)
+	o.L("func %[1]ss() []%[1]s {", t.name)
+	o.L("mu%[1]ss.RLock()", t.name)
+	o.L("defer mu%[1]ss.RUnlock()", t.name)
 	o.L("return list%s", t.name)
 	o.L("}")
 

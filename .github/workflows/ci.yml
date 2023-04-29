@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags']
-        go: [ '1.19', '1.18', '1.17' ]
+        go: [ '1.20', '1.19', '1.18']
     name: "Test [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
@@ -57,7 +57,8 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.out
+      - uses: bazelbuild/setup-bazelisk@v2
+      - run: bazel run //:gazelle-update-repos
       - name: Check difference between generation code and commit code
         run: make check_diffs
-      - uses: bazelbuild/setup-bazelisk@v2
-      - run: bazel build //...
+
