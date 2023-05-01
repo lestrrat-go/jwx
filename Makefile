@@ -25,8 +25,11 @@ test-goccy:
 test-es256k:
 	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k"
 
+test-asmbase64:
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64"
+
 test-alltags:
-	$(MAKE) test-cmd TESTOPTS="-tags jwx_goccy,jwx_es256k"
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64,jwx_goccy,jwx_es256k"
 
 cover-cmd:
 	env MODE=cover ./tools/test.sh
