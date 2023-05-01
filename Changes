@@ -15,6 +15,14 @@ v2.0.10 - UNRELEASED
     `jws.RegisterSigner` and `jws.RegisterVerifier` now properly hooks into the new
     `jwa.RegisterSignatureAlgorithm` to automatically register new algorithm names
     (#910, #911)
+[Miscellaneous]
+  * Added limited support for github.com/segmentio/asm/base64. Compile your code
+    with the `jwx_asmbase64` build tag. This feature is EXPERIMENTAL.
+
+    Through limited testing, the use of a faster base64 library provide 1~5% increase
+    in throughput on average. It might make more difference if the input/output is large.
+    If you care about this performance improvement, you should probably enable
+    `goccy` JSON parser as well, by specifying `jwx_goccy,jwx_asmbase64` in your build call.
 
 v2.0.9 - 21 Mar 2023
 [Security Fixes]
