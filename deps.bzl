@@ -74,6 +74,14 @@ def go_dependencies():
         version = "v1.0.0",
     )
     go_repository(
+        name = "com_github_segmentio_asm",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/segmentio/asm",
+        sum = "h1:9BQrFxC+YOHJlTlHGkTrFWf59nbL3XnCoFLTwDCI7ys=",
+        version = "v1.2.0",
+    )
+
+    go_repository(
         name = "com_github_stretchr_objx",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/stretchr/objx",
