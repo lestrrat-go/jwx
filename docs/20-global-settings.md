@@ -29,6 +29,18 @@ Disable the tag if you feel like it's not worth the hassle.
 
 And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
 
+## Enabling experimental base64 encoder/decoder
+
+This feature is currently considered experimental.
+
+Currently you can enable [github.com/segmentio/asm/base64](https://github.com/segmentio/asm/tree/main/base64) by specifying the `jwx_asmbase64` build tag
+
+```shell
+% go build -tags jwx_goccy ...
+```
+
+In our limited testing, this does not seem to improve performance significantly: presumably the other bottlenecks are more dominant. If you care enough to use this option, you probably wantt o enable `jwx_goccy` build tag as well.
+
 ## Using json.Number
 
 If you want to parse numbers in the incoming JSON objects as json.Number
