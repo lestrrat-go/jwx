@@ -12,7 +12,7 @@ If you are using this module in your product or your company, please add  your p
   * Supports JWS with unencoded payload (RFC7797)
   * Supports JWE messages with multiple recipients, both compact and JSON serialization
   * Most operations work with either JWK or raw keys e.g. *rsa.PrivateKey, *ecdsa.PrivateKey, etc).
-* Opinionated, but very uniform API. Everything is symmetric, and follows a standard convetion
+* Opinionated, but very uniform API. Everything is symmetric, and follows a standard convention
   * jws.Parse/Verify/Sign
   * jwe.Parse/Encrypt/Decrypt
   * Arguments are organized as explicit required paramters and optional WithXXXX() style options.
