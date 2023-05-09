@@ -43,7 +43,7 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 //   - []byte creates a symmetric key
 func FromRaw(key interface{}) (Key, error) {
 	if key == nil {
-		return nil, fmt.Errorf(`jwk.New requires a non-nil key`)
+		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
 	}
 
 	var ptr interface{}
