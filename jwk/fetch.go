@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"sync"
@@ -41,6 +42,9 @@ func getGlobalFetcher() httprc.Fetcher {
 		var nworkers int
 		v := os.Getenv(`JWK_FETCHER_WORKER_COUNT`)
 		if c, err := strconv.ParseInt(v, 10, 64); err == nil {
+			if c > math.MaxInt {
+				nworkers = math.MaxInt
+			}
 			nworkers = int(c)
 		}
 		if nworkers < 1 {
