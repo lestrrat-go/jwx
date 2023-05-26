@@ -24,14 +24,14 @@ func (f FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) 
 
 var globalFetcher httprc.Fetcher
 var muGlobalFetcher sync.Mutex
-var fetcherChanged atomic.Bool
+var fetcherChanged uint32
 
 func init() {
-	fetcherChanged.Store(true)
+	atomic.StoreUint32(&fetcherChanged, 1)
 }
 
 func getGlobalFetcher() httprc.Fetcher {
-	if !fetcherChanged.Load() { // no need to check
+	if v := atomic.LoadUint32(&fetcherChanged); v == 0 {
 		return globalFetcher
 	}
 
@@ -49,6 +49,8 @@ func getGlobalFetcher() httprc.Fetcher {
 
 		globalFetcher = httprc.NewFetcher(context.Background(), httprc.WithFetcherWorkerCount(nworkers))
 	}
+
+	atomic.StoreUint32(&fetcherChanged, 0)
 	return globalFetcher
 }
 
@@ -62,11 +64,20 @@ func getGlobalFetcher() httprc.Fetcher {
 // how the default whitelist is handled), or when you want to control
 // the lifetime of the global fetcher, for example for tests
 // that require a clean shutdown.
+//
+// If you do use this function to set a custom fetcher and you
+// control its termination, make sure that you call `jwk.SetGlobalFetcher()`
+// one more time (possibly with `nil`) to assign a valid fetcher.
+// Otherwise, once the fetcher is invalidated, subsequent calls to `jwk.Fetch`
+// may hang, causing very hard to debug problems.
+//
+// If you are sure you no longer need `jwk.Fetch` after terminating the
+// fetcher, then you the above caution is not necessary.
 func SetGlobalFetcher(f httprc.Fetcher) {
 	muGlobalFetcher.Lock()
 	globalFetcher = f
 	muGlobalFetcher.Unlock()
-	fetcherChanged.Store(true)
+	atomic.StoreUint32(&fetcherChanged, 1)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be
