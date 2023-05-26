@@ -2160,7 +2160,7 @@ func TestECDSAPEM(t *testing.T) {
 //		goleak.VerifyNone(t)
 //	  }
 /*
-func TestGH922(t *testing.T) {
+func TestGH928(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	jwk.SetGlobalFetcher(httprc.NewFetcher(ctx))
 
