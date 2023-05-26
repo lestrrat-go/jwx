@@ -2136,9 +2136,8 @@ func TestECDSAPEM(t *testing.T) {
 // but 1) this is sort of expected in this library, and 2) we don't believe that
 // forcing all of our users to use `go.uber.org/goleak` is prudent.
 //
-// However, we are leaving this test here so that user can learn how this function
-// can be used.
-// This is meant to show you the boilerplate code for when you/ want to make
+// However, we are leaving this test here so that users can learn how this function
+// can be used. This is meant to show you the boilerplate code for when you/ want to make
 // absolutely sure that no goroutine is left when you finish your program.
 //
 // For example, if you are writing an app, you can follow the pattern in the
