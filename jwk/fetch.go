@@ -44,8 +44,9 @@ func getGlobalFetcher() httprc.Fetcher {
 		if c, err := strconv.ParseInt(v, 10, 64); err == nil {
 			if c > math.MaxInt {
 				nworkers = math.MaxInt
+			} else {
+				nworkers = int(c)
 			}
-			nworkers = int(c)
 		}
 		if nworkers < 1 {
 			nworkers = 3
