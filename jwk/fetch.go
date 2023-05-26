@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/httprc"
 )
@@ -21,18 +23,50 @@ func (f FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) 
 }
 
 var globalFetcher httprc.Fetcher
+var muGlobalFetcher sync.Mutex
+var fetcherChanged atomic.Bool
 
 func init() {
-	var nworkers int
-	v := os.Getenv(`JWK_FETCHER_WORKER_COUNT`)
-	if c, err := strconv.ParseInt(v, 10, 64); err == nil {
-		nworkers = int(c)
-	}
-	if nworkers < 1 {
-		nworkers = 3
+	fetcherChanged.Store(true)
+}
+
+func getGlobalFetcher() httprc.Fetcher {
+	if !fetcherChanged.Load() { // no need to check
+		return globalFetcher
 	}
 
-	globalFetcher = httprc.NewFetcher(context.Background(), httprc.WithFetcherWorkerCount(nworkers))
+	muGlobalFetcher.Lock()
+	defer muGlobalFetcher.Unlock()
+	if globalFetcher == nil {
+		var nworkers int
+		v := os.Getenv(`JWK_FETCHER_WORKER_COUNT`)
+		if c, err := strconv.ParseInt(v, 10, 64); err == nil {
+			nworkers = int(c)
+		}
+		if nworkers < 1 {
+			nworkers = 3
+		}
+
+		globalFetcher = httprc.NewFetcher(context.Background(), httprc.WithFetcherWorkerCount(nworkers))
+	}
+	return globalFetcher
+}
+
+// SetGlobalFetcher allows users to specify a custom global fetcher,
+// which is used by the `Fetch` function. Assigning `nil` forces the
+// the default fetcher to be (re)created when the next call to
+// `jwk.Fetch` occurs
+//
+// You only need to call this function when you want to
+// either change the fetching behavior (for example, you want to change
+// how the default whitelist is handled), or when you want to control
+// the lifetime of the global fetcher, for example for tests
+// that require a clean shutdown.
+func SetGlobalFetcher(f httprc.Fetcher) {
+	muGlobalFetcher.Lock()
+	globalFetcher = f
+	muGlobalFetcher.Unlock()
+	fetcherChanged.Store(true)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be
@@ -43,6 +77,14 @@ func init() {
 // contents of the object with the data at the remote resource,
 // consider using `jwk.Cache`, which automatically refreshes
 // jwk.Set objects asynchronously.
+//
+// Please note that underneath the `jwk.Fetch` function, it uses a global
+// object that spawns goroutines that are present until the go runtime
+// exits. Initially this global variable is uninitialized, but upon
+// calling `jwk.Fetch` once, it is initialized and goroutines are spawned.
+// If you want to control the lifetime of these goroutines, you can
+// call `jwk.SetGlobalFetcher` with a custom fetcher which is tied to
+// a `context.Context` object that you can control.
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var hrfopts []httprc.FetchOption
 	var parseOptions []ParseOption
@@ -61,7 +103,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		}
 	}
 
-	res, err := globalFetcher.Fetch(ctx, u, hrfopts...)
+	res, err := getGlobalFetcher().Fetch(ctx, u, hrfopts...)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to fetch %q: %w`, u, err)
 	}
