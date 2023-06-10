@@ -14,6 +14,9 @@ import (
 // to encrypt the content encryption key in a JWE message without
 // having to expose the secret key in memory, for example, when you
 // want to use hardware security modules (HSMs) to encrypt the key.
+//
+// This API is experimental and may change without notice, even
+// in minor releases.
 type KeyEncrypter interface {
 	// Algorithm returns the algorithm used to encrypt the key.
 	Algorithm() jwa.KeyEncryptionAlgorithm
@@ -37,6 +40,9 @@ type KeyIDer interface {
 // to decrypt the encrypted key in a JWE message without having to
 // expose the secret key in memory, for example, when you want to use
 // hardware security modules (HSMs) to decrypt the key.
+//
+// This API is experimental and may change without notice, even
+// in minor releases.
 type KeyDecrypter interface {
 	// Decrypt decrypts the encrypted key of a JWE message.
 	//
