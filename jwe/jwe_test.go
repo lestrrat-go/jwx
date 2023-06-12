@@ -1,6 +1,7 @@
 package jwe_test
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -674,7 +675,6 @@ func TestGHIssue230(t *testing.T) {
 
 func TestReadFile(t *testing.T) {
 	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
-	t.Parallel()
 
 	f, err := os.CreateTemp("", "test-read-file-*.jwe")
 	if !assert.NoError(t, err, `os.CreateTemp should succeed`) {
@@ -840,4 +840,46 @@ func TestGH840(t *testing.T) {
 	const payload = `Lorem ipsum`
 	_, err = jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A128KW, pubkey))
 	require.Error(t, err, `jwe.Encrypt should fail (instead of panic)`)
+}
+
+type dummyKeyEncrypterDecrypter struct {
+	key []byte
+}
+
+func (kd *dummyKeyEncrypterDecrypter) DecryptKey(alg jwa.KeyEncryptionAlgorithm, cek []byte, _ jwe.Recipient, _ *jwe.Message) ([]byte, error) {
+	return bytes.TrimSuffix(cek, kd.key), nil
+}
+
+func (kd *dummyKeyEncrypterDecrypter) Algorithm() jwa.KeyEncryptionAlgorithm {
+	return jwa.A128GCMKW
+}
+
+func (kd *dummyKeyEncrypterDecrypter) EncryptKey(key []byte) ([]byte, error) {
+	return append(key, kd.key...), nil
+}
+
+var _ jwe.KeyEncrypter = (*dummyKeyEncrypterDecrypter)(nil)
+
+func TestGH924(t *testing.T) {
+	sharedKey := []byte("abra-kadabra")
+
+	ked := &dummyKeyEncrypterDecrypter{key: sharedKey}
+
+	payload := []byte("Lorem Ipsum")
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.A128GCMKW, ked),
+		jwe.WithContentEncryption(jwa.A128GCM),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	var msg jwe.Message
+	decrypted, err := jwe.Decrypt(
+		encrypted,
+		jwe.WithKey(jwa.A128GCMKW, ked),
+		jwe.WithMessage(&msg),
+	)
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+	require.Equal(t, payload, decrypted, `decrypt messages match`)
 }

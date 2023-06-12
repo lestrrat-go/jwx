@@ -111,14 +111,14 @@ func BenchmarkJWT(b *testing.B) {
 					Name:      "jwt.ParseString",
 					SkipShort: true,
 					Test: func(b *testing.B) error {
-						_, err := jwt.ParseString(signedString)
+						_, err := jwt.ParseString(signedString, jwt.WithVerify(false), jwt.WithValidate(false))
 						return err
 					},
 				},
 				{
 					Name: "jwt.Parse",
 					Test: func(b *testing.B) error {
-						_, err := jwt.Parse(signedBuf)
+						_, err := jwt.Parse(signedBuf, jwt.WithVerify(false), jwt.WithValidate(false))
 						return err
 					},
 				},
@@ -130,7 +130,7 @@ func BenchmarkJWT(b *testing.B) {
 						return err
 					},
 					Test: func(b *testing.B) error {
-						_, err := jwt.ParseReader(signedReader)
+						_, err := jwt.ParseReader(signedReader, jwt.WithVerify(false), jwt.WithValidate(false))
 						return err
 					},
 				},

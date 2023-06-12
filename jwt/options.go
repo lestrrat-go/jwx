@@ -187,7 +187,7 @@ func WithJwtID(s string) ValidateOption {
 
 // WithAudience specifies that expected audience value.
 // `Validate()` will return true if one of the values in the `aud` element
-// matches this value.  If not specified, the value of issuer is not
+// matches this value. If not specified, the value of `aud` is not
 // verified at all.
 func WithAudience(s string) ValidateOption {
 	return WithValidator(audienceClaimContainsString(s))
