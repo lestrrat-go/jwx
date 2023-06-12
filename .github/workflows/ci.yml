@@ -61,4 +61,3 @@ jobs:
       - run: bazel run //:gazelle-update-repos
       - name: Check difference between generation code and commit code
         run: make check_diffs
-
