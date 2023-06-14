@@ -11,13 +11,13 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'all']
-        go: [ '1.17.x', '1.16.x' ]
+        go: [ '1.19.x', '1.18.x' ]
     name: "Test [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Cache Go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
@@ -25,9 +25,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Munge APT Repositories
+        run: curl --connect-timeout 1 https://azure.archive.ubuntu.com || (sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt-get update)
       - name: Install Go stable version
         if: matrix.go != 'tip'
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
       - name: Install Go tip
@@ -42,13 +44,14 @@ jobs:
       - name: Install stringer
         run: go install golang.org/x/tools/cmd/stringer@latest
       - name: Install jose
-        run: sudo apt-get install -y --no-install-recommends jose
+        run: |
+          sudo apt-get install -y --no-install-recommends jose
       - run: make generate
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
         if: matrix.go == '1.17.x'
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           file: ./coverage.out
       - name: Check difference between generation code and commit code

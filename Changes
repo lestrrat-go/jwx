@@ -1,6 +1,20 @@
 Changes
 =======
 
+v1.2.26 - 14 Jun 2023
+[Security]
+  * Potential Padding Oracle Attack Vulnerability and Timing Attack Vulnerability 
+    for JWE AES-CBC encrypted payloads affecting all v2 releases up to v2.0.10,
+    all v1 releases up to v1.2.25, and all v0 releases up to v0.9.2 have been reported by
+    @shogo82148.
+
+    Please note that v0 versions will NOT receive fixes.
+    This release fixes these vulnerabilities for the v1 series.
+
+[Miscellaneous]
+  * JWE tests now only run algorithms that are supported by the underlying
+    `jose` tool
+
 v1.2.25 23 May 2022
 [Bug Fixes][Security]
   * [jwe] An old bug from at least 7 years ago existed in handling AES-CBC unpadding,
