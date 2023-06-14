@@ -71,10 +71,11 @@ func TestPad(t *testing.T) {
 			return
 		}
 
-		pb, err := unpad(pb, 16)
-		if !assert.NoError(t, err, "Unpad return successfully") {
+		toRemove, good := extractPadding(pb)
+		if !assert.Equal(t, 1, int(good)&1, "padding should be good") {
 			return
 		}
+		pb = pb[:len(pb)-toRemove]
 
 		if !assert.Len(t, pb, i, "Unpad should result in len = %d", i) {
 			return
