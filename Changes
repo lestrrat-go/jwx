@@ -1,6 +1,12 @@
 Changes
 =======
 
+v1.2.27 - UNRELEASED
+[Buf xies]
+  * [jwk] jwk.Set(jwk.KeyOpsKey, <jwk.KeyOperation>) now works (previously, either
+     Set(.., <string>) or Set(..., []jwk.KeyOperation{...}) worked, but not a single
+     jwk.KeyOperation
+
 v1.2.26 - 14 Jun 2023
 [Security]
   * Potential Padding Oracle Attack Vulnerability and Timing Attack Vulnerability 
