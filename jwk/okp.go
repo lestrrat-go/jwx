@@ -86,6 +86,9 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 	}
 	switch alg {
 	case jwa.Ed25519:
+		if len(dbuf) != ed25519.SeedSize {
+			return nil, fmt.Errorf(`wrong private key size`)
+		}
 		ret := ed25519.NewKeyFromSeed(dbuf)
 		//nolint:forcetypeassert
 		if !bytes.Equal(xbuf, ret.Public().(ed25519.PublicKey)) {
