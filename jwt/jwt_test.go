@@ -1693,3 +1693,53 @@ func TestGH888(t *testing.T) {
 		require.Error(t, err, `jwt.Parse with alg=none should fail`)
 	})
 }
+
+func TestGH951(t *testing.T) {
+	signKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+	sharedKey := []byte{
+		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
+	}
+
+	token, err := jwt.NewBuilder().
+		Subject(`test-951`).
+		Issuer(`jwt.Test951`).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	// this whole workflow actually works even if the bug in #951 is present.
+	// so we shall compare the results with and without the encryption
+	// options to see if there is a difference in the length of the
+	// cipher text, which is the second from last component in the message
+	serialized, err := jwt.NewSerializer().
+		Sign(jwt.WithKey(jwa.RS256, signKey)).
+		Encrypt(
+			jwt.WithKey(jwa.A128KW, sharedKey),
+			jwt.WithEncryptOption(jwe.WithContentEncryption(jwa.A128GCM)),
+			jwt.WithEncryptOption(jwe.WithCompress(jwa.Deflate)),
+		).
+		Serialize(token)
+	require.NoError(t, err, `jwt.NewSerializer()....Serizlie() should succeed`)
+
+	serialized2, err := jwt.NewSerializer().
+		Sign(jwt.WithKey(jwa.RS256, signKey)).
+		Encrypt(
+			jwt.WithKey(jwa.A128KW, sharedKey),
+		).
+		Serialize(token)
+	require.NoError(t, err, `jwt.NewSerializer()....Serizlie() should succeed`)
+
+	require.NotEqual(t,
+		len(bytes.Split(serialized, []byte{'.'})[3]),
+		len(bytes.Split(serialized2, []byte{'.'})[3]),
+	)
+
+	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW, sharedKey))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+
+	verified, err := jwt.Parse(decrypted, jwt.WithKey(jwa.RS256, signKey))
+	require.NoError(t, err, `jwt.Parse should succeed`)
+
+	require.True(t, jwt.Equal(verified, token), `tokens should be equal`)
+}
