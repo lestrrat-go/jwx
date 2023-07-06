@@ -11,5 +11,5 @@ require (
 	github.com/lestrrat-go/option v1.0.1
 	github.com/segmentio/asm v1.2.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.10.0
+	golang.org/x/crypto v0.11.0
 )
