@@ -124,6 +124,10 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		return nil, fmt.Errorf(`failed to fetch %q: %w`, u, err)
 	}
 
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf(`failed to fetch %q: %s`, u, res.Status)
+	}
+
 	buf, err := io.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
