@@ -2137,7 +2137,7 @@ func TestECDSAPEM(t *testing.T) {
 // forcing all of our users to use `go.uber.org/goleak` is prudent.
 //
 // However, we are leaving this test here so that users can learn how this function
-// can be used. This is meant to show you the boilerplate code for when you/ want to make
+// can be used. This is meant to show you the boilerplate code for when you want to make
 // absolutely sure that no goroutine is left when you finish your program.
 //
 // For example, if you are writing an app, you can follow the pattern in the
@@ -2176,3 +2176,12 @@ func TestGH928(t *testing.T) {
 	goleak.VerifyNone(t)
 }
 */
+
+func TestGH947(t *testing.T) {
+	// AS OP described it. Below case will panic if the problem exists,
+	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
+	k, err := jwk.ParseKey(raw)
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+	var exported []byte
+	require.Error(t, k.Raw(&exported), `(okpkey).Raw with 0-length OKP key should fail`)
+}
