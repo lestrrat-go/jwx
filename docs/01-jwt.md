@@ -1160,7 +1160,7 @@ source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestr
 
 ## Performance
 
-github.com/lestrrat-go/jwx is focused on usability / stable API. If you are worried about performance while handing JWTs, the best path is just to use a plain struct after handling JWS yourself:
+github.com/lestrrat-go/jwx is focused on usability / stable API. If you are worried about performance while processing JWTs, the best path is just to use a plain struct after handling JWS yourself:
 
 <!-- INCLUDE(examples/jwt_raw_struct_example_test.go) -->
 <!-- END INCLUDE -->
