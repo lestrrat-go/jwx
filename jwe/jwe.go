@@ -76,7 +76,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 		keyID = jwkKey.KeyID()
 
 		var raw interface{}
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Raw(jwkKey, &raw); err != nil {
 			return nil, nil, fmt.Errorf(`failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
@@ -573,7 +573,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw interface{}
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Raw(jwkKey, &raw); err != nil {
 			return nil, fmt.Errorf(`failed to retrieve raw key from %T: %w`, key, err)
 		}
 		key = raw
@@ -609,13 +609,13 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		switch epk := epkif.(type) {
 		case jwk.ECDSAPublicKey:
 			var pubkey ecdsa.PublicKey
-			if err := epk.Raw(&pubkey); err != nil {
+			if err := jwk.Raw(epk, &pubkey); err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
 			dec.PublicKey(&pubkey)
 		case jwk.OKPPublicKey:
 			var pubkey interface{}
-			if err := epk.Raw(&pubkey); err != nil {
+			if err := jwk.Raw(epk, &pubkey); err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
 			dec.PublicKey(pubkey)

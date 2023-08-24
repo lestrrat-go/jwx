@@ -35,7 +35,7 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	var octets []byte
-	if err := k.Raw(&octets); err != nil {
+	if err := Raw(k, &octets); err != nil {
 		return nil, fmt.Errorf(`failed to materialize symmetric key: %w`, err)
 	}
 

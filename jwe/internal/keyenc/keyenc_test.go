@@ -101,7 +101,7 @@ func TestDeriveECDHES(t *testing.T) {
 	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 		return
 	}
-	if !assert.NoError(t, aliceWebKey.Raw(&aliceKey), `aliceWebKey.Raw should succeed`) {
+	if !assert.NoError(t, jwk.Raw(aliceWebKey, &aliceKey), `aliceWebKey.Raw should succeed`) {
 		return
 	}
 
@@ -109,7 +109,7 @@ func TestDeriveECDHES(t *testing.T) {
 	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 		return
 	}
-	if !assert.NoError(t, bobWebKey.Raw(&bobKey), `bobWebKey.Raw should succeed`) {
+	if !assert.NoError(t, jwk.Raw(bobWebKey, &bobKey), `bobWebKey.Raw should succeed`) {
 		return
 	}
 

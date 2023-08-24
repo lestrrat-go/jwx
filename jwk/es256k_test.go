@@ -19,6 +19,22 @@ import (
 
 func TestES256K(t *testing.T) {
 	require.True(t, ecutil.IsAvailable(jwa.Secp256k1), `jwa.Secp256k1 should be available`)
+
+	t.Run("PEM", func(t *testing.T) {
+		privkey, err := secp256k1.GeneratePrivateKey()
+		require.NoError(t, err, `secp256k1.GeneratePrivateKey should succeed`)
+
+		key, err := jwk.FromRaw(privkey)
+		require.NoError(t, err, `jwk.FromRaw should succeed`)
+
+		buf, err := jwk.Pem(key)
+		require.NoError(t, err, `jwk.Pem should succeed`)
+
+		parsed, err := jwk.ParseKey(buf, jwk.WithPEM(true))
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+		require.Equal(t, key, parsed, `jwk.ParseKey should return the same key`)
+	})
 }
 
 func BenchmarkKeyInstantiation(b *testing.B) {

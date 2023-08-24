@@ -511,7 +511,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to parse JWK")
 		}
 		var key interface{}
-		if !assert.NoError(t, jwkKey.Raw(&key), `jwk.Raw should succeed`) {
+		if !assert.NoError(t, jwk.Raw(jwkKey, &key), `jwk.Raw should succeed`) {
 			return
 		}
 		var jwsCompact []byte
@@ -583,7 +583,7 @@ func TestEncode(t *testing.T) {
 		}
 
 		var rawkey rsa.PrivateKey
-		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+		if !assert.NoError(t, jwk.Raw(privkey, &rawkey), `obtaining raw key should succeed`) {
 			return
 		}
 
@@ -660,7 +660,7 @@ func TestEncode(t *testing.T) {
 		}
 
 		var rawkey ecdsa.PrivateKey
-		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+		if !assert.NoError(t, jwk.Raw(privkey, &rawkey), `obtaining raw key should succeed`) {
 			return
 		}
 
@@ -745,7 +745,7 @@ func TestEncode(t *testing.T) {
 		}
 
 		var rawkey ed25519.PrivateKey
-		if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+		if !assert.NoError(t, jwk.Raw(privkey, &rawkey), `obtaining raw key should succeed`) {
 			return
 		}
 
@@ -1024,7 +1024,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	}
 
 	var rawkey ecdsa.PublicKey
-	if !assert.NoError(t, pubkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+	if !assert.NoError(t, jwk.Raw(pubkey, &rawkey), `obtaining raw key should succeed`) {
 		return
 	}
 

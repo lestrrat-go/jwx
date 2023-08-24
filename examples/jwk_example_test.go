@@ -32,7 +32,7 @@ func ExampleJWK_Usage() {
 		key := pair.Value.(jwk.Key)
 
 		var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-		if err := key.Raw(&rawkey); err != nil {
+		if err := jwk.Raw(key, &rawkey); err != nil {
 			log.Printf("failed to create public key: %s", err)
 			return
 		}

@@ -167,7 +167,7 @@ func TestJoseCompatibility(t *testing.T) {
 					}
 				}
 
-				if !assert.NoError(t, webkey.Raw(&tc.Raw), `jwk.Raw should succeed`) {
+				if !assert.NoError(t, jwk.Raw(webkey, &tc.Raw), `jwk.Raw should succeed`) {
 					return
 				}
 			})
@@ -298,17 +298,17 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 		switch spec.alg {
 		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 			var rawkey rsa.PrivateKey
-			if !assert.NoError(t, jwxJwk.Raw(&rawkey), `jwk.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Raw(jwxJwk, &rawkey), `jwk.Raw should succeed`) {
 				return
 			}
 		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 			var rawkey ecdsa.PrivateKey
-			if !assert.NoError(t, jwxJwk.Raw(&rawkey), `jwk.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Raw(jwxJwk, &rawkey), `jwk.Raw should succeed`) {
 				return
 			}
 		default:
 			var rawkey []byte
-			if !assert.NoError(t, jwxJwk.Raw(&rawkey), `jwk.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Raw(jwxJwk, &rawkey), `jwk.Raw should succeed`) {
 				return
 			}
 		}

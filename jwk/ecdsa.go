@@ -186,7 +186,7 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PublicKey
-	if err := k.Raw(&key); err != nil {
+	if err := Raw(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize ecdsa.PublicKey for thumbprint generation: %w`, err)
 	}
 
@@ -210,7 +210,7 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PrivateKey
-	if err := k.Raw(&key); err != nil {
+	if err := Raw(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize ecdsa.PrivateKey for thumbprint generation: %w`, err)
 	}
 

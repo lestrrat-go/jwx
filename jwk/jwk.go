@@ -11,7 +11,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"math/big"
@@ -30,94 +29,6 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 		return nil, fmt.Errorf(`invalid *big.Int value`)
 	}
 	return n.Bytes(), nil
-}
-
-// FromRaw creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
-//
-// The constructor auto-detects the type of key to be instantiated
-// based on the input type:
-//
-//   - "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
-//   - "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
-//   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
-//   - []byte creates a symmetric key
-func FromRaw(key interface{}) (Key, error) {
-	if key == nil {
-		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
-	}
-
-	var ptr interface{}
-	switch v := key.(type) {
-	case rsa.PrivateKey:
-		ptr = &v
-	case rsa.PublicKey:
-		ptr = &v
-	case ecdsa.PrivateKey:
-		ptr = &v
-	case ecdsa.PublicKey:
-		ptr = &v
-	default:
-		ptr = v
-	}
-
-	switch rawKey := ptr.(type) {
-	case *rsa.PrivateKey:
-		k := newRSAPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *rsa.PublicKey:
-		k := newRSAPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *ecdsa.PrivateKey:
-		k := newECDSAPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *ecdsa.PublicKey:
-		k := newECDSAPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case ed25519.PrivateKey:
-		k := newOKPPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case ed25519.PublicKey:
-		k := newOKPPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case x25519.PrivateKey:
-		k := newOKPPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case x25519.PublicKey:
-		k := newOKPPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case []byte:
-		k := newSymmetricKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	default:
-		return nil, fmt.Errorf(`invalid key type '%T' for jwk.New`, key)
-	}
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -188,7 +99,7 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 		}
 
 		var raw interface{}
-		if err := pubk.Raw(&raw); err != nil {
+		if err := Raw(pubk, &raw); err != nil {
 			return nil, fmt.Errorf(`failed to obtain raw key from %T: %w`, pubk, err)
 		}
 		return raw, nil
@@ -233,14 +144,6 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 }
 
-const (
-	pmPrivateKey    = `PRIVATE KEY`
-	pmPublicKey     = `PUBLIC KEY`
-	pmECPrivateKey  = `EC PRIVATE KEY`
-	pmRSAPublicKey  = `RSA PUBLIC KEY`
-	pmRSAPrivateKey = `RSA PRIVATE KEY`
-)
-
 // EncodeX509 encodes the key into a byte sequence in ASN.1 DER format
 // suitable for to be PEM encoded. The key can be a jwk.Key or a raw key
 // instance, but it must be one of the types supported by `x509` package.
@@ -254,9 +157,9 @@ const (
 // The second return value is the encoded byte sequence.
 func EncodeX509(v interface{}) (string, []byte, error) {
 	// we can't import jwk, so just use the interface
-	if key, ok := v.(interface{ Raw(interface{}) error }); ok {
+	if key, ok := v.(Key); ok {
 		var raw interface{}
-		if err := key.Raw(&raw); err != nil {
+		if err := Raw(key, &raw); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key out of %T: %w`, key, err)
 		}
 
@@ -290,77 +193,6 @@ func EncodeX509(v interface{}) (string, []byte, error) {
 	}
 }
 
-// EncodePEM encodes the key into a PEM encoded ASN.1 DER format.
-// The key can be a jwk.Key or a raw key instance, but it must be one of
-// the types supported by `x509` package.
-//
-// Internally, it uses the same routine as `jwk.EncodeX509()`, and therefore
-// the same caveats apply
-func EncodePEM(v interface{}) ([]byte, error) {
-	typ, marshaled, err := EncodeX509(v)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to encode key in x509: %w`, err)
-	}
-
-	block := &pem.Block{
-		Type:  typ,
-		Bytes: marshaled,
-	}
-	return pem.EncodeToMemory(block), nil
-}
-
-// DecodePEM decodes a key in PEM encoded ASN.1 DER format.
-// and returns a raw key
-func DecodePEM(src []byte) (interface{}, []byte, error) {
-	block, rest := pem.Decode(src)
-	if block == nil {
-		return nil, nil, fmt.Errorf(`failed to decode PEM data`)
-	}
-
-	switch block.Type {
-	// Handle the semi-obvious cases
-	case pmRSAPrivateKey:
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
-		}
-		return key, rest, nil
-	case pmRSAPublicKey:
-		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
-		}
-		return key, rest, nil
-	case pmECPrivateKey:
-		key, err := x509.ParseECPrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse EC private key: %w`, err)
-		}
-		return key, rest, nil
-	case pmPublicKey:
-		// XXX *could* return dsa.PublicKey
-		key, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKIX public key: %w`, err)
-		}
-		return key, rest, nil
-	case pmPrivateKey:
-		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
-		}
-		return key, rest, nil
-	case "CERTIFICATE":
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to parse certificate: %w`, err)
-		}
-		return cert.PublicKey, rest, nil
-	default:
-		return nil, nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
-	}
-}
-
 // ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
 // and assigns the "raw" key to the given parameter. The key must either be
 // a pointer to an empty interface, or a pointer to the actual raw key type
@@ -371,7 +203,7 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
-	if err := key.Raw(rawkey); err != nil {
+	if err := Raw(key, rawkey); err != nil {
 		return fmt.Errorf(`failed to assign to raw key variable: %w`, err)
 	}
 
@@ -632,71 +464,6 @@ func cloneKey(src Key) (Key, error) {
 		}
 	}
 	return dst, nil
-}
-
-// Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
-// using either PKCS8 for private keys and PKIX for public keys.
-// If you need to encode using PKCS1 or SEC1, you must do it yourself.
-//
-// # Argument must be of type jwk.Key or jwk.Set
-//
-// Currently only EC (including Ed25519) and RSA keys (and jwk.Set
-// comprised of these key types) are supported.
-func Pem(v interface{}) ([]byte, error) {
-	var set Set
-	switch v := v.(type) {
-	case Key:
-		set = NewSet()
-		if err := set.AddKey(v); err != nil {
-			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
-		}
-	case Set:
-		set = v
-	default:
-		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
-	}
-
-	var ret []byte
-	for i := 0; i < set.Len(); i++ {
-		key, _ := set.Key(i)
-		typ, buf, err := asnEncode(key)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
-		}
-
-		var block pem.Block
-		block.Type = typ
-		block.Bytes = buf
-		ret = append(ret, pem.EncodeToMemory(&block)...)
-	}
-	return ret, nil
-}
-
-func asnEncode(key Key) (string, []byte, error) {
-	switch key := key.(type) {
-	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
-		var rawkey interface{}
-		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return pmPrivateKey, buf, nil
-	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		var rawkey interface{}
-		if err := key.Raw(&rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKIXPublicKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
-		}
-		return pmPublicKey, buf, nil
-	default:
-		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
-	}
 }
 
 // RegisterCustomField allows users to specify that a private field

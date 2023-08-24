@@ -129,7 +129,7 @@ func (k *rsaPrivateKey) Raw(v interface{}) error {
 	pubk := newRSAPublicKey()
 	pubk.n = k.n
 	pubk.e = k.e
-	if err := pubk.Raw(&key.PublicKey); err != nil {
+	if err := Raw(pubk, &key.PublicKey); err != nil {
 		return fmt.Errorf(`failed to materialize RSA public key: %w`, err)
 	}
 
@@ -208,7 +208,7 @@ func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key rsa.PrivateKey
-	if err := k.Raw(&key); err != nil {
+	if err := Raw(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize RSA private key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
@@ -219,7 +219,7 @@ func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key rsa.PublicKey
-	if err := k.Raw(&key); err != nil {
+	if err := Raw(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize RSA public key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key)
