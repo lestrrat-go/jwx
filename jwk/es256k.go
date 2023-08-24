@@ -189,12 +189,20 @@ func secp256k1Raw(nextRFK RawFromKeyer, key Key, raw interface{}) error {
 		if err := key.Raw(&ecdsaKey); err != nil {
 			return fmt.Errorf(`failed to convert JWK into raw ecdsa.PrivateKey: %w`, err)
 		}
+		// Make sure the curve is secp256k1
+		if ecdsaKey.Curve.Params().Name != secp256k1.S256().Params().Name {
+			return fmt.Errorf(`invalid curve for secp256k1: %s`, ecdsaKey.Curve.Params().Name)
+		}
 		return blackmagic.AssignIfCompatible(raw, secp256k1.PrivKeyFromBytes(ecdsaKey.D.Bytes()))
 	case *secp256k1.PublicKey:
 		// we first get a ecdsa.PublicKey, then convert it to secp256k1.PublicKey
 		var ecdsaKey ecdsa.PublicKey
 		if err := key.Raw(&ecdsaKey); err != nil {
 			return fmt.Errorf(`failed to convert JWK into raw ecdsa.PublicKey: %w`, err)
+		}
+		// Make sure the curve is secp256k1
+		if ecdsaKey.Curve.Params().Name != secp256k1.S256().Params().Name {
+			return fmt.Errorf(`invalid curve for secp256k1: %s`, ecdsaKey.Curve.Params().Name)
 		}
 		var x secp256k1.FieldVal
 		var y secp256k1.FieldVal
