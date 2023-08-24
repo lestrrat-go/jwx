@@ -235,6 +235,9 @@ func fromRaw(_ KeyFromRawer, key interface{}) (Key, error) {
 //   - "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
 //   - []byte creates a symmetric key
+//
+// This function also takes care of additional key types added by external
+// libraries such as secp256k1 keys.
 func FromRaw(raw interface{}) (Key, error) {
 	if raw == nil {
 		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
@@ -244,9 +247,12 @@ func FromRaw(raw interface{}) (Key, error) {
 }
 
 // Raw converts a jwk.Key to its raw form and stores in the `raw` variable.
-// `raw` must be a pointer to a compatible object.
+// `raw` must be a pointer to a compatible object, otherwise an error will
+// be returned.
 //
 // As of v2.0.12, it is recommended to use `jwk.Raw()` instead of `keyObject.Raw()`.
+// The latter will NOT take care of converting additional key types added by
+// external libraries, such as secp256k1 keys.
 func Raw(key Key, raw interface{}) error {
 	return chainedRFK.Next(key, raw)
 }
