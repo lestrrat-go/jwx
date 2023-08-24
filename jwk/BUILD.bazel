@@ -4,6 +4,7 @@ go_library(
     name = "jwk",
     srcs = [
         "cache.go",
+        "convert.go",
         "ecdsa.go",
         "ecdsa_gen.go",
         "fetch.go",
@@ -16,6 +17,7 @@ go_library(
         "okp_gen.go",
         "options.go",
         "options_gen.go",
+        "pem.go",
         "rsa.go",
         "rsa_gen.go",
         "set.go",
