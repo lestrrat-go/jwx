@@ -71,8 +71,6 @@ func (st *chainedASN1DecoderCallState) ASN1Decode(src []byte) (interface{}, []by
 	return d.Next(st, src)
 }
 
-type NextASN1Decoder func([]byte) (interface{}, []byte, error)
-
 func AddASN1Decoder(dec ChainedASN1Decoder) {
 	chainedASN1D.Add(dec)
 }
@@ -81,12 +79,26 @@ var chainedASN1D = &chainedASN1Decoder{
 	list: []ChainedASN1Decoder{ChainedASN1DecodeFunc(asn1Decode)},
 }
 
-type chainedASN1Encoder struct {
-	mu   sync.RWMutex
-	list []ASN1Encoder
+type ASN1Encoder interface {
+	ASN1Encode(Key) (string, []byte, error)
 }
 
-func (c *chainedASN1Encoder) Add(e ASN1Encoder) {
+type ChainedASN1Encoder interface {
+	Next(ASN1Encoder, Key) (string, []byte, error)
+}
+
+type ChainedASN1EncodeFunc func(ASN1Encoder, Key) (string, []byte, error)
+
+func (fn ChainedASN1EncodeFunc) Next(n ASN1Encoder, key Key) (string, []byte, error) {
+	return fn(n, key)
+}
+
+type chainedASN1Encoder struct {
+	mu   sync.RWMutex
+	list []ChainedASN1Encoder
+}
+
+func (c *chainedASN1Encoder) Add(e ChainedASN1Encoder) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.list = append(c.list, e)
@@ -97,7 +109,7 @@ func (c *chainedASN1Encoder) Next(key Key) (string, []byte, error) {
 	llist := len(c.list)
 	c.mu.RUnlock()
 	st := &chainedASN1EncoderCallState{parent: c, current: llist}
-	return st.Next(key)
+	return st.ASN1Encode(key)
 }
 
 type chainedASN1EncoderCallState struct {
@@ -105,7 +117,7 @@ type chainedASN1EncoderCallState struct {
 	parent  *chainedASN1Encoder
 }
 
-func (st *chainedASN1EncoderCallState) Next(key Key) (string, []byte, error) {
+func (st *chainedASN1EncoderCallState) ASN1Encode(key Key) (string, []byte, error) {
 	idx := st.current - 1
 
 	st.parent.mu.RLock()
@@ -119,32 +131,15 @@ func (st *chainedASN1EncoderCallState) Next(key Key) (string, []byte, error) {
 	st.current = idx
 
 	e := st.parent.list[idx]
-	return e.ASN1Encode(st.Next, key)
-}
-
-type NextASN1Encoder func(Key) (string, []byte, error)
-
-// ASN1Encoder encodes a given key into ASN.1 format, so that it can be
-// further encoded in PEM format.
-type ASN1Encoder interface {
-	// ASN1Encode takes a key, and returns three elements. The first string
-	// is the name to be used when encoded in PEM format, the second
-	// is the actual byte sequence encoded in ASN.1 format, and the
-	// third is an error, if any.
-	ASN1Encode(NextASN1Encoder, Key) (string, []byte, error)
-}
-type ASN1EncodeFunc func(NextASN1Encoder, Key) (string, []byte, error)
-
-func (fn ASN1EncodeFunc) ASN1Encode(n NextASN1Encoder, key Key) (string, []byte, error) {
-	return fn(n, key)
+	return e.Next(st, key)
 }
 
 var chainedASN1E = &chainedASN1Encoder{
-	list: []ASN1Encoder{ASN1EncodeFunc(asn1Encode)},
+	list: []ChainedASN1Encoder{ChainedASN1EncodeFunc(asn1Encode)},
 }
 
 // AddASN1Encoder allows users
-func AddASN1Encoder(enc ASN1Encoder) {
+func AddASN1Encoder(enc ChainedASN1Encoder) {
 	chainedASN1E.Add(enc)
 }
 
@@ -153,7 +148,7 @@ func EncodeASN1(key Key) (string, []byte, error) {
 	return chainedASN1E.Next(key)
 }
 
-func asn1Encode(_ NextASN1Encoder, key Key) (string, []byte, error) {
+func asn1Encode(_ ASN1Encoder, key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
 		var rawkey interface{}

@@ -494,3 +494,17 @@ func AvailableCurves() []elliptic.Curve {
 func CurveForAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, bool) {
 	return ecutil.CurveForAlgorithm(alg)
 }
+
+// KeySpec is a specification for additional key types
+// to be added to the jwk system.
+//
+// This mechanism should be considered experimental and subject
+// to change, even between micro versions. If you are adding a
+// new key type, please be ready to update your code when
+// a new version of this library is released.
+type KeySpec struct {
+	Curve      elliptic.Curve
+	Algorithm  jwa.EllipticCurveAlgorithm
+	RawFromKey ChainedRawFromKeyer
+	KeyFromRaw ChainedKeyFromRawer
+}

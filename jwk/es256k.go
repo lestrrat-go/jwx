@@ -23,7 +23,7 @@ func init() {
 
 	AddKeyFromRaw(ChainedKeyFromRawFunc(secp256k1FromRaw))
 	AddRawFromKey(ChainedRawFromKeyFunc(secp256k1Raw))
-	AddASN1Encoder(ASN1EncodeFunc(secp256k1ASN1Encode))
+	AddASN1Encoder(ChainedASN1EncodeFunc(secp256k1ASN1Encode))
 	AddASN1Decoder(ChainedASN1DecodeFunc(secp256k1ASN1Decode))
 }
 
@@ -65,7 +65,7 @@ type secp256k1ASN1PublicKey struct {
 	BitString asn1.BitString
 }
 
-func secp256k1ASN1Encode(n NextASN1Encoder, key Key) (string, []byte, error) {
+func secp256k1ASN1Encode(n ASN1Encoder, key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case ECDSAPrivateKey:
 		if key.Crv() == jwa.Secp256k1 {
@@ -85,7 +85,7 @@ func secp256k1ASN1Encode(n NextASN1Encoder, key Key) (string, []byte, error) {
 		}
 	}
 
-	return n(key)
+	return n.ASN1Encode(key)
 }
 
 func secp256k1ASN1Decode(n ASN1Decoder, buf []byte) (interface{}, []byte, error) {
