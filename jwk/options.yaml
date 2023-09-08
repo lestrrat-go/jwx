@@ -1,6 +1,10 @@
 package_name: jwk
 output: jwk/options_gen.go
 interfaces:
+  - name: CacheOption
+    comment: |
+      CacheOption is a type of Option that can be passed to the
+      the `jwk.NewCache()` function.
   - name: AssignKeyIDOption
   - name: FetchOption
     methods:

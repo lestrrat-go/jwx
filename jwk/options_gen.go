@@ -25,7 +25,7 @@ type assignKeyIDOption struct {
 func (*assignKeyIDOption) assignKeyIDOption() {}
 
 // CacheOption is a type of Option that can be passed to the
-// `jwk.Cache` object.
+// the `jwk.NewCache()` function.
 type CacheOption interface {
 	Option
 	cacheOption()
