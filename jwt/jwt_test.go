@@ -1431,7 +1431,7 @@ func TestVerifyAuto(t *testing.T) {
 	defer srv.Close()
 
 	tok, err := jwt.NewBuilder().
-		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx/v2`).
+		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx/v3`).
 		Claim(jwt.SubjectKey, `jku-test`).
 		Build()
 
@@ -1464,7 +1464,7 @@ func TestVerifyAuto(t *testing.T) {
 		return
 	}
 	wl = jwk.NewMapWhitelist().
-		Add(`https://github.com/lestrrat-go/jwx/v2`)
+		Add(`https://github.com/lestrrat-go/jwx/v3`)
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	if !assert.Error(t, err, `jwt.Parse should fail`) {
 		return

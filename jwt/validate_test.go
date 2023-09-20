@@ -72,7 +72,7 @@ func TestGHIssue10(t *testing.T) {
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Issuer("github.com/lestrrat-go/jwx/v2").
+			Issuer("github.com/lestrrat-go/jwx/v3").
 			Build()
 		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
@@ -213,7 +213,7 @@ func TestGHIssue10(t *testing.T) {
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v2").
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v3").
 			Build()
 		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
 			return
