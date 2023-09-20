@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v2/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
 var muGlobalConfig sync.RWMutex

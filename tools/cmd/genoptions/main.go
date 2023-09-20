@@ -140,11 +140,11 @@ func genOptions(objects *Objects) error {
 
 	imports := append(objects.Imports, []string{
 		`io/fs`, // for some reason without this the goimports in my environment tries to import a differnet package
-		`github.com/lestrrat-go/jwx/v2/jwa`,
-		`github.com/lestrrat-go/jwx/v2/jwe`,
-		`github.com/lestrrat-go/jwx/v2/jwk`,
-		`github.com/lestrrat-go/jwx/v2/jws`,
-		`github.com/lestrrat-go/jwx/v2/jwt`,
+		`github.com/lestrrat-go/jwx/v3/jwa`,
+		`github.com/lestrrat-go/jwx/v3/jwe`,
+		`github.com/lestrrat-go/jwx/v3/jwk`,
+		`github.com/lestrrat-go/jwx/v3/jws`,
+		`github.com/lestrrat-go/jwx/v3/jwt`,
 	}...)
 	// Write all imports -- they will be pruned by golang.org/x/tools/imports eventually,
 	// so it's okay to be redundant

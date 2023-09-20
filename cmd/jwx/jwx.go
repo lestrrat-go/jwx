@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/urfave/cli/v2"
 )
 

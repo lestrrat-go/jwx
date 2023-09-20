@@ -1,4 +1,4 @@
-# JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe)
+# JWE [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3/jwe.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe)
 
 Package jwe implements JWE as described in [RFC7516](https://tools.ietf.org/html/rfc7516)
 

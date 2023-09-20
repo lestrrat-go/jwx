@@ -11,7 +11,7 @@ go_library(
         "key_type_gen.go",
         "signature_gen.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwa",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwa",
     visibility = ["//visibility:public"],
 )
 

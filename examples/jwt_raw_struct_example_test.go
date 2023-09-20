@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func ExampleJWTPlainStruct() {
 	t1, err := jwt.NewBuilder().
-		Issuer("https://github.com/lestrrat-go/jwx/v2/examples").
+		Issuer("https://github.com/lestrrat-go/jwx/v3/examples").
 		Subject("raw_struct").
 		Claim("private", "foobar").
 		Build()

@@ -38,11 +38,11 @@ import (
   "net/http"
   "time"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
-  "github.com/lestrrat-go/jwx/v2/jwt"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func ExampleJWX() {
@@ -144,7 +144,7 @@ func ExampleJWX() {
   // OUTPUT:
 }
 ```
-source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwx_readme_example_test.go)
+source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwx_readme_example_test.go)
 <!-- END INCLUDE -->
 
 # How-to Documentation
@@ -160,11 +160,11 @@ available packages:
 
 | Package name                                              | Notes                                           |
 |-----------------------------------------------------------|-------------------------------------------------|
-| [jwt](https://github.com/lestrrat-go/jwx/tree/v2/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
-| [jwk](https://github.com/lestrrat-go/jwx/tree/v2/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
-| [jwa](https://github.com/lestrrat-go/jwx/tree/v2/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
-| [jws](https://github.com/lestrrat-go/jwx/tree/v2/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
-| [jwe](https://github.com/lestrrat-go/jwx/tree/v2/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
+| [jwt](https://github.com/lestrrat-go/jwx/tree/v3/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
+| [jwk](https://github.com/lestrrat-go/jwx/tree/v3/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
+| [jwa](https://github.com/lestrrat-go/jwx/tree/v3/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
+| [jws](https://github.com/lestrrat-go/jwx/tree/v3/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
+| [jwe](https://github.com/lestrrat-go/jwx/tree/v3/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
 ## History
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
@@ -211,7 +211,7 @@ to specify alternate structs to parse objects with custom fields)
 In the end I think it comes down to your usage pattern, and priorities.
 Some general guidelines that come to mind are:
 
-* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/v2/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
+* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/v3/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
 * If you want to honor all possible custom fields transparently, use this module.
 * If you want a standardized clean API, use this module.
 
@@ -236,7 +236,7 @@ If you are editing auto-generated files (those files with the `_gen.go` suffix, 
 
 ## Discussions / Usage
 
-Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v2/discussions) first.
+Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v3/discussions) first.
 
 # Related Modules
 
