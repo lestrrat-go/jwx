@@ -13,17 +13,17 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
-	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwe/internal/aescbc"
-	"github.com/lestrrat-go/jwx/v2/jwe/internal/content_crypt"
-	"github.com/lestrrat-go/jwx/v2/jwe/internal/keyenc"
-	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v2/x25519"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 var muSettings sync.RWMutex

@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/jws/internal/cmd/genheader
+module github.com/lestrrat-go/jwx/v3/jws/internal/cmd/genheader
 
 go 1.16
 

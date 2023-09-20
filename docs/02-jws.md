@@ -1,6 +1,6 @@
 # Working with JWS
 
-In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v2/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
+In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v3/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws)
 
 * [Parsing](#parsing)
   * [Parse a JWS message stored in memory](#parse-a-jws-message-stored-in-memory)
@@ -33,7 +33,7 @@ to sign or verify using a parsed `jws.Message`. To do this, you would need to us
 
 ## Parse a JWS message stored in memory
 
-You can parse a JWS message in memory stored as `[]byte` into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Message) object. In this mode, there is no verification performed.
+You can parse a JWS message in memory stored as `[]byte` into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Message) object. In this mode, there is no verification performed.
 
 <!-- INCLUDE(examples/jws_parse_example_test.go) -->
 ```go
@@ -44,7 +44,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_Parse() {
@@ -61,12 +61,12 @@ func ExampleJWS_Parse() {
   // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
 }
 ```
-source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_parse_example_test.go)
+source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS message stored in a file
 
-To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Parse).
+To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Parse).
 
 <!-- INCLUDE(examples/jws_readfile_example_test.go) -->
 ```go
@@ -77,7 +77,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_ReadFile() {
@@ -104,7 +104,7 @@ func ExampleJWS_ReadFile() {
   // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
 }
 ```
-source: [examples/jws_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_readfile_example_test.go)
+source: [examples/jws_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS message and access JWS headers
@@ -122,10 +122,10 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
-  "github.com/lestrrat-go/jwx/v2/jwt"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func ExampleJWS_UseJWSHeader() {
@@ -164,7 +164,7 @@ func ExampleJWS_UseJWSHeader() {
   // "secret-key"
 }
 ```
-source: [examples/jws_use_jws_header_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_use_jws_header_test.go)
+source: [examples/jws_use_jws_header_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_use_jws_header_test.go)
 <!-- END INCLUDE -->
 
 # Signing
@@ -183,9 +183,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_Sign() {
@@ -205,14 +205,14 @@ func ExampleJWS_Sign() {
   // eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0
 }
 ```
-source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_example_test.go)
+source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWS message in JSON serialization format
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
 
-When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Sign) function with the `jws.WithJSON()` option and multiple `jws.WithKey()` options:
+When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Sign) function with the `jws.WithJSON()` option and multiple `jws.WithKey()` options:
 
 <!-- INCLUDE(examples/jws_sign_json_example_test.go) -->
 ```go
@@ -221,9 +221,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_SignJSON() {
@@ -253,7 +253,7 @@ func ExampleJWS_SignJSON() {
   // {"payload":"TG9yZW0gaXBzdW0","signatures":[{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"bCQtU2y4PEnG78dUN-tXea8YEwhBAzLX7ZEYlRVtX_g"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"0ovW79M_bbaRDBrBLaNKN7rgJeXaSRAnu5rhAuRXBR4"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"ZkUzwlK5E6LFKsYEIyUvskOKLMDxE0MvvkvNrwINNWE"}]}
 }
 ```
-source: [examples/jws_sign_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_json_example_test.go)
+source: [examples/jws_sign_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWS message with detached payload
@@ -268,9 +268,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_SignDetachedPayload() {
@@ -293,7 +293,7 @@ func ExampleJWS_SignDetachedPayload() {
   // eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk
 }
 ```
-source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_detached_payload_example_test.go)
+source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -311,9 +311,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_SignWithHeaders() {
@@ -335,7 +335,7 @@ func ExampleJWS_SignWithHeaders() {
   // eyJhbGciOiJIUzI1NiIsIngtZXhhbXBsZSI6dHJ1ZX0.TG9yZW0gaXBzdW0.9nIX0hN7u1b97UcjmrVvd5y1ubkQp_1gz1V3Mkkcm14
 }
 ```
-source: [examples/jws_sign_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_sign_with_headers_example_test.go)
+source: [examples/jws_sign_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using cloud KMS services
@@ -361,9 +361,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_VerifyWithKey() {
@@ -385,7 +385,7 @@ func ExampleJWS_VerifyWithKey() {
   // Lorem ipsum
 }
 ```
-source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_key_example_test.go)
+source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a JWKS
@@ -407,9 +407,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_VerifyWithJWKSet() {
@@ -449,7 +449,7 @@ func ExampleJWS_VerifyWithJWKSet() {
   // OUTPUT:
 }
 ```
-source: [examples/jws_verify_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_with_keyset_example_test.go)
+source: [examples/jws_verify_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a detached payload
@@ -463,9 +463,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWS_VerifyDetachedPayload() {
@@ -489,7 +489,7 @@ func ExampleJWS_VerifyDetachedPayload() {
   // $.02
 }
 ```
-source: [examples/jws_verify_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_verify_detached_payload_example_test.go)
+source: [examples/jws_verify_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using `jku`
@@ -537,7 +537,7 @@ payload, _ := jws.VerifyAuto(buf, jws.WithHTTPClient(client))
 
 Sometimes we do not offer a particular algorithm out of the box, but you have an implementation for it.
 
-In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#RegisterVerifier) functions to
+In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#RegisterVerifier) functions to
 generate your own verifier instance. 
 
 <!-- INCLUDE(examples/jws_custom_signer_verifier_example_test.go) -->
@@ -549,8 +549,8 @@ import (
   "fmt"
 
   "github.com/cloudflare/circl/sign/ed25519"
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 type CirclEdDSASignerVerifier struct{}
@@ -621,7 +621,7 @@ func ExampleJWS_CustomSignerVerifier() {
   // OUTPUT:
 }
 ```
-source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jws_custom_signer_verifier_example_test.go)
+source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)
 <!-- END INCLUDE -->
 
 # Enabling ES256K

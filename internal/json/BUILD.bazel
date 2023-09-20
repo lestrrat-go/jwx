@@ -7,7 +7,7 @@ go_library(
         "registry.go",
         "stdlib.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/internal/json",
+    importpath = "github.com/lestrrat-go/jwx/v3/internal/json",
     visibility = ["//:__subpackages__"],
     deps = ["//internal/base64"],
 )
