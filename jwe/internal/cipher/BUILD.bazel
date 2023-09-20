@@ -6,7 +6,7 @@ go_library(
         "cipher.go",
         "interface.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwe/internal/cipher",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwe/internal/cipher",
     visibility = ["//:__subpackages__"],
     deps = [
         "//jwa",

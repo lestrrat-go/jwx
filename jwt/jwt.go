@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2"
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
 var compactOnly uint32

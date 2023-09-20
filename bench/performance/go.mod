@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/bench/performance
+module github.com/lestrrat-go/jwx/v3/bench/performance
 
 go 1.16
 

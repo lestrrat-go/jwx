@@ -15,7 +15,7 @@ go_library(
         "options.go",
         "options_gen.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwe",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwe",
     visibility = ["//visibility:public"],
     deps = [
         "//cert",
