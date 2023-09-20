@@ -6,7 +6,7 @@ go_library(
         "interface.go",
         "keyenc.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwe/internal/keyenc",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/ecutil",

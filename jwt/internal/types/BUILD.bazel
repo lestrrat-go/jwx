@@ -6,7 +6,7 @@ go_library(
         "date.go",
         "string.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwt/internal/types",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwt/internal/types",
     visibility = ["//jwt:__subpackages__"],
     deps = ["//internal/json"],
 )

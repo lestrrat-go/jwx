@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
 )
 
 // https://openid.net/specs/openid-connect-core-1_0.html

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
+	"github.com/lestrrat-go/jwx/v3/internal/iter"
 )
 
 // Iterate returns a channel that successively returns all the

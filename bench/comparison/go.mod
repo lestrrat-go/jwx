@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/bench/comparison
+module github.com/lestrrat-go/jwx/v3/bench/comparison
 
 go 1.15
 

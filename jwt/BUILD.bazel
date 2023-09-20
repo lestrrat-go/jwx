@@ -16,7 +16,7 @@ go_library(
         "token_options_gen.go",
         "validate.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwt",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwt",
     visibility = ["//visibility:public"],
     deps = [
         "//:jwx",

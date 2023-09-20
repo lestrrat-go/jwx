@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/x25519"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )

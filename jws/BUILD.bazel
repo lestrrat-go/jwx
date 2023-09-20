@@ -19,7 +19,7 @@ go_library(
         "signer.go",
         "verifier.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jws",
+    importpath = "github.com/lestrrat-go/jwx/v3/jws",
     visibility = ["//visibility:public"],
     deps = [
         "//cert",

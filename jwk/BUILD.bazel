@@ -24,7 +24,7 @@ go_library(
         "usage.go",
         "whitelist.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwk",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwk",
     visibility = ["//visibility:public"],
     deps = [
         "//cert",
