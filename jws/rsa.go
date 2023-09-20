@@ -6,8 +6,8 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v2/internal/keyconv"
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 var rsaSigners map[jwa.SignatureAlgorithm]*rsaSigner

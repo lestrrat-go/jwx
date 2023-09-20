@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/jwe/tools/cmd/genoptions
+module github.com/lestrrat-go/jwx/v3/jwe/tools/cmd/genoptions
 
 go 1.19
 

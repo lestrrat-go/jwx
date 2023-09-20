@@ -10,18 +10,18 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 
-	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk/internal/x509"
-	"github.com/lestrrat-go/jwx/v2/x25519"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 var registry = json.NewRegistry()

@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwt"
-	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
-	"github.com/lestrrat-go/jwx/v2/jwt/openid"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
+	"github.com/lestrrat-go/jwx/v3/jwt/openid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

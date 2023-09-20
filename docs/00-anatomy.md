@@ -24,7 +24,7 @@ JWX is a Go specific implementation of the JOSE ecosystem, and attempts to do th
 
 First, you are probably here because you were trying to work with JWTs, which is described in RFC7519. 
 
-JWTs are implemented in github.com/lestrrat-go/jwx/v2/jwt package. There is also a package to deal with OpenID extensions in github.com/lestrrat-go/jwx/v2/jwt/openid. 
+JWTs are implemented in github.com/lestrrat-go/jwx/v3/jwt package. There is also a package to deal with OpenID extensions in github.com/lestrrat-go/jwx/v3/jwt/openid. 
 
 In its essence, there is nothing special about JWTs: they are just a standardized format to exchange some piece of information.
 
@@ -34,10 +34,10 @@ While they are referenced from RFC7519, the standardized message formats for sig
 
 As a side note, many libraries bundle these signature/encryption features into one JWT package, and the API becomes tightly coupled with the JWT, which I find confusing and hard to fix/extend which is part of the reason why JWX was born.
 
-## Documentation for `github.com/lestrrat-go/jwx/v2/jwt`
+## Documentation for `github.com/lestrrat-go/jwx/v3/jwt`
 
 * [FAQ-style HOW-TOs](./01-jwt.md)
-* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt)
 
 # JWS - RFC7515
 
@@ -60,12 +60,12 @@ graph TD
     JSON --> |"has 'signature'"| Flat[Flattened JSON Serialization]
 ```
 
-JWS is implemented in github.com/lestrrat-go/jwx/v2/jws package. This package provides ways to sign arbitrary payload into JWS message, and ways to verify them.
+JWS is implemented in github.com/lestrrat-go/jwx/v3/jws package. This package provides ways to sign arbitrary payload into JWS message, and ways to verify them.
 
-## Documentation for `github.com/lestrrat-go/jwx/v2/jws`
+## Documentation for `github.com/lestrrat-go/jwx/v3/jws`
 
 * [FAQ-style HOW-TOs](./02-jws.md)
-* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws)
 
 # JWE - RFC7516
 
@@ -80,9 +80,9 @@ eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTE5MkdDTSIsImVwayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6
 
 JWE is implemented in github.com/lestrrat-go/jwe package. This package provides tools to encrypt payload into JWE messages, and tools to decrypt them.
 
-## Documentation for `github.com/lestrrat-go/jwx/v2/jwe`
+## Documentation for `github.com/lestrrat-go/jwx/v3/jwe`
 
-* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe)
 
 # JWK - RFC7517
 
@@ -101,15 +101,15 @@ JWKs describe formats to describe keys, such as RSA keys, Elliptic Curve keys, s
 }
 ```
 
-JWK is implemented in github.com/lestrrat-go/jwx/v2/jwk package. This package provides ways to generate, read, and manipulate JWKs, convert them to and from raw key formats (e.g. "crypto/rsa".PrivateKey to JWK and vice versa). It can also work with PEM-encoded keys.
+JWK is implemented in github.com/lestrrat-go/jwx/v3/jwk package. This package provides ways to generate, read, and manipulate JWKs, convert them to and from raw key formats (e.g. "crypto/rsa".PrivateKey to JWK and vice versa). It can also work with PEM-encoded keys.
 
-## Documentation for `github.com/lestrrat-go/jwx/v2/jwk`
+## Documentation for `github.com/lestrrat-go/jwx/v3/jwk`
 
 * [FAQ-style HOW-TOs](./04-jwk.md)
-* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk)
+* [Documentation on pkg.go.dev](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk)
 
 # JWA - RFC7518
 
 And finally, an RFC exists to define commonly used algorithm names in JWT, JWS, JWE, and JWK.
 
-This is implemented in github.com/lestrrat-go/jwx/v2/jwa.
+This is implemented in github.com/lestrrat-go/jwx/v3/jwa.

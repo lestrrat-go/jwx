@@ -7,13 +7,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/jws"
-	"github.com/lestrrat-go/jwx/v2/jwt/openid"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jwt/openid"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 const aLongLongTimeAgo = 233431200
@@ -114,7 +114,7 @@ func ExampleJWT_Sign_WithImportJWK() {
 
 	// create a new jwt
 	t := jwt.New()
-	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
+	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v3/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
 	t.Set(jwt.IssuedAtKey, time.Unix(500, 0))
 
@@ -191,7 +191,7 @@ func ExampleJWT_Sign() {
 
 func ExampleJWT_Token() {
 	t := jwt.New()
-	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
+	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v3/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
 	t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
 	t.Set(`privateClaimKey`, `Hello, World!`)
@@ -217,12 +217,12 @@ func ExampleJWT_Token() {
 	//   ],
 	//   "iat": 233431200,
 	//   "privateClaimKey": "Hello, World!",
-	//   "sub": "https://github.com/lestrrat-go/jwx/v2/jwt"
+	//   "sub": "https://github.com/lestrrat-go/jwx/v3/jwt"
 	// }
 	// aud -> '[Golang Users]'
 	// iat -> '1977-05-25T18:00:00Z'
 	// privateClaimKey -> 'Hello, World!'
-	// sub -> 'https://github.com/lestrrat-go/jwx/v2/jwt'
+	// sub -> 'https://github.com/lestrrat-go/jwx/v3/jwt'
 }
 
 func ExampleJWT_SignToken() {
@@ -265,7 +265,7 @@ func ExampleJWT_SignToken() {
 
 func ExampleJWT_OpenIDToken() {
 	t := openid.New()
-	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
+	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v3/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
 	t.Set(jwt.IssuedAtKey, time.Unix(aLongLongTimeAgo, 0))
 	t.Set(`privateClaimKey`, `Hello, World!`)
@@ -311,6 +311,6 @@ func ExampleJWT_OpenIDToken() {
 	//   ],
 	//   "iat": 233431200,
 	//   "privateClaimKey": "Hello, World!",
-	//   "sub": "https://github.com/lestrrat-go/jwx/v2/jwt"
+	//   "sub": "https://github.com/lestrrat-go/jwx/v3/jwt"
 	// }
 }

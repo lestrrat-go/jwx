@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lestrrat-go/jwx/v2/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
 
 func uncompress(src []byte, maxBufferSize int64) ([]byte, error) {

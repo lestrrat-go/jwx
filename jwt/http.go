@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/v2/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
 
 // ParseCookie parses a JWT stored in a http.Cookie with the given name.

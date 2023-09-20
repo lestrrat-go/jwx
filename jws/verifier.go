@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 type VerifierFactory interface {

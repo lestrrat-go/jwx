@@ -4,7 +4,7 @@
 package jws
 
 import (
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 func init() {

@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/jwt/internal/cmd/gentoken
+module github.com/lestrrat-go/jwx/v3/jwt/internal/cmd/gentoken
 
 go 1.16
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v2/cert"
-	"github.com/lestrrat-go/jwx/v2/internal/base64"
-	"github.com/lestrrat-go/jwx/v2/internal/json"
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/cert"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/stretchr/testify/assert"
 )
 
