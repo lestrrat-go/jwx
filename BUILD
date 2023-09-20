@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix github.com/lestrrat-go/jwx/v2
+# gazelle:prefix github.com/lestrrat-go/jwx/v3
 # gazelle:go_naming_convention import_alias
 
 gazelle(name = "gazelle")
@@ -25,7 +25,7 @@ go_library(
         "jwx.go",
         "options.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2",
+    importpath = "github.com/lestrrat-go/jwx/v3",
     visibility = ["//visibility:public"],
     deps = [
         "//internal/json",
