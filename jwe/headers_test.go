@@ -76,7 +76,7 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			Key:    jwe.JWKSetURLKey,
-			Value:  "http://github.com/lestrrat-go/jwx/v2",
+			Value:  "http://github.com/lestrrat-go/jwx/v3",
 			Method: "JWKSetURL",
 		},
 		{
@@ -106,7 +106,7 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			Key:    jwe.X509URLKey,
-			Value:  "http://github.com/lestrrat-go/jwx/v2",
+			Value:  "http://github.com/lestrrat-go/jwx/v3",
 			Method: "X509URL",
 		},
 		{Key: "private", Value: "boofoo"},

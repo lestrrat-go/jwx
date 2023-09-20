@@ -28,7 +28,7 @@ for dir in ./cmd/jwx ./examples ./bench/performance; do
 	echo "👉 $dir"
 	pushd $dir > /dev/null
 
-	go get github.com/lestrrat-go/jwx/v2@"$TAG"
+	go get github.com/lestrrat-go/jwx/v3@"$TAG"
 	go mod tidy
 
 	popd > /dev/null
