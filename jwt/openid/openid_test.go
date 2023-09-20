@@ -248,10 +248,10 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Value: "https://github.com/lestrrat-go/jwx/v2",
+			Value: "https://github.com/lestrrat-go/jwx/v3",
 			Key:   openid.ProfileKey,
 			Check: func(token openid.Token) {
-				assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx/v2")
+				assert.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx/v3")
 			},
 		},
 		{
@@ -262,10 +262,10 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Value: "https://github.com/lestrrat-go/jwx/v2",
+			Value: "https://github.com/lestrrat-go/jwx/v3",
 			Key:   openid.WebsiteKey,
 			Check: func(token openid.Token) {
-				assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx/v2")
+				assert.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx/v3")
 			},
 		},
 		{

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v2"
+	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
