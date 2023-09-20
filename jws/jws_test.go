@@ -1297,7 +1297,7 @@ func TestJKU(t *testing.T) {
 				Name:  "Rejected by whitelist",
 				Error: true,
 				FetchOptions: func() []jwk.FetchOption {
-					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v2`)
+					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v3`)
 					return []jwk.FetchOption{
 						jwk.WithFetchWhitelist(wl),
 						jwk.WithHTTPClient(srv.Client()),
@@ -1422,7 +1422,7 @@ func TestJKU(t *testing.T) {
 				Name:  "Rejected by whitelist",
 				Error: true,
 				FetchOptions: func() []jwk.FetchOption {
-					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v2`)
+					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v3`)
 					return []jwk.FetchOption{
 						jwk.WithFetchWhitelist(wl),
 					}
