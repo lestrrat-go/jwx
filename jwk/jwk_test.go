@@ -97,7 +97,7 @@ func init() {
 			Method: "X509CertThumbprintS256",
 		},
 		jwk.X509URLKey: {
-			Value:  "http://github.com/lestrrat-go/jwx/v2",
+			Value:  "http://github.com/lestrrat-go/jwx/v3",
 			Method: "X509URL",
 		},
 		"private": {Value: "boofoo"},
