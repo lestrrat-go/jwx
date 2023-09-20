@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - develop/v2
+      - develop/v3
     types:
       - closed
 
