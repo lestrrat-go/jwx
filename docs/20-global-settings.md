@@ -57,7 +57,7 @@ within `jwx` *will* use your settings.
 
 ## Decode private fields to objects
 
-Packages within `github.com/lestrrat-go/jwx/v2` parses known fields into pre-defined types,
+Packages within `github.com/lestrrat-go/jwx/v3` parses known fields into pre-defined types,
 but for everything else (usually called private fields/headers/claims) are decoded into
 wharever `"encoding/json".Unmarshal` deems appropriate.
 
