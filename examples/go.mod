@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/examples
+module github.com/lestrrat-go/jwx/v3/examples
 
 go 1.16
 

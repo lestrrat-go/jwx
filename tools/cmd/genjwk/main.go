@@ -612,7 +612,7 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	pkgs := []string{
 		"crypto/x509",
 		"fmt",
-		"github.com/lestrrat-go/jwx/v2/jwa",
+		"github.com/lestrrat-go/jwx/v3/jwa",
 	}
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))

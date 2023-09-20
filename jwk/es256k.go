@@ -5,8 +5,8 @@ package jwk
 
 import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 func init() {

@@ -1,10 +1,10 @@
-# JWS [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws)
+# JWS [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3/jws.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws)
 
 Package jws implements JWS as described in [RFC7515](https://tools.ietf.org/html/rfc7515) and [RFC7797](https://tools.ietf.org/html/rfc7797)
 
 * Parse and generate compact or JSON serializations
 * Sign and verify arbitrary payload
-* Use any of the keys supported in [github.com/lestrrat-go/jwx/v2/jwk](../jwk)
+* Use any of the keys supported in [github.com/lestrrat-go/jwx/v3/jwk](../jwk)
 * Add arbitrary fields in the JWS object
 * Ability to add/replace existing signature methods
 * Respect "b64" settings for RFC7797
@@ -45,8 +45,8 @@ import(
   "crypto/rsa"
   "log"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func main() {

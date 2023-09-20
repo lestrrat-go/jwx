@@ -10,7 +10,7 @@ go_library(
         "openid.go",
         "token_gen.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v2/jwt/openid",
+    importpath = "github.com/lestrrat-go/jwx/v3/jwt/openid",
     visibility = ["//visibility:public"],
     deps = [
         "//internal/base64",

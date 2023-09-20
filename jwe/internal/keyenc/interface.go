@@ -4,8 +4,8 @@ import (
 	"crypto/rsa"
 	"hash"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
 
 // Encrypter is an interface for things that can encrypt keys

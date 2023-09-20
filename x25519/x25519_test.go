@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v2/x25519"
+	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
