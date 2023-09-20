@@ -2,8 +2,8 @@ package jws
 
 import (
 	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v2/internal/iter"
-	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v3/internal/iter"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 type DecodeCtx interface {

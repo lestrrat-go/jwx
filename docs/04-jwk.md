@@ -1,6 +1,6 @@
 # Working with JWK
 
-In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v2/jwk`
+In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v3/jwk`
 
 * [Terminology](#terminology)
   * [JWK / Key](#jwk--key)
@@ -38,8 +38,8 @@ Used to describe a JWK key, possibly of type RSA, ECDSA, OKP, or Symmetric.
 A "jwk" resource on the web can either contain a single JWK or an array of multiple JWKs.
 The latter is called a JWK Set.
 
-It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse)
-and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ReadFile) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) by default.
+It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse)
+and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ReadFile) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) by default.
 
 ## Raw Key
 
@@ -63,7 +63,7 @@ If given anything else, `jwk.FromRaw` will return an error.
 
 ## Parse a set
 
-If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse)
+If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse)
 
 <!-- INCLUDE(examples/jwk_parse_jwks_example_test.go) -->
 ```go
@@ -74,7 +74,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_ParseJWKS() {
@@ -105,12 +105,12 @@ func ExampleJWK_ParseJWKS() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_jwks_example_test.go)
+source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_jwks_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key
 
-If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseKey)
+If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseKey)
 
 <!-- INCLUDE(examples/jwk_parse_key_example_test.go) -->
 ```go
@@ -121,7 +121,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_ParseKey() {
@@ -145,12 +145,12 @@ func ExampleJWK_ParseKey() {
   // {"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}
 }
 ```
-source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_key_example_test.go)
+source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key or a set in PEM format
 
-Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#WithPEM) option.
+Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#WithPEM) option.
 
 <!-- INCLUDE(examples/jwk_parse_with_pem_example_test.go) -->
 ```go
@@ -160,8 +160,8 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/internal/json"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/internal/json"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_ParseWithPEM() {
@@ -204,12 +204,12 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}
 }
 ```
-source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_parse_with_pem_example_test.go)
+source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key from a file
 
-To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ReadFile) can be used. 
+To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ReadFile) can be used. 
 
 <!-- INCLUDE(examples/jwk_readfile_example_test.go) -->
 ```go
@@ -220,7 +220,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_ReadFile() {
@@ -262,10 +262,10 @@ func ExampleJWK_ReadFile() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_readfile_example_test.go)
+source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_readfile_example_test.go)
 <!-- END INCLUDE -->
 
-`jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
+`jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
 
 <!-- INCLUDE(examples/jwk_readfile_with_pem_example_test.go) -->
 ```go
@@ -275,8 +275,8 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/internal/json"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/internal/json"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_ReadFileWithPEM() {
@@ -329,7 +329,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"keys":[{"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}]}
 }
 ```
-source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_readfile_with_pem_example_test.go)
+source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_readfile_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key as a struct field
@@ -356,7 +356,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 type Container struct {
@@ -406,18 +406,18 @@ func ExampleJWK_StructField() {
   // {"key":{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}}
 }
 ```
-source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_struct_field_example_test.go)
+source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_struct_field_example_test.go)
 <!-- END INCLUDE -->
 
 # Construction
 
 ## Using jwk.FromRaw()
 
-Users can create a new key from scratch using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw).
+Users can create a new key from scratch using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw).
 
-[`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) requires the raw key as its argument.
+[`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) requires the raw key as its argument.
 There are other ways to creating keys from a raw key, but they require knowing its type in advance.
-Use [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) when you have a key type which you do not know its underlying type in advance.
+Use [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
 
@@ -442,7 +442,7 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_FromRaw() {
@@ -525,16 +525,16 @@ func ExampleJWK_FromRaw() {
   // OUTPUT:
 }
 ```
-source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_from_raw_example_test.go)
+source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_from_raw_example_test.go)
 <!-- END INCLUDE -->
 
 # Fetching JWK Sets
 
 ## Parse a key from a remote resource
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
+To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#CachedSet) described elsewhere in this document.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
@@ -548,7 +548,7 @@ import (
   "net/http/httptest"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_Fetch() {
@@ -588,7 +588,7 @@ func ExampleJWK_Fetch() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_fetch_example_test.go)
+source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_fetch_example_test.go)
 <!-- END INCLUDE -->
 
 ## Auto-refreshing remote keys
@@ -596,11 +596,11 @@ source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/
 Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
 For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
 
-Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch),
+Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Fetch),
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) to do this for you.
+`github.com/lestrrat-go/jwx/v3/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#CachedSet) to do this for you.
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -611,7 +611,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_Cache() {
@@ -675,7 +675,7 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 <!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
@@ -687,8 +687,8 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
-  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v3/jws"
 )
 
 func ExampleJWK_CachedSet() {
@@ -721,7 +721,7 @@ func ExampleJWK_CachedSet() {
   _ = jws.WithKeySet(cached)
 }
 ```
-source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cached_set_example_test.go)
+source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists
@@ -747,7 +747,7 @@ import (
   "os"
   "regexp"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_Whitelist() {
@@ -818,7 +818,7 @@ func ExampleJWK_Whitelist() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_whitelist_example_test.go)
+source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_whitelist_example_test.go)
 <!-- END INCLUDE -->
 
 # Working with jwk.Key
@@ -838,7 +838,7 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_KeySpecificMethods() {
@@ -876,18 +876,18 @@ func ExampleJWK_KeySpecificMethods() {
   //
 }
 ```
-source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_key_specific_methods_example_test.go)
+source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_key_specific_methods_example_test.go)
 <!-- END INCLUDE -->
 
 ## Setting values to fields
 
-Using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#FromRaw) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
+Using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
 
-These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method.
+These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) method.
 
-The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
+The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
 
-[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) may not alter the Key Type (`kty`) field of a key.
+[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) may not alter the Key Type (`kty`) field of a key.
 
 the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
 
@@ -898,7 +898,7 @@ key.Set(`my-custom-field`, `unbelievable-value`)
 
 ## Converting a jwk.Key to a raw key
 
-As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc) as "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v2/jwk#Raw) method.
+As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc) as "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v3/jwk#Raw) method.
 
 ```go
 key, _ := jwk.ParseKey(src)
@@ -909,10 +909,10 @@ if err := key.Raw(&raw); err != nil {
 }
 ```
 
-In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) represents.
+In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) represents.
 If `key` represents an RSA key, it will contain either a `rsa.PublicKey` or `rsa.PrivateKey`. If it represents an ECDSA key, an `ecdsa.PublicKey`, or `ecdsa.PrivateKey`, etc.
 
-If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseRawKey)
+If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseRawKey)
 
 ```go
 var raw interface{}

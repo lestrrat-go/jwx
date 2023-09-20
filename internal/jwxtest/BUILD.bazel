@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "jwxtest",
     srcs = ["jwxtest.go"],
-    importpath = "github.com/lestrrat-go/jwx/v2/internal/jwxtest",
+    importpath = "github.com/lestrrat-go/jwx/v3/internal/jwxtest",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/ecutil",

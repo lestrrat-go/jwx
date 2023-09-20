@@ -1,6 +1,6 @@
 # Working with JWE
 
-In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v2/jwe`
+In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v3/jwe`
 
 * [Parsing](#parsing)
   * [Parse a JWE message stored in memory](#parse-a-jwe-message-stored-in-memory)
@@ -22,7 +22,7 @@ Also, be aware that a `jwe.Message` is not meant to be used for either decryptio
 
 ## Parse a JWE message stored in memory
 
-You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#Message) object. In this mode, there is no decryption performed.
+You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#Message) object. In this mode, there is no decryption performed.
 
 <!-- INCLUDE(examples/jwe_parse_example_test.go) -->
 ```go
@@ -33,7 +33,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwe"
 )
 
 func ExampleJWE_Parse() {
@@ -50,12 +50,12 @@ func ExampleJWE_Parse() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_parse_example_test.go)
+source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWE message stored in a file
 
-To parse a JWE stored in a file, use [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#ReadFile). [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#ReadFile) accepts the same options as [`jwe.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwe#Parse).
+To parse a JWE stored in a file, use [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#ReadFile). [`jwe.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#ReadFile) accepts the same options as [`jwe.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#Parse).
 
 <!-- INCLUDE(examples/jwe_readfile_example_test.go) -->
 ```go
@@ -66,7 +66,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwe"
 )
 
 func ExampleJWE_ReadFile() {
@@ -93,7 +93,7 @@ func ExampleJWE_ReadFile() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_readfile_example_test.go)
+source: [examples/jwe_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 # Encrypting
@@ -114,9 +114,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWE_Encrypt() {
@@ -154,14 +154,14 @@ func ExampleJWE_Encrypt() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_example_test.go)
+source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWE message in JSON serialization format
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple recipients (encrypted keys) for a given payload using multiple encryption algorithms and keys.
 
-When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
+When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
 
 <!-- INCLUDE(examples/jwe_encrypt_json_example_test.go) -->
 ```go
@@ -172,9 +172,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWE_EncryptJSON() {
@@ -263,7 +263,7 @@ func ExampleJWE_EncryptJSONMulti() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_json_example_test.go)
+source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -286,9 +286,9 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v2/internal/json"
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v3/internal/json"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
 )
 
 func ExampleJWE_SignWithHeaders() {
@@ -329,7 +329,7 @@ func ExampleJWE_SignWithHeaders() {
   // {"alg":"RSA-OAEP","enc":"A256GCM","x-example":true}
 }
 ```
-source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_encrypt_with_headers_example_test.go)
+source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 # Decrypting
@@ -348,8 +348,8 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
 )
 
 func ExampleJWE_VerifyWithKey() {
@@ -370,7 +370,7 @@ func ExampleJWE_VerifyWithKey() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_key_example_test.go)
+source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_decrypt_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Decrypting using a JWKS
@@ -393,9 +393,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v2/jwa"
-  "github.com/lestrrat-go/jwx/v2/jwe"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWE_VerifyWithJWKSet() {
@@ -432,5 +432,5 @@ func ExampleJWE_VerifyWithJWKSet() {
   // OUTPUT:
 }
 ```
-source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwe_decrypt_with_keyset_example_test.go)
+source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->

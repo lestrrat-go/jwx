@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2/cmd/jwx
+module github.com/lestrrat-go/jwx/v3/cmd/jwx
 
 go 1.17
 

@@ -1,4 +1,4 @@
-# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk)
+# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk)
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517).
 If you are looking to use JWT wit JWKs, look no further than [github.com/lestrrat-go/jwx](../jwt).
@@ -23,7 +23,7 @@ If you are looking to use JWT wit JWKs, look no further than [github.com/lestrra
 
 # Documentation
 
-Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk), or
+Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk), or
 the how-to style documentation on how to use JWK can be found in the [docs directory](../docs/04-jwk.md).
 
 # Auto-Refresh a key during a long running process
@@ -37,7 +37,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_Cache() {
@@ -101,7 +101,7 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 Parse and use a JWK key:
@@ -115,8 +115,8 @@ import (
   "fmt"
   "log"
 
-  "github.com/lestrrat-go/jwx/v2/internal/json"
-  "github.com/lestrrat-go/jwx/v2/jwk"
+  "github.com/lestrrat-go/jwx/v3/internal/json"
+  "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func ExampleJWK_Usage() {
@@ -213,5 +213,5 @@ func ExampleJWK_MarshalJSON() {
   // }
 }
 ```
-source: [examples/jwk_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwk_example_test.go)
+source: [examples/jwk_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_example_test.go)
 <!-- END INCLUDE -->

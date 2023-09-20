@@ -68,7 +68,7 @@ So, for example, a service like Google will sign their JWTs using their private 
 
 ### 3. You are parsing the wrong token.
 
-Often times we have people asking us about github.com/lestrrat-go/jwx/v2/jwt not being able to parse a token... except, they are not JWTs.
+Often times we have people asking us about github.com/lestrrat-go/jwx/v3/jwt not being able to parse a token... except, they are not JWTs.
 
 For example, when a provider says they will give you an "access token" ... well, it *may* be a JWT, but often times they are just some sort of string key (which will definitely parse if you pass it to `jwt.Parse`). Sometimes what you really want is stored in a different token, and it may be called an "ID token". Who knows, these things vary between implementation to implemention.
 

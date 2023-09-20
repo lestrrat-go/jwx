@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "base64",
     srcs = ["base64.go"],
-    importpath = "github.com/lestrrat-go/jwx/v2/internal/base64",
+    importpath = "github.com/lestrrat-go/jwx/v3/internal/base64",
     visibility = ["//:__subpackages__"],
 )
 

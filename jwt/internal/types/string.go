@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v2/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
 )
 
 type StringList []string
