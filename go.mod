@@ -1,4 +1,4 @@
-module github.com/lestrrat-go/jwx/v2
+module github.com/lestrrat-go/jwx/v3
 
 go 1.18
 
