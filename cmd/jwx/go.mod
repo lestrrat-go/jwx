@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 	github.com/urfave/cli/v2 v2.24.4
-	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.18.0
 )
 
 require (
@@ -20,5 +20,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 )
+
+replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../..
