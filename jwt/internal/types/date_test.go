@@ -10,6 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDate(t *testing.T) {
@@ -100,12 +101,10 @@ func TestDate(t *testing.T) {
 				if !assert.NoError(t, err) {
 					return
 				}
-				v, ok := t1.Get(jwt.IssuedAtKey)
-				if !assert.True(t, ok) {
-					return
-				}
-				realized := v.(time.Time)
-				if !assert.Equal(t, tc.Expected, realized) {
+				var v time.Time
+				require.NoError(t, t1.Get(jwt.IssuedAtKey, &v), `t1.Get should succeed`)
+
+				if !assert.Equal(t, tc.Expected, v) {
 					return
 				}
 			})

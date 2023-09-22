@@ -578,7 +578,7 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 // section of the key, if it already doesn't have one. It uses Key.Thumbprint
 // method with crypto.SHA256 as the default hashing algorithm
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
-	if _, ok := key.Get(KeyIDKey); ok {
+	if key.Has(KeyIDKey) {
 		return nil
 	}
 

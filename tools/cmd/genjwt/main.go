@@ -147,13 +147,19 @@ func generateToken(obj *codegen.Object) error {
 	o.L("// to access the corresponding fields in the JWS/JWE message. For this,")
 	o.L("// you will need to access them by directly parsing the payload using")
 	o.L("// `jws.Parse` and `jwe.Parse`")
-	o.L("Get(string) (interface{}, bool)")
+	o.L("Get(string, interface{}) error")
 
 	o.LL("// Set assigns a value to the corresponding field in the token. Some")
 	o.L("// pre-defined fields such as `nbf`, `iat`, `iss` need their values to")
 	o.L("// be of a specific type. See the other getter methods in this interface")
 	o.L("// for the types of each of these fields")
 	o.L("Set(string, interface{}) error")
+
+	o.LL("// Has returns true if the specified field has a token, even if")
+	o.L("// the value is empty-ish, such as nil, as long as it has been")
+	o.L("// explicitly set")
+	o.L("Has(string) bool")
+
 	o.L("Remove(string) error")
 
 	var pkgPrefix string
@@ -211,29 +217,53 @@ func generateToken(obj *codegen.Object) error {
 	o.L("return &t.options")
 	o.L("}")
 
-	o.LL("func (t *%s) Get(name string) (interface{}, bool) {", obj.Name(false))
+	o.LL("func (t *%s) Has(name string) bool {", obj.Name(false))
+	o.L("t.mu.RLock()")
+	o.L("defer t.mu.RUnlock()")
+	o.L("switch name {")
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		o.L("return t.%s != nil", f.Name(false))
+	}
+	o.L("default:")
+	o.L("_, ok := t.privateClaims[name]")
+	o.L("return ok")
+	o.L("}")
+	o.L("}")
+
+	o.LL("func (t *%s) Get(name string, dst interface{}) error {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("switch name {")
 	for _, f := range fields {
 		o.L("case %sKey:", f.Name(true))
 		o.L("if t.%s == nil {", f.Name(false))
-		o.L("return nil, false")
+		o.L("return fmt.Errorf(`field %%q not found`, name)")
 		o.L("}")
+		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if f.Bool(`hasGet`) {
-			o.L("v := t.%s.Get()", f.Name(false))
+			o.R("t.%s.Get()", f.Name(false))
 		} else {
 			if fieldStorageTypeIsIndirect(f.Type()) {
-				o.L("v := *(t.%s)", f.Name(false))
+				o.R("*(t.%s)", f.Name(false))
 			} else {
-				o.L("v := t.%s", f.Name(false))
+				o.R("t.%s", f.Name(false))
 			}
 		}
-		o.L("return v, true")
+		o.R("); err != nil {")
+		o.L("return fmt.Errorf(`failed to assign value to dst: %%w`, err)")
+		o.L("}")
+		o.L("return nil")
 	}
 	o.L("default:")
 	o.L("v, ok := t.privateClaims[name]")
-	o.L("return v, ok")
+	o.L("if !ok {")
+	o.L("return fmt.Errorf(`field %%q not found`, name)")
+	o.L("}")
+	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
+	o.L("return fmt.Errorf(`failed to assign value to dst: %%w`, err)")
+	o.L("}")
+	o.L("return nil")
 	o.L("}") // end switch name
 	o.L("}") // end of Get
 

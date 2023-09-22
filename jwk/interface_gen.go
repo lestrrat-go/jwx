@@ -27,13 +27,17 @@ const (
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
 type Key interface {
+	// Has returns true if the given field has a value assigned. It
+	// returns true even if the value is an empty-ish value such as 0, false
+	// or the empty string
+	Has(string) bool
 	// Get returns the value of a single field. The second boolean return value
 	// will be false if the field is not stored in the source
 	//
 	// This method, which returns an `interface{}`, exists because
 	// these objects can contain extra _arbitrary_ fields that users can
 	// specify, and there is no way of knowing what type they could be
-	Get(string) (interface{}, bool)
+	Get(string, interface{}) error
 
 	// Set sets the value of a single field. Note that certain fields,
 	// notably "kty", cannot be altered, but will not return an error

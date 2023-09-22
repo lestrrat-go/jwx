@@ -102,9 +102,10 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("AsMap(ctx context.Context) (map[string]interface{}, error)")
 
 	// These are used to access a single element by key name
-	o.L("Get(string) (interface{}, bool)")
+	o.L("Get(string, interface{}) error")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
+	o.L("Has(string) bool")
 
 	// These are used to deal with encoded headers
 	o.L("Encode() ([]byte, error)")
@@ -185,25 +186,50 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return h.privateParams")
 	o.L("}")
 
-	o.LL("func (h *stdHeaders) Get(name string) (interface{}, bool) {")
+	o.LL("func (h *stdHeaders) Has(name string) bool {")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("switch name {")
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		o.L("return h.%s != nil", f.Name(false))
+	}
+	o.L("default:")
+	o.L("_, ok := h.privateParams[name]")
+	o.L("return ok")
+	o.L("}")
+	o.L("}")
+
+	o.LL("func (h *stdHeaders) Get(name string, dst interface{}) error {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
 		o.L("if h.%s == nil {", f.Name(false))
-		o.L("return nil, false")
+		o.L("return fmt.Errorf(`field %%q not found`, name)")
 		o.L("}")
+
+		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("return *(h.%s), true", f.Name(false))
+			o.R("*(h.%s)", f.Name(false))
 		} else {
-			o.L("return h.%s, true", f.Name(false))
+			o.R("h.%s", f.Name(false))
 		}
+		o.R("); err != nil {")
+		o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+		o.L("}")
 	}
 	o.L("default:")
 	o.L("v, ok := h.privateParams[name]")
-	o.L("return v, ok")
+	o.L("if !ok {")
+	o.L("return fmt.Errorf(`field %%q not found`, name)")
+	o.L("}")
+	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
+	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("}")
 	o.L("}") // end switch name
+	o.L("return nil")
 	o.L("}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
 
 	o.LL("func (h *stdHeaders) Set(name string, value interface{}) error {")

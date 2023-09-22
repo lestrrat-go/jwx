@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/iter"
@@ -75,13 +76,18 @@ type Token interface {
 	// to access the corresponding fields in the JWS/JWE message. For this,
 	// you will need to access them by directly parsing the payload using
 	// `jws.Parse` and `jwe.Parse`
-	Get(string) (interface{}, bool)
+	Get(string, interface{}) error
 
 	// Set assigns a value to the corresponding field in the token. Some
 	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
 	// be of a specific type. See the other getter methods in this interface
 	// for the types of each of these fields
 	Set(string, interface{}) error
+
+	// Has returns true if the specified field has a token, even if
+	// the value is empty-ish, such as nil, as long as it has been
+	// explicitly set
+	Has(string) bool
 	Remove(string) error
 
 	// Options returns the per-token options associated with this token.
@@ -123,55 +129,99 @@ func (t *stdToken) Options() *TokenOptionSet {
 	return &t.options
 }
 
-func (t *stdToken) Get(name string) (interface{}, bool) {
+func (t *stdToken) Has(name string) bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	switch name {
+	case AudienceKey:
+		return t.audience != nil
+	case ExpirationKey:
+		return t.expiration != nil
+	case IssuedAtKey:
+		return t.issuedAt != nil
+	case IssuerKey:
+		return t.issuer != nil
+	case JwtIDKey:
+		return t.jwtID != nil
+	case NotBeforeKey:
+		return t.notBefore != nil
+	case SubjectKey:
+		return t.subject != nil
+	default:
+		_, ok := t.privateClaims[name]
+		return ok
+	}
+}
+
+func (t *stdToken) Get(name string, dst interface{}) error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	switch name {
 	case AudienceKey:
 		if t.audience == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.audience.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.audience.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case ExpirationKey:
 		if t.expiration == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.expiration.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.expiration.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case IssuedAtKey:
 		if t.issuedAt == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.issuedAt.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.issuedAt.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case IssuerKey:
 		if t.issuer == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.issuer)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.issuer)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case JwtIDKey:
 		if t.jwtID == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.jwtID)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.jwtID)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case NotBeforeKey:
 		if t.notBefore == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.notBefore.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.notBefore.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case SubjectKey:
 		if t.subject == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.subject)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.subject)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	default:
 		v, ok := t.privateClaims[name]
-		return v, ok
+		if !ok {
+			return fmt.Errorf(`field %q not found`, name)
+		}
+		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	}
 }
 

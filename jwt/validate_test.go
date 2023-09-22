@@ -519,8 +519,7 @@ func TestClaimValidator(t *testing.T) {
 	const myClaim = "my-claim"
 	err0 := errors.New(myClaim + " does not exist")
 	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) jwt.ValidationError {
-		_, ok := tok.Get(myClaim)
-		if !ok {
+		if !tok.Has(myClaim) {
 			return jwt.NewValidationError(err0)
 		}
 		return nil

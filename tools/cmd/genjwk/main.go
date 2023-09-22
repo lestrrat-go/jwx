@@ -273,12 +273,32 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return h.privateParams")
 	o.L("}")
 
-	o.LL("func (h *%s) Get(name string) (interface{}, bool) {", structName)
+	o.LL("func (h *%s) Has(name string) bool {", structName)
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("switch name {")
+	for _, f := range obj.Fields() {
+		if f.Bool(`is_std`) {
+			o.L("case %sKey:", f.Name(true))
+		} else {
+			o.L("case %s%sKey:", kt.Prefix, f.Name(true))
+		}
+		o.L("return h.%s != nil", f.Name(false))
+	}
+	o.L("default:")
+	o.L("_, ok := h.privateParams[name]")
+	o.L("return ok")
+	o.L("}")
+	o.L("}")
+
+	o.LL("func (h *%s) Get(name string, dst interface{}) error {", structName)
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
 	o.L("case KeyTypeKey:")
-	o.L("return h.KeyType(), true")
+	o.L("if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {")
+	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("}")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
 			o.L("case %sKey:", f.Name(true))
@@ -287,20 +307,31 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		}
 
 		o.L("if h.%s == nil {", f.Name(false))
-		o.L("return nil, false")
+		o.L("return fmt.Errorf(`field %%q not found`, name)")
 		o.L("}")
+		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if f.Bool(`hasGet`) {
-			o.L("return h.%s.Get(), true", f.Name(false))
+			o.R("h.%s.Get()", f.Name(false))
 		} else if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("return *(h.%s), true", f.Name(false))
+			o.R("*(h.%s)", f.Name(false))
 		} else {
-			o.L("return h.%s, true", f.Name(false))
+			o.R("h.%s", f.Name(false))
 		}
+		o.R("); err != nil {")
+		o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+		o.L("}")
+		o.L("return nil")
 	}
 	o.L("default:")
 	o.L("v, ok := h.privateParams[name]")
-	o.L("return v, ok")
+	o.L("if !ok {")
+	o.L("return fmt.Errorf(`field %%q not found`, name)")
+	o.L("}")
+	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
+	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("}")
 	o.L("}") // end switch name
+	o.L("return nil")
 	o.L("}") // func (h *%s) Get(name string) (interface{}, bool)
 
 	o.LL("func (h *%s) Set(name string, value interface{}) error {", structName)
@@ -624,12 +655,16 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.L("// between each key types, so you should use type assertions")
 	o.L("// to perform more specific tasks with each key")
 	o.L("type Key interface {")
+	o.L("// Has returns true if the given field has a value assigned. It")
+	o.L("// returns true even if the value is an empty-ish value such as 0, false")
+	o.L("// or the empty string")
+	o.L("Has(string) bool")
 	o.L("// Get returns the value of a single field. The second boolean return value")
 	o.L("// will be false if the field is not stored in the source")
 	o.L("//\n// This method, which returns an `interface{}`, exists because")
 	o.L("// these objects can contain extra _arbitrary_ fields that users can")
 	o.L("// specify, and there is no way of knowing what type they could be")
-	o.L("Get(string) (interface{}, bool)")
+	o.L("Get(string, interface{}) error")
 	o.LL("// Set sets the value of a single field. Note that certain fields,")
 	o.L("// notably \"kty\", cannot be altered, but will not return an error")
 	o.L("//\n// This method, which takes an `interface{}`, exists because")

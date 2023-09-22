@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestX509CertChain(t *testing.T) {
@@ -34,11 +35,8 @@ func TestX509CertChain(t *testing.T) {
 				return
 			}
 
-			v, ok := key.Get(X509CertChainKey)
-			if !assert.True(t, ok, "Get for x5c should succeed") {
-				return
-			}
-			gotcerts := v.(*cert.Chain)
+			var gotcerts cert.Chain
+			require.NoError(t, key.Get(X509CertChainKey, &gotcerts), "Get for x5c should succeed")
 			if !assert.Equal(t, gotcerts.Len(), 3, `should have 3 cert`) {
 				return
 			}
@@ -63,10 +61,8 @@ func TestIterator(t *testing.T) {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
 
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
+				var getV interface{}
+				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
 				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
 					return
 				}

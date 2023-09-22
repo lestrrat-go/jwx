@@ -183,10 +183,9 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 			k := k
 			kdef := kdef
 			t.Run(k, func(t *testing.T) {
-				getval, ok := key.Get(k)
-				if !assert.True(t, ok, `key.Get(%s) should succeed`, k) {
-					return
-				}
+				var getval interface{}
+				require.NoError(t, key.Get(k, &getval), `key.Get(%s) should succeed`, k)
+
 				expected := kdef.Expected
 				if expected == nil {
 					expected = kdef.Value
@@ -1404,10 +1403,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := key.Get(`x-birthday`)
-		if !assert.True(t, ok, `key.Get("x-birthday") should succeed`) {
-			return
-		}
+		var v interface{}
+		require.NoError(t, key.Get(`x-birthday`, &v), `key.Get("x-birthday") should succeed`)
 
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
@@ -1541,10 +1538,9 @@ func TestTypedFields(t *testing.T) {
 						return
 					}
 
-					v, ok := got.Get("typed-field")
-					if !assert.True(t, ok, `got.Get() should succeed`) {
-						return
-					}
+					var v interface{}
+					require.NoError(t, got.Get("typed-field", &v), `got.Get() should succeed`)
+
 					field, err := tc.PostProcess(t, v)
 					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
 						return
@@ -1583,10 +1579,8 @@ func TestTypedFields(t *testing.T) {
 				for iter := got.Keys(ctx); iter.Next(ctx); {
 					pair := iter.Pair()
 					key, _ := pair.Value.(jwk.Key)
-					v, ok := key.Get("typed-field")
-					if !assert.True(t, ok, `key.Get() should succeed`) {
-						return
-					}
+					var v interface{}
+					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
 					field, err := tc.PostProcess(t, v)
 					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
 						return
@@ -1715,12 +1709,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok := set.Get(`renewal_kid`)
-			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
-				return
-			}
+			var kid string
+			require.NoError(t, set.Get(`renewal_kid`, &kid), `set.Get("renewal_kid") should succeed`)
 
-			if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
+			if !assert.Equal(t, `foo`, kid, `set.Get("renewal_kid") should return "foo"`) {
 				return
 			}
 
@@ -1729,12 +1721,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok = key.Get(`renewal_kid`)
-			if !assert.True(t, ok, `key.Get("renewal_kid") should return ok = true`) {
-				return
-			}
+			kid = ""
+			require.NoError(t, key.Get(`renewal_kid`, &kid), `key.Get("renewal_kid") should return ok = true`)
 
-			if !assert.Equal(t, `foo`, v, `key.Get("renewal_kid") should return "foo"`) {
+			if !assert.Equal(t, `foo`, kid, `key.Get("renewal_kid") should return "foo"`) {
 				return
 			}
 		}
@@ -1775,10 +1765,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 				return
 			}
 
-			v, ok := set.Get(`renewal_kid`)
-			if !assert.True(t, ok, `set.Get("renewal_kid") should return ok = true`) {
-				return
-			}
+			var v interface{}
+			require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`)
 
 			if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
 				return
@@ -1806,10 +1794,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 
-		v, ok := set.Get(`renewal_kid`)
-		if !assert.True(t, ok, `set.Get("renewal_kid") should succeed`) {
-			return
-		}
+		var v interface{}
+		require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should succeed`)
 
 		if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
 			return
