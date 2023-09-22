@@ -32,7 +32,13 @@ const (
 	X509URLKey                = "x5u"
 )
 
-// Headers describe a standard Header set.
+// Headers describe a standard JWS Header set. It is part of the JWS message
+// and ise used to represet bot Public or Protected headers, which in turn
+// can be found in each Signature object. If you are not sure how this works,
+// It is strongly recommended that you read RFC7515, especially the section
+// that describes the full JSON serialization format of JWS messages.
+//
+// In most cases, you likely want to use the protected headers, as this is part of the signed content.
 type Headers interface {
 	json.Marshaler
 	json.Unmarshaler
@@ -52,9 +58,19 @@ type Headers interface {
 	AsMap(context.Context) (map[string]interface{}, error)
 	Copy(context.Context, Headers) error
 	Merge(context.Context, Headers) (Headers, error)
+	// Get is used to extract the value of any field, including non-standard fields, out of the header.
+	//
+	// The first argument is the name of the field. The second argument is a pointer
+	// to a variable that will receive the value of the field. The method returns
+	// an error if the field does not exist, or if the value cannot be assigned to
+	// the destination variable. Note that a field is considered to "exist" even if
+	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
 	Get(string, interface{}) error
 	Set(string, interface{}) error
 	Remove(string) error
+	// Has returns true if the specified header has a value, even if
+	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
+	// explicitly set.
 	Has(string) bool
 
 	// PrivateParams returns the non-standard elements in the source structure

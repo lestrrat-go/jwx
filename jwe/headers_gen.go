@@ -37,7 +37,14 @@ const (
 	X509URLKey                = "x5u"
 )
 
-// Headers describe a standard Header set.
+// Headers describe a standard JWE Header set. It is part of the JWE message
+// and is used to represent both Protected and Unprotected headers,
+// which in turn can be found in each Recipient object.
+// If you are not sure how this works, it is strongly recommended that
+// you read RFC7516, especially the section
+// that describes the full JSON serialization format of JWE messages.
+//
+// In most cases, you likely want to use the protected headers, as this is the part of the encrypted content
 type Headers interface {
 	json.Marshaler
 	json.Unmarshaler
@@ -60,9 +67,20 @@ type Headers interface {
 	Iterate(ctx context.Context) Iterator
 	Walk(ctx context.Context, v Visitor) error
 	AsMap(ctx context.Context) (map[string]interface{}, error)
+
+	// Get is used to extract the value of any field, including non-standard fields, out of the header.
+	//
+	// The first argument is the name of the field. The second argument is a pointer
+	// to a variable that will receive the value of the field. The method returns
+	// an error if the field does not exist, or if the value cannot be assigned to
+	// the destination variable. Note that a field is considered to "exist" even if
+	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
 	Get(string, interface{}) error
 	Set(string, interface{}) error
 	Remove(string) error
+	// Has returns true if the specified header has a value, even if
+	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
+	// explicitly set.
 	Has(string) bool
 	Encode() ([]byte, error)
 	Decode([]byte) error

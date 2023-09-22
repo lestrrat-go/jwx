@@ -27,16 +27,19 @@ const (
 // between each key types, so you should use type assertions
 // to perform more specific tasks with each key
 type Key interface {
-	// Has returns true if the given field has a value assigned. It
-	// returns true even if the value is an empty-ish value such as 0, false
-	// or the empty string
+
+	// Has returns true if the specified field has a value, even if
+	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
+	// explicitly set.
 	Has(string) bool
-	// Get returns the value of a single field. The second boolean return value
-	// will be false if the field is not stored in the source
+
+	// Get is used to extract the value of any field, including non-standard fields, out of the key.
 	//
-	// This method, which returns an `interface{}`, exists because
-	// these objects can contain extra _arbitrary_ fields that users can
-	// specify, and there is no way of knowing what type they could be
+	// The first argument is the name of the field. The second argument is a pointer
+	// to a variable that will receive the value of the field. The method returns
+	// an error if the field does not exist, or if the value cannot be assigned to
+	// the destination variable. Note that a field is considered to "exist" even if
+	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
 	Get(string, interface{}) error
 
 	// Set sets the value of a single field. Note that certain fields,

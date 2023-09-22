@@ -86,7 +86,13 @@ func generateHeaders(obj *codegen.Object) error {
 	}
 	o.L(")") // end const
 
-	o.LL("// Headers describe a standard Header set.")
+	o.LL("// Headers describe a standard JWS Header set. It is part of the JWS message")
+	o.L("// and is used to represet both Public or Protected headers, which in turn")
+	o.L("// can be found in each Signature object. If you are not sure how this works,")
+	o.L("// it is strongly recommended that you read RFC7515, especially the section")
+	o.L("// that describes the full JSON serialization format of JWS messages.")
+	o.L("//")
+	o.L("// In most cases, you likely want to use the protected headers, as this is part of the signed content.")
 	o.L("type Headers interface {")
 	o.L("json.Marshaler")
 	o.L("json.Unmarshaler")
@@ -107,9 +113,19 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("Merge(context.Context, Headers) (Headers, error)")
 
 	// These are used to access a single element by key name
+	o.L("// Get is used to extract the value of any field, including non-standard fields, out of the header.")
+	o.L("//")
+	o.L("// The first argument is the name of the field. The second argument is a pointer")
+	o.L("// to a variable that will receive the value of the field. The method returns")
+	o.L("// an error if the field does not exist, or if the value cannot be assigned to")
+	o.L("// the destination variable. Note that a field is considered to \"exist\" even if")
+	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
 	o.L("Get(string, interface{}) error")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
+	o.L("// Has returns true if the specified header has a value, even if")
+	o.L("// the value is empty-ish (e.g. 0, false, \"\")  as long as it has been")
+	o.L("// explicitly set.")
 	o.L("Has(string) bool")
 
 	o.LL("// PrivateParams returns the non-standard elements in the source structure")

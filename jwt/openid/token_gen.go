@@ -133,14 +133,20 @@ type Token interface {
 	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
 	PrivateClaims() map[string]interface{}
 
-	// Get returns the value of the corresponding field in the token, such as
-	// `nbf`, `exp`, `iat`, and other user-defined fields. If the field does not
-	// exist in the token, the second return value will be `false`
+	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
-	// If you need to access fields like `alg`, `kid`, `jku`, etc, you need
-	// to access the corresponding fields in the JWS/JWE message. For this,
-	// you will need to access them by directly parsing the payload using
-	// `jws.Parse` and `jwe.Parse`
+	// The first argument is the name of the claim. The second argument is a pointer
+	// to a variable that will receive the value of the claim. The method returns
+	// an error if the claim does not exist, or if the value cannot be assigned to
+	// the destination variable.  Note that a field is considered to "exist" even if
+	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
+	//
+	// For standard claims, you can use the corresponding getter method, such as
+	// `Issuer()`, `Subject()`, `Audience()`, `IssuedAt()`, `NotBefore()`, `ExpiresAt()`
+	//
+	// Note that fields of JWS/JWE are NOT accessible through this method. You need
+	// to use `jws.Parse` and `jwe.Parse` to obtain the JWS/JWE message (and NOT
+	// the payload, which presumably is the JWT), and then use their `Get` methods in their respective packages
 	Get(string, interface{}) error
 
 	// Set assigns a value to the corresponding field in the token. Some
@@ -149,9 +155,9 @@ type Token interface {
 	// for the types of each of these fields
 	Set(string, interface{}) error
 
-	// Has returns true if the specified field has a token, even if
-	// the value is empty-ish, such as nil, as long as it has been
-	// explicitly set
+	// Has returns true if the specified claim has a value, even if
+	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
+	// explicitly set.
 	Has(string) bool
 	Remove(string) error
 
