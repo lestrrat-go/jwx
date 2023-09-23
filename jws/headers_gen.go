@@ -33,9 +33,9 @@ const (
 )
 
 // Headers describe a standard JWS Header set. It is part of the JWS message
-// and ise used to represet bot Public or Protected headers, which in turn
+// and is used to represet both Public or Protected headers, which in turn
 // can be found in each Signature object. If you are not sure how this works,
-// It is strongly recommended that you read RFC7515, especially the section
+// it is strongly recommended that you read RFC7515, especially the section
 // that describes the full JSON serialization format of JWS messages.
 //
 // In most cases, you likely want to use the protected headers, as this is part of the signed content.
