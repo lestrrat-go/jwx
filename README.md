@@ -144,7 +144,7 @@ func ExampleJWX() {
   // OUTPUT:
 }
 ```
-source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwx_readme_example_test.go)
+source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwx_readme_example_test.go)
 <!-- END INCLUDE -->
 
 # How-to Documentation

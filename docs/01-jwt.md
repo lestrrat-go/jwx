@@ -91,7 +91,7 @@ func ExampleJWT_Parse() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_example_test.go)
+source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
 Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
@@ -136,7 +136,7 @@ func ExampleJWT_ReadFile() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_readfile_example_test.go)
+source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_readfile_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWT from a *http.Request
@@ -201,7 +201,7 @@ func ExampleJWT_ParseRequest_Authorization() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_request_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_request_example_test.go)
+source: [examples/jwt_parse_request_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_request_example_test.go)
 <!-- END INCLUDE -->
 
 # Programmatically Creating a JWT
@@ -241,7 +241,7 @@ func ExampleJWT_Construct() {
   // {"aud":["users"],"iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-source: [examples/jwt_construct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_construct_example_test.go)
+source: [examples/jwt_construct_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_construct_example_test.go)
 <!-- END INCLUDE -->
 
 If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
@@ -286,7 +286,7 @@ func ExampleJWT_Builder() {
   // {"aud":["users"],"claim1":"value1","claim2":"value2","iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_builder_example_test.go)
+source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_builder_example_test.go)
 <!-- END INCLUDE -->
 
 # JWT Verification
@@ -325,7 +325,7 @@ func ExampleJWT_ParseWithKey() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_key_example_test.go)
+source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
@@ -441,7 +441,7 @@ func ExampleJWT_ParseWithKeySet() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_keyset_example_test.go)
+source: [examples/jwt_parse_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 There are a couple of things to note.
@@ -553,7 +553,7 @@ func ExampleJWT_ParseWithKeyProvider() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_with_key_provider_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_key_provider_example_test.go)
+source: [examples/jwt_parse_with_key_provider_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_with_key_provider_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse and Verify a JWT (using key specified in "jku")
@@ -645,7 +645,7 @@ func ExampleJWT_ParseWithJKU() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_parse_with_jku_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_jku_example_test.go)
+source: [examples/jwt_parse_with_jku_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_parse_with_jku_example_test.go)
 <!-- END INCLUDE -->
 
 This feature must be used with extreme caution. Please see the caveats and fine prints
@@ -709,7 +709,7 @@ func ExampleJWT_Validate() {
   // "exp" not satisfied
 }
 ```
-source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_example_test.go)
+source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_validate_example_test.go)
 <!-- END INCLUDE -->
 
 ## Validate for specific claim values
@@ -747,7 +747,7 @@ func ExampleJWT_ValidateIssuer() {
   // "iss" not satisfied: values do not match
 }
 ```
-source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_issuer_example_test.go)
+source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_validate_issuer_example_test.go)
 <!-- END INCLUDE -->
 
 ## Use a custom validator
@@ -794,7 +794,7 @@ func ExampleJWT_ValidateValidator() {
   // tokens are only valid if issued during August!
 }
 ```
-source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_validator_example_test.go)
+source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_validate_validator_example_test.go)
 <!-- END INCLUDE -->
 
 ## Detecting error types
@@ -871,7 +871,7 @@ func ExampleJWT_ValidateDetectErrorType() {
   // "exp" not satisfied
 }
 ```
-source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_validate_detect_error_type_example_test.go)
+source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_validate_detect_error_type_example_test.go)
 <!-- END INCLUDE -->
 
 # JWT Serialization
@@ -911,7 +911,7 @@ func ExampleJWT_SerializeJSON() {
   // {"iat":233431200,"iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-source: [examples/jwt_serialize_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_json_example_test.go)
+source: [examples/jwt_serialize_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_serialize_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize using JWS
@@ -973,7 +973,7 @@ func ExampleJWT_SerializeJWS() {
   // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
 }
 ```
-source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jws_example_test.go)
+source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_serialize_jws_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize using JWE and JWS
@@ -1041,7 +1041,7 @@ func ExampleJWT_SerializeJWEJWS() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jwe_jws_example_test.go)
+source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_serialize_jwe_jws_example_test.go)
 <!-- END INCLUDE -->
 
 ## Serialize the the `aud` field as a single string
@@ -1153,7 +1153,7 @@ func ExampleJWT_FlattenAudience() {
   // {"aud":"foo"}
 }
 ```
-source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_flatten_audience_example_test.go)
+source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_flatten_audience_example_test.go)
 <!-- END INCLUDE -->
 
 # Working with JWT
@@ -1213,7 +1213,7 @@ func ExampleJWTPlainStruct() {
   // foobar
 }
 ```
-source: [examples/jwt_raw_struct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_raw_struct_example_test.go)
+source: [examples/jwt_raw_struct_example_test.go](https://github.com/lestrrat-go/jwx/blob/refs/heads/develop/v2/examples/jwt_raw_struct_example_test.go)
 <!-- END INCLUDE -->
 
 This makes sure that you do not go through any extra layers of abstraction that causes performance panalties, and you get exactly the type of field that you want.
