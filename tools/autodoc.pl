@@ -7,7 +7,7 @@ use File::Temp;
 
 # Use GITHUB_REF, but if the ref is develop/v\d, then use v\d
 my $link_ref = $ENV{GITHUB_REF};
-if ($link_ref =~ /^develop\/(v\d+)$/) {
+if ($link_ref =~ /^(?:refs\/heads\/)?develop\/(v\d+)$/) {
     $link_ref = $1;
 }
 
