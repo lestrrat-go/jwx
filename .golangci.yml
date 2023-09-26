@@ -10,10 +10,14 @@ linters-settings:
 linters:
   enable-all: true
   disable:
+    - contextcheck
     - cyclop
+    - depguard
+    - deadcode # deprecated
     - dupl
     - exhaustive
     - exhaustivestruct
+    - exhaustruct
     - errorlint
     - funlen
     - gci
@@ -30,22 +34,28 @@ linters:
     - gomnd
     - gomoddirectives # I think it's broken
     - gosec
+    - gosmopolitan
     - govet
     - interfacer # deprecated
+    - interfacebloat 
     - ifshort
     - ireturn # No, I _LIKE_ returning interfaces
     - lll
     - maintidx # Do this in code review
     - maligned # deprecated
     - makezero
+    - nonamedreturns
     - nakedret
     - nestif
     - nlreturn
+    - nosnakecase # deprecated
     - paralleltest
     - scopelint # deprecated
+    - structcheck # deprecated
     - tagliatelle
     - testpackage
     - thelper    # Tests are fine
+    - varcheck # deprecated
     - varnamelen # Short names are ok
     - wrapcheck
     - wsl

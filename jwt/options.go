@@ -362,7 +362,7 @@ func WithRequiredClaim(name string) ValidateOption {
 //
 // For example, in order to specify that `exp` - `iat` should be less than 10*time.Second, you would write
 //
-//    jwt.Validate(token, jwt.WithMaxDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
+//	jwt.Validate(token, jwt.WithMaxDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
 //
 // If AcceptableSkew of 2 second is specified, the above will return valid for any value of
 // `exp` - `iat`  between 8 (10-2) and 12 (10+2).
@@ -375,10 +375,9 @@ func WithMaxDelta(dur time.Duration, c1, c2 string) ValidateOption {
 //
 // For example, in order to specify that `exp` - `iat` should be greater than 10*time.Second, you would write
 //
-//    jwt.Validate(token, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
+//	jwt.Validate(token, jwt.WithMinDelta(10*time.Second, jwt.ExpirationKey, jwt.IssuedAtKey))
 //
 // The validation would fail if the difference is less than 10 seconds.
-//
 func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 	return WithValidator(MinDeltaIs(c1, c2, dur))
 }
@@ -387,14 +386,13 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 //
 // For example, in order to validate tokens that are only valid during August, you would write
 //
-//    validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
-//      if time.Now().Month() != 8 {
-//        return fmt.Errorf(`tokens are only valid during August!`)
-//      }
-//      return nil
-//    })
-//   err := jwt.Validate(token, jwt.WithValidator(validator))
-//
+//	 validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+//	   if time.Now().Month() != 8 {
+//	     return fmt.Errorf(`tokens are only valid during August!`)
+//	   }
+//	   return nil
+//	 })
+//	err := jwt.Validate(token, jwt.WithValidator(validator))
 func WithValidator(v Validator) ValidateOption {
 	return newValidateOption(identValidator{}, v)
 }

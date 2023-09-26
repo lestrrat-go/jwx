@@ -53,7 +53,6 @@ const (
 // Such private parameters can be accessed via the `Field()` method.
 // If a resource contains a single JWK instead of a JWK set, private parameters
 // are stored in _both_ the resulting `jwk.Set` object and the `jwk.Key` object .
-//
 type Set interface {
 	// Add adds the specified key. If the key already exists in the set, it is
 	// not added.

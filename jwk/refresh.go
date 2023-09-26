@@ -18,8 +18,8 @@ import (
 // Before retrieving the jwk.Set objects, the user must pre-register the
 // URLs they intend to use by calling `Configure()`
 //
-//  ar := jwk.NewAutoRefresh(ctx)
-//  ar.Configure(url, options...)
+//	ar := jwk.NewAutoRefresh(ctx)
+//	ar.Configure(url, options...)
 //
 // Once registered, you can call `Fetch()` to retrieve the jwk.Set object.
 //
@@ -104,14 +104,14 @@ type resetTimerReq struct {
 // should mostly be set to a context that ends when the main loop/part of your
 // program exits:
 //
-// func MainLoop() {
-//   ctx, cancel := context.WithCancel(context.Background())
-//   defer cancel()
-//   ar := jwk.AutoRefresh(ctx)
-//   for ... {
-//     ...
-//   }
-// }
+//	func MainLoop() {
+//	  ctx, cancel := context.WithCancel(context.Background())
+//	  defer cancel()
+//	  ar := jwk.AutoRefresh(ctx)
+//	  for ... {
+//	    ...
+//	  }
+//	}
 func NewAutoRefresh(ctx context.Context) *AutoRefresh {
 	af := &AutoRefresh{
 		cache:        make(map[string]Set),
@@ -154,8 +154,9 @@ func (af *AutoRefresh) Remove(url string) error {
 // Note that options are treated as a whole -- you can't just update
 // one value. For example, if you did:
 //
-//   ar.Configure(url, jwk.WithHTTPClient(...))
-//   ar.Configure(url, jwk.WithRefreshInterval(...))
+//	ar.Configure(url, jwk.WithHTTPClient(...))
+//	ar.Configure(url, jwk.WithRefreshInterval(...))
+//
 // The the end result is that `url` is ONLY associated with the options
 // given in the second call to `Configure()`, i.e. `jwk.WithRefreshInterval`.
 // The other unspecified options, including the HTTP client, is set to
