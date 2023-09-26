@@ -846,7 +846,7 @@ type dummyKeyEncrypterDecrypter struct {
 	key []byte
 }
 
-func (kd *dummyKeyEncrypterDecrypter) DecryptKey(alg jwa.KeyEncryptionAlgorithm, cek []byte, _ jwe.Recipient, _ *jwe.Message) ([]byte, error) {
+func (kd *dummyKeyEncrypterDecrypter) DecryptKey(_ jwa.KeyEncryptionAlgorithm, cek []byte, _ jwe.Recipient, _ *jwe.Message) ([]byte, error) {
 	return bytes.TrimSuffix(cek, kd.key), nil
 }
 
