@@ -89,7 +89,7 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 		}
 		return nil
 	case string:
-		// yeah, yeah, regexp is slow. PR's welcome
+		// yeah, regexp is slow. PR's welcome
 		indices := birthdateRx.FindStringSubmatchIndex(v)
 		if indices == nil {
 			return errors.New(`invalid pattern for birthdate`)

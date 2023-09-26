@@ -47,7 +47,7 @@ func (kw *Noop) KeyID() string {
 	return kw.keyID
 }
 
-func (kw *Noop) Encrypt(cek []byte) (keygen.ByteSource, error) {
+func (kw *Noop) Encrypt(_ []byte) (keygen.ByteSource, error) {
 	return keygen.ByteKey(kw.sharedkey), nil
 }
 

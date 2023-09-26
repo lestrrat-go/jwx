@@ -166,7 +166,7 @@ func (es *dummyECDSACryptoSigner) Public() crypto.PublicKey {
 	return es.raw.Public()
 }
 
-func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, _ crypto.SignerOpts) ([]byte, error) {
 	// The implementation is the same as ecdsaCryptoSigner.
 	// This is just here to test the interface conversion
 	r, s, err := ecdsa.Sign(rand, es.raw, digest)

@@ -39,10 +39,10 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 // The constructor auto-detects the type of key to be instantiated
 // based on the input type:
 //
-//   * "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
-//   * "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
-//   * "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
-//   * []byte creates a symmetric key
+//   - "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
+//   - "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
+//   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
+//   - []byte creates a symmetric key
 func New(key interface{}) (Key, error) {
 	if key == nil {
 		return nil, errors.New(`jwk.New requires a non-nil key`)
@@ -636,8 +636,7 @@ func cloneKey(src Key) (Key, error) {
 // Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
 // using either PKCS8 for private keys and PKIX for public keys.
 // If you need to encode using PKCS1 or SEC1, you must do it yourself.
-//
-// Argument must be of type jwk.Key or jwk.Set
+// The argument to this function must be of type jwk.Key or jwk.Set
 //
 // Currently only EC (including Ed25519) and RSA keys (and jwk.Set
 // comprised of these key types) are supported.
@@ -706,14 +705,13 @@ func asnEncode(key Key) (string, []byte, error) {
 //
 // In that case you would register a custom field as follows
 //
-//   jwk.RegisterCustomField(`x-birthday`, timeT)
+//	jwk.RegisterCustomField(`x-birthday`, timeT)
 //
 // Then `key.Get("x-birthday")` will still return an `interface{}`,
 // but you can convert its type to `time.Time`
 //
-//   bdayif, _ := key.Get(`x-birthday`)
-//   bday := bdayif.(time.Time)
-//
+//	bdayif, _ := key.Get(`x-birthday`)
+//	bday := bdayif.(time.Time)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

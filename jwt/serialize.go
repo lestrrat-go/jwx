@@ -43,16 +43,16 @@ type SerializeStep interface {
 // For example, to marshal the token into JSON, then apply JWS and JWE
 // in that order, you would do:
 //
-//   serialized, err := jwt.NewSerialer().
-//      Sign(jwa.RS256, key).
-//      Encrypt(jwa.RSA_OAEP, key.PublicKey).
-//      Serialize(token)
+//	serialized, err := jwt.NewSerialer().
+//	   Sign(jwa.RS256, key).
+//	   Encrypt(jwa.RSA_OAEP, key.PublicKey).
+//	   Serialize(token)
 //
 // The `jwt.Sign()` function is equivalent to
 //
-//   serialized, err := jwt.NewSerializer().
-//      Sign(...args...).
-//      Serialize(token)
+//	serialized, err := jwt.NewSerializer().
+//	   Sign(...args...).
+//	   Serialize(token)
 type Serializer struct {
 	steps []SerializeStep
 }
