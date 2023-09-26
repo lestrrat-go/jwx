@@ -26,6 +26,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
 * [Working with JWT](#working-with-jwt)
+  * [Performance](#performance)
   * [Access JWS headers](#access-jws-headers)
   * [Get/Set fields](#getset-fields)
 
@@ -1156,6 +1157,66 @@ source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestr
 <!-- END INCLUDE -->
 
 # Working with JWT
+
+## Performance
+
+github.com/lestrrat-go/jwx is focused on usability / stable API. If you are worried about performance while processing JWTs, the best path is just to use a plain struct after handling JWS yourself:
+
+<!-- INCLUDE(examples/jwt_raw_struct_example_test.go) -->
+```go
+package examples
+
+import (
+  "encoding/json"
+  "fmt"
+  "os"
+
+  "github.com/lestrrat-go/jwx/v2/jwa"
+  "github.com/lestrrat-go/jwx/v2/jws"
+  "github.com/lestrrat-go/jwx/v2/jwt"
+)
+
+func ExampleJWTPlainStruct() {
+  t1, err := jwt.NewBuilder().
+    Issuer("https://github.com/lestrrat-go/jwx/v2/examples").
+    Subject("raw_struct").
+    Claim("private", "foobar").
+    Build()
+  if err != nil {
+    fmt.Fprintf(os.Stderr, "failed to build JWT: %s\n", err)
+  }
+
+  key := []byte("secret")
+  signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256, key))
+  if err != nil {
+    fmt.Printf("failed to sign JWT: %s\n", err)
+  }
+
+  rawJWT, err := jws.Verify(signed, jws.WithKey(jwa.HS256, key))
+  if err != nil {
+    fmt.Printf("failed to verify JWS: %s\n", err)
+  }
+
+  type MyToken struct {
+    Issuer  string `json:"iss"`
+    Subject string `json:"sub"`
+    Private string `json:"private"`
+  }
+
+  var t2 MyToken
+  if err := json.Unmarshal(rawJWT, &t2); err != nil {
+    fmt.Printf("failed to unmarshal JWT: %s\n", err)
+  }
+
+  fmt.Printf("%s\n", t2.Private)
+  // OUTPUT:
+  // foobar
+}
+```
+source: [examples/jwt_raw_struct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_raw_struct_example_test.go)
+<!-- END INCLUDE -->
+
+This makes sure that you do not go through any extra layers of abstraction that causes performance panalties, and you get exactly the type of field that you want.
 
 ## Access JWS headers
 
