@@ -30,6 +30,7 @@ go_library(
         "//jws",
         "//jwt/internal/types",
         "@com_github_lestrrat_go_iter//mapiter:go_default_library",
+        "@com_github_lestrrat_go_blackmagic//:go_default_library",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

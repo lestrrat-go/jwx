@@ -625,13 +625,11 @@ func TestUnmarshalJSON(t *testing.T) {
 		if !assert.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`) {
 			return
 		}
-		aud, ok := t1.Get(jwt.AudienceKey)
-		if !assert.True(t, ok, `jwt.Get(jwt.AudienceKey) should succeed`) {
-			t.Logf("%#v", t1)
-			return
-		}
 
-		if !assert.Equal(t, aud.([]string), []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
+		var aud []string
+		require.NoError(t, t1.Get(jwt.AudienceKey, &aud), `jwt.Get(jwt.AudienceKey) should succeed`)
+
+		if !assert.Equal(t, aud, []string{"foo", "bar", "baz"}, "audience should match. got %v", aud) {
 			return
 		}
 	})
@@ -780,10 +778,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := token.Get(`x-birthday`)
-		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
-			return
-		}
+		var v time.Time
+		require.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`)
 
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
@@ -795,10 +791,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := token.Get(`x-birthday`)
-		if !assert.True(t, ok, `token.Get("x-birthday") should succeed`) {
-			return
-		}
+		var v time.Time
+		require.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`)
 
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
@@ -1236,10 +1230,9 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 				return
 			}
 
-			v, ok := got.Get("typed-claim")
-			if !assert.True(t, ok, `got.Get() should succeed`) {
-				return
-			}
+			var v interface{}
+			require.NoError(t, got.Get("typed-claim", &v), `got.Get() should succeed`)
+
 			claim, err := tc.PostProcess(t, v)
 			if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
 				return

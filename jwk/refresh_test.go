@@ -14,6 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:revive,golint
@@ -24,10 +25,8 @@ func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected .
 	iter.Next(ctx)
 
 	key := iter.Pair().Value.(jwk.Key)
-	v, ok := key.Get(`accessCount`)
-	if !assert.True(t, ok, `key.Get("accessCount") should succeed`) {
-		return false
-	}
+	var v float64
+	require.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`)
 
 	for _, e := range expected {
 		if v == float64(e) {

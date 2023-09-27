@@ -122,8 +122,8 @@ func TestAdressClaim(t *testing.T) {
 
 func TestOpenIDClaims(t *testing.T) {
 	getVerify := func(token openid.Token, key string, expected interface{}) bool {
-		v, ok := token.Get(key)
-		if !assert.True(t, ok, `token.Get %#v should succeed`, key) {
+		var v interface{}
+		if assert.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key) {
 			return false
 		}
 		return assert.Equal(t, v, expected)
@@ -378,10 +378,8 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: `dummy`,
 			Key:   `dummy`,
 			Check: func(token openid.Token) {
-				v, ok := token.Get(`dummy`)
-				if !assert.True(t, ok, `token.Get should return valid value`) {
-					return
-				}
+				var v interface{}
+				require.NoError(t, token.Get(`dummy`, &v), `token.Get should return valid value`)
 				if !assert.Equal(t, `dummy`, v, `values should match`) {
 					return
 				}
@@ -500,10 +498,8 @@ func TestOpenIDClaims(t *testing.T) {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
 
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
+				var getV interface{}
+				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
 				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
 					return
 				}

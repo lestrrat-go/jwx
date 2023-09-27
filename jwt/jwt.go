@@ -483,15 +483,16 @@ func (t *stdToken) Clone() (Token, error) {
 // you want to represent as a string formatted in RFC3339 in JSON,
 // but want it back as `time.Time`.
 //
-// In that case you would register a custom field as follows
+// In such case you would register a custom field as follows
 //
-//	jwt.RegisterCustomField(`x-birthday`, timeT)
+//	jwt.RegisterCustomField(`x-birthday`, time.Time)
 //
-// Then `token.Get("x-birthday")` will still return an `interface{}`,
-// but you can convert its type to `time.Time`
+// Then you can use a `time.Time` variable to extract the value
+// of `x-birthday` field, instead of having to use `interface{}`
+// and later convert it to `time.Time`
 //
-//	bdayif, _ := token.Get(`x-birthday`)
-//	bday := bdayif.(time.Time)
+//	var bday time.Time
+//	_ = token.Get(`x-birthday`, &bday)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

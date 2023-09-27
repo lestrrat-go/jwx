@@ -679,11 +679,11 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 
 	switch alg {
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
-		epkif, ok := h2.Get(EphemeralPublicKeyKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'epk' field`)
+		var epk interface{}
+		if err := h2.Get(EphemeralPublicKeyKey, &epk); err != nil {
+			return nil, fmt.Errorf(`failed to get 'epk' field: %w`, err)
 		}
-		switch epk := epkif.(type) {
+		switch epk := epk.(type) {
 		case jwk.ECDSAPublicKey:
 			var pubkey ecdsa.PublicKey
 			if err := epk.Raw(&pubkey); err != nil {
@@ -697,7 +697,7 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 			}
 			dec.PublicKey(pubkey)
 		default:
-			return nil, fmt.Errorf("unexpected 'epk' type %T for alg %s", epkif, alg)
+			return nil, fmt.Errorf("unexpected 'epk' type %T for alg %s", epk, alg)
 		}
 
 		if apu := h2.AgreementPartyUInfo(); len(apu) > 0 {
@@ -707,64 +707,47 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 			dec.AgreementPartyVInfo(apv)
 		}
 	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
-		ivB64, ok := h2.Get(InitializationVectorKey)
-		if ok {
-			ivB64Str, ok := ivB64.(string)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type for 'iv': %T", ivB64)
-			}
-			iv, err := base64.DecodeString(ivB64Str)
+		var ivB64 string
+		if err := h2.Get(InitializationVectorKey, &ivB64); err == nil {
+			iv, err := base64.DecodeString(ivB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
 			}
 			dec.KeyInitializationVector(iv)
 		}
-		tagB64, ok := h2.Get(TagKey)
-		if ok {
-			tagB64Str, ok := tagB64.(string)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type for 'tag': %T", tagB64)
-			}
-			tag, err := base64.DecodeString(tagB64Str)
+		var tagB64 string
+		if err := h2.Get(TagKey, &tagB64); err == nil {
+			tag, err := base64.DecodeString(tagB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
 			}
 			dec.KeyTag(tag)
 		}
 	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
-		saltB64, ok := h2.Get(SaltKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'p2s' field`)
-		}
-		saltB64Str, ok := saltB64.(string)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'p2s': %T", saltB64)
-		}
-
-		count, ok := h2.Get(CountKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'p2c' field`)
+		var saltB64 string
+		if err := h2.Get(SaltKey, &saltB64); err != nil {
+			return nil, fmt.Errorf(`failed to get %q field`, SaltKey)
 		}
 
 		// check if WithUseNumber is effective, because it will change the
 		// type of the underlying value (#1140)
 		var countFlt float64
 		if json.UseNumber() {
-			num, ok := count.(json.Number)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+			var count json.Number
+			if err := h2.Get(CountKey, &count); err != nil {
+				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
 			}
-			v, err := num.Float64()
+			v, err := count.Float64()
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert 'p2c' to float64: %w", err)
 			}
 			countFlt = v
 		} else {
-			v, ok := count.(float64)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+			var count float64
+			if err := h2.Get(CountKey, &count); err != nil {
+				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
 			}
-			countFlt = v
+			countFlt = count
 		}
 
 		muSettings.RLock()
@@ -773,7 +756,7 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		if countFlt > float64(maxCount) {
 			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
-		salt, err := base64.DecodeString(saltB64Str)
+		salt, err := base64.DecodeString(saltB64)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to b64-decode 'salt': %w`, err)
 		}
@@ -911,15 +894,16 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 // you want to represent as a string formatted in RFC3339 in JSON,
 // but want it back as `time.Time`.
 //
-// In that case you would register a custom field as follows
+// In such case you would register a custom field as follows
 //
-//	jwe.RegisterCustomField(`x-birthday`, timeT)
+//	jws.RegisterCustomField(`x-birthday`, time.Time{})
 //
-// Then `hdr.Get("x-birthday")` will still return an `interface{}`,
-// but you can convert its type to `time.Time`
+// Then you can use a `time.Time` variable to extract the value
+// of `x-birthday` field, instead of having to use `interface{}`
+// and later convert it to `time.Time`
 //
-//	bdayif, _ := hdr.Get(`x-birthday`)
-//	bday := bdayif.(time.Time)
+//	var bday time.Time
+//	_ = hdr.Get(`x-birthday`, &bday)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
