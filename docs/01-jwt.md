@@ -1234,7 +1234,8 @@ Please [look at the JWS documentation for it](./02-jws.md#parse-a-jws-message-an
 Any field in the token can be accessed in an uniform away using `(jwt.Token).Get()`
 
 ```go
-v, ok := token.Get(name)
+var v interface{} // can be concrete type, if you know the type beforehand
+err := token.Get(name, &v)
 ```
 
 If the field corresponding to `name` does not exist, the second return value will be `false`.

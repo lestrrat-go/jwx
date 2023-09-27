@@ -75,7 +75,7 @@ type Set interface {
 	// For the purposes of a key set, any field other than the "keys" field is
 	// considered to be a private field. In other words, you cannot use this
 	// method to directly access the list of keys in the set
-	Get(string) (interface{}, bool)
+	Get(string, interface{}) error
 
 	// Set sets the value of a single field.
 	//

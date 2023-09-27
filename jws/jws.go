@@ -497,15 +497,11 @@ func IsVerificationError(err error) bool {
 // If the field does not exist, returns true (default)
 // Otherwise return the value specified by the header field.
 func getB64Value(hdr Headers) bool {
-	b64raw, ok := hdr.Get("b64")
-	if !ok {
+	var b64 bool
+	if err := hdr.Get("b64", &b64); err != nil {
 		return true // default
 	}
 
-	b64, ok := b64raw.(bool) // default
-	if !ok {
-		return false
-	}
 	return b64
 }
 
@@ -784,15 +780,16 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 // you want to represent as a string formatted in RFC3339 in JSON,
 // but want it back as `time.Time`.
 //
-// In that case you would register a custom field as follows
+// In such case you would register a custom field as follows
 //
-//	jwe.RegisterCustomField(`x-birthday`, timeT)
+//	jws.RegisterCustomField(`x-birthday`, time.Time{})
 //
-// Then `hdr.Get("x-birthday")` will still return an `interface{}`,
-// but you can convert its type to `time.Time`
+// Then you can use a `time.Time` variable to extract the value
+// of `x-birthday` field, instead of having to use `interface{}`
+// and later convert it to `time.Time`
 //
-//	bdayif, _ := hdr.Get(`x-birthday`)
-//	bday := bdayif.(time.Time)
+//	var bday time.Time
+//	_ = hdr.Get(`x-birthday`, &bday)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

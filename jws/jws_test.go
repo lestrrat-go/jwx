@@ -1052,8 +1052,8 @@ func TestCustomField(t *testing.T) {
 		msg, err := jws.Parse(signed)
 		require.NoError(t, err, `jws.Parse should succeed`)
 
-		v, ok := msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
-		require.True(t, ok, `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+		var v interface{}
+		require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 		require.Equal(t, expected, v, `values should match`)
 
 		// Create JSON from jws.Message
@@ -1063,9 +1063,13 @@ func TestCustomField(t *testing.T) {
 		var msg2 jws.Message
 		require.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`)
 
-		v, ok = msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
-		require.True(t, ok, `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+		v = nil
+		require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 		require.Equal(t, expected, v, `values should match`)
+
+		if !assert.Equal(t, expected, v, `values should match`) {
+			return
+		}
 	})
 }
 
