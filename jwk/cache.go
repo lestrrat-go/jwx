@@ -345,13 +345,13 @@ func (cs *CachedSet) Clone() (Set, error) {
 }
 
 // Get returns the value of non-Key field stored in the jwk.Set
-func (cs *CachedSet) Get(name string) (interface{}, bool) {
+func (cs *CachedSet) Get(name string, dst interface{}) error {
 	set, err := cs.cached()
 	if err != nil {
-		return nil, false
+		return err
 	}
 
-	return set.Get(name)
+	return set.Get(name, dst)
 }
 
 // Key returns the Key at the specified index

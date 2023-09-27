@@ -7,6 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHeader(t *testing.T) {
@@ -35,10 +36,8 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			got, ok := h.Get(k)
-			if !assert.True(t, ok, "Get works for '%s'", k) {
-				return
-			}
+			var got interface{}
+			require.NoError(t, h.Get(k, &got), "Get works for '%s'", k)
 
 			if !assert.Equal(t, v, got, "values match '%s'", k) {
 				return
@@ -122,10 +121,8 @@ func TestHeader(t *testing.T) {
 				return
 			}
 
-			got, ok := h.Get("alg")
-			if !assert.True(t, ok, "Get for alg should succeed") {
-				return
-			}
+			var got jwa.KeyAlgorithm
+			require.NoError(t, h.Get("alg", &got), "Get for alg should succeed")
 
 			if !assert.Equal(t, value, got, "values match") {
 				return

@@ -721,11 +721,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := msg.ProtectedHeaders().Get(`x-birthday`)
-		if !assert.True(t, ok, `msg.ProtectedHeaders().Get("x-birthday") should succeed`) {
-			return
-		}
-
+		var v time.Time
+		require.NoError(t, msg.ProtectedHeaders().Get(`x-birthday`, &v), `msg.ProtectedHeaders().Get("x-birthday") should succeed`)
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
 		}
@@ -741,11 +738,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok = msg2.ProtectedHeaders().Get(`x-birthday`)
-		if !assert.True(t, ok, `msg2.ProtectedHeaders().Get("x-birthday") should succeed`) {
-			return
-		}
-
+		v = time.Time{} // reset
+		require.NoError(t, msg2.ProtectedHeaders().Get(`x-birthday`, &v), `msg2.ProtectedHeaders().Get("x-birthday") should succeed`)
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
 		}

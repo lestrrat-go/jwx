@@ -87,7 +87,14 @@ func generateHeaders(obj *codegen.Object) error {
 	}
 	o.L(")") // end const
 
-	o.LL("// Headers describe a standard Header set.")
+	o.LL("// Headers describe a standard JWE Header set. It is part of the JWE message")
+	o.L("// and is used to represent both Protected and Unprotected headers,")
+	o.L("// which in turn can be found in each Recipient object.")
+	o.L("// If you are not sure how this works, it is strongly recommended that")
+	o.L("// you read RFC7516, especially the section")
+	o.L("// that describes the full JSON serialization format of JWE messages.")
+	o.L("//")
+	o.L("// In most cases, you likely want to use the protected headers, as this is the part of the encrypted content")
 	o.L("type Headers interface {")
 	o.L("json.Marshaler")
 	o.L("json.Unmarshaler")
@@ -102,9 +109,20 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("AsMap(ctx context.Context) (map[string]interface{}, error)")
 
 	// These are used to access a single element by key name
-	o.L("Get(string) (interface{}, bool)")
+	o.LL("// Get is used to extract the value of any field, including non-standard fields, out of the header.")
+	o.L("//")
+	o.L("// The first argument is the name of the field. The second argument is a pointer")
+	o.L("// to a variable that will receive the value of the field. The method returns")
+	o.L("// an error if the field does not exist, or if the value cannot be assigned to")
+	o.L("// the destination variable. Note that a field is considered to \"exist\" even if")
+	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
+	o.L("Get(string, interface{}) error")
 	o.L("Set(string, interface{}) error")
 	o.L("Remove(string) error")
+	o.L("// Has returns true if the specified header has a value, even if")
+	o.L("// the value is empty-ish (e.g. 0, false, \"\")  as long as it has been")
+	o.L("// explicitly set.")
+	o.L("Has(string) bool")
 
 	// These are used to deal with encoded headers
 	o.L("Encode() ([]byte, error)")
@@ -185,25 +203,50 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return h.privateParams")
 	o.L("}")
 
-	o.LL("func (h *stdHeaders) Get(name string) (interface{}, bool) {")
+	o.LL("func (h *stdHeaders) Has(name string) bool {")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("switch name {")
+	for _, f := range obj.Fields() {
+		o.L("case %sKey:", f.Name(true))
+		o.L("return h.%s != nil", f.Name(false))
+	}
+	o.L("default:")
+	o.L("_, ok := h.privateParams[name]")
+	o.L("return ok")
+	o.L("}")
+	o.L("}")
+
+	o.LL("func (h *stdHeaders) Get(name string, dst interface{}) error {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
 		o.L("if h.%s == nil {", f.Name(false))
-		o.L("return nil, false")
+		o.L("return fmt.Errorf(`field %%q not found`, name)")
 		o.L("}")
+
+		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("return *(h.%s), true", f.Name(false))
+			o.R("*(h.%s)", f.Name(false))
 		} else {
-			o.L("return h.%s, true", f.Name(false))
+			o.R("h.%s", f.Name(false))
 		}
+		o.R("); err != nil {")
+		o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+		o.L("}")
 	}
 	o.L("default:")
 	o.L("v, ok := h.privateParams[name]")
-	o.L("return v, ok")
+	o.L("if !ok {")
+	o.L("return fmt.Errorf(`field %%q not found`, name)")
+	o.L("}")
+	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
+	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("}")
 	o.L("}") // end switch name
+	o.L("return nil")
 	o.L("}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
 
 	o.LL("func (h *stdHeaders) Set(name string, value interface{}) error {")
