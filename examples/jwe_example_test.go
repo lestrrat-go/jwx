@@ -82,24 +82,24 @@ func ExampleJWE_ComplexDecrypt() {
 	// I would personally recommend creating a real type for your specific needs
 	// instead of passing adhoc closures. YMMV.
 	kp := func(ctx context.Context, sink jwe.KeySink, _ jwe.Recipient, msg *jwe.Message) error {
-		rawhint, _ := msg.ProtectedHeaders().Get(`jwx-hints`)
-		//nolint:forcetypeassert
-		hint, ok := rawhint.(string)
-		if ok && hint == `foobar` {
-			// This is where we are setting the key to be used.
-			//
-			// In real life you would look up the key or something.
-			// Here we just assign the key to use.
-			//
-			// You may opt to set both the algorithm and key here as well.
-			// BUT BE CAREFUL so that you don't accidentally create a
-			// vulnerability
-			sink.Key(jwa.RSA_OAEP, privkey)
-			return nil
+		var hint string
+		if err := msg.ProtectedHeaders().Get(`jwx-hints`, &hint); err == nil {
+			if hint == `foobar` {
+				// This is where we are setting the key to be used.
+				//
+				// In real life you would look up the key or something.
+				// Here we just assign the key to use.
+				//
+				// You may opt to set both the algorithm and key here as well.
+				// BUT BE CAREFUL so that you don't accidentally create a
+				// vulnerability
+				sink.Key(jwa.RSA_OAEP, privkey)
+				return nil
+			}
 		}
 
 		// If there were errors, just return it, and the whole jwe.Decrypt will fail.
-		return fmt.Errorf(`invalid value for jwx-hints: %s`, rawhint)
+		return fmt.Errorf(`invalid value for jwx-hints`)
 	}
 
 	// Calling jwe.Decrypt with the extra argument of jwe.WithPostParser().

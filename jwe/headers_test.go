@@ -11,6 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var zeroval reflect.Value
@@ -135,8 +136,8 @@ func TestHeaders(t *testing.T) {
 		}
 		for _, tc := range data {
 			var values []interface{}
-			viaGet, ok := h.Get(tc.Key)
-			if !assert.True(t, ok, "value for %s should exist", tc.Key) {
+			var viaGet interface{}
+			if !assert.NoError(t, h.Get(tc.Key, &viaGet), `h.Get should be successful`) {
 				return
 			}
 			values = append(values, viaGet)
@@ -218,13 +219,9 @@ func TestHeaders(t *testing.T) {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
 
-				getV, ok := v.Get(pair.Key.(string))
-				if !assert.True(t, ok, `v.Get should succeed for key %#v`, pair.Key) {
-					return
-				}
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
+				var getV interface{}
+				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
+				require.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`)
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
 				return

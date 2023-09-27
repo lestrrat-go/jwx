@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/iter/arrayiter"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -38,12 +39,18 @@ func (s *set) Set(n string, v interface{}) error {
 	return nil
 }
 
-func (s *set) Get(n string) (interface{}, bool) {
+func (s *set) Get(name string, dst interface{}) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	v, ok := s.privateParams[n]
-	return v, ok
+	v, ok := s.privateParams[name]
+	if !ok {
+		return fmt.Errorf(`field %q not found`, name)
+	}
+	if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+		return fmt.Errorf(`failed to assign value to dst: %w`, err)
+	}
+	return nil
 }
 
 func (s *set) Key(idx int) (Key, bool) {

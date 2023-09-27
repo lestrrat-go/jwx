@@ -1285,10 +1285,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok := msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
-		if !assert.True(t, ok, `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`) {
-			return
-		}
+		var v interface{}
+		require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
@@ -1305,10 +1303,8 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		v, ok = msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`)
-		if !assert.True(t, ok, `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`) {
-			return
-		}
+		v = nil
+		require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 
 		if !assert.Equal(t, expected, v, `values should match`) {
 			return
