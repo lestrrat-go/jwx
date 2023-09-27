@@ -37,16 +37,20 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 }
 
 func init() {
-	RegisterProbeField(reflect.StructField{
+	if err := RegisterProbeField(reflect.StructField{
 		Name: "Kty",
 		Type: reflect.TypeOf(""),
 		Tag:  `json:"kty"`,
-	})
-	RegisterProbeField(reflect.StructField{
+	}); err != nil {
+		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
+	}
+	if err := RegisterProbeField(reflect.StructField{
 		Name: "D",
 		Type: reflect.TypeOf(json.RawMessage(nil)),
 		Tag:  `json:"d,omitempty"`,
-	})
+	}); err != nil {
+		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
+	}
 }
 
 // FromRaw creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
