@@ -26,19 +26,23 @@ func ExampleJWT_GetClaims() {
 	var _ string = tok.Issuer()
 	var _ string = tok.Subject()
 
-	var v interface{}
-	var ok bool
-
 	// But you can also get them via the generic `.Get()` method.
-	// However, v is of type interface{}, so you might need to
-	// use a type switch to properly use its value.
+	// However, you would need to decide for yourself what the
+	// return type is. If you don't need the exact type, you could
+	// use interface{}, or you could use the specific time.Time
+	// type
 	//
 	// For the key name you could also use jwt.IssuedAtKey constant
-	v, ok = tok.Get(`iat`)
+	var iat time.Time
+	_ = tok.Get(`iat`, &iat)
+
+	// var iat interface{} would also work, but you would need to
+	// convert the type if you need time.Time specific behavior
 
 	// Private claims
-	v, ok = tok.Get(`claim1`)
-	v, ok = tok.Get(`claim2`)
+	var dummy interface{}
+	_ = tok.Get(`claim1`, &dummy)
+	_ = tok.Get(`claim2`, &dummy)
 
 	// However, it is possible to globally specify that a private
 	// claim should be parsed into a custom type.
@@ -50,18 +54,13 @@ func ExampleJWT_GetClaims() {
 		fmt.Printf(`failed to parse token: %s`, err)
 		return
 	}
-	v, ok = tok.Get(`claim2`)
-	if !ok {
-		fmt.Printf(`failed to get private claim "claim2"`)
-		return
-	}
-	if _, ok := v.(time.Time); !ok {
-		fmt.Printf(`claim2 expected to be time.Time, but got %T`, v)
-		return
-	}
 
-	_ = v
-	_ = ok
+	// now you can use the exact type
+	var claim2 time.Time
+	if err := tok.Get(`claim2`, &claim2); err != nil {
+		fmt.Printf("failed to get private claim \"claim2\": %s\n", err)
+		return
+	}
 
 	// OUTPUT:
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -38,10 +39,8 @@ func TestHeader(t *testing.T) {
 			if !assert.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k) {
 				return
 			}
-			got, ok := h.Get(k)
-			if !assert.True(t, ok, `h.Get should succeed for key %#v`, k) {
-				return
-			}
+			var got interface{}
+			require.NoError(t, h.Get(k, &got), `h.Get should succeed for key %#v`, k)
 			if !reflect.DeepEqual(v, got) {
 				t.Fatalf("Values do not match: (%v, %v)", v, got)
 			}
@@ -77,16 +76,11 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Setting %s value failed", "default")
 		}
+		var tmp interface{}
 		for k := range values {
-			_, ok := h.Get(k)
-			if ok {
-				t.Fatalf("Getting %s value should have failed", k)
-			}
+			require.Error(t, h.Get(k, &tmp), `Getting %s value should have failed`)
 		}
-		_, ok := h.Get("default")
-		if !ok {
-			t.Fatal("Failed to get default value")
-		}
+		require.NoError(t, h.Get("default", &tmp), `Getting %s value should have succeeded`)
 	})
 
 	t.Run("GetError", func(t *testing.T) {
@@ -209,10 +203,8 @@ func TestToken(t *testing.T) {
 	t.Run("Get", func(t *testing.T) {
 		rv := reflect.ValueOf(tok)
 		for k, kdef := range def {
-			getval, ok := tok.Get(k)
-			if !assert.True(t, ok, `tok.Get(%s) should succeed`, k) {
-				return
-			}
+			var getval interface{}
+			require.NoError(t, tok.Get(k, &getval), `tok.Get(%s) should succeed`, k)
 
 			if mname := kdef.Method; mname != "" {
 				method := rv.MethodByName(mname)

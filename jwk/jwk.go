@@ -578,7 +578,7 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 // section of the key, if it already doesn't have one. It uses Key.Thumbprint
 // method with crypto.SHA256 as the default hashing algorithm
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
-	if _, ok := key.Get(KeyIDKey); ok {
+	if key.Has(KeyIDKey) {
 		return nil
 	}
 
@@ -707,15 +707,16 @@ func asnEncode(key Key) (string, []byte, error) {
 // you want to represent as a string formatted in RFC3339 in JSON,
 // but want it back as `time.Time`.
 //
-// In that case you would register a custom field as follows
+// In such case you would register a custom field as follows
 //
-//	jwk.RegisterCustomField(`x-birthday`, timeT)
+//	jwk.RegisterCustomField(`x-birthday`, time.Time{})
 //
-// Then `key.Get("x-birthday")` will still return an `interface{}`,
-// but you can convert its type to `time.Time`
+// Then you can use a `time.Time` variable to extract the value
+// of `x-birthday` field, instead of having to use `interface{}`
+// and later convert it to `time.Time`
 //
-//	bdayif, _ := key.Get(`x-birthday`)
-//	bday := bdayif.(time.Time)
+//	var bday time.Time
+//	_ = key.Get(`x-birthday`, &bday)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

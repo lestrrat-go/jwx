@@ -79,8 +79,8 @@ This tells the decoder that when it encounters a JWT token with the field named
 access this value by using `Get()`
 
 ```go
-v, _ := token.Get(`x-foo-bar`)
-foobar := v.(mypkg.FooBar)
+var v mypkg.FooBar
+_ = token.Get(`x-foo-bar`, &v)
 ```
 
 Do be aware that this has *global* effect. In the above example, all JWT tokens containing

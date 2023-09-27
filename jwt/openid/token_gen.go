@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/iter"
@@ -132,21 +133,32 @@ type Token interface {
 	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
 	PrivateClaims() map[string]interface{}
 
-	// Get returns the value of the corresponding field in the token, such as
-	// `nbf`, `exp`, `iat`, and other user-defined fields. If the field does not
-	// exist in the token, the second return value will be `false`
+	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
-	// If you need to access fields like `alg`, `kid`, `jku`, etc, you need
-	// to access the corresponding fields in the JWS/JWE message. For this,
-	// you will need to access them by directly parsing the payload using
-	// `jws.Parse` and `jwe.Parse`
-	Get(string) (interface{}, bool)
+	// The first argument is the name of the claim. The second argument is a pointer
+	// to a variable that will receive the value of the claim. The method returns
+	// an error if the claim does not exist, or if the value cannot be assigned to
+	// the destination variable.  Note that a field is considered to "exist" even if
+	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
+	//
+	// For standard claims, you can use the corresponding getter method, such as
+	// `Issuer()`, `Subject()`, `Audience()`, `IssuedAt()`, `NotBefore()`, `ExpiresAt()`
+	//
+	// Note that fields of JWS/JWE are NOT accessible through this method. You need
+	// to use `jws.Parse` and `jwe.Parse` to obtain the JWS/JWE message (and NOT
+	// the payload, which presumably is the JWT), and then use their `Get` methods in their respective packages
+	Get(string, interface{}) error
 
 	// Set assigns a value to the corresponding field in the token. Some
 	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
 	// be of a specific type. See the other getter methods in this interface
 	// for the types of each of these fields
 	Set(string, interface{}) error
+
+	// Has returns true if the specified claim has a value, even if
+	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
+	// explicitly set.
+	Has(string) bool
 	Remove(string) error
 
 	// Options returns the per-token options associated with this token.
@@ -207,169 +219,289 @@ func (t *stdToken) Options() *jwt.TokenOptionSet {
 	return &t.options
 }
 
-func (t *stdToken) Get(name string) (interface{}, bool) {
+func (t *stdToken) Has(name string) bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	switch name {
+	case AddressKey:
+		return t.address != nil
+	case AudienceKey:
+		return t.audience != nil
+	case BirthdateKey:
+		return t.birthdate != nil
+	case EmailKey:
+		return t.email != nil
+	case EmailVerifiedKey:
+		return t.emailVerified != nil
+	case ExpirationKey:
+		return t.expiration != nil
+	case FamilyNameKey:
+		return t.familyName != nil
+	case GenderKey:
+		return t.gender != nil
+	case GivenNameKey:
+		return t.givenName != nil
+	case IssuedAtKey:
+		return t.issuedAt != nil
+	case IssuerKey:
+		return t.issuer != nil
+	case JwtIDKey:
+		return t.jwtID != nil
+	case LocaleKey:
+		return t.locale != nil
+	case MiddleNameKey:
+		return t.middleName != nil
+	case NameKey:
+		return t.name != nil
+	case NicknameKey:
+		return t.nickname != nil
+	case NotBeforeKey:
+		return t.notBefore != nil
+	case PhoneNumberKey:
+		return t.phoneNumber != nil
+	case PhoneNumberVerifiedKey:
+		return t.phoneNumberVerified != nil
+	case PictureKey:
+		return t.picture != nil
+	case PreferredUsernameKey:
+		return t.preferredUsername != nil
+	case ProfileKey:
+		return t.profile != nil
+	case SubjectKey:
+		return t.subject != nil
+	case UpdatedAtKey:
+		return t.updatedAt != nil
+	case WebsiteKey:
+		return t.website != nil
+	case ZoneinfoKey:
+		return t.zoneinfo != nil
+	default:
+		_, ok := t.privateClaims[name]
+		return ok
+	}
+}
+
+func (t *stdToken) Get(name string, dst interface{}) error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	switch name {
 	case AddressKey:
 		if t.address == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.address
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.address); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case AudienceKey:
 		if t.audience == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.audience.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.audience.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case BirthdateKey:
 		if t.birthdate == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.birthdate
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.birthdate); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case EmailKey:
 		if t.email == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.email)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.email)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case EmailVerifiedKey:
 		if t.emailVerified == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.emailVerified)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.emailVerified)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case ExpirationKey:
 		if t.expiration == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.expiration.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.expiration.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case FamilyNameKey:
 		if t.familyName == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.familyName)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.familyName)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case GenderKey:
 		if t.gender == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.gender)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.gender)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case GivenNameKey:
 		if t.givenName == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.givenName)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.givenName)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case IssuedAtKey:
 		if t.issuedAt == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.issuedAt.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.issuedAt.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case IssuerKey:
 		if t.issuer == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.issuer)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.issuer)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case JwtIDKey:
 		if t.jwtID == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.jwtID)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.jwtID)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case LocaleKey:
 		if t.locale == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.locale)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.locale)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case MiddleNameKey:
 		if t.middleName == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.middleName)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.middleName)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case NameKey:
 		if t.name == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.name)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.name)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case NicknameKey:
 		if t.nickname == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.nickname)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.nickname)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case NotBeforeKey:
 		if t.notBefore == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.notBefore.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.notBefore.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case PhoneNumberKey:
 		if t.phoneNumber == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.phoneNumber)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumber)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case PhoneNumberVerifiedKey:
 		if t.phoneNumberVerified == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.phoneNumberVerified)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumberVerified)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case PictureKey:
 		if t.picture == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.picture)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.picture)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case PreferredUsernameKey:
 		if t.preferredUsername == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.preferredUsername)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.preferredUsername)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case ProfileKey:
 		if t.profile == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.profile)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.profile)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case SubjectKey:
 		if t.subject == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.subject)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.subject)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case UpdatedAtKey:
 		if t.updatedAt == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := t.updatedAt.Get()
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, t.updatedAt.Get()); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case WebsiteKey:
 		if t.website == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.website)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.website)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	case ZoneinfoKey:
 		if t.zoneinfo == nil {
-			return nil, false
+			return fmt.Errorf(`field %q not found`, name)
 		}
-		v := *(t.zoneinfo)
-		return v, true
+		if err := blackmagic.AssignIfCompatible(dst, *(t.zoneinfo)); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	default:
 		v, ok := t.privateClaims[name]
-		return v, ok
+		if !ok {
+			return fmt.Errorf(`field %q not found`, name)
+		}
+		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+		}
+		return nil
 	}
 }
 
