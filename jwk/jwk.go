@@ -511,11 +511,18 @@ var keyProbe = &keyProber{
 // can possibly be modified during runtime. This function is used to
 // add a new field to this dynamic type.
 //
-// The field name must be unique. If you believe that your field name may
+// Note that the `Name` field for the given `reflect.StructField` must start
+// with an upper case alphabet, such that it is treated as an exported field.
+// So for example, if you want to probe the "my_hint" field, you should specify
+// the field name as "MyHint" or similar.
+//
+// Also the field name must be unique. If you believe that your field name may
 // collide with other packages that may want to add their own probes,
 // it is the responsibility of the caller
 // to ensure that the field name is unique (possibly by prefixing the field
-// name with a unique string)
+// name with a unique string). It is important to note that the field name
+// need not be the same as the JSON field name. For example, your field name
+// could be "MyPkg_MyHint", while the actual JSON field name could be "my_hint".
 //
 // If the field name is not unique, an error is returned.
 func RegisterProbeField(p reflect.StructField) error {
@@ -538,7 +545,7 @@ type KeyUnmarshaler interface {
 //
 //  func init() {
 //    // optional
-//    jwk.RegisterKeyProbe(&MyKeyProber{})
+//    jwk.RegiserProbeField(reflect.StructField{Name: "SomeHint", Type: reflect.TypeOf(""), Tag: `json:"some_hint"`})
 //    jwk.RegisterKeyParser(&MyKeyParser{})
 //  }
 //
@@ -559,50 +566,78 @@ type KeyUnmarshaler interface {
 //
 //  { "kty": "RSA", "n": ..., "e": ..., ... }
 //
-// Therefore, a KeyProber that can unmarshal the value of the field "kty"
+// Therefore, a KeyProbe that can unmarshal the value of the field "kty"
 // would be able to tell us that this is an RSA key.
 //
 // Also, if said payload contains some value in the "d" field, we can
 // also tell that this is a private key, as only private keys need
 // this field.
 //
-// For most cases, the default KeyProber implementation should be sufficient.
-// However, if you need extra pieces of information, you can specify your
-// own KeyProber implementation. You will receive this object in your
-// KeyParser's ParseKey method, and you can convert the type to your
-// own implementation to get to the extra information. Please see the
-// example later in this document.
+// For most cases, the default KeyProbe implementation should be sufficient.
+// You would be able to query "kty" and "d" fields via the `Get()` method.
 //
-// After the probe is done, the library will call the KeyParser's ParseKey
-// method, passing the probe object and the raw payload. You can then
-// use the probe object to determine the type of key to instantiate.
+//  var kty string
+//  _ = probe.Get("Kty", &kty)
 //
-// Below is a very rough example. Note that because the KeyProber is
-// an interface, you are free to convert it to your own type, and
-// use it directly to determine the type of key to instantiate.
+// However, if you need extra pieces of information, you can specify
+// additional fields to be probed. For example, if you want to know the
+// value of the field "my_hint" (which holds a string value) from the payload,
+// you can register it to be probed by registering an additional probe field like this:
 //
-//  type MyKeyParser struct { ... }
-//  type MyKeyProber struct {
-//    SomeHint string `json:"some_hint"`
+//  jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//
+// Once the probe is done, the library will iterate over the registered parsers
+// and attempt to parse the key by calling their `ParseKey()` methods.
+// The parsers will be called in reverse order that they were registered.
+// This means that it will try all parsers that were registered by third
+// parties, and once those are exhausted, the default parser will be used.
+//
+// Each parser's `ParseKey()`` method will receive three arguments: the probe object, a
+// KeyUnmarshaler, and the raw payload. The probe object can be used
+// as a hint to determine what kind of key to instantiate. An example
+// pseudocode may look like this:
+//
+//  var kty string
+//  _ = probe.Get("Kty", &kty)
+//  switch kty {
+//  case "RSA":
+//    // create an RSA key
+//  case "EC":
+//    // create an EC key
+//  ...
 //  }
 //
-//  jwk.SetKeyProber(&MyKeyProber{})
+// The `KeyUnmarshaler` is a thin wrapper around `json.Unmarshal` it
+// works almost identical to `json.Unmarshal`, but it allows us to
+// add extra magic that is specific to this library before calling
+// the actual `json.Unmarshal`. If you want to try to unmarshal the
+// payload, please use this instead of `json.Unmarshal`.
 //
-//  func(*MyKeyParser) ParseKey(rawProbe KeyProber, decoder KeyUnmarshaler, data []byte) (jwk.Key, error) {
-//    probe, ok := rawProbe.(*MyKeyProber)
-//    if !ok { // not for us (shouldn't happen)
-//      return nil, fmt.Errorf("unexpected probe type %T", rawProbe)
+//  func init() {
+//    jwk.RegisterFieldProbe(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//    jwk.RegisterParser(&MyKeyParser{})
+//  }
+//
+//  type MyKeyParser struct { ... }
+//  func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
+//    // Create concrete type
+//    var hint string
+//    if err := probe.Get("MyHint", &hint); err != nil {
+//       // if it doesn't have the `my_hint` field, it probably means
+//       // it's not for us, so we return ContinueParseError so that
+//       // the next parser can pick it up
+//       return nil, jwk.ContinueParseError()
 //    }
 //
-//    // Create concrete type
+//    // Use hint to determine concrete key type
 //    var key jwk.Key
-//    switch probe.SomeHint {
+//    switch hint {
 //    case ...:
 //    	key = = myNewAwesomeJWK()
 //    ...
 //    }
 //
-//    return decoder.Unmarshal(data, key)
+//    return unmarshaler.Unmarshal(data, key)
 //  }
 //
 // This functionality should be considered experimental. While we
@@ -610,14 +645,23 @@ type KeyUnmarshaler interface {
 // change in backward incompatible ways, even during minor version
 // releases.
 
-type ContinueParseError struct{}
+var cpe = &continueParseError{}
 
-func (e *ContinueParseError) Error() string {
+// ContinueParseError returns an opaque error that can be returned
+// when a `KeyParser` cannot parse the given payload, but would like
+// the parsing process to continue with the next parser.
+func ContinueParseError() error {
+	return cpe
+}
+
+type continueParseError struct{}
+
+func (e *continueParseError) Error() string {
 	return "continue parsing"
 }
 
 func IsContiueParseError(err error) bool {
-	return errors.Is(err, &ContinueParseError{})
+	return errors.Is(err, &continueParseError{})
 }
 
 // KeyParser represents a type that can parse a []byte into a jwk.Key.
