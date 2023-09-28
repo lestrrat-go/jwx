@@ -244,32 +244,18 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					return
 				}
 
-				m1, err := key.AsMap(context.TODO())
-				if !assert.NoError(t, err, `key.AsMap should succeed`) {
-					return
-				}
+				key.Range(func(k string, v interface{}) bool {
+					if usePEM {
+						switch k {
+						case `private`, jwk.AlgorithmKey, jwk.KeyIDKey, jwk.KeyOpsKey, jwk.KeyUsageKey, jwk.X509CertChainKey, jwk.X509CertThumbprintKey, jwk.X509CertThumbprintS256Key, jwk.X509URLKey:
+							return true
+						}
+					}
 
-				m2, err := newkey.AsMap(context.TODO())
-				if !assert.NoError(t, err, `key.AsMap should succeed`) {
-					return
-				}
-
-				// PEM does not preserve these keys
-				if usePEM {
-					delete(m1, `private`)
-					delete(m1, jwk.AlgorithmKey)
-					delete(m1, jwk.KeyIDKey)
-					delete(m1, jwk.KeyOpsKey)
-					delete(m1, jwk.KeyUsageKey)
-					delete(m1, jwk.X509CertChainKey)
-					delete(m1, jwk.X509CertThumbprintKey)
-					delete(m1, jwk.X509CertThumbprintS256Key)
-					delete(m1, jwk.X509URLKey)
-				}
-
-				if !assert.Equal(t, m1, m2, `keys should match`) {
-					return
-				}
+					var v2 interface{}
+					require.NoError(t, newkey.Get(k, &v2), `newkey.Get(%s) should succeed`, k)
+					return assert.Equal(t, v, v2, `values should match`)
+				})
 			})
 		}
 	})
@@ -303,33 +289,23 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		ctx := context.TODO()
-
 		newkey, err := key.Clone()
 		if !assert.NoError(t, err, `key.Clone should succeed`) {
 			return
 		}
 
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			newkey.Remove(pair.Key.(string))
-		}
+		key.Range(func(k string, v interface{}) bool {
+			return assert.NoError(t, newkey.Remove(k), `newkey.Remove should succeed`)
+		})
 
-		m, err := newkey.AsMap(ctx)
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
-		}
+		newkey.Range(func(k string, _ interface{}) bool {
+			// only remaining key should be kty
+			return assert.Equal(t, k, jwk.KeyTypeKey, `key should be kty`)
+		})
 
-		if !assert.Len(t, m, 1, `keys should have 1 key (kty remains)`) {
-			return
-		}
-
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, newkey.Set(pair.Key.(string), pair.Value), `newkey.Set should succeed`) {
-				return
-			}
-		}
+		key.Range(func(k string, v interface{}) bool {
+			return assert.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
+		})
 	})
 }
 

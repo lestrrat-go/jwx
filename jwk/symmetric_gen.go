@@ -4,16 +4,13 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -559,26 +556,94 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
-func (h *symmetricKey) Iterate(ctx context.Context) HeaderIterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
+func (h *symmetricKey) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 9+len(h.privateParams))
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		keys = append(keys, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		keys = append(keys, KeyUsageKey)
+	}
+	if h.octets != nil {
+		keys = append(keys, SymmetricOctetsKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (h *symmetricKey) Range(f func(key string, value interface{}) bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if h.algorithm != nil {
+		if !f(AlgorithmKey, *(h.algorithm)) {
+			return
 		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *symmetricKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *symmetricKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+	}
+	if h.keyID != nil {
+		if !f(KeyIDKey, *(h.keyID)) {
+			return
+		}
+	}
+	if h.keyOps != nil {
+		if !f(KeyOpsKey, *(h.keyOps)) {
+			return
+		}
+	}
+	if h.keyUsage != nil {
+		if !f(KeyUsageKey, *(h.keyUsage)) {
+			return
+		}
+	}
+	if h.octets != nil {
+		if !f(SymmetricOctetsKey, h.octets) {
+			return
+		}
+	}
+	if h.x509CertChain != nil {
+		if !f(X509CertChainKey, h.x509CertChain) {
+			return
+		}
+	}
+	if h.x509CertThumbprint != nil {
+		if !f(X509CertThumbprintKey, *(h.x509CertThumbprint)) {
+			return
+		}
+	}
+	if h.x509CertThumbprintS256 != nil {
+		if !f(X509CertThumbprintS256Key, *(h.x509CertThumbprintS256)) {
+			return
+		}
+	}
+	if h.x509URL != nil {
+		if !f(X509URLKey, *(h.x509URL)) {
+			return
+		}
+	}
+	for k, v := range h.privateParams {
+		if !f(k, v) {
+			return
+		}
+	}
 }

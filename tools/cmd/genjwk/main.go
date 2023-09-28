@@ -605,28 +605,52 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return ret, nil")
 	o.L("}")
 
-	o.LL("func (h *%s) Iterate(ctx context.Context) HeaderIterator {", structName)
-	o.L("pairs := h.makePairs()")
-	o.L("ch := make(chan *HeaderPair, len(pairs))")
-	o.L("go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {")
-	o.L("defer close(ch)")
-	o.L("for _, pair := range pairs {")
-	o.L("select {")
-	o.L("case <-ctx.Done():")
+	o.LL("func (h *%s) Keys() []string {", structName)
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	for _, f := range obj.Fields() {
+		var keyName string
+		if f.Bool(`is_std`) {
+			keyName = f.Name(true) + "Key"
+		} else {
+			keyName = kt.Prefix + f.Name(true) + "Key"
+		}
+		o.L("if h.%s != nil {", f.Name(false))
+		o.L("keys = append(keys, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k := range h.privateParams {")
+	o.L("keys = append(keys, k)")
+	o.L("}")
+	o.L("return keys")
+	o.L("}")
+
+	o.LL("func (h *%s) Range(f func(key string, value interface{}) bool) {", structName)
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	for _, f := range obj.Fields() {
+		var keyName string
+		if f.Bool(`is_std`) {
+			keyName = f.Name(true) + "Key"
+		} else {
+			keyName = kt.Prefix + f.Name(true) + "Key"
+		}
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("if !f(%s, *(h.%s)) {", keyName, f.Name(false))
+		} else {
+			o.L("if !f(%s, h.%s) {", keyName, f.Name(false))
+		}
+		o.L("return")
+		o.L("}")
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("if !f(k, v) {")
 	o.L("return")
-	o.L("case ch<-pair:")
 	o.L("}")
 	o.L("}")
-	o.L("}(ctx, ch, pairs)")
-	o.L("return mapiter.New(ch)")
-	o.L("}")
-
-	o.LL("func (h *%s) Walk(ctx context.Context, visitor HeaderVisitor) error {", structName)
-	o.L("return iter.WalkMap(ctx, h, visitor)")
-	o.L("}")
-
-	o.LL("func (h *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", structName)
-	o.L("return iter.AsMap(ctx, h)")
 	o.L("}")
 
 	return nil
@@ -696,17 +720,10 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.LL("// Thumbprint returns the JWK thumbprint using the indicated")
 	o.L("// hashing algorithm, according to RFC 7638")
 	o.L("Thumbprint(crypto.Hash) ([]byte, error)")
-	o.LL("// Iterate returns an iterator that returns all keys and values.")
-	o.L("// See github.com/lestrrat-go/iter for a description of the iterator.")
-	o.L("Iterate(ctx context.Context) HeaderIterator")
-	o.LL("// Walk is a utility tool that allows a visitor to iterate all keys and values")
-	o.L("Walk(context.Context, HeaderVisitor) error")
-	o.LL("// AsMap is a utility tool that returns a new map that contains the same fields as the source")
-	o.L("AsMap(context.Context) (map[string]interface{}, error)")
-	o.LL("// PrivateParams returns the non-standard elements in the source structure")
-	o.L("// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
-	o.L("// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead")
-	o.L("PrivateParams() map[string]interface{}")
+	o.LL("// Keys returns a list of the keys contained in this jwk.Key.")
+	o.L("Keys() []string")
+	o.LL("// Range calls f sequentially for each key and value present in the map. If f returns false, range stops the iteration.")
+	o.L("Range(f func(key string, value interface{}) bool)")
 	o.LL("// Clone creates a new instance of the same type")
 	o.L("Clone() (Key, error)")
 	o.LL("// PublicKey creates the corresponding PublicKey type for this object.")

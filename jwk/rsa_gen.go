@@ -4,17 +4,14 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"crypto/rsa"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -606,28 +603,104 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
-func (h *rsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
+func (h *rsaPublicKey) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 10+len(h.privateParams))
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.e != nil {
+		keys = append(keys, RSAEKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		keys = append(keys, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		keys = append(keys, KeyUsageKey)
+	}
+	if h.n != nil {
+		keys = append(keys, RSANKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (h *rsaPublicKey) Range(f func(key string, value interface{}) bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if h.algorithm != nil {
+		if !f(AlgorithmKey, *(h.algorithm)) {
+			return
 		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *rsaPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *rsaPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+	}
+	if h.e != nil {
+		if !f(RSAEKey, h.e) {
+			return
+		}
+	}
+	if h.keyID != nil {
+		if !f(KeyIDKey, *(h.keyID)) {
+			return
+		}
+	}
+	if h.keyOps != nil {
+		if !f(KeyOpsKey, *(h.keyOps)) {
+			return
+		}
+	}
+	if h.keyUsage != nil {
+		if !f(KeyUsageKey, *(h.keyUsage)) {
+			return
+		}
+	}
+	if h.n != nil {
+		if !f(RSANKey, h.n) {
+			return
+		}
+	}
+	if h.x509CertChain != nil {
+		if !f(X509CertChainKey, h.x509CertChain) {
+			return
+		}
+	}
+	if h.x509CertThumbprint != nil {
+		if !f(X509CertThumbprintKey, *(h.x509CertThumbprint)) {
+			return
+		}
+	}
+	if h.x509CertThumbprintS256 != nil {
+		if !f(X509CertThumbprintS256Key, *(h.x509CertThumbprintS256)) {
+			return
+		}
+	}
+	if h.x509URL != nil {
+		if !f(X509URLKey, *(h.x509URL)) {
+			return
+		}
+	}
+	for k, v := range h.privateParams {
+		if !f(k, v) {
+			return
+		}
+	}
 }
 
 type RSAPrivateKey interface {
@@ -1400,26 +1473,150 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
-func (h *rsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
+func (h *rsaPrivateKey) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 16+len(h.privateParams))
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.d != nil {
+		keys = append(keys, RSADKey)
+	}
+	if h.dp != nil {
+		keys = append(keys, RSADPKey)
+	}
+	if h.dq != nil {
+		keys = append(keys, RSADQKey)
+	}
+	if h.e != nil {
+		keys = append(keys, RSAEKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		keys = append(keys, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		keys = append(keys, KeyUsageKey)
+	}
+	if h.n != nil {
+		keys = append(keys, RSANKey)
+	}
+	if h.p != nil {
+		keys = append(keys, RSAPKey)
+	}
+	if h.q != nil {
+		keys = append(keys, RSAQKey)
+	}
+	if h.qi != nil {
+		keys = append(keys, RSAQIKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (h *rsaPrivateKey) Range(f func(key string, value interface{}) bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if h.algorithm != nil {
+		if !f(AlgorithmKey, *(h.algorithm)) {
+			return
 		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *rsaPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *rsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+	}
+	if h.d != nil {
+		if !f(RSADKey, h.d) {
+			return
+		}
+	}
+	if h.dp != nil {
+		if !f(RSADPKey, h.dp) {
+			return
+		}
+	}
+	if h.dq != nil {
+		if !f(RSADQKey, h.dq) {
+			return
+		}
+	}
+	if h.e != nil {
+		if !f(RSAEKey, h.e) {
+			return
+		}
+	}
+	if h.keyID != nil {
+		if !f(KeyIDKey, *(h.keyID)) {
+			return
+		}
+	}
+	if h.keyOps != nil {
+		if !f(KeyOpsKey, *(h.keyOps)) {
+			return
+		}
+	}
+	if h.keyUsage != nil {
+		if !f(KeyUsageKey, *(h.keyUsage)) {
+			return
+		}
+	}
+	if h.n != nil {
+		if !f(RSANKey, h.n) {
+			return
+		}
+	}
+	if h.p != nil {
+		if !f(RSAPKey, h.p) {
+			return
+		}
+	}
+	if h.q != nil {
+		if !f(RSAQKey, h.q) {
+			return
+		}
+	}
+	if h.qi != nil {
+		if !f(RSAQIKey, h.qi) {
+			return
+		}
+	}
+	if h.x509CertChain != nil {
+		if !f(X509CertChainKey, h.x509CertChain) {
+			return
+		}
+	}
+	if h.x509CertThumbprint != nil {
+		if !f(X509CertThumbprintKey, *(h.x509CertThumbprint)) {
+			return
+		}
+	}
+	if h.x509CertThumbprintS256 != nil {
+		if !f(X509CertThumbprintS256Key, *(h.x509CertThumbprintS256)) {
+			return
+		}
+	}
+	if h.x509URL != nil {
+		if !f(X509URLKey, *(h.x509URL)) {
+			return
+		}
+	}
+	for k, v := range h.privateParams {
+		if !f(k, v) {
+			return
+		}
+	}
 }
