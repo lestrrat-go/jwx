@@ -244,18 +244,20 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					return
 				}
 
-				key.Range(func(k string, v interface{}) bool {
+				for _, k := range key.Keys() {
 					if usePEM {
 						switch k {
 						case `private`, jwk.AlgorithmKey, jwk.KeyIDKey, jwk.KeyOpsKey, jwk.KeyUsageKey, jwk.X509CertChainKey, jwk.X509CertThumbprintKey, jwk.X509CertThumbprintS256Key, jwk.X509URLKey:
-							return true
+							continue
 						}
 					}
 
+					var v interface{}
 					var v2 interface{}
+					require.NoError(t, key.Get(k, &v), `key.Get(%s) should succeed`, k)
 					require.NoError(t, newkey.Get(k, &v2), `newkey.Get(%s) should succeed`, k)
-					return assert.Equal(t, v, v2, `values should match`)
-				})
+					require.Equal(t, v, v2, `values should match`)
+				}
 			})
 		}
 	})
@@ -294,18 +296,19 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 			return
 		}
 
-		key.Range(func(k string, v interface{}) bool {
-			return assert.NoError(t, newkey.Remove(k), `newkey.Remove should succeed`)
-		})
+		for _, k := range key.Keys() {
+			require.NoError(t, newkey.Remove(k), `newkey.Remove should succeed`)
+		}
 
-		newkey.Range(func(k string, _ interface{}) bool {
-			// only remaining key should be kty
-			return assert.Equal(t, k, jwk.KeyTypeKey, `key should be kty`)
-		})
+		for _, k := range newkey.Keys() {
+			require.Equal(t, k, jwk.KeyTypeKey, `key should be kty`)
+		}
 
-		key.Range(func(k string, v interface{}) bool {
-			return assert.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
-		})
+		for _, k := range key.Keys() {
+			var v interface{}
+			require.NoError(t, key.Get(k, &v), `key.Get should succeed`)
+			require.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
+		}
 	})
 }
 

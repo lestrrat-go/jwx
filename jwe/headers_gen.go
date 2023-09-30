@@ -46,8 +46,6 @@ const (
 //
 // In most cases, you likely want to use the protected headers, as this is the part of the encrypted content
 type Headers interface {
-	json.Marshaler
-	json.Unmarshaler
 	AgreementPartyUInfo() []byte
 	AgreementPartyVInfo() []byte
 	Algorithm() jwa.KeyEncryptionAlgorithm
@@ -64,9 +62,6 @@ type Headers interface {
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
 	X509URL() string
-	Iterate(ctx context.Context) Iterator
-	Walk(ctx context.Context, v Visitor) error
-	AsMap(ctx context.Context) (map[string]interface{}, error)
 
 	// Get is used to extract the value of any field, including non-standard fields, out of the header.
 	//
@@ -84,14 +79,12 @@ type Headers interface {
 	Has(string) bool
 	Encode() ([]byte, error)
 	Decode([]byte) error
-	// PrivateParams returns the map containing the non-standard ('private') parameters
-	// in the associated header. WARNING: DO NOT USE PrivateParams()
-	// IF YOU HAVE CONCURRENT CODE ACCESSING THEM. Use AsMap() to
-	// get a copy of the entire header instead
-	PrivateParams() map[string]interface{}
 	Clone(context.Context) (Headers, error)
 	Copy(context.Context, Headers) error
 	Merge(context.Context, Headers) (Headers, error)
+
+	// Keys returns a list of the keys contained in this header.
+	Keys() []string
 }
 
 type stdHeaders struct {
@@ -773,6 +766,64 @@ LOOP:
 		}
 	}
 	return nil
+}
+
+func (h *stdHeaders) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 16+len(h.privateParams))
+	if h.agreementPartyUInfo != nil {
+		keys = append(keys, AgreementPartyUInfoKey)
+	}
+	if h.agreementPartyVInfo != nil {
+		keys = append(keys, AgreementPartyVInfoKey)
+	}
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.compression != nil {
+		keys = append(keys, CompressionKey)
+	}
+	if h.contentEncryption != nil {
+		keys = append(keys, ContentEncryptionKey)
+	}
+	if h.contentType != nil {
+		keys = append(keys, ContentTypeKey)
+	}
+	if h.critical != nil {
+		keys = append(keys, CriticalKey)
+	}
+	if h.ephemeralPublicKey != nil {
+		keys = append(keys, EphemeralPublicKeyKey)
+	}
+	if h.jwk != nil {
+		keys = append(keys, JWKKey)
+	}
+	if h.jwkSetURL != nil {
+		keys = append(keys, JWKSetURLKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.typ != nil {
+		keys = append(keys, TypeKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {

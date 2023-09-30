@@ -73,9 +73,6 @@ type Key interface {
 	// Keys returns a list of the keys contained in this jwk.Key.
 	Keys() []string
 
-	// Range calls f sequentially for each key and value present in the map. If f returns false, range stops the iteration.
-	Range(f func(key string, value interface{}) bool)
-
 	// Clone creates a new instance of the same type
 	Clone() (Key, error)
 

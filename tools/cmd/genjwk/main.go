@@ -626,33 +626,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return keys")
 	o.L("}")
 
-	o.LL("func (h *%s) Range(f func(key string, value interface{}) bool) {", structName)
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-	for _, f := range obj.Fields() {
-		var keyName string
-		if f.Bool(`is_std`) {
-			keyName = f.Name(true) + "Key"
-		} else {
-			keyName = kt.Prefix + f.Name(true) + "Key"
-		}
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("if !f(%s, *(h.%s)) {", keyName, f.Name(false))
-		} else {
-			o.L("if !f(%s, h.%s) {", keyName, f.Name(false))
-		}
-		o.L("return")
-		o.L("}")
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("if !f(k, v) {")
-	o.L("return")
-	o.L("}")
-	o.L("}")
-	o.L("}")
-
 	return nil
 }
 
@@ -722,8 +695,6 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.L("Thumbprint(crypto.Hash) ([]byte, error)")
 	o.LL("// Keys returns a list of the keys contained in this jwk.Key.")
 	o.L("Keys() []string")
-	o.LL("// Range calls f sequentially for each key and value present in the map. If f returns false, range stops the iteration.")
-	o.L("Range(f func(key string, value interface{}) bool)")
 	o.LL("// Clone creates a new instance of the same type")
 	o.L("Clone() (Key, error)")
 	o.LL("// PublicKey creates the corresponding PublicKey type for this object.")

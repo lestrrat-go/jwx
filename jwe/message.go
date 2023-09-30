@@ -62,7 +62,7 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.WriteString(`{"header":`)
-	hdrbuf, err := r.headers.MarshalJSON()
+	hdrbuf, err := json.Marshal(r.headers)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to marshal recipient header: %w`, err)
 	}
