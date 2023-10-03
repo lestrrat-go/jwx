@@ -94,8 +94,6 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("//")
 	o.L("// In most cases, you likely want to use the protected headers, as this is part of the signed content.")
 	o.L("type Headers interface {")
-	o.L("json.Marshaler")
-	o.L("json.Unmarshaler")
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
 		if f.Bool(`noDeref`) {
@@ -105,10 +103,6 @@ func generateHeaders(obj *codegen.Object) error {
 		}
 	}
 
-	// These are used to iterate through all keys in a header
-	o.L("Iterate(ctx context.Context) Iterator")
-	o.L("Walk(context.Context, Visitor) error")
-	o.L("AsMap(context.Context) (map[string]interface{}, error)")
 	o.L("Copy(context.Context, Headers) error")
 	o.L("Merge(context.Context, Headers) (Headers, error)")
 
@@ -128,10 +122,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("// explicitly set.")
 	o.L("Has(string) bool")
 
-	o.LL("// PrivateParams returns the non-standard elements in the source structure")
-	o.L("// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
-	o.L("// Use AsMap() to get a copy of the entire header instead")
-	o.L("PrivateParams() map[string]interface{}")
+	o.L("Keys() []string")
 	o.L("}")
 
 	o.LL("type stdHeaders struct {")
@@ -404,6 +395,22 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 	o.L("h.raw = buf")
 	o.L("return nil")
+	o.L("}")
+
+	o.LL("func (h *stdHeaders) Keys() []string {")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	for _, f := range obj.Fields() {
+		keyName := f.Name(true) + "Key"
+		o.L("if h.%s != nil {", f.Name(false))
+		o.L("keys = append(keys, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k := range h.privateParams {")
+	o.L("keys = append(keys, k)")
+	o.L("}")
+	o.L("return keys")
 	o.L("}")
 
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")

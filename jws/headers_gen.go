@@ -40,8 +40,6 @@ const (
 //
 // In most cases, you likely want to use the protected headers, as this is part of the signed content.
 type Headers interface {
-	json.Marshaler
-	json.Unmarshaler
 	Algorithm() jwa.SignatureAlgorithm
 	ContentType() string
 	Critical() []string
@@ -53,9 +51,6 @@ type Headers interface {
 	X509CertThumbprint() string
 	X509CertThumbprintS256() string
 	X509URL() string
-	Iterate(ctx context.Context) Iterator
-	Walk(context.Context, Visitor) error
-	AsMap(context.Context) (map[string]interface{}, error)
 	Copy(context.Context, Headers) error
 	Merge(context.Context, Headers) (Headers, error)
 	// Get is used to extract the value of any field, including non-standard fields, out of the header.
@@ -72,11 +67,7 @@ type Headers interface {
 	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
 	// explicitly set.
 	Has(string) bool
-
-	// PrivateParams returns the non-standard elements in the source structure
-	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
-	// Use AsMap() to get a copy of the entire header instead
-	PrivateParams() map[string]interface{}
+	Keys() []string
 }
 
 type stdHeaders struct {
@@ -623,6 +614,49 @@ LOOP:
 	}
 	h.raw = buf
 	return nil
+}
+
+func (h *stdHeaders) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 11+len(h.privateParams))
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.contentType != nil {
+		keys = append(keys, ContentTypeKey)
+	}
+	if h.critical != nil {
+		keys = append(keys, CriticalKey)
+	}
+	if h.jwk != nil {
+		keys = append(keys, JWKKey)
+	}
+	if h.jwkSetURL != nil {
+		keys = append(keys, JWKSetURLKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.typ != nil {
+		keys = append(keys, TypeKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {

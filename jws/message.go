@@ -355,7 +355,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	var wrote bool
 
 	if hdr := sig.headers; hdr != nil {
-		hdrjs, err := hdr.MarshalJSON()
+		hdrjs, err := json.Marshal(hdr)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "header" (flattened format): %w`, err)
 		}
@@ -372,7 +372,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	buf.WriteRune('"')
 
 	if protected := sig.protected; protected != nil {
-		protectedbuf, err := protected.MarshalJSON()
+		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
 		}
@@ -406,7 +406,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		buf.WriteRune('{')
 		var wrote bool
 		if hdr := sig.headers; hdr != nil {
-			hdrbuf, err := hdr.MarshalJSON()
+			hdrbuf, err := json.Marshal(hdr)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to marshal "header" for signature #%d: %w`, i+1, err)
 			}
@@ -416,7 +416,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		}
 
 		if protected := sig.protected; protected != nil {
-			protectedbuf, err := protected.MarshalJSON()
+			protectedbuf, err := json.Marshal(protected)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
