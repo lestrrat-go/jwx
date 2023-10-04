@@ -3,43 +3,16 @@ package jws
 import (
 	"context"
 	"fmt"
-
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 )
 
-// Iterate returns a channel that successively returns all the
-// header name and values.
-func (h *stdHeaders) Iterate(ctx context.Context) Iterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *stdHeaders) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
-}
-
 func (h *stdHeaders) Copy(_ context.Context, dst Headers) error {
-	for _, pair := range h.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return fmt.Errorf(`failed to set header %q: %w`, key, err)
+	for _, k := range h.Keys() {
+		var v interface{}
+		if err := h.Get(k, &v); err != nil {
+			return fmt.Errorf(`failed to get header %q: %w`, k, err)
+		}
+		if err := dst.Set(k, v); err != nil {
+			return fmt.Errorf(`failed to set header %q: %w`, k, err)
 		}
 	}
 	return nil
