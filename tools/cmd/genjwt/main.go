@@ -136,9 +136,6 @@ func generateToken(obj *codegen.Object) error {
 		}
 		o.L("%s() %s", field.GetterMethod(true), rv)
 	}
-	o.LL("// PrivateClaims return the entire set of fields (claims) in the token")
-	o.L("// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.")
-	o.L("PrivateClaims() map[string]interface{}")
 	o.LL("// Get is used to extract the value of any claim, including non-standard claims, out of the token.")
 	o.L("//")
 	o.L("// The first argument is the name of the claim. The second argument is a pointer")
@@ -179,9 +176,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("// such as `json.Marshal` and `json.Unmarshal`")
 	o.L("Options() *%sTokenOptionSet", pkgPrefix)
 	o.L("Clone() (%sToken, error)", pkgPrefix)
-	o.L("Iterate(context.Context) Iterator")
-	o.L("Walk(context.Context, Visitor) error")
-	o.L("AsMap(context.Context) (map[string]interface{}, error)")
+	o.L("Keys() []string")
 	o.L("}")
 
 	o.L("type %s struct {", obj.Name(false))
@@ -518,6 +513,21 @@ func generateToken(obj *codegen.Object) error {
 	o.L("return nil")
 	o.L("}")
 
+	o.LL("func (t *%s) Keys() []string {", obj.Name(false))
+	o.L("t.mu.RLock()")
+	o.L("defer t.mu.RUnlock()")
+	o.L("keys := make([]string, 0, %d+len(t.privateClaims))", len(obj.Fields()))
+	for _, f := range obj.Fields() {
+		keyName := f.Name(true) + "Key"
+		o.L("if t.%s != nil {", f.Name(false))
+		o.L("keys = append(keys, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k := range t.privateClaims {")
+	o.L("keys = append(keys, k)")
+	o.L("}")
+	o.L("return keys")
+	o.L("}")
 	var numericDateFields []codegen.Field
 	for _, field := range fields {
 		if field.Type() == "types.NumericDate" {
@@ -576,30 +586,6 @@ func generateToken(obj *codegen.Object) error {
 	o.L("ret := make([]byte, buf.Len())")
 	o.L("copy(ret, buf.Bytes())")
 	o.L("return ret, nil")
-	o.L("}")
-
-	o.LL("func (t *%s) Iterate(ctx context.Context) Iterator {", obj.Name(false))
-	o.L("pairs := t.makePairs()")
-	o.L("ch := make(chan *ClaimPair, len(pairs))")
-	o.L("go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {")
-	o.L("defer close(ch)")
-	o.L("for _, pair := range pairs {")
-	o.L("select {")
-	o.L("case <-ctx.Done():")
-	o.L("return")
-	o.L("case ch<-pair:")
-	o.L("}")
-	o.L("}")
-	o.L("}(ctx, ch, pairs)")
-	o.L("return mapiter.New(ch)")
-	o.L("}")
-
-	o.LL("func (t *%s) Walk(ctx context.Context, visitor Visitor) error {", obj.Name(false))
-	o.L("return iter.WalkMap(ctx, t, visitor)")
-	o.L("}")
-
-	o.LL("func (t *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", obj.Name(false))
-	o.L("return iter.AsMap(ctx, t)")
 	o.L("}")
 
 	if err := o.WriteFile(obj.MustString(`filename`), codegen.WithFormatCode(true)); err != nil {

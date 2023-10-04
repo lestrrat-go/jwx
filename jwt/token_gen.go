@@ -4,16 +4,13 @@ package jwt
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
@@ -64,10 +61,6 @@ type Token interface {
 	// Subject returns the value for "sub" field of the token
 	Subject() string
 
-	// PrivateClaims return the entire set of fields (claims) in the token
-	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
-	PrivateClaims() map[string]interface{}
-
 	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
 	// The first argument is the name of the claim. The second argument is a pointer
@@ -102,9 +95,7 @@ type Token interface {
 	// such as `json.Marshal` and `json.Unmarshal`
 	Options() *TokenOptionSet
 	Clone() (Token, error)
-	Iterate(context.Context) Iterator
-	Walk(context.Context, Visitor) error
-	AsMap(context.Context) (map[string]interface{}, error)
+	Keys() []string
 }
 type stdToken struct {
 	mu            *sync.RWMutex
@@ -529,6 +520,37 @@ LOOP:
 	return nil
 }
 
+func (t *stdToken) Keys() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	keys := make([]string, 0, 7+len(t.privateClaims))
+	if t.audience != nil {
+		keys = append(keys, AudienceKey)
+	}
+	if t.expiration != nil {
+		keys = append(keys, ExpirationKey)
+	}
+	if t.issuedAt != nil {
+		keys = append(keys, IssuedAtKey)
+	}
+	if t.issuer != nil {
+		keys = append(keys, IssuerKey)
+	}
+	if t.jwtID != nil {
+		keys = append(keys, JwtIDKey)
+	}
+	if t.notBefore != nil {
+		keys = append(keys, NotBeforeKey)
+	}
+	if t.subject != nil {
+		keys = append(keys, SubjectKey)
+	}
+	for k := range t.privateClaims {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func (t stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
@@ -568,28 +590,4 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
-}
-
-func (t *stdToken) Iterate(ctx context.Context) Iterator {
-	pairs := t.makePairs()
-	ch := make(chan *ClaimPair, len(pairs))
-	go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (t *stdToken) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, t, visitor)
-}
-
-func (t *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, t)
 }

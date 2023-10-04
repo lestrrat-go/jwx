@@ -4,16 +4,13 @@ package openid
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -129,10 +126,6 @@ type Token interface {
 	// Zoneinfo returns the value for "zoneinfo" field of the token
 	Zoneinfo() string
 
-	// PrivateClaims return the entire set of fields (claims) in the token
-	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
-	PrivateClaims() map[string]interface{}
-
 	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
 	// The first argument is the name of the claim. The second argument is a pointer
@@ -167,9 +160,7 @@ type Token interface {
 	// such as `json.Marshal` and `json.Unmarshal`
 	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
-	Iterate(context.Context) Iterator
-	Walk(context.Context, Visitor) error
-	AsMap(context.Context) (map[string]interface{}, error)
+	Keys() []string
 }
 type stdToken struct {
 	mu                  *sync.RWMutex
@@ -1304,6 +1295,94 @@ LOOP:
 	return nil
 }
 
+func (t *stdToken) Keys() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	keys := make([]string, 0, 26+len(t.privateClaims))
+	if t.address != nil {
+		keys = append(keys, AddressKey)
+	}
+	if t.audience != nil {
+		keys = append(keys, AudienceKey)
+	}
+	if t.birthdate != nil {
+		keys = append(keys, BirthdateKey)
+	}
+	if t.email != nil {
+		keys = append(keys, EmailKey)
+	}
+	if t.emailVerified != nil {
+		keys = append(keys, EmailVerifiedKey)
+	}
+	if t.expiration != nil {
+		keys = append(keys, ExpirationKey)
+	}
+	if t.familyName != nil {
+		keys = append(keys, FamilyNameKey)
+	}
+	if t.gender != nil {
+		keys = append(keys, GenderKey)
+	}
+	if t.givenName != nil {
+		keys = append(keys, GivenNameKey)
+	}
+	if t.issuedAt != nil {
+		keys = append(keys, IssuedAtKey)
+	}
+	if t.issuer != nil {
+		keys = append(keys, IssuerKey)
+	}
+	if t.jwtID != nil {
+		keys = append(keys, JwtIDKey)
+	}
+	if t.locale != nil {
+		keys = append(keys, LocaleKey)
+	}
+	if t.middleName != nil {
+		keys = append(keys, MiddleNameKey)
+	}
+	if t.name != nil {
+		keys = append(keys, NameKey)
+	}
+	if t.nickname != nil {
+		keys = append(keys, NicknameKey)
+	}
+	if t.notBefore != nil {
+		keys = append(keys, NotBeforeKey)
+	}
+	if t.phoneNumber != nil {
+		keys = append(keys, PhoneNumberKey)
+	}
+	if t.phoneNumberVerified != nil {
+		keys = append(keys, PhoneNumberVerifiedKey)
+	}
+	if t.picture != nil {
+		keys = append(keys, PictureKey)
+	}
+	if t.preferredUsername != nil {
+		keys = append(keys, PreferredUsernameKey)
+	}
+	if t.profile != nil {
+		keys = append(keys, ProfileKey)
+	}
+	if t.subject != nil {
+		keys = append(keys, SubjectKey)
+	}
+	if t.updatedAt != nil {
+		keys = append(keys, UpdatedAtKey)
+	}
+	if t.website != nil {
+		keys = append(keys, WebsiteKey)
+	}
+	if t.zoneinfo != nil {
+		keys = append(keys, ZoneinfoKey)
+	}
+	for k := range t.privateClaims {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func (t stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
@@ -1343,28 +1422,4 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
-}
-
-func (t *stdToken) Iterate(ctx context.Context) Iterator {
-	pairs := t.makePairs()
-	ch := make(chan *ClaimPair, len(pairs))
-	go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (t *stdToken) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, t, visitor)
-}
-
-func (t *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, t)
 }
