@@ -237,6 +237,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 						return
 					}
 					buf = jsonbuf
+					t.Logf("%s", buf)
 				}
 
 				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
@@ -244,11 +245,12 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					return
 				}
 
+			LOOP:
 				for _, k := range key.Keys() {
 					if usePEM {
 						switch k {
 						case `private`, jwk.AlgorithmKey, jwk.KeyIDKey, jwk.KeyOpsKey, jwk.KeyUsageKey, jwk.X509CertChainKey, jwk.X509CertThumbprintKey, jwk.X509CertThumbprintS256Key, jwk.X509URLKey:
-							continue
+							continue LOOP
 						}
 					}
 
@@ -337,14 +339,10 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				if !assert.True(t, reflect.TypeOf(pair.Value).AssignableTo(expected), "key should be a %s", expected) {
-					return
-				}
+			for i := 0; i < set.Len(); i++ {
+				key, err := set.Key(i)
+				require.True(t, err, `set.Key(%d) should succeed`, i)
+				require.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected)
 			}
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
@@ -358,10 +356,9 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for iter := set.Keys(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
-
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key(%d) should succeed`, i)
 				switch key := key.(type) {
 				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
 				default:
@@ -1584,17 +1581,14 @@ func TestTypedFields(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
 				got, err := jwk.Parse(serialized, tc.Options...)
 				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 					return
 				}
 
-				for iter := got.Keys(ctx); iter.Next(ctx); {
-					pair := iter.Pair()
-					key, _ := pair.Value.(jwk.Key)
+				for i := 0; i < got.Len(); i++ {
+					key, ok := got.Key(i)
+					require.True(t, ok, `got.Key() should succeed`)
 					var v interface{}
 					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
 					field, err := tc.PostProcess(t, v)
@@ -1663,14 +1657,10 @@ func TestGH412(t *testing.T) {
 				expected[k] = struct{}{}
 			}
 
-			ctx := context.Background()
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
-				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
-					return
-				}
-				t.Logf("%s found", key.KeyID())
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key() should succeed`)
+				require.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`)
 				delete(expected, key.KeyID())
 			}
 

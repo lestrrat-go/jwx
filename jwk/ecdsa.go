@@ -132,21 +132,22 @@ func (k *ecdsaPrivateKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeECDSAPublicKey(v interface {
-	makePairs() []*HeaderPair
-}) (Key, error) {
+func makeECDSAPublicKey(src Key) (Key, error) {
 	newKey := newECDSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, pair := range v.makePairs() {
-		switch pair.Key {
+	for _, k := range src.Keys() {
+		switch k {
 		case ECDSADKey:
 			continue
 		default:
-			//nolint:forcetypeassert
-			key := pair.Key.(string)
-			if err := newKey.Set(key, pair.Value); err != nil {
-				return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
+			var v interface{}
+			if err := src.Get(k, &v); err != nil {
+				return nil, fmt.Errorf(`ecdsa: makeECDSAPublicKey: failed to get field %q: %w`, k, err)
+			}
+
+			if err := newKey.Set(k, v); err != nil {
+				return nil, fmt.Errorf(`ecdsa: makeECDSAPublicKey: failed to set field %q: %w`, k, err)
 			}
 		}
 	}

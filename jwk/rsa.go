@@ -171,21 +171,21 @@ func (k *rsaPublicKey) Raw(v interface{}) error {
 	return blackmagic.AssignIfCompatible(v, &key)
 }
 
-func makeRSAPublicKey(v interface {
-	makePairs() []*HeaderPair
-}) (Key, error) {
+func makeRSAPublicKey(src Key) (Key, error) {
 	newKey := newRSAPublicKey()
 
 	// Iterate and copy everything except for the bits that should not be in the public key
-	for _, pair := range v.makePairs() {
-		switch pair.Key {
+	for _, k := range src.Keys() {
+		switch k {
 		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
 			continue
 		default:
-			//nolint:forcetypeassert
-			key := pair.Key.(string)
-			if err := newKey.Set(key, pair.Value); err != nil {
-				return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
+			var v interface{}
+			if err := src.Get(k, &v); err != nil {
+				return nil, fmt.Errorf(`rsa: makeRSAPublicKey: failed to get field %q: %w`, k, err)
+			}
+			if err := newKey.Set(k, v); err != nil {
+				return nil, fmt.Errorf(`rsa: makeRSAPublicKey: failed to set field %q: %w`, k, err)
 			}
 		}
 	}

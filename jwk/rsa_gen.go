@@ -130,52 +130,6 @@ func (h *rsaPublicKey) X509URL() string {
 	return ""
 }
 
-func (h *rsaPublicKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.e != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSAEKey, Value: h.e})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.n != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *rsaPublicKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *rsaPublicKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -212,7 +166,7 @@ func (h *rsaPublicKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`rsaPublicKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -433,7 +387,11 @@ func (k *rsaPublicKey) Remove(key string) error {
 }
 
 func (k *rsaPublicKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`rsaPublicKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *rsaPublicKey) DecodeCtx() json.DecodeCtx {
@@ -567,9 +525,51 @@ LOOP:
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 10)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.RSA
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.e != nil {
+		data[RSAEKey] = h.e
+		fields = append(fields, RSAEKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.n != nil {
+		data[RSANKey] = h.n
+		fields = append(fields, RSANKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -607,6 +607,7 @@ func (h *rsaPublicKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	keys := make([]string, 0, 10+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
 	}
@@ -781,70 +782,6 @@ func (h *rsaPrivateKey) X509URL() string {
 	return ""
 }
 
-func (h *rsaPrivateKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.RSA})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.d != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSADKey, Value: h.d})
-	}
-	if h.dp != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSADPKey, Value: h.dp})
-	}
-	if h.dq != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSADQKey, Value: h.dq})
-	}
-	if h.e != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSAEKey, Value: h.e})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.n != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSANKey, Value: h.n})
-	}
-	if h.p != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSAPKey, Value: h.p})
-	}
-	if h.q != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSAQKey, Value: h.q})
-	}
-	if h.qi != nil {
-		pairs = append(pairs, &HeaderPair{Key: RSAQIKey, Value: h.qi})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *rsaPrivateKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *rsaPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -893,7 +830,7 @@ func (h *rsaPrivateKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`rsaPrivateKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -1210,7 +1147,11 @@ func (k *rsaPrivateKey) Remove(key string) error {
 }
 
 func (k *rsaPrivateKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`rsaPrivateKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *rsaPrivateKey) DecodeCtx() json.DecodeCtx {
@@ -1377,9 +1318,75 @@ LOOP:
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 16)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.RSA
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.d != nil {
+		data[RSADKey] = h.d
+		fields = append(fields, RSADKey)
+	}
+	if h.dp != nil {
+		data[RSADPKey] = h.dp
+		fields = append(fields, RSADPKey)
+	}
+	if h.dq != nil {
+		data[RSADQKey] = h.dq
+		fields = append(fields, RSADQKey)
+	}
+	if h.e != nil {
+		data[RSAEKey] = h.e
+		fields = append(fields, RSAEKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.n != nil {
+		data[RSANKey] = h.n
+		fields = append(fields, RSANKey)
+	}
+	if h.p != nil {
+		data[RSAPKey] = h.p
+		fields = append(fields, RSAPKey)
+	}
+	if h.q != nil {
+		data[RSAQKey] = h.q
+		fields = append(fields, RSAQKey)
+	}
+	if h.qi != nil {
+		data[RSAQIKey] = h.qi
+		fields = append(fields, RSAQIKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -1417,6 +1424,7 @@ func (h *rsaPrivateKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	keys := make([]string, 0, 16+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
 	}

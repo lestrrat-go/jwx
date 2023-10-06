@@ -105,6 +105,4 @@ type Key interface {
 	X509CertThumbprint() string
 	// X509CertThumbprintS256 returns `x5t#S256` of a JWK
 	X509CertThumbprintS256() string
-
-	makePairs() []*HeaderPair
 }

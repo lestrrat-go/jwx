@@ -248,38 +248,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
 
-	o.LL("func (h *%s) makePairs() []*HeaderPair {", structName)
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-
-	// NOTE: building up an array is *slow*?
-	o.LL("var pairs []*HeaderPair")
-	o.L("pairs = append(pairs, &HeaderPair{Key: \"kty\", Value: %s})", kt.KeyType)
-	for _, f := range obj.Fields() {
-		var keyName string
-		if f.Bool(`is_std`) {
-			keyName = f.Name(true) + "Key"
-		} else {
-			keyName = kt.Prefix + f.Name(true) + "Key"
-		}
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %s, Value: *(h.%s)})", keyName, f.Name(false))
-		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", keyName, f.Name(false))
-		}
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, &HeaderPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) makePairs(...)
-
-	o.LL("func (h *%s) PrivateParams() map[string]interface{} {", structName)
-	o.L("return h.privateParams")
-	o.L("}")
-
 	o.LL("func (h *%s) Has(name string) bool {", structName)
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
@@ -304,7 +272,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("switch name {")
 	o.L("case KeyTypeKey:")
 	o.L("if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {")
-	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("return fmt.Errorf(`%s.Get: failed to assign value for field %%q to destination object: %%w`, name, err)", structName)
 	o.L("}")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
@@ -440,7 +408,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (k *%s) Clone() (Key, error) {", structName)
-	o.L("return cloneKey(k)")
+	o.L("key, err := cloneKey(k)")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`%s.Clone: %%w`, err)", structName)
+	o.L("}")
+	o.L("return key, nil")
 	o.L("}")
 
 	o.LL("func (k *%s) DecodeCtx() json.DecodeCtx {", structName)
@@ -570,10 +542,29 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
 	o.L("data := make(map[string]interface{})")
 	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("for _, pair := range h.makePairs() {")
-	o.L("fields = append(fields, pair.Key.(string))")
-	o.L("data[pair.Key.(string)] = pair.Value")
+	o.L("data[KeyTypeKey] = %s", kt.KeyType)
+	o.L("fields = append(fields, KeyTypeKey)")
+	for _, f := range obj.Fields() {
+		var keyName string
+		if f.Bool(`is_std`) {
+			keyName = f.Name(true) + "Key"
+		} else {
+			keyName = kt.Prefix + f.Name(true) + "Key"
+		}
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("data[%s] = *(h.%s)", keyName, f.Name(false))
+		} else {
+			o.L("data[%s] = h.%s", keyName, f.Name(false))
+		}
+		o.L("fields = append(fields, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("data[k] = v")
+	o.L("fields = append(fields, k)")
 	o.L("}")
+
 	o.LL("sort.Strings(fields)")
 	o.L("buf := pool.GetBytesBuffer()")
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
@@ -609,6 +600,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	o.L("keys = append(keys, KeyTypeKey)")
+
 	for _, f := range obj.Fields() {
 		var keyName string
 		if f.Bool(`is_std`) {
@@ -720,7 +713,6 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 			o.R("%s", PointerElem(f))
 		}
 	}
-	o.LL("makePairs() []*HeaderPair")
 	o.L("}")
 
 	if err := o.WriteFile("interface_gen.go", codegen.WithFormatCode(true)); err != nil {

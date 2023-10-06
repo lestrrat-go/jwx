@@ -127,52 +127,6 @@ func (h *okpPublicKey) X509URL() string {
 	return ""
 }
 
-func (h *okpPublicKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OKP})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: OKPCrvKey, Value: *(h.crv)})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: OKPXKey, Value: h.x})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *okpPublicKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *okpPublicKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -209,7 +163,7 @@ func (h *okpPublicKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`okpPublicKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -430,7 +384,11 @@ func (k *okpPublicKey) Remove(key string) error {
 }
 
 func (k *okpPublicKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`okpPublicKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *okpPublicKey) DecodeCtx() json.DecodeCtx {
@@ -566,9 +524,51 @@ LOOP:
 func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 10)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.OKP
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.crv != nil {
+		data[OKPCrvKey] = *(h.crv)
+		fields = append(fields, OKPCrvKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.x != nil {
+		data[OKPXKey] = h.x
+		fields = append(fields, OKPXKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -606,6 +606,7 @@ func (h *okpPublicKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	keys := make([]string, 0, 10+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
 	}
@@ -753,55 +754,6 @@ func (h *okpPrivateKey) X509URL() string {
 	return ""
 }
 
-func (h *okpPrivateKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OKP})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: OKPCrvKey, Value: *(h.crv)})
-	}
-	if h.d != nil {
-		pairs = append(pairs, &HeaderPair{Key: OKPDKey, Value: h.d})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: OKPXKey, Value: h.x})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *okpPrivateKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *okpPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -840,7 +792,7 @@ func (h *okpPrivateKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`okpPrivateKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -1077,7 +1029,11 @@ func (k *okpPrivateKey) Remove(key string) error {
 }
 
 func (k *okpPrivateKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`okpPrivateKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *okpPrivateKey) DecodeCtx() json.DecodeCtx {
@@ -1221,9 +1177,55 @@ LOOP:
 func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 11)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.OKP
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.crv != nil {
+		data[OKPCrvKey] = *(h.crv)
+		fields = append(fields, OKPCrvKey)
+	}
+	if h.d != nil {
+		data[OKPDKey] = h.d
+		fields = append(fields, OKPDKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.x != nil {
+		data[OKPXKey] = h.x
+		fields = append(fields, OKPXKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -1261,6 +1263,7 @@ func (h *okpPrivateKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	keys := make([]string, 0, 11+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
 	}

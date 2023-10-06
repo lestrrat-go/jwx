@@ -112,49 +112,6 @@ func (h *symmetricKey) X509URL() string {
 	return ""
 }
 
-func (h *symmetricKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.OctetSeq})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.octets != nil {
-		pairs = append(pairs, &HeaderPair{Key: SymmetricOctetsKey, Value: h.octets})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *symmetricKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *symmetricKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -189,7 +146,7 @@ func (h *symmetricKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`symmetricKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -394,7 +351,11 @@ func (k *symmetricKey) Remove(key string) error {
 }
 
 func (k *symmetricKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`symmetricKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *symmetricKey) DecodeCtx() json.DecodeCtx {
@@ -520,9 +481,47 @@ LOOP:
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 9)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.OctetSeq
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.octets != nil {
+		data[SymmetricOctetsKey] = h.octets
+		fields = append(fields, SymmetricOctetsKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -560,6 +559,7 @@ func (h *symmetricKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	keys := make([]string, 0, 9+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
 	}

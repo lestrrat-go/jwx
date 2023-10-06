@@ -634,6 +634,7 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	return nil
 }
 
+// NOTE: may need to remove this to allow pluggale key types
 func cloneKey(src Key) (Key, error) {
 	var dst Key
 	switch src.(type) {
@@ -652,14 +653,17 @@ func cloneKey(src Key) (Key, error) {
 	case SymmetricKey:
 		dst = newSymmetricKey()
 	default:
-		return nil, fmt.Errorf(`unknown key type %T`, src)
+		return nil, fmt.Errorf(`jwk.cloneKey: unknown key type %T`, src)
 	}
 
-	for _, pair := range src.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set %q: %w`, key, err)
+	for _, k := range src.Keys() {
+		// It's absolutely
+		var v interface{}
+		if err := src.Get(k, &v); err != nil {
+			return nil, fmt.Errorf(`jwk.cloneKey: failed to get %q: %w`, k, err)
+		}
+		if err := dst.Set(k, v); err != nil {
+			return nil, fmt.Errorf(`jwk.cloneKey: failed to set %q: %w`, k, err)
 		}
 	}
 	return dst, nil
