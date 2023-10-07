@@ -5,12 +5,10 @@ package jwt
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
@@ -390,48 +388,6 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (t *stdToken) makePairs() []*ClaimPair {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	pairs := make([]*ClaimPair, 0, 7)
-	if t.audience != nil {
-		v := t.audience.Get()
-		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
-	}
-	if t.expiration != nil {
-		v := t.expiration.Get()
-		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
-	}
-	if t.issuedAt != nil {
-		v := t.issuedAt.Get()
-		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
-	}
-	if t.issuer != nil {
-		v := *(t.issuer)
-		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
-	}
-	if t.jwtID != nil {
-		v := *(t.jwtID)
-		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
-	}
-	if t.notBefore != nil {
-		v := t.notBefore.Get()
-		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
-	}
-	if t.subject != nil {
-		v := *(t.subject)
-		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
-	}
-	for k, v := range t.privateClaims {
-		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].Key.(string) < pairs[j].Key.(string)
-	})
-	return pairs
-}
-
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -556,35 +512,106 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
-	for i, pair := range t.makePairs() {
-		f := pair.Key.(string)
+	var i int
+	if t.audience != nil {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
+		i++
 		buf.WriteRune('"')
-		buf.WriteString(f)
+		buf.WriteString("aud")
 		buf.WriteString(`":`)
-		switch f {
-		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(FlattenAudience)); err != nil {
-				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
-			}
-			continue
-		case ExpirationKey, IssuedAtKey, NotBeforeKey:
-			enc.Encode(pair.Value.(time.Time).Unix())
-			continue
+		if err := json.EncodeAudience(enc, t.audience, t.options.IsEnabled(FlattenAudience)); err != nil {
+			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 		}
-		switch v := pair.Value.(type) {
-		case []byte:
-			buf.WriteRune('"')
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %s: %w`, f, err)
-			}
-			buf.Truncate(buf.Len() - 1)
+	}
+	if t.expiration != nil {
+		if i > 0 {
+			buf.WriteByte(',')
 		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("exp")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.expiration.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
+		}
+	}
+	if t.issuedAt != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("iat")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.issuedAt.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
+		}
+	}
+	if t.issuer != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("iss")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.issuer)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.jwtID != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("jti")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.jwtID)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.notBefore != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("nbf")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.notBefore.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
+		}
+	}
+	if t.subject != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("sub")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.subject)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	for k, v := range t.privateClaims {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString(k)
+		buf.WriteString(`":`)
+		if err := enc.Encode(v); err != nil {
+			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
+		}
+		buf.Truncate(buf.Len() - 1)
 	}
 	buf.WriteByte('}')
 	ret := make([]byte, buf.Len())

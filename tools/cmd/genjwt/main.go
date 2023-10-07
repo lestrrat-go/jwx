@@ -396,38 +396,6 @@ func generateToken(obj *codegen.Object) error {
 	o.L("return t.privateClaims")
 	o.L("}")
 
-	// Generate a function that iterates through all of the keys
-	// in this header.
-	o.LL("func (t *%s) makePairs() []*ClaimPair {", obj.Name(false))
-	o.L("t.mu.RLock()")
-	o.L("defer t.mu.RUnlock()")
-
-	// NOTE: building up an array is *slow*?
-	o.LL("pairs := make([]*ClaimPair, 0, %d)", len(fields))
-	for _, f := range fields {
-		keyName := f.Name(true) + "Key"
-		o.L("if t.%s != nil {", f.Name(false))
-		if f.Bool(`hasGet`) {
-			o.L("v := t.%s.Get()", f.Name(false))
-		} else {
-			if fieldStorageTypeIsIndirect(f.Type()) {
-				o.L("v := *(t.%s)", f.Name(false))
-			} else {
-				o.L("v := t.%s", f.Name(false))
-			}
-		}
-		o.L("pairs = append(pairs, &ClaimPair{Key: %s, Value: v})", keyName)
-		o.L("}")
-	}
-	o.L("for k, v := range t.privateClaims {")
-	o.L("pairs = append(pairs, &ClaimPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("sort.Slice(pairs, func(i, j int) bool {")
-	o.L("return pairs[i].Key.(string) < pairs[j].Key.(string)")
-	o.L("})")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) iterate(...)
-
 	o.LL("func (t *stdToken) UnmarshalJSON(buf []byte) error {")
 	o.L("t.mu.Lock()")
 	o.L("defer t.mu.Unlock()")
@@ -540,47 +508,49 @@ func generateToken(obj *codegen.Object) error {
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
 	o.L("buf.WriteByte('{')")
 	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, pair := range t.makePairs() {")
-	o.L("f := pair.Key.(string)")
+	o.L("var i int")
+	for _, f := range fields {
+		o.L("if t.%s != nil {", f.Name(false))
+		o.L("if i > 0 {")
+		o.L("buf.WriteByte(',')")
+		o.L("}")
+		o.L("i++")
+		o.L("buf.WriteRune('\"')")
+		o.L("buf.WriteString(%q)", f.JSON())
+		o.L("buf.WriteString(`\":`)")
+		if f.Name(false) == `audience` {
+			o.L("if err := json.EncodeAudience(enc, t.audience, t.options.IsEnabled(%sFlattenAudience)); err != nil {", pkgPrefix)
+			o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
+			o.L("}")
+		} else if f.Type() == "types.NumericDate" {
+			o.L("if err := enc.Encode(t.%s.Unix()); err != nil {", f.Name(false))
+			o.L("return nil, fmt.Errorf(`failed to encode %q: %%w`, err)", f.JSON())
+			o.L("}")
+		} else if f.Type() == "[]byte" {
+			o.L("buf.WriteRune('\"')")
+			o.L("buf.WriteString(base64.EncodeToString(t.%s))", f.Name(false))
+			o.L("buf.WriteRune('\"')")
+		} else {
+			o.L("if err := enc.Encode(*(t.%s)); err != nil {", f.Name(false))
+			o.L("return nil, fmt.Errorf(`failed to encode field %q: %%w`, err)", f.JSON())
+			o.L("}")
+			o.L("buf.Truncate(buf.Len()-1)")
+		}
+		o.L("}")
+	}
+
+	o.L("for k, v := range t.privateClaims {")
 	o.L("if i > 0 {")
 	o.L("buf.WriteByte(',')")
 	o.L("}")
+	o.L("i++")
 	o.L("buf.WriteRune('\"')")
-	o.L("buf.WriteString(f)")
+	o.L("buf.WriteString(k)")
 	o.L("buf.WriteString(`\":`)")
-
-	// Handle cases that need specialized handling
-	o.L("switch f {")
-	o.L("case AudienceKey:")
-	o.L("if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(%sFlattenAudience)); err != nil {", pkgPrefix)
-	o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
-	o.L("}")
-	o.L("continue")
-	if lndf := len(numericDateFields); lndf > 0 {
-		o.L("case ")
-		for i, ndf := range numericDateFields {
-			o.R("%sKey", ndf.Name(true))
-			if i < lndf-1 {
-				o.R(",")
-			}
-		}
-		o.R(":")
-		o.L("enc.Encode(pair.Value.(time.Time).Unix())")
-		o.L("continue")
-	}
-	o.L("}")
-
-	o.L("switch v := pair.Value.(type) {")
-	o.L("case []byte:")
-	o.L("buf.WriteRune('\"')")
-	o.L("buf.WriteString(base64.EncodeToString(v))")
-	o.L("buf.WriteRune('\"')")
-	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to marshal field %%s: %%w`, f, err)")
+	o.L("return nil, fmt.Errorf(`failed to encode field %%q: %%w`, k, err)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
-	o.L("}")
 	o.L("}")
 	o.L("buf.WriteByte('}')")
 	o.L("ret := make([]byte, buf.Len())")
@@ -613,15 +583,25 @@ func genBuilder(obj *codegen.Object) error {
 	o.L("// Note that each call to Claim() overwrites the value set from the")
 	o.L("// previous call.")
 	o.L("type Builder struct {")
-	o.L("claims []*ClaimPair")
+	o.L("mu sync.Mutex")
+	o.L("claims map[string]interface{}")
 	o.L("}")
 
 	o.LL("func NewBuilder() *Builder {")
 	o.L("return &Builder{}")
 	o.L("}")
 
+	o.LL("func (b *Builder) init() {")
+	o.L("if b.claims == nil {")
+	o.L("b.claims = make(map[string]interface{})")
+	o.L("}")
+	o.L("}")
+
 	o.LL("func (b *Builder) Claim(name string, value interface{}) *Builder {")
-	o.L("b.claims = append(b.claims, &ClaimPair{Key: name, Value: value})")
+	o.L("b.mu.Lock()")
+	o.L("defer b.mu.Unlock()")
+	o.L("b.init()")
+	o.L("b.claims[name] = value")
 	o.L("return b")
 	o.L("}")
 
@@ -640,11 +620,18 @@ func genBuilder(obj *codegen.Object) error {
 	o.LL("// Build creates a new token based on the claims that the builder has received")
 	o.L("// so far. If a claim cannot be set, then the method returns a nil Token with")
 	o.L("// a en error as a second return value")
+	o.L("//")
+	o.L("// Once `Build()` is called, all claims are cleared from the Builder, and the")
+	o.L("// Builder can be reused to build another token")
 	o.L("func (b *Builder) Build() (Token, error) {")
+	o.L("b.mu.Lock()")
+	o.L("claims := b.claims")
+	o.L("b.claims = nil")
+	o.L("b.mu.Unlock()")
 	o.L("tok := New()")
-	o.L("for _, claim := range b.claims {")
-	o.L("if err := tok.Set(claim.Key.(string), claim.Value); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to set claim %%q: %%w`, claim.Key.(string), err)")
+	o.L("for k, v := range claims {")
+	o.L("if err := tok.Set(k, v); err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to set claim %%q: %%w`, k, err)")
 	o.L("}")
 	o.L("}")
 	o.L("return tok, nil")

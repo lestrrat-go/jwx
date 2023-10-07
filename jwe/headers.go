@@ -6,9 +6,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 )
 
 type isZeroer interface {
@@ -33,32 +30,6 @@ func (h *stdHeaders) isZero() bool {
 		h.x509CertThumbprintS256 == nil &&
 		h.x509URL == nil &&
 		len(h.privateParams) == 0
-}
-
-// Iterate returns a channel that successively returns all the
-// header name and values.
-func (h *stdHeaders) Iterate(ctx context.Context) Iterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *stdHeaders) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *stdHeaders) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
 }
 
 func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {

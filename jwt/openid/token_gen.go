@@ -5,12 +5,10 @@ package openid
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -984,124 +982,6 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (t *stdToken) makePairs() []*ClaimPair {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	pairs := make([]*ClaimPair, 0, 26)
-	if t.address != nil {
-		v := t.address
-		pairs = append(pairs, &ClaimPair{Key: AddressKey, Value: v})
-	}
-	if t.audience != nil {
-		v := t.audience.Get()
-		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
-	}
-	if t.birthdate != nil {
-		v := t.birthdate
-		pairs = append(pairs, &ClaimPair{Key: BirthdateKey, Value: v})
-	}
-	if t.email != nil {
-		v := *(t.email)
-		pairs = append(pairs, &ClaimPair{Key: EmailKey, Value: v})
-	}
-	if t.emailVerified != nil {
-		v := *(t.emailVerified)
-		pairs = append(pairs, &ClaimPair{Key: EmailVerifiedKey, Value: v})
-	}
-	if t.expiration != nil {
-		v := t.expiration.Get()
-		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
-	}
-	if t.familyName != nil {
-		v := *(t.familyName)
-		pairs = append(pairs, &ClaimPair{Key: FamilyNameKey, Value: v})
-	}
-	if t.gender != nil {
-		v := *(t.gender)
-		pairs = append(pairs, &ClaimPair{Key: GenderKey, Value: v})
-	}
-	if t.givenName != nil {
-		v := *(t.givenName)
-		pairs = append(pairs, &ClaimPair{Key: GivenNameKey, Value: v})
-	}
-	if t.issuedAt != nil {
-		v := t.issuedAt.Get()
-		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
-	}
-	if t.issuer != nil {
-		v := *(t.issuer)
-		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
-	}
-	if t.jwtID != nil {
-		v := *(t.jwtID)
-		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
-	}
-	if t.locale != nil {
-		v := *(t.locale)
-		pairs = append(pairs, &ClaimPair{Key: LocaleKey, Value: v})
-	}
-	if t.middleName != nil {
-		v := *(t.middleName)
-		pairs = append(pairs, &ClaimPair{Key: MiddleNameKey, Value: v})
-	}
-	if t.name != nil {
-		v := *(t.name)
-		pairs = append(pairs, &ClaimPair{Key: NameKey, Value: v})
-	}
-	if t.nickname != nil {
-		v := *(t.nickname)
-		pairs = append(pairs, &ClaimPair{Key: NicknameKey, Value: v})
-	}
-	if t.notBefore != nil {
-		v := t.notBefore.Get()
-		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
-	}
-	if t.phoneNumber != nil {
-		v := *(t.phoneNumber)
-		pairs = append(pairs, &ClaimPair{Key: PhoneNumberKey, Value: v})
-	}
-	if t.phoneNumberVerified != nil {
-		v := *(t.phoneNumberVerified)
-		pairs = append(pairs, &ClaimPair{Key: PhoneNumberVerifiedKey, Value: v})
-	}
-	if t.picture != nil {
-		v := *(t.picture)
-		pairs = append(pairs, &ClaimPair{Key: PictureKey, Value: v})
-	}
-	if t.preferredUsername != nil {
-		v := *(t.preferredUsername)
-		pairs = append(pairs, &ClaimPair{Key: PreferredUsernameKey, Value: v})
-	}
-	if t.profile != nil {
-		v := *(t.profile)
-		pairs = append(pairs, &ClaimPair{Key: ProfileKey, Value: v})
-	}
-	if t.subject != nil {
-		v := *(t.subject)
-		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
-	}
-	if t.updatedAt != nil {
-		v := t.updatedAt.Get()
-		pairs = append(pairs, &ClaimPair{Key: UpdatedAtKey, Value: v})
-	}
-	if t.website != nil {
-		v := *(t.website)
-		pairs = append(pairs, &ClaimPair{Key: WebsiteKey, Value: v})
-	}
-	if t.zoneinfo != nil {
-		v := *(t.zoneinfo)
-		pairs = append(pairs, &ClaimPair{Key: ZoneinfoKey, Value: v})
-	}
-	for k, v := range t.privateClaims {
-		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].Key.(string) < pairs[j].Key.(string)
-	})
-	return pairs
-}
-
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -1388,35 +1268,352 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 	buf.WriteByte('{')
 	enc := json.NewEncoder(buf)
-	for i, pair := range t.makePairs() {
-		f := pair.Key.(string)
+	var i int
+	if t.address != nil {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
+		i++
 		buf.WriteRune('"')
-		buf.WriteString(f)
+		buf.WriteString("address")
 		buf.WriteString(`":`)
-		switch f {
-		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
-				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
-			}
-			continue
-		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
-			enc.Encode(pair.Value.(time.Time).Unix())
-			continue
+		if err := enc.Encode(*(t.address)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "address": %w`, err)
 		}
-		switch v := pair.Value.(type) {
-		case []byte:
-			buf.WriteRune('"')
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %s: %w`, f, err)
-			}
-			buf.Truncate(buf.Len() - 1)
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.audience != nil {
+		if i > 0 {
+			buf.WriteByte(',')
 		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("aud")
+		buf.WriteString(`":`)
+		if err := json.EncodeAudience(enc, t.audience, t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
+			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
+		}
+	}
+	if t.birthdate != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("birthdate")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.birthdate)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "birthdate": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.email != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("email")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.email)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "email": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.emailVerified != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("email_verified")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.emailVerified)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "email_verified": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.expiration != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("exp")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.expiration.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
+		}
+	}
+	if t.familyName != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("family_name")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.familyName)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "family_name": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.gender != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("gender")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.gender)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "gender": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.givenName != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("given_name")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.givenName)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "given_name": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.issuedAt != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("iat")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.issuedAt.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
+		}
+	}
+	if t.issuer != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("iss")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.issuer)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.jwtID != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("jti")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.jwtID)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.locale != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("locale")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.locale)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "locale": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.middleName != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("middle_name")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.middleName)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "middle_name": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.name != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("name")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.name)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "name": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.nickname != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("nickname")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.nickname)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "nickname": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.notBefore != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("nbf")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.notBefore.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
+		}
+	}
+	if t.phoneNumber != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("phone_number")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.phoneNumber)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "phone_number": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.phoneNumberVerified != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("phone_number_verified")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.phoneNumberVerified)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "phone_number_verified": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.picture != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("picture")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.picture)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "picture": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.preferredUsername != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("preferred_username")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.preferredUsername)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "preferred_username": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.profile != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("profile")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.profile)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "profile": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.subject != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("sub")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.subject)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.updatedAt != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("updated_at")
+		buf.WriteString(`":`)
+		if err := enc.Encode(t.updatedAt.Unix()); err != nil {
+			return nil, fmt.Errorf(`failed to encode "updated_at": %w`, err)
+		}
+	}
+	if t.website != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("website")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.website)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "website": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	if t.zoneinfo != nil {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString("zoneinfo")
+		buf.WriteString(`":`)
+		if err := enc.Encode(*(t.zoneinfo)); err != nil {
+			return nil, fmt.Errorf(`failed to encode field "zoneinfo": %w`, err)
+		}
+		buf.Truncate(buf.Len() - 1)
+	}
+	for k, v := range t.privateClaims {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		i++
+		buf.WriteRune('"')
+		buf.WriteString(k)
+		buf.WriteString(`":`)
+		if err := enc.Encode(v); err != nil {
+			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
+		}
+		buf.Truncate(buf.Len() - 1)
 	}
 	buf.WriteByte('}')
 	ret := make([]byte, buf.Len())
