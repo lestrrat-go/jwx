@@ -110,6 +110,7 @@ type identLocalRegistry struct{}
 type identMinRefreshInterval struct{}
 type identPEM struct{}
 type identPostFetcher struct{}
+type identPrivateKey struct{}
 type identRefreshInterval struct{}
 type identRefreshWindow struct{}
 type identThumbprintHash struct{}
@@ -148,6 +149,10 @@ func (identPEM) String() string {
 
 func (identPostFetcher) String() string {
 	return "WithPostFetcher"
+}
+
+func (identPrivateKey) String() string {
+	return "WithPrivateKey"
 }
 
 func (identRefreshInterval) String() string {
@@ -250,6 +255,13 @@ func WithPEM(v bool) ParseOption {
 // names after it has been fetched and parsed, but before it is cached.
 func WithPostFetcher(v PostFetcher) RegisterOption {
 	return &registerOption{option.New(identPostFetcher{}, v)}
+}
+
+// WithPrivate, if set to true, causes parsing to reject keys that contain only
+// the public key. If set to false, parsing will reject keys that contain only
+// the private key. WithPrivate is a no-op for symmetric keys.
+func WithPrivateKey(v bool) ParseOption {
+	return &parseOption{option.New(identPrivateKey{}, v)}
 }
 
 // WithRefreshInterval specifies the static interval between refreshes
