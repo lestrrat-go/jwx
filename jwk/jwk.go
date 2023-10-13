@@ -387,6 +387,10 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 	return ctx.ignoreParseError
 }
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 // ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
 // report failure if you attempt to pass a JWK set. Only use this function
 // when you know that the data is a single JWK.
@@ -401,11 +405,14 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
+	var asymKeyMustPrivate *bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identPrivateKey{}:
+			asymKeyMustPrivate = boolPtr(option.Value().(bool))
 		case identLocalRegistry{}:
 			// in reality you can only pass either withLocalRegistry or
 			// WithTypedField, but since withLocalRegistry is used only by us,
@@ -463,6 +470,12 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		}
 	default:
 		return nil, fmt.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
+	}
+
+	if akey, ok := key.(asymmetricKey); ok && asymKeyMustPrivate != nil {
+		if akey.isPrivate() != *asymKeyMustPrivate {
+			return nil, fmt.Errorf(`unexpected public/private type for %T`, key)
+		}
 	}
 
 	if localReg != nil {
