@@ -82,13 +82,6 @@ options:
     interface: ParseOption
     argument_type: bool
     comment: WithPEM specifies that the input to `Parse()` is a PEM encoded key.
-  - ident: PrivateKey
-    interface: ParseOption
-    argument_type: bool
-    comment: |
-      WithPrivate, if set to true, causes parsing to reject keys that contain only
-      the public key. If set to false, parsing will reject keys that contain only
-      the private key. WithPrivate is a no-op for symmetric keys.
   - ident: FetchWhitelist
     interface: FetchOption
     argument_type: Whitelist
