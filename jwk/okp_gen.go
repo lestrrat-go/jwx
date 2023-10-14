@@ -61,6 +61,10 @@ func (h okpPublicKey) KeyType() jwa.KeyType {
 	return jwa.OKP
 }
 
+func (h okpPublicKey) IsPrivate() bool {
+	return false
+}
+
 func (h *okpPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
@@ -593,6 +597,10 @@ func newOKPPrivateKey() *okpPrivateKey {
 
 func (h okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP
+}
+
+func (h okpPrivateKey) IsPrivate() bool {
+	return true
 }
 
 func (h *okpPrivateKey) Algorithm() jwa.KeyAlgorithm {

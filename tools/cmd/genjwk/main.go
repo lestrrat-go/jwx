@@ -168,7 +168,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	if v := obj.String(`interface`); v != "" {
 		ifName = v
 	}
-	structName := strings.ToLower(kt.Prefix) + obj.Name(true)
+	objName := obj.Name(true)
+	structName := strings.ToLower(kt.Prefix) + objName
 	if v := obj.String(`struct_name`); v != "" {
 		structName = v
 	}
@@ -209,6 +210,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.LL("func (h %s) KeyType() jwa.KeyType {", structName)
 	o.L("return %s", kt.KeyType)
 	o.L("}")
+
+	if objName == "PublicKey" || objName == "PrivateKey" {
+		o.LL("func (h %s) IsPrivate() bool {", structName)
+		o.L("return %s", fmt.Sprint(objName == "PrivateKey"))
+		o.L("}")
+	}
 
 	for _, f := range obj.Fields() {
 		o.LL("func (h *%s) %s() ", structName, f.GetterMethod(true))
@@ -618,6 +625,12 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 		o.L("%sKey = %s", f.Name(true), strconv.Quote(f.JSON()))
 	}
 	o.L(")") // end const
+
+	o.LL("// AsymmetricKey is able to indicate if it's a public ")
+	o.L("// or private key.")
+	o.L("type AsymmetricKey interface {")
+	o.L("IsPrivate() bool")
+	o.L("}")
 
 	o.LL("// Key defines the minimal interface for each of the")
 	o.L("// key types. Their use and implementation differ significantly")

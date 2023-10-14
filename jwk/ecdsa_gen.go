@@ -65,6 +65,10 @@ func (h ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
 
+func (h ecdsaPublicKey) IsPrivate() bool {
+	return false
+}
+
 func (h *ecdsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
@@ -627,6 +631,10 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC
+}
+
+func (h ecdsaPrivateKey) IsPrivate() bool {
+	return true
 }
 
 func (h *ecdsaPrivateKey) Algorithm() jwa.KeyAlgorithm {

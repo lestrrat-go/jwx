@@ -67,6 +67,10 @@ func (h rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
 
+func (h rsaPublicKey) IsPrivate() bool {
+	return false
+}
+
 func (h *rsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
@@ -604,6 +608,10 @@ func newRSAPrivateKey() *rsaPrivateKey {
 
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA
+}
+
+func (h rsaPrivateKey) IsPrivate() bool {
+	return true
 }
 
 func (h *rsaPrivateKey) Algorithm() jwa.KeyAlgorithm {

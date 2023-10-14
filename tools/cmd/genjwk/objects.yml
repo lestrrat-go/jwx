@@ -89,7 +89,7 @@ key_types:
   - filename: ecdsa_gen.go
     prefix: ECDSA
     key_type: jwa.EC
-    objects: 
+    objects:
       - name: publicKey
         raw_key_type: "*ecdsa.PublicKey"
         fields:
