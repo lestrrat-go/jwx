@@ -748,9 +748,9 @@ func Equal(k1, k2 Key) bool {
 // IsPrivate tells whether the supplied key is a private or public key.  An
 // error is raised if the supplied key is not an AsymmetricKey.
 func IsPrivate(k Key) (bool, error) {
-	ak, ok := k.(AsymmetricKey)
+	asymmetric, ok := k.(AsymmetricKey)
 	if ok {
-		return ak.IsPrivate(), nil
+		return asymmetric.IsPrivate(), nil
 	}
 	return false, fmt.Errorf("%T is not an asymmetric key", k)
 }
