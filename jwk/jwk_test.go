@@ -293,13 +293,13 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("IsPrivate", func(t *testing.T) {
-		_, err := jwk.IsPrivate(key)
+		_, err := jwk.IsPrivateKey(key)
 		if _, ok := key.(jwk.SymmetricKey); ok {
-			if !assert.Error(t, err, `jwk.IsPrivate should fail`) {
+			if !assert.Error(t, err, `jwk.IsPrivateKey should fail`) {
 				return
 			}
 		} else {
-			if !assert.NoError(t, err, `jwk.IsPrivate should succeed`) {
+			if !assert.NoError(t, err, `jwk.IsPrivateKey should succeed`) {
 				return
 			}
 		}
@@ -407,15 +407,15 @@ func TestParse(t *testing.T) {
 					return
 				}
 
-				isPrivate, err := jwk.IsPrivate(key)
-				if !assert.NoError(t, err, "jwk.IsPrivate(%T) sould succeed", key) {
+				isPrivate, err := jwk.IsPrivateKey(key)
+				if !assert.NoError(t, err, "jwk.IsPrivateKey(%T) sould succeed", key) {
 					return
 				}
 
 				var crawkey interface{}
 				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivate(&rsa.PrivateKey) should be true`) {
+					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&rsa.PrivateKey) should be true`) {
 						return
 					}
 					var rawkey rsa.PrivateKey
@@ -424,7 +424,7 @@ func TestParse(t *testing.T) {
 					}
 					crawkey = &rawkey
 				case jwk.RSAPublicKey:
-					if !assert.False(t, isPrivate, `jwk.IsPrivate(&rsa.PublicKey) should be false`) {
+					if !assert.False(t, isPrivate, `jwk.IsPrivateKey(&rsa.PublicKey) should be false`) {
 						return
 					}
 					var rawkey rsa.PublicKey
@@ -433,7 +433,7 @@ func TestParse(t *testing.T) {
 					}
 					crawkey = &rawkey
 				case jwk.ECDSAPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivate(&ecdsa.PrivateKey) should be true`) {
+					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&ecdsa.PrivateKey) should be true`) {
 						return
 					}
 					var rawkey ecdsa.PrivateKey
@@ -442,7 +442,7 @@ func TestParse(t *testing.T) {
 					}
 					crawkey = &rawkey
 				case jwk.OKPPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivate(&ed25519.PrivateKey) should be true`) {
+					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`) {
 						return
 					}
 					switch k.Crv() {
@@ -465,7 +465,7 @@ func TestParse(t *testing.T) {
 				// key, since it's a subset of the
 				// private key variant.
 				case jwk.OKPPublicKey:
-					if !assert.False(t, isPrivate, `jwk.IsPrivate(&ed25519.PublicKey) should be false`) {
+					if !assert.False(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PublicKey) should be false`) {
 						return
 					}
 					switch k.Crv() {
