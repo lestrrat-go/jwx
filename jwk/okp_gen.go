@@ -61,7 +61,7 @@ func (h okpPublicKey) KeyType() jwa.KeyType {
 	return jwa.OKP
 }
 
-func (h okpPublicKey) isPrivate() bool {
+func (h okpPublicKey) IsPrivate() bool {
 	return false
 }
 
@@ -599,7 +599,7 @@ func (h okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP
 }
 
-func (h okpPrivateKey) isPrivate() bool {
+func (h okpPrivateKey) IsPrivate() bool {
 	return true
 }
 

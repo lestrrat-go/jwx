@@ -65,7 +65,7 @@ func (h ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
 
-func (h ecdsaPublicKey) isPrivate() bool {
+func (h ecdsaPublicKey) IsPrivate() bool {
 	return false
 }
 
@@ -633,7 +633,7 @@ func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC
 }
 
-func (h ecdsaPrivateKey) isPrivate() bool {
+func (h ecdsaPrivateKey) IsPrivate() bool {
 	return true
 }
 

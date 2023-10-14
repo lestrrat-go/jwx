@@ -22,12 +22,10 @@ const (
 	X509CertThumbprintS256Key = "x5t#S256"
 )
 
-// asymmetricKey extends the Key interface by allowing
-// the Key implementation to indicate if it's a public
+// AsymmetricKey is able to indicate if it's a public
 // or private key.
-type asymmetricKey interface {
-	isPrivate() bool
-	Key
+type AsymmetricKey interface {
+	IsPrivate() bool
 }
 
 // Key defines the minimal interface for each of the

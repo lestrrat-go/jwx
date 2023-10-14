@@ -67,7 +67,7 @@ func (h rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
 
-func (h rsaPublicKey) isPrivate() bool {
+func (h rsaPublicKey) IsPrivate() bool {
 	return false
 }
 
@@ -610,7 +610,7 @@ func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA
 }
 
-func (h rsaPrivateKey) isPrivate() bool {
+func (h rsaPrivateKey) IsPrivate() bool {
 	return true
 }
 

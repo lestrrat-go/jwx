@@ -212,7 +212,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	if objName == "PublicKey" || objName == "PrivateKey" {
-		o.LL("func (h %s) isPrivate() bool {", structName)
+		o.LL("func (h %s) IsPrivate() bool {", structName)
 		o.L("return %s", fmt.Sprint(objName == "PrivateKey"))
 		o.L("}")
 	}
@@ -626,12 +626,10 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	}
 	o.L(")") // end const
 
-	o.LL("// asymmetricKey extends the Key interface by allowing")
-	o.L("// the Key implementation to indicate if it's a public")
+	o.LL("// AsymmetricKey is able to indicate if it's a public ")
 	o.L("// or private key.")
-	o.L("type asymmetricKey interface {")
-	o.L("isPrivate() bool")
-	o.L("Key")
+	o.L("type AsymmetricKey interface {")
+	o.L("IsPrivate() bool")
 	o.L("}")
 
 	o.LL("// Key defines the minimal interface for each of the")
