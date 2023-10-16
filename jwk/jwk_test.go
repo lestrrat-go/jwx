@@ -408,7 +408,7 @@ func TestParse(t *testing.T) {
 				}
 
 				isPrivate, err := jwk.IsPrivateKey(key)
-				if !assert.NoError(t, err, "jwk.IsPrivateKey(%T) sould succeed", key) {
+				if !assert.NoError(t, err, "jwk.IsPrivateKey(%T) should succeed", key) {
 					return
 				}
 
