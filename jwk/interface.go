@@ -10,6 +10,13 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 )
 
+// AsymmetricKey describes a Key that represents an key in an asymmetric key pair,
+// which in turn can be either a private or a public key. This interface
+// allows those keys to be queried if they are one or the other.
+type AsymmetricKey interface {
+	IsPrivate() bool
+}
+
 // KeyUsageType is used to denote what this key should be used for
 type KeyUsageType string
 

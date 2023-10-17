@@ -626,12 +626,6 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	}
 	o.L(")") // end const
 
-	o.LL("// AsymmetricKey is able to indicate if it's a public ")
-	o.L("// or private key.")
-	o.L("type AsymmetricKey interface {")
-	o.L("IsPrivate() bool")
-	o.L("}")
-
 	o.LL("// Key defines the minimal interface for each of the")
 	o.L("// key types. Their use and implementation differ significantly")
 	o.L("// between each key types, so you should use type assertions")
