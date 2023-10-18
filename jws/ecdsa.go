@@ -64,6 +64,9 @@ func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 
 	signer, ok := key.(crypto.Signer)
 	if ok {
+		if !isValidECDSAKey(key) {
+			return nil, fmt.Errorf(`cannot use key of type %T to generate ECDSA based signatures`, key)
+		}
 		switch key.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
 			// if it's a ecdsa.PrivateKey, it's more efficient to
