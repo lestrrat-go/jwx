@@ -72,6 +72,16 @@ func (w *withKey) Protected(v Headers) Headers {
 // * A crypto.Signer
 // * A jwk.Key
 //
+// Note that due to technical reasons, this library is NOT able to differentiate
+// between a valid/invalid key for given algorithm if the key implements crypto.Signer
+// and the key is from an external library. For example, while we can tell that it is
+// invalid to use `jwk.WithKey(jwa.RSA256, ecdsaPrivateKey)` because the key is
+// presumably from `crypto/ecdsa` or this library, if you use a KMS wrapper
+// that implements crypto.Signer that is outside of the go standard library or this
+// library, we will not be able to properly catch the misuse of such keys --
+// the output will happily generate an ECDSA signature even in the presence of
+// `jwa.RSA256`
+//
 // A `crypto.Signer` is used when the private part of a key is
 // kept in an inaccessible location, such as hardware.
 // `crypto.Signer` is currently supported for RSA, ECDSA, and EdDSA
@@ -89,7 +99,7 @@ func (w *withKey) Protected(v Headers) Headers {
 // is respected when serializing. That is, if you specify a header with
 // `{"b64": false}`, then the payload is not base64 encoded.
 //
-// These suboptions are ignored whe the `jws.WithKey()` option is used with `jws.Verify()`.
+// These suboptions are ignored when the `jws.WithKey()` option is used with `jws.Verify()`.
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) SignVerifyOption {
 	// Implementation note: this option is shared between Sign() and
 	// Verify(). As such we don't create a KeyProvider here because

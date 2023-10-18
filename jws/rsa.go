@@ -77,7 +77,11 @@ func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	}
 
 	signer, ok := key.(crypto.Signer)
-	if !ok {
+	if ok {
+		if !isValidRSAKey(key) {
+			return nil, fmt.Errorf(`cannot use key of type %T to generate RSA based signatures`, key)
+		}
+	} else {
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
 			return nil, fmt.Errorf(`failed to retrieve rsa.PrivateKey out of %T: %w`, key, err)

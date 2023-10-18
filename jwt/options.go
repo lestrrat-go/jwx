@@ -119,10 +119,13 @@ type withKey struct {
 }
 
 // WithKey is a multi-purpose option. It can be used for either jwt.Sign, jwt.Parse (and
-// its siblings), and jwt.Serializer methods.
+// its siblings), and jwt.Serializer methods. For signatures, please see the documentation
+// for `jws.WithKey` for more details. For encryption, please see the documentation
+// for `jwe.WithKey`.
 //
 // It is the caller's responsibility to match the suboptions to the operation that they
-// are performing. For example, you are not allowed to do this:
+// are performing. For example, you are not allowed to do this, because the operation
+// is to generate a signature, and yet you are passing options for jwe:
 //
 //	jwt.Sign(token, jwt.WithKey(alg, key, jweOptions...))
 //

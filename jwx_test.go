@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwe"
 	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -543,6 +544,85 @@ func TestFormat(t *testing.T) {
 		t.Run(tc.Expected, func(t *testing.T) {
 			if !assert.Equal(t, tc.Expected, tc.Value.String(), `stringification should match`) {
 				return
+			}
+		})
+	}
+}
+
+func TestGH996(t *testing.T) {
+	ecdsaKey, err := jwxtest.GenerateEcdsaKey(jwa.P256)
+	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
+
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+	okpKey, err := jwxtest.GenerateEd25519Key()
+	require.NoError(t, err, `jwxtest.GenerateEd25519Key should succeed`)
+
+	symmetricKey := []byte(`abracadabra`)
+
+	testcases := []struct {
+		Name      string
+		Algorithm jwa.SignatureAlgorithm
+		Valid     []interface{}
+		Invalid   []interface{}
+	}{
+		{
+			Name:      `ECDSA`,
+			Algorithm: jwa.ES256,
+			Valid:     []interface{}{ecdsaKey},
+			Invalid:   []interface{}{rsaKey, okpKey, symmetricKey},
+		},
+		{
+			Name:      `RSA`,
+			Algorithm: jwa.RS256,
+			Valid:     []interface{}{rsaKey},
+			Invalid:   []interface{}{ecdsaKey, okpKey, symmetricKey},
+		},
+		{
+			Name:      `OKP`,
+			Algorithm: jwa.EdDSA,
+			Valid:     []interface{}{okpKey},
+			Invalid:   []interface{}{ecdsaKey, rsaKey, symmetricKey},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			for _, valid := range tc.Valid {
+				valid := valid
+				t.Run(fmt.Sprintf("Sign Valid(%T)", valid), func(t *testing.T) {
+					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, valid))
+					require.NoError(t, err, `signing with %T should succeed`, valid)
+				})
+			}
+
+			for _, invalid := range tc.Invalid {
+				invalid := invalid
+				t.Run(fmt.Sprintf("Sign Invalid(%T)", invalid), func(t *testing.T) {
+					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, invalid))
+					require.Error(t, err, `signing with %T should fail`, invalid)
+				})
+			}
+
+			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, tc.Valid[0]))
+			require.NoError(t, err, `jws.Sign with valid key should succeed`)
+
+			for _, valid := range tc.Valid {
+				valid := valid
+				t.Run(fmt.Sprintf("Verify Valid(%T)", valid), func(t *testing.T) {
+					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, valid))
+					require.NoError(t, err, `verifying with %T should succeed`, valid)
+				})
+			}
+
+			for _, invalid := range tc.Invalid {
+				invalid := invalid
+				t.Run(fmt.Sprintf("Verify Invalid(%T)", invalid), func(t *testing.T) {
+					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, invalid))
+					require.Error(t, err, `verifying with %T should fail`, invalid)
+				})
 			}
 		})
 	}
