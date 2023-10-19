@@ -28,7 +28,11 @@ func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
 	// simply accept a crypto.Signer here.
 	signer, ok := key.(crypto.Signer)
-	if !ok {
+	if ok {
+		if !isValidEDDSAKey(key) {
+			return nil, fmt.Errorf(`cannot use key of type %T to generate EdDSA based signatures`, key)
+		}
+	} else {
 		// This fallback exists for cases when jwk.Key was passed, or
 		// users gave us a pointer instead of non-pointer, etc.
 		var privkey ed25519.PrivateKey
