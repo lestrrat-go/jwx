@@ -6,10 +6,10 @@ v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jw
 
 v2.0.15 19 UNRELEASED
 [Bug fixes]
-  * [jws] jws.Sign() now properly check for valid algorithm / key type pair.
-    This was caused by the fact that jws.WithKey() accepted keys that implemented
-    crypto.Signer, and there really is no way to robustly check what algorithm
-    the crypto.Signer implements.
+  * [jws] jws.Sign() now properly check for valid algorithm / key type pair when
+    the key implements crypto.Signer. This was caused by the fact that when 
+    jws.WithKey() accepted keys that implemented crypto.Signer, there really
+    is no way to robustly check what algorithm the crypto.Signer implements.
 
     The code has now been modified to check for KNOWN key types, i.e. those
     that are defined in Go standard library, and those that are defined in
