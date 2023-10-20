@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ import (
 func TestShowBuildInfo(t *testing.T) {
 	t.Logf("Running tests using JSON backend => %s\n", json.Engine())
 	t.Logf("Available elliptic curves:")
-	for _, alg := range ecutil.AvailableAlgorithms() {
+	for _, alg := range ourecdsa.Algorithms() {
 		t.Logf("  %s", alg)
 	}
 }

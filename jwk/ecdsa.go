@@ -11,12 +11,13 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 )
 
 func init() {
-	ecutil.RegisterCurve(elliptic.P256(), jwa.P256)
-	ecutil.RegisterCurve(elliptic.P384(), jwa.P384)
-	ecutil.RegisterCurve(elliptic.P521(), jwa.P521)
+	ourecdsa.RegisterCurve(jwa.P256, elliptic.P256())
+	ourecdsa.RegisterCurve(jwa.P384, elliptic.P384())
+	ourecdsa.RegisterCurve(jwa.P521, elliptic.P521())
 }
 
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
@@ -41,13 +42,11 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	k.y = make([]byte, len(ybuf))
 	copy(k.y, ybuf)
 
-	var crv jwa.EllipticCurveAlgorithm
-	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
-		crv = tmp
-	} else {
-		return fmt.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+	alg, err := ourecdsa.AlgorithmFromCurve(rawKey.Curve)
+	if err != nil {
+		return fmt.Errorf(`jwk: failed to get algorithm for converting ECDSA public key to JWK: %w`, err)
 	}
-	k.crv = &crv
+	k.crv = &alg
 
 	return nil
 }
@@ -80,23 +79,19 @@ func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
 	k.d = make([]byte, len(dbuf))
 	copy(k.d, dbuf)
 
-	var crv jwa.EllipticCurveAlgorithm
-	if tmp, ok := ecutil.AlgorithmForCurve(rawKey.Curve); ok {
-		crv = tmp
-	} else {
-		return fmt.Errorf(`invalid elliptic curve %s`, rawKey.Curve)
+	alg, err := ourecdsa.AlgorithmFromCurve(rawKey.Curve)
+	if err != nil {
+		return fmt.Errorf(`jwk: failed to get algorithm for converting ECDSA private key to JWK: %w`, err)
 	}
-	k.crv = &crv
+	k.crv = &alg
 
 	return nil
 }
 
 func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecdsa.PublicKey, error) {
-	var crv elliptic.Curve
-	if tmp, ok := ecutil.CurveForAlgorithm(alg); ok {
-		crv = tmp
-	} else {
-		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
+	crv, err := ourecdsa.CurveFromAlgorithm(alg)
+	if err != nil {
+		return nil, fmt.Errorf(`jwk: failed to get algorithm for ECDSA public key: %w`, err)
 	}
 
 	var x, y big.Int

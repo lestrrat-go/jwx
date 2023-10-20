@@ -20,15 +20,14 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/jws"
-
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1299,7 +1298,9 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("Curve types", func(t *testing.T) {
-		for _, alg := range ecutil.AvailableAlgorithms() {
+		algorithms := ourecdsa.Algorithms()
+		require.True(t, len(algorithms) >= 3, `algorithm length should be greater than or equal to 3`)
+		for _, alg := range algorithms {
 			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				key, err := jwxtest.GenerateEcdsaKey(alg)
@@ -2052,16 +2053,6 @@ func TestGH567(t *testing.T) {
 			return
 		}
 	})
-}
-
-func TestAvailableCurves(_ *testing.T) {
-	// Not much to test here, but this silences the linters
-	_ = jwk.AvailableCurves()
-}
-
-func TestCurveForAlgorithm(_ *testing.T) {
-	// Not much to test here, but this silences the linters
-	_, _ = jwk.CurveForAlgorithm(jwa.P521)
 }
 
 func TestGH664(t *testing.T) {
