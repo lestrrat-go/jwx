@@ -19,10 +19,10 @@ import (
 // Ed25519 refers to the biratinally equivalent curve of Curve25519, except it's in Edwards form.
 // Ed25519 is the name of the curve and the also the signature scheme using that curve.
 // The full name of the scheme is Edwards Curve Digital Signature Algorithm, and thus it is
-// also refered to as EdDSA.
+// also referred to as EdDSA.
 //
 // X25519 refers to the Diffie-Hellman key exchange protocol that uses Cruve25519.
-// Because this is an elliptic curve based Diffie Hellman protocol, it is also refered to
+// Because this is an elliptic curve based Diffie Hellman protocol, it is also referred to
 // as ECDH.
 //
 // OKP keys are used to represent private/public pairs of thse elliptic curve
