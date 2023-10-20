@@ -46,12 +46,12 @@ go_test(
     ],
     embed = [":jwt"],
     deps = [
-        "//internal/ecutil",
         "//internal/json",
         "//internal/jwxtest",
         "//jwa",
         "//jwe",
         "//jwk",
+        "//jwk/ecdsa",
         "//jws",
         "//jwt/internal/types",
         "@com_github_stretchr_testify//assert",
