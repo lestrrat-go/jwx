@@ -324,15 +324,22 @@ type KeyParser interface {
 	ParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, payload []byte) (Key, error)
 }
 
+// KeyParseFunc is a type of KeyParser that is based on a function/closure
 type KeyParseFunc func(probe *KeyProbe, unmarshaler KeyUnmarshaler, payload []byte) (Key, error)
 
 func (f KeyParseFunc) ParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, payload []byte) (Key, error) {
 	return f(probe, unmarshaler, payload)
 }
 
+var muKeyParser sync.RWMutex
 var keyParsers = []KeyParser{KeyParseFunc(defaultParseKey)}
 
+// RegisterKeyParser adds a new KeyParser. Parsers are called in FILO order.
+// That is, the last parser to be registered is called first. There is no
+// check for duplicate entries.
 func RegisterKeyParser(kp KeyParser) {
+	muKeyParser.Lock()
+	defer muKeyParser.Unlock()
 	keyParsers = append(keyParsers, kp)
 }
 
@@ -740,7 +747,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	unmarshaler := keyUnmarshaler{localReg: localReg}
-	for _, parser := range keyParsers {
+
+	muKeyParser.RLock()
+	parsers := make([]KeyParser, len(keyParsers))
+	copy(parsers, keyParsers)
+	muKeyParser.RUnlock()
+
+	for i := len(parsers) - 1; i >= 0; i-- {
+		parser := parsers[i]
 		key, err := parser.ParseKey(probe, &unmarshaler, data)
 		if err == nil {
 			return key, nil
