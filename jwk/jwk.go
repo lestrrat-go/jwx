@@ -302,6 +302,11 @@ func (e *continueParseError) Error() string {
 	return "continue parsing"
 }
 
+// IsContinueParseError returns true if the given error is a ContinueParseError.
+//
+// When a ContinueParseError is returned from a KeyParser, it means that while
+// the key parsing operation was not successful, we should keep
+// trying to parse using the remaining parsers
 func IsContiueParseError(err error) bool {
 	return errors.Is(err, &continueParseError{})
 }
