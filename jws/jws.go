@@ -25,6 +25,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -43,7 +44,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 var registry = json.NewRegistry()
@@ -835,7 +835,7 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 		kty = jwa.RSA
 	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
 		kty = jwa.EC
-	case ed25519.PublicKey, ed25519.PrivateKey, x25519.PublicKey, x25519.PrivateKey:
+	case ed25519.PublicKey, ed25519.PrivateKey, *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
 		kty = jwa.OKP
 	case []byte:
 		kty = jwa.OctetSeq

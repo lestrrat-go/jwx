@@ -5,7 +5,6 @@ go_library(
     srcs = ["ecutil.go"],
     importpath = "github.com/lestrrat-go/jwx/v3/internal/ecutil",
     visibility = ["//:__subpackages__"],
-    deps = ["//jwa"],
 )
 
 alias(

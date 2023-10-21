@@ -20,16 +20,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
-
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,11 +165,11 @@ func TestJWTParseVerify(t *testing.T) {
 					return
 				}
 			case *ecdsa.PrivateKey:
-				curveAlg, ok := ecutil.AlgorithmForCurve(pk.Curve)
-				if !assert.True(t, ok, `ecutil.AlgorithmForCurve should succeed`) {
-					return
+				alg, err := ourecdsa.AlgorithmFromCurve(pk.Curve)
+				if err != nil {
+					require.Fail(t, `unsupported elliptic.Curve: %w`, alg)
 				}
-				dummyRawKey, err = jwxtest.GenerateEcdsaKey(curveAlg)
+				dummyRawKey, err = jwxtest.GenerateEcdsaKey(alg)
 				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
 					return
 				}

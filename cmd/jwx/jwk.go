@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdh"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/x25519"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )
@@ -88,11 +88,12 @@ func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) err
 
 func makeJwkGenerateCmd() *cli.Command {
 	var crvnames bytes.Buffer
-	for i, crv := range jwk.AvailableCurves() {
+
+	for i, crv := range jwa.EllipticCurveAlgorithms() {
 		if i > 0 {
 			crvnames.WriteByte('/')
 		}
-		crvnames.WriteString(crv.Params().Name)
+		crvnames.WriteString(crv.String())
 	}
 
 	var cmd cli.Command
@@ -137,16 +138,14 @@ func makeJwkGenerateCmd() *cli.Command {
 			}
 			rawkey = v
 		case jwa.EC:
-			var crv elliptic.Curve
-
 			var crvalg jwa.EllipticCurveAlgorithm
 			if err := crvalg.Accept(c.String("curve")); err != nil {
 				return fmt.Errorf(`invalid elliptic curve name %s: %w`, c.String("curve"), err)
 			}
 
-			crv, ok := jwk.CurveForAlgorithm(crvalg)
-			if !ok {
-				return fmt.Errorf(`invalid elliptic curve for ECDSA: %s (expected %s)`, crvalg, crvnames.String())
+			crv, err := ourecdsa.CurveFromAlgorithm(crvalg)
+			if err != nil {
+				return fmt.Errorf(`invalid elliptic curve for ECDSA: %s (expected %s): %w`, crvalg, crvnames.String(), err)
 			}
 
 			v, err := ecdsa.GenerateKey(crv, rand.Reader)
@@ -173,7 +172,7 @@ func makeJwkGenerateCmd() *cli.Command {
 				}
 				rawkey = priv
 			case jwa.X25519:
-				_, priv, err := x25519.GenerateKey(rand.Reader)
+				priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 				if err != nil {
 					return fmt.Errorf(`failed to generate x25519 private key: %w`, err)
 				}

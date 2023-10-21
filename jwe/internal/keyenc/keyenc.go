@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -16,7 +17,6 @@ import (
 	"hash"
 	"io"
 
-	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
@@ -24,7 +24,6 @@ import (
 	contentcipher "github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 func NewNoop(alg jwa.KeyEncryptionAlgorithm, sharedkey []byte) (*Noop, error) {
@@ -216,7 +215,7 @@ func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionA
 	switch key := keyif.(type) {
 	case *ecdsa.PublicKey:
 		generator, err = keygen.NewEcdhes(alg, enc, keysize, key, apu, apv)
-	case x25519.PublicKey:
+	case *ecdh.PublicKey:
 		generator, err = keygen.NewX25519(alg, enc, keysize, key)
 	default:
 		return nil, fmt.Errorf("unexpected key type %T", keyif)
@@ -294,16 +293,16 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 
 func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
 	switch privkeyif.(type) {
-	case x25519.PrivateKey:
-		privkey, ok := privkeyif.(x25519.PrivateKey)
+	case *ecdh.PrivateKey:
+		privkey, ok := privkeyif.(*ecdh.PrivateKey)
 		if !ok {
-			return nil, fmt.Errorf(`private key must be x25519.PrivateKey, was: %T`, privkeyif)
+			return nil, fmt.Errorf(`private key must be *ecdh.PrivateKey, was: %T`, privkeyif)
 		}
-		pubkey, ok := pubkeyif.(x25519.PublicKey)
+		pubkey, ok := pubkeyif.(*ecdh.PublicKey)
 		if !ok {
-			return nil, fmt.Errorf(`public key must be x25519.PublicKey, was: %T`, pubkeyif)
+			return nil, fmt.Errorf(`public key must be *ecdh.PublicKey, was: %T`, pubkeyif)
 		}
-		return curve25519.X25519(privkey.Seed(), pubkey)
+		return privkey.ECDH(pubkey)
 	default:
 		privkey, ok := privkeyif.(*ecdsa.PrivateKey)
 		if !ok {

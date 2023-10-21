@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -20,16 +21,14 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/jws"
-
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/x25519"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -151,7 +150,7 @@ func expectedRawKeyType(key jwk.Key) interface{} {
 		case jwa.Ed25519:
 			return ed25519.PrivateKey(nil)
 		case jwa.X25519:
-			return x25519.PrivateKey(nil)
+			return &ecdh.PrivateKey{}
 		default:
 			panic("unknown curve type for OKPPrivateKey:" + key.Crv())
 		}
@@ -160,7 +159,7 @@ func expectedRawKeyType(key jwk.Key) interface{} {
 		case jwa.Ed25519:
 			return ed25519.PublicKey(nil)
 		case jwa.X25519:
-			return x25519.PublicKey(nil)
+			return &ecdh.PublicKey{}
 		default:
 			panic("unknown curve type for OKPPublicKey:" + key.Crv())
 		}
@@ -452,11 +451,11 @@ func TestParse(t *testing.T) {
 						}
 						crawkey = rawkey
 					case jwa.X25519:
-						var rawkey x25519.PrivateKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PrivateKey) should succeed`) {
+						var rawkey ecdh.PrivateKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
 							return
 						}
-						crawkey = rawkey
+						crawkey = &rawkey
 					default:
 						t.Errorf(`invalid curve %s`, k.Crv())
 					}
@@ -475,11 +474,11 @@ func TestParse(t *testing.T) {
 						}
 						crawkey = rawkey
 					case jwa.X25519:
-						var rawkey x25519.PublicKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&x25519.PublicKey) should succeed`) {
+						var rawkey ecdh.PublicKey
+						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
 							return
 						}
-						crawkey = rawkey
+						crawkey = &rawkey
 					default:
 						t.Errorf(`invalid curve %s`, k.Crv())
 					}
@@ -930,11 +929,11 @@ func TestPublicKeyOf(t *testing.T) {
 		},
 		{
 			Key:           x25519key,
-			PublicKeyType: reflect.TypeOf(x25519key.Public()),
+			PublicKeyType: reflect.TypeOf(&ecdh.PublicKey{}),
 		},
 		{
 			Key:           x25519key.Public(),
-			PublicKeyType: reflect.TypeOf(x25519key.Public()),
+			PublicKeyType: reflect.TypeOf(&ecdh.PublicKey{}),
 		},
 	}
 
@@ -1299,7 +1298,9 @@ func TestECDSA(t *testing.T) {
 		})
 	})
 	t.Run("Curve types", func(t *testing.T) {
-		for _, alg := range ecutil.AvailableAlgorithms() {
+		algorithms := ourecdsa.Algorithms()
+		require.True(t, len(algorithms) >= 3, `algorithm length should be greater than or equal to 3`)
+		for _, alg := range algorithms {
 			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				key, err := jwxtest.GenerateEcdsaKey(alg)
@@ -1507,10 +1508,14 @@ func TestTypedFields(t *testing.T) {
 	expected := &typedField{Foo: "Foo", Bar: 0xdeadbeef}
 	var keys []jwk.Key
 	{
-		k1, _ := jwxtest.GenerateRsaJwk()
-		k2, _ := jwxtest.GenerateEcdsaJwk()
-		k3, _ := jwxtest.GenerateSymmetricJwk()
-		k4, _ := jwxtest.GenerateEd25519Jwk()
+		k1, e1 := jwxtest.GenerateRsaJwk()
+		require.NoError(t, e1, `jwxtest.GenerateRsaJwk should succeed`)
+		k2, e2 := jwxtest.GenerateEcdsaJwk()
+		require.NoError(t, e2, `jwxtest.GenerateEcdsaJwk should succeed`)
+		k3, e3 := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, e3, `jwxtest.GenerateSymmetricJwk should succeed`)
+		k4, e4 := jwxtest.GenerateEd25519Jwk()
+		require.NoError(t, e4, `jwxtest.GenerateEd25519Jwk should succeed`)
 		keys = []jwk.Key{k1, k2, k3, k4}
 	}
 	for _, key := range keys {
@@ -2052,16 +2057,6 @@ func TestGH567(t *testing.T) {
 			return
 		}
 	})
-}
-
-func TestAvailableCurves(_ *testing.T) {
-	// Not much to test here, but this silences the linters
-	_ = jwk.AvailableCurves()
-}
-
-func TestCurveForAlgorithm(_ *testing.T) {
-	// Not much to test here, but this silences the linters
-	_, _ = jwk.CurveForAlgorithm(jwa.P521)
 }
 
 func TestGH664(t *testing.T) {

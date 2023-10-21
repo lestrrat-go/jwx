@@ -3,9 +3,9 @@ package jwxtest
 import (
 	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -15,12 +15,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,11 +51,9 @@ func GenerateRsaPublicJwk() (jwk.Key, error) {
 }
 
 func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error) {
-	var crv elliptic.Curve
-	if tmp, ok := ecutil.CurveForAlgorithm(alg); ok {
-		crv = tmp
-	} else {
-		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
+	crv, err := ourecdsa.CurveFromAlgorithm(alg)
+	if err != nil {
+		return nil, fmt.Errorf(`unknown elliptic curve algorithm: %w`, err)
 	}
 
 	return ecdsa.GenerateKey(crv, rand.Reader)
@@ -119,8 +116,8 @@ func GenerateEd25519Jwk() (jwk.Key, error) {
 	return k, nil
 }
 
-func GenerateX25519Key() (x25519.PrivateKey, error) {
-	_, priv, err := x25519.GenerateKey(rand.Reader)
+func GenerateX25519Key() (*ecdh.PrivateKey, error) {
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	return priv, err
 }
 

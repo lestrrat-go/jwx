@@ -6,45 +6,7 @@ import (
 	"crypto/elliptic"
 	"math/big"
 	"sync"
-
-	"github.com/lestrrat-go/jwx/v3/jwa"
 )
-
-// data for available curves. Some algorithms may be compiled in/out
-var curveToAlg = map[elliptic.Curve]jwa.EllipticCurveAlgorithm{}
-var algToCurve = map[jwa.EllipticCurveAlgorithm]elliptic.Curve{}
-var availableAlgs []jwa.EllipticCurveAlgorithm
-var availableCrvs []elliptic.Curve
-
-func RegisterCurve(crv elliptic.Curve, alg jwa.EllipticCurveAlgorithm) {
-	curveToAlg[crv] = alg
-	algToCurve[alg] = crv
-	availableAlgs = append(availableAlgs, alg)
-	availableCrvs = append(availableCrvs, crv)
-}
-
-func IsAvailable(alg jwa.EllipticCurveAlgorithm) bool {
-	_, ok := algToCurve[alg]
-	return ok
-}
-
-func AvailableAlgorithms() []jwa.EllipticCurveAlgorithm {
-	return availableAlgs
-}
-
-func AvailableCurves() []elliptic.Curve {
-	return availableCrvs
-}
-
-func AlgorithmForCurve(crv elliptic.Curve) (jwa.EllipticCurveAlgorithm, bool) {
-	v, ok := curveToAlg[crv]
-	return v, ok
-}
-
-func CurveForAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, bool) {
-	v, ok := algToCurve[alg]
-	return v, ok
-}
 
 const (
 	// size of buffer that needs to be allocated for EC521 curve
