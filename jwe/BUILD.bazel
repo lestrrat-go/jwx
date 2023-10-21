@@ -20,7 +20,6 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
-        "//internal/iter",
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
@@ -31,7 +30,6 @@ go_library(
         "//jwe/internal/keygen",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
         "@org_golang_x_crypto//pbkdf2",
     ],

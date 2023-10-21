@@ -21,7 +21,6 @@ go_library(
     deps = [
         "//:jwx",
         "//internal/base64",
-        "//internal/iter",
         "//internal/json",
         "//internal/pool",
         "//jwa",
@@ -30,7 +29,6 @@ go_library(
         "//jws",
         "//jwt/internal/types",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

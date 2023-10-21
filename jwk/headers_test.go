@@ -1,7 +1,6 @@
 package jwk_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -50,19 +49,9 @@ func TestHeader(t *testing.T) {
 
 		t.Run("Private params", func(t *testing.T) {
 			t.Parallel()
-			pp, err := h.AsMap(context.Background())
-			if !assert.NoError(t, err, `h.AsMap should succeed`) {
-				return
-			}
-
-			v, ok := pp["private"]
-			if !assert.True(t, ok, "key 'private' should exists") {
-				return
-			}
-
-			if !assert.Equal(t, v, "boofoo", "value for 'private' should match") {
-				return
-			}
+			var v string
+			require.NoError(t, h.Get(`private`, &v), `h.Get should succeed`)
+			require.Equal(t, v, "boofoo", "value for 'private' should match")
 		})
 	})
 	t.Run("RoundtripError", func(t *testing.T) {

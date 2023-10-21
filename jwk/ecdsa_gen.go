@@ -4,17 +4,14 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -138,55 +135,6 @@ func (h *ecdsaPublicKey) Y() []byte {
 	return h.y
 }
 
-func (h *ecdsaPublicKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSACrvKey, Value: *(h.crv)})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	if h.y != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSAYKey, Value: h.y})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *ecdsaPublicKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *ecdsaPublicKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -225,7 +173,7 @@ func (h *ecdsaPublicKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`ecdsaPublicKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -462,7 +410,11 @@ func (k *ecdsaPublicKey) Remove(key string) error {
 }
 
 func (k *ecdsaPublicKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`ecdsaPublicKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *ecdsaPublicKey) DecodeCtx() json.DecodeCtx {
@@ -606,9 +558,55 @@ LOOP:
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 11)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.EC
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.crv != nil {
+		data[ECDSACrvKey] = *(h.crv)
+		fields = append(fields, ECDSACrvKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.x != nil {
+		data[ECDSAXKey] = h.x
+		fields = append(fields, ECDSAXKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	if h.y != nil {
+		data[ECDSAYKey] = h.y
+		fields = append(fields, ECDSAYKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -642,28 +640,48 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
-func (h *ecdsaPublicKey) Iterate(ctx context.Context) HeaderIterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *ecdsaPublicKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *ecdsaPublicKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+func (h *ecdsaPublicKey) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 11+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.crv != nil {
+		keys = append(keys, ECDSACrvKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		keys = append(keys, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		keys = append(keys, KeyUsageKey)
+	}
+	if h.x != nil {
+		keys = append(keys, ECDSAXKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	if h.y != nil {
+		keys = append(keys, ECDSAYKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 type ECDSAPrivateKey interface {
@@ -783,58 +801,6 @@ func (h *ecdsaPrivateKey) Y() []byte {
 	return h.y
 }
 
-func (h *ecdsaPrivateKey) makePairs() []*HeaderPair {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	var pairs []*HeaderPair
-	pairs = append(pairs, &HeaderPair{Key: "kty", Value: jwa.EC})
-	if h.algorithm != nil {
-		pairs = append(pairs, &HeaderPair{Key: AlgorithmKey, Value: *(h.algorithm)})
-	}
-	if h.crv != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSACrvKey, Value: *(h.crv)})
-	}
-	if h.d != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSADKey, Value: h.d})
-	}
-	if h.keyID != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyIDKey, Value: *(h.keyID)})
-	}
-	if h.keyOps != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyOpsKey, Value: *(h.keyOps)})
-	}
-	if h.keyUsage != nil {
-		pairs = append(pairs, &HeaderPair{Key: KeyUsageKey, Value: *(h.keyUsage)})
-	}
-	if h.x != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSAXKey, Value: h.x})
-	}
-	if h.x509CertChain != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertChainKey, Value: h.x509CertChain})
-	}
-	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
-	}
-	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
-	}
-	if h.x509URL != nil {
-		pairs = append(pairs, &HeaderPair{Key: X509URLKey, Value: *(h.x509URL)})
-	}
-	if h.y != nil {
-		pairs = append(pairs, &HeaderPair{Key: ECDSAYKey, Value: h.y})
-	}
-	for k, v := range h.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	return pairs
-}
-
-func (h *ecdsaPrivateKey) PrivateParams() map[string]interface{} {
-	return h.privateParams
-}
-
 func (h *ecdsaPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -875,7 +841,7 @@ func (h *ecdsaPrivateKey) Get(name string, dst interface{}) error {
 	switch name {
 	case KeyTypeKey:
 		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return fmt.Errorf(`ecdsaPrivateKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
@@ -1128,7 +1094,11 @@ func (k *ecdsaPrivateKey) Remove(key string) error {
 }
 
 func (k *ecdsaPrivateKey) Clone() (Key, error) {
-	return cloneKey(k)
+	key, err := cloneKey(k)
+	if err != nil {
+		return nil, fmt.Errorf(`ecdsaPrivateKey.Clone: %w`, err)
+	}
+	return key, nil
 }
 
 func (k *ecdsaPrivateKey) DecodeCtx() json.DecodeCtx {
@@ -1280,9 +1250,59 @@ LOOP:
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 12)
-	for _, pair := range h.makePairs() {
-		fields = append(fields, pair.Key.(string))
-		data[pair.Key.(string)] = pair.Value
+	data[KeyTypeKey] = jwa.EC
+	fields = append(fields, KeyTypeKey)
+	if h.algorithm != nil {
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
+	}
+	if h.crv != nil {
+		data[ECDSACrvKey] = *(h.crv)
+		fields = append(fields, ECDSACrvKey)
+	}
+	if h.d != nil {
+		data[ECDSADKey] = h.d
+		fields = append(fields, ECDSADKey)
+	}
+	if h.keyID != nil {
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
+	}
+	if h.x != nil {
+		data[ECDSAXKey] = h.x
+		fields = append(fields, ECDSAXKey)
+	}
+	if h.x509CertChain != nil {
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
+	}
+	if h.y != nil {
+		data[ECDSAYKey] = h.y
+		fields = append(fields, ECDSAYKey)
+	}
+	for k, v := range h.privateParams {
+		data[k] = v
+		fields = append(fields, k)
 	}
 
 	sort.Strings(fields)
@@ -1316,26 +1336,49 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
-func (h *ecdsaPrivateKey) Iterate(ctx context.Context) HeaderIterator {
-	pairs := h.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (h *ecdsaPrivateKey) Walk(ctx context.Context, visitor HeaderVisitor) error {
-	return iter.WalkMap(ctx, h, visitor)
-}
-
-func (h *ecdsaPrivateKey) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, h)
+func (h *ecdsaPrivateKey) Keys() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	keys := make([]string, 0, 12+len(h.privateParams))
+	keys = append(keys, KeyTypeKey)
+	if h.algorithm != nil {
+		keys = append(keys, AlgorithmKey)
+	}
+	if h.crv != nil {
+		keys = append(keys, ECDSACrvKey)
+	}
+	if h.d != nil {
+		keys = append(keys, ECDSADKey)
+	}
+	if h.keyID != nil {
+		keys = append(keys, KeyIDKey)
+	}
+	if h.keyOps != nil {
+		keys = append(keys, KeyOpsKey)
+	}
+	if h.keyUsage != nil {
+		keys = append(keys, KeyUsageKey)
+	}
+	if h.x != nil {
+		keys = append(keys, ECDSAXKey)
+	}
+	if h.x509CertChain != nil {
+		keys = append(keys, X509CertChainKey)
+	}
+	if h.x509CertThumbprint != nil {
+		keys = append(keys, X509CertThumbprintKey)
+	}
+	if h.x509CertThumbprintS256 != nil {
+		keys = append(keys, X509CertThumbprintS256Key)
+	}
+	if h.x509URL != nil {
+		keys = append(keys, X509URLKey)
+	}
+	if h.y != nil {
+		keys = append(keys, ECDSAYKey)
+	}
+	for k := range h.privateParams {
+		keys = append(keys, k)
+	}
+	return keys
 }

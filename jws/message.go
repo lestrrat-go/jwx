@@ -2,7 +2,6 @@ package jws
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -102,10 +101,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
 func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	hdrs, err := mergeHeaders(ctx, s.headers, s.protected)
+	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
 	}
@@ -355,7 +351,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	var wrote bool
 
 	if hdr := sig.headers; hdr != nil {
-		hdrjs, err := hdr.MarshalJSON()
+		hdrjs, err := json.Marshal(hdr)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "header" (flattened format): %w`, err)
 		}
@@ -372,7 +368,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	buf.WriteRune('"')
 
 	if protected := sig.protected; protected != nil {
-		protectedbuf, err := protected.MarshalJSON()
+		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
 		}
@@ -406,7 +402,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		buf.WriteRune('{')
 		var wrote bool
 		if hdr := sig.headers; hdr != nil {
-			hdrbuf, err := hdr.MarshalJSON()
+			hdrbuf, err := json.Marshal(hdr)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to marshal "header" for signature #%d: %w`, i+1, err)
 			}
@@ -416,7 +412,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		}
 
 		if protected := sig.protected; protected != nil {
-			protectedbuf, err := protected.MarshalJSON()
+			protectedbuf, err := json.Marshal(protected)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
