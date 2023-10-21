@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -31,7 +32,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1868,7 +1868,7 @@ func TestAlgorithmsForKey(t *testing.T) {
 		},
 		{
 			Name:     "x25519.PublicKey",
-			Key:      x25519.PublicKey(nil),
+			Key:      &ecdh.PublicKey{},
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
 		},
 	}

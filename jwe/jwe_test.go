@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -21,7 +22,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -454,12 +454,10 @@ func TestEncode_ECDH(t *testing.T) {
 }
 
 func TestEncode_X25519(t *testing.T) {
-	pubkey, privkey, err := x25519.GenerateKey(rand.Reader)
-	if !assert.NoError(t, err, `x25519.GenerateKey should succeed`) {
-		return
-	}
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.X25519().GenerateKey should succeed`)
 
-	testEncodeECDHWithKey(t, privkey, pubkey)
+	testEncodeECDHWithKey(t, priv, priv.Public())
 }
 
 func Test_GHIssue207(t *testing.T) {
