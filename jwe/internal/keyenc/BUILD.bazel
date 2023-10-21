@@ -14,8 +14,6 @@ go_library(
         "//jwe/internal/cipher",
         "//jwe/internal/concatkdf",
         "//jwe/internal/keygen",
-        "//x25519",
-        "@org_golang_x_crypto//curve25519",
         "@org_golang_x_crypto//pbkdf2",
     ],
 )

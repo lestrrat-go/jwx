@@ -7,7 +7,7 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//jwk",
-        "@com_github_lestrrat_go_blackmagic//:go_default_library",
+        "@com_github_lestrrat_go_blackmagic//:blackmagic",
         "@org_golang_x_crypto//ed25519",
     ],
 )
