@@ -121,9 +121,9 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("Encode() ([]byte, error)")
 	o.L("Decode([]byte) error")
 
-	o.L("Clone(context.Context) (Headers, error)")
-	o.L("Copy(context.Context, Headers) error")
-	o.L("Merge(context.Context, Headers) (Headers, error)")
+	o.L("Clone() (Headers, error)")
+	o.L("Copy(Headers) error")
+	o.L("Merge(Headers) (Headers, error)")
 
 	o.LL("// Keys returns a list of the keys contained in this header.")
 	o.L("Keys() []string")

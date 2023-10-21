@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -456,7 +455,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error {
 	// Recipients in this case should not contain the content encryption key,
 	// so move that out
-	hdrs, err := protected.Clone(context.TODO())
+	hdrs, err := protected.Clone()
 	if err != nil {
 		return fmt.Errorf(`failed to clone headers: %w`, err)
 	}
@@ -503,16 +502,15 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 		return nil, fmt.Errorf(`invalid protected header`)
 	}
 
-	ctx := context.TODO()
-	hcopy, err := m.protectedHeaders.Clone(ctx)
+	hcopy, err := m.protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to copy protected header: %w`, err)
 	}
-	hcopy, err = hcopy.Merge(ctx, m.unprotectedHeaders)
+	hcopy, err = hcopy.Merge(m.unprotectedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge unprotected header: %w`, err)
 	}
-	hcopy, err = hcopy.Merge(ctx, recipient.Headers())
+	hcopy, err = hcopy.Merge(recipient.Headers())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge recipient header: %w`, err)
 	}

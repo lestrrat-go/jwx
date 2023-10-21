@@ -4,7 +4,6 @@ package jwe
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 	"sync"
@@ -79,9 +78,9 @@ type Headers interface {
 	Has(string) bool
 	Encode() ([]byte, error)
 	Decode([]byte) error
-	Clone(context.Context) (Headers, error)
-	Copy(context.Context, Headers) error
-	Merge(context.Context, Headers) (Headers, error)
+	Clone() (Headers, error)
+	Copy(Headers) error
+	Merge(Headers) (Headers, error)
 
 	// Keys returns a list of the keys contained in this header.
 	Keys() []string

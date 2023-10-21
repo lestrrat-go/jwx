@@ -1,7 +1,6 @@
 package jwe
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -32,15 +31,15 @@ func (h *stdHeaders) isZero() bool {
 		len(h.privateParams) == 0
 }
 
-func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {
+func (h *stdHeaders) Clone() (Headers, error) {
 	dst := NewHeaders()
-	if err := h.Copy(ctx, dst); err != nil {
+	if err := h.Copy(dst); err != nil {
 		return nil, fmt.Errorf(`failed to copy header contents to new object: %w`, err)
 	}
 	return dst, nil
 }
 
-func (h *stdHeaders) Copy(_ context.Context, dst Headers) error {
+func (h *stdHeaders) Copy(dst Headers) error {
 	for _, key := range h.Keys() {
 		var v interface{}
 		if err := h.Get(key, &v); err != nil {
@@ -54,17 +53,17 @@ func (h *stdHeaders) Copy(_ context.Context, dst Headers) error {
 	return nil
 }
 
-func (h *stdHeaders) Merge(ctx context.Context, h2 Headers) (Headers, error) {
+func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
 	h3 := NewHeaders()
 
 	if h != nil {
-		if err := h.Copy(ctx, h3); err != nil {
+		if err := h.Copy(h3); err != nil {
 			return nil, fmt.Errorf(`failed to copy headers from receiver: %w`, err)
 		}
 	}
 
 	if h2 != nil {
-		if err := h2.Copy(ctx, h3); err != nil {
+		if err := h2.Copy(h3); err != nil {
 			return nil, fmt.Errorf(`failed to copy headers from argument: %w`, err)
 		}
 	}
