@@ -6,6 +6,7 @@ package jwe
 import (
 	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
@@ -23,7 +24,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 var muSettings sync.RWMutex
@@ -167,7 +167,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 			}
 
 			switch key := rawKey.(type) {
-			case x25519.PublicKey:
+			case *ecdh.PublicKey:
 				var apu, apv []byte
 				if hdrs := b.headers; hdrs != nil {
 					apu = hdrs.AgreementPartyUInfo()

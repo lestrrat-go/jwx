@@ -5,7 +5,7 @@ go_library(
     srcs = ["mapiter.go"],
     importpath = "github.com/lestrrat-go/jwx/v3/internal/iter",
     visibility = ["//:__subpackages__"],
-    deps = ["@com_github_lestrrat_go_iter//mapiter:go_default_library"],
+    deps = ["@com_github_lestrrat_go_iter//mapiter"],
 )
 
 alias(
