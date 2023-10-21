@@ -2,8 +2,6 @@ module github.com/lestrrat-go/jwx/v3/cmd/jwx
 
 go 1.20
 
-toolchain go1.21.1
-
 require (
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 	github.com/urfave/cli/v2 v2.24.4
