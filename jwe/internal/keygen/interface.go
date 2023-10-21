@@ -1,10 +1,10 @@
 package keygen
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 type Generator interface {
@@ -32,7 +32,7 @@ type X25519 struct {
 	algorithm jwa.KeyEncryptionAlgorithm
 	enc       jwa.ContentEncryptionAlgorithm
 	keysize   int
-	pubkey    x25519.PublicKey
+	pubkey    *ecdh.PublicKey
 }
 
 // ByteKey is a generated key that only has the key's byte buffer

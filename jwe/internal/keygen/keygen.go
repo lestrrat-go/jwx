@@ -2,19 +2,17 @@ package keygen
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/curve25519"
-
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 // Bytes returns the byte from this ByteKey
@@ -95,7 +93,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 }
 
 // NewX25519 creates a new key generator using ECDH-ES
-func NewX25519(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey x25519.PublicKey) (*X25519, error) {
+func NewX25519(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdh.PublicKey) (*X25519, error) {
 	return &X25519{
 		algorithm: alg,
 		enc:       enc,
@@ -111,7 +109,7 @@ func (g X25519) Size() int {
 
 // Generate generates new keys using ECDH-ES
 func (g X25519) Generate() (ByteSource, error) {
-	pub, priv, err := x25519.GenerateKey(rand.Reader)
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate key for X25519: %w`, err)
 	}
@@ -126,7 +124,7 @@ func (g X25519) Generate() (ByteSource, error) {
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, uint32(g.keysize)*8)
 
-	zBytes, err := curve25519.X25519(priv.Seed(), g.pubkey)
+	zBytes, err := priv.ECDH(g.pubkey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to compute Z: %w`, err)
 	}
@@ -137,7 +135,7 @@ func (g X25519) Generate() (ByteSource, error) {
 	}
 
 	return ByteWithECPublicKey{
-		PublicKey: pub,
+		PublicKey: priv.PublicKey(),
 		ByteKey:   ByteKey(kek),
 	}, nil
 }

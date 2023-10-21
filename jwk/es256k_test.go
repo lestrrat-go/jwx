@@ -11,14 +11,14 @@ import (
 	"testing"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/stretchr/testify/require"
 )
 
 func TestES256K(t *testing.T) {
-	require.True(t, ecutil.IsAvailable(jwa.Secp256k1), `jwa.Secp256k1 should be available`)
+	require.True(t, ourecdsa.IsCurveAvailable(jwa.Secp256k1), `jwa.Secp256k1 should be available`)
 }
 
 func BenchmarkKeyInstantiation(b *testing.B) {

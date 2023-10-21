@@ -8,7 +8,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -16,12 +15,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 var registry = json.NewRegistry()
@@ -33,6 +30,150 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 	return n.Bytes(), nil
 }
 
+func init() {
+	if err := RegisterProbeField(reflect.StructField{
+		Name: "Kty",
+		Type: reflect.TypeOf(""),
+		Tag:  `json:"kty"`,
+	}); err != nil {
+		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
+	}
+	if err := RegisterProbeField(reflect.StructField{
+		Name: "D",
+		Type: reflect.TypeOf(json.RawMessage(nil)),
+		Tag:  `json:"d,omitempty"`,
+	}); err != nil {
+		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
+	}
+}
+
+// # Registering a key type
+//
+// You can add the ability to use a JWK that this library does not
+// implement out of the box. You can do this by registering your own
+// KeyParser instance.
+//
+//  func init() {
+//    // optional
+//    jwk.RegiserProbeField(reflect.StructField{Name: "SomeHint", Type: reflect.TypeOf(""), Tag: `json:"some_hint"`})
+//    jwk.RegisterKeyParser(&MyKeyParser{})
+//  }
+//
+// In order to understand how this works, you need to understand
+// how the `jwk.ParseKey()` works.
+//
+// The first thing that occurs when parsing a key is a partial
+// unmarshaling of the payload into a hint / probe object.
+//
+// Because the `json.Unmarshal` works by calling the `UnmarshalJSON`
+// method on a concrete object, we need to create one first. In order
+// to create the appropriate Go object, we need to peek into the
+// payload and figure out what type of key it is.
+//
+// In order to do this, we create a new KeyProber to partially populate
+// the object with hints from the payload. For example, a JWK representing
+// an RSA key would look like:
+//
+//  { "kty": "RSA", "n": ..., "e": ..., ... }
+//
+// Therefore, a KeyProbe that can unmarshal the value of the field "kty"
+// would be able to tell us that this is an RSA key.
+//
+// Also, if said payload contains some value in the "d" field, we can
+// also tell that this is a private key, as only private keys need
+// this field.
+//
+// For most cases, the default KeyProbe implementation should be sufficient.
+// You would be able to query "kty" and "d" fields via the `Get()` method.
+//
+//  var kty string
+//  _ = probe.Get("Kty", &kty)
+//
+// However, if you need extra pieces of information, you can specify
+// additional fields to be probed. For example, if you want to know the
+// value of the field "my_hint" (which holds a string value) from the payload,
+// you can register it to be probed by registering an additional probe field like this:
+//
+//  jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//
+// Once the probe is done, the library will iterate over the registered parsers
+// and attempt to parse the key by calling their `ParseKey()` methods.
+// The parsers will be called in reverse order that they were registered.
+// This means that it will try all parsers that were registered by third
+// parties, and once those are exhausted, the default parser will be used.
+//
+// Each parser's `ParseKey()`` method will receive three arguments: the probe object, a
+// KeyUnmarshaler, and the raw payload. The probe object can be used
+// as a hint to determine what kind of key to instantiate. An example
+// pseudocode may look like this:
+//
+//  var kty string
+//  _ = probe.Get("Kty", &kty)
+//  switch kty {
+//  case "RSA":
+//    // create an RSA key
+//  case "EC":
+//    // create an EC key
+//  ...
+//  }
+//
+// The `KeyUnmarshaler` is a thin wrapper around `json.Unmarshal` it
+// works almost identical to `json.Unmarshal`, but it allows us to
+// add extra magic that is specific to this library before calling
+// the actual `json.Unmarshal`. If you want to try to unmarshal the
+// payload, please use this instead of `json.Unmarshal`.
+//
+//  func init() {
+//    jwk.RegisterFieldProbe(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//    jwk.RegisterParser(&MyKeyParser{})
+//  }
+//
+//  type MyKeyParser struct { ... }
+//  func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
+//    // Create concrete type
+//    var hint string
+//    if err := probe.Get("MyHint", &hint); err != nil {
+//       // if it doesn't have the `my_hint` field, it probably means
+//       // it's not for us, so we return ContinueParseError so that
+//       // the next parser can pick it up
+//       return nil, jwk.ContinueParseError()
+//    }
+//
+//    // Use hint to determine concrete key type
+//    var key jwk.Key
+//    switch hint {
+//    case ...:
+//     key = = myNewAwesomeJWK()
+//    ...
+//
+//    return unmarshaler.Unmarshal(data, key)
+//  }
+//
+// This functionality should be considered experimental. While we
+// expect that the functionality itself will remain, the API may
+// change in backward incompatible ways, even during minor version
+// releases.
+
+var cpe = &continueError{}
+
+// ContinueError returns an opaque error that can be returned
+// when a `KeyParser` or `KeyConverter` cannot handle the given payload,
+// but would like the process to continue with the next handler.
+func ContinueError() error {
+	return cpe
+}
+
+type continueError struct{}
+
+func (e *continueError) Error() string {
+	return "continue parsing"
+}
+
+// IsContinueError returns true if the given error is a ContinueError.
+func IsContinueError(err error) bool {
+	return errors.Is(err, &continueError{})
+}
+
 // FromRaw creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
@@ -41,84 +182,21 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 //   - "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
 //   - "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
+//   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey creates an OKP based key
 //   - []byte creates a symmetric key
-func FromRaw(key interface{}) (Key, error) {
-	if key == nil {
+func FromRaw(raw interface{}) (Key, error) {
+	if raw == nil {
 		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
 	}
 
-	var ptr interface{}
-	switch v := key.(type) {
-	case rsa.PrivateKey:
-		ptr = &v
-	case rsa.PublicKey:
-		ptr = &v
-	case ecdsa.PrivateKey:
-		ptr = &v
-	case ecdsa.PublicKey:
-		ptr = &v
-	default:
-		ptr = v
+	muKeyConverters.RLock()
+	conv, ok := keyConverters[reflect.TypeOf(raw)]
+	muKeyConverters.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf(`jwk.FromRaw: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	switch rawKey := ptr.(type) {
-	case *rsa.PrivateKey:
-		k := newRSAPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *rsa.PublicKey:
-		k := newRSAPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *ecdsa.PrivateKey:
-		k := newECDSAPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case *ecdsa.PublicKey:
-		k := newECDSAPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case ed25519.PrivateKey:
-		k := newOKPPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case ed25519.PublicKey:
-		k := newOKPPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case x25519.PrivateKey:
-		k := newOKPPrivateKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case x25519.PublicKey:
-		k := newOKPPublicKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	case []byte:
-		k := newSymmetricKey()
-		if err := k.FromRaw(rawKey); err != nil {
-			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, rawKey, err)
-		}
-		return k, nil
-	default:
-		return nil, fmt.Errorf(`invalid key type '%T' for jwk.New`, key)
-	}
+	return conv.FromRaw(raw)
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -168,7 +246,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 
 	jk, err := FromRaw(v)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to convert key into JWK: %w`, err)
+		return nil, fmt.Errorf(`jwk.PublicKeyOf: failed to convert key into JWK: %w`, err)
 	}
 
 	return jk.PublicKey()
@@ -181,57 +259,33 @@ func PublicKeyOf(v interface{}) (Key, error) {
 // The returned value will always be a pointer to the public key,
 // except when a []byte (e.g. symmetric key, ed25519 key) is passed to `v`.
 // In this case, the same []byte value is returned.
+//
+// This function must go through converting the object once to a jwk.Key,
+// then back to a raw key, so it's not exactly efficient.
 func PublicRawKeyOf(v interface{}) (interface{}, error) {
-	if pk, ok := v.(PublicKeyer); ok {
-		pubk, err := pk.PublicKey()
+	pk, ok := v.(PublicKeyer)
+	if !ok {
+		k, err := FromRaw(v)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to obtain public key from %T: %w`, v, err)
+			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.Key: %w`, err)
 		}
 
-		var raw interface{}
-		if err := pubk.Raw(&raw); err != nil {
-			return nil, fmt.Errorf(`failed to obtain raw key from %T: %w`, pubk, err)
+		pk, ok = k.(PublicKeyer)
+		if !ok {
+			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.PublicKeyer: %w`, err)
 		}
-		return raw, nil
 	}
 
-	// This may be a silly idea, but if the user gave us a non-pointer value...
-	var ptr interface{}
-	switch v := v.(type) {
-	case rsa.PrivateKey:
-		ptr = &v
-	case rsa.PublicKey:
-		ptr = &v
-	case ecdsa.PrivateKey:
-		ptr = &v
-	case ecdsa.PublicKey:
-		ptr = &v
-	default:
-		ptr = v
+	pubk, err := pk.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain public key from %T: %w`, v, err)
 	}
 
-	switch x := ptr.(type) {
-	case *rsa.PrivateKey:
-		return &x.PublicKey, nil
-	case *rsa.PublicKey:
-		return x, nil
-	case *ecdsa.PrivateKey:
-		return &x.PublicKey, nil
-	case *ecdsa.PublicKey:
-		return x, nil
-	case ed25519.PrivateKey:
-		return x.Public(), nil
-	case ed25519.PublicKey:
-		return x, nil
-	case x25519.PrivateKey:
-		return x.Public(), nil
-	case x25519.PublicKey:
-		return x, nil
-	case []byte:
-		return x, nil
-	default:
-		return nil, fmt.Errorf(`invalid key type passed to PublicKeyOf (%T)`, v)
+	var raw interface{}
+	if err := pubk.Raw(&raw); err != nil {
+		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
 	}
+	return raw, nil
 }
 
 const (
@@ -431,56 +485,32 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		return FromRaw(raw)
 	}
 
-	var hint struct {
-		Kty string          `json:"kty"`
-		D   json.RawMessage `json:"d"`
+	probe, err := keyProbe.Probe(data)
+	if err != nil {
+		return nil, fmt.Errorf(`jwk.Parse: failed to probe data: %w`, err)
 	}
 
-	if err := json.Unmarshal(data, &hint); err != nil {
-		return nil, fmt.Errorf(`failed to unmarshal JSON into key hint: %w`, err)
-	}
+	unmarshaler := keyUnmarshaler{localReg: localReg}
 
-	var key Key
-	switch jwa.KeyType(hint.Kty) {
-	case jwa.RSA:
-		if len(hint.D) > 0 {
-			key = newRSAPrivateKey()
-		} else {
-			key = newRSAPublicKey()
+	muKeyParser.RLock()
+	parsers := make([]KeyParser, len(keyParsers))
+	copy(parsers, keyParsers)
+	muKeyParser.RUnlock()
+
+	for i := len(parsers) - 1; i >= 0; i-- {
+		parser := parsers[i]
+		key, err := parser.ParseKey(probe, &unmarshaler, data)
+		if err == nil {
+			return key, nil
 		}
-	case jwa.EC:
-		if len(hint.D) > 0 {
-			key = newECDSAPrivateKey()
-		} else {
-			key = newECDSAPublicKey()
-		}
-	case jwa.OctetSeq:
-		key = newSymmetricKey()
-	case jwa.OKP:
-		if len(hint.D) > 0 {
-			key = newOKPPrivateKey()
-		} else {
-			key = newOKPPublicKey()
-		}
-	default:
-		return nil, fmt.Errorf(`invalid key type from JSON (%s)`, hint.Kty)
-	}
 
-	if localReg != nil {
-		dcKey, ok := key.(json.DecodeCtxContainer)
-		if !ok {
-			return nil, fmt.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
+		if IsContinueError(err) {
+			continue
 		}
-		dc := json.NewDecodeCtx(localReg)
-		dcKey.SetDecodeCtx(dc)
-		defer func() { dcKey.SetDecodeCtx(nil) }()
-	}
 
-	if err := json.Unmarshal(data, key); err != nil {
-		return nil, fmt.Errorf(`failed to unmarshal JSON into key (%T): %w`, key, err)
+		return nil, err
 	}
-
-	return key, nil
+	return nil, fmt.Errorf(`jwk.Parse: no parser was able to parse the key`)
 }
 
 // Parse parses JWK from the incoming []byte.
@@ -720,14 +750,6 @@ func asnEncode(key Key) (string, []byte, error) {
 //	_ = key.Get(`x-birthday`, &bday)
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
-}
-
-func AvailableCurves() []elliptic.Curve {
-	return ecutil.AvailableCurves()
-}
-
-func CurveForAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, bool) {
-	return ecutil.CurveForAlgorithm(alg)
 }
 
 // Equal compares two keys and returns true if they are equal. The comparison
