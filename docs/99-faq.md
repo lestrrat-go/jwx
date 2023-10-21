@@ -150,4 +150,18 @@ Based on the reasons above, we decided to **decouple the option data** and the *
 Yes, we understand that this way we introduce more boilerplate code in each method's starting section. But our design choice is that this way fulfills our goals better, namely that **the overall structure is simpler**, **we do not expose unnecessary internal data to the end-user**, and because the options are all data, it's far **easier to re-use the same options for multiple methods** (as we do in cases such as `jws.WithKey()`, for example).
 
 
+## Design
 
+### Why does this library not provide a method similar to `Range()`?
+
+A method such as `(*sync.Map).Range` requires that the callback function does not block the execution of the `Range` method itself. However, we would like to avoid modifications to the objects while our `Range`, if provided, is being executed, leading us to use at least a read lock a la `(*sync.RWMutex).RLock`. That causes problems in code like the following:
+
+```
+obj.Range(func(k string, v interface{}) bool) { // This needs a read lock
+    obj.Remove(k) // This needs a write lock
+}
+```
+
+`sync.Map` actually solves this problem, but it involves a fairly complicated workaround. While it is theoretically possible to implement the same logic in this package, we have decided that it is not worth the effort for our purposes.
+
+If you would like to iterate through the keys,  use `Keys()` to retireve the list of keys. This also requires a read lock, but by necessity you can only proceed to execute the next piece of code only after the read lock has been released.

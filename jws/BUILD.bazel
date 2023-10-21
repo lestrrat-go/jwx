@@ -32,7 +32,6 @@ go_library(
         "//jwa",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

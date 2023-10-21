@@ -4,6 +4,7 @@ package jwt
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -16,15 +17,25 @@ import (
 // Note that each call to Claim() overwrites the value set from the
 // previous call.
 type Builder struct {
-	claims []*ClaimPair
+	mu     sync.Mutex
+	claims map[string]interface{}
 }
 
 func NewBuilder() *Builder {
 	return &Builder{}
 }
 
+func (b *Builder) init() {
+	if b.claims == nil {
+		b.claims = make(map[string]interface{})
+	}
+}
+
 func (b *Builder) Claim(name string, value interface{}) *Builder {
-	b.claims = append(b.claims, &ClaimPair{Key: name, Value: value})
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.init()
+	b.claims[name] = value
 	return b
 }
 
@@ -59,11 +70,18 @@ func (b *Builder) Subject(v string) *Builder {
 // Build creates a new token based on the claims that the builder has received
 // so far. If a claim cannot be set, then the method returns a nil Token with
 // a en error as a second return value
+//
+// Once `Build()` is called, all claims are cleared from the Builder, and the
+// Builder can be reused to build another token
 func (b *Builder) Build() (Token, error) {
+	b.mu.Lock()
+	claims := b.claims
+	b.claims = nil
+	b.mu.Unlock()
 	tok := New()
-	for _, claim := range b.claims {
-		if err := tok.Set(claim.Key.(string), claim.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set claim %q: %w`, claim.Key.(string), err)
+	for k, v := range claims {
+		if err := tok.Set(k, v); err != nil {
+			return nil, fmt.Errorf(`failed to set claim %q: %w`, k, err)
 		}
 	}
 	return tok, nil

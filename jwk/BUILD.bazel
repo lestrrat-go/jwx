@@ -32,7 +32,6 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
-        "//internal/iter",
         "//internal/json",
         "//internal/pool",
         "//jwa",
@@ -41,8 +40,6 @@ go_library(
         "//jwk/ecdsa",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
         "@com_github_lestrrat_go_httprc//:httprc",
-        "@com_github_lestrrat_go_iter//arrayiter",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

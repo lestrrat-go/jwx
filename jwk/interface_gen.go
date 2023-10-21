@@ -3,7 +3,6 @@
 package jwk
 
 import (
-	"context"
 	"crypto"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
@@ -85,20 +84,8 @@ type Key interface {
 	// hashing algorithm, according to RFC 7638
 	Thumbprint(crypto.Hash) ([]byte, error)
 
-	// Iterate returns an iterator that returns all keys and values.
-	// See github.com/lestrrat-go/iter for a description of the iterator.
-	Iterate(ctx context.Context) HeaderIterator
-
-	// Walk is a utility tool that allows a visitor to iterate all keys and values
-	Walk(context.Context, HeaderVisitor) error
-
-	// AsMap is a utility tool that returns a new map that contains the same fields as the source
-	AsMap(context.Context) (map[string]interface{}, error)
-
-	// PrivateParams returns the non-standard elements in the source structure
-	// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.
-	// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead
-	PrivateParams() map[string]interface{}
+	// Keys returns a list of the keys contained in this jwk.Key.
+	Keys() []string
 
 	// Clone creates a new instance of the same type
 	Clone() (Key, error)
@@ -132,6 +119,4 @@ type Key interface {
 	X509CertThumbprint() string
 	// X509CertThumbprintS256 returns `x5t#S256` of a JWK
 	X509CertThumbprintS256() string
-
-	makePairs() []*HeaderPair
 }

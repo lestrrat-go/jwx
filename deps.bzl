@@ -50,13 +50,6 @@ def go_dependencies():
         sum = "h1:qgmgIRhpvBqexMJjA/PmwSvhNk679oqD1RbovdCGW8k=",
         version = "v1.0.6",
     )
-    go_repository(
-        name = "com_github_lestrrat_go_iter",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/lestrrat-go/iter",
-        sum = "h1:gMXo1q4c2pHmC3dn8LzRhJfP1ceCbgSiT9lUydIzltI=",
-        version = "v1.0.2",
-    )
 
     go_repository(
         name = "com_github_lestrrat_go_option",

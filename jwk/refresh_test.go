@@ -17,14 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:revive,golint
-func checkAccessCount(t *testing.T, ctx context.Context, src jwk.Set, expected ...int) bool {
+func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 	t.Helper()
 
-	iter := src.Keys(ctx)
-	iter.Next(ctx)
+	key, ok := src.Key(0)
+	require.True(t, ok, `src.Key(0) should succeed`)
 
-	key := iter.Pair().Value.(jwk.Key)
 	var v float64
 	require.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`)
 
@@ -97,23 +95,13 @@ func TestCache(t *testing.T) {
 			return
 		}
 
-		iter := set.Keys(ctx)
-		citer := cached.Keys(ctx)
-		for i := 0; i < numKeys; i++ {
+		for i := 0; i < set.Len(); i++ {
 			k, err := set.Key(i)
 			ck, cerr := cached.Key(i)
 			if !assert.Equal(t, k, ck, `key %d should match`, i) {
 				return
 			}
 			if !assert.Equal(t, err, cerr, `error %d should match`, i) {
-				return
-			}
-
-			if !assert.Equal(t, iter.Next(ctx), citer.Next(ctx), `iter.Next should match`) {
-				return
-			}
-
-			if !assert.Equal(t, iter.Pair(), citer.Pair(), `iter.Pair should match`) {
 				return
 			}
 		}
@@ -159,7 +147,7 @@ func TestCache(t *testing.T) {
 				if !assert.NoError(t, err, `af.Get should succeed`) {
 					return
 				}
-				if !checkAccessCount(t, ctx, ks, 1) {
+				if !checkAccessCount(t, ks, 1) {
 					return
 				}
 			}()
@@ -173,7 +161,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 2) {
+		if !checkAccessCount(t, ks, 2) {
 			return
 		}
 	})
@@ -223,7 +211,7 @@ func TestCache(t *testing.T) {
 					return
 				}
 
-				if !checkAccessCount(t, ctx, ks, 1) {
+				if !checkAccessCount(t, ks, 1) {
 					return
 				}
 			}()
@@ -237,7 +225,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 2) {
+		if !checkAccessCount(t, ks, 2) {
 			return
 		}
 	})
@@ -277,7 +265,7 @@ func TestCache(t *testing.T) {
 		if !assert.NoError(t, err, `af.Get (#1) should succeed`) {
 			return
 		}
-		if !checkAccessCount(t, ctx, ks, 1) {
+		if !checkAccessCount(t, ks, 1) {
 			return
 		}
 
@@ -288,7 +276,7 @@ func TestCache(t *testing.T) {
 			return
 		}
 		// Should be using the cached version
-		if !checkAccessCount(t, ctx, ks, 1) {
+		if !checkAccessCount(t, ks, 1) {
 			return
 		}
 
@@ -300,7 +288,7 @@ func TestCache(t *testing.T) {
 			return
 		}
 		// should be new
-		if !checkAccessCount(t, ctx, ks, 4, 5) {
+		if !checkAccessCount(t, ks, 4, 5) {
 			return
 		}
 	})

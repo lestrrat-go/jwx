@@ -1,7 +1,6 @@
 package openid_test
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -491,49 +490,25 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	t.Run("Iterator", func(t *testing.T) {
-		v := tokens[0].Token
+		tok := tokens[0].Token
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]interface{})
-			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				seen[pair.Key.(string)] = pair.Value
-
-				var getV interface{}
-				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
-			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("Walk", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			v.Walk(context.TODO(), openid.VisitorFunc(func(key string, value interface{}) error {
-				seen[key] = value
-				return nil
-			}))
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
-		})
-		t.Run("AsMap", func(t *testing.T) {
-			seen, err := v.AsMap(context.TODO())
-			if !assert.NoError(t, err, `v.AsMap should succeed`) {
-				return
+			for _, k := range tok.Keys() {
+				var v interface{}
+				require.NoError(t, tok.Get(k, &v), `tok.Get should succeed`)
+				seen[k] = v
 			}
 			if !assert.Equal(t, expected, seen, `values should match`) {
 				return
 			}
 		})
 		t.Run("Clone", func(t *testing.T) {
-			cloned, err := v.Clone()
-			if !assert.NoError(t, err, `v.Clone should succeed`) {
+			cloned, err := tok.Clone()
+			if !assert.NoError(t, err, `tok.Clone should succeed`) {
 				return
 			}
 
-			if !assert.True(t, jwt.Equal(v, cloned), `values should match`) {
+			if !assert.True(t, jwt.Equal(tok, cloned), `values should match`) {
 				return
 			}
 		})

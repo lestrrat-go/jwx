@@ -73,6 +73,16 @@ func AssignNextStringToken(dst **string, dec *Decoder) error {
 // up how signatures are calculated)
 var FlattenAudience uint32
 
+func MarshalAudience(aud []string, flatten bool) ([]byte, error) {
+	var val interface{}
+	if len(aud) == 1 && flatten {
+		val = aud[0]
+	} else {
+		val = aud
+	}
+	return Marshal(val)
+}
+
 func EncodeAudience(enc *Encoder, aud []string, flatten bool) error {
 	var val interface{}
 	if len(aud) == 1 && flatten {

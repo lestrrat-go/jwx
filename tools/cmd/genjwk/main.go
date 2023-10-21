@@ -248,38 +248,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
 
-	o.LL("func (h *%s) makePairs() []*HeaderPair {", structName)
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-
-	// NOTE: building up an array is *slow*?
-	o.LL("var pairs []*HeaderPair")
-	o.L("pairs = append(pairs, &HeaderPair{Key: \"kty\", Value: %s})", kt.KeyType)
-	for _, f := range obj.Fields() {
-		var keyName string
-		if f.Bool(`is_std`) {
-			keyName = f.Name(true) + "Key"
-		} else {
-			keyName = kt.Prefix + f.Name(true) + "Key"
-		}
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %s, Value: *(h.%s)})", keyName, f.Name(false))
-		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %s, Value: h.%s})", keyName, f.Name(false))
-		}
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, &HeaderPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) makePairs(...)
-
-	o.LL("func (h *%s) PrivateParams() map[string]interface{} {", structName)
-	o.L("return h.privateParams")
-	o.L("}")
-
 	o.LL("func (h *%s) Has(name string) bool {", structName)
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
@@ -304,7 +272,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("switch name {")
 	o.L("case KeyTypeKey:")
 	o.L("if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {")
-	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("return fmt.Errorf(`%s.Get: failed to assign value for field %%q to destination object: %%w`, name, err)", structName)
 	o.L("}")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
@@ -440,7 +408,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (k *%s) Clone() (Key, error) {", structName)
-	o.L("return cloneKey(k)")
+	o.L("key, err := cloneKey(k)")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`%s.Clone: %%w`, err)", structName)
+	o.L("}")
+	o.L("return key, nil")
 	o.L("}")
 
 	o.LL("func (k *%s) DecodeCtx() json.DecodeCtx {", structName)
@@ -570,10 +542,29 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
 	o.L("data := make(map[string]interface{})")
 	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("for _, pair := range h.makePairs() {")
-	o.L("fields = append(fields, pair.Key.(string))")
-	o.L("data[pair.Key.(string)] = pair.Value")
+	o.L("data[KeyTypeKey] = %s", kt.KeyType)
+	o.L("fields = append(fields, KeyTypeKey)")
+	for _, f := range obj.Fields() {
+		var keyName string
+		if f.Bool(`is_std`) {
+			keyName = f.Name(true) + "Key"
+		} else {
+			keyName = kt.Prefix + f.Name(true) + "Key"
+		}
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("data[%s] = *(h.%s)", keyName, f.Name(false))
+		} else {
+			o.L("data[%s] = h.%s", keyName, f.Name(false))
+		}
+		o.L("fields = append(fields, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("data[k] = v")
+	o.L("fields = append(fields, k)")
 	o.L("}")
+
 	o.LL("sort.Strings(fields)")
 	o.L("buf := pool.GetBytesBuffer()")
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
@@ -605,28 +596,27 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return ret, nil")
 	o.L("}")
 
-	o.LL("func (h *%s) Iterate(ctx context.Context) HeaderIterator {", structName)
-	o.L("pairs := h.makePairs()")
-	o.L("ch := make(chan *HeaderPair, len(pairs))")
-	o.L("go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {")
-	o.L("defer close(ch)")
-	o.L("for _, pair := range pairs {")
-	o.L("select {")
-	o.L("case <-ctx.Done():")
-	o.L("return")
-	o.L("case ch<-pair:")
-	o.L("}")
-	o.L("}")
-	o.L("}(ctx, ch, pairs)")
-	o.L("return mapiter.New(ch)")
-	o.L("}")
+	o.LL("func (h *%s) Keys() []string {", structName)
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	o.L("keys = append(keys, KeyTypeKey)")
 
-	o.LL("func (h *%s) Walk(ctx context.Context, visitor HeaderVisitor) error {", structName)
-	o.L("return iter.WalkMap(ctx, h, visitor)")
+	for _, f := range obj.Fields() {
+		var keyName string
+		if f.Bool(`is_std`) {
+			keyName = f.Name(true) + "Key"
+		} else {
+			keyName = kt.Prefix + f.Name(true) + "Key"
+		}
+		o.L("if h.%s != nil {", f.Name(false))
+		o.L("keys = append(keys, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k := range h.privateParams {")
+	o.L("keys = append(keys, k)")
 	o.L("}")
-
-	o.LL("func (h *%s) AsMap(ctx context.Context) (map[string]interface{}, error) {", structName)
-	o.L("return iter.AsMap(ctx, h)")
+	o.L("return keys")
 	o.L("}")
 
 	return nil
@@ -710,17 +700,8 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	o.LL("// Thumbprint returns the JWK thumbprint using the indicated")
 	o.L("// hashing algorithm, according to RFC 7638")
 	o.L("Thumbprint(crypto.Hash) ([]byte, error)")
-	o.LL("// Iterate returns an iterator that returns all keys and values.")
-	o.L("// See github.com/lestrrat-go/iter for a description of the iterator.")
-	o.L("Iterate(ctx context.Context) HeaderIterator")
-	o.LL("// Walk is a utility tool that allows a visitor to iterate all keys and values")
-	o.L("Walk(context.Context, HeaderVisitor) error")
-	o.LL("// AsMap is a utility tool that returns a new map that contains the same fields as the source")
-	o.L("AsMap(context.Context) (map[string]interface{}, error)")
-	o.LL("// PrivateParams returns the non-standard elements in the source structure")
-	o.L("// WARNING: DO NOT USE PrivateParams() IF YOU HAVE CONCURRENT CODE ACCESSING THEM.")
-	o.L("// Use `AsMap()` to get a copy of the entire header, or use `Iterate()` instead")
-	o.L("PrivateParams() map[string]interface{}")
+	o.LL("// Keys returns a list of the keys contained in this jwk.Key.")
+	o.L("Keys() []string")
 	o.LL("// Clone creates a new instance of the same type")
 	o.L("Clone() (Key, error)")
 	o.LL("// PublicKey creates the corresponding PublicKey type for this object.")
@@ -746,7 +727,6 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 			o.R("%s", PointerElem(f))
 		}
 	}
-	o.LL("makePairs() []*HeaderPair")
 	o.L("}")
 
 	if err := o.WriteFile("interface_gen.go", codegen.WithFormatCode(true)); err != nil {

@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc"
-	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/iter/mapiter"
 )
 
 type Transformer = httprc.Transformer
@@ -373,22 +371,13 @@ func (cs *CachedSet) Index(key Key) int {
 	return set.Index(key)
 }
 
-func (cs *CachedSet) Keys(ctx context.Context) KeyIterator {
+func (cs *CachedSet) Keys() []string {
 	set, err := cs.cached()
 	if err != nil {
-		return arrayiter.New(nil)
+		return nil
 	}
 
-	return set.Keys(ctx)
-}
-
-func (cs *CachedSet) Iterate(ctx context.Context) HeaderIterator {
-	set, err := cs.cached()
-	if err != nil {
-		return mapiter.New(nil)
-	}
-
-	return set.Iterate(ctx)
+	return set.Keys()
 }
 
 func (cs *CachedSet) Len() int {

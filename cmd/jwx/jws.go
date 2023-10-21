@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -182,10 +181,11 @@ func makeJwsVerifyCmd() *cli.Command {
 				return fmt.Errorf(`invalid alg %s`, givenalg)
 			}
 
-			ctx := context.Background()
-			for iter := keyset.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
+			for i := 0; i < keyset.Len(); i++ {
+				key, ok := keyset.Key(i)
+				if !ok {
+					return fmt.Errorf(`failed to retrieve key %d`, i)
+				}
 				payload, err := jws.Verify(buf, jws.WithKey(alg, key))
 				if err == nil {
 					fmt.Fprintf(output, "%s", payload)

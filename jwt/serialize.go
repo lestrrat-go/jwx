@@ -92,7 +92,7 @@ func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, err
 
 	buf, err := json.Marshal(token)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to serialize as JSON`)
+		return nil, fmt.Errorf(`failed to serialize as JSON: %w`, err)
 	}
 	return buf, nil
 }
