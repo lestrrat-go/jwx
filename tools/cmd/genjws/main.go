@@ -185,31 +185,6 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return h.raw")
 	o.L("}")
 
-	// Generate a function that iterates through all of the keys
-	// in this header.
-	o.LL("func (h *stdHeaders) makePairs() []*HeaderPair {")
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-	// NOTE: building up an array is *slow*?
-	o.L("var pairs []*HeaderPair")
-	for _, f := range obj.Fields() {
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.Name(true), f.Name(false))
-		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.Name(true), f.Name(false))
-		}
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, &HeaderPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("sort.Slice(pairs, func(i, j int) bool {")
-	o.L("return pairs[i].Key.(string) < pairs[j].Key.(string)")
-	o.L("})")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) iterate(...)
-
 	o.LL("func (h *stdHeaders) PrivateParams() map[string]interface{} {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
@@ -414,26 +389,46 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	o.L("h.mu.RLock()")
+	o.L("data := make(map[string]interface{})")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	for _, f := range obj.Fields() {
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("data[%sKey] = *(h.%s)", f.Name(true), f.Name(false))
+		} else {
+			o.L("data[%sKey] = h.%s", f.Name(true), f.Name(false))
+		}
+		o.L("keys = append(keys, %sKey)", f.Name(true))
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("data[k] = v")
+	o.L("keys = append(keys, k)")
+	o.L("}")
+	o.L("h.mu.RUnlock()")
+	o.L("sort.Strings(keys)")
+
 	o.L("buf := pool.GetBytesBuffer()")
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
-	o.L("buf.WriteByte('{')")
 	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, p := range h.makePairs() {")
+
+	o.L("buf.WriteByte('{')")
+	o.L("for i, k := range keys {")
 	o.L("if i > 0 {")
 	o.L("buf.WriteRune(',')")
 	o.L("}")
 	o.L("buf.WriteRune('\"')")
-	o.L("buf.WriteString(p.Key.(string))")
+	o.L("buf.WriteString(k)")
 	o.L("buf.WriteString(`\":`)")
-	o.L("v := p.Value")
-	o.L("switch v := v.(type) {")
+	o.L("switch v := data[k].(type) {")
 	o.L("case []byte:")
 	o.L("buf.WriteRune('\"')")
 	o.L("buf.WriteString(base64.EncodeToString(v))")
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, p.Key, err)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, k, err)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")

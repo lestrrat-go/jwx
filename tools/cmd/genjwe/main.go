@@ -164,28 +164,6 @@ func generateHeaders(obj *codegen.Object) error {
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
 
-	// Generate a function that iterates through all of the keys
-	// in this header.
-	o.LL("func (h *stdHeaders) makePairs() []*HeaderPair {")
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-	// NOTE: building up an array is *slow*?
-	o.L("var pairs []*HeaderPair")
-	for _, f := range obj.Fields() {
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.Name(true), f.Name(false))
-		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.Name(true), f.Name(false))
-		}
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, &HeaderPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) iterate(...)
-
 	o.LL("func (h *stdHeaders) PrivateParams() map[string]interface{} {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
@@ -396,24 +374,36 @@ func generateHeaders(obj *codegen.Object) error {
 
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("data := make(map[string]interface{})")
-	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("for _, pair := range h.makePairs() {")
-	o.L("fields = append(fields, pair.Key.(string))")
-	o.L("data[pair.Key.(string)] = pair.Value")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	o.L("h.mu.RLock()")
+	for _, f := range obj.Fields() {
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("data[%sKey] = *(h.%s)", f.Name(true), f.Name(false))
+		} else {
+			o.L("data[%sKey] = h.%s", f.Name(true), f.Name(false))
+		}
+		o.L("keys = append(keys, %sKey)", f.Name(true))
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("data[k] = v")
+	o.L("keys = append(keys, k)")
 	o.L("}")
-	o.LL("sort.Strings(fields)")
+	o.L("h.mu.RUnlock()")
+	o.LL("sort.Strings(keys)")
 	o.L("buf := pool.GetBytesBuffer()")
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
-	o.L("buf.WriteByte('{')")
 	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, f := range fields {")
+	o.L("buf.WriteByte('{')")
+	o.L("for i, k := range keys {")
 	o.L("if i > 0 {")
 	o.L("buf.WriteRune(',')")
 	o.L("}")
 	o.L("buf.WriteRune('\"')")
-	o.L("buf.WriteString(f)")
+	o.L("buf.WriteString(k)")
 	o.L("buf.WriteString(`\":`)")
-	o.L("v := data[f]")
+	o.L("v := data[k]")
 	o.L("switch v := v.(type) {")
 	o.L("case []byte:")
 	o.L("buf.WriteRune('\"')")
@@ -421,7 +411,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, f)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, k)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")

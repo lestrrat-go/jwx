@@ -24,14 +24,12 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
-        "//internal/iter",
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
         "//jwa",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

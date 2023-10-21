@@ -41,11 +41,14 @@ func (h *stdHeaders) Clone(ctx context.Context) (Headers, error) {
 }
 
 func (h *stdHeaders) Copy(_ context.Context, dst Headers) error {
-	for _, pair := range h.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return fmt.Errorf(`failed to set header %q: %w`, key, err)
+	for _, key := range h.Keys() {
+		var v interface{}
+		if err := h.Get(key, &v); err != nil {
+			return fmt.Errorf(`jwe.Headers: Copy: failed to get header %q: %w`, key, err)
+		}
+
+		if err := dst.Set(key, v); err != nil {
+			return fmt.Errorf(`jwe.Headers: Copy: failed to set header %q: %w`, key, err)
 		}
 	}
 	return nil
