@@ -1,12 +1,8 @@
 package jwk
 
 import (
-	"context"
 	"sync"
 
-	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 )
 
@@ -106,11 +102,9 @@ type Set interface {
 	// in set.
 	RemoveKey(Key) error
 
-	// Keys creates an iterator to iterate through all keys in the set.
-	Keys(context.Context) KeyIterator
-
-	// Iterate creates an iterator to iterate through all fields other than the keys
-	Iterate(context.Context) HeaderIterator
+	// Keys returns the list of keys present in the Set, except for `keys`
+	// TODO: name is confusing between this and Key()
+	Keys() []string
 
 	// Clone create a new set with identical keys. Keys themselves are not cloned.
 	Clone() (Set, error)
@@ -122,13 +116,6 @@ type set struct {
 	dc            DecodeCtx
 	privateParams map[string]interface{}
 }
-
-type HeaderVisitor = iter.MapVisitor
-type HeaderVisitorFunc = iter.MapVisitorFunc
-type HeaderPair = mapiter.Pair
-type HeaderIterator = mapiter.Iterator
-type KeyPair = arrayiter.Pair
-type KeyIterator = arrayiter.Iterator
 
 type PublicKeyer interface {
 	// PublicKey creates the corresponding PublicKey type for this object.

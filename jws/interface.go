@@ -1,8 +1,6 @@
 package jws
 
 import (
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -63,11 +61,6 @@ type Signature struct {
 	signature []byte  // Signature
 	detached  bool
 }
-
-type Visitor = iter.MapVisitor
-type VisitorFunc = iter.MapVisitorFunc
-type HeaderPair = mapiter.Pair
-type Iterator = mapiter.Iterator
 
 // Signer generates the signature for a given payload.
 type Signer interface {

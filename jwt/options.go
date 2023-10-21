@@ -207,11 +207,6 @@ func WithClaimValue(name string, v interface{}) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
 }
 
-type claimPair struct {
-	Name  string
-	Value interface{}
-}
-
 // WithTypedClaim allows a private claim to be parsed into the object type of
 // your choice. It works much like the RegisterCustomField, but the effect
 // is only applicable to the jwt.Parse function call which receives this option.

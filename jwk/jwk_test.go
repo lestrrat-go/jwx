@@ -237,6 +237,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 						return
 					}
 					buf = jsonbuf
+					t.Logf("%s", buf)
 				}
 
 				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
@@ -244,31 +245,20 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					return
 				}
 
-				m1, err := key.AsMap(context.TODO())
-				if !assert.NoError(t, err, `key.AsMap should succeed`) {
-					return
-				}
+			LOOP:
+				for _, k := range key.Keys() {
+					if usePEM {
+						switch k {
+						case `private`, jwk.AlgorithmKey, jwk.KeyIDKey, jwk.KeyOpsKey, jwk.KeyUsageKey, jwk.X509CertChainKey, jwk.X509CertThumbprintKey, jwk.X509CertThumbprintS256Key, jwk.X509URLKey:
+							continue LOOP
+						}
+					}
 
-				m2, err := newkey.AsMap(context.TODO())
-				if !assert.NoError(t, err, `key.AsMap should succeed`) {
-					return
-				}
-
-				// PEM does not preserve these keys
-				if usePEM {
-					delete(m1, `private`)
-					delete(m1, jwk.AlgorithmKey)
-					delete(m1, jwk.KeyIDKey)
-					delete(m1, jwk.KeyOpsKey)
-					delete(m1, jwk.KeyUsageKey)
-					delete(m1, jwk.X509CertChainKey)
-					delete(m1, jwk.X509CertThumbprintKey)
-					delete(m1, jwk.X509CertThumbprintS256Key)
-					delete(m1, jwk.X509URLKey)
-				}
-
-				if !assert.Equal(t, m1, m2, `keys should match`) {
-					return
+					var v interface{}
+					var v2 interface{}
+					require.NoError(t, key.Get(k, &v), `key.Get(%s) should succeed`, k)
+					require.NoError(t, newkey.Get(k, &v2), `newkey.Get(%s) should succeed`, k)
+					require.Equal(t, v, v2, `values should match`)
 				}
 			})
 		}
@@ -303,32 +293,23 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		ctx := context.TODO()
-
 		newkey, err := key.Clone()
 		if !assert.NoError(t, err, `key.Clone should succeed`) {
 			return
 		}
 
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			newkey.Remove(pair.Key.(string))
+		for _, k := range key.Keys() {
+			require.NoError(t, newkey.Remove(k), `newkey.Remove should succeed`)
 		}
 
-		m, err := newkey.AsMap(ctx)
-		if !assert.NoError(t, err, `key.AsMap should succeed`) {
-			return
+		for _, k := range newkey.Keys() {
+			require.Equal(t, k, jwk.KeyTypeKey, `key should be kty`)
 		}
 
-		if !assert.Len(t, m, 1, `keys should have 1 key (kty remains)`) {
-			return
-		}
-
-		for iter := key.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, newkey.Set(pair.Key.(string), pair.Value), `newkey.Set should succeed`) {
-				return
-			}
+		for _, k := range key.Keys() {
+			var v interface{}
+			require.NoError(t, key.Get(k, &v), `key.Get should succeed`)
+			require.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
 		}
 	})
 }
@@ -358,14 +339,10 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				if !assert.True(t, reflect.TypeOf(pair.Value).AssignableTo(expected), "key should be a %s", expected) {
-					return
-				}
+			for i := 0; i < set.Len(); i++ {
+				key, err := set.Key(i)
+				require.True(t, err, `set.Key(%d) should succeed`, i)
+				require.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected)
 			}
 		})
 		t.Run("jwk.Parse", func(t *testing.T) {
@@ -379,10 +356,9 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for iter := set.Keys(context.TODO()); iter.Next(context.TODO()); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
-
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key(%d) should succeed`, i)
 				switch key := key.(type) {
 				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
 				default:
@@ -1605,17 +1581,14 @@ func TestTypedFields(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
 				got, err := jwk.Parse(serialized, tc.Options...)
 				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 					return
 				}
 
-				for iter := got.Keys(ctx); iter.Next(ctx); {
-					pair := iter.Pair()
-					key, _ := pair.Value.(jwk.Key)
+				for i := 0; i < got.Len(); i++ {
+					key, ok := got.Key(i)
+					require.True(t, ok, `got.Key() should succeed`)
 					var v interface{}
 					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
 					field, err := tc.PostProcess(t, v)
@@ -1684,14 +1657,10 @@ func TestGH412(t *testing.T) {
 				expected[k] = struct{}{}
 			}
 
-			ctx := context.Background()
-			for iter := set.Keys(ctx); iter.Next(ctx); {
-				pair := iter.Pair()
-				key := pair.Value.(jwk.Key)
-				if !assert.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`) {
-					return
-				}
-				t.Logf("%s found", key.KeyID())
+			for i := 0; i < set.Len(); i++ {
+				key, ok := set.Key(i)
+				require.True(t, ok, `set.Key() should succeed`)
+				require.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`)
 				delete(expected, key.KeyID())
 			}
 

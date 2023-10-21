@@ -24,15 +24,17 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
+<<<<<<< HEAD
         "//internal/ecutil",
         "//internal/iter",
+=======
+>>>>>>> 7497448 (Remove iterators  (#999))
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
         "//jwa",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
         "@com_github_lestrrat_go_option//:option",
     ],
 )
