@@ -96,17 +96,10 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("//")
 	o.L("// In most cases, you likely want to use the protected headers, as this is the part of the encrypted content")
 	o.L("type Headers interface {")
-	o.L("json.Marshaler")
-	o.L("json.Unmarshaler")
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
 		o.L("%s() %s", f.GetterMethod(true), f.Type()) //PointerElem())
 	}
-
-	// These are used to iterate through all keys in a header
-	o.L("Iterate(ctx context.Context) Iterator")
-	o.L("Walk(ctx context.Context, v Visitor) error")
-	o.L("AsMap(ctx context.Context) (map[string]interface{}, error)")
 
 	// These are used to access a single element by key name
 	o.LL("// Get is used to extract the value of any field, including non-standard fields, out of the header.")
@@ -128,16 +121,12 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("Encode() ([]byte, error)")
 	o.L("Decode([]byte) error")
 
-	// Access private parameters
-	o.L("// PrivateParams returns the map containing the non-standard ('private') parameters")
-	o.L("// in the associated header. WARNING: DO NOT USE PrivateParams()")
-	o.L("// IF YOU HAVE CONCURRENT CODE ACCESSING THEM. Use AsMap() to")
-	o.L("// get a copy of the entire header instead")
-	o.L("PrivateParams() map[string]interface{}")
+	o.L("Clone() (Headers, error)")
+	o.L("Copy(Headers) error")
+	o.L("Merge(Headers) (Headers, error)")
 
-	o.L("Clone(context.Context) (Headers, error)")
-	o.L("Copy(context.Context, Headers) error")
-	o.L("Merge(context.Context, Headers) (Headers, error)")
+	o.LL("// Keys returns a list of the keys contained in this header.")
+	o.L("Keys() []string")
 
 	o.L("}")
 
@@ -174,28 +163,6 @@ func generateHeaders(obj *codegen.Object) error {
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
-
-	// Generate a function that iterates through all of the keys
-	// in this header.
-	o.LL("func (h *stdHeaders) makePairs() []*HeaderPair {")
-	o.L("h.mu.RLock()")
-	o.L("defer h.mu.RUnlock()")
-	// NOTE: building up an array is *slow*?
-	o.L("var pairs []*HeaderPair")
-	for _, f := range obj.Fields() {
-		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: *(h.%s)})", f.Name(true), f.Name(false))
-		} else {
-			o.L("pairs = append(pairs, &HeaderPair{Key: %sKey, Value: h.%s})", f.Name(true), f.Name(false))
-		}
-		o.L("}")
-	}
-	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, &HeaderPair{Key: k, Value: v})")
-	o.L("}")
-	o.L("return pairs")
-	o.L("}") // end of (h *stdHeaders) iterate(...)
 
 	o.LL("func (h *stdHeaders) PrivateParams() map[string]interface{} {")
 	o.L("h.mu.RLock()")
@@ -389,26 +356,54 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return nil")
 	o.L("}")
 
+	o.LL("func (h *stdHeaders) Keys() []string {")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	for _, f := range obj.Fields() {
+		keyName := f.Name(true) + "Key"
+		o.L("if h.%s != nil {", f.Name(false))
+		o.L("keys = append(keys, %s)", keyName)
+		o.L("}")
+	}
+	o.L("for k := range h.privateParams {")
+	o.L("keys = append(keys, k)")
+	o.L("}")
+	o.L("return keys")
+	o.L("}")
+
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("data := make(map[string]interface{})")
-	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("for _, pair := range h.makePairs() {")
-	o.L("fields = append(fields, pair.Key.(string))")
-	o.L("data[pair.Key.(string)] = pair.Value")
+	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
+	o.L("h.mu.RLock()")
+	for _, f := range obj.Fields() {
+		o.L("if h.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("data[%sKey] = *(h.%s)", f.Name(true), f.Name(false))
+		} else {
+			o.L("data[%sKey] = h.%s", f.Name(true), f.Name(false))
+		}
+		o.L("keys = append(keys, %sKey)", f.Name(true))
+		o.L("}")
+	}
+	o.L("for k, v := range h.privateParams {")
+	o.L("data[k] = v")
+	o.L("keys = append(keys, k)")
 	o.L("}")
-	o.LL("sort.Strings(fields)")
+	o.L("h.mu.RUnlock()")
+	o.LL("sort.Strings(keys)")
 	o.L("buf := pool.GetBytesBuffer()")
 	o.L("defer pool.ReleaseBytesBuffer(buf)")
-	o.L("buf.WriteByte('{')")
 	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, f := range fields {")
+	o.L("buf.WriteByte('{')")
+	o.L("for i, k := range keys {")
 	o.L("if i > 0 {")
 	o.L("buf.WriteRune(',')")
 	o.L("}")
 	o.L("buf.WriteRune('\"')")
-	o.L("buf.WriteString(f)")
+	o.L("buf.WriteString(k)")
 	o.L("buf.WriteString(`\":`)")
-	o.L("v := data[f]")
+	o.L("v := data[k]")
 	o.L("switch v := v.(type) {")
 	o.L("case []byte:")
 	o.L("buf.WriteRune('\"')")
@@ -416,7 +411,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("buf.WriteRune('\"')")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, f)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, k)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")

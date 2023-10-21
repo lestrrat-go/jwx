@@ -14,13 +14,11 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//internal/base64",
-        "//internal/iter",
         "//internal/json",
         "//internal/pool",
         "//jwt",
         "//jwt/internal/types",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_iter//mapiter",
     ],
 )
 

@@ -2,13 +2,10 @@ package jwk
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/arrayiter"
-	"github.com/lestrrat-go/iter/mapiter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
@@ -135,23 +132,13 @@ func (s *set) Clear() error {
 	return nil
 }
 
-func (s *set) Keys(ctx context.Context) KeyIterator {
-	ch := make(chan *KeyPair, s.Len())
-	go iterate(ctx, s.keys, ch)
-	return arrayiter.New(ch)
-}
-
-func iterate(ctx context.Context, keys []Key, ch chan *KeyPair) {
-	defer close(ch)
-
-	for i, key := range keys {
-		pair := &KeyPair{Index: i, Value: key}
-		select {
-		case <-ctx.Done():
-			return
-		case ch <- pair:
-		}
+func (s *set) Keys() []string {
+	ret := make([]string, len(s.privateParams))
+	var i int
+	for k := range s.privateParams {
+		ret[i] = k
 	}
+	return ret
 }
 
 func (s *set) MarshalJSON() ([]byte, error) {
@@ -314,32 +301,4 @@ func (s *set) Clone() (Set, error) {
 	s2.keys = make([]Key, len(s.keys))
 	copy(s2.keys, s.keys)
 	return s2, nil
-}
-
-func (s *set) makePairs() []*HeaderPair {
-	pairs := make([]*HeaderPair, 0, len(s.privateParams))
-	for k, v := range s.privateParams {
-		pairs = append(pairs, &HeaderPair{Key: k, Value: v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		//nolint:forcetypeassert
-		return pairs[i].Key.(string) < pairs[j].Key.(string)
-	})
-	return pairs
-}
-
-func (s *set) Iterate(ctx context.Context) HeaderIterator {
-	pairs := s.makePairs()
-	ch := make(chan *HeaderPair, len(pairs))
-	go func(ctx context.Context, ch chan *HeaderPair, pairs []*HeaderPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
 }
