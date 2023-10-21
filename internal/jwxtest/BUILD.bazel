@@ -6,12 +6,11 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v3/internal/jwxtest",
     visibility = ["//:__subpackages__"],
     deps = [
-        "//internal/ecutil",
         "//jwa",
         "//jwe",
         "//jwk",
+        "//jwk/ecdsa",
         "//jws",
-        "//x25519",
         "@com_github_stretchr_testify//assert",
     ],
 )
