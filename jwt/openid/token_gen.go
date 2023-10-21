@@ -4,16 +4,12 @@ package openid
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -129,10 +125,6 @@ type Token interface {
 	// Zoneinfo returns the value for "zoneinfo" field of the token
 	Zoneinfo() string
 
-	// PrivateClaims return the entire set of fields (claims) in the token
-	// *other* than the pre-defined fields such as `iss`, `nbf`, `iat`, etc.
-	PrivateClaims() map[string]interface{}
-
 	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
 	// The first argument is the name of the claim. The second argument is a pointer
@@ -167,9 +159,7 @@ type Token interface {
 	// such as `json.Marshal` and `json.Unmarshal`
 	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
-	Iterate(context.Context) Iterator
-	Walk(context.Context, Visitor) error
-	AsMap(context.Context) (map[string]interface{}, error)
+	Keys() []string
 }
 type stdToken struct {
 	mu                  *sync.RWMutex
@@ -993,124 +983,6 @@ func (t *stdToken) PrivateClaims() map[string]interface{} {
 	return t.privateClaims
 }
 
-func (t *stdToken) makePairs() []*ClaimPair {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	pairs := make([]*ClaimPair, 0, 26)
-	if t.address != nil {
-		v := t.address
-		pairs = append(pairs, &ClaimPair{Key: AddressKey, Value: v})
-	}
-	if t.audience != nil {
-		v := t.audience.Get()
-		pairs = append(pairs, &ClaimPair{Key: AudienceKey, Value: v})
-	}
-	if t.birthdate != nil {
-		v := t.birthdate
-		pairs = append(pairs, &ClaimPair{Key: BirthdateKey, Value: v})
-	}
-	if t.email != nil {
-		v := *(t.email)
-		pairs = append(pairs, &ClaimPair{Key: EmailKey, Value: v})
-	}
-	if t.emailVerified != nil {
-		v := *(t.emailVerified)
-		pairs = append(pairs, &ClaimPair{Key: EmailVerifiedKey, Value: v})
-	}
-	if t.expiration != nil {
-		v := t.expiration.Get()
-		pairs = append(pairs, &ClaimPair{Key: ExpirationKey, Value: v})
-	}
-	if t.familyName != nil {
-		v := *(t.familyName)
-		pairs = append(pairs, &ClaimPair{Key: FamilyNameKey, Value: v})
-	}
-	if t.gender != nil {
-		v := *(t.gender)
-		pairs = append(pairs, &ClaimPair{Key: GenderKey, Value: v})
-	}
-	if t.givenName != nil {
-		v := *(t.givenName)
-		pairs = append(pairs, &ClaimPair{Key: GivenNameKey, Value: v})
-	}
-	if t.issuedAt != nil {
-		v := t.issuedAt.Get()
-		pairs = append(pairs, &ClaimPair{Key: IssuedAtKey, Value: v})
-	}
-	if t.issuer != nil {
-		v := *(t.issuer)
-		pairs = append(pairs, &ClaimPair{Key: IssuerKey, Value: v})
-	}
-	if t.jwtID != nil {
-		v := *(t.jwtID)
-		pairs = append(pairs, &ClaimPair{Key: JwtIDKey, Value: v})
-	}
-	if t.locale != nil {
-		v := *(t.locale)
-		pairs = append(pairs, &ClaimPair{Key: LocaleKey, Value: v})
-	}
-	if t.middleName != nil {
-		v := *(t.middleName)
-		pairs = append(pairs, &ClaimPair{Key: MiddleNameKey, Value: v})
-	}
-	if t.name != nil {
-		v := *(t.name)
-		pairs = append(pairs, &ClaimPair{Key: NameKey, Value: v})
-	}
-	if t.nickname != nil {
-		v := *(t.nickname)
-		pairs = append(pairs, &ClaimPair{Key: NicknameKey, Value: v})
-	}
-	if t.notBefore != nil {
-		v := t.notBefore.Get()
-		pairs = append(pairs, &ClaimPair{Key: NotBeforeKey, Value: v})
-	}
-	if t.phoneNumber != nil {
-		v := *(t.phoneNumber)
-		pairs = append(pairs, &ClaimPair{Key: PhoneNumberKey, Value: v})
-	}
-	if t.phoneNumberVerified != nil {
-		v := *(t.phoneNumberVerified)
-		pairs = append(pairs, &ClaimPair{Key: PhoneNumberVerifiedKey, Value: v})
-	}
-	if t.picture != nil {
-		v := *(t.picture)
-		pairs = append(pairs, &ClaimPair{Key: PictureKey, Value: v})
-	}
-	if t.preferredUsername != nil {
-		v := *(t.preferredUsername)
-		pairs = append(pairs, &ClaimPair{Key: PreferredUsernameKey, Value: v})
-	}
-	if t.profile != nil {
-		v := *(t.profile)
-		pairs = append(pairs, &ClaimPair{Key: ProfileKey, Value: v})
-	}
-	if t.subject != nil {
-		v := *(t.subject)
-		pairs = append(pairs, &ClaimPair{Key: SubjectKey, Value: v})
-	}
-	if t.updatedAt != nil {
-		v := t.updatedAt.Get()
-		pairs = append(pairs, &ClaimPair{Key: UpdatedAtKey, Value: v})
-	}
-	if t.website != nil {
-		v := *(t.website)
-		pairs = append(pairs, &ClaimPair{Key: WebsiteKey, Value: v})
-	}
-	if t.zoneinfo != nil {
-		v := *(t.zoneinfo)
-		pairs = append(pairs, &ClaimPair{Key: ZoneinfoKey, Value: v})
-	}
-	for k, v := range t.privateClaims {
-		pairs = append(pairs, &ClaimPair{Key: k, Value: v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].Key.(string) < pairs[j].Key.(string)
-	})
-	return pairs
-}
-
 func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -1304,67 +1176,345 @@ LOOP:
 	return nil
 }
 
+func (t *stdToken) Keys() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	keys := make([]string, 0, 26+len(t.privateClaims))
+	if t.address != nil {
+		keys = append(keys, AddressKey)
+	}
+	if t.audience != nil {
+		keys = append(keys, AudienceKey)
+	}
+	if t.birthdate != nil {
+		keys = append(keys, BirthdateKey)
+	}
+	if t.email != nil {
+		keys = append(keys, EmailKey)
+	}
+	if t.emailVerified != nil {
+		keys = append(keys, EmailVerifiedKey)
+	}
+	if t.expiration != nil {
+		keys = append(keys, ExpirationKey)
+	}
+	if t.familyName != nil {
+		keys = append(keys, FamilyNameKey)
+	}
+	if t.gender != nil {
+		keys = append(keys, GenderKey)
+	}
+	if t.givenName != nil {
+		keys = append(keys, GivenNameKey)
+	}
+	if t.issuedAt != nil {
+		keys = append(keys, IssuedAtKey)
+	}
+	if t.issuer != nil {
+		keys = append(keys, IssuerKey)
+	}
+	if t.jwtID != nil {
+		keys = append(keys, JwtIDKey)
+	}
+	if t.locale != nil {
+		keys = append(keys, LocaleKey)
+	}
+	if t.middleName != nil {
+		keys = append(keys, MiddleNameKey)
+	}
+	if t.name != nil {
+		keys = append(keys, NameKey)
+	}
+	if t.nickname != nil {
+		keys = append(keys, NicknameKey)
+	}
+	if t.notBefore != nil {
+		keys = append(keys, NotBeforeKey)
+	}
+	if t.phoneNumber != nil {
+		keys = append(keys, PhoneNumberKey)
+	}
+	if t.phoneNumberVerified != nil {
+		keys = append(keys, PhoneNumberVerifiedKey)
+	}
+	if t.picture != nil {
+		keys = append(keys, PictureKey)
+	}
+	if t.preferredUsername != nil {
+		keys = append(keys, PreferredUsernameKey)
+	}
+	if t.profile != nil {
+		keys = append(keys, ProfileKey)
+	}
+	if t.subject != nil {
+		keys = append(keys, SubjectKey)
+	}
+	if t.updatedAt != nil {
+		keys = append(keys, UpdatedAtKey)
+	}
+	if t.website != nil {
+		keys = append(keys, WebsiteKey)
+	}
+	if t.zoneinfo != nil {
+		keys = append(keys, ZoneinfoKey)
+	}
+	for k := range t.privateClaims {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+type claimPair struct {
+	Name  string
+	Value interface{}
+}
+
+var claimPairPool = sync.Pool{
+	New: func() interface{} {
+		return make([]claimPair, 0, 26)
+	},
+}
+
+func getClaimPairList() []claimPair {
+	return claimPairPool.Get().([]claimPair)
+}
+
+func putClaimPairList(list []claimPair) {
+	list = list[:0]
+	claimPairPool.Put(list)
+}
+
+// makePairs creates a list of claimPair objects that are sorted by
+// their key names. The key names are always their JSON names, and
+// the values are already JSON encoded.
+// Because makePairs needs to allocate a slice, it _slows_ down
+// marshaling of the token to JSON. The upside is that it allows us to
+// marshal the token keys in a deterministic order.
+// Do we really need it...? Well, technically we don't, but it's so
+// much nicer to have this to make the example tests actually work
+// deterministically. Also if for whatever reason this becomes a
+// performance issue, we can always/ add a flag to use a more _optimized_ code path.
+//
+// The caller is responsible to call putClaimPairList() to return the
+// allocated slice back to the pool.
+
+func (t *stdToken) makePairs() ([]claimPair, error) {
+	pairs := getClaimPairList()
+	if t.address != nil {
+		buf, err := json.Marshal(*(t.address))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "address": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: AddressKey, Value: buf})
+	}
+	if t.audience != nil {
+		buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(jwt.FlattenAudience))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: AudienceKey, Value: buf})
+	}
+	if t.birthdate != nil {
+		buf, err := json.Marshal(*(t.birthdate))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "birthdate": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: BirthdateKey, Value: buf})
+	}
+	if t.email != nil {
+		buf, err := json.Marshal(*(t.email))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "email": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: EmailKey, Value: buf})
+	}
+	if t.emailVerified != nil {
+		buf, err := json.Marshal(*(t.emailVerified))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "email_verified": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: EmailVerifiedKey, Value: buf})
+	}
+	if t.expiration != nil {
+		buf, err := json.Marshal(t.expiration.Unix())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
+	}
+	if t.familyName != nil {
+		buf, err := json.Marshal(*(t.familyName))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "family_name": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: FamilyNameKey, Value: buf})
+	}
+	if t.gender != nil {
+		buf, err := json.Marshal(*(t.gender))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "gender": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: GenderKey, Value: buf})
+	}
+	if t.givenName != nil {
+		buf, err := json.Marshal(*(t.givenName))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "given_name": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: GivenNameKey, Value: buf})
+	}
+	if t.issuedAt != nil {
+		buf, err := json.Marshal(t.issuedAt.Unix())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
+	}
+	if t.issuer != nil {
+		buf, err := json.Marshal(*(t.issuer))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: IssuerKey, Value: buf})
+	}
+	if t.jwtID != nil {
+		buf, err := json.Marshal(*(t.jwtID))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: buf})
+	}
+	if t.locale != nil {
+		buf, err := json.Marshal(*(t.locale))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "locale": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: LocaleKey, Value: buf})
+	}
+	if t.middleName != nil {
+		buf, err := json.Marshal(*(t.middleName))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "middle_name": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: MiddleNameKey, Value: buf})
+	}
+	if t.name != nil {
+		buf, err := json.Marshal(*(t.name))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "name": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: NameKey, Value: buf})
+	}
+	if t.nickname != nil {
+		buf, err := json.Marshal(*(t.nickname))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "nickname": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: NicknameKey, Value: buf})
+	}
+	if t.notBefore != nil {
+		buf, err := json.Marshal(t.notBefore.Unix())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
+	}
+	if t.phoneNumber != nil {
+		buf, err := json.Marshal(*(t.phoneNumber))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "phone_number": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: PhoneNumberKey, Value: buf})
+	}
+	if t.phoneNumberVerified != nil {
+		buf, err := json.Marshal(*(t.phoneNumberVerified))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "phone_number_verified": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: PhoneNumberVerifiedKey, Value: buf})
+	}
+	if t.picture != nil {
+		buf, err := json.Marshal(*(t.picture))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "picture": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: PictureKey, Value: buf})
+	}
+	if t.preferredUsername != nil {
+		buf, err := json.Marshal(*(t.preferredUsername))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "preferred_username": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: PreferredUsernameKey, Value: buf})
+	}
+	if t.profile != nil {
+		buf, err := json.Marshal(*(t.profile))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "profile": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: ProfileKey, Value: buf})
+	}
+	if t.subject != nil {
+		buf, err := json.Marshal(*(t.subject))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: SubjectKey, Value: buf})
+	}
+	if t.updatedAt != nil {
+		buf, err := json.Marshal(t.updatedAt.Unix())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode "updated_at": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: buf})
+	}
+	if t.website != nil {
+		buf, err := json.Marshal(*(t.website))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "website": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: WebsiteKey, Value: buf})
+	}
+	if t.zoneinfo != nil {
+		buf, err := json.Marshal(*(t.zoneinfo))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field "zoneinfo": %w`, err)
+		}
+		pairs = append(pairs, claimPair{Name: ZoneinfoKey, Value: buf})
+	}
+	for k, v := range t.privateClaims {
+		buf, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
+		}
+		pairs = append(pairs, claimPair{Name: k, Value: buf})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Name < pairs[j].Name
+	})
+
+	return pairs, nil
+}
+
 func (t stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
+	pairs, err := t.makePairs()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+	}
 	buf.WriteByte('{')
-	enc := json.NewEncoder(buf)
-	for i, pair := range t.makePairs() {
-		f := pair.Key.(string)
+
+	for i, pair := range pairs {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteRune('"')
-		buf.WriteString(f)
-		buf.WriteString(`":`)
-		switch f {
-		case AudienceKey:
-			if err := json.EncodeAudience(enc, pair.Value.([]string), t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
-				return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
-			}
-			continue
-		case ExpirationKey, IssuedAtKey, NotBeforeKey, UpdatedAtKey:
-			enc.Encode(pair.Value.(time.Time).Unix())
-			continue
-		}
-		switch v := pair.Value.(type) {
-		case []byte:
-			buf.WriteRune('"')
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %s: %w`, f, err)
-			}
-			buf.Truncate(buf.Len() - 1)
-		}
+		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
 	}
 	buf.WriteByte('}')
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
+	putClaimPairList(pairs)
 	return ret, nil
-}
-
-func (t *stdToken) Iterate(ctx context.Context) Iterator {
-	pairs := t.makePairs()
-	ch := make(chan *ClaimPair, len(pairs))
-	go func(ctx context.Context, ch chan *ClaimPair, pairs []*ClaimPair) {
-		defer close(ch)
-		for _, pair := range pairs {
-			select {
-			case <-ctx.Done():
-				return
-			case ch <- pair:
-			}
-		}
-	}(ctx, ch, pairs)
-	return mapiter.New(ch)
-}
-
-func (t *stdToken) Walk(ctx context.Context, visitor Visitor) error {
-	return iter.WalkMap(ctx, t, visitor)
-}
-
-func (t *stdToken) AsMap(ctx context.Context) (map[string]interface{}, error) {
-	return iter.AsMap(ctx, t)
 }

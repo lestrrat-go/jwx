@@ -19,11 +19,13 @@ var registry = json.NewRegistry()
 func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
-	for _, pair := range t.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set %s: %w`, key, err)
+	for _, k := range t.Keys() {
+		var v interface{}
+		if err := t.Get(k, &v); err != nil {
+			return nil, fmt.Errorf(`openid.Clone: failed to get %s: %w`, k, err)
+		}
+		if err := dst.Set(k, v); err != nil {
+			return nil, fmt.Errorf(`openid.Clone: failed to set %s: %w`, k, err)
 		}
 	}
 	return dst, nil

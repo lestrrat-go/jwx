@@ -104,3 +104,19 @@ Now you should be able to just pass the `alg` value to most high-level functions
 There are some functions that accept `jwa.KeyAlgorithm`, while there are others that expect `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`. So when do we use which?
 
 The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type.
+
+## Design
+
+### Why does this library not provide a method similar to `Range()`?
+
+A method such as `(*sync.Map).Range` requires that the callback function does not block the execution of the `Range` method itself. However, we would like to avoid modifications to the objects while our `Range`, if provided, is being executed, leading us to use at least a read lock a la `(*sync.RWMutex).RLock`. That causes problems in code like the following:
+
+```
+obj.Range(func(k string, v interface{}) bool) { // This needs a read lock
+    obj.Remove(k) // This needs a write lock
+}
+```
+
+`sync.Map` actually solves this problem, but it involves a fairly complicated workaround. While it is theoretically possible to implement the same logic in this package, we have decided that it is not worth the effort for our purposes.
+
+If you would like to iterate through the keys,  use `Keys()` to retireve the list of keys. This also requires a read lock, but by necessity you can only proceed to execute the next piece of code only after the read lock has been released.

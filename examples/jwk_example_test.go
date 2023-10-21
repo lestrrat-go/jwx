@@ -27,16 +27,20 @@ func ExampleJWK_Usage() {
 		log.Printf("%s", jsonbuf)
 	}
 
-	for it := set.Keys(context.Background()); it.Next(context.Background()); {
-		pair := it.Pair()
-		key := pair.Value.(jwk.Key)
+	for i := 0; i < set.Len(); i++ {
+		var rawkey interface{} // This is where we would like to store the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+		key, ok := set.Key(i)  // This retrieves the corresponding jwk.Key
+		if !ok {
+			log.Printf("failed to get key at index %d", i)
+			return
+		}
 
-		var rawkey interface{} // This is the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
+		// jws and jwe operations can be performed using jwk.Key, but you could also
+		// covert it to their "raw" forms, such as *rsa.PrivateKey or *ecdsa.PrivateKey
 		if err := key.Raw(&rawkey); err != nil {
 			log.Printf("failed to create public key: %s", err)
 			return
 		}
-		// Use rawkey for jws.Verify() or whatever.
 		_ = rawkey
 
 		// You can create jwk.Key from a raw key, too
