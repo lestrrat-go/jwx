@@ -1,8 +1,6 @@
 package jwe
 
 import (
-	"github.com/lestrrat-go/iter/mapiter"
-	"github.com/lestrrat-go/jwx/v3/internal/iter"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
@@ -207,8 +205,3 @@ type Message struct {
 type populater interface {
 	Populate(keygen.Setter) error
 }
-
-type Visitor = iter.MapVisitor
-type VisitorFunc = iter.MapVisitorFunc
-type HeaderPair = mapiter.Pair
-type Iterator = mapiter.Iterator

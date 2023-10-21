@@ -49,10 +49,13 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 func (k *symmetricKey) PublicKey() (Key, error) {
 	newKey := newSymmetricKey()
 
-	for _, pair := range k.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := newKey.Set(key, pair.Value); err != nil {
+	for _, key := range k.Keys() {
+		var v interface{}
+		if err := k.Get(key, &v); err != nil {
+			return nil, fmt.Errorf(`failed to get field %q: %w`, key, err)
+		}
+
+		if err := newKey.Set(key, v); err != nil {
 			return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
 		}
 	}

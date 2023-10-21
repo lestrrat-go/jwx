@@ -465,11 +465,13 @@ func (t *stdToken) Clone() (Token, error) {
 	dst := New()
 
 	dst.Options().Set(*(t.Options()))
-	for _, pair := range t.makePairs() {
-		//nolint:forcetypeassert
-		key := pair.Key.(string)
-		if err := dst.Set(key, pair.Value); err != nil {
-			return nil, fmt.Errorf(`failed to set %s: %w`, key, err)
+	for _, k := range t.Keys() {
+		var v interface{}
+		if err := t.Get(k, &v); err != nil {
+			return nil, fmt.Errorf(`jwt.Clone: failed to get %s: %w`, k, err)
+		}
+		if err := dst.Set(k, v); err != nil {
+			return nil, fmt.Errorf(`jwt.Clone failed to set %s: %w`, k, err)
 		}
 	}
 	return dst, nil

@@ -338,8 +338,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 			if !mergeProtected || protected == nil {
 				protected = v
 			} else {
-				ctx := context.TODO()
-				merged, err := protected.Merge(ctx, v)
+				merged, err := protected.Merge(v)
 				if err != nil {
 					return nil, fmt.Errorf(`jwe.Encrypt: failed to merge headers: %w`, err)
 				}
@@ -418,7 +417,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := protected.Merge(context.TODO(), recipients[0].Headers())
+		h, err := protected.Merge(recipients[0].Headers())
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Encrypt: failed to merge protected headers: %w`, err)
 		}
@@ -546,12 +545,11 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	}
 
 	// Process things that are common to the message
-	ctx := context.TODO()
-	h, err := msg.protectedHeaders.Clone(ctx)
+	h, err := msg.protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
 	}
-	h, err = h.Merge(ctx, msg.unprotectedHeaders)
+	h, err = h.Merge(msg.unprotectedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge headers for message decryption: %w`, err)
 	}
@@ -595,6 +593,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.maxDecompressBufferSize = perCallMaxDecompressBufferSize
 
 	var lastError error
+	ctx := context.TODO()
 	for _, recipient := range recipients {
 		decrypted, err := dctx.try(ctx, recipient, keyUsed)
 		if err != nil {
@@ -629,7 +628,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			key := pair.key
 
-			decrypted, err := dctx.decryptContent(ctx, alg, key, recipient)
+			decrypted, err := dctx.decryptContent(alg, key, recipient)
 			if err != nil {
 				lastError = err
 				continue
@@ -646,7 +645,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
 }
 
-func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
+func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw interface{}
 		if err := jwkKey.Raw(&raw); err != nil {
@@ -667,12 +666,12 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		return nil, fmt.Errorf(`jwe.Decrypt: key and recipient algorithms do not match`)
 	}
 
-	h2, err := dctx.protectedHeaders.Clone(ctx)
+	h2, err := dctx.protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
 	}
 
-	h2, err = h2.Merge(ctx, recipient.Headers())
+	h2, err = h2.Merge(recipient.Headers())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to copy headers (2): %w`, err)
 	}

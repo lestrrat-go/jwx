@@ -1,7 +1,6 @@
 package jwt_test
 
 import (
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -234,47 +233,28 @@ func TestToken(t *testing.T) {
 			return
 		}
 
-		m1, err := tok.AsMap(context.TODO())
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
-			return
-		}
-
-		m2, err := newtok.AsMap(context.TODO())
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, m1, m2, `tokens should match`) {
+		if !assert.True(t, jwt.Equal(tok, newtok), `tokens should match`) {
 			return
 		}
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
-		ctx := context.TODO()
-
 		newtok, err := tok.Clone()
 		if !assert.NoError(t, err, `tok.Clone should succeed`) {
 			return
 		}
 
-		for iter := tok.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			newtok.Remove(pair.Key.(string))
+		for _, k := range tok.Keys() {
+			newtok.Remove(k)
 		}
 
-		m, err := newtok.AsMap(ctx)
-		if !assert.NoError(t, err, `tok.AsMap should succeed`) {
+		if !assert.Len(t, newtok.Keys(), 0, `toks should have 0 tok`) {
 			return
 		}
 
-		if !assert.Len(t, m, 0, `toks should have 0 tok`) {
-			return
-		}
-
-		for iter := tok.Iterate(ctx); iter.Next(ctx); {
-			pair := iter.Pair()
-			if !assert.NoError(t, newtok.Set(pair.Key.(string), pair.Value), `newtok.Set should succeed`) {
-				return
-			}
+		for _, k := range tok.Keys() {
+			var v interface{}
+			require.NoError(t, tok.Get(k, &v), `tok.Get(%s) should succeed`, k)
+			require.NoError(t, newtok.Set(k, v), `newtok.Set should succeed`)
 		}
 	})
 }
