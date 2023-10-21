@@ -3,6 +3,7 @@ package jwe
 import (
 	"crypto/aes"
 	cryptocipher "crypto/cipher"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -17,7 +18,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 // decrypter is responsible for taking various components to decrypt a message.
@@ -285,7 +285,7 @@ func (d *decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 		return keyenc.NewAES(alg, sharedkey)
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		switch d.pubkey.(type) {
-		case x25519.PublicKey:
+		case *ecdh.PublicKey:
 			return keyenc.NewECDHESDecrypt(alg, d.ctalg, d.pubkey, d.apu, d.apv, d.privkey), nil
 		default:
 			var pubkey ecdsa.PublicKey

@@ -11,7 +11,6 @@ go_library(
         "//jwk",
         "//jwk/ecdsa",
         "//jws",
-        "//x25519",
         "@com_github_stretchr_testify//assert",
     ],
 )

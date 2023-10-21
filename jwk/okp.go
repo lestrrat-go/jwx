@@ -3,13 +3,13 @@ package jwk
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"fmt"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 )
 
 // Mental note:
@@ -38,8 +38,8 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 		k.x = rawKey
 		crv = jwa.Ed25519
 		k.crv = &crv
-	case x25519.PublicKey:
-		k.x = rawKey
+	case *ecdh.PublicKey:
+		k.x = rawKey.Bytes()
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
@@ -60,9 +60,10 @@ func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
 		k.x = rawKey.Public().(ed25519.PublicKey) //nolint:forcetypeassert
 		crv = jwa.Ed25519
 		k.crv = &crv
-	case x25519.PrivateKey:
-		k.d = rawKey.Seed()
-		k.x = rawKey.Public().(x25519.PublicKey) //nolint:forcetypeassert
+	case *ecdh.PrivateKey:
+		// k.d = rawKey.Seed()
+		k.d = rawKey.Bytes()
+		k.x = rawKey.Public().(*ecdh.PublicKey).Bytes() //nolint:forcetypeassert
 		crv = jwa.X25519
 		k.crv = &crv
 	default:
@@ -77,7 +78,11 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (interface{}
 	case jwa.Ed25519:
 		return ed25519.PublicKey(xbuf), nil
 	case jwa.X25519:
-		return x25519.PublicKey(xbuf), nil
+		ret, err := ecdh.X25519().NewPublicKey(xbuf)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to parse x25519 public key: %w`, err)
+		}
+		return ret, nil
 	default:
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
@@ -90,10 +95,13 @@ func (k *okpPublicKey) Raw(v interface{}) error {
 
 	pubk, err := buildOKPPublicKey(k.Crv(), k.x)
 	if err != nil {
-		return fmt.Errorf(`failed to build public key: %w`, err)
+		return fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
 	}
 
-	return blackmagic.AssignIfCompatible(v, pubk)
+	if err := blackmagic.AssignIfCompatible(v, pubk); err != nil {
+		return fmt.Errorf(`jwk.OKPPublicKey: failed to assign to destination variable: %w`, err)
+	}
+	return nil
 }
 
 func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte) (interface{}, error) {
@@ -112,12 +120,12 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 		}
 		return ret, nil
 	case jwa.X25519:
-		ret, err := x25519.NewKeyFromSeed(dbuf)
+		ret, err := ecdh.X25519().NewPrivateKey(dbuf)
 		if err != nil {
 			return nil, fmt.Errorf(`unable to construct x25519 private key from seed: %w`, err)
 		}
 		//nolint:forcetypeassert
-		if !bytes.Equal(xbuf, ret.Public().(x25519.PublicKey)) {
+		if !bytes.Equal(xbuf, ret.Public().(*ecdh.PublicKey).Bytes()) {
 			return nil, fmt.Errorf(`invalid x value given d value`)
 		}
 		return ret, nil
@@ -132,10 +140,13 @@ func (k *okpPrivateKey) Raw(v interface{}) error {
 
 	privk, err := buildOKPPrivateKey(k.Crv(), k.x, k.d)
 	if err != nil {
-		return fmt.Errorf(`failed to build public key: %w`, err)
+		return fmt.Errorf(`jwk.OKPPrivateKey: failed to build public key: %w`, err)
 	}
 
-	return blackmagic.AssignIfCompatible(v, privk)
+	if err := blackmagic.AssignIfCompatible(v, privk); err != nil {
+		return fmt.Errorf(`jwk.OKPPrivateKey: failed to assign to destination variable: %w`, err)
+	}
+	return nil
 }
 
 func makeOKPPublicKey(v interface {

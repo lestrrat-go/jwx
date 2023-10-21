@@ -3,6 +3,7 @@ package jwxtest
 import (
 	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -19,7 +20,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,8 +116,8 @@ func GenerateEd25519Jwk() (jwk.Key, error) {
 	return k, nil
 }
 
-func GenerateX25519Key() (x25519.PrivateKey, error) {
-	_, priv, err := x25519.GenerateKey(rand.Reader)
+func GenerateX25519Key() (*ecdh.PrivateKey, error) {
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	return priv, err
 }
 

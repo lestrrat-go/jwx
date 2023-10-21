@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -12,7 +13,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/x25519"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )
@@ -172,7 +172,7 @@ func makeJwkGenerateCmd() *cli.Command {
 				}
 				rawkey = priv
 			case jwa.X25519:
-				_, priv, err := x25519.GenerateKey(rand.Reader)
+				priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 				if err != nil {
 					return fmt.Errorf(`failed to generate x25519 private key: %w`, err)
 				}
