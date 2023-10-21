@@ -2,7 +2,6 @@ package jws
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -102,10 +101,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
 func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	hdrs, err := mergeHeaders(ctx, s.headers, s.protected)
+	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
 	}
