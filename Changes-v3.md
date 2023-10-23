@@ -20,6 +20,8 @@ These are changes that are incompatible with the v2.x.x version.
 
 * Method `Has()` to query the presence of a field has been added
 
+* Added ability to define new `jwk.Key` types.
+
 * `PrivateParams()` has been removed.
 
 ## JWS
