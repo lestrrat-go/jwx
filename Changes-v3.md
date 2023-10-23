@@ -14,6 +14,14 @@ These are changes that are incompatible with the v2.x.x version.
   `Get(string, interface{}) error`, where the second argument should be a pointer
   to the storage destination of the field.
 
+* Iterator related methods such as, `Iterate()`, `AsMAp()`, `Walk()`, `Visit()`, etc have all been
+  removed. Use `Keys()` to iterate through elements. Also, methods such as `Copy()` and `Merge()`
+  no longer takes `context.Context` as its first argument.
+
+* Method `Has()` to query the presence of a field has been added
+
+* `PrivateParams()` has been removed.
+
 ## JWS
 
 * Iterators have been completely removed.

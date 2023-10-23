@@ -46,6 +46,145 @@ var keyParsers = []KeyParser{KeyParseFunc(defaultParseKey)}
 // RegisterKeyParser adds a new KeyParser. Parsers are called in FILO order.
 // That is, the last parser to be registered is called first. There is no
 // check for duplicate entries.
+//
+// You can use a JWK that this library does not implement out of the box by
+// registering a new `KeyParser` that can produce your custom JWK. For example,
+// you may register a new parser and a key probe field like this:
+//
+//	func init() {
+//	  // optional
+//	  jwk.RegiserProbeField(reflect.StructField{Name: "SomeHint", Type: reflect.TypeOf(""), Tag: `json:"some_hint"`})
+//	  jwk.RegisterKeyParser(&MyKeyParser{})
+//	}
+//
+// In order to understand how this works, you need to understand
+// how the `jwk.ParseKey()` works.
+//
+// The first thing that occurs when parsing a key is a partial
+// unmarshaling of the payload into a hint / probe object.
+// This must be done because when going from JSON to a concrete Go type,
+// we must first create a concrete Go type _and then_ use `json.Unmarshal`
+// to parse the JSON payload.
+//
+//	key := NewMyKey()
+//	_ = json.Unmarshal(payload, key)
+//
+// But in order to create the concrete type, we need to know what kind of
+// Go type we need. This can only be done by peeking into the payload.
+// To do this, we use a struct that populates the minimal amount of
+// information required to determine the concrete type.
+//
+//	var probe ...
+//	_ = json.Unmarshal(payload, &probe)
+//	if probe.Hint == ... { /* pseudocode */
+//	  concrete := newAwesomeToken() /* we now know the concrete type! */
+//	  if err := json.Unmarshal(payload, concrete) { ... }
+//	}
+//
+// For the built-in types, we only need to know the value of the "kty"
+// and "d" fields, to determine the key type (via "kty") and if it's
+// a private or public key (via "d").
+//
+// For example, a JWK representing an RSA key would look like:
+//
+//	{ "kty": "RSA", "n": ..., "e": ..., ... }
+//
+// The KeyProbe partially unmarshals this object so that we can obtain the value
+// of the field "kty". By inspecting the value of this field, we can determine
+// that this is an RSA key. Following code shows the rough idea of how the
+// key type is determined:
+//
+//	var kty string
+//	_ = probe.Get("Kty", &kty)
+//	switch kty {
+//	case "RSA":
+//	  // create an RSA key
+//	case "EC":
+//	  // create an EC key
+//	...
+//	}
+//
+// However this is not enough. We also need to know if this is a private
+// or public key. In the case of an RSA key, the key is a private key if said payload contains
+// some value in the "d" field.
+//
+//	 var key jwk.Key
+//	 switch kty {
+//	 case "RSA":
+//	   var d json.RawMessage
+//	   _ = probe.Get("D", &d)
+//	   if len(d) > 0 {
+//		    key = newRSAPrivateKey()
+//	   } else {
+//	     key = newRSAPublicKey()
+//	   }
+//	   ...
+//	 }
+//
+// In this way we can finally unmarshal the payload into a concrete type.
+//
+// For most cases, the default KeyProbe implementation should be sufficient.
+// However, in some cases you may need to query additional fields to determine
+// to determine the concrete type.
+// For example, if you want to know the value of the field "my_hint" (which holds a string value)
+// from the payload, you can register it to be probed by registering an additional probe field like this:
+//
+//	jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//
+// This will add a new field to the KeyProbe object dynamically, allowing it to
+// capture the value of the "my_hint" field from the payload and store it in
+// the "MyHint" slot of the probe.
+//
+// This probe will be passed to the registered parsers' `ParseKey()` methods.
+// This is why the `KeyParser` interface contains the `*jwk.KeyProbe` object
+// as its first argument. Following is how you would query the value of
+// "MyHint" from the probe:
+//
+//	func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
+//	  var hint string
+//	  if err := probe.Get("MyHint", &hint); err != nil { ... }
+//	  ...
+//	}
+//
+// The second argument is a `KeyUnmarshaler` object. This is a thin wrapper
+// `json.Unmarshal`. It works almost identical to `json.Unmarshal`, but
+// adds extra magic that is specific to this library before calling
+// the actual `json.Unmarshal`, but unfortunately you would need to know the
+// internals of this library to fully use its magic. If you do not care
+// about the details, just use the unmarshaler as you would `json.Unmarshal`.
+//
+// Combining this together, the following is how you would add a new `jwk.Key`
+//
+//	func init() {
+//	  jwk.RegisterFieldProbe(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//	  jwk.RegisterParser(&MyKeyParser{})
+//	}
+//
+//	type MyKeyParser struct { ... }
+//	func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
+//	  // Create concrete type
+//	  var hint string
+//	  if err := probe.Get("MyHint", &hint); err != nil {
+//	     // if it doesn't have the `my_hint` field, it probably means
+//	     // it's not for us, so we return ContinueParseError so that
+//	     // the next parser can pick it up
+//	     return nil, jwk.ContinueParseError()
+//	  }
+//
+//	  // Use hint to determine concrete key type
+//	  var key jwk.Key
+//	  switch hint {
+//	  case ...:
+//	   key = = myNewAwesomeJWK()
+//	  ...
+//
+//	  return unmarshaler.Unmarshal(data, key)
+//	}
+//
+// This functionality should be considered experimental. While we
+// expect that the functionality itself will remain, the API may
+// change in backward incompatible ways, even during minor version
+// releases.
 func RegisterKeyParser(kp KeyParser) {
 	muKeyParser.Lock()
 	defer muKeyParser.Unlock()
