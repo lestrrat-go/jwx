@@ -2044,3 +2044,80 @@ func TestGH910(t *testing.T) {
 
 	require.Equal(t, src, string(verified), `verified payload should match`)
 }
+
+func TestUnpaddedSignatureR(t *testing.T) {
+	// I brute-forced generating a key and signature where the R portion
+	// of the signature was not padded by using the following code in the
+	// first run, then copied the result to the test
+	/*
+		for i := 0; i < 10000; i++ {
+			rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P256)
+			require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
+
+			key, err := jwk.FromRaw(rawKey)
+			require.NoError(t, err, `jwk.FromRaw should succeed`)
+
+			pubkey, _ := key.PublicKey()
+
+			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.ES256, key))
+			require.NoError(t, err, `jws.Sign should succeed`)
+
+			message, err := jws.Parse(signed)
+			require.NoError(t, err, `jws.Parse should succeed`)
+
+			asJson, _ := json.Marshal(message)
+			t.Logf("%s", asJson)
+
+			for _, sig := range message.Signatures() {
+				sigBytes := sig.Signature()
+				if sigBytes[0] == 0x00 {
+					// Found it!
+					t.Logf("Found signature that can be unpadded.")
+					t.Logf("Original signature: %q", base64.EncodeToString(sigBytes))
+
+					//				unpaddedSig := append(sigBytes[1:31], sigBytes[32:]...)
+					unpaddedSig := sigBytes[1:]
+					t.Logf("Signature with first byte of R removed: %q", base64.EncodeToString(unpaddedSig))
+					t.Logf("Original JWS payload: %q", signed)
+					require.Len(t, unpaddedSig, 63)
+
+					i := bytes.LastIndexByte(signed, '.')
+					modified := append(signed[:i+1], base64.Encode(unpaddedSig)...)
+					t.Logf("JWS payload with unpadded signature: %q", modified)
+
+					// jws.Verify for sanity
+					verified, err := jws.Verify(modified, jws.WithKey(jwa.ES256, pubkey))
+					require.NoError(t, err, `jws.Verify should succeed`)
+					t.Logf("verified payload: %q", verified)
+
+					buf, _ := json.Marshal(key)
+					t.Logf("Private JWK: %s", buf)
+					return
+				}
+			}
+		}
+	*/
+	// Padded has R with a leading 0 (as it should)
+	padded := "eyJhbGciOiJFUzI1NiJ9.TG9yZW0gSXBzdW0.ALFru4CRZDiAlVKyyHtlLGtXIAWxC3lXIlZuYO8G8a5ePzCwyw6c2FzWBZwrLaoLFZb_TcYs3TcZ8mhONPaavQ"
+	// Unpadded has R with a leading 0 removed (31 bytes, WRONG)
+	unpadded := "eyJhbGciOiJFUzI1NiJ9.TG9yZW0gSXBzdW0.sWu7gJFkOICVUrLIe2Usa1cgBbELeVciVm5g7wbxrl4_MLDLDpzYXNYFnCstqgsVlv9NxizdNxnyaE409pq9"
+
+	// This is the private key used to sign the payload
+	keySrc := `{"crv":"P-256","d":"MqGwMl-dlJFrMnu7rFyslPV8EdsVC7I4V19N-ADVqaU","kty":"EC","x":"Anf1p2lRrcXgZKpVRRC1xLxPiw_45PbOlygfbxvD8Es","y":"d0HiZq-aurVVLLtK-xqXPpzpWloZJNwKNve7akBDuvg"}`
+
+	privKey, err := jwk.ParseKey([]byte(keySrc))
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+	pubKey, err := jwk.PublicKeyOf(privKey)
+	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
+
+	// Should always succeed
+	payload, err := jws.Verify([]byte(padded), jws.WithKey(jwa.ES256, pubKey))
+	require.NoError(t, err, `jws.Verify should succeed`)
+	require.Equal(t, "Lorem Ipsum", string(payload))
+
+	// Should fail
+	_, err = jws.Verify([]byte(unpadded), jws.WithKey(jwa.ES256, pubKey))
+	require.Error(t, err, `jws.Verify should fail`)
+
+}
