@@ -2119,5 +2119,4 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	// Should fail
 	_, err = jws.Verify([]byte(unpadded), jws.WithKey(jwa.ES256, pubKey))
 	require.Error(t, err, `jws.Verify should fail`)
-
 }
