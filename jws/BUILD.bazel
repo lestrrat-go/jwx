@@ -50,6 +50,7 @@ go_test(
     deps = [
         "//cert",
         "//internal/base64",
+        "//internal/ecutil",
         "//internal/json",
         "//internal/jwxtest",
         "//jwa",
