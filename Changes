@@ -4,6 +4,28 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.16 UNRELEASED
+[Security]
+  * [jws] ECDSA signature verification requires us to check if the signature
+    is of the desired length of bytes, but this check that used to exist before
+    had been removed in #65, resulting in certain malformed signatures to pass
+    verification.
+
+    This could happen if R is a 31 byte integer and S is 32 byte integer,
+    both containing the correct signature values, but R is not zero-padded.
+
+       Correct = R: [ 0 , ... ] (32 bytes) S: [ ... ] (32 bytes)
+       Wrong   = R: [ ... ] (31 bytes)     S: [ ... ] (32 bytes)
+
+    In order for this check to pass, you would still need to have all 63 bytes
+    populated with the correct signature. The only modification a bad actor
+    may be able to do is to add one more byte at the end, in which case the
+    first 32 bytes (including what would have been S's first byte) is used for R,
+    and S would contain the rest. But this will only result in the verification to
+    fail. Therefore this in itself should not pose any security risk, albeit
+    allowing some illegally formated messages to be verified.
+
+
 v2.0.15 19 20 Oct 2023
 [Bug fixes]
   * [jws] jws.Sign() now properly check for valid algorithm / key type pair when
