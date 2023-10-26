@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v2/cert"
+	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/stretchr/testify/assert"
@@ -129,9 +130,18 @@ func TestIterator(t *testing.T) {
 		{
 			Extras: map[string]interface{}{
 				ECDSACrvKey: jwa.P256,
-				ECDSAXKey:   []byte("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4"),
-				ECDSAYKey:   []byte("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"),
-				ECDSADKey:   []byte("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"),
+				ECDSAXKey: (func() []byte {
+					s, _ := base64.DecodeString("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4")
+					return s
+				})(),
+				ECDSAYKey: (func() []byte {
+					s, _ := base64.DecodeString("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM")
+					return s
+				})(),
+				ECDSADKey: (func() []byte {
+					s, _ := base64.DecodeString("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE")
+					return s
+				})(),
 			},
 			Func: func() Key {
 				return newECDSAPrivateKey()
@@ -140,8 +150,14 @@ func TestIterator(t *testing.T) {
 		{
 			Extras: map[string]interface{}{
 				ECDSACrvKey: jwa.P256,
-				ECDSAXKey:   []byte("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4"),
-				ECDSAYKey:   []byte("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"),
+				ECDSAXKey: (func() []byte {
+					s, _ := base64.DecodeString("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4")
+					return s
+				})(),
+				ECDSAYKey: (func() []byte {
+					s, _ := base64.DecodeString("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM")
+					return s
+				})(),
 			},
 			Func: func() Key {
 				return newECDSAPublicKey()
@@ -184,6 +200,7 @@ func TestIterator(t *testing.T) {
 			}
 
 			if !assert.NoError(t, json.Unmarshal(buf, key2), `json.Unmarshal should succeed`) {
+				t.Logf("%s", buf)
 				return
 			}
 

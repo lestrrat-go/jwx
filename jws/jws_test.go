@@ -1129,7 +1129,8 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 			Name: `match 2 keys via same "kid" and different key type / alg`,
 			Key: func() jwk.Key {
 				privateKey, _ := jwxtest.GenerateEcdsaKey(jwa.P256)
-				wrongKey, _ := jwk.PublicKeyOf(privateKey)
+				wrongKey, err := jwk.PublicKeyOf(privateKey)
+				require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
 				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K)
 				return wrongKey

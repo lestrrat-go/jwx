@@ -139,6 +139,7 @@ type identPublicHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
 type identUseDefault struct{}
+type identValidateKey struct{}
 
 func (identContext) String() string {
 	return "WithContext"
@@ -202,6 +203,10 @@ func (identSerialization) String() string {
 
 func (identUseDefault) String() string {
 	return "WithUseDefault"
+}
+
+func (identValidateKey) String() string {
+	return "WithValidateKey"
 }
 
 func WithContext(v context.Context) VerifyOption {
@@ -333,4 +338,25 @@ func WithCompact() SignOption {
 // (I think this should be removed)
 func WithUseDefault(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
+}
+
+// WithValidateKey specifies whether the key used for verification
+// should be validated before using. Note that this means calling
+// `key.Validate()` on the key, which in turn means that your key
+// must be a `jwk.Key` instance, or a key that can be converted to
+// a `jwk.Key` by calling `jwk.FromRaw()`. This means that your
+// custom hardware-backed keys will probably not work.
+//
+// You can directly call `key.Validate()` yourself if you need to
+// mix keys that cannot be converted to `jwk.Key`.
+//
+// Please also note that use of this option will also result in
+// one extra conversion of raw keys to a `jwk.Key` instance. If you
+// care about shaving off as much as possible, consider using a
+// pre-validated key instead of using this option to validate
+// the key on-demand each time.
+//
+// By default, the key is not validated.
+func WithValidateKey(v bool) VerifyOption {
+	return &verifyOption{option.New(identValidateKey{}, v)}
 }

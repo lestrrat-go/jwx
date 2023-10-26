@@ -2217,3 +2217,55 @@ func TestGH947(t *testing.T) {
 	var exported []byte
 	require.Error(t, k.Raw(&exported), `(okpkey).Raw with 0-length OKP key should fail`)
 }
+
+func TestValidation(t *testing.T) {
+	{
+		key, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwx.GenerateRsaJwk should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed (vanilla key)`)
+
+		require.NoError(t, key.Set(jwk.RSADKey, []byte(nil)), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+	}
+
+	{
+		key, err := jwxtest.GenerateEcdsaJwk()
+		require.NoError(t, err, `jwx.GenerateEcdsaJwk should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed`)
+
+		//nolint:forcetypeassert
+		x := key.(jwk.ECDSAPrivateKey).X()
+		require.NoError(t, key.Set(jwk.ECDSAXKey, x[:len(x)/2]), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+
+		require.NoError(t, key.Set(jwk.ECDSAXKey, x), `key.Set should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed`)
+
+		require.NoError(t, key.Set(jwk.ECDSADKey, []byte(nil)), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+	}
+
+	{
+		key, err := jwxtest.GenerateEd25519Jwk()
+		require.NoError(t, err, `jwx.GenerateEd25519Jwk should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed`)
+		x := key.(jwk.OKPPrivateKey).X()
+		require.NoError(t, key.Set(jwk.OKPXKey, []byte(nil)), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+
+		require.NoError(t, key.Set(jwk.OKPXKey, x), `key.Set should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed`)
+
+		require.NoError(t, key.Set(jwk.OKPDKey, []byte(nil)), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+	}
+
+	{
+		key, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err, `jwx.GenerateSymmetricJwk should succeed`)
+		require.NoError(t, key.Validate(), `key.Validate should succeed`)
+
+		require.NoError(t, key.Set(jwk.SymmetricOctetsKey, []byte(nil)), `key.Set should succeed`)
+		require.Error(t, key.Validate(), `key.Validate should fail`)
+	}
+}

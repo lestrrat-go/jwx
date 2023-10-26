@@ -290,6 +290,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var detachedPayload []byte
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
+	var validateKey bool
 
 	ctx := context.Background()
 
@@ -316,6 +317,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			keyUsed = option.Value()
 		case identContext{}:
 			ctx = option.Value().(context.Context)
+		case identValidateKey{}:
+			validateKey = option.Value().(bool)
 		default:
 			return nil, fmt.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -386,6 +389,20 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				//nolint:forcetypeassert
 				alg := pair.alg.(jwa.SignatureAlgorithm)
 				key := pair.key
+
+				if validateKey {
+					jwkKey, ok := key.(jwk.Key)
+					if !ok {
+						converted, err := jwk.FromRaw(key)
+						if err != nil {
+							return nil, fmt.Errorf(`jws.Verify: could not convert key of type %T to jwk.Key for validation: %w`, key, err)
+						}
+						jwkKey = converted
+					}
+					if err := jwkKey.Validate(); err != nil {
+						return nil, fmt.Errorf(`jws.Verify: failed to validate key: %w`, err)
+					}
+				}
 				verifier, err := NewVerifier(alg)
 				if err != nil {
 					return nil, fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)
