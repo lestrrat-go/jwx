@@ -8,10 +8,15 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// CustomDecoder is the interface we expect from RegisterCustomField in jws, jwe, jwk, and jwt packages.
 type CustomDecoder interface {
+	// Decode takes a JSON encoded byte slice and returns the desired
+	// decoded value,which will be used as the value for that field
+	// registered throught RegisterCustomField
 	Decode([]byte) (interface{}, error)
 }
 
+// CustomDecodeFunc is a stateless, function-based implementation of CustomDecoder
 type CustomDecodeFunc func([]byte) (interface{}, error)
 
 func (fn CustomDecodeFunc) Decode(data []byte) (interface{}, error) {
@@ -34,7 +39,6 @@ func (dec *objectTypeDecoder) Decode(data []byte) (interface{}, error) {
 type Registry struct {
 	mu   *sync.RWMutex
 	ctrs map[string]CustomDecoder
-	objs map[string]reflect.Type
 }
 
 func NewRegistry() *Registry {
