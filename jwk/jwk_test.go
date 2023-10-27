@@ -1393,16 +1393,34 @@ func TestOKP(t *testing.T) {
 }
 
 func TestCustomField(t *testing.T) {
+	const rfc3339Key = `x-rfc3339-key`
+	const rfc1123Key = `x-rfc1123-key`
+
 	// XXX has global effect!!!
-	jwk.RegisterCustomField(`x-birthday`, time.Time{})
-	defer jwk.RegisterCustomField(`x-birthday`, nil)
+	jwk.RegisterCustomField(rfc3339Key, time.Time{})
+	jwk.RegisterCustomField(rfc1123Key, jwk.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse(time.RFC1123, s)
+	}))
+	defer jwk.RegisterCustomField(rfc3339Key, nil)
+	defer jwk.RegisterCustomField(rfc1123Key, nil)
 
 	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
-	bdaybytes, _ := expected.MarshalText() // RFC3339
+	rfc3339bytes, _ := expected.MarshalText() // RFC3339
+	rfc1123bytes := expected.Format(time.RFC1123)
 
 	var b strings.Builder
-	b.WriteString(`{"e":"AQAB", "kty":"RSA", "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw","x-birthday":"`)
-	b.Write(bdaybytes)
+	b.WriteString(`{"e":"AQAB", "kty":"RSA", "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw","`)
+	b.WriteString(rfc3339Key)
+	b.WriteString(`":"`)
+	b.Write(rfc3339bytes)
+	b.WriteString(`","`)
+	b.WriteString(rfc1123Key)
+	b.WriteString(`":"`)
+	b.WriteString(rfc1123bytes)
 	b.WriteString(`"}`)
 	src := b.String()
 
@@ -1412,11 +1430,10 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		var v interface{}
-		require.NoError(t, key.Get(`x-birthday`, &v), `key.Get("x-birthday") should succeed`)
-
-		if !assert.Equal(t, expected, v, `values should match`) {
-			return
+		for _, name := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, key.Get(name, &v), `key.Get(%q) should succeed`, name)
+			require.Equal(t, expected, v, `values should match`)
 		}
 	})
 }
