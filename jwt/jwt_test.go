@@ -1757,12 +1757,13 @@ func TestGH1007(t *testing.T) {
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
 
 	// This was the intended usage (no WithKey). This worked from the beginning
 	_, err = jwt.ParseInsecure(signed)
 	require.NoError(t, err, `jwt.ParseInsecure should succeed`)
 
-	// This is the problematic behavior reported in #1007.
+	// This is the problematic behavior reporded in #1007.
 	// The fact that we're specifying a wrong key caused Parse() to check for
 	// verification and yet fail :/
 	wrongPubKey, err := jwxtest.GenerateRsaPublicJwk()
