@@ -759,20 +759,20 @@ func IsPrivateKey(k Key) (bool, error) {
 	return false, fmt.Errorf("jwk.IsPrivateKey: %T is not an asymmetric key", k)
 }
 
-type keyValidationErr struct {
+type keyValidationError struct {
 	err error
 }
 
-func (e *keyValidationErr) Error() string {
+func (e *keyValidationError) Error() string {
 	return fmt.Sprintf(`key validation failed: %s`, e.err)
 }
 
-func (e *keyValidationErr) Unwrap() error {
+func (e *keyValidationError) Unwrap() error {
 	return e.err
 }
 
-func (e *keyValidationErr) Is(target error) bool {
-	_, ok := target.(*keyValidationErr)
+func (e *keyValidationError) Is(target error) bool {
+	_, ok := target.(*keyValidationError)
 	return ok
 }
 
@@ -780,10 +780,10 @@ func (e *keyValidationErr) Is(target error) bool {
 // `key.Validate()` has failed. This error type should ONLY be used as
 // return value from the `Validate()` method.
 func NewKeyValidationError(err error) error {
-	return &keyValidationErr{err: err}
+	return &keyValidationError{err: err}
 }
 
 func IsKeyValidationError(err error) bool {
-	var kve keyValidationErr
+	var kve keyValidationError
 	return errors.Is(err, &kve)
 }

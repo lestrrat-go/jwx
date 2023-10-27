@@ -117,10 +117,7 @@ func validateKeyBeforeUse(key interface{}) error {
 		}
 		jwkKey = converted
 	}
-	if err := jwkKey.Validate(); err != nil {
-		return err
-	}
-	return nil
+	return jwkKey.Validate()
 }
 
 // Sign generates a JWS message for the given payload and returns
