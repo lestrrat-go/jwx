@@ -2233,7 +2233,6 @@ func TestValidation(t *testing.T) {
 		require.NoError(t, err, `jwx.GenerateEcdsaJwk should succeed`)
 		require.NoError(t, key.Validate(), `key.Validate should succeed`)
 
-		//nolint:forcetypeassert
 		x := key.(jwk.ECDSAPrivateKey).X()
 		require.NoError(t, key.Set(jwk.ECDSAXKey, x[:len(x)/2]), `key.Set should succeed`)
 		require.Error(t, key.Validate(), `key.Validate should fail`)

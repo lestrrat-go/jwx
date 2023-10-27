@@ -227,27 +227,27 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	), nil
 }
 
-func ecdsaValidateKey(h interface {
+func ecdsaValidateKey(k interface {
 	Crv() jwa.EllipticCurveAlgorithm
 	X() []byte
 	Y() []byte
 }, checkPrivate bool) error {
-	crv, ok := ecutil.CurveForAlgorithm(h.Crv())
+	crv, ok := ecutil.CurveForAlgorithm(k.Crv())
 	if !ok {
-		return fmt.Errorf(`invalid curve algorithm %q`, h.Crv())
+		return fmt.Errorf(`invalid curve algorithm %q`, k.Crv())
 	}
 
 	keySize := ecutil.CalculateKeySize(crv)
-	if x := h.X(); len(x) != keySize {
+	if x := k.X(); len(x) != keySize {
 		return fmt.Errorf(`invalid "x" length (%d) for curve %q`, len(x), crv.Params().Name)
 	}
 
-	if y := h.Y(); len(y) != keySize {
+	if y := k.Y(); len(y) != keySize {
 		return fmt.Errorf(`invalid "y" length (%d) for curve %q`, len(y), crv.Params().Name)
 	}
 
 	if checkPrivate {
-		if priv, ok := h.(interface{ D() []byte }); ok {
+		if priv, ok := k.(interface{ D() []byte }); ok {
 			if len(priv.D()) != keySize {
 				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(priv.D()), crv.Params().Name)
 			}
@@ -258,15 +258,15 @@ func ecdsaValidateKey(h interface {
 	return nil
 }
 
-func (h *ecdsaPrivateKey) Validate() error {
-	if err := ecdsaValidateKey(h, true); err != nil {
+func (k *ecdsaPrivateKey) Validate() error {
+	if err := ecdsaValidateKey(k, true); err != nil {
 		return fmt.Errorf(`jwk.ECDSAPrivateKey: failed to validate key: %w`, err)
 	}
 	return nil
 }
 
-func (h *ecdsaPublicKey) Validate() error {
-	if err := ecdsaValidateKey(h, false); err != nil {
+func (k *ecdsaPublicKey) Validate() error {
+	if err := ecdsaValidateKey(k, false); err != nil {
 		return fmt.Errorf(`jwk.ECDSAPublicKey: failed to validate key: %w`, err)
 	}
 	return nil
