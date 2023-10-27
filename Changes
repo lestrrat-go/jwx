@@ -29,7 +29,7 @@ v2.0.16 UNRELEASED
     stored in the keys. However, this still does not necessarily mean that the key's
     are valid for use in cryptographic operations. If `Validate()` is successful,
     it only means that the keys are in the right _format_, including the presence
-    of required fields and that certain fields are have proper length, etc.
+    of required fields and that certain fields have proper length, etc.
 
 [New Features]
   * [jws] Added `jws.WithValidateKey()` to force calling `key.Validate()` before
