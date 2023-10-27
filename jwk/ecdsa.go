@@ -228,9 +228,9 @@ func ecdsaValidateKey(k interface {
 	X() []byte
 	Y() []byte
 }, checkPrivate bool) error {
-	crv, ok := ecutil.CurveForAlgorithm(k.Crv())
-	if !ok {
-		return fmt.Errorf(`invalid curve algorithm %q`, k.Crv())
+	crv, err := ourecdsa.CurveFromAlgorithm(k.Crv())
+	if err != nil {
+		return fmt.Errorf(`invalid curve algorithm %q: %w`, k.Crv(), err)
 	}
 
 	keySize := ecutil.CalculateKeySize(crv)
