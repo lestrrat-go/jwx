@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-
-	"github.com/goccy/go-json"
 )
 
 // CustomDecoder is the interface we expect from RegisterCustomField in jws, jwe, jwk, and jwt packages.
@@ -30,7 +28,7 @@ type objectTypeDecoder struct {
 
 func (dec *objectTypeDecoder) Decode(data []byte) (interface{}, error) {
 	ptr := reflect.New(dec.typ).Interface()
-	if err := json.Unmarshal(data, ptr); err != nil {
+	if err := Unmarshal(data, ptr); err != nil {
 		return nil, fmt.Errorf(`failed to decode field %s: %w`, dec.name, err)
 	}
 	return reflect.ValueOf(ptr).Elem().Interface(), nil
@@ -73,7 +71,7 @@ func (r *Registry) Decode(dec *Decoder, name string) (interface{}, error) {
 	defer r.mu.RUnlock()
 
 	if ctr, ok := r.ctrs[name]; ok {
-		var raw json.RawMessage
+		var raw RawMessage
 		if err := dec.Decode(&raw); err != nil {
 			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
 		}
