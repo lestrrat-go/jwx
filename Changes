@@ -42,6 +42,10 @@ v2.0.16 UNRELEASED
   * [jwk] Added `jwk.IsKeyValidationError` that checks if an error is an error
     from `key.Validate()`.
 
+[Bug Fixes]
+  * [jwt] `jwt.ParseInsecure()` was running verification if you provided a key
+    via `jwt.WithKey()` or `jwt.WithKeySet()` (#1007)
+
 v2.0.15 19 20 Oct 2023
 [Bug fixes]
   * [jws] jws.Sign() now properly check for valid algorithm / key type pair when

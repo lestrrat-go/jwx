@@ -209,6 +209,10 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		}
 	}
 
+	if !verification {
+		ctx.skipVerification = true
+	}
+
 	lvo := len(verifyOpts)
 	if lvo == 0 && verification {
 		return nil, fmt.Errorf(`jwt.Parse: no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
