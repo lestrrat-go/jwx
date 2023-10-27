@@ -24,11 +24,7 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
-<<<<<<< HEAD
         "//internal/ecutil",
-        "//internal/iter",
-=======
->>>>>>> 7497448 (Remove iterators  (#999))
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
