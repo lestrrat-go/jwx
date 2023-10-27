@@ -454,6 +454,9 @@ func (t *stdToken) Clone() (Token, error) {
 	return dst, nil
 }
 
+type CustomDecoder = json.CustomDecoder
+type CustomDecodeFunc = json.CustomDecodeFunc
+
 // RegisterCustomField allows users to specify that a private field
 // be decoded as an instance of the specified type. This option has
 // a global effect.
@@ -464,7 +467,7 @@ func (t *stdToken) Clone() (Token, error) {
 //
 // In such case you would register a custom field as follows
 //
-//	jwt.RegisterCustomField(`x-birthday`, time.Time)
+//	jwt.RegisterCustomField(`x-birthday`, time.Time{})
 //
 // Then you can use a `time.Time` variable to extract the value
 // of `x-birthday` field, instead of having to use `interface{}`
@@ -472,6 +475,14 @@ func (t *stdToken) Clone() (Token, error) {
 //
 //	var bday time.Time
 //	_ = token.Get(`x-birthday`, &bday)
+//
+// If you need a more fine-tuned control over the decoding process,
+// you can register a `CustomDecoder`. For example, below shows
+// how to register a decoder that can parse RFC822 format string:
+//
+//	jwt.RegisterCustomField(`x-birthday`, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+//	  return time.Parse(time.RFC822, string(data))
+//	}))
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }
