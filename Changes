@@ -31,6 +31,17 @@ v2.0.16 UNRELEASED
     it only means that the keys are in the right _format_, including the presence
     of required fields and that certain fields are have proper length, etc.
 
+[New Features]
+  * [jws] Added `jws.WithValidateKey()` to force calling `key.Validate()` before
+    signing or verification.
+
+  * [jws] `jws.Sign()` now returns a special type of error that can hold the
+    individual errors from the signers. The stringification is still the same
+    as before to preserve backwards compatibility.
+
+  * [jwk] Added `jwk.IsKeyValidationError` that checks if an error is an error
+    from `key.Validate()`.
+
 v2.0.15 19 20 Oct 2023
 [Bug fixes]
   * [jws] jws.Sign() now properly check for valid algorithm / key type pair when

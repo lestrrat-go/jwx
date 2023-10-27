@@ -28,6 +28,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -107,6 +108,21 @@ const (
 var _ = fmtInvalid
 var _ = fmtMax
 
+func validateKeyBeforeUse(key interface{}) error {
+	jwkKey, ok := key.(jwk.Key)
+	if !ok {
+		converted, err := jwk.FromRaw(key)
+		if err != nil {
+			return fmt.Errorf(`could not convert key of type %T to jwk.Key for validation: %w`, key, err)
+		}
+		jwkKey = converted
+	}
+	if err := jwkKey.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Sign generates a JWS message for the given payload and returns
 // it in serialized form, which can be in either compact or
 // JSON format. Default is compact.
@@ -149,6 +165,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var signers []*payloadSigner
 	var detached bool
 	var noneSignature *payloadSigner
+	var validateKey bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
@@ -185,6 +202,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, fmt.Errorf(`jws.Sign: payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
 			payload = option.Value().([]byte)
+		case identValidateKey{}:
+			validateKey = option.Value().(bool)
 		}
 	}
 
@@ -238,6 +257,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			protected: protected,
 			// cheat. FIXXXXXXMEEEEEE
 			detached: detached,
+		}
+
+		if validateKey {
+			if err := validateKeyBeforeUse(signer.key); err != nil {
+				return nil, fmt.Errorf(`jws.Verify: %w`, err)
+			}
 		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
@@ -353,6 +378,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	verifyBuf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(verifyBuf)
 
+	var errs []error
 	for i, sig := range msg.signatures {
 		verifyBuf.Reset()
 
@@ -391,16 +417,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				key := pair.key
 
 				if validateKey {
-					jwkKey, ok := key.(jwk.Key)
-					if !ok {
-						converted, err := jwk.FromRaw(key)
-						if err != nil {
-							return nil, fmt.Errorf(`jws.Verify: could not convert key of type %T to jwk.Key for validation: %w`, key, err)
-						}
-						jwkKey = converted
-					}
-					if err := jwkKey.Validate(); err != nil {
-						return nil, fmt.Errorf(`jws.Verify: failed to validate key: %w`, err)
+					if err := validateKeyBeforeUse(key); err != nil {
+						return nil, fmt.Errorf(`jws.Verify: %w`, err)
 					}
 				}
 				verifier, err := NewVerifier(alg)
@@ -409,6 +427,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				}
 
 				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
+					errs = append(errs, err)
 					continue
 				}
 
@@ -426,7 +445,33 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf(`could not verify message using any of the signatures or keys`)
+	return nil, &verifyError{errs: errs}
+}
+
+type verifyError struct {
+	// Note: when/if we can ditch Go < 1.20, we can change this to a simple
+	// `err error`, where the value is the result of `errors.Join()`
+	//
+	// We also need to implement Unwrap:
+	// func (e *verifyError) Unwrap() error {
+	//	return e.err
+	//}
+	//
+	// And finally, As() can go away
+	errs []error
+}
+
+func (e *verifyError) Error() string {
+	return `could not verify message using any of the signatures or keys`
+}
+
+func (e *verifyError) As(target interface{}) bool {
+	for _, err := range e.errs {
+		if errors.As(err, target) {
+			return true
+		}
+	}
+	return false
 }
 
 // get the value of b64 header field.

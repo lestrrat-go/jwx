@@ -270,14 +270,14 @@ func validateRSAKey(key interface {
 
 func (k *rsaPrivateKey) Validate() error {
 	if err := validateRSAKey(k, true); err != nil {
-		return fmt.Errorf(`jwk.RSAPrivateKey: failed to validate key: %w`, err)
+		return NewKeyValidationError(fmt.Errorf(`jwk.RSAPrivateKey: %w`, err))
 	}
 	return nil
 }
 
 func (k *rsaPublicKey) Validate() error {
 	if err := validateRSAKey(k, false); err != nil {
-		return fmt.Errorf(`jwk.RSAPublicKey: failed to validate key: %w`, err)
+		return NewKeyValidationError(fmt.Errorf(`jwk.RSAPublicKey: %w`, err))
 	}
 	return nil
 }

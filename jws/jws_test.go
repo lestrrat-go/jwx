@@ -2121,3 +2121,36 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	_, err = jws.Verify([]byte(unpadded), jws.WithKey(jwa.ES256, pubKey))
 	require.Error(t, err, `jws.Verify should fail`)
 }
+
+func TestValidateKey(t *testing.T) {
+	privKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	// This should fail because D is empty
+	require.NoError(t, privKey.Set(jwk.RSADKey, []byte(nil)), `jwk.Set should succeed`)
+	_, err = jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	require.Error(t, err, `jws.Sign should fail`)
+
+	pubKey, err := jwk.PublicKeyOf(privKey)
+	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
+
+	n := pubKey.(jwk.RSAPublicKey).N()
+
+	// Set N to an empty value
+	require.NoError(t, pubKey.Set(jwk.RSANKey, []byte(nil)), `jwk.Set should succeed`)
+
+	// This is going to fail regardless, because the public key is now
+	// invalid (empty N), but we want to make sure that it fails because
+	// of the validation failing
+	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256, pubKey), jws.WithValidateKey(true))
+	require.Error(t, err, `jws.Verify should fail`)
+	require.True(t, jwk.IsKeyValidationError(err), `jwk.IsKeyValidationError should return true`)
+
+	// The following should now succeed, because N has been reinstated
+	require.NoError(t, pubKey.Set(jwk.RSANKey, n), `jwk.Set should succeed`)
+	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256, pubKey), jws.WithValidateKey(true))
+	require.NoError(t, err, `jws.Verify should succeed`)
+}

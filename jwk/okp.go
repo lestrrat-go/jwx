@@ -211,11 +211,17 @@ func validateOKPKey(key interface {
 func (k *okpPublicKey) Validate() error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
-	return validateOKPKey(k)
+	if err := validateOKPKey(k); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.OKPPublicKey: %w`, err))
+	}
+	return nil
 }
 
 func (k *okpPrivateKey) Validate() error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
-	return validateOKPKey(k)
+	if err := validateOKPKey(k); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.OKPPrivateKey: %w`, err))
+	}
+	return nil
 }

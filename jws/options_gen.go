@@ -340,7 +340,7 @@ func WithUseDefault(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
 }
 
-// WithValidateKey specifies whether the key used for verification
+// WithValidateKey specifies whether the key used for signing or verification
 // should be validated before using. Note that this means calling
 // `key.Validate()` on the key, which in turn means that your key
 // must be a `jwk.Key` instance, or a key that can be converted to
@@ -357,6 +357,6 @@ func WithUseDefault(v bool) WithKeySetSuboption {
 // the key on-demand each time.
 //
 // By default, the key is not validated.
-func WithValidateKey(v bool) VerifyOption {
-	return &verifyOption{option.New(identValidateKey{}, v)}
+func WithValidateKey(v bool) SignVerifyOption {
+	return &signVerifyOption{option.New(identValidateKey{}, v)}
 }

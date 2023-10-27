@@ -260,14 +260,14 @@ func ecdsaValidateKey(k interface {
 
 func (k *ecdsaPrivateKey) Validate() error {
 	if err := ecdsaValidateKey(k, true); err != nil {
-		return fmt.Errorf(`jwk.ECDSAPrivateKey: failed to validate key: %w`, err)
+		return NewKeyValidationError(fmt.Errorf(`jwk.ECDSAPrivateKey: %w`, err))
 	}
 	return nil
 }
 
 func (k *ecdsaPublicKey) Validate() error {
 	if err := ecdsaValidateKey(k, false); err != nil {
-		return fmt.Errorf(`jwk.ECDSAPublicKey: failed to validate key: %w`, err)
+		return NewKeyValidationError(fmt.Errorf(`jwk.ECDSAPublicKey: %w`, err))
 	}
 	return nil
 }

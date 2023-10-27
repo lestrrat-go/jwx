@@ -89,10 +89,10 @@ options:
       have provided are instances of `jwk.Key` (remember that the
       jwx API allows users to specify a raw key such as *rsa.PublicKey)
   - ident: ValidateKey
-    interface: VerifyOption
+    interface: SignVerifyOption
     argument_type: bool
     comment: |
-      WithValidateKey specifies whether the key used for verification
+      WithValidateKey specifies whether the key used for signing or verification
       should be validated before using. Note that this means calling
       `key.Validate()` on the key, which in turn means that your key
       must be a `jwk.Key` instance, or a key that can be converted to
