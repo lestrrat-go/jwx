@@ -562,35 +562,43 @@ func TestGH996(t *testing.T) {
 	symmetricKey := []byte(`abracadabra`)
 
 	testcases := []struct {
-		Name      string
-		Algorithm jwa.SignatureAlgorithm
-		Valid     []interface{}
-		Invalid   []interface{}
+		Name                    string
+		Algorithm               jwa.SignatureAlgorithm
+		ValidSigningKeys        []interface{}
+		InvalidSigningKeys      []interface{}
+		ValidVerificationKeys   []interface{}
+		InvalidVerificationKeys []interface{}
 	}{
 		{
-			Name:      `ECDSA`,
-			Algorithm: jwa.ES256,
-			Valid:     []interface{}{ecdsaKey},
-			Invalid:   []interface{}{rsaKey, okpKey, symmetricKey},
+			Name:                    `ECDSA`,
+			Algorithm:               jwa.ES256,
+			ValidSigningKeys:        []interface{}{ecdsaKey},
+			InvalidSigningKeys:      []interface{}{rsaKey, okpKey, symmetricKey},
+			ValidVerificationKeys:   []interface{}{ecdsaKey.PublicKey},
+			InvalidVerificationKeys: []interface{}{rsaKey.PublicKey, okpKey.Public(), symmetricKey},
 		},
 		{
-			Name:      `RSA`,
-			Algorithm: jwa.RS256,
-			Valid:     []interface{}{rsaKey},
-			Invalid:   []interface{}{ecdsaKey, okpKey, symmetricKey},
+			Name:                    `RSA`,
+			Algorithm:               jwa.RS256,
+			ValidSigningKeys:        []interface{}{rsaKey},
+			InvalidSigningKeys:      []interface{}{ecdsaKey, okpKey, symmetricKey},
+			ValidVerificationKeys:   []interface{}{rsaKey.PublicKey},
+			InvalidVerificationKeys: []interface{}{ecdsaKey.PublicKey, okpKey.Public(), symmetricKey},
 		},
 		{
-			Name:      `OKP`,
-			Algorithm: jwa.EdDSA,
-			Valid:     []interface{}{okpKey},
-			Invalid:   []interface{}{ecdsaKey, rsaKey, symmetricKey},
+			Name:                    `OKP`,
+			Algorithm:               jwa.EdDSA,
+			ValidSigningKeys:        []interface{}{okpKey},
+			InvalidSigningKeys:      []interface{}{ecdsaKey, rsaKey, symmetricKey},
+			ValidVerificationKeys:   []interface{}{okpKey.Public()},
+			InvalidVerificationKeys: []interface{}{ecdsaKey.PublicKey, rsaKey.PublicKey, symmetricKey},
 		},
 	}
 
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			for _, valid := range tc.Valid {
+			for _, valid := range tc.ValidSigningKeys {
 				valid := valid
 				t.Run(fmt.Sprintf("Sign Valid(%T)", valid), func(t *testing.T) {
 					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, valid))
@@ -598,7 +606,7 @@ func TestGH996(t *testing.T) {
 				})
 			}
 
-			for _, invalid := range tc.Invalid {
+			for _, invalid := range tc.InvalidSigningKeys {
 				invalid := invalid
 				t.Run(fmt.Sprintf("Sign Invalid(%T)", invalid), func(t *testing.T) {
 					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, invalid))
@@ -606,10 +614,10 @@ func TestGH996(t *testing.T) {
 				})
 			}
 
-			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, tc.Valid[0]))
+			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, tc.ValidSigningKeys[0]))
 			require.NoError(t, err, `jws.Sign with valid key should succeed`)
 
-			for _, valid := range tc.Valid {
+			for _, valid := range tc.ValidVerificationKeys {
 				valid := valid
 				t.Run(fmt.Sprintf("Verify Valid(%T)", valid), func(t *testing.T) {
 					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, valid))
@@ -617,7 +625,7 @@ func TestGH996(t *testing.T) {
 				})
 			}
 
-			for _, invalid := range tc.Invalid {
+			for _, invalid := range tc.InvalidVerificationKeys {
 				invalid := invalid
 				t.Run(fmt.Sprintf("Verify Invalid(%T)", invalid), func(t *testing.T) {
 					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, invalid))

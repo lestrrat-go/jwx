@@ -46,6 +46,20 @@ type Key interface {
 	// Remove removes the field associated with the specified key.
 	// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.
 	Remove(string) error
+	// Validate performs _minimal_ checks if the data stored in the key are valid.
+	// By minimal, we mean that it does not check if the key is valid for use in
+	// cryptographic operations. For example, it does not check if an RSA key's
+	// `e` field is a valid exponent, or if the `n` field is a valid modulus.
+	// Instead, it checks for things such as the _presence_ of some required fields,
+	// or if certain keys' values are of particular length.
+	//
+	// Note that depending on th underlying key type, use of this method requires
+	// that multiple fields in the key are properly populated. For example, an EC
+	// key's "x", "y" fields cannot be validated unless the "crv" field is populated first.
+	//
+	// Validate is never called by `UnmarshalJSON()` or `Set`. It must explicitly be
+	// called by the user
+	Validate() error
 
 	// Raw creates the corresponding raw key. For example,
 	// EC types would create *ecdsa.PublicKey or *ecdsa.PrivateKey,

@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -756,4 +757,33 @@ func IsPrivateKey(k Key) (bool, error) {
 		return asymmetric.IsPrivate(), nil
 	}
 	return false, fmt.Errorf("jwk.IsPrivateKey: %T is not an asymmetric key", k)
+}
+
+type keyValidationError struct {
+	err error
+}
+
+func (e *keyValidationError) Error() string {
+	return fmt.Sprintf(`key validation failed: %s`, e.err)
+}
+
+func (e *keyValidationError) Unwrap() error {
+	return e.err
+}
+
+func (e *keyValidationError) Is(target error) bool {
+	_, ok := target.(*keyValidationError)
+	return ok
+}
+
+// NewKeyValidationError wraps the given error with an error that denotes
+// `key.Validate()` has failed. This error type should ONLY be used as
+// return value from the `Validate()` method.
+func NewKeyValidationError(err error) error {
+	return &keyValidationError{err: err}
+}
+
+func IsKeyValidationError(err error) bool {
+	var kve keyValidationError
+	return errors.Is(err, &kve)
 }

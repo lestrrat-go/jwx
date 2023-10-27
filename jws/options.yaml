@@ -88,6 +88,27 @@ options:
       `jwk.Key` here unless you are 100% sure that all keys that you
       have provided are instances of `jwk.Key` (remember that the
       jwx API allows users to specify a raw key such as *rsa.PublicKey)
+  - ident: ValidateKey
+    interface: SignVerifyOption
+    argument_type: bool
+    comment: |
+      WithValidateKey specifies whether the key used for signing or verification
+      should be validated before using. Note that this means calling
+      `key.Validate()` on the key, which in turn means that your key
+      must be a `jwk.Key` instance, or a key that can be converted to
+      a `jwk.Key` by calling `jwk.FromRaw()`. This means that your
+      custom hardware-backed keys will probably not work.
+
+      You can directly call `key.Validate()` yourself if you need to
+      mix keys that cannot be converted to `jwk.Key`.
+
+      Please also note that use of this option will also result in
+      one extra conversion of raw keys to a `jwk.Key` instance. If you
+      care about shaving off as much as possible, consider using a
+      pre-validated key instead of using this option to validate
+      the key on-demand each time.
+
+      By default, the key is not validated.
   - ident: InferAlgorithmFromKey
     interface: WithKeySetSuboption
     argument_type: bool

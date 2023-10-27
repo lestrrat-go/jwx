@@ -1738,7 +1738,7 @@ func TestGH951(t *testing.T) {
 	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW, sharedKey))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 
-	verified, err := jwt.Parse(decrypted, jwt.WithKey(jwa.RS256, signKey))
+	verified, err := jwt.Parse(decrypted, jwt.WithKey(jwa.RS256, signKey.PublicKey))
 	require.NoError(t, err, `jwt.Parse should succeed`)
 
 	require.True(t, jwt.Equal(verified, token), `tokens should be equal`)

@@ -187,3 +187,41 @@ func (k okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 		base64.EncodeToString(k.x),
 	), nil
 }
+
+func validateOKPKey(key interface {
+	Crv() jwa.EllipticCurveAlgorithm
+	X() []byte
+}) error {
+	if key.Crv() == jwa.InvalidEllipticCurve {
+		return fmt.Errorf(`invalid curve algorithm`)
+	}
+
+	if len(key.X()) == 0 {
+		return fmt.Errorf(`missing "x" field`)
+	}
+
+	if priv, ok := key.(interface{ D() []byte }); ok {
+		if len(priv.D()) == 0 {
+			return fmt.Errorf(`missing "d" field`)
+		}
+	}
+	return nil
+}
+
+func (k *okpPublicKey) Validate() error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	if err := validateOKPKey(k); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.OKPPublicKey: %w`, err))
+	}
+	return nil
+}
+
+func (k *okpPrivateKey) Validate() error {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	if err := validateOKPKey(k); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.OKPPrivateKey: %w`, err))
+	}
+	return nil
+}
