@@ -721,7 +721,7 @@ func TestCustomField(t *testing.T) {
 
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
-		msg, err := jwe.Parse([]byte(encrypted))
+		msg, err := jwe.Parse(encrypted)
 		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
 			t.Logf("%q", encrypted)
 			return

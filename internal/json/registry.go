@@ -12,7 +12,7 @@ import (
 type CustomDecoder interface {
 	// Decode takes a JSON encoded byte slice and returns the desired
 	// decoded value,which will be used as the value for that field
-	// registered throught RegisterCustomField
+	// registered through RegisterCustomField
 	Decode([]byte) (interface{}, error)
 }
 
