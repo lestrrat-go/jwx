@@ -1743,3 +1743,33 @@ func TestGH951(t *testing.T) {
 
 	require.True(t, jwt.Equal(verified, token), `tokens should be equal`)
 }
+
+func TestGH1007(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	tok, err := jwt.NewBuilder().
+		Claim(`claim1`, `value1`).
+		Claim(`claim2`, `value2`).
+		Issuer(`github.com/lestrrat-go/jwx`).
+		Audience([]string{`users`}).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	// This was the intended usage (no WithKey). This worked from the beginning
+	_, err = jwt.ParseInsecure(signed)
+	require.NoError(t, err, `jwt.ParseInsecure should succeed`)
+
+	// This is the problematic behavior reporded in #1007.
+	// The fact that we're specifying a wrong key caused Parse() to check for
+	// verification and yet fail :/
+	wrongPubKey, err := jwxtest.GenerateRsaPublicJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaPublicJwk should succeed`)
+	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
+
+	_, err = jwt.ParseInsecure(signed, jwt.WithKey(jwa.RS256, wrongPubKey))
+	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKey() should succeed`)
+}
