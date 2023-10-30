@@ -883,3 +883,18 @@ func TestGH924(t *testing.T) {
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
 }
+
+func TestGH1001(t *testing.T) {
+	rawKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+	encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+	var cek []byte
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawKey), jwe.WithCEK(&cek))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+
+	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
+
+	require.NotNil(t, cek, `cek should not be nil`)
+}

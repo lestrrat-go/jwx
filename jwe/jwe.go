@@ -421,6 +421,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 type decryptCtx struct {
 	msg              *Message
 	aad              []byte
+	cek              *[]byte
 	computedAad      []byte
 	keyProviders     []KeyProvider
 	protectedHeaders Headers
@@ -438,7 +439,7 @@ type decryptCtx struct {
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
-
+	var cek *[]byte
 	var dst *Message
 	//nolint:forcetypeassert
 	for _, option := range options {
@@ -459,6 +460,8 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 				alg: alg,
 				key: pair.key,
 			})
+		case identCEK{}:
+			cek = option.Value().(*[]byte)
 		}
 	}
 
@@ -517,6 +520,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.msg = msg
 	dctx.keyProviders = keyProviders
 	dctx.protectedHeaders = h
+	dctx.cek = cek
 
 	var lastError error
 	for _, recipient := range recipients {
@@ -583,7 +587,8 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		AuthenticatedData(dctx.aad).
 		ComputedAuthenticatedData(dctx.computedAad).
 		InitializationVector(dctx.msg.initializationVector).
-		Tag(dctx.msg.tag)
+		Tag(dctx.msg.tag).
+		CEK(dctx.cek)
 
 	if recipient.Headers().Algorithm() != alg {
 		// algorithms don't match

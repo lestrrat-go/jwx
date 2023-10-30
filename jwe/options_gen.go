@@ -110,6 +110,7 @@ type withKeySetSuboption struct {
 
 func (*withKeySetSuboption) withKeySetSuboption() {}
 
+type identCEK struct{}
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
 type identFS struct{}
@@ -123,6 +124,10 @@ type identPretty struct{}
 type identProtectedHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
+
+func (identCEK) String() string {
+	return "WithCEK"
+}
 
 func (identCompress) String() string {
 	return "WithCompress"
@@ -174,6 +179,13 @@ func (identRequireKid) String() string {
 
 func (identSerialization) String() string {
 	return "WithSerialization"
+}
+
+// WithCEK allows users to specify a variable to store the CEK used in the
+// message upon successful decryption. The variable must be a pointer to
+// a byte slice, and it will only be populated if the decryption is successful.
+func WithCEK(v *[]byte) DecryptOption {
+	return &decryptOption{option.New(identCEK{}, v)}
 }
 
 // WithCompress specifies the compression algorithm to use when encrypting
