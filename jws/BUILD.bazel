@@ -24,6 +24,7 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
+        "//internal/ecutil",
         "//internal/iter",
         "//internal/json",
         "//internal/keyconv",
@@ -50,6 +51,7 @@ go_test(
     deps = [
         "//cert",
         "//internal/base64",
+        "//internal/ecutil",
         "//internal/json",
         "//internal/jwxtest",
         "//jwa",

@@ -241,3 +241,43 @@ func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
 	}
 	return h.Sum(nil), nil
 }
+
+func validateRSAKey(key interface {
+	N() []byte
+	E() []byte
+}, checkPrivate bool) error {
+	if len(key.N()) == 0 {
+		// Ideally we would like to check for the actual length, but unlike
+		// EC keys, we have nothing in the key itself that will tell us
+		// how many bits this key should have.
+		return fmt.Errorf(`missing "n" value`)
+	}
+	if len(key.E()) == 0 {
+		return fmt.Errorf(`missing "e" value`)
+	}
+	if checkPrivate {
+		if priv, ok := key.(interface{ D() []byte }); ok {
+			if len(priv.D()) == 0 {
+				return fmt.Errorf(`missing "d" value`)
+			}
+		} else {
+			return fmt.Errorf(`missing "d" value`)
+		}
+	}
+
+	return nil
+}
+
+func (k *rsaPrivateKey) Validate() error {
+	if err := validateRSAKey(k, true); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.RSAPrivateKey: %w`, err))
+	}
+	return nil
+}
+
+func (k *rsaPublicKey) Validate() error {
+	if err := validateRSAKey(k, false); err != nil {
+		return NewKeyValidationError(fmt.Errorf(`jwk.RSAPublicKey: %w`, err))
+	}
+	return nil
+}

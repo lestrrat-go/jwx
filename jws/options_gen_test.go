@@ -25,4 +25,5 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithRequireKid", identRequireKid{}.String())
 	require.Equal(t, "WithSerialization", identSerialization{}.String())
 	require.Equal(t, "WithUseDefault", identUseDefault{}.String())
+	require.Equal(t, "WithValidateKey", identValidateKey{}.String())
 }

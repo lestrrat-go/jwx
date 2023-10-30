@@ -28,6 +28,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -107,6 +108,18 @@ const (
 var _ = fmtInvalid
 var _ = fmtMax
 
+func validateKeyBeforeUse(key interface{}) error {
+	jwkKey, ok := key.(jwk.Key)
+	if !ok {
+		converted, err := jwk.FromRaw(key)
+		if err != nil {
+			return fmt.Errorf(`could not convert key of type %T to jwk.Key for validation: %w`, key, err)
+		}
+		jwkKey = converted
+	}
+	return jwkKey.Validate()
+}
+
 // Sign generates a JWS message for the given payload and returns
 // it in serialized form, which can be in either compact or
 // JSON format. Default is compact.
@@ -149,6 +162,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var signers []*payloadSigner
 	var detached bool
 	var noneSignature *payloadSigner
+	var validateKey bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
@@ -185,6 +199,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, fmt.Errorf(`jws.Sign: payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
 			payload = option.Value().([]byte)
+		case identValidateKey{}:
+			validateKey = option.Value().(bool)
 		}
 	}
 
@@ -239,6 +255,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			// cheat. FIXXXXXXMEEEEEE
 			detached: detached,
 		}
+
+		if validateKey {
+			if err := validateKeyBeforeUse(signer.key); err != nil {
+				return nil, fmt.Errorf(`jws.Verify: %w`, err)
+			}
+		}
 		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
@@ -290,6 +312,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var detachedPayload []byte
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
+	var validateKey bool
 
 	ctx := context.Background()
 
@@ -316,6 +339,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			keyUsed = option.Value()
 		case identContext{}:
 			ctx = option.Value().(context.Context)
+		case identValidateKey{}:
+			validateKey = option.Value().(bool)
 		default:
 			return nil, fmt.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -350,6 +375,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	verifyBuf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(verifyBuf)
 
+	var errs []error
 	for i, sig := range msg.signatures {
 		verifyBuf.Reset()
 
@@ -386,12 +412,19 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				//nolint:forcetypeassert
 				alg := pair.alg.(jwa.SignatureAlgorithm)
 				key := pair.key
+
+				if validateKey {
+					if err := validateKeyBeforeUse(key); err != nil {
+						return nil, fmt.Errorf(`jws.Verify: %w`, err)
+					}
+				}
 				verifier, err := NewVerifier(alg)
 				if err != nil {
 					return nil, fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)
 				}
 
 				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
+					errs = append(errs, err)
 					continue
 				}
 
@@ -409,7 +442,33 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf(`could not verify message using any of the signatures or keys`)
+	return nil, &verifyError{errs: errs}
+}
+
+type verifyError struct {
+	// Note: when/if we can ditch Go < 1.20, we can change this to a simple
+	// `err error`, where the value is the result of `errors.Join()`
+	//
+	// We also need to implement Unwrap:
+	// func (e *verifyError) Unwrap() error {
+	//	return e.err
+	//}
+	//
+	// And finally, As() can go away
+	errs []error
+}
+
+func (e *verifyError) Error() string {
+	return `could not verify message using any of the signatures or keys`
+}
+
+func (e *verifyError) As(target interface{}) bool {
+	for _, err := range e.errs {
+		if errors.As(err, target) {
+			return true
+		}
+	}
+	return false
 }
 
 // get the value of b64 header field.

@@ -58,3 +58,10 @@ func (k *symmetricKey) PublicKey() (Key, error) {
 	}
 	return newKey, nil
 }
+
+func (k *symmetricKey) Validate() error {
+	if len(k.Octets()) == 0 {
+		return NewKeyValidationError(fmt.Errorf(`jwk.SymmetricKey: missing "k" field`))
+	}
+	return nil
+}

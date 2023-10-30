@@ -80,10 +80,7 @@ func ReleaseECPointBuffer(buf []byte) {
 	ecpointBufferPool.Put(&buf)
 }
 
-// AllocECPointBuffer allocates a buffer for the given point in the given
-// curve. This buffer should be released using the ReleaseECPointBuffer
-// function.
-func AllocECPointBuffer(v *big.Int, crv elliptic.Curve) []byte {
+func CalculateKeySize(crv elliptic.Curve) int {
 	// We need to create a buffer that fits the entire curve.
 	// If the curve size is 66, that fits in 9 bytes. If the curve
 	// size is 64, it fits in 8 bytes.
@@ -104,7 +101,14 @@ func AllocECPointBuffer(v *big.Int, crv elliptic.Curve) []byte {
 		}
 	}
 
-	buf := getCrvFixedBuffer(inBytes)
+	return inBytes
+}
+
+// AllocECPointBuffer allocates a buffer for the given point in the given
+// curve. This buffer should be released using the ReleaseECPointBuffer
+// function.
+func AllocECPointBuffer(v *big.Int, crv elliptic.Curve) []byte {
+	buf := getCrvFixedBuffer(CalculateKeySize(crv))
 	v.FillBytes(buf)
 	return buf
 }
