@@ -11,7 +11,7 @@ v2.0.16 UNRELEASED
     had been removed in #65, resulting in certain malformed signatures to pass
     verification.
 
-    This could happen if R is a 31 byte integer and S is 32 byte integer,
+    One of the ways this could happen if R is a 31 byte integer and S is 32 byte integer,
     both containing the correct signature values, but R is not zero-padded.
 
        Correct = R: [ 0 , ... ] (32 bytes) S: [ ... ] (32 bytes)
