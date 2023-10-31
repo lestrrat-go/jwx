@@ -772,6 +772,9 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	return &msg, nil
 }
 
+type CustomDecoder = json.CustomDecoder
+type CustomDecodeFunc = json.CustomDecodeFunc
+
 // RegisterCustomField allows users to specify that a private field
 // be decoded as an instance of the specified type. This option has
 // a global effect.
@@ -790,6 +793,24 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 //
 //	var bday time.Time
 //	_ = hdr.Get(`x-birthday`, &bday)
+//
+// If you need a more fine-tuned control over the decoding process,
+// you can register a `CustomDecoder`. For example, below shows
+// how to register a decoder that can parse RFC1123 format string:
+//
+//	jws.RegisterCustomField(`x-birthday`, jws.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+//	  return time.Parse(time.RFC1123, string(data))
+//	}))
+//
+// Please note that use of custom fields can be problematic if you
+// are using a library that does not implement MarshalJSON/UnmarshalJSON
+// and you try to roundtrip from an object to JSON, and then back to an object.
+// For example, in the above example, you can _parse_ time values formatted
+// in the format specified in RFC822, but when you convert an object into
+// JSON, it will be formatted in RFC3339, because that's what `time.Time`
+// likes to do. To avoid this, it's always better to use a custom type
+// that wraps your desired type (in this case `time.Time`) and implement
+// MarshalJSON and UnmashalJSON.
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
 }

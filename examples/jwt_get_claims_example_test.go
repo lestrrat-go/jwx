@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
@@ -15,6 +16,7 @@ func ExampleJWT_GetClaims() {
 		Subject(`example`).
 		Claim(`claim1`, `value1`).
 		Claim(`claim2`, `2022-05-16T07:35:56+00:00`).
+		Claim(`claim3`, `{"kty": "oct", "alg":"A128KW", "k":"GawgguFyGrWKav7AX4VKUg"}`).
 		Build()
 	if err != nil {
 		fmt.Printf("failed to build token: %s\n", err)
@@ -43,6 +45,7 @@ func ExampleJWT_GetClaims() {
 	var dummy interface{}
 	_ = tok.Get(`claim1`, &dummy)
 	_ = tok.Get(`claim2`, &dummy)
+	_ = tok.Get(`claim3`, &dummy)
 
 	// However, it is possible to globally specify that a private
 	// claim should be parsed into a custom type.
@@ -59,6 +62,25 @@ func ExampleJWT_GetClaims() {
 	var claim2 time.Time
 	if err := tok.Get(`claim2`, &claim2); err != nil {
 		fmt.Printf("failed to get private claim \"claim2\": %s\n", err)
+		return
+	}
+
+	// It's also possible to specify a custom decoder for a private claim.
+	// For example, in the case of `claim3`, it needs to call `jwk.ParseKey`
+	// which returns an interface that can't be instantiated like the
+	// `time.Time` value for `claim2`.
+	jwt.RegisterCustomField(`claim3`, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+		return jwk.ParseKey(data)
+	}))
+
+	tok = jwt.New()
+	if err := json.Unmarshal([]byte(`{"claim3": {"kty": "oct", "alg":"A128KW", "k":"GawgguFyGrWKav7AX4VKUg"}}`), tok); err != nil {
+		fmt.Printf(`failed to parse token: %s`, err)
+		return
+	}
+	var claim3 jwk.Key
+	if err := tok.Get(`claim3`, &claim3); err != nil {
+		fmt.Printf("failed to get private claim \"claim3\": %s\n", err)
 		return
 	}
 
