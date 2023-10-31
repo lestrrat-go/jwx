@@ -689,57 +689,66 @@ func TestReadFile(t *testing.T) {
 
 func TestCustomField(t *testing.T) {
 	// XXX has global effect!!!
-	jwe.RegisterCustomField(`x-birthday`, time.Time{})
-	defer jwe.RegisterCustomField(`x-birthday`, nil)
+	const rfc3339Key = `x-test-rfc3339`
+	const rfc1123Key = `x-test-rfc1123`
+	jwe.RegisterCustomField(rfc3339Key, time.Time{})
+	jwe.RegisterCustomField(rfc1123Key, jwe.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse(time.RFC1123, s)
+	}))
+
+	defer jwe.RegisterCustomField(rfc3339Key, nil)
+	defer jwe.RegisterCustomField(rfc1123Key, nil)
 
 	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
-	bdaybytes, _ := expected.MarshalText() // RFC3339
+	rfc3339bytes, _ := expected.MarshalText() // RFC3339
+	rfc1123bytes := expected.Format(time.RFC1123)
 
 	plaintext := []byte("Hello, World!")
 	rsakey, err := jwxtest.GenerateRsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`)
+
 	pubkey, err := jwk.PublicKeyOf(rsakey)
-	if !assert.NoError(t, err, `jwk.PublicKeyOf() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.PublicKeyOf() should succeed`)
 
-	protected := jwe.NewHeaders()
-	protected.Set(`x-birthday`, string(bdaybytes))
+	t.Run("jwe.Parse", func(t *testing.T) {
+		protected := jwe.NewHeaders()
+		protected.Set(rfc3339Key, string(rfc3339bytes))
+		protected.Set(rfc1123Key, rfc1123bytes)
 
-	encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
-	if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
-		return
-	}
-
-	t.Run("jwe.Parse + json.Unmarshal", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
 		msg, err := jwe.Parse(encrypted)
 		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
+			t.Logf("%q", encrypted)
 			return
 		}
 
-		var v time.Time
-		require.NoError(t, msg.ProtectedHeaders().Get(`x-birthday`, &v), `msg.ProtectedHeaders().Get("x-birthday") should succeed`)
-		if !assert.Equal(t, expected, v, `values should match`) {
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, msg.ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
+		}
+	})
+	t.Run("json.Unmarshal", func(t *testing.T) {
+		protected := jwe.NewHeaders()
+		protected.Set(rfc3339Key, string(rfc3339bytes))
+		protected.Set(rfc1123Key, rfc1123bytes)
+
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected), jwe.WithJSON())
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+		msg := jwe.NewMessage()
+		if !assert.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`) {
 			return
 		}
 
-		// Create JSON from jwe.Message
-		buf, err := json.Marshal(msg)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
-		var msg2 jwe.Message
-		if !assert.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`) {
-			return
-		}
-
-		v = time.Time{} // reset
-		require.NoError(t, msg2.ProtectedHeaders().Get(`x-birthday`, &v), `msg2.ProtectedHeaders().Get("x-birthday") should succeed`)
-		if !assert.Equal(t, expected, v, `values should match`) {
-			return
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, msg.ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
 		}
 	})
 }
