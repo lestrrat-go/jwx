@@ -6,15 +6,43 @@ import (
 	"sync"
 )
 
+// CustomDecoder is the interface we expect from RegisterCustomField in jws, jwe, jwk, and jwt packages.
+type CustomDecoder interface {
+	// Decode takes a JSON encoded byte slice and returns the desired
+	// decoded value,which will be used as the value for that field
+	// registered through RegisterCustomField
+	Decode([]byte) (interface{}, error)
+}
+
+// CustomDecodeFunc is a stateless, function-based implementation of CustomDecoder
+type CustomDecodeFunc func([]byte) (interface{}, error)
+
+func (fn CustomDecodeFunc) Decode(data []byte) (interface{}, error) {
+	return fn(data)
+}
+
+type objectTypeDecoder struct {
+	typ  reflect.Type
+	name string
+}
+
+func (dec *objectTypeDecoder) Decode(data []byte) (interface{}, error) {
+	ptr := reflect.New(dec.typ).Interface()
+	if err := Unmarshal(data, ptr); err != nil {
+		return nil, fmt.Errorf(`failed to decode field %s: %w`, dec.name, err)
+	}
+	return reflect.ValueOf(ptr).Elem().Interface(), nil
+}
+
 type Registry struct {
 	mu   *sync.RWMutex
-	data map[string]reflect.Type
+	ctrs map[string]CustomDecoder
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
 		mu:   &sync.RWMutex{},
-		data: make(map[string]reflect.Type),
+		ctrs: make(map[string]CustomDecoder),
 	}
 }
 
@@ -22,26 +50,36 @@ func (r *Registry) Register(name string, object interface{}) {
 	if object == nil {
 		r.mu.Lock()
 		defer r.mu.Unlock()
-		delete(r.data, name)
+		delete(r.ctrs, name)
 		return
 	}
 
-	typ := reflect.TypeOf(object)
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.data[name] = typ
+	if ctr, ok := object.(CustomDecoder); ok {
+		r.ctrs[name] = ctr
+	} else {
+		r.ctrs[name] = &objectTypeDecoder{
+			typ:  reflect.TypeOf(object),
+			name: name,
+		}
+	}
 }
 
 func (r *Registry) Decode(dec *Decoder, name string) (interface{}, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if typ, ok := r.data[name]; ok {
-		ptr := reflect.New(typ).Interface()
-		if err := dec.Decode(ptr); err != nil {
+	if ctr, ok := r.ctrs[name]; ok {
+		var raw RawMessage
+		if err := dec.Decode(&raw); err != nil {
 			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
 		}
-		return reflect.ValueOf(ptr).Elem().Interface(), nil
+		v, err := ctr.Decode([]byte(raw))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
+		}
+		return v, nil
 	}
 
 	var decoded interface{}

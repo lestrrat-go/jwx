@@ -1032,45 +1032,120 @@ func TestVerifySet(t *testing.T) {
 
 func TestCustomField(t *testing.T) {
 	// XXX has global effect!!!
-	jws.RegisterCustomField(`x-birthday`, time.Time{})
-	defer jws.RegisterCustomField(`x-birthday`, nil)
+	const rfc3339Key = `x-test-rfc3339`
+	const rfc1123Key = `x-test-rfc1123`
+	jws.RegisterCustomField(rfc3339Key, time.Time{})
+	jws.RegisterCustomField(rfc1123Key, jws.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse(time.RFC1123, s)
+	}))
+
+	defer jws.RegisterCustomField(rfc3339Key, nil)
+	defer jws.RegisterCustomField(rfc1123Key, nil)
 
 	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
-	bdaybytes, _ := expected.MarshalText() // RFC3339
+	rfc3339bytes, _ := expected.MarshalText() // RFC3339
+	rfc1123bytes := expected.Format(time.RFC1123)
 
-	payload := "Hello, World!"
-	privkey, err := jwxtest.GenerateRsaJwk()
+	plaintext := []byte("Hello, World!")
+	rsakey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`)
 
-	hdrs := jws.NewHeaders()
-	hdrs.Set(`x-birthday`, string(bdaybytes))
+	t.Run("jws.Parse", func(t *testing.T) {
+		protected := jws.NewHeaders()
+		protected.Set(rfc3339Key, string(rfc3339bytes))
+		protected.Set(rfc1123Key, rfc1123bytes)
 
-	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtectedHeaders(hdrs)))
-	require.NoError(t, err, `jws.Sign should succeed`)
-
-	t.Run("jws.Parse + json.Unmarshal", func(t *testing.T) {
-		msg, err := jws.Parse(signed)
-		require.NoError(t, err, `jws.Parse should succeed`)
-
-		var v interface{}
-		require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
-		require.Equal(t, expected, v, `values should match`)
-
-		// Create JSON from jws.Message
-		buf, err := json.Marshal(msg)
-		require.NoError(t, err, `json.Marshal should succeed`)
-
-		var msg2 jws.Message
-		require.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`)
-
-		v = nil
-		require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
-		require.Equal(t, expected, v, `values should match`)
-
-		if !assert.Equal(t, expected, v, `values should match`) {
+		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)))
+		require.NoError(t, err, `jws.Sign should succeed`)
+		msg, err := jws.Parse(encrypted)
+		if !assert.NoError(t, err, `jws.Parse should succeed`) {
+			t.Logf("%q", encrypted)
 			return
 		}
+
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
+		}
 	})
+	t.Run("json.Unmarshal", func(t *testing.T) {
+		protected := jws.NewHeaders()
+		protected.Set(rfc3339Key, string(rfc3339bytes))
+		protected.Set(rfc1123Key, rfc1123bytes)
+
+		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)), jws.WithJSON())
+		require.NoError(t, err, `jws.Sign should succeed`)
+		msg := jws.NewMessage()
+		if !assert.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`) {
+			return
+		}
+
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
+		}
+	})
+
+	/*
+		// XXX has global effect!!!
+		jws.RegisterCustomField(`x-birthday`, time.Time{})
+		defer jws.RegisterCustomField(`x-birthday`, nil)
+
+		expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
+		bdaybytes, _ := expected.MarshalText() // RFC3339
+
+		payload := "Hello, World!"
+		privkey, err := jwxtest.GenerateRsaJwk()
+		if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
+			return
+		}
+
+		hdrs := jws.NewHeaders()
+		hdrs.Set(`x-birthday`, string(bdaybytes))
+
+		signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtectedHeaders(hdrs)))
+		if !assert.NoError(t, err, `jws.Sign should succeed`) {
+			return
+		}
+
+		t.Run("jws.Parse + json.Unmarshal", func(t *testing.T) {
+			msg, err := jws.Parse(signed)
+			if !assert.NoError(t, err, `jws.Parse should succeed`) {
+				return
+			}
+
+			var v interface{}
+			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+
+			if !assert.Equal(t, expected, v, `values should match`) {
+				return
+			}
+
+			// Create JSON from jws.Message
+			buf, err := json.Marshal(msg)
+			if !assert.NoError(t, err, `json.Marshal should succeed`) {
+				return
+			}
+
+			var msg2 jws.Message
+			if !assert.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`) {
+				return
+			}
+
+			v = nil
+			require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+
+			if !assert.Equal(t, expected, v, `values should match`) {
+				return
+			}
+		})
+	*/
 }
 
 func TestWithMessage(t *testing.T) {
