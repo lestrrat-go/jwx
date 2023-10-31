@@ -743,15 +743,33 @@ func TestReadFile(t *testing.T) {
 
 func TestCustomField(t *testing.T) {
 	// XXX has global effect!!!
-	jwt.RegisterCustomField(`x-birthday`, time.Time{})
-	defer jwt.RegisterCustomField(`x-birthday`, nil)
+	const rfc3339Key = `x-test-rfc3339`
+	const rfc1123Key = `x-test-rfc1123`
+	jwt.RegisterCustomField(rfc3339Key, time.Time{})
+	jwt.RegisterCustomField(rfc1123Key, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse(time.RFC1123, s)
+	}))
+
+	defer jwt.RegisterCustomField(rfc3339Key, nil)
+	defer jwt.RegisterCustomField(rfc1123Key, nil)
 
 	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
-	bdaybytes, _ := expected.MarshalText() // RFC3339
 
+	rfc3339bytes, _ := expected.MarshalText() // RFC3339
+	rfc1123bytes := expected.Format(time.RFC1123)
 	var b strings.Builder
-	b.WriteString(`{"iss": "github.com/lesstrrat-go/jwx", "x-birthday": "`)
-	b.Write(bdaybytes)
+	b.WriteString(`{"iss": "github.com/lesstrrat-go/jwx", "`)
+	b.WriteString(rfc3339Key)
+	b.WriteString(`": "`)
+	b.Write(rfc3339bytes)
+	b.WriteString(`", "`)
+	b.WriteString(rfc1123Key)
+	b.WriteString(`": "`)
+	b.WriteString(rfc1123bytes)
 	b.WriteString(`"}`)
 	src := b.String()
 
@@ -762,11 +780,10 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		var v time.Time
-		require.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`)
-
-		if !assert.Equal(t, expected, v, `values should match`) {
-			return
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, token.Get(key, &v), `token.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
 		}
 	})
 	t.Run("json.Unmarshal", func(t *testing.T) {
@@ -775,11 +792,10 @@ func TestCustomField(t *testing.T) {
 			return
 		}
 
-		var v time.Time
-		require.NoError(t, token.Get(`x-birthday`, &v), `token.Get("x-birthday") should succeed`)
-
-		if !assert.Equal(t, expected, v, `values should match`) {
-			return
+		for _, key := range []string{rfc3339Key, rfc1123Key} {
+			var v time.Time
+			require.NoError(t, token.Get(key, &v), `token.Get(%q) should succeed`, key)
+			require.Equal(t, expected, v, `values should match`)
 		}
 	})
 }
