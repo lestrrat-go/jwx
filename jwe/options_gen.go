@@ -184,6 +184,9 @@ func (identSerialization) String() string {
 // WithCEK allows users to specify a variable to store the CEK used in the
 // message upon successful decryption. The variable must be a pointer to
 // a byte slice, and it will only be populated if the decryption is successful.
+//
+// This option is currently considered EXPERIMENTAL, and is subject to
+// future changes across minor/micro versions.
 func WithCEK(v *[]byte) DecryptOption {
 	return &decryptOption{option.New(identCEK{}, v)}
 }
