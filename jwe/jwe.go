@@ -251,9 +251,15 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 }
 
 // Encryptstatic is exactly like Encrypt, except it accepts a static
-// content encryption key (CEK). DO NOT attempt to use this function unless
-// you completely understand the security implications to using static
-// CEKs. You have been warned.
+// content encryption key (CEK). It is separated out from the main
+// Encrypt function such that the latter does not accidentally use a static
+// CEK.
+//
+// DO NOT attempt to use this function unless you completely understand the
+// security implications to using static CEKs. You have been warned.
+//
+// This function is currently considered EXPERIMENTAL, and is subject to
+// future changes across minor/micro versions.
 func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	if len(cek) <= 0 {
 		return nil, fmt.Errorf(`jwe.EncryptStatic: empty CEK`)
