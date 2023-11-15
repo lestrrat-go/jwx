@@ -28,6 +28,7 @@ type decrypter struct {
 	aad         []byte
 	apu         []byte
 	apv         []byte
+	cek         *[]byte
 	computedAad []byte
 	iv          []byte
 	keyiv       []byte
@@ -120,6 +121,11 @@ func (d *decrypter) Tag(tag []byte) *decrypter {
 	return d
 }
 
+func (d *decrypter) CEK(ptr *[]byte) *decrypter {
+	d.cek = ptr
+	return d
+}
+
 func (d *decrypter) ContentCipher() (content_crypt.Cipher, error) {
 	if d.cipher == nil {
 		switch d.ctalg {
@@ -161,6 +167,9 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 		return
 	}
 
+	if d.cek != nil {
+		*d.cek = cek
+	}
 	return plaintext, nil
 }
 
