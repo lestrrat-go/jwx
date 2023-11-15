@@ -247,6 +247,23 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
+	return encrypt(payload, nil, options...)
+}
+
+// Encryptstatic is exactly like Encrypt, except it accepts a static
+// content encryption key (CEK). DO NOT attempt to use this function unless
+// you completely understand the security implications to using static
+// CEKs. You have been warned.
+func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
+	if len(cek) <= 0 {
+		return nil, fmt.Errorf(`jwe.EncryptStatic: empty CEK`)
+	}
+	return encrypt(payload, cek, options...)
+}
+
+// encrypt is separate so it can receive cek from outside.
+// (but we don't want to receive it in the options slice)
+func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	// default content encryption algorithm
 	calg := jwa.A256GCM
 
@@ -327,12 +344,14 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 		return nil, fmt.Errorf(`jwe.Encrypt: failed to create AES encrypter: %w`, err)
 	}
 
-	generator := keygen.NewRandom(contentcrypt.KeySize())
-	bk, err := generator.Generate()
-	if err != nil {
-		return nil, fmt.Errorf(`jwe.Encrypt: failed to generate key: %w`, err)
+	if len(cek) <= 0 {
+		generator := keygen.NewRandom(contentcrypt.KeySize())
+		bk, err := generator.Generate()
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Encrypt: failed to generate key: %w`, err)
+		}
+		cek = bk.Bytes()
 	}
-	cek := bk.Bytes()
 
 	recipients := make([]Recipient, len(builders))
 	for i, builder := range builders {

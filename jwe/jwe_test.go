@@ -895,6 +895,16 @@ func TestGH1001(t *testing.T) {
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 
 	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
-
 	require.NotNil(t, cek, `cek should not be nil`)
+
+	reEncrypted, err := jwe.EncryptStatic([]byte("Lorem Ipsum"), cek, jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	require.NoError(t, err, `jwe.EncryptStatic should succeed`)
+
+	cek = []byte(nil)
+	decrypted, err = jwe.Decrypt(reEncrypted, jwe.WithKey(jwa.RSA_OAEP, rawKey), jwe.WithCEK(&cek))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+
+	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
+	require.NotNil(t, cek, `cek should not be nil`)
+
 }
