@@ -900,6 +900,10 @@ func TestGH1001(t *testing.T) {
 	reEncrypted, err := jwe.EncryptStatic([]byte("Lorem Ipsum"), cek, jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
 	require.NoError(t, err, `jwe.EncryptStatic should succeed`)
 
+	// sanity. empty CEKs should be rejected
+	_, err = jwe.EncryptStatic([]byte("Lorem Ipsum"), nil, jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	require.Error(t, err, `jwe.Encryptstatic should fail with empty cek`)
+
 	cek = []byte(nil)
 	decrypted, err = jwe.Decrypt(reEncrypted, jwe.WithKey(jwa.RSA_OAEP, rawKey), jwe.WithCEK(&cek))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
