@@ -906,5 +906,4 @@ func TestGH1001(t *testing.T) {
 
 	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
 	require.NotNil(t, cek, `cek should not be nil`)
-
 }
