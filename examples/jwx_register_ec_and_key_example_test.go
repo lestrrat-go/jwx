@@ -51,10 +51,21 @@ func convertShangMiSm2(key interface{}) (jwk.Key, error) {
 
 func ExampleShangMiSm2() {
 	shangmi2pk, _ := sm2.GenerateKey(rand.Reader)
+
+	// Create a jwk.Key from ShangMi SM2 private key
 	shangmi2JWK, err := jwk.FromRaw(shangmi2pk)
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+
+	{
+		// Create a ShangMi SM2 private key back from the jwk.Key
+		var clone sm2.PrivateKey
+		if err := shangmi2JWK.Raw(&clone); err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	payload := []byte("Lorem ipsum")
