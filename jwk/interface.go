@@ -84,8 +84,9 @@ type Set interface {
 	// specify, and there is no way of knowing what type they could be.
 	Set(string, interface{}) error
 
-	// RemoveKey removes the specified non-key field from the set.
-	// Keys may not be removed using this method.
+	// Remove removes the specified non-key field from the set.
+	// Keys may not be removed using this method. See RemoveKey for
+	// removing keys.
 	Remove(string) error
 
 	// Index returns the index where the given key exists, -1 otherwise
@@ -101,6 +102,8 @@ type Set interface {
 	LookupKeyID(string) (Key, bool)
 
 	// RemoveKey removes the key from the set.
+	// RemoveKey returns an error when the specified key does not exist
+	// in set.
 	RemoveKey(Key) error
 
 	// Keys creates an iterator to iterate through all keys in the set.
