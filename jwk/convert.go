@@ -68,7 +68,7 @@ type JRKeyConverter interface {
 	// receives the _value_ that this pointer points to, to make it easier to
 	// detect the type of the result.
 	//
-	// Note that the the second argument may be an `interface{}` (which means that the
+	// Note that the second argument may be an `interface{}` (which means that the
 	// user has delegated the type detection to the converter).
 	//
 	// Raw must NOT modify the hint object, and should return jwk.ContinueError
