@@ -34,6 +34,9 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 	muSignerDB.Lock()
 	signerDB[alg] = f
 	muSignerDB.Unlock()
+
+	// Remove previous signer, if there was one
+	removeSigner(alg)
 }
 
 // UnregisterSigner removes the signer factory associated with
@@ -49,6 +52,8 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 	muSignerDB.Lock()
 	delete(signerDB, alg)
 	muSignerDB.Unlock()
+	// Remove previous signer
+	removeSigner(alg)
 }
 
 func init() {

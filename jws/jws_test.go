@@ -2044,6 +2044,19 @@ func TestGH910(t *testing.T) {
 	require.NoError(t, err, `jws.Verify should succeed`)
 
 	require.Equal(t, src, string(verified), `verified payload should match`)
+
+	jws.UnregisterSigner(sha256Algo)
+
+	// Now try after unregistering the signer for the algorithm
+	_, err = jws.Sign([]byte(src), jws.WithKey(sha256Algo, nil))
+	require.Error(t, err, `jws.Sign should succeed`)
+
+	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
+		return s256SignerVerifier{}, nil
+	}))
+
+	_, err = jws.Sign([]byte(src), jws.WithKey(sha256Algo, nil))
+	require.NoError(t, err, `jws.Sign should succeed`)
 }
 
 func TestUnpaddedSignatureR(t *testing.T) {

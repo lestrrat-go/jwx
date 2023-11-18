@@ -74,6 +74,12 @@ func (s *payloadSigner) PublicHeader() Headers {
 var signers = make(map[jwa.SignatureAlgorithm]Signer)
 var muSigner = &sync.Mutex{}
 
+func removeSigner(alg jwa.SignatureAlgorithm) {
+	muSigner.Lock()
+	defer muSigner.Unlock()
+	delete(signers, alg)
+}
+
 func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) (*payloadSigner, error) {
 	muSigner.Lock()
 	signer, ok := signers[alg]
