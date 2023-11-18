@@ -18,6 +18,8 @@ func init() {
 	ourecdsa.RegisterCurve(jwa.P256, elliptic.P256())
 	ourecdsa.RegisterCurve(jwa.P384, elliptic.P384())
 	ourecdsa.RegisterCurve(jwa.P521, elliptic.P521())
+
+	RegisterJRKeyConverter(jwa.EC, JRKeyConvertFunc(ecdsaPrivateJWKToRaw))
 }
 
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
@@ -115,21 +117,47 @@ func (k *ecdsaPublicKey) Raw(v interface{}) error {
 }
 
 func (k *ecdsaPrivateKey) Raw(v interface{}) error {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
+	return raw(k, v)
+}
 
-	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
-	if err != nil {
-		return fmt.Errorf(`failed to build public key: %w`, err)
+func ecdsaPrivateJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
+	switch k := keyif.(type) {
+	case *ecdsaPublicKey:
+		switch hint.(type) {
+		case ecdsa.PublicKey, *ecdsa.PublicKey, interface{}:
+		default:
+			return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+		}
+
+		k.mu.RLock()
+		defer k.mu.RUnlock()
+
+		return buildECDSAPublicKey(k.Crv(), k.x, k.y)
+	case *ecdsaPrivateKey:
+		switch hint.(type) {
+		case ecdsa.PrivateKey, *ecdsa.PrivateKey, interface{}:
+		default:
+			return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+		}
+
+		k.mu.RLock()
+		defer k.mu.RUnlock()
+
+		pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to build public key: %w`, err)
+		}
+
+		var key ecdsa.PrivateKey
+		var d big.Int
+		d.SetBytes(k.d)
+		key.D = &d
+		key.PublicKey = *pubk
+
+		return &key, nil
+	default:
+		return nil, ContinueError()
 	}
-
-	var key ecdsa.PrivateKey
-	var d big.Int
-	d.SetBytes(k.d)
-	key.D = &d
-	key.PublicKey = *pubk
-
-	return blackmagic.AssignIfCompatible(v, &key)
 }
 
 func makeECDSAPublicKey(src Key) (Key, error) {

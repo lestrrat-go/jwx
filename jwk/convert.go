@@ -8,73 +8,119 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
-// # Converting Raw Keys To `jwk.Key`s
+// # Converting between Raw Keys and `jwk.Key`s
+//
+// A converter that converts from a raw key to a `jwk.Key` is called a RJKeyConverter.
+// A converter that converts from a `jwk.Key` to a raw key is called a JRKeyConverter.
 //
 // You can register a convert from a raw key to a `jwk.Key` by calling
-// `jwk.RegisterKeyConverter`.
-//
+// `jwk.RegisterRJKeyConverter`.
 
-var keyConverters = make(map[reflect.Type]KeyConverter)
+var rjConverters = make(map[reflect.Type]RJKeyConverter)
+var jrConverters = make(map[jwa.KeyType][]JRKeyConverter)
 
-var muKeyConverters sync.RWMutex
+var muRJConverters sync.RWMutex
+var muJRConverters sync.RWMutex
 
-func RegisterKeyConverter(from interface{}, conv KeyConverter) {
-	muKeyConverters.Lock()
-	defer muKeyConverters.Unlock()
-	keyConverters[reflect.TypeOf(from)] = conv
+func RegisterRJKeyConverter(from interface{}, conv RJKeyConverter) {
+	muRJConverters.Lock()
+	defer muRJConverters.Unlock()
+	rjConverters[reflect.TypeOf(from)] = conv
 }
 
-type KeyConverter interface {
+func RegisterJRKeyConverter(kty jwa.KeyType, conv JRKeyConverter) {
+	muJRConverters.Lock()
+	defer muJRConverters.Unlock()
+	convs, ok := jrConverters[kty]
+	if !ok {
+		convs = []JRKeyConverter{conv}
+	} else {
+		convs = append([]JRKeyConverter{conv}, convs...)
+	}
+	jrConverters[kty] = convs
+}
+
+type RJKeyConverter interface {
 	FromRaw(interface{}) (Key, error)
 }
 
-type KeyConvertFunc func(interface{}) (Key, error)
+type RJKeyConvertFunc func(interface{}) (Key, error)
 
-func (f KeyConvertFunc) FromRaw(raw interface{}) (Key, error) {
+func (f RJKeyConvertFunc) FromRaw(raw interface{}) (Key, error) {
 	return f(raw)
+}
+
+// JRKeyConverter is used to convert from a `jwk.Key` to a raw key.
+type JRKeyConverter interface {
+	// Raw takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
+	// The hint is the object that the user requested the result to be assigned to.
+	// The method should return the converted raw key, or an error if the conversion fails.
+	//
+	// Third party modules MUST NOT create raw
+	//
+	// When the user calls `key.Raw(dst)`, the `dst` object is a _pointer_ to the
+	// object that the user wants the result to be assigned to, but the converter
+	// receives the _value_ that this pointer points to, to make it easier to
+	// detect the type of the result.
+	//
+	// Note that the the second argument may be an `interface{}` (which means that the
+	// user has delegated the type detection to the converter).
+	//
+	// Raw must NOT modify the hint object, and should return jwk.ContinueError
+	// if the hint object is not compatible with the converter.
+	Raw(Key, interface{}) (interface{}, error)
+}
+
+type JRKeyConvertFunc func(Key, interface{}) (interface{}, error)
+
+func (f JRKeyConvertFunc) Raw(key Key, hint interface{}) (interface{}, error) {
+	return f(key, hint)
 }
 
 func init() {
 	{
-		f := KeyConvertFunc(rsaPrivateKeyToJWK)
+		f := RJKeyConvertFunc(rsaPrivateKeyToJWK)
 		k := rsa.PrivateKey{}
-		RegisterKeyConverter(k, f)
-		RegisterKeyConverter(&k, f)
+		RegisterRJKeyConverter(k, f)
+		RegisterRJKeyConverter(&k, f)
 	}
 	{
-		f := KeyConvertFunc(rsaPublicKeyToJWK)
+		f := RJKeyConvertFunc(rsaPublicKeyToJWK)
 		k := rsa.PublicKey{}
-		RegisterKeyConverter(k, f)
-		RegisterKeyConverter(&k, f)
+		RegisterRJKeyConverter(k, f)
+		RegisterRJKeyConverter(&k, f)
 	}
 	{
-		f := KeyConvertFunc(ecdsaPrivateKeyToJWK)
+		f := RJKeyConvertFunc(ecdsaPrivateKeyToJWK)
 		k := ecdsa.PrivateKey{}
-		RegisterKeyConverter(k, f)
-		RegisterKeyConverter(&k, f)
+		RegisterRJKeyConverter(k, f)
+		RegisterRJKeyConverter(&k, f)
 	}
 	{
-		f := KeyConvertFunc(ecdsaPublicKeyToJWK)
+		f := RJKeyConvertFunc(ecdsaPublicKeyToJWK)
 		k := ecdsa.PublicKey{}
-		RegisterKeyConverter(k, f)
-		RegisterKeyConverter(&k, f)
+		RegisterRJKeyConverter(k, f)
+		RegisterRJKeyConverter(&k, f)
 	}
 	{
-		f := KeyConvertFunc(okpPrivateKeyToJWK)
+		f := RJKeyConvertFunc(okpPrivateKeyToJWK)
 		for _, k := range []interface{}{ed25519.PrivateKey(nil), ecdh.PrivateKey{}, &ecdh.PrivateKey{}} {
-			RegisterKeyConverter(k, f)
+			RegisterRJKeyConverter(k, f)
 		}
 	}
 	{
-		f := KeyConvertFunc(okpPublicKeyToJWK)
+		f := RJKeyConvertFunc(okpPublicKeyToJWK)
 		for _, k := range []interface{}{ed25519.PublicKey(nil), ecdh.PublicKey{}, &ecdh.PublicKey{}} {
-			RegisterKeyConverter(k, f)
+			RegisterRJKeyConverter(k, f)
 		}
 	}
 
-	RegisterKeyConverter([]byte(nil), KeyConvertFunc(bytesToKey))
+	RegisterRJKeyConverter([]byte(nil), RJKeyConvertFunc(bytesToKey))
 }
 
 // These may seem a bit repetitive and redandunt, but the problem is that
@@ -197,4 +243,34 @@ func bytesToKey(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
+}
+
+// All objects call this method to convert themselves to a raw key.
+// It's done this way to centralize the logic (mapping) of which keys are converted
+// to what raw key.
+func raw(key Key, dst interface{}) error {
+	muRJConverters.RLock()
+	defer muRJConverters.RUnlock()
+	// dst better be a pointer
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() != reflect.Ptr {
+		return fmt.Errorf(`destination object must be a pointer`)
+	}
+	if convs, ok := jrConverters[key.KeyType()]; ok {
+		for _, conv := range convs {
+			v, err := conv.Raw(key, dst)
+			if err != nil {
+				if IsContinueError(err) {
+					continue
+				}
+				return fmt.Errorf(`failed to convert jwk.Key to raw format: %w`, err)
+			}
+
+			if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+				return fmt.Errorf(`failed to assign key: %w`, err)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf(`failed to find converter for key type '%T'`, key)
 }
