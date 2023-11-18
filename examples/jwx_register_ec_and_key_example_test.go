@@ -80,7 +80,7 @@ func ExampleShangMiSm2() {
 	// Create a jwk.Key from ShangMi SM2 private key
 	shangmi2JWK, err := jwk.FromRaw(shangmi2pk)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("failed to create jwk.Key from raw ShangMi private key: %w\n", err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func ExampleShangMiSm2() {
 		// Create a ShangMi SM2 private key back from the jwk.Key
 		var clone sm2.PrivateKey
 		if err := shangmi2JWK.Raw(&clone); err != nil {
-			fmt.Println(err)
+			fmt.Printf("failed to create ShangMi private key from jwk.Key: %w\n", err)
 			return
 		}
 
@@ -117,7 +117,7 @@ func ExampleShangMiSm2() {
 	{ // Can do the same thing for interface{}
 		var clone interface{}
 		if err := shangmi2JWK.Raw(&clone); err != nil {
-			fmt.Println(err)
+			fmt.Printf("failed to create ShangMi private key from jwk.Key (via interface{}): %w\n", err)
 			return
 		}
 	}
@@ -131,12 +131,12 @@ func ExampleShangMiSm2() {
 		}
 		eckjwk, err := jwk.FromRaw(ecprivkey)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("failed to create jwk.Key from raw ShangMi public key: %w\n", err)
 			return
 		}
 		var clone ecdsa.PrivateKey
 		if err := eckjwk.Raw(&clone); err != nil {
-			fmt.Println(err)
+			fmt.Printf("failed to create ShangMi public key from jwk.Key: %w\n", err)
 			return
 		}
 	}
@@ -144,19 +144,19 @@ func ExampleShangMiSm2() {
 	payload := []byte("Lorem ipsum")
 	signed, err := jws.Sign(payload, jws.WithKey(jwa.ES256, shangmi2JWK))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Failed to sign using ShangMi key: %w\n", err)
 		return
 	}
 
 	shangmi2PubJWK, err := jwk.PublicKeyOf(shangmi2JWK)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Failed to create public JWK using ShangMi key: %w\n", err)
 		return
 	}
 
 	verified, err := jws.Verify(signed, jws.WithKey(jwa.ES256, shangmi2PubJWK))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Failed to verify using ShangMi key: %w\n", err)
 		return
 	}
 
