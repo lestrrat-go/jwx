@@ -119,4 +119,13 @@ options:
       `jwk.Key` here unless you are 100% sure that all keys that you
       have provided are instances of `jwk.Key` (remember that the
       jwx API allows users to specify a raw key such as *rsa.PublicKey)
-
+  - ident: CEK
+    interface: DecryptOption
+    argument_type: '*[]byte'
+    comment: |
+      WithCEK allows users to specify a variable to store the CEK used in the
+      message upon successful decryption. The variable must be a pointer to
+      a byte slice, and it will only be populated if the decryption is successful.
+      
+      This option is currently considered EXPERIMENTAL, and is subject to
+      future changes across minor/micro versions.
