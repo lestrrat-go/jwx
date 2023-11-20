@@ -20,7 +20,8 @@ var muSignerDB sync.RWMutex
 var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 
 // RegisterSigner is used to register a factory object that creates
-// Signer objects based on the given algorithm.
+// Signer objects based on the given algorithm. Previous object instantiated
+// by the factory is discarded.
 //
 // For example, if you would like to provide a custom signer for
 // jwa.EdDSA, use this function to register a `SignerFactory`
@@ -40,7 +41,8 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 }
 
 // UnregisterSigner removes the signer factory associated with
-// the given algorithm.
+// the given algorithm, as well as the signer instance created
+// by the factory.
 //
 // Note that when you call this function, the algorithm itself is
 // not automatically unregistered from the known algorithms database.
