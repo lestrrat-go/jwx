@@ -19,7 +19,7 @@ func init() {
 	ourecdsa.RegisterCurve(jwa.P384, elliptic.P384())
 	ourecdsa.RegisterCurve(jwa.P521, elliptic.P521())
 
-	RegisterJRKeyConverter(jwa.EC, JRKeyConvertFunc(ecdsaPrivateJWKToRaw))
+	RegisterKeyExporter(jwa.EC, KeyExportFunc(ecdsaPrivateJWKToRaw))
 }
 
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {

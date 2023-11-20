@@ -189,9 +189,9 @@ func FromRaw(raw interface{}) (Key, error) {
 		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
 	}
 
-	muRJConverters.RLock()
-	conv, ok := rjConverters[reflect.TypeOf(raw)]
-	muRJConverters.RUnlock()
+	myKeyImporters.RLock()
+	conv, ok := keyImporters[reflect.TypeOf(raw)]
+	myKeyImporters.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf(`jwk.FromRaw: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}

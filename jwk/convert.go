@@ -15,48 +15,45 @@ import (
 
 // # Converting between Raw Keys and `jwk.Key`s
 //
-// A converter that converts from a raw key to a `jwk.Key` is called a RJKeyConverter.
-// A converter that converts from a `jwk.Key` to a raw key is called a JRKeyConverter.
-//
-// You can register a convert from a raw key to a `jwk.Key` by calling
-// `jwk.RegisterRJKeyConverter`.
+// A converter that converts from a raw key to a `jwk.Key` is called a KeyImporter.
+// A converter that converts from a `jwk.Key` to a raw key is called a KeyExporter.
 
-var rjConverters = make(map[reflect.Type]RJKeyConverter)
-var jrConverters = make(map[jwa.KeyType][]JRKeyConverter)
+var keyImporters = make(map[reflect.Type]KeyImporter)
+var keyExporters = make(map[jwa.KeyType][]KeyExporter)
 
-var muRJConverters sync.RWMutex
+var myKeyImporters sync.RWMutex
 var muJRConverters sync.RWMutex
 
-func RegisterRJKeyConverter(from interface{}, conv RJKeyConverter) {
-	muRJConverters.Lock()
-	defer muRJConverters.Unlock()
-	rjConverters[reflect.TypeOf(from)] = conv
+func RegisterKeyImporter(from interface{}, conv KeyImporter) {
+	myKeyImporters.Lock()
+	defer myKeyImporters.Unlock()
+	keyImporters[reflect.TypeOf(from)] = conv
 }
 
-func RegisterJRKeyConverter(kty jwa.KeyType, conv JRKeyConverter) {
+func RegisterKeyExporter(kty jwa.KeyType, conv KeyExporter) {
 	muJRConverters.Lock()
 	defer muJRConverters.Unlock()
-	convs, ok := jrConverters[kty]
+	convs, ok := keyExporters[kty]
 	if !ok {
-		convs = []JRKeyConverter{conv}
+		convs = []KeyExporter{conv}
 	} else {
-		convs = append([]JRKeyConverter{conv}, convs...)
+		convs = append([]KeyExporter{conv}, convs...)
 	}
-	jrConverters[kty] = convs
+	keyExporters[kty] = convs
 }
 
-type RJKeyConverter interface {
+type KeyImporter interface {
 	FromRaw(interface{}) (Key, error)
 }
 
-type RJKeyConvertFunc func(interface{}) (Key, error)
+type KeyImportFunc func(interface{}) (Key, error)
 
-func (f RJKeyConvertFunc) FromRaw(raw interface{}) (Key, error) {
+func (f KeyImportFunc) FromRaw(raw interface{}) (Key, error) {
 	return f(raw)
 }
 
-// JRKeyConverter is used to convert from a `jwk.Key` to a raw key.
-type JRKeyConverter interface {
+// KeyExporter is used to convert from a `jwk.Key` to a raw key.
+type KeyExporter interface {
 	// Raw takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
 	// The hint is the object that the user requested the result to be assigned to.
 	// The method should return the converted raw key, or an error if the conversion fails.
@@ -76,51 +73,51 @@ type JRKeyConverter interface {
 	Raw(Key, interface{}) (interface{}, error)
 }
 
-type JRKeyConvertFunc func(Key, interface{}) (interface{}, error)
+type KeyExportFunc func(Key, interface{}) (interface{}, error)
 
-func (f JRKeyConvertFunc) Raw(key Key, hint interface{}) (interface{}, error) {
+func (f KeyExportFunc) Raw(key Key, hint interface{}) (interface{}, error) {
 	return f(key, hint)
 }
 
 func init() {
 	{
-		f := RJKeyConvertFunc(rsaPrivateKeyToJWK)
+		f := KeyImportFunc(rsaPrivateKeyToJWK)
 		k := rsa.PrivateKey{}
-		RegisterRJKeyConverter(k, f)
-		RegisterRJKeyConverter(&k, f)
+		RegisterKeyImporter(k, f)
+		RegisterKeyImporter(&k, f)
 	}
 	{
-		f := RJKeyConvertFunc(rsaPublicKeyToJWK)
+		f := KeyImportFunc(rsaPublicKeyToJWK)
 		k := rsa.PublicKey{}
-		RegisterRJKeyConverter(k, f)
-		RegisterRJKeyConverter(&k, f)
+		RegisterKeyImporter(k, f)
+		RegisterKeyImporter(&k, f)
 	}
 	{
-		f := RJKeyConvertFunc(ecdsaPrivateKeyToJWK)
+		f := KeyImportFunc(ecdsaPrivateKeyToJWK)
 		k := ecdsa.PrivateKey{}
-		RegisterRJKeyConverter(k, f)
-		RegisterRJKeyConverter(&k, f)
+		RegisterKeyImporter(k, f)
+		RegisterKeyImporter(&k, f)
 	}
 	{
-		f := RJKeyConvertFunc(ecdsaPublicKeyToJWK)
+		f := KeyImportFunc(ecdsaPublicKeyToJWK)
 		k := ecdsa.PublicKey{}
-		RegisterRJKeyConverter(k, f)
-		RegisterRJKeyConverter(&k, f)
+		RegisterKeyImporter(k, f)
+		RegisterKeyImporter(&k, f)
 	}
 	{
-		f := RJKeyConvertFunc(okpPrivateKeyToJWK)
+		f := KeyImportFunc(okpPrivateKeyToJWK)
 		for _, k := range []interface{}{ed25519.PrivateKey(nil), ecdh.PrivateKey{}, &ecdh.PrivateKey{}} {
-			RegisterRJKeyConverter(k, f)
+			RegisterKeyImporter(k, f)
 		}
 	}
 	{
-		f := RJKeyConvertFunc(okpPublicKeyToJWK)
+		f := KeyImportFunc(okpPublicKeyToJWK)
 		for _, k := range []interface{}{ed25519.PublicKey(nil), ecdh.PublicKey{}, &ecdh.PublicKey{}} {
-			RegisterRJKeyConverter(k, f)
+			RegisterKeyImporter(k, f)
 		}
 	}
 
-	RegisterRJKeyConverter([]byte(nil), RJKeyConvertFunc(bytesToKey))
+	RegisterKeyImporter([]byte(nil), KeyImportFunc(bytesToKey))
 }
 
 // These may seem a bit repetitive and redandunt, but the problem is that
@@ -249,14 +246,14 @@ func bytesToKey(src interface{}) (Key, error) {
 // It's done this way to centralize the logic (mapping) of which keys are converted
 // to what raw key.
 func raw(key Key, dst interface{}) error {
-	muRJConverters.RLock()
-	defer muRJConverters.RUnlock()
+	myKeyImporters.RLock()
+	defer myKeyImporters.RUnlock()
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Ptr {
 		return fmt.Errorf(`destination object must be a pointer`)
 	}
-	if convs, ok := jrConverters[key.KeyType()]; ok {
+	if convs, ok := keyExporters[key.KeyType()]; ok {
 		for _, conv := range convs {
 			v, err := conv.Raw(key, dst)
 			if err != nil {
