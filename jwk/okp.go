@@ -139,7 +139,7 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 }
 
 // This is half baked. I think it will blow up if we used ecdh.* keys and/or x25519 keys
-func okpJWKToRaw(key Key, hint interface{}) (interface{}, error) {
+func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half baked */) (interface{}, error) {
 	switch key := key.(type) {
 	case *okpPrivateKey:
 		key.mu.RLock()
