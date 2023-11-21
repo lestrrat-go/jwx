@@ -22,17 +22,23 @@ var keyImporters = make(map[reflect.Type]KeyImporter)
 var keyExporters = make(map[jwa.KeyType][]KeyExporter)
 
 var myKeyImporters sync.RWMutex
-var muJRConverters sync.RWMutex
+var muKeyExporters sync.RWMutex
 
+// RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.FromRaw()` is called,
+// the library will look up the appropriate KeyImporter for the given raw key type (via `reflect`)
+// and execute the KeyImporters in succession until either one of them succeeds, or all of them fail.
 func RegisterKeyImporter(from interface{}, conv KeyImporter) {
 	myKeyImporters.Lock()
 	defer myKeyImporters.Unlock()
 	keyImporters[reflect.TypeOf(from)] = conv
 }
 
+// RegisterKeyExporter registers a KeyExporter for the given key type. When `key.Raw()` is called,
+// the library will look up the appropriate KeyExporter for the given key type and execute the
+// KeyExporters in succession until either one of them succeeds, or all of them fail.
 func RegisterKeyExporter(kty jwa.KeyType, conv KeyExporter) {
-	muJRConverters.Lock()
-	defer muJRConverters.Unlock()
+	muKeyExporters.Lock()
+	defer muKeyExporters.Unlock()
 	convs, ok := keyExporters[kty]
 	if !ok {
 		convs = []KeyExporter{conv}
@@ -42,23 +48,28 @@ func RegisterKeyExporter(kty jwa.KeyType, conv KeyExporter) {
 	keyExporters[kty] = convs
 }
 
+// KeyImporter is used to convert from a raw key to a `jwk.Key`. mneumonic: from the PoV of the `jwk.Key`,
+// we're _importing_ a raw key.
 type KeyImporter interface {
+	// FromRaw takes the raw key to be converted, and returns a `jwk.Key` or an error if the conversion fails.
 	FromRaw(interface{}) (Key, error)
 }
 
+// KeyImportFunc is a convenience type to implement KeyImporter as a function.
 type KeyImportFunc func(interface{}) (Key, error)
 
 func (f KeyImportFunc) FromRaw(raw interface{}) (Key, error) {
 	return f(raw)
 }
 
-// KeyExporter is used to convert from a `jwk.Key` to a raw key.
+// KeyExporter is used to convert from a `jwk.Key` to a raw key. mneumonic: from the PoV of the `jwk.Key`,
+// we're _exporting_ it to a raw key.
 type KeyExporter interface {
 	// Raw takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
 	// The hint is the object that the user requested the result to be assigned to.
 	// The method should return the converted raw key, or an error if the conversion fails.
 	//
-	// Third party modules MUST NOT create raw
+	// Third party modules MUST NOT modifiy the hint object.
 	//
 	// When the user calls `key.Raw(dst)`, the `dst` object is a _pointer_ to the
 	// object that the user wants the result to be assigned to, but the converter
@@ -73,6 +84,7 @@ type KeyExporter interface {
 	Raw(Key, interface{}) (interface{}, error)
 }
 
+// KeyExportFunc is a convenience type to implement KeyExporter as a function.
 type KeyExportFunc func(Key, interface{}) (interface{}, error)
 
 func (f KeyExportFunc) Raw(key Key, hint interface{}) (interface{}, error) {

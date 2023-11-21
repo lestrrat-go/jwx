@@ -39,9 +39,9 @@ func init() {
 
 	// We only need one converter for the private key, because the public key
 	// is exactly the same type as *ecdsa.PublicKey
-	jwk.RegisterRJKeyConverter(shangmi2pk, jwk.RJKeyConvertFunc(convertShangMiSm2))
+	jwk.RegisterKeyImporter(shangmi2pk, jwk.KeyImportFunc(convertShangMiSm2))
 
-	jwk.RegisterJRKeyConverter(jwa.EC, jwk.JRKeyConvertFunc(convertJWKToShangMiSm2))
+	jwk.RegisterKeyExporter(jwa.EC, jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
 
 func convertShangMiSm2(key interface{}) (jwk.Key, error) {
