@@ -53,7 +53,10 @@ func convertShangMiSm2(key interface{}) (jwk.Key, error) {
 }
 
 func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) {
-	ecdsaKey := key.(jwk.ECDSAPrivateKey)
+	ecdsaKey, ok := key.(jwk.ECDSAPrivateKey)
+	if !ok {
+		return nil, fmt.Errorf(`invalid key type %T: %w`, key, jwk.ContinueError())
+	}
 	if ecdsaKey.Crv() != SM2 {
 		return nil, fmt.Errorf(`cannot convert curve of type %s to ShangMi key: %w`, ecdsaKey.Crv(), jwk.ContinueError())
 	}
@@ -87,7 +90,7 @@ func ExampleShangMiSm2() {
 	{
 		// Create a ShangMi SM2 private key back from the jwk.Key
 		var clone sm2.PrivateKey
-		if err := shangmi2JWK.Raw(&clone); err != nil {
+		if err := jwk.Export(shangmi2JWK, &clone); err != nil {
 			fmt.Printf("failed to create ShangMi private key from jwk.Key: %s\n", err)
 			return
 		}
@@ -116,7 +119,7 @@ func ExampleShangMiSm2() {
 
 	{ // Can do the same thing for interface{}
 		var clone interface{}
-		if err := shangmi2JWK.Raw(&clone); err != nil {
+		if err := jwk.Export(shangmi2JWK, &clone); err != nil {
 			fmt.Printf("failed to create ShangMi private key from jwk.Key (via interface{}): %s\n", err)
 			return
 		}
@@ -135,7 +138,7 @@ func ExampleShangMiSm2() {
 			return
 		}
 		var clone ecdsa.PrivateKey
-		if err := eckjwk.Raw(&clone); err != nil {
+		if err := jwk.Export(eckjwk, &clone); err != nil {
 			fmt.Printf("failed to create ShangMi public key from jwk.Key: %s\n", err)
 			return
 		}

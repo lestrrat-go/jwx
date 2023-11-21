@@ -81,9 +81,9 @@ func FromRaw(raw interface{}) (Key, error) {
 		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
 	}
 
-	myKeyImporters.RLock()
+	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
-	myKeyImporters.RUnlock()
+	muKeyImporters.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf(`jwk.FromRaw: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
@@ -174,7 +174,7 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	}
 
 	var raw interface{}
-	if err := pubk.Raw(&raw); err != nil {
+	if err := Export(pubk, &raw); err != nil {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
 	}
 	return raw, nil
@@ -201,9 +201,9 @@ const (
 // The second return value is the encoded byte sequence.
 func EncodeX509(v interface{}) (string, []byte, error) {
 	// we can't import jwk, so just use the interface
-	if key, ok := v.(interface{ Raw(interface{}) error }); ok {
+	if key, ok := v.(Key); ok {
 		var raw interface{}
-		if err := key.Raw(&raw); err != nil {
+		if err := Export(key, &raw); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key out of %T: %w`, key, err)
 		}
 
@@ -318,7 +318,7 @@ func ParseRawKey(data []byte, rawkey interface{}) error {
 		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
-	if err := key.Raw(rawkey); err != nil {
+	if err := Export(key, rawkey); err != nil {
 		return fmt.Errorf(`failed to assign to raw key variable: %w`, err)
 	}
 
@@ -603,7 +603,7 @@ func asnEncode(key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
 		var rawkey interface{}
-		if err := key.Raw(&rawkey); err != nil {
+		if err := Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
@@ -613,7 +613,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		var rawkey interface{}
-		if err := key.Raw(&rawkey); err != nil {
+		if err := Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKIXPublicKey(rawkey)

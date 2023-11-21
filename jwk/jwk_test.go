@@ -267,7 +267,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		typ := expectedRawKeyType(key)
 
 		var rawkey interface{}
-		if !assert.NoError(t, key.Raw(&rawkey), `Raw() should succeed`) {
+		if !assert.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`) {
 			return
 		}
 		if !assert.IsType(t, rawkey, typ, `raw key should be of this type`) {
@@ -377,7 +377,7 @@ func TestParse(t *testing.T) {
 				t.Helper()
 
 				var irawkey interface{}
-				if !assert.NoError(t, key.Raw(&irawkey), `key.Raw(&interface) should ucceed`) {
+				if !assert.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`) {
 					return
 				}
 
@@ -393,7 +393,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey rsa.PrivateKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -402,7 +402,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey rsa.PublicKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -411,7 +411,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey ecdsa.PrivateKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -422,13 +422,13 @@ func TestParse(t *testing.T) {
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PrivateKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
 							return
 						}
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PrivateKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
 							return
 						}
 						crawkey = &rawkey
@@ -445,13 +445,13 @@ func TestParse(t *testing.T) {
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PublicKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
 							return
 						}
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PublicKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
 							return
 						}
 						crawkey = &rawkey
@@ -940,7 +940,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, pubJwkKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`) {
 				return
 			}
 
@@ -993,7 +993,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, setKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`) {
 				return
 			}
 
@@ -1476,7 +1476,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	}
 
 	var pubkey rsa.PublicKey
-	if !assert.NoError(t, key.Raw(&pubkey), `key.Raw should succeed`) {
+	if !assert.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`) {
 		return
 	}
 
@@ -2182,7 +2182,7 @@ func TestGH947(t *testing.T) {
 	k, err := jwk.ParseKey(raw)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	var exported []byte
-	require.Error(t, k.Raw(&exported), `(okpkey).Raw with 0-length OKP key should fail`)
+	require.Error(t, jwk.Export(k, &exported), `(okpkey).Raw with 0-length OKP key should fail`)
 }
 
 func TestValidation(t *testing.T) {

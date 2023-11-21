@@ -21,15 +21,15 @@ import (
 var keyImporters = make(map[reflect.Type]KeyImporter)
 var keyExporters = make(map[jwa.KeyType][]KeyExporter)
 
-var myKeyImporters sync.RWMutex
+var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
 // RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.FromRaw()` is called,
 // the library will look up the appropriate KeyImporter for the given raw key type (via `reflect`)
 // and execute the KeyImporters in succession until either one of them succeeds, or all of them fail.
 func RegisterKeyImporter(from interface{}, conv KeyImporter) {
-	myKeyImporters.Lock()
-	defer myKeyImporters.Unlock()
+	muKeyImporters.Lock()
+	defer muKeyImporters.Unlock()
 	keyImporters[reflect.TypeOf(from)] = conv
 }
 
@@ -254,32 +254,43 @@ func bytesToKey(src interface{}) (Key, error) {
 	return k, nil
 }
 
-// All objects call this method to convert themselves to a raw key.
-// It's done this way to centralize the logic (mapping) of which keys are converted
-// to what raw key.
-func raw(key Key, dst interface{}) error {
-	myKeyImporters.RLock()
-	defer myKeyImporters.RUnlock()
+// Export converts a `jwk.Key` to a Export key. The dst argument must be a pointer to the
+// object that the user wants the result to be assigned to.
+//
+// Normally you would pass a pointer to the zero value of the raw key type
+// such as &(*rsa.PrivateKey) or &(*ecdsa.PublicKey), which gets assigned
+// the converted key.
+//
+// If you do not know the exact type of a jwk.Key before attempting
+// to obtain the raw key, you can simply pass a pointer to an
+// empty interface as the second argument
+//
+// If you already know the exact type, it is recommended that you
+// pass a pointer to the zero value of the actual key type for efficiency.
+func Export(key Key, dst interface{}) error {
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Ptr {
-		return fmt.Errorf(`destination object must be a pointer`)
+		return fmt.Errorf(`jwk.Export: destination object must be a pointer`)
 	}
-	if convs, ok := keyExporters[key.KeyType()]; ok {
-		for _, conv := range convs {
+	muKeyExporters.RLock()
+	exporters, ok := keyExporters[key.KeyType()]
+	muKeyExporters.RUnlock()
+	if ok {
+		for _, conv := range exporters {
 			v, err := conv.Export(key, dst)
 			if err != nil {
 				if IsContinueError(err) {
 					continue
 				}
-				return fmt.Errorf(`failed to convert jwk.Key to raw format: %w`, err)
+				return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
 			}
 
 			if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-				return fmt.Errorf(`failed to assign key: %w`, err)
+				return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
 			}
 			return nil
 		}
 	}
-	return fmt.Errorf(`failed to find converter for key type '%T'`, key)
+	return fmt.Errorf(`jwk.Export: failed to find exporter for key type '%T'`, key)
 }

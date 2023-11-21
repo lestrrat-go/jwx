@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -19,7 +18,7 @@ func init() {
 	ourecdsa.RegisterCurve(jwa.P384, elliptic.P384())
 	ourecdsa.RegisterCurve(jwa.P521, elliptic.P521())
 
-	RegisterKeyExporter(jwa.EC, KeyExportFunc(ecdsaPrivateJWKToRaw))
+	RegisterKeyExporter(jwa.EC, KeyExportFunc(ecdsaJWKToRaw))
 }
 
 func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
@@ -103,24 +102,7 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	return &ecdsa.PublicKey{Curve: crv, X: &x, Y: &y}, nil
 }
 
-// Raw returns the EC-DSA public key represented by this JWK
-func (k *ecdsaPublicKey) Raw(v interface{}) error {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
-
-	pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
-	if err != nil {
-		return fmt.Errorf(`failed to build public key: %w`, err)
-	}
-
-	return blackmagic.AssignIfCompatible(v, pubk)
-}
-
-func (k *ecdsaPrivateKey) Raw(v interface{}) error {
-	return raw(k, v)
-}
-
-func ecdsaPrivateJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
+func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 	switch k := keyif.(type) {
 	case *ecdsaPublicKey:
 		switch hint.(type) {
@@ -131,7 +113,6 @@ func ecdsaPrivateJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 
 		k.mu.RLock()
 		defer k.mu.RUnlock()
-
 		return buildECDSAPublicKey(k.Crv(), k.x, k.y)
 	case *ecdsaPrivateKey:
 		switch hint.(type) {
@@ -142,7 +123,6 @@ func ecdsaPrivateJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 
 		k.mu.RLock()
 		defer k.mu.RUnlock()
-
 		pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to build public key: %w`, err)
@@ -210,7 +190,7 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PublicKey
-	if err := k.Raw(&key); err != nil {
+	if err := Export(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize ecdsa.PublicKey for thumbprint generation: %w`, err)
 	}
 
@@ -234,7 +214,7 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PrivateKey
-	if err := k.Raw(&key); err != nil {
+	if err := Export(&k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to materialize ecdsa.PrivateKey for thumbprint generation: %w`, err)
 	}
 

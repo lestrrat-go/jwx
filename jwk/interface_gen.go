@@ -67,22 +67,6 @@ type Key interface {
 	// called by the user
 	Validate() error
 
-	// Raw creates the corresponding raw key from the jwk.Key. For example,
-	// EC keys would create *ecdsa.PublicKey or *ecdsa.PrivateKey,
-	// and OctetSeq types create a []byte key.
-	//
-	// If you do not know the exact type of a jwk.Key before attempting
-	// to obtain the raw key, you can simply pass a pointer to an
-	// empty interface as the first argument (important caveat: this can only
-	// be done for keys that are defined in this package. If you are using keys
-	// imported from third party modules, you will need to know the exact type
-	// before calling this method).
-	//
-	// If you already know the exact type, it is recommended that you
-	// pass a pointer to the zero value of the actual key type (e.g. &rsa.PrivateKey)
-	// for efficiency.
-	Raw(interface{}) error
-
 	// Thumbprint returns the JWK thumbprint using the indicated
 	// hashing algorithm, according to RFC 7638
 	Thumbprint(crypto.Hash) ([]byte, error)
