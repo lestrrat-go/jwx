@@ -243,7 +243,7 @@
 //	var dst *ecdsa.PrivateKey
 //	key.Raw(&dst) // Error, if key is an RSA key
 //
-// You will need to handle this distinction youself in your KeyImporter. For example, certain
+// You will need to handle this distinction yourself in your KeyImporter. For example, certain
 // elliptic curve keys can be expressed in JWK in the same format, minus the "kty". In that case
 // you will need to check for the type of the destination object and return an error if it is
 // not compatible with your key.
