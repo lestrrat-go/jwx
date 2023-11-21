@@ -28,7 +28,9 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 func octetSeqToRaw(key Key, hint interface{}) (interface{}, error) {
 	switch key := key.(type) {
 	case *symmetricKey:
-		if _, ok := hint.([]byte); !ok {
+		switch hint.(type) {
+		case *[]byte, *interface{}:
+		default:
 			return nil, fmt.Errorf(`invalid destination object type %T for symmetric key: %w`, hint, ContinueError())
 		}
 		key.mu.RLock()
