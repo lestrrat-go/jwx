@@ -1,6 +1,5 @@
 //go:generate ../tools/cmd/genjwk.sh
 
-// Package jwk implements JWK as described in https://tools.ietf.org/html/rfc7517
 package jwk
 
 import (
@@ -47,117 +46,10 @@ func init() {
 	}
 }
 
-// # Registering a key type
-//
-// You can add the ability to use a JWK that this library does not
-// implement out of the box. You can do this by registering your own
-// KeyParser instance.
-//
-//  func init() {
-//    // optional
-//    jwk.RegiserProbeField(reflect.StructField{Name: "SomeHint", Type: reflect.TypeOf(""), Tag: `json:"some_hint"`})
-//    jwk.RegisterKeyParser(&MyKeyParser{})
-//  }
-//
-// In order to understand how this works, you need to understand
-// how the `jwk.ParseKey()` works.
-//
-// The first thing that occurs when parsing a key is a partial
-// unmarshaling of the payload into a hint / probe object.
-//
-// Because the `json.Unmarshal` works by calling the `UnmarshalJSON`
-// method on a concrete object, we need to create one first. In order
-// to create the appropriate Go object, we need to peek into the
-// payload and figure out what type of key it is.
-//
-// In order to do this, we create a new KeyProber to partially populate
-// the object with hints from the payload. For example, a JWK representing
-// an RSA key would look like:
-//
-//  { "kty": "RSA", "n": ..., "e": ..., ... }
-//
-// Therefore, a KeyProbe that can unmarshal the value of the field "kty"
-// would be able to tell us that this is an RSA key.
-//
-// Also, if said payload contains some value in the "d" field, we can
-// also tell that this is a private key, as only private keys need
-// this field.
-//
-// For most cases, the default KeyProbe implementation should be sufficient.
-// You would be able to query "kty" and "d" fields via the `Get()` method.
-//
-//  var kty string
-//  _ = probe.Get("Kty", &kty)
-//
-// However, if you need extra pieces of information, you can specify
-// additional fields to be probed. For example, if you want to know the
-// value of the field "my_hint" (which holds a string value) from the payload,
-// you can register it to be probed by registering an additional probe field like this:
-//
-//  jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
-//
-// Once the probe is done, the library will iterate over the registered parsers
-// and attempt to parse the key by calling their `ParseKey()` methods.
-// The parsers will be called in reverse order that they were registered.
-// This means that it will try all parsers that were registered by third
-// parties, and once those are exhausted, the default parser will be used.
-//
-// Each parser's `ParseKey()`` method will receive three arguments: the probe object, a
-// KeyUnmarshaler, and the raw payload. The probe object can be used
-// as a hint to determine what kind of key to instantiate. An example
-// pseudocode may look like this:
-//
-//  var kty string
-//  _ = probe.Get("Kty", &kty)
-//  switch kty {
-//  case "RSA":
-//    // create an RSA key
-//  case "EC":
-//    // create an EC key
-//  ...
-//  }
-//
-// The `KeyUnmarshaler` is a thin wrapper around `json.Unmarshal` it
-// works almost identical to `json.Unmarshal`, but it allows us to
-// add extra magic that is specific to this library before calling
-// the actual `json.Unmarshal`. If you want to try to unmarshal the
-// payload, please use this instead of `json.Unmarshal`.
-//
-//  func init() {
-//    jwk.RegisterFieldProbe(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
-//    jwk.RegisterParser(&MyKeyParser{})
-//  }
-//
-//  type MyKeyParser struct { ... }
-//  func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
-//    // Create concrete type
-//    var hint string
-//    if err := probe.Get("MyHint", &hint); err != nil {
-//       // if it doesn't have the `my_hint` field, it probably means
-//       // it's not for us, so we return ContinueParseError so that
-//       // the next parser can pick it up
-//       return nil, jwk.ContinueParseError()
-//    }
-//
-//    // Use hint to determine concrete key type
-//    var key jwk.Key
-//    switch hint {
-//    case ...:
-//     key = = myNewAwesomeJWK()
-//    ...
-//
-//    return unmarshaler.Unmarshal(data, key)
-//  }
-//
-// This functionality should be considered experimental. While we
-// expect that the functionality itself will remain, the API may
-// change in backward incompatible ways, even during minor version
-// releases.
-
 var cpe = &continueError{}
 
 // ContinueError returns an opaque error that can be returned
-// when a `KeyParser` or `KeyConverter` cannot handle the given payload,
+// when a `KeyParser`, `KeyImporter`, or `KeyExporter` cannot handle the given payload,
 // but would like the process to continue with the next handler.
 func ContinueError() error {
 	return cpe
@@ -196,7 +88,7 @@ func FromRaw(raw interface{}) (Key, error) {
 		return nil, fmt.Errorf(`jwk.FromRaw: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.FromRaw(raw)
+	return conv.Import(raw)
 }
 
 // PublicSetOf returns a new jwk.Set consisting of

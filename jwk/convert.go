@@ -51,27 +51,27 @@ func RegisterKeyExporter(kty jwa.KeyType, conv KeyExporter) {
 // KeyImporter is used to convert from a raw key to a `jwk.Key`. mneumonic: from the PoV of the `jwk.Key`,
 // we're _importing_ a raw key.
 type KeyImporter interface {
-	// FromRaw takes the raw key to be converted, and returns a `jwk.Key` or an error if the conversion fails.
-	FromRaw(interface{}) (Key, error)
+	// Import takes the raw key to be converted, and returns a `jwk.Key` or an error if the conversion fails.
+	Import(interface{}) (Key, error)
 }
 
 // KeyImportFunc is a convenience type to implement KeyImporter as a function.
 type KeyImportFunc func(interface{}) (Key, error)
 
-func (f KeyImportFunc) FromRaw(raw interface{}) (Key, error) {
+func (f KeyImportFunc) Import(raw interface{}) (Key, error) {
 	return f(raw)
 }
 
 // KeyExporter is used to convert from a `jwk.Key` to a raw key. mneumonic: from the PoV of the `jwk.Key`,
 // we're _exporting_ it to a raw key.
 type KeyExporter interface {
-	// Raw takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
+	// Export takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
 	// The hint is the object that the user requested the result to be assigned to.
 	// The method should return the converted raw key, or an error if the conversion fails.
 	//
 	// Third party modules MUST NOT modifiy the hint object.
 	//
-	// When the user calls `key.Raw(dst)`, the `dst` object is a _pointer_ to the
+	// When the user calls `key.Export(dst)`, the `dst` object is a _pointer_ to the
 	// object that the user wants the result to be assigned to, but the converter
 	// receives the _value_ that this pointer points to, to make it easier to
 	// detect the type of the result.
@@ -79,15 +79,15 @@ type KeyExporter interface {
 	// Note that the second argument may be an `interface{}` (which means that the
 	// user has delegated the type detection to the converter).
 	//
-	// Raw must NOT modify the hint object, and should return jwk.ContinueError
+	// Export must NOT modify the hint object, and should return jwk.ContinueError
 	// if the hint object is not compatible with the converter.
-	Raw(Key, interface{}) (interface{}, error)
+	Export(Key, interface{}) (interface{}, error)
 }
 
 // KeyExportFunc is a convenience type to implement KeyExporter as a function.
 type KeyExportFunc func(Key, interface{}) (interface{}, error)
 
-func (f KeyExportFunc) Raw(key Key, hint interface{}) (interface{}, error) {
+func (f KeyExportFunc) Export(key Key, hint interface{}) (interface{}, error) {
 	return f(key, hint)
 }
 
@@ -267,7 +267,7 @@ func raw(key Key, dst interface{}) error {
 	}
 	if convs, ok := keyExporters[key.KeyType()]; ok {
 		for _, conv := range convs {
-			v, err := conv.Raw(key, dst)
+			v, err := conv.Export(key, dst)
 			if err != nil {
 				if IsContinueError(err) {
 					continue
