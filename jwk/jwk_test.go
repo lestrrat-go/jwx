@@ -7,6 +7,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"io"
@@ -1329,67 +1330,111 @@ func TestSymmetric(t *testing.T) {
 func TestOKP(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Ed25519", func(t *testing.T) {
-		t.Parallel()
-		t.Run("PrivateKey", func(t *testing.T) {
+	ecdhkey, err := ecdh.P256().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.P256().GenerateKey should succeed`)
+
+	_, ed25519privkey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
+
+	keys := map[string][]struct {
+		Name string
+		Data map[string]keyDef
+	}{
+		"Ed25519": {
+			{
+				Name: "PrivateKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPDKey: expectBase64(keyDef{
+						Method: "D",
+						Value:  base64.EncodeToString(ed25519privkey.Seed()),
+					}),
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ed25519privkey.Public().(ed25519.PublicKey)),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.Ed25519,
+					},
+				},
+			},
+			{
+				Name: "PublicKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ed25519privkey.Public().(ed25519.PublicKey)),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.Ed25519,
+					},
+				},
+			},
+		},
+		"ECDH": {
+			{
+				Name: "PrivateKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPDKey: expectBase64(keyDef{
+						Method: "D",
+						Value:  base64.EncodeToString(ecdhkey.Bytes()),
+					}),
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ecdhkey.Public().(*ecdh.PublicKey).Bytes()),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.X25519,
+					},
+				},
+			},
+			{
+				Name: "PublicKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ecdhkey.Public().(*ecdh.PublicKey).Bytes()),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.X25519,
+					},
+				},
+			},
+		},
+	}
+
+	for typ, keys := range keys {
+		keys := keys
+		t.Run(typ, func(t *testing.T) {
 			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPDKey: expectBase64(keyDef{
-					Method: "D",
-					Value:  "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
-				}),
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.Ed25519,
-				},
-			})
+			for _, key := range keys {
+				key := key
+				t.Run(key.Name, func(t *testing.T) {
+					t.Parallel()
+					VerifyKey(t, key.Data)
+				})
+			}
 		})
-		t.Run("PublicKey", func(t *testing.T) {
-			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.Ed25519,
-				},
-			})
-		})
-	})
-	t.Run("X25519", func(t *testing.T) {
-		t.Parallel()
-		t.Run("PublicKey", func(t *testing.T) {
-			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.X25519,
-				},
-			})
-		})
-	})
+	}
 }
 
 func TestCustomField(t *testing.T) {
