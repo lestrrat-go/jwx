@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -174,9 +175,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 	def = complimentDef(def)
 	key, err := jwk.ParseKey(makeKeyJSON(def))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
@@ -268,12 +267,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		typ := expectedRawKeyType(key)
 
 		var rawkey interface{}
-		if !assert.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`) {
-			return
-		}
-		if !assert.IsType(t, rawkey, typ, `raw key should be of this type`) {
-			return
-		}
+		require.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`)
+		require.IsType(t, rawkey, typ, `raw key should be of this type`)
 	})
 	t.Run("PublicKey", func(t *testing.T) {
 		_, err := jwk.PublicKeyOf(key)
@@ -1332,6 +1327,10 @@ func TestOKP(t *testing.T) {
 
 	ecdhkey, err := ecdh.P256().GenerateKey(rand.Reader)
 	require.NoError(t, err, `ecdh.P256().GenerateKey should succeed`)
+	x, err := ecdhkey.ECDH(ecdhkey.PublicKey())
+	require.NoError(t, err, `ecdhkey.ECDH should succeed`)
+
+	log.Printf("ecdhkey.PublicKey().Bytes(): %x", ecdhkey.PublicKey().Bytes())
 
 	_, ed25519privkey, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
@@ -1394,7 +1393,7 @@ func TestOKP(t *testing.T) {
 					}),
 					jwk.OKPXKey: expectBase64(keyDef{
 						Method: "X",
-						Value:  base64.EncodeToString(ecdhkey.Public().(*ecdh.PublicKey).Bytes()),
+						Value:  base64.EncodeToString(x),
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
@@ -1411,7 +1410,7 @@ func TestOKP(t *testing.T) {
 					},
 					jwk.OKPXKey: expectBase64(keyDef{
 						Method: "X",
-						Value:  base64.EncodeToString(ecdhkey.Public().(*ecdh.PublicKey).Bytes()),
+						Value:  base64.EncodeToString(x),
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
