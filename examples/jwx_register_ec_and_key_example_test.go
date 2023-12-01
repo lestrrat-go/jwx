@@ -17,7 +17,7 @@ import (
 
 // Setup. This is something that you probably should do in your adapter
 // library, or in your application's init() function.
-
+//
 // I could not readily find what the exact curve notation is for ShangMi SM2
 // (either I'm just bad at researching or it's not in an RFC as of this writing)
 // so I'm faking it as "SM2".
@@ -27,8 +27,6 @@ import (
 const SM2 jwa.EllipticCurveAlgorithm = "SM2"
 
 func init() {
-	shangmi2pk, _ := sm2.GenerateKey(rand.Reader)
-
 	// Register the algorithm name so it can be looked up
 	jwa.RegisterEllipticCurveAlgorithm(SM2)
 
@@ -39,7 +37,7 @@ func init() {
 
 	// We only need one converter for the private key, because the public key
 	// is exactly the same type as *ecdsa.PublicKey
-	jwk.RegisterKeyImporter(shangmi2pk, jwk.KeyImportFunc(convertShangMiSm2))
+	jwk.RegisterKeyImporter(&sm2.PrivateKey{}, jwk.KeyImportFunc(convertShangMiSm2))
 
 	jwk.RegisterKeyExporter(jwa.EC, jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
