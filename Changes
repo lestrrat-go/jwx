@@ -1,6 +1,18 @@
 Changes
 =======
 
+v1.2.27 - 03 Dec 2023
+[Security]
+  * [jwe] A large number in p2c parameter for PBKDF2 based encryptions could cause a DoS attack,
+    similar to https://nvd.nist.gov/vuln/detail/CVE-2022-36083.  All users should upgrade, as
+    unlike v2, v1 attempts to decrypt JWEs on JWTs by default.
+    [GHSA-7f9x-gw85-8grf]
+
+[Bug Fixes]
+  * [jwk] jwk.Set(jwk.KeyOpsKey, <jwk.KeyOperation>) now works (previously, either
+     Set(.., <string>) or Set(..., []jwk.KeyOperation{...}) worked, but not a single
+     jwk.KeyOperation
+
 v1.2.26 - 14 Jun 2023
 [Security]
   * Potential Padding Oracle Attack Vulnerability and Timing Attack Vulnerability 

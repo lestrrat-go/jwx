@@ -612,6 +612,11 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 			if !ok {
 				return nil, errors.Errorf("unexpected type for 'p2c': %T", count)
 			}
+			// in v1, this number is hardcoded to 10000. Use v2 if you need to
+			// finetune this value
+			if countFlt > 10000 {
+				return nil, errors.Errorf("invalid value for 'p2c'")
+			}
 			salt, err := base64.DecodeString(saltB64Str)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to b64-decode 'salt'")

@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var zeroval reflect.Value
@@ -2061,4 +2063,20 @@ func TestGH664(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGH945(t *testing.T) {
+	privateRawRsaKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	newJwk, err := jwk.New(privateRawRsaKey.PublicKey)
+	require.NoError(t, err, `jwk.New should succeed`)
+
+	newJwk.Set(jwk.KeyIDKey, "foobar")
+
+	newJwk.Set(jwk.KeyUsageKey, jwk.ForSignature)
+	newJwk.Set(jwk.KeyOpsKey, jwk.KeyOpSign)
+
+	require.NotNil(t, newJwk.KeyOps(), "keyops should be non-nil")
+	require.Equal(t, newJwk.KeyOps(), jwk.KeyOperationList{jwk.KeyOpSign})
 }

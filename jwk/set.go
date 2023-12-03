@@ -296,8 +296,6 @@ func (s *set) Clone() (Set, error) {
 
 	s2.keys = make([]Key, len(s.keys))
 
-	for i := 0; i < len(s.keys); i++ {
-		s2.keys[i] = s.keys[i]
-	}
+	copy(s2.keys, s.keys)
 	return s2, nil
 }

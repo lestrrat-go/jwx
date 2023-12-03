@@ -13,6 +13,8 @@ func (ops *KeyOperationList) Accept(v interface{}) error {
 	switch x := v.(type) {
 	case string:
 		return ops.Accept([]string{x})
+	case KeyOperation:
+		return ops.Accept([]KeyOperation{x})
 	case []interface{}:
 		l := make([]string, len(x))
 		for i, e := range x {
