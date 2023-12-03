@@ -31,6 +31,7 @@ var maxPBES2Count = 10000
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
 	defer muSettings.Unlock()
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMaxPBES2Count{}:

@@ -946,10 +946,10 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 		defer cancel()
 
 		done := make(chan struct{})
-		go func(t *testing.T, done chan struct{}) {
+		go func(done chan struct{}) {
 			_, _ = jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
 			close(done)
-		}(t, done)
+		}(done)
 
 		select {
 		case <-done:
