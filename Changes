@@ -8,7 +8,7 @@ v1.2.27 - 03 Dec 2023
     unlike v2, v1 attempts to decrypt JWEs on JWTs by default.
     [GHSA-7f9x-gw85-8grf]
 
-[Bug xies]
+[Bug Fixes]
   * [jwk] jwk.Set(jwk.KeyOpsKey, <jwk.KeyOperation>) now works (previously, either
      Set(.., <string>) or Set(..., []jwk.KeyOperation{...}) worked, but not a single
      jwk.KeyOperation
