@@ -4,6 +4,15 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.18 03 Dec 2023
+[Security Fixes]
+  * [jwe] A large number in p2c parameter for PBKDF2 based encryptions could cause a DoS attack,
+    similar to https://nvd.nist.gov/vuln/detail/CVE-2022-36083.  All users who use JWE via this
+    package should upgrade. While the JOSE spec allows for encryption using JWE on JWTs, users of
+    the `jwt` package are not immediately susceptible unless they explicitly try to decrypt
+    JWTs -- by default the `jwt` package verifies signatures, but does not decrypt messages.
+    [GHSA-7f9x-gw85-8grf]
+
 v2.0.17 20 Nov 2023
 [Bug Fixes]
   * [jws] Previously, `jws.UnregisterSigner` did not remove the previous signer instance when

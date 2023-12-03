@@ -911,3 +911,51 @@ func TestGH1001(t *testing.T) {
 	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
 	require.NotNil(t, cek, `cek should not be nil`)
 }
+
+func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
+	token := []byte("eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJlbmMiOiJBMjU2R0NNIiwicDJjIjoyMDAwMDAwMDAwLCJwMnMiOiJNNzczSnlmV2xlX2FsSXNrc0NOTU9BIn0=.S8B1kXdIR7BM6i_TaGsgqEOxU-1Sgdakp4mHq7UVhn-_REzOiGz2gg.gU_LfzhBXtQdwYjh.9QUIS-RWkLc.m9TudmzUoCzDhHsGGfzmCA")
+	key, err := jwk.FromRaw([]byte(`abcdefg`))
+	require.NoError(t, err, `jwk.FromRaw should succeed`)
+
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		done := make(chan struct{})
+		go func(t *testing.T, done chan struct{}) {
+			_, err := jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+			require.Error(t, err, `jwe.Decrypt should fail`)
+			close(done)
+		}(t, done)
+
+		select {
+		case <-done:
+		case <-ctx.Done():
+			require.Fail(t, "jwe.Decrypt should not block")
+		}
+	}
+
+	// NOTE: HAS GLOBAL EFFECT
+	// Should allow for timeout to occur
+	jwe.Settings(jwe.WithMaxPBES2Count(100000000000000000))
+
+	// put it back to normal after the test
+	defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		done := make(chan struct{})
+		go func(done chan struct{}) {
+			_, _ = jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+			close(done)
+		}(done)
+
+		select {
+		case <-done:
+			require.Fail(t, "jwe.Decrypt should block")
+		case <-ctx.Done():
+			// timeout occurred as it should
+		}
+	}
+}
