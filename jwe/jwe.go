@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
@@ -23,6 +24,20 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
+
+var muSettings sync.RWMutex
+var maxPBES2Count = 10000
+
+func Settings(options ...GlobalOption) {
+	muSettings.Lock()
+	defer muSettings.Unlock()
+	for _, option := range options {
+		switch option.Ident() {
+		case identMaxPBES2Count{}:
+			maxPBES2Count = option.Value().(int)
+		}
+	}
+}
 
 const (
 	fmtInvalid = iota
@@ -701,6 +716,12 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		countFlt, ok := count.(float64)
 		if !ok {
 			return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+		}
+		muSettings.RLock()
+		maxCount := maxPBES2Count
+		muSettings.RUnlock()
+		if countFlt > float64(maxCount) {
+			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
 		salt, err := base64.DecodeString(saltB64Str)
 		if err != nil {
