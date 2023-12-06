@@ -26,8 +26,8 @@
 //
 // You can use them to sign/verify/encrypt/decrypt:
 //
-//   jws.Sign([]byte(`...`), jws.WithKey(jwa.RS256, jwkKey))
-//   jwe.Encrypt([]byte(`...`), jwe.WithKey(jwa.RSA_OAEP, jwkKey))
+//	jws.Sign([]byte(`...`), jws.WithKey(jwa.RS256, jwkKey))
+//	jwe.Encrypt([]byte(`...`), jwe.WithKey(jwa.RSA_OAEP, jwkKey))
 //
 // See examples/jwk_parse_example_test.go and other files in the exmaples/ directory for more.
 //
