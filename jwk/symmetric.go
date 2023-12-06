@@ -4,9 +4,13 @@ import (
 	"crypto"
 	"fmt"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
+
+func init() {
+	RegisterKeyExporter(jwa.OctetSeq, KeyExportFunc(octetSeqToRaw))
+}
 
 func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	k.mu.Lock()
@@ -21,12 +25,22 @@ func (k *symmetricKey) FromRaw(rawKey []byte) error {
 	return nil
 }
 
-// Raw returns the octets for this symmetric key.
-// Since this is a symmetric key, this just calls Octets
-func (k *symmetricKey) Raw(v interface{}) error {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
-	return blackmagic.AssignIfCompatible(v, k.octets)
+func octetSeqToRaw(key Key, hint interface{}) (interface{}, error) {
+	switch key := key.(type) {
+	case *symmetricKey:
+		switch hint.(type) {
+		case *[]byte, *interface{}:
+		default:
+			return nil, fmt.Errorf(`invalid destination object type %T for symmetric key: %w`, hint, ContinueError())
+		}
+		key.mu.RLock()
+		defer key.mu.RUnlock()
+		octets := make([]byte, len(key.octets))
+		copy(octets, key.octets)
+		return octets, nil
+	default:
+		return nil, ContinueError()
+	}
 }
 
 // Thumbprint returns the JWK thumbprint using the indicated
@@ -35,7 +49,7 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	var octets []byte
-	if err := k.Raw(&octets); err != nil {
+	if err := Export(k, &octets); err != nil {
 		return nil, fmt.Errorf(`failed to materialize symmetric key: %w`, err)
 	}
 

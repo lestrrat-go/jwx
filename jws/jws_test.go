@@ -442,7 +442,7 @@ func TestEncode(t *testing.T) {
 			t.Fatal("Failed to parse JWK")
 		}
 		var key interface{}
-		require.NoError(t, jwkKey.Raw(&key), `jwk.Raw should succeed`)
+		require.NoError(t, jwk.Export(jwkKey, &key), `jwk.Export should succeed`)
 		var jwsCompact []byte
 		jwsCompact, err = jws.Sign(jwsPayload, jws.WithKey(alg, key))
 		if err != nil {
@@ -504,7 +504,7 @@ func TestEncode(t *testing.T) {
 		require.NoError(t, err, `parsing jwk should be successful`)
 
 		var rawkey rsa.PrivateKey
-		require.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`)
+		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
 		sign, err := jws.NewSigner(jwa.RS256)
 		require.NoError(t, err, "RsaSign created successfully")
@@ -562,7 +562,7 @@ func TestEncode(t *testing.T) {
 		require.NoError(t, err, `parsing jwk should succeed`)
 
 		var rawkey ecdsa.PrivateKey
-		require.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`)
+		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
 		signer, err := jws.NewSigner(jwa.ES256)
 		require.NoError(t, err, "RsaSign created successfully")
@@ -627,7 +627,7 @@ func TestEncode(t *testing.T) {
 		require.NoError(t, err, `parsing jwk should succeed`)
 
 		var rawkey ed25519.PrivateKey
-		require.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`)
+		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
 		signer, err := jws.NewSigner(jwa.EdDSA)
 		require.NoError(t, err, "EdDSASign created successfully")
@@ -842,7 +842,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	require.NoError(t, err, `parsing jwk should be successful`)
 
 	var rawkey ecdsa.PublicKey
-	require.NoError(t, pubkey.Raw(&rawkey), `obtaining raw key should succeed`)
+	require.NoError(t, jwk.Export(pubkey, &rawkey), `obtaining raw key should succeed`)
 
 	v, err := jws.NewVerifier(jwa.ES384)
 	require.NoError(t, err, "EcdsaVerify created")
