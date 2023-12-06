@@ -17,7 +17,7 @@ import (
 func RSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw rsa.PrivateKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce rsa.PrivateKey from %T: %w`, src, err)
 		}
 		src = &raw
@@ -42,7 +42,7 @@ func RSAPrivateKey(dst, src interface{}) error {
 func RSAPublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw rsa.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce rsa.PublicKey from %T: %w`, src, err)
 		}
 		src = &raw
@@ -66,7 +66,7 @@ func RSAPublicKey(dst, src interface{}) error {
 func ECDSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ecdsa.PrivateKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
 		}
 		src = &raw
@@ -89,7 +89,7 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 func ECDSAPublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ecdsa.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce ecdsa.PublicKey from %T: %w`, src, err)
 		}
 		src = &raw
@@ -110,7 +110,7 @@ func ECDSAPublicKey(dst, src interface{}) error {
 func ByteSliceKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw []byte
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce []byte from %T: %w`, src, err)
 		}
 		src = raw
@@ -125,7 +125,7 @@ func ByteSliceKey(dst, src interface{}) error {
 func Ed25519PrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ed25519.PrivateKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce ed25519.PrivateKey from %T: %w`, src, err)
 		}
 		src = &raw
@@ -146,7 +146,7 @@ func Ed25519PrivateKey(dst, src interface{}) error {
 func Ed25519PublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ed25519.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
+		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return fmt.Errorf(`failed to produce ed25519.PublicKey from %T: %w`, src, err)
 		}
 		src = &raw
