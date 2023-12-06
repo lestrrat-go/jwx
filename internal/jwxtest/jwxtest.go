@@ -267,7 +267,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 	}
 
 	var rawkey interface{}
-	if err := key.Raw(&rawkey); err != nil {
+	if err := jwk.Export(key, &rawkey); err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
 
@@ -285,19 +285,19 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 	switch keyalg {
 	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
 		var rawkey rsa.PrivateKey
-		if err := key.Raw(&rawkey); err != nil {
+		if err := jwk.Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey.PublicKey
 	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
 		var rawkey ecdsa.PrivateKey
-		if err := key.Raw(&rawkey); err != nil {
+		if err := jwk.Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey.PublicKey
 	default:
 		var rawkey []byte
-		if err := key.Raw(&rawkey); err != nil {
+		if err := jwk.Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey
@@ -323,7 +323,7 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 	}
 
 	var rawkey, pubkey interface{}
-	if err := key.Raw(&rawkey); err != nil {
+	if err := jwk.Export(key, &rawkey); err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
 	pubkey = rawkey

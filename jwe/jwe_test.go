@@ -50,7 +50,7 @@ func init() {
 		panic(err)
 	}
 
-	if err := privkey.Raw(&rsaPrivKey); err != nil {
+	if err := jwk.Export(privkey, &rsaPrivKey); err != nil {
 		panic(err)
 	}
 }
@@ -168,7 +168,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	var rawkey rsa.PrivateKey
-	if !assert.NoError(t, privkey.Raw(&rawkey), `obtaining raw key should succeed`) {
+	if !assert.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`) {
 		return
 	}
 
@@ -501,7 +501,7 @@ func Test_GHIssue207(t *testing.T) {
 			}
 
 			var key ecdsa.PrivateKey
-			if !assert.NoError(t, webKey.Raw(&key), `jwk.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`) {
 				return
 			}
 
@@ -628,7 +628,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 			}
 
 			var key []byte
-			if !assert.NoError(t, webKey.Raw(&key), `jwk.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`) {
 				return
 			}
 
