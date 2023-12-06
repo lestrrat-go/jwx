@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # github.com/lestrrat-go/jwx/v2 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg?branch=develop/v2) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v2)](https://codecov.io/github/lestrrat-go/jwx?branch=v2)
+=======
+# github.com/lestrrat-go/jwx/v3 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg?branch=v3) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
+>>>>>>> 3b034e6 (Update README for v3)
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
@@ -23,7 +27,7 @@ If you are using this module in your product or your company, please add  your p
 Some more in-depth discussion on why you might want to use this library over others
 can be found in the [Description section](#description)
 
-If you are using v0 or v1, you are strongly encouraged to migrate to using v2
+If you are using v0 or v1, you are strongly encouraged to migrate to using v3
 (the version that comes with the README you are reading).
 
 # SYNOPSIS
@@ -149,7 +153,7 @@ source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx
 
 # How-to Documentation
 
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2)
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3)
 * [How-to style documentation](./docs)
 * [Runnable Examples](./examples)
 
@@ -177,7 +181,7 @@ For example, a certain library looks like it had most of JWS, JWE, JWK covered, 
 
 Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
-So here's `github.com/lestrrat-go/jwx/v2`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
+So here's `github.com/lestrrat-go/jwx/v3`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
 
 ## Why would I use this library?
 
