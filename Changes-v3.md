@@ -8,7 +8,7 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## Module
 
-* This module now requires Go 1.20.x
+* This module now requires Go 1.21
 
 * All `xxx.Get()` methods have been changed from `Get(string) (interface{}, error)` to
   `Get(string, interface{}) error`, where the second argument should be a pointer
@@ -42,7 +42,9 @@ These are changes that are incompatible with the v2.x.x version.
   type to instantiate, and aids implementing your own `jwk.KeyParser`. Also see
   `jwk.RegisterKeyProbe()`
 
-* Conversion between raw keys and `jwk.Key` can be customized using `jwk.KeyConverter`.
-  Also see `jwk.RegisterKeyConverter()`
+* Conversion between raw keys and `jwk.Key` can be customized using `jwk.KeyImporter` and `jwk.KeyExporter`.
+  Also see `jwk.RegisterKeyImporter()` and `jwk.RegisterKeyExporter()`
 
 * Added `jwk/ecdsa` to keep track of which curves are available for ECDSA keys.
+
+* `(jwk.Key).Raw()` has been deprecated. Use `jwk.Export()` instead.

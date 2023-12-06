@@ -7,9 +7,11 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -173,9 +175,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 	def = complimentDef(def)
 	key, err := jwk.ParseKey(makeKeyJSON(def))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
@@ -267,12 +267,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		typ := expectedRawKeyType(key)
 
 		var rawkey interface{}
-		if !assert.NoError(t, key.Raw(&rawkey), `Raw() should succeed`) {
-			return
-		}
-		if !assert.IsType(t, rawkey, typ, `raw key should be of this type`) {
-			return
-		}
+		require.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`)
+		require.IsType(t, rawkey, typ, `raw key should be of this type`)
 	})
 	t.Run("PublicKey", func(t *testing.T) {
 		_, err := jwk.PublicKeyOf(key)
@@ -377,7 +373,7 @@ func TestParse(t *testing.T) {
 				t.Helper()
 
 				var irawkey interface{}
-				if !assert.NoError(t, key.Raw(&irawkey), `key.Raw(&interface) should ucceed`) {
+				if !assert.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`) {
 					return
 				}
 
@@ -393,7 +389,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey rsa.PrivateKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -402,7 +398,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey rsa.PublicKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -411,7 +407,7 @@ func TestParse(t *testing.T) {
 						return
 					}
 					var rawkey ecdsa.PrivateKey
-					if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
+					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
 						return
 					}
 					crawkey = &rawkey
@@ -422,13 +418,13 @@ func TestParse(t *testing.T) {
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PrivateKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
 							return
 						}
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PrivateKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
 							return
 						}
 						crawkey = &rawkey
@@ -445,13 +441,13 @@ func TestParse(t *testing.T) {
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PublicKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
 							return
 						}
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PublicKey
-						if !assert.NoError(t, key.Raw(&rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
+						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
 							return
 						}
 						crawkey = &rawkey
@@ -940,7 +936,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, pubJwkKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`) {
 				return
 			}
 
@@ -993,7 +989,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, setKey.Raw(&rawKey), `pubJwkKey.Raw should succeed`) {
+			if !assert.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`) {
 				return
 			}
 
@@ -1329,67 +1325,115 @@ func TestSymmetric(t *testing.T) {
 func TestOKP(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Ed25519", func(t *testing.T) {
-		t.Parallel()
-		t.Run("PrivateKey", func(t *testing.T) {
+	ecdhkey, err := ecdh.P256().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.P256().GenerateKey should succeed`)
+	x, err := ecdhkey.ECDH(ecdhkey.PublicKey())
+	require.NoError(t, err, `ecdhkey.ECDH should succeed`)
+
+	log.Printf("ecdhkey.PublicKey().Bytes(): %x", ecdhkey.PublicKey().Bytes())
+
+	_, ed25519privkey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
+
+	keys := map[string][]struct {
+		Name string
+		Data map[string]keyDef
+	}{
+		"Ed25519": {
+			{
+				Name: "PrivateKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPDKey: expectBase64(keyDef{
+						Method: "D",
+						Value:  base64.EncodeToString(ed25519privkey.Seed()),
+					}),
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ed25519privkey.Public().(ed25519.PublicKey)),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.Ed25519,
+					},
+				},
+			},
+			{
+				Name: "PublicKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(ed25519privkey.Public().(ed25519.PublicKey)),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.Ed25519,
+					},
+				},
+			},
+		},
+		"ECDH": {
+			{
+				Name: "PrivateKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPDKey: expectBase64(keyDef{
+						Method: "D",
+						Value:  base64.EncodeToString(ecdhkey.Bytes()),
+					}),
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(x),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.X25519,
+					},
+				},
+			},
+			{
+				Name: "PublicKey",
+				Data: map[string]keyDef{
+					jwk.KeyTypeKey: {
+						Method: "KeyType",
+						Value:  jwa.OKP,
+					},
+					jwk.OKPXKey: expectBase64(keyDef{
+						Method: "X",
+						Value:  base64.EncodeToString(x),
+					}),
+					jwk.OKPCrvKey: {
+						Method: "Crv",
+						Value:  jwa.X25519,
+					},
+				},
+			},
+		},
+	}
+
+	for typ, keys := range keys {
+		keys := keys
+		t.Run(typ, func(t *testing.T) {
 			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPDKey: expectBase64(keyDef{
-					Method: "D",
-					Value:  "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
-				}),
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.Ed25519,
-				},
-			})
+			for _, key := range keys {
+				key := key
+				t.Run(key.Name, func(t *testing.T) {
+					t.Parallel()
+					VerifyKey(t, key.Data)
+				})
+			}
 		})
-		t.Run("PublicKey", func(t *testing.T) {
-			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.Ed25519,
-				},
-			})
-		})
-	})
-	t.Run("X25519", func(t *testing.T) {
-		t.Parallel()
-		t.Run("PublicKey", func(t *testing.T) {
-			t.Parallel()
-			VerifyKey(t, map[string]keyDef{
-				jwk.KeyTypeKey: {
-					Method: "KeyType",
-					Value:  jwa.OKP,
-				},
-				jwk.OKPXKey: expectBase64(keyDef{
-					Method: "X",
-					Value:  "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08",
-				}),
-				jwk.OKPCrvKey: {
-					Method: "Crv",
-					Value:  jwa.X25519,
-				},
-			})
-		})
-	})
+	}
 }
 
 func TestCustomField(t *testing.T) {
@@ -1476,7 +1520,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	}
 
 	var pubkey rsa.PublicKey
-	if !assert.NoError(t, key.Raw(&pubkey), `key.Raw should succeed`) {
+	if !assert.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`) {
 		return
 	}
 
@@ -2182,7 +2226,7 @@ func TestGH947(t *testing.T) {
 	k, err := jwk.ParseKey(raw)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	var exported []byte
-	require.Error(t, k.Raw(&exported), `(okpkey).Raw with 0-length OKP key should fail`)
+	require.Error(t, jwk.Export(k, &exported), `(okpkey).Raw with 0-length OKP key should fail`)
 }
 
 func TestValidation(t *testing.T) {
