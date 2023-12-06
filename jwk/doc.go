@@ -26,17 +26,27 @@
 //
 // You can use them to sign/verify/encrypt/decrypt:
 //
-//	 jws.Sign([]byte(`...`), jws.WithKey(jwa.RS256, jwkKey))
-//		jwe.Encrypt([]byte(`...`), jwe.WithKey(jwa.RSA_OAEP, jwkKey))
+//   jws.Sign([]byte(`...`), jws.WithKey(jwa.RS256, jwkKey))
+//   jwe.Encrypt([]byte(`...`), jwe.WithKey(jwa.RSA_OAEP, jwkKey))
 //
 // See examples/jwk_parse_example_test.go and other files in the exmaples/ directory for more.
 //
-// # Registering a custom key type
+// # Advanced Usage: Registering a custom key type and conversion routines
 //
-// (Caveat Emptor) This functionality should be considered experimental. While we
-// expect that the functionality itself will remain, the API may
+// Caveat Emptor: Functionality around registering keys
+// (KeyProbe/KeyParser/KeyImporter/KeyExporter) should be considered experimental.
+// While we expect that the functionality itself will remain, the API may
 // change in backward incompatible ways, even during minor version
 // releases.
+//
+// ## tl;dr
+//
+// * KeyProbe: Used for parsing JWKs in JSON format. Probes hint fields to be used for later parsing by KeyParser
+// * KeyParser: Used for parsing JWKs in JSON format. Parses the JSON payload into a jwk.Key using the KeyProbe as hint
+// * KeyImporter: Used for converting raw key into jwk.Key.
+// * KeyExporter: Used for converting jwk.Key into raw key.
+//
+// ## Overview
 //
 // You can add the ability to use a JWK type that this library does not
 // implement out of the box. You can do this by registering your own
@@ -122,7 +132,7 @@
 // This mechanism allows you to be flexible when trying to determine the key type
 // to instantiate.
 //
-// # Registering a KeyParser
+// ## Parse via the KeyParser
 //
 // When `jwk.Parse` / `jwk.ParseKey` is called, the library will first probe
 // the payload as discussed above.
