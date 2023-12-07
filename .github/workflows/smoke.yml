@@ -31,7 +31,7 @@ jobs:
       - name: Munge APT Repositories
         run: curl --connect-timeout 1 https://azure.archive.ubuntu.com || (sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt-get update)
       - name: Install Go stable version
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
       - name: Install stringer
