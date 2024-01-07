@@ -477,6 +477,18 @@ func (e *verifyError) As(target interface{}) bool {
 	return false
 }
 
+// IsVerificationError returns true if the error came from the verification part of the
+// jws.Verify function, allowing you to check if the error is a result of actual
+// verification failure.
+//
+// For example, if the error happened while fetching a key
+// from a datasource, that error should return false, whereas a failure to
+// compute the signature for whatever reason would be a verify error
+func IsVerificationError(err error) bool {
+	var ve *verifyError
+	return errors.As(err, &ve)
+}
+
 // get the value of b64 header field.
 // If the field does not exist, returns true (default)
 // Otherwise return the value specified by the header field.
