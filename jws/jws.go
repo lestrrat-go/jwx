@@ -482,8 +482,9 @@ func (e *verifyError) As(target interface{}) bool {
 // verification failure.
 //
 // For example, if the error happened while fetching a key
-// from a datasource, that error should return false, whereas a failure to
-// compute the signature for whatever reason would be a verify error
+// from a datasource, feeding that error should to this function return false, whereas
+// a failure to compute the signature for whatever reason would be a verification error
+// and returns true.
 func IsVerificationError(err error) bool {
 	var ve *verifyError
 	return errors.As(err, &ve)
