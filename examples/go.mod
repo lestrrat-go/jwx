@@ -3,7 +3,7 @@ module github.com/lestrrat-go/jwx/v2/examples
 go 1.16
 
 require (
-	github.com/cloudflare/circl v1.3.3
+	github.com/cloudflare/circl v1.3.7
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 )
 
