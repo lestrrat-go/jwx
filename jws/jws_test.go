@@ -1814,7 +1814,7 @@ func TestEmptyProtectedField(t *testing.T) {
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
 	// This fails. `jws.Parse` works, but the subsequent verification
-	// workflow fails to verify anything without the presense of a signature or
+	// workflow fails to verify anything without the presence of a signature or
 	// a protected header.
 	_, err = jws.Verify([]byte(`{"signature": ""}`), jwa.RS256, privKey)
 	require.Error(t, err, `jws.Parse should fail`)
