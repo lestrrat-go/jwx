@@ -1,6 +1,17 @@
 Changes
 =======
 
+v1.2.28 09 Jan 2024
+[Security Fixes]
+  * [jws] JWS messages formated in full JSON format (i.e. not the compact format, which
+    consists of three base64 strings concatenated with a '.') with missing "protected"
+    headers could cause a panic, thereby introducing a possiblity of a DoS.
+
+    This has been fixed so that the `jws.Parse` function succeeds in parsing a JWS message
+    lacking a protected header. Calling `jws.Verify` on this same JWS message will result
+    in a failed verification attempt. Note that this behavior will differ slightly when
+    parsing JWS messages in compact form, which result in an error. 
+
 v1.2.27 - 03 Dec 2023
 [Security]
   * [jwe] A large number in p2c parameter for PBKDF2 based encryptions could cause a DoS attack,
@@ -247,7 +258,7 @@ v1.2.6 24 Aug 2021
   * Support `crypto.Signer` keys for RSA, ECDSA, and EdDSA family
     of signatures in `jws.Sign`
 [Miscellaneous]
-  * `jwx.GuessFormat()` now requires the presense of both `payload` and
+  * `jwx.GuessFormat()` now requires the presence of both `payload` and
     `signatures` keys for it to guess that a JSON object is a JWS message.
   * Slightly enhance `jwt.Parse()` performance.
 

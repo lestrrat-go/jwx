@@ -91,11 +91,13 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		s.protected = prt
 	}
 
-	decoded, err := base64.DecodeString(*sup.Signature)
-	if err != nil {
-		return errors.Wrap(err, `failed to base decode signature`)
+	if sup.Signature != nil {
+		decoded, err := base64.DecodeString(*sup.Signature)
+		if err != nil {
+			return errors.Wrap(err, `failed to base decode signature`)
+		}
+		s.signature = decoded
 	}
-	s.signature = decoded
 	return nil
 }
 
@@ -282,6 +284,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			}
 			sig.SetDecodeCtx(nil)
 
+			if sig.protected == nil {
+				// Instead of barfing on a nil protected header, use an empty header
+				sig.protected = NewHeaders()
+			}
+
 			if i == 0 {
 				if !getB64Value(sig.protected) {
 					b64 = false
@@ -315,6 +322,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(nil)
 			sig.protected = prt
+		}
+
+		if sig.protected == nil {
+			// Instead of barfing on a nil protected header, use an empty header
+			sig.protected = NewHeaders()
 		}
 
 		decoded, err := base64.DecodeString(*mup.Signature)

@@ -32,6 +32,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" + ` "http://example.com/is_root":true}`
@@ -1794,4 +1795,56 @@ func TestGH681(t *testing.T) {
 	if !assert.NoError(t, err, "failed to verify JWS message") {
 		return
 	}
+}
+
+func TestEmptyProtectedField(t *testing.T) {
+	// MEMO: this was the only test case from the original report
+	// This passes. It should produce an invalid JWS message, but
+	// that's not `jws.Parse`'s problem.
+	_, err := jws.Parse([]byte(`{"signature": ""}`))
+	require.NoError(t, err, `jws.Parse should fail`)
+
+	// Also test that non-flattened serialization passes.
+	_, err = jws.Parse([]byte(`{"signatures": [{}]}`))
+	require.NoError(t, err, `jws.Parse should fail`)
+
+	// MEMO: rest of the cases are present to be extra pedantic about it
+
+	privKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	// This fails. `jws.Parse` works, but the subsequent verification
+	// workflow fails to verify anything without the presence of a signature or
+	// a protected header.
+	_, err = jws.Verify([]byte(`{"signature": ""}`), jwa.RS256, privKey)
+	require.Error(t, err, `jws.Parse should fail`)
+
+	// Create a valid signatre.
+	signed, err := jws.Sign([]byte("Lorem Ipsum"), jwa.RS256, privKey)
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	_, payload, signature, err := jws.SplitCompact(signed)
+	require.NoError(t, err, `jws.SplitCompact should succeed`)
+
+	// This fails as well. we have a valid signature and a valid
+	// key to verify it, but no protected headers
+	_, err = jws.Verify(
+		[]byte(fmt.Sprintf(`{"signature": "%s"}`, signature)),
+		jwa.RS256, privKey,
+	)
+	require.Error(t, err, `jws.Verify should fail`)
+
+	// Test for cases when we have an incomplete compact form JWS
+	var buf bytes.Buffer
+	buf.WriteRune('.')
+	buf.Write(payload)
+	buf.WriteRune('.')
+	buf.Write(signature)
+	invalidMessage := buf.Bytes()
+
+	// This is an error because the format is simply wrong.
+	// Whereas in the other JSON-based JWS's case the lack of protected field
+	// is not a SYNTAX error, this one is, and therefore we barf.
+	_, err = jws.Parse(invalidMessage)
+	require.Error(t, err, `jws.Parse should fail`)
 }
