@@ -4,6 +4,22 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.19 09 Jan 2023
+[New Features]
+  * [jws] Added jws.IsVerificationError to check if the error returned by `jws.Verify`
+    was caused by actual verification step or something else, for example, while fetching
+    a key from datasource
+
+[Security Fixes]
+  * [jws] JWS messages formated in full JSON format (i.e. not the compact format, which
+    consists of three base64 strings concatenated with a '.') with missing "protected"
+    headers could cause a panic, thereby introducing a possiblity of a DoS.
+
+    This has been fixed so that the `jws.Parse` function succeeds in parsing a JWS message
+    lacking a protected header. Calling `jws.Verify` on this same JWS message will result
+    in a failed verification attempt. Note that this behavior will differ slightly when
+    parsing JWS messages in compact form, which result in an error. 
+
 v2.0.18 03 Dec 2023
 [Security Fixes]
   * [jwe] A large number in p2c parameter for PBKDF2 based encryptions could cause a DoS attack,

@@ -24,7 +24,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install Go stable version
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
