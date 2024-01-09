@@ -1,7 +1,7 @@
 Changes
 =======
 
-v1.2.28 UNRELEASED
+v1.2.28 09 Jan 2024
 [Security Fixes]
   * [jws] JWS messages formated in full JSON format (i.e. not the compact format, which
     consists of three base64 strings concatenated with a '.') with missing "protected"
