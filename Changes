@@ -4,7 +4,7 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
-v2.0.19 09 Jan 2023
+v2.0.19 09 Jan 2024
 [New Features]
   * [jws] Added jws.IsVerificationError to check if the error returned by `jws.Verify`
     was caused by actual verification step or something else, for example, while fetching
