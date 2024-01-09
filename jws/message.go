@@ -278,6 +278,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			}
 			sig.SetDecodeCtx(nil)
 
+			if sig.protected == nil {
+				// Instead of barfing on a nil protected header, use an empty header
+				sig.protected = NewHeaders()
+			}
+
 			if i == 0 {
 				if !getB64Value(sig.protected) {
 					b64 = false
@@ -311,6 +316,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(nil)
 			sig.protected = prt
+		}
+
+		if sig.protected == nil {
+			// Instead of barfing on a nil protected header, use an empty header
+			sig.protected = NewHeaders()
 		}
 
 		decoded, err := base64.DecodeString(*mup.Signature)
