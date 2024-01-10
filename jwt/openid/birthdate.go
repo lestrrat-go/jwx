@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"strconv"
 
@@ -57,9 +58,22 @@ func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func tointptr(v int64) *int {
-	i := int(v)
-	return &i
+var intSize int
+
+func init() {
+	switch math.MaxInt {
+	case math.MaxInt16:
+		intSize = 16
+	case math.MaxInt32:
+		intSize = 32
+	case math.MaxInt64:
+		intSize = 64
+	}
+}
+
+func parseBirthdayInt(s string) int {
+	i, _ := strconv.ParseInt(s, 10, intSize)
+	return int(i)
 }
 
 var birthdateRx = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})$`)
@@ -100,23 +114,23 @@ func (b *BirthdateClaim) Accept(v interface{}) error {
 		// we can assume that strconv.ParseInt always succeeds.
 		// strconv.ParseInt (and strconv.ParseUint that it uses internally)
 		// only returns range errors, so we should be safe.
-		year, _ := strconv.ParseInt(v[indices[2]:indices[3]], 10, 64)
+		year := parseBirthdayInt(v[indices[2]:indices[3]])
 		if year <= 0 {
 			return fmt.Errorf(`failed to parse birthdate year`)
 		}
-		tmp.year = tointptr(year)
+		tmp.year = &year
 
-		month, _ := strconv.ParseInt(v[indices[4]:indices[5]], 10, 64)
+		month := parseBirthdayInt(v[indices[4]:indices[5]])
 		if month <= 0 {
 			return fmt.Errorf(`failed to parse birthdate month`)
 		}
-		tmp.month = tointptr(month)
+		tmp.month = &month
 
-		day, _ := strconv.ParseInt(v[indices[6]:indices[7]], 10, 64)
+		day := parseBirthdayInt(v[indices[6]:indices[7]])
 		if day <= 0 {
 			return fmt.Errorf(`failed to parse birthdate day`)
 		}
-		tmp.day = tointptr(day)
+		tmp.day = &day
 
 		*b = tmp
 		return nil

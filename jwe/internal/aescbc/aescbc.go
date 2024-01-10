@@ -10,11 +10,31 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"sync/atomic"
 )
 
 const (
 	NonceSize = 16
 )
+
+const defaultBufSize int64 = 256 * 1024 * 1024
+
+// Grr, we would like to use atomic.Int64, but that's only available
+// from Go 1.19. Yes, we will cut support for Go 1.19 at some point,
+// but not today (probably going to up the minimum required Go version
+// some time after 1.22 is released)
+var maxBufSize int64
+
+func init() {
+	atomic.StoreInt64(&maxBufSize, defaultBufSize)
+}
+
+func SetMaxBufferSize(siz int64) {
+	if siz <= 0 {
+		siz = defaultBufSize
+	}
+	atomic.StoreInt64(&maxBufSize, siz)
+}
 
 func pad(buf []byte, n int) []byte {
 	rem := n - len(buf)%n
@@ -22,6 +42,10 @@ func pad(buf []byte, n int) []byte {
 		return buf
 	}
 
+	mbs := atomic.LoadInt64(&maxBufSize)
+	if int64(len(buf)+rem) > mbs {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
 	newbuf := make([]byte, len(buf)+rem)
 	copy(newbuf, buf)
 
@@ -174,6 +198,11 @@ func ensureSize(dst []byte, n int) []byte {
 // Seal fulfills the crypto.AEAD interface
 func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ctlen := len(plaintext)
+	bufsiz := ctlen + c.Overhead()
+	mbs := atomic.LoadInt64(&maxBufSize)
+	if int64(bufsiz) > mbs {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)
 	ciphertext = pad(ciphertext, c.blockCipher.BlockSize())
