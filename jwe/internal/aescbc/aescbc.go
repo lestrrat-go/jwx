@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"math"
 	"sync/atomic"
 )
 
@@ -27,7 +26,7 @@ func init() {
 }
 
 func SetMaxBufferSize(siz int64) {
-	if siz <= 0 || siz > math.MaxInt64 {
+	if siz <= 0 {
 		siz = defaultBufSize
 	}
 	maxBufSize.Store(siz)

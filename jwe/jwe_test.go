@@ -970,5 +970,4 @@ func TestMaxBufferSize(t *testing.T) {
 
 	_, err = jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithContentEncryption(jwa.A128CBC_HS256), jwe.WithKey(jwa.RSA_OAEP, key))
 	require.Error(t, err, `jwe.Encrypt should fail`)
-
 }
