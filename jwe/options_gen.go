@@ -129,6 +129,7 @@ type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
+type identMaxBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
@@ -164,6 +165,10 @@ func (identKeyProvider) String() string {
 
 func (identKeyUsed) String() string {
 	return "WithKeyUsed"
+}
+
+func (identMaxBufferSize) String() string {
+	return "WithMaxBufferSize"
 }
 
 func (identMaxPBES2Count) String() string {
@@ -245,9 +250,20 @@ func WithKeyUsed(v interface{}) DecryptOption {
 	return &decryptOption{option.New(identKeyUsed{}, v)}
 }
 
+// WithMaxBufferSize specifies the maximum buffer size for internal
+// calculations, such as when AES-CBC is performed. The default value is 256MB.
+// If set to an invalid value, the default value is used.
+//
+// This option has a global effect.
+func WithMaxBufferSize(v int64) GlobalOption {
+	return &globalOption{option.New(identMaxBufferSize{}, v)}
+}
+
 // WithMaxPBES2Count specifies the maximum number of PBES2 iterations
 // to use when decrypting a message. If not specified, the default
 // value of 10,000 is used.
+//
+// This option has a global effect.
 func WithMaxPBES2Count(v int) GlobalOption {
 	return &globalOption{option.New(identMaxPBES2Count{}, v)}
 }

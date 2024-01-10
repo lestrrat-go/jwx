@@ -10,11 +10,28 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"math"
+	"sync/atomic"
 )
 
 const (
 	NonceSize = 16
 )
+
+const defaultBufSize int64 = 256 * 1024 * 1024
+
+var maxBufSize atomic.Int64
+
+func init() {
+	maxBufSize.Store(defaultBufSize)
+}
+
+func SetMaxBufferSize(siz int64) {
+	if siz <= 0 || siz > math.MaxInt64 {
+		siz = defaultBufSize
+	}
+	maxBufSize.Store(siz)
+}
 
 func pad(buf []byte, n int) []byte {
 	rem := n - len(buf)%n
@@ -22,6 +39,9 @@ func pad(buf []byte, n int) []byte {
 		return buf
 	}
 
+	if int64(len(buf)+rem) > maxBufSize.Load() {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
 	newbuf := make([]byte, len(buf)+rem)
 	copy(newbuf, buf)
 
@@ -174,6 +194,10 @@ func ensureSize(dst []byte, n int) []byte {
 // Seal fulfills the crypto.AEAD interface
 func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	ctlen := len(plaintext)
+	bufsiz := ctlen + c.Overhead()
+	if int64(bufsiz) > maxBufSize.Load() {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
 	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
 	copy(ciphertext, plaintext)
 	ciphertext = pad(ciphertext, c.blockCipher.BlockSize())
