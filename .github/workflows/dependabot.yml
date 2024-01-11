@@ -27,5 +27,5 @@ jobs:
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --merge "$PR_URL"
         env:
-https://github.com/endeworks/gihyo/pull/127          PR_URL: ${{github.event.pull_request.html_url}}
+          PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
