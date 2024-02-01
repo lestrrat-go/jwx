@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -1888,6 +1889,14 @@ func TestSetWithPrivateParams(t *testing.T) {
 	})
 }
 
+type DummyRoundTripper struct{}
+
+func (t *DummyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusTeapot,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte(nil))),
+	}, nil
+}
 func TestFetch(t *testing.T) {
 	k1, err := jwxtest.GenerateRsaJwk()
 	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
@@ -1917,79 +1926,91 @@ func TestFetch(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	testcases := []struct {
-		Name      string
-		Whitelist func() jwk.Whitelist
-		Error     bool
-	}{
-		{
-			Name: `InsecureWhitelist`,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.InsecureWhitelist{}
+	t.Run("HTTPClient", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		client := &http.Client{
+			Transport: &DummyRoundTripper{},
+		}
+		_, err := jwk.Fetch(ctx, `https://www.googleapis.com/oauth2/v3/certs`, jwk.WithHTTPClient(client))
+		require.Error(t, err, `jwk.Fetch should fail`)
+		require.Contains(t, err.Error(), `418`, `error should contain 418`)
+	})
+	t.Run("Whitelist", func(t *testing.T) {
+		testcases := []struct {
+			Name      string
+			Whitelist func() jwk.Whitelist
+			Error     bool
+		}{
+			{
+				Name: `InsecureWhitelist`,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.InsecureWhitelist{}
+				},
 			},
-		},
-		{
-			Name:  `MapWhitelist`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.NewMapWhitelist().
-					Add(`https://www.googleapis.com/oauth2/v3/certs`).
-					Add(srv.URL)
+			{
+				Name:  `MapWhitelist`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.NewMapWhitelist().
+						Add(`https://www.googleapis.com/oauth2/v3/certs`).
+						Add(srv.URL)
+				},
 			},
-		},
-		{
-			Name:  `RegexpWhitelist`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.NewRegexpWhitelist().
-					Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
+			{
+				Name:  `RegexpWhitelist`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.NewRegexpWhitelist().
+						Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
+				},
 			},
-		},
-		{
-			Name:  `WhitelistFunc`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.WhitelistFunc(func(s string) bool {
-					return s == srv.URL
-				})
+			{
+				Name:  `WhitelistFunc`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.WhitelistFunc(func(s string) bool {
+						return s == srv.URL
+					})
+				},
 			},
-		},
-	}
+		}
 
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(tc.Name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
 
-			wl := tc.Whitelist()
+				wl := tc.Whitelist()
 
-			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
-			if tc.Error {
-				if !assert.Error(t, err, `jwk.Fetch should fail`) {
+				_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
+				if tc.Error {
+					if !assert.Error(t, err, `jwk.Fetch should fail`) {
+						return
+					}
+					if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
+						t.Logf("error was %q", err.Error())
+						return
+					}
+				}
+
+				fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
+				if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
 					return
 				}
-				if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
-					t.Logf("error was %q", err.Error())
+
+				got, err := json.MarshalIndent(fetched, "", "  ")
+				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
 					return
 				}
-			}
 
-			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
-			if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
-				return
-			}
-
-			got, err := json.MarshalIndent(fetched, "", "  ")
-			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, expected, got, `data should match`) {
-				return
-			}
-		})
-	}
+				if !assert.Equal(t, expected, got, `data should match`) {
+					return
+				}
+			})
+		}
+	})
 }
 
 func TestGH567(t *testing.T) {
