@@ -28,7 +28,7 @@ func (w *RegexpWhitelist) Add(pat *regexp.Regexp) *RegexpWhitelist {
 	return w
 }
 
-// IsAlloed returns true if any of the patterns in the whitelist
+// IsAllowed returns true if any of the patterns in the whitelist
 // returns true.
 func (w *RegexpWhitelist) IsAllowed(u string) bool {
 	for _, pat := range w.patterns {
