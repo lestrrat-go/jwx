@@ -108,13 +108,8 @@ def go_dependencies():
         name = "org_golang_x_crypto",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/crypto",
-<<<<<<< HEAD
         sum = "h1:PGVlW0xEltQnzFZ55hkuX5+KLyrMYhHld1YHO4AKcdc=",
         version = "v0.18.0",
-=======
-        sum = "h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=",
-        version = "v0.16.0",
->>>>>>> 2161b89f ([WIP] Make JWK Key Parsing pluggable (#991))
     )
 
     go_repository(
