@@ -11,7 +11,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -1891,10 +1890,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 
 type DummyRoundTripper struct{}
 
-func (t *DummyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *DummyRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusTeapot,
-		Body:       ioutil.NopCloser(bytes.NewReader([]byte(nil))),
+		Body:       io.NopCloser(bytes.NewReader([]byte(nil))),
 	}, nil
 }
 func TestFetch(t *testing.T) {
