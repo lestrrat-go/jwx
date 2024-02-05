@@ -50,6 +50,6 @@ jobs:
         run: make tidy
       - name: Run smoke tests
         run: make smoke-${{ matrix.go_tags }}
-      - uses: bazelbuild/setup-bazelisk@v2
+      - uses: bazelbuild/setup-bazelisk@v3
       - run: bazel build //...
 
