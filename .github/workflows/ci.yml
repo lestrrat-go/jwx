@@ -54,7 +54,7 @@ jobs:
         run: make cover-${{ matrix.go_tags }}
       - name: Upload code coverage to codecov
         if: matrix.go == '1.19'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.out
       - uses: bazelbuild/setup-bazelisk@v3
