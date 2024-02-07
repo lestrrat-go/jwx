@@ -1923,6 +1923,12 @@ func TestFetch(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(expected)
 	}))
+	// This test is commented out because we did not want to include `go.uber.org/goleak`
+	// in our dependency. We agree that it's important to check for goroutine leaks,
+	// but 1) this is sort of expected in this library, and 2) we don't believe that
+	// forcing all of our users to use `go.uber.org/goleak` is prudent.
+	//
+	// defer goleak.VerifyNone(t)
 	defer srv.Close()
 
 	t.Run("HTTPClient", func(t *testing.T) {
@@ -2010,6 +2016,7 @@ func TestFetch(t *testing.T) {
 			})
 		}
 	})
+
 }
 
 func TestGH567(t *testing.T) {
@@ -2193,52 +2200,6 @@ func TestECDSAPEM(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-// This test is commented out because we did not want to include `go.uber.org/goleak`
-// in our dependency. We agree that it's important to check for goroutine leaks,
-// but 1) this is sort of expected in this library, and 2) we don't believe that
-// forcing all of our users to use `go.uber.org/goleak` is prudent.
-//
-// However, we are leaving this test here so that users can learn how this function
-// can be used. This is meant to show you the boilerplate code for when you want to make
-// absolutely sure that no goroutine is left when you finish your program.
-//
-// For example, if you are writing an app, you can follow the pattern in the
-// test below and stop the goroutines that are started by httprc.NewFetcher
-// when your app terminates:
-//
-//	func AppMain() {
-//	  ctx, cancel := context.WithCancel(context.Background())
-//	  defer cancel()
-//
-//	  jwk.SetGlobalFetcher(http.NewFetcher(ctx))
-//	  // your app code goes here
-//	}
-//
-// Then, you can be sure that no goroutines are left when `AppMain()` is done.
-// You can also verify this in your test:
-//
-//	  func TestApp(t *testing.T) {
-//	    AppMain()
-//		goleak.VerifyNone(t)
-//	  }
-/*
-func TestGH928(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	jwk.SetGlobalFetcher(httprc.NewFetcher(ctx))
-
-	// If you are using a custom fetcher like this in your test and you
-	// still have more tests to run, you probably want to include the
-	// following line to restore the default behavior after this test.
-	// Otherwise, calls to `jwk.Fetch` may hang.
-	defer jwk.SetGlobalFetcher(nil) // This must be included to restore default behavior
-
-	cancel() // stop fetcher goroutines
-
-	// At this point, not goroutines from httprc.Fetcher should be running
-	goleak.VerifyNone(t)
-}
-*/
 
 func TestGH947(t *testing.T) {
 	// AS OP described it. Below case will panic if the problem exists,
