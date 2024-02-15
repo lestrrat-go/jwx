@@ -49,7 +49,7 @@ func NewCachedFetcher(cache *Cache) *CachedFetcher {
 
 // Fetch fetches a JWKS from the cache. If the JWKS URL has not been registered with
 // the cache, an error is returned.
-func (f *CachedFetcher) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
+func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (Set, error) {
 	if !f.cache.IsRegistered(u) {
 		return nil, fmt.Errorf(`jwk.CachedFetcher: url %q has not been registered`, u)
 	}
