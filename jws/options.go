@@ -198,7 +198,7 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 //	jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(jwk.InsecureWhitelist()))
 //
 // You can also use `jwk.CachedFetcher` to use cached JWKS objects, but do note
-// that this object is not really designed to accomodate a large set of
+// that this object is not really designed to accommodate a large set of
 // arbitrary URLs. Use `jwk.CachedFetcher` as the first argument if you only
 // have a small set of URLs that you trust. For anything more complex, you should
 // implement your own `jwk.Fetcher` object.
