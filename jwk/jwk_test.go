@@ -2016,7 +2016,6 @@ func TestFetch(t *testing.T) {
 			})
 		}
 	})
-
 }
 
 func TestGH567(t *testing.T) {
