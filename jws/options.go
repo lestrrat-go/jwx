@@ -170,11 +170,39 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	})
 }
 
+// WithVerifyAuto enables automatic verification of the signature using the JWKS specified in
+// the `jku` header. Note that by default this option will _reject_ any jku
+// provided by the JWS message. Read on for details.
+//
+// The JWKS is retrieved by the `jwk.Fetcher` specified in the first argument.
+// If the fetcher object is nil, the default fetcher, which is the `jwk.Fetch()`
+// function (wrapped in the `jwk.FetchFunc` type) is used.
+//
+// The remaining arguments are passed to the `(jwk.Fetcher).Fetch` method
+// when the JWKS is retrieved.
+//
+//	jws.WithVerifyAuto(nil) // uses jwk.Fetch
+//	jws.WithVerifyAuto(jwk.NewCachedFetcher(...)) // uses cached fetcher
+//	jws.WithVerifyAuto(myFetcher) // use your custom fetcher
+//
+// By default a whitelist that disallows all URLs is added to the options
+// passed to the fetcher. You must explicitly specify a whitelist that allows
+// the URLs you trust. This default behavior is provided because by design
+// of the JWS specification it is the/ caller's responsibility to verify if
+// the URL specified in the `jku` header can be trusted -- thus by default
+// we trust nothing.
+//
+// Users are free to specify an open whitelist if they so choose, but this must
+// be explicitly done:
+//
+//	jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(jwk.InsecureWhitelist()))
+//
+// You can also use `jwk.CachedFetcher` to use cached JWKS objects, but do note
+// that this object is not really designed to accomodate a large set of
+// arbitrary URLs. Use `jwk.CachedFetcher` as the first argument if you only
+// have a small set of URLs that you trust. For anything more complex, you should
+// implement your own `jwk.Fetcher` object.
 func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) VerifyOption {
-	if f == nil {
-		f = jwk.FetchFunc(jwk.Fetch)
-	}
-
 	// the option MUST start with a "disallow no whitelist" to force
 	// users provide a whitelist
 	options = append(append([]jwk.FetchOption(nil), jwk.WithFetchWhitelist(allowNoneWhitelist)), options...)

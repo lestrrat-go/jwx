@@ -9,14 +9,51 @@ import (
 	"github.com/lestrrat-go/httprc"
 )
 
+// Fetcher is an interface that represents an object that fetches a JWKS.
+// Currently this is only used in the `jws.WithVerifyAuto` option.
+//
+// Particularly, do not confuse this as the backend to `jwk.Fetch()` function.
+// If you need to control how `jwk.Fetch()` implements HTTP requests look into
+// providing a custom `http.Client` object via `jwk.WithHTTPClient` option
 type Fetcher interface {
 	Fetch(context.Context, string, ...FetchOption) (Set, error)
 }
 
+// FetchFunc describes a type of Fetcher that is represented as a function.
+//
+// You can use this to wrap functions (e.g. `jwk.Fetch“) as a Fetcher object.
 type FetchFunc func(context.Context, string, ...FetchOption) (Set, error)
 
-func (f FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
-	return f(ctx, u, options...)
+func (ff FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
+	return ff(ctx, u, options...)
+}
+
+// CachedFetcher wraps `jwk.Cache` so that it can be used as a `jwk.Fetcher`.
+//
+// One notable diffence from a general use fetcher is that `jwk.CachedFetcher`
+// can only be used with JWKS URLs that have been registered with the cache.
+// Please read the documentation fo `(jwk.CachedFetcher).Fetch` for more details.
+//
+// This object is intended to be used with `jws.WithVerifyAuto` option, specifically
+// for a scenario where there is a very small number of JWKS URLs that are trusted
+// and used to verify JWS messages. It is NOT meant to be used as a general purpose
+// caching fetcher object.
+type CachedFetcher struct {
+	cache *Cache
+}
+
+// Creates a new `jwk.CachedFetcher` object.
+func NewCachedFetcher(cache *Cache) *CachedFetcher {
+	return &CachedFetcher{cache}
+}
+
+// Fetch fetches a JWKS from the cache. If the JWKS URL has not been registered with
+// the cache, an error is returned.
+func (f *CachedFetcher) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
+	if !f.cache.IsRegistered(u) {
+		return nil, fmt.Errorf(`jwk.CachedFetcher: url %q has not been registered`, u)
+	}
+	return f.cache.Get(ctx, u)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be
@@ -27,8 +64,6 @@ func (f FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) 
 // contents of the object with the data at the remote resource,
 // consider using `jwk.Cache`, which automatically refreshes
 // jwk.Set objects asynchronously.
-//
-// If you need extra
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var parseOptions []ParseOption
 	var wl Whitelist = InsecureWhitelist{}

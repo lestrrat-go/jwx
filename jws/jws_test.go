@@ -1384,20 +1384,14 @@ func TestJKU(t *testing.T) {
 				},
 			},
 			{
-				Name: "JWKFetcher",
+				Name: "Cache",
 				Fetcher: func() jwk.Fetcher {
 					c := jwk.NewCache(context.TODO())
-					return jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
-						var cacheopts []jwk.RegisterOption
-						for _, option := range options {
-							cacheopts = append(cacheopts, option)
-						}
-						cacheopts = append(cacheopts, jwk.WithHTTPClient(srv.Client()))
-						cacheopts = append(cacheopts, jwk.WithFetchWhitelist(httprc.InsecureWhitelist{}))
-						c.Register(u, cacheopts...)
-
-						return c.Get(ctx, u)
-					})
+					c.Register(srv.URL,
+						jwk.WithHTTPClient(srv.Client()),
+						jwk.WithFetchWhitelist(httprc.InsecureWhitelist{}),
+					)
+					return jwk.NewCachedFetcher(c)
 				},
 			},
 		}
