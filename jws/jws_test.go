@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/httprc"
+	"github.com/lestrrat-go/httprc/v2"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"

@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/lestrrat-go/httprc"
+	"github.com/lestrrat-go/httprc/v2"
 )
 
 // Fetcher is an interface that represents an object that fetches a JWKS.
