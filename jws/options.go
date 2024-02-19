@@ -20,7 +20,7 @@ func WithHeaders(h Headers) SignOption {
 //
 // If you pass multiple keys to `jws.Sign()`, it will fail unless
 // you also pass this option.
-func WithJSON(options ...WithJSONSuboption) SignOption {
+func WithJSON(options ...WithJSONSuboption) SignVerifyParseOption {
 	var pretty bool
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -34,7 +34,7 @@ func WithJSON(options ...WithJSONSuboption) SignOption {
 	if pretty {
 		format = fmtJSONPretty
 	}
-	return &signOption{option.New(identSerialization{}, format)}
+	return &signVerifyParseOption{option.New(identSerialization{}, format)}
 }
 
 type withKey struct {

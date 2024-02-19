@@ -64,6 +64,7 @@ type SignVerifyOption interface {
 	Option
 	signOption()
 	verifyOption()
+	parseOption()
 }
 
 type signVerifyOption struct {
@@ -74,10 +75,33 @@ func (*signVerifyOption) signOption() {}
 
 func (*signVerifyOption) verifyOption() {}
 
+func (*signVerifyOption) parseOption() {}
+
+type SignVerifyParseOption interface {
+	Option
+	signOption()
+	verifyOption()
+	parseOption()
+	readFileOption()
+}
+
+type signVerifyParseOption struct {
+	Option
+}
+
+func (*signVerifyParseOption) signOption() {}
+
+func (*signVerifyParseOption) verifyOption() {}
+
+func (*signVerifyParseOption) parseOption() {}
+
+func (*signVerifyParseOption) readFileOption() {}
+
 // VerifyOption describes options that can be passed to `jws.Verify`
 type VerifyOption interface {
 	Option
 	verifyOption()
+	parseOption()
 }
 
 type verifyOption struct {
@@ -85,6 +109,8 @@ type verifyOption struct {
 }
 
 func (*verifyOption) verifyOption() {}
+
+func (*verifyOption) parseOption() {}
 
 // JSONSuboption describes suboptions that can be passed to `jws.WithJSON()` option
 type WithJSONSuboption interface {
@@ -329,8 +355,8 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 //
 // By default `jws.Sign()` will opt to use compact format, so you usually
 // do not need to specify this option other than to be explicit about it
-func WithCompact() SignOption {
-	return &signOption{option.New(identSerialization{}, fmtCompact)}
+func WithCompact() SignVerifyParseOption {
+	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains

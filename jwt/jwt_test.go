@@ -1773,3 +1773,33 @@ func TestGH1007(t *testing.T) {
 	_, err = jwt.ParseInsecure(signed, jwt.WithKey(jwa.RS256, wrongPubKey))
 	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKey() should succeed`)
 }
+
+func TestParseJSON(t *testing.T) {
+	// NOTE: jwt.Settings has global effect!
+	defer jwt.Settings(jwt.WithCompactOnly(false))
+	for _, compactOnly := range []bool{true, false} {
+		t.Run("compactOnly="+strconv.FormatBool(compactOnly), func(t *testing.T) {
+			jwt.Settings(jwt.WithCompactOnly(compactOnly))
+
+			privKey, err := jwxtest.GenerateRsaJwk()
+			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+			signedJSON, err := jws.Sign([]byte(`{}`), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true), jws.WithJSON())
+			require.NoError(t, err, `jws.Sign should succeed`)
+
+			// jws.Verify should succeed
+			_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey))
+			require.NoError(t, err, `jws.Parse should succeed`)
+
+			if compactOnly {
+				// jwt.Parse should fail
+				_, err = jwt.Parse(signedJSON, jwt.WithKey(jwa.RS256, privKey))
+				require.Error(t, err, `jws.Parse should fail`)
+			} else {
+				// for backward compatibility, this should succeed
+				_, err = jwt.Parse(signedJSON, jwt.WithKey(jwa.RS256, privKey))
+				require.NoError(t, err, `jws.Parse should succeed`)
+			}
+		})
+	}
+}
