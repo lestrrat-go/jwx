@@ -86,7 +86,7 @@ options:
     interface: GlobalOption
     argument_type: bool
     comment: |
-	    WithCompactOnly option controls whether jwt.Parse should accept only tokens
+      WithCompactOnly option controls whether jwt.Parse should accept only tokens
       that are in compact serialization format. RFC7519 specifies that JWTs
       should be serialized in JWS compact form only, but historically this library
       allowed for deserialization of JWTs in JWS's JSON serialization format.

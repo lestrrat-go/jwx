@@ -235,7 +235,12 @@ func WithClock(v Clock) ValidateOption {
 	return &validateOption{option.New(identClock{}, v)}
 }
 
-// WithCompactOnly option controls whether jwt.Parse should accept only tokens that are in compact serialization format. RFC7519 specifies that JWTs should be serialized in JWS compact form only, but historically this library allowed for deserialization of JWTs in JWS's JSON serialization format. Specifying this option will disable this behavior, and will report errots if the token is not in compact serialization format.
+// WithCompactOnly option controls whether jwt.Parse should accept only tokens
+// that are in compact serialization format. RFC7519 specifies that JWTs
+// should be serialized in JWS compact form only, but historically this library
+// allowed for deserialization of JWTs in JWS's JSON serialization format.
+// Specifying this option will disable this behavior, and will report
+// errots if the token is not in compact serialization format.
 func WithCompactOnly(v bool) GlobalOption {
 	return &globalOption{option.New(identCompactOnly{}, v)}
 }
