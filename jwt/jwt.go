@@ -243,8 +243,8 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 	if len(ctx.verifyOpts) == 0 {
 		return nil, _JwsVerifySkipped, nil
 	}
-
-	verified, err := jws.Verify(payload, ctx.verifyOpts...)
+	verifyOpts := append(ctx.verifyOpts, jws.WithCompact())
+	verified, err := jws.Verify(payload, verifyOpts...)
 	return verified, _JwsVerifyDone, err
 }
 
@@ -330,7 +330,7 @@ OUTER:
 			}
 
 			// No verification.
-			m, err := jws.Parse(data)
+			m, err := jws.Parse(data, jws.WithCompact())
 			if err != nil {
 				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}

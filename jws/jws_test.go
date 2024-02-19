@@ -1887,3 +1887,54 @@ func TestEmptyProtectedField(t *testing.T) {
 	_, err = jws.Parse(invalidMessage)
 	require.Error(t, err, `jws.Parse should fail`)
 }
+
+func TestParseFormat(t *testing.T) {
+	privKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	signedCompact, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	signedJSON, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true), jws.WithJSON())
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	// Only compact formats should succeed
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithCompact())
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithCompact())
+	require.Error(t, err, `jws.Verify should fail`)
+	_, err = jws.Parse(signedCompact, jws.WithCompact())
+	require.NoError(t, err, `jws.Parse should succeed`)
+	_, err = jws.Parse(signedJSON, jws.WithCompact())
+	require.Error(t, err, `jws.Parse should fail`)
+
+	// Only JSON formats should succeed
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithJSON())
+	require.Error(t, err, `jws.Verify should fail`)
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithJSON())
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Parse(signedJSON, jws.WithJSON())
+	require.NoError(t, err, `jws.Parse should succeed`)
+	_, err = jws.Parse(signedCompact, jws.WithJSON())
+	require.Error(t, err, `jws.Parse should fail`)
+
+	// Either format should succeed
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey))
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithJSON(), jws.WithCompact())
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Parse(signedCompact)
+	require.NoError(t, err, `jws.Parse should succeed`)
+	_, err = jws.Parse(signedCompact, jws.WithJSON(), jws.WithCompact())
+	require.NoError(t, err, `jws.Parse should succeed`)
+
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey))
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithJSON(), jws.WithCompact())
+	require.NoError(t, err, `jws.Verify should succeed`)
+	_, err = jws.Parse(signedJSON)
+	require.NoError(t, err, `jws.Parse should succeed`)
+	_, err = jws.Parse(signedJSON, jws.WithJSON(), jws.WithCompact())
+	require.NoError(t, err, `jws.Parse should succeed`)
+
+}
