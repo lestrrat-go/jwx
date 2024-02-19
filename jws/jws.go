@@ -530,7 +530,7 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 //
 // You may pass `jws.WithJSON()` and/or `jws.WithCompact()` to specify
 // explicitly which format to use. If neither or both is specified, the function
-// will attempt to autodetect the format. If one or the other is spcified,
+// will attempt to autodetect the format. If one or the other is specified,
 // only the specified format will be attempted.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	var formats int
