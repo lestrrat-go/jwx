@@ -6,9 +6,18 @@ v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jw
 
 v2.0.20 UNRELEASED
 [New Features]
-  * [jwe] Added jwe.Settings(WithMaxBufferSize(int64)) to set the maximum size of
+  * [jwe] Added `jwe.Settings(WithMaxBufferSize(int64))`` to set the maximum size of
     internal buffers. The default value is 256MB. Most users do not need to change
     this value.
+  * [jws] Allow `jws.WithCompact()` and `jws.WithJSON()` to be passed to `jws.Parse()` and
+    `jws.Verify()`. These options control the expected serialization format for the
+    JWS message.
+  * [jwt] Add `jwt.WithCompactOnly()` to specify that only compact serialization can
+    be used for `jwt.Parse()`. Previously, by virtue of `jws.Parse()` allowing either
+    JSON or Compact serialization format, `jwt.Parse()` also alloed JSON serialization
+    where as RFC7519 explicitly states that only compact serialization should be
+    used. For backward compatibility the default behavior is not changed, but you
+    can set this global option for jwt: `jwt.Settings(jwt.WithCompactOnly(true))`
 
 [Miscellaneous]
   * Internal key conversions should now allow private keys to be used in place of
