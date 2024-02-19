@@ -125,7 +125,6 @@ func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
 type identClock struct{}
-type identCompactOnly struct{}
 type identContext struct{}
 type identCookie struct{}
 type identCookieKey struct{}
@@ -153,10 +152,6 @@ func (identAcceptableSkew) String() string {
 
 func (identClock) String() string {
 	return "WithClock"
-}
-
-func (identCompactOnly) String() string {
-	return "WithCompactOnly"
 }
 
 func (identContext) String() string {
@@ -249,16 +244,6 @@ func WithAcceptableSkew(v time.Duration) ValidateOption {
 // exp and nbf claims.
 func WithClock(v Clock) ValidateOption {
 	return &validateOption{option.New(identClock{}, v)}
-}
-
-// WithCompactOnly option controls whether jwt.Parse should accept only tokens
-// that are in compact serialization format. RFC7519 specifies that JWTs
-// should be serialized in JWS compact form only, but historically this library
-// allowed for deserialization of JWTs in JWS's JSON serialization format.
-// Specifying this option will disable this behavior, and will report
-// errors if the token is not in compact serialization format.
-func WithCompactOnly(v bool) GlobalOption {
-	return &globalOption{option.New(identCompactOnly{}, v)}
 }
 
 // WithContext allows you to specify a context.Context object to be used
