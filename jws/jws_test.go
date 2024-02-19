@@ -1936,5 +1936,4 @@ func TestParseFormat(t *testing.T) {
 	require.NoError(t, err, `jws.Parse should succeed`)
 	_, err = jws.Parse(signedJSON, jws.WithJSON(), jws.WithCompact())
 	require.NoError(t, err, `jws.Parse should succeed`)
-
 }
