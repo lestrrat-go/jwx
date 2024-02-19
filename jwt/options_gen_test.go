@@ -11,7 +11,6 @@ import (
 func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithAcceptableSkew", identAcceptableSkew{}.String())
 	require.Equal(t, "WithClock", identClock{}.String())
-	require.Equal(t, "WithCompactOnly", identCompactOnly{}.String())
 	require.Equal(t, "WithContext", identContext{}.String())
 	require.Equal(t, "WithEncryptOption", identEncryptOption{}.String())
 	require.Equal(t, "WithFS", identFS{}.String())
