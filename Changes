@@ -6,7 +6,7 @@ v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jw
 
 v2.0.20 UNRELEASED
 [New Features]
-  * [jwe] Added `jwe.Settings(WithMaxBufferSize(int64))`` to set the maximum size of
+  * [jwe] Added `jwe.Settings(WithMaxBufferSize(int64))` to set the maximum size of
     internal buffers. The default value is 256MB. Most users do not need to change
     this value.
   * [jws] Allow `jws.WithCompact()` and `jws.WithJSON()` to be passed to `jws.Parse()` and
