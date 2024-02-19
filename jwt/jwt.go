@@ -17,6 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt/internal/types"
 )
 
+var compactOnly uint32
 var errInvalidJWT = errors.New(`invalid JWT`)
 
 // ErrInvalidJWT returns the opaque error value that is returned when
@@ -28,7 +29,8 @@ func ErrInvalidJWT() error {
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
-	var flattenAudienceBool bool
+	var flattenAudience bool
+	var compactOnlyBool bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
@@ -37,7 +39,9 @@ func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identFlattenAudience{}:
-			flattenAudienceBool = option.Value().(bool)
+			flattenAudience = option.Value().(bool)
+		case identCompactOnly{}:
+			compactOnlyBool = option.Value().(bool)
 		case identNumericDateParsePedantic{}:
 			parsePedantic = option.Value().(bool)
 		case identNumericDateParsePrecision{}:
@@ -81,8 +85,19 @@ func Settings(options ...GlobalOption) {
 	}
 
 	{
+		v := atomic.LoadUint32(&compactOnly)
+		if (v == 1) != compactOnlyBool {
+			var newVal uint32
+			if compactOnlyBool {
+				newVal = 1
+			}
+			atomic.CompareAndSwapUint32(&compactOnly, v, newVal)
+		}
+	}
+
+	{
 		defaultOptionsMu.Lock()
-		if flattenAudienceBool {
+		if flattenAudience {
 			defaultOptions.Enable(FlattenAudience)
 		} else {
 			defaultOptions.Disable(FlattenAudience)
@@ -244,7 +259,11 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		return nil, _JwsVerifySkipped, nil
 	}
 
-	verified, err := jws.Verify(payload, ctx.verifyOpts...)
+	verifyOpts := ctx.verifyOpts
+	if atomic.LoadUint32(&compactOnly) == 1 {
+		verifyOpts = append(verifyOpts, jws.WithCompact())
+	}
+	verified, err := jws.Verify(payload, verifyOpts...)
 	return verified, _JwsVerifyDone, err
 }
 
@@ -330,7 +349,11 @@ OUTER:
 			}
 
 			// No verification.
-			m, err := jws.Parse(data)
+			var parseOptions []jws.ParseOption
+			if atomic.LoadUint32(&compactOnly) == 1 {
+				parseOptions = append(parseOptions, jws.WithCompact())
+			}
+			m, err := jws.Parse(data, parseOptions...)
 			if err != nil {
 				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}

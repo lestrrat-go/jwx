@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v2/jwe/internal/keygen"
@@ -36,6 +37,8 @@ func Settings(options ...GlobalOption) {
 		switch option.Ident() {
 		case identMaxPBES2Count{}:
 			maxPBES2Count = option.Value().(int)
+		case identMaxBufferSize{}:
+			aescbc.SetMaxBufferSize(option.Value().(int64))
 		}
 	}
 }

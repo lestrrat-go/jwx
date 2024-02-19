@@ -103,7 +103,7 @@ func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected H
 }
 
 const (
-	fmtInvalid = iota
+	fmtInvalid = 1 << iota
 	fmtCompact
 	fmtJSON
 	fmtJSONPretty
@@ -314,6 +314,7 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
+	var parseOptions []ParseOption
 	var dst *Message
 	var detachedPayload []byte
 	var keyProviders []KeyProvider
@@ -347,6 +348,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			ctx = option.Value().(context.Context)
 		case identValidateKey{}:
 			validateKey = option.Value().(bool)
+		case identSerialization{}:
+			parseOptions = append(parseOptions, option.(ParseOption))
 		default:
 			return nil, fmt.Errorf(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -356,7 +359,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		return nil, fmt.Errorf(`jws.Verify: no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
 	}
 
-	msg, err := Parse(buf)
+	msg, err := Parse(buf, parseOptions...)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse jws: %w`, err)
 	}
@@ -523,23 +526,47 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 }
 
 // Parse parses contents from the given source and creates a jws.Message
-// struct. The input can be in either compact or full JSON serialization.
+// struct. By default the input can be in either compact or full JSON serialization.
 //
-// Parse() currently does not take any options, but the API accepts it
-// in anticipation of future addition.
-func Parse(src []byte, _ ...ParseOption) (*Message, error) {
-	for i := 0; i < len(src); i++ {
-		r := rune(src[i])
-		if r >= utf8.RuneSelf {
-			r, _ = utf8.DecodeRune(src)
-		}
-		if !unicode.IsSpace(r) {
-			if r == '{' {
-				return parseJSON(src)
+// You may pass `jws.WithJSON()` and/or `jws.WithCompact()` to specify
+// explicitly which format to use. If neither or both is specified, the function
+// will attempt to autodetect the format. If one or the other is specified,
+// only the specified format will be attempted.
+func Parse(src []byte, options ...ParseOption) (*Message, error) {
+	var formats int
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
+		case identSerialization{}:
+			switch option.Value().(int) {
+			case fmtJSON:
+				formats |= fmtJSON
+			case fmtCompact:
+				formats |= fmtCompact
 			}
-			return parseCompact(src)
 		}
 	}
+
+	// if format is 0 or both JSON/Compact, auto detect
+	if v := formats & (fmtJSON | fmtCompact); v == 0 || v == fmtJSON|fmtCompact {
+		for i := 0; i < len(src); i++ {
+			r := rune(src[i])
+			if r >= utf8.RuneSelf {
+				r, _ = utf8.DecodeRune(src)
+			}
+			if !unicode.IsSpace(r) {
+				if r == '{' {
+					return parseJSON(src)
+				}
+				return parseCompact(src)
+			}
+		}
+	} else if formats&fmtCompact == fmtCompact {
+		return parseCompact(src)
+	} else if formats&fmtJSON == fmtJSON {
+		return parseJSON(src)
+	}
+
 	return nil, fmt.Errorf(`invalid byte sequence`)
 }
 

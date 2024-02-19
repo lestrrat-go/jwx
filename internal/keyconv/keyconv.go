@@ -18,7 +18,7 @@ func RSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw rsa.PrivateKey
 		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce rsa.PrivateKey from %T: %w`, src, err)
+			return fmt.Errorf(`keyconv: failed to produce rsa.PrivateKey from %T: %w`, src, err)
 		}
 		src = &raw
 	}
@@ -30,7 +30,7 @@ func RSAPrivateKey(dst, src interface{}) error {
 	case *rsa.PrivateKey:
 		ptr = src
 	default:
-		return fmt.Errorf(`expected rsa.PrivateKey or *rsa.PrivateKey, got %T`, src)
+		return fmt.Errorf(`keyconv: expected rsa.PrivateKey or *rsa.PrivateKey, got %T`, src)
 	}
 
 	return blackmagic.AssignIfCompatible(dst, ptr)
@@ -41,21 +41,25 @@ func RSAPrivateKey(dst, src interface{}) error {
 // `src` may be rsa.PublicKey, *rsa.PublicKey, or a jwk.Key
 func RSAPublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw rsa.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce rsa.PublicKey from %T: %w`, src, err)
+		pk, err := jwk.PublicRawKeyOf(jwkKey)
+		if err != nil {
+			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
-		src = &raw
+		src = pk
 	}
 
 	var ptr *rsa.PublicKey
 	switch src := src.(type) {
+	case rsa.PrivateKey:
+		ptr = &src.PublicKey
+	case *rsa.PrivateKey:
+		ptr = &src.PublicKey
 	case rsa.PublicKey:
 		ptr = &src
 	case *rsa.PublicKey:
 		ptr = src
 	default:
-		return fmt.Errorf(`expected rsa.PublicKey or *rsa.PublicKey, got %T`, src)
+		return fmt.Errorf(`keyconv: expected rsa.PublicKey/rsa.PrivateKey or *rsa.PublicKey/*rsa.PrivateKey, got %T`, src)
 	}
 
 	return blackmagic.AssignIfCompatible(dst, ptr)
@@ -67,7 +71,7 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ecdsa.PrivateKey
 		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
+			return fmt.Errorf(`keyconv: failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
 		}
 		src = &raw
 	}
@@ -79,7 +83,7 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 	case *ecdsa.PrivateKey:
 		ptr = src
 	default:
-		return fmt.Errorf(`expected ecdsa.PrivateKey or *ecdsa.PrivateKey, got %T`, src)
+		return fmt.Errorf(`keyconv: expected ecdsa.PrivateKey or *ecdsa.PrivateKey, got %T`, src)
 	}
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
@@ -88,21 +92,25 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 // non-pointer to a pointer
 func ECDSAPublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw ecdsa.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce ecdsa.PublicKey from %T: %w`, src, err)
+		pk, err := jwk.PublicRawKeyOf(jwkKey)
+		if err != nil {
+			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
-		src = &raw
+		src = pk
 	}
 
 	var ptr *ecdsa.PublicKey
 	switch src := src.(type) {
+	case ecdsa.PrivateKey:
+		ptr = &src.PublicKey
+	case *ecdsa.PrivateKey:
+		ptr = &src.PublicKey
 	case ecdsa.PublicKey:
 		ptr = &src
 	case *ecdsa.PublicKey:
 		ptr = src
 	default:
-		return fmt.Errorf(`expected ecdsa.PublicKey or *ecdsa.PublicKey, got %T`, src)
+		return fmt.Errorf(`keyconv: expected ecdsa.PublicKey/ecdsa.PrivateKey or *ecdsa.PublicKey/*ecdsa.PrivateKey, got %T`, src)
 	}
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
@@ -111,13 +119,13 @@ func ByteSliceKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw []byte
 		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce []byte from %T: %w`, src, err)
+			return fmt.Errorf(`keyconv: failed to produce []byte from %T: %w`, src, err)
 		}
 		src = raw
 	}
 
 	if _, ok := src.([]byte); !ok {
-		return fmt.Errorf(`expected []byte, got %T`, src)
+		return fmt.Errorf(`keyconv: expected []byte, got %T`, src)
 	}
 	return blackmagic.AssignIfCompatible(dst, src)
 }
@@ -145,11 +153,18 @@ func Ed25519PrivateKey(dst, src interface{}) error {
 
 func Ed25519PublicKey(dst, src interface{}) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw ed25519.PublicKey
-		if err := jwkKey.Raw(&raw); err != nil {
-			return fmt.Errorf(`failed to produce ed25519.PublicKey from %T: %w`, src, err)
+		pk, err := jwk.PublicRawKeyOf(jwkKey)
+		if err != nil {
+			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
-		src = &raw
+		src = pk
+	}
+
+	switch key := src.(type) {
+	case ed25519.PrivateKey:
+		src = key.Public()
+	case *ed25519.PrivateKey:
+		src = key.Public()
 	}
 
 	var ptr *ed25519.PublicKey

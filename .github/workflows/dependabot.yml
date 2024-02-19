@@ -19,10 +19,11 @@ jobs:
       - run: |
           bazel build //...
       - run: |
+          git config --local user.name 'Daisuke Maki'
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .
           git commit -m "Run tidy / bazel+gazelle"
-          git push
+          git push origin ${{ github.ref_name }}
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --merge "$PR_URL"
         env:

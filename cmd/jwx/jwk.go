@@ -156,7 +156,7 @@ func makeJwkGenerateCmd() *cli.Command {
 			rawkey = v
 		case jwa.OctetSeq:
 			octets := make([]byte, c.Int("keysize"))
-			rand.Reader.Read(octets)
+			io.ReadFull(rand.Reader, octets)
 
 			rawkey = octets
 		case jwa.OKP:

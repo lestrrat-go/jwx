@@ -7,6 +7,9 @@ interfaces:
   - name: VerifyOption
     comment: |
       VerifyOption describes options that can be passed to `jws.Verify`
+    methods:
+      - verifyOption
+      - parseOption
   - name: SignOption
     comment: |
       SignOption describes options that can be passed to `jws.Sign`
@@ -14,6 +17,7 @@ interfaces:
     methods:
       - signOption
       - verifyOption
+      - parseOption
     comment: |
       SignVerifyOption describes options that can be passed to either `jws.Verify` or `jws.Sign`
   - name: WithJSONSuboption
@@ -35,6 +39,12 @@ interfaces:
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
+  - name: SignVerifyParseOption
+    methods:
+      - signOption
+      - verifyOption
+      - parseOption
+      - readFileOption
 options:
   - ident: Key
     skip_option: true
@@ -42,7 +52,7 @@ options:
     skip_option: true
   - ident: Serialization
     option_name: WithCompact
-    interface: SignOption
+    interface: SignVerifyParseOption
     constant_value: fmtCompact
     comment: |
       WithCompact specifies that the result of `jws.Sign()` is serialized in
