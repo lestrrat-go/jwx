@@ -1888,6 +1888,14 @@ func TestSetWithPrivateParams(t *testing.T) {
 	})
 }
 
+type DummyRoundTripper struct{}
+
+func (t *DummyRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusTeapot,
+		Body:       io.NopCloser(bytes.NewReader([]byte(nil))),
+	}, nil
+}
 func TestFetch(t *testing.T) {
 	k1, err := jwxtest.GenerateRsaJwk()
 	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
@@ -1915,81 +1923,99 @@ func TestFetch(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(expected)
 	}))
+	// This test is commented out because we did not want to include `go.uber.org/goleak`
+	// in our dependency. We agree that it's important to check for goroutine leaks,
+	// but 1) this is sort of expected in this library, and 2) we don't believe that
+	// forcing all of our users to use `go.uber.org/goleak` is prudent.
+	//
+	// defer goleak.VerifyNone(t)
 	defer srv.Close()
 
-	testcases := []struct {
-		Name      string
-		Whitelist func() jwk.Whitelist
-		Error     bool
-	}{
-		{
-			Name: `InsecureWhitelist`,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.InsecureWhitelist{}
+	t.Run("HTTPClient", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		client := &http.Client{
+			Transport: &DummyRoundTripper{},
+		}
+		_, err := jwk.Fetch(ctx, `https://www.googleapis.com/oauth2/v3/certs`, jwk.WithHTTPClient(client))
+		require.Error(t, err, `jwk.Fetch should fail`)
+		require.Contains(t, err.Error(), `418`, `error should contain 418`)
+	})
+	t.Run("Whitelist", func(t *testing.T) {
+		testcases := []struct {
+			Name      string
+			Whitelist func() jwk.Whitelist
+			Error     bool
+		}{
+			{
+				Name: `InsecureWhitelist`,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.InsecureWhitelist{}
+				},
 			},
-		},
-		{
-			Name:  `MapWhitelist`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.NewMapWhitelist().
-					Add(`https://www.googleapis.com/oauth2/v3/certs`).
-					Add(srv.URL)
+			{
+				Name:  `MapWhitelist`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.NewMapWhitelist().
+						Add(`https://www.googleapis.com/oauth2/v3/certs`).
+						Add(srv.URL)
+				},
 			},
-		},
-		{
-			Name:  `RegexpWhitelist`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.NewRegexpWhitelist().
-					Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
+			{
+				Name:  `RegexpWhitelist`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.NewRegexpWhitelist().
+						Add(regexp.MustCompile(regexp.QuoteMeta(srv.URL)))
+				},
 			},
-		},
-		{
-			Name:  `WhitelistFunc`,
-			Error: true,
-			Whitelist: func() jwk.Whitelist {
-				return jwk.WhitelistFunc(func(s string) bool {
-					return s == srv.URL
-				})
+			{
+				Name:  `WhitelistFunc`,
+				Error: true,
+				Whitelist: func() jwk.Whitelist {
+					return jwk.WhitelistFunc(func(s string) bool {
+						return s == srv.URL
+					})
+				},
 			},
-		},
-	}
+		}
 
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(tc.Name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+		for _, tc := range testcases {
+			tc := tc
+			t.Run(tc.Name, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
 
-			wl := tc.Whitelist()
+				wl := tc.Whitelist()
 
-			_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
-			if tc.Error {
-				if !assert.Error(t, err, `jwk.Fetch should fail`) {
+				_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
+				if tc.Error {
+					if !assert.Error(t, err, `jwk.Fetch should fail`) {
+						return
+					}
+					if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
+						t.Logf("error was %q", err.Error())
+						return
+					}
+				}
+
+				fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
+				if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
 					return
 				}
-				if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
-					t.Logf("error was %q", err.Error())
+
+				got, err := json.MarshalIndent(fetched, "", "  ")
+				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
 					return
 				}
-			}
 
-			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
-			if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
-				return
-			}
-
-			got, err := json.MarshalIndent(fetched, "", "  ")
-			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, expected, got, `data should match`) {
-				return
-			}
-		})
-	}
+				if !assert.Equal(t, expected, got, `data should match`) {
+					return
+				}
+			})
+		}
+	})
 }
 
 func TestGH567(t *testing.T) {
@@ -2173,52 +2199,6 @@ func TestECDSAPEM(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-// This test is commented out because we did not want to include `go.uber.org/goleak`
-// in our dependency. We agree that it's important to check for goroutine leaks,
-// but 1) this is sort of expected in this library, and 2) we don't believe that
-// forcing all of our users to use `go.uber.org/goleak` is prudent.
-//
-// However, we are leaving this test here so that users can learn how this function
-// can be used. This is meant to show you the boilerplate code for when you want to make
-// absolutely sure that no goroutine is left when you finish your program.
-//
-// For example, if you are writing an app, you can follow the pattern in the
-// test below and stop the goroutines that are started by httprc.NewFetcher
-// when your app terminates:
-//
-//	func AppMain() {
-//	  ctx, cancel := context.WithCancel(context.Background())
-//	  defer cancel()
-//
-//	  jwk.SetGlobalFetcher(http.NewFetcher(ctx))
-//	  // your app code goes here
-//	}
-//
-// Then, you can be sure that no goroutines are left when `AppMain()` is done.
-// You can also verify this in your test:
-//
-//	  func TestApp(t *testing.T) {
-//	    AppMain()
-//		goleak.VerifyNone(t)
-//	  }
-/*
-func TestGH928(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	jwk.SetGlobalFetcher(httprc.NewFetcher(ctx))
-
-	// If you are using a custom fetcher like this in your test and you
-	// still have more tests to run, you probably want to include the
-	// following line to restore the default behavior after this test.
-	// Otherwise, calls to `jwk.Fetch` may hang.
-	defer jwk.SetGlobalFetcher(nil) // This must be included to restore default behavior
-
-	cancel() // stop fetcher goroutines
-
-	// At this point, not goroutines from httprc.Fetcher should be running
-	goleak.VerifyNone(t)
-}
-*/
 
 func TestGH947(t *testing.T) {
 	// AS OP described it. Below case will panic if the problem exists,

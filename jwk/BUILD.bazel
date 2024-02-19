@@ -37,7 +37,7 @@ go_library(
         "//jwa",
         "//jwk/ecdsa",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_httprc//:httprc",
+        "@com_github_lestrrat_go_httprc_v2//:httprc",
         "@com_github_lestrrat_go_option//:option",
     ],
 )
