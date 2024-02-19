@@ -561,9 +561,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 				return parseCompact(src)
 			}
 		}
-	}
-
-	if formats&fmtCompact == fmtCompact {
+	} else if formats&fmtCompact == fmtCompact {
 		return parseCompact(src)
 	} else if formats&fmtJSON == fmtJSON {
 		return parseJSON(src)
