@@ -44,11 +44,11 @@ def go_dependencies():
         version = "v1.0.1",
     )
     go_repository(
-        name = "com_github_lestrrat_go_httprc",
+        name = "com_github_lestrrat_go_httprc_v2",
         build_file_proto_mode = "disable_global",
-        importpath = "github.com/lestrrat-go/httprc",
-        sum = "h1:bAZymwoZQb+Oq8MEbyipag7iSq6YIga8Wj6GOiJGdI8=",
-        version = "v1.0.4",
+        importpath = "github.com/lestrrat-go/httprc/v2",
+        sum = "h1:dZia9gCSXkYYZN9YUe4U3KU4rvpKXzmGB4QTYDDrOU0=",
+        version = "v2.0.0",
     )
 
     go_repository(
@@ -108,13 +108,8 @@ def go_dependencies():
         name = "org_golang_x_crypto",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/crypto",
-<<<<<<< HEAD
         sum = "h1:PGVlW0xEltQnzFZ55hkuX5+KLyrMYhHld1YHO4AKcdc=",
         version = "v0.18.0",
-=======
-        sum = "h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=",
-        version = "v0.16.0",
->>>>>>> 2161b89f ([WIP] Make JWK Key Parsing pluggable (#991))
     )
 
     go_repository(
