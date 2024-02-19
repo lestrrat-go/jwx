@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lestrrat-go/httprc"
+	"github.com/lestrrat-go/httprc/v2"
 )
 
 type Transformer = httprc.Transformer
@@ -17,7 +17,7 @@ type ErrSink = httprc.ErrSink
 // Whitelist describes a set of rules that allows users to access
 // a particular URL. By default all URLs are blocked for security
 // reasons. You will HAVE to provide some sort of whitelist. See
-// the documentation for github.com/lestrrat-go/httprc for more details.
+// the documentation for github.com/lestrrat-go/httprc/v2 for more details.
 type Whitelist = httprc.Whitelist
 
 // Cache is a container that keeps track of Set object by their source URLs.

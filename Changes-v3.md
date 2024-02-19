@@ -48,3 +48,9 @@ These are changes that are incompatible with the v2.x.x version.
 * Added `jwk/ecdsa` to keep track of which curves are available for ECDSA keys.
 
 * `(jwk.Key).Raw()` has been deprecated. Use `jwk.Export()` instead.
+
+* `jwk.SetGlobalFetcher` has been deprecated. The required version for `github.com/lestrrat-go/httprc`
+  has been upgraded, and thus we no longer have a pool of workers that need to be controlled.
+
+* `jwk.Fetcher` has been clearly marked as something that has limited
+  usage for `jws.WithVerifyAuto`

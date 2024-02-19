@@ -216,6 +216,10 @@ type jkuProvider struct {
 }
 
 func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message) error {
+	if kp.fetcher == nil {
+		kp.fetcher = jwk.FetchFunc(jwk.Fetch)
+	}
+
 	kid := sig.ProtectedHeaders().KeyID()
 	if kid == "" {
 		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
