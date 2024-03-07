@@ -632,9 +632,10 @@ func doDecryptCtx(dctx *decryptCtx) ([]byte, error) {
 		}
 
 		if h2.Compression() == jwa.Deflate {
-			buf, err := uncompress(plaintext)
+			buf, err := uncompress(plaintext, dctx.maxDecompressBufferSize)
 			if err != nil {
 				lastError = errors.Wrap(err, `failed to uncompress payload`)
+				plaintext = nil
 				continue
 			}
 			plaintext = buf
