@@ -62,6 +62,21 @@ type encryptOption struct {
 
 func (*encryptOption) encryptOption() {}
 
+// GlobalDecryptOption describes options that changes global settings and for each call of the `jwe.Decrypt` function
+type GlobalDecryptOption interface {
+	Option
+	globalOption()
+	decryptOption()
+}
+
+type globalDecryptOption struct {
+	Option
+}
+
+func (*globalDecryptOption) globalOption() {}
+
+func (*globalDecryptOption) decryptOption() {}
+
 // GlobalOption describes options that changes global settings for this package
 type GlobalOption interface {
 	Option
@@ -130,6 +145,7 @@ type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identMaxBufferSize struct{}
+type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
@@ -169,6 +185,10 @@ func (identKeyUsed) String() string {
 
 func (identMaxBufferSize) String() string {
 	return "WithMaxBufferSize"
+}
+
+func (identMaxDecompressBufferSize) String() string {
+	return "WithMaxDecompressBufferSize"
 }
 
 func (identMaxPBES2Count) String() string {
@@ -255,8 +275,23 @@ func WithKeyUsed(v interface{}) DecryptOption {
 // If set to an invalid value, the default value is used.
 //
 // This option has a global effect.
+//
+// Due to historical reasons this option has a vague name, but in future versions
+// it will be appropriately renamed.
 func WithMaxBufferSize(v int64) GlobalOption {
 	return &globalOption{option.New(identMaxBufferSize{}, v)}
+}
+
+// WithMaxDecompressBufferSize specifies the maximum buffer size for used when
+// decompressing the payload of a JWE message. If a compressed JWE payload
+// exceeds this amount when decompressed, jwe.Decrypt will return an error.
+// The default value is 10MB.
+//
+// This option can be used for `jwe.Settings()`, which changes the behavior
+// globally, or for `jwe.Decrypt()`, which changes the behavior for that
+// specific call.
+func WithMaxDecompressBufferSize(v int64) GlobalDecryptOption {
+	return &globalDecryptOption{option.New(identMaxDecompressBufferSize{}, v)}
 }
 
 // WithMaxPBES2Count specifies the maximum number of PBES2 iterations

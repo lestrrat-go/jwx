@@ -136,12 +136,12 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 // specified by the caller.
 //
 // To work with keys/JWS messages not having a `kid` field, you may specify
-// the suboption `WithKeySetRequired` via `jws.WithKeySetSuboption(jws.WithKeySetRequireKid(false))`.
+// the suboption `WithKeySetRequired` via `jws.WithKey(key, jws.WithRequireKid(false))`.
 // This will allow the library to proceed without having to match the `kid` field.
 //
 // However, it will still check if the `alg` fields in the JWS message and the key(s)
 // match. If you must work with JWS messages that do not have an `alg` field,
-// you will need to use `jws.WithKeySetSuboption(jws.WithInferAlgorithm(true))`.
+// you will need to use `jws.WithKeySet(key, jws.WithInferAlgorithm(true))`.
 //
 // See the documentation for `WithInferAlgorithm()` for more details.
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {

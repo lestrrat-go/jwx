@@ -4,6 +4,19 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.0.21 07 Mar 2024
+[Security]
+  * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the
+    maximum size of a decompressed JWE payload. The default value is 10MB. If you
+    are compressing payloads greater than this and want to decompress it during
+    a call to `jwe.Decrypt`, you need to explicitly set a value large enough to
+    hold that data.
+
+    The same option can be passed to `jwe.Decrypt` to control this behavior on
+    a per-message basis.
+  * [jwe] Added documentation stating that `jwe.WithMaxBufferSize` option will be
+    renamed in future versions, i.e. v3
+
 v2.0.20 20 Feb 2024
 [New Features]
   * [jwe] Added `jwe.Settings(WithMaxBufferSize(int64))` to set the maximum size of

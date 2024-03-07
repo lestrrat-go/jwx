@@ -4,6 +4,12 @@ interfaces:
   - name: GlobalOption
     comment: |
       GlobalOption describes options that changes global settings for this package
+  - name: GlobalDecryptOption
+    comment: |
+      GlobalDecryptOption describes options that changes global settings and for each call of the `jwe.Decrypt` function
+    methods:
+      - globalOption
+      - decryptOption
   - name: CompactOption
     comment: |
       CompactOption describes options that can be passed to `jwe.Compact`
@@ -141,6 +147,18 @@ options:
       value of 10,000 is used.
 
       This option has a global effect.
+  - ident: MaxDecompressBufferSize
+    interface: GlobalDecryptOption
+    argument_type: int64
+    comment: |
+      WithMaxDecompressBufferSize specifies the maximum buffer size for used when
+      decompressing the payload of a JWE message. If a compressed JWE payload
+      exceeds this amount when decompressed, jwe.Decrypt will return an error.
+      The default value is 10MB.
+
+      This option can be used for `jwe.Settings()`, which changes the behavior
+      globally, or for `jwe.Decrypt()`, which changes the behavior for that
+      specific call.
   - ident: MaxBufferSize
     interface: GlobalOption
     argument_type: int64
@@ -150,3 +168,6 @@ options:
       If set to an invalid value, the default value is used.
 
       This option has a global effect.
+
+      Due to historical reasons this option has a vague name, but in future versions
+      it will be appropriately renamed.

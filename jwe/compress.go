@@ -9,8 +9,35 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
 
-func uncompress(plaintext []byte) ([]byte, error) {
-	return io.ReadAll(flate.NewReader(bytes.NewReader(plaintext)))
+func uncompress(src []byte, maxBufferSize int64) ([]byte, error) {
+	var dst bytes.Buffer
+	r := flate.NewReader(bytes.NewReader(src))
+	defer r.Close()
+	var buf [16384]byte
+	var sofar int64
+	for {
+		n, readErr := r.Read(buf[:])
+		sofar += int64(n)
+		if sofar > maxBufferSize {
+			return nil, fmt.Errorf(`compressed payload exceeds maximum allowed size`)
+		}
+		if readErr != nil {
+			// if we have a read error, and it's not EOF, then we need to stop
+			if readErr != io.EOF {
+				return nil, fmt.Errorf(`failed to read inflated data: %w`, readErr)
+			}
+		}
+
+		if _, err := dst.Write(buf[:n]); err != nil {
+			return nil, fmt.Errorf(`failed to write inflated data: %w`, err)
+		}
+
+		if readErr != nil {
+			// if it got here, then readErr == io.EOF, we're done
+			//nolint:nilerr
+			return dst.Bytes(), nil
+		}
+	}
 }
 
 func compress(plaintext []byte) ([]byte, error) {

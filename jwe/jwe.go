@@ -28,6 +28,7 @@ import (
 
 var muSettings sync.RWMutex
 var maxPBES2Count = 10000
+var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
 
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
@@ -37,6 +38,8 @@ func Settings(options ...GlobalOption) {
 		switch option.Ident() {
 		case identMaxPBES2Count{}:
 			maxPBES2Count = option.Value().(int)
+		case identMaxDecompressBufferSize{}:
+			maxDecompressBufferSize = option.Value().(int64)
 		case identMaxBufferSize{}:
 			aescbc.SetMaxBufferSize(option.Value().(int64))
 		}
@@ -463,28 +466,50 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 }
 
 type decryptCtx struct {
-	msg              *Message
-	aad              []byte
-	cek              *[]byte
-	computedAad      []byte
-	keyProviders     []KeyProvider
-	protectedHeaders Headers
+	msg                     *Message
+	aad                     []byte
+	cek                     *[]byte
+	computedAad             []byte
+	keyProviders            []KeyProvider
+	protectedHeaders        Headers
+	maxDecompressBufferSize int64
 }
 
-// Decrypt takes the key encryption algorithm and the corresponding
-// key to decrypt the JWE message, and returns the decrypted payload.
+// Decrypt takes encrypted payload, and information required to decrypt the
+// payload (e.g. the key encryption algorithm and the corresponding
+// key to decrypt the JWE message) in its optional arguments. See
+// the examples and list of options that return a DecryptOption for possible
+// values. Upon successful decryptiond returns the decrypted payload.
+//
 // The JWE message can be either compact or full JSON format.
 //
-// `alg` accepts a `jwa.KeyAlgorithm` for convenience so you can directly pass
-// the result of `(jwk.Key).Algorithm()`, but in practice it must be of type
+// When using `jwe.WithKeyEncryptionAlgorithm()`, you can pass a `jwa.KeyAlgorithm`
+// for convenience: this is mainly to allow you to directly pass the result of `(jwk.Key).Algorithm()`.
+// However, do note that while `(jwk.Key).Algorithm()` could very well contain key encryption
+// algorithms, it could also contain other types of values, such as _signature algorithms_.
+// In order for `jwe.Decrypt` to work properly, the `alg` parameter must be of type
 // `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
 //
-// `key` must be a private key. It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
+// When using `jwe.WithKey()`, the value must be a private key.
+// It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
+//
+// When the encrypted message is also compressed, the decompressed payload must be
+// smaller than the size specified by the `jwe.WithMaxDecompressBufferSize` setting,
+// which defaults to 10MB. If the decompressed payload is larger than this size,
+// an error is returned.
+//
+// You can opt to change the MaxDecompressBufferSize setting globally, or on a
+// per-call basis by passing the `jwe.WithMaxDecompressBufferSize` option to
+// either `jwe.Settings()` or `jwe.Decrypt()`:
+//
+//	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
+//	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
 	var cek *[]byte
 	var dst *Message
+	perCallMaxDecompressBufferSize := maxDecompressBufferSize
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
@@ -506,6 +531,8 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 			})
 		case identCEK{}:
 			cek = option.Value().(*[]byte)
+		case identMaxDecompressBufferSize{}:
+			perCallMaxDecompressBufferSize = option.Value().(int64)
 		}
 	}
 
@@ -565,6 +592,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.keyProviders = keyProviders
 	dctx.protectedHeaders = h
 	dctx.cek = cek
+	dctx.maxDecompressBufferSize = perCallMaxDecompressBufferSize
 
 	var lastError error
 	for _, recipient := range recipients {
@@ -741,7 +769,7 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 	}
 
 	if h2.Compression() == jwa.Deflate {
-		buf, err := uncompress(plaintext)
+		buf, err := uncompress(plaintext, dctx.maxDecompressBufferSize)
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Derypt: failed to uncompress payload: %w`, err)
 		}
