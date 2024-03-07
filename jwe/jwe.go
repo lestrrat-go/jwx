@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
-	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -256,7 +255,6 @@ func Decrypt(buf []byte, alg jwa.KeyEncryptionAlgorithm, key interface{}, option
 
 	payload, err := doDecryptCtx(&ctx)
 	if err != nil {
-		fmt.Printf("failed to decrypt: %s\n", err)
 		return nil, errors.Wrap(err, `failed to decrypt message`)
 	}
 
