@@ -971,3 +971,89 @@ func TestMaxBufferSize(t *testing.T) {
 	_, err = jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithContentEncryption(jwa.A128CBC_HS256), jwe.WithKey(jwa.RSA_OAEP, key))
 	require.Error(t, err, `jwe.Encrypt should fail`)
 }
+
+func TestMaxDecompressBufferSize(t *testing.T) {
+	// This payload size is intentionally set to a small value to avoid
+	// causing problems for regular users and CI/CD systems. If you wish to
+	// verify that root issue is fixed, you may want to try increasing the
+	// payload size to a larger value.
+	const payloadSize = 1 << 16
+
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	pubkey := &privkey.PublicKey
+
+	wrongPrivkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+	wrongPubkey := &wrongPrivkey.PublicKey
+
+	payload := strings.Repeat("x", payloadSize)
+
+	testcases := []struct {
+		Name                  string
+		GlobalMaxSize         int64
+		PublicKey             *rsa.PublicKey
+		Error                 bool
+		ProcessDecryptOptions func([]jwe.DecryptOption) []jwe.DecryptOption
+	}{
+		// This should work, because we set the MaxSize to be large (==payload size)
+		{
+			Name:          "same as payload size",
+			GlobalMaxSize: payloadSize,
+			PublicKey:     pubkey,
+		},
+		// This should fail, because we set the GlobalMaxSize to be smaller than the payload size
+		{
+			Name:          "smaller than payload size",
+			GlobalMaxSize: payloadSize - 1,
+			PublicKey:     pubkey,
+			Error:         true,
+		},
+		// This should fail, because the public key does not match the
+		// private key used to decrypt the payload. In essence this way
+		// we do NOT trigger the root cause of this issue, but we bail out early
+		{
+			Name:          "Wrong PublicKey",
+			GlobalMaxSize: payloadSize,
+			PublicKey:     wrongPubkey,
+			Error:         true,
+		},
+		{
+			Name:          "global=payloadSize-1, per-call=payloadSize",
+			GlobalMaxSize: payloadSize - 1,
+			PublicKey:     pubkey,
+			ProcessDecryptOptions: func(options []jwe.DecryptOption) []jwe.DecryptOption {
+				return append(options, jwe.WithMaxDecompressBufferSize(payloadSize))
+			},
+		},
+		// This should be the last test case to put the value back to default :)
+		{
+			Name:          "Default 10MB globally",
+			GlobalMaxSize: 10 * 1024 * 1024,
+			PublicKey:     pubkey,
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			jwe.Settings(jwe.WithMaxDecompressBufferSize(tc.GlobalMaxSize))
+
+			encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, tc.PublicKey), jwe.WithContentEncryption("A128CBC-HS256"), jwe.WithCompress(jwa.Deflate))
+
+			require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+			decryptOptions := []jwe.DecryptOption{jwe.WithKey(jwa.RSA_OAEP, privkey)}
+
+			if fn := tc.ProcessDecryptOptions; fn != nil {
+				decryptOptions = fn(decryptOptions)
+			}
+			_, err = jwe.Decrypt(encrypted, decryptOptions...)
+			if tc.Error {
+				require.Error(t, err, `jwe.Decrypt should fail`)
+			} else {
+				require.NoError(t, err, `jwe.Decrypt should succeed`)
+			}
+		})
+	}
+}
