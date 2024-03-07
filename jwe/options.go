@@ -11,6 +11,7 @@ type identMessage struct{}
 type identPostParser struct{}
 type identPrettyFormat struct{}
 type identProtectedHeader struct{}
+type identMaxDecompressBufferSize struct{}
 
 type DecryptOption interface {
 	Option
@@ -22,6 +23,14 @@ type decryptOption struct {
 }
 
 func (*decryptOption) decryptOption() {}
+
+// WithMaxDecompressBufferSize specifies the maximum buffer size for used when
+// decompressing the payload of a JWE message. If a JWE payload is compressed,
+// and the size of the decompressed payload exceeds this amount, and error is
+// returned. The default value is 10MB.
+func WithMaxDecompressBufferSize(size int64) DecryptOption {
+	return &decryptOption{option.New(identMaxDecompressBufferSize{}, size)}
+}
 
 type SerializerOption interface {
 	Option

@@ -1,6 +1,13 @@
 Changes
 =======
 
+v1.2.29 07 Mar 2024
+  * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the
+    maximum size of a decompressed JWE payload. The default value is 10MB. If you
+    are compressing payloads greater than this, you need to explicitly set it.
+
+    Unlike in v2, there is no way to set this globally. Please use v2 if this is required.
+
 v1.2.28 09 Jan 2024
 [Security Fixes]
   * [jws] JWS messages formated in full JSON format (i.e. not the compact format, which

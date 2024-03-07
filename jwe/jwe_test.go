@@ -21,6 +21,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/x25519"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -788,5 +789,68 @@ func TestGH554(t *testing.T) {
 	kid := recipients[0].Headers().KeyID()
 	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
 		return
+	}
+}
+
+func TestMaxDecompressBufferSize(t *testing.T) {
+	// This payload size is intentionally set to a small value to avoid
+	// causing problems for regular users and CI/CD systems. If you wish to
+	// verify that root issue is fixed, you may want to try increasing the
+	// payload size to a larger value.
+	const payloadSize = 1 << 16
+
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	pubkey := &privkey.PublicKey
+
+	wrongPrivkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+	wrongPubkey := &wrongPrivkey.PublicKey
+
+	payload := strings.Repeat("x", payloadSize)
+
+	testcases := []struct {
+		Name      string
+		MaxSize   int64
+		PublicKey *rsa.PublicKey
+		Error     bool
+	}{
+		// This should work, because we set the MaxSize to be large (==payload size)
+		{
+			Name:      "same as payload size",
+			MaxSize:   payloadSize,
+			PublicKey: pubkey,
+		},
+		// This should fail, because we set the GlobalMaxSize to be smaller than the payload size
+		{
+			Name:      "smaller than payload size",
+			MaxSize:   payloadSize - 1,
+			PublicKey: pubkey,
+			Error:     true,
+		},
+		// This should fail, because the public key does not match the
+		// private key used to decrypt the payload. In essence this way
+		// we do NOT trigger the root cause of this issue, but we bail out early
+		{
+			Name:      "Wrong PublicKey",
+			PublicKey: wrongPubkey,
+			MaxSize:   payloadSize,
+			Error:     true,
+		},
+	}
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			encrypted, err := jwe.Encrypt([]byte(payload), jwa.RSA_OAEP, tc.PublicKey, "A128CBC-HS256", jwa.Deflate)
+			require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+			_, err = jwe.Decrypt(encrypted, jwa.RSA_OAEP, privkey, jwe.WithMaxDecompressBufferSize(tc.MaxSize))
+			if tc.Error {
+				require.Error(t, err, `jwe.Decrypt should fail`)
+			} else {
+				require.NoError(t, err, `jwe.Decrypt should succeed`)
+			}
+		})
 	}
 }
