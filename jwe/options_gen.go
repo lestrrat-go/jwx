@@ -144,7 +144,7 @@ type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
-type identMaxBufferSize struct{}
+type identMaxAESCBCBufferSize struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
@@ -183,8 +183,8 @@ func (identKeyUsed) String() string {
 	return "WithKeyUsed"
 }
 
-func (identMaxBufferSize) String() string {
-	return "WithMaxBufferSize"
+func (identMaxAESCBCBufferSize) String() string {
+	return "WithMaxAESCBCBufferSize"
 }
 
 func (identMaxDecompressBufferSize) String() string {
@@ -270,16 +270,16 @@ func WithKeyUsed(v interface{}) DecryptOption {
 	return &decryptOption{option.New(identKeyUsed{}, v)}
 }
 
-// WithMaxBufferSize specifies the maximum buffer size for internal
-// calculations, such as when AES-CBC is performed. The default value is 256MB.
+// WithMaxAESCBCBufferSize specifies the maximum buffer size for internal
+// AES-CBC calculations. The default value is 256MB.
 // If set to an invalid value, the default value is used.
 //
 // This option has a global effect.
 //
 // Due to historical reasons this option has a vague name, but in future versions
 // it will be appropriately renamed.
-func WithMaxBufferSize(v int64) GlobalOption {
-	return &globalOption{option.New(identMaxBufferSize{}, v)}
+func WithMaxAESCBCBufferSize(v int64) GlobalOption {
+	return &globalOption{option.New(identMaxAESCBCBufferSize{}, v)}
 }
 
 // WithMaxDecompressBufferSize specifies the maximum buffer size for used when

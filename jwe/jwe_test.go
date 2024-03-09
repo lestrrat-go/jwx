@@ -961,10 +961,10 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	}
 }
 
-func TestMaxBufferSize(t *testing.T) {
+func TestMaxAESCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
-	jwe.Settings(jwe.WithMaxBufferSize(1))
-	defer jwe.Settings(jwe.WithMaxBufferSize(0))
+	jwe.Settings(jwe.WithMaxAESCBCBufferSize(1))
+	defer jwe.Settings(jwe.WithMaxAESCBCBufferSize(0))
 
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
