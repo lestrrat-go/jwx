@@ -159,12 +159,12 @@ options:
       This option can be used for `jwe.Settings()`, which changes the behavior
       globally, or for `jwe.Decrypt()`, which changes the behavior for that
       specific call.
-  - ident: MaxBufferSize
+  - ident: MaxAESCBCBufferSize
     interface: GlobalOption
     argument_type: int64
     comment: |
-      WithMaxBufferSize specifies the maximum buffer size for internal
-      calculations, such as when AES-CBC is performed. The default value is 256MB.
+      WithMaxAESCBCBufferSize specifies the maximum buffer size for internal
+      AES-CBC calculations. The default value is 256MB.
       If set to an invalid value, the default value is used.
 
       This option has a global effect.
