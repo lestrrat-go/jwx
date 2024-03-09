@@ -108,6 +108,14 @@ options:
       
       While the type system allows this option to be passed to `jwt.Parse()` directly,
       doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: CookieKey
+    interface: ParseOption
+    argument_type: string
+    comment: |
+      WithCookieKey is used to specify cookie keys to search for tokens.
+      
+      While the type system allows this option to be passed to `jwt.Parse()` directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
   - ident: Token
     interface: ParseOption
     argument_type: Token

@@ -126,6 +126,7 @@ type identAcceptableSkew struct{}
 type identClock struct{}
 type identCompactOnly struct{}
 type identContext struct{}
+type identCookieKey struct{}
 type identEncryptOption struct{}
 type identFS struct{}
 type identFlattenAudience struct{}
@@ -157,6 +158,10 @@ func (identCompactOnly) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identCookieKey) String() string {
+	return "WithCookieKey"
 }
 
 func (identEncryptOption) String() string {
@@ -253,6 +258,14 @@ func WithCompactOnly(v bool) GlobalOption {
 // `context.Context` object.
 func WithContext(v context.Context) ValidateOption {
 	return &validateOption{option.New(identContext{}, v)}
+}
+
+// WithCookieKey is used to specify cookie keys to search for tokens.
+//
+// While the type system allows this option to be passed to `jwt.Parse()` directly,
+// doing so will have no effect. Only use it for HTTP request parsing functions
+func WithCookieKey(v string) ParseOption {
+	return &parseOption{option.New(identCookieKey{}, v)}
 }
 
 // WithEncryptOption provides an escape hatch for cases where extra options to

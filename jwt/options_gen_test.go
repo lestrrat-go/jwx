@@ -13,6 +13,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithClock", identClock{}.String())
 	require.Equal(t, "WithCompactOnly", identCompactOnly{}.String())
 	require.Equal(t, "WithContext", identContext{}.String())
+	require.Equal(t, "WithCookieKey", identCookieKey{}.String())
 	require.Equal(t, "WithEncryptOption", identEncryptOption{}.String())
 	require.Equal(t, "WithFS", identFS{}.String())
 	require.Equal(t, "WithFlattenAudience", identFlattenAudience{}.String())
