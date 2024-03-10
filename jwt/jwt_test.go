@@ -824,6 +824,7 @@ func TestParseRequest(t *testing.T) {
 					jwt.WithHeaderKey("x-authorization"),
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
+					jwt.WithCookieKey("cookie"),
 					jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
@@ -912,6 +913,29 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
+			Name: "Token in cookie (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Invalid token in cookie",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed) + "foobarbaz"})
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
 			Name: "Token in access_token form field (w/o option)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, u, nil)
@@ -970,6 +994,17 @@ func TestParseRequest(t *testing.T) {
 			}
 		})
 	}
+
+	// One extra test. Make sure we can extract the cookie object that we used
+	// when parsing from cookies
+	t.Run("jwt.WithCookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, u, nil)
+		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
+		var dst *http.Cookie
+		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256, pubkey))
+		require.NoError(t, err, `jwt.ParseRequest should succeed`)
+		require.NotNil(t, dst, `cookie should be extracted`)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {
