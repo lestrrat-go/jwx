@@ -32,12 +32,23 @@ v2.1.0 18 Jun 2024
     token came from, should the need arise.
   * [jwt] (BREAKING CHANGE) `jwt.ParseRequest()` no longer automatically looks for "Authorization" header when
     only `jwt.WithFormKey()` is used. This behavior is the same for `jwt.WithCookieKey()` and
+v2.0.22 UNRELEASED
+[New Features]
+  * [jwt] Added jwt.ParseCookie() function
+  * [jwt] jwt.ParseRequest() can now accept a new option, jwt.WithCookieKey() to
+    specify a cookie name to extract the token from.
+  * [jwt] jwt.ParseRequest() and jwt.ParseCookie can accept the jwt.WithCookie() option,
+    which will, upon successful token parsing, make the functions assign the *http.Cookie
+    used to parse the token. This allows users to further inspect the cookie where the
+    token came from, should the need arise.
+  * [jwt] jwt.ParseRequest() no longer automatically looks for "Authorization" header when
+    only jwt.WithFormKey() is used. This behavior is the same for jwt.WithCookieKey() and
     any similar options that may be implemented in the future.
 
       # previously
       jwt.ParseRequest(req) // looks under Authorization
-      jwt.ParseRequest(req, jwt.WithFormKey("foo")) // looks under foo AND Authorization
-      jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
+      jwt.ParseReuqest(req, jwt.WithFormKey("foo")) // looks under foo AND Authorization
+      jwt.ParseReuqest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
 
       # since this release
       jwt.ParseRequest(req) // same as before
