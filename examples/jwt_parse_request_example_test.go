@@ -4,21 +4,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 func ExampleJWT_ParseRequest_Authorization() {
-	values := url.Values{
-		`access_token`: []string{exampleJWTSignedHMAC},
-	}
-
-	req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, strings.NewReader(values.Encode()))
+	req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
 	if err != nil {
 		fmt.Printf("failed to create request: %s\n", err)
 		return
 	}
+	req.Form = url.Values{}
+	req.Form.Add("access_token", exampleJWTSignedHMAC)
 
 	req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, exampleJWTSignedECDSA))
 	req.Header.Set(`X-JWT-Token`, exampleJWTSignedRSA)
@@ -46,7 +43,14 @@ func ExampleJWT_ParseRequest_Authorization() {
 		options := append(tc.options, []jwt.ParseOption{jwt.WithVerify(false), jwt.WithValidate(false)}...)
 		tok, err := jwt.ParseRequest(req, options...)
 		if err != nil {
-			fmt.Printf("jwt.ParseRequest with options %#v failed: %s\n", tc.options, err)
+			fmt.Print("jwt.ParseRequest with options [")
+			for i, option := range tc.options {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Printf("%s", option)
+			}
+			fmt.Printf("]: %s\n", err)
 			return
 		}
 		_ = tok

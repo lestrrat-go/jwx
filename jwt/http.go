@@ -169,13 +169,37 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		triedForms.WriteString(strconv.Quote(formkey))
 	}
 
+	var triedCookies strings.Builder
+	for i, cookiekey := range cookiekeys {
+		if i > 0 {
+			triedCookies.WriteString(", ")
+		}
+		triedCookies.WriteString(strconv.Quote(cookiekey))
+	}
+
 	var b strings.Builder
-	b.WriteString(`failed to find a valid token in any location of the request (tried: [header keys: `)
-	b.WriteString(triedHdrs.String())
-	b.WriteByte(']')
+	b.WriteString(`failed to find a valid token in any location of the request (tried: `)
+	olen := b.Len()
+	if triedHdrs.Len() > 0 {
+		b.WriteString(`header keys: [`)
+		b.WriteString(triedHdrs.String())
+		b.WriteByte(']')
+	}
 	if triedForms.Len() > 0 {
-		b.WriteString(", form keys: [")
+		if b.Len() > olen {
+			b.WriteString(", ")
+		}
+		b.WriteString("form keys: [")
 		b.WriteString(triedForms.String())
+		b.WriteByte(']')
+	}
+
+	if triedCookies.Len() > 0 {
+		if b.Len() > olen {
+			b.WriteString(", ")
+		}
+		b.WriteString("cookie keys: [")
+		b.WriteString(triedCookies.String())
 		b.WriteByte(']')
 	}
 	b.WriteByte(')')
