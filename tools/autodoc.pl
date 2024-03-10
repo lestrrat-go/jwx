@@ -73,6 +73,6 @@ if (!$ENV{AUTODOC_DRYRUN}) {
         system("git", "switch", "-c", "autodoc-pr-$ENV{GITHUB_HEAD_REF}") == 0 or die $!;
         system("git", "commit", "-F", $commit_message_file->filename, @files) == 0 or die $!;
         system("git", "push", "origin", "HEAD:autodoc-pr-$ENV{GITHUB_HEAD_REF}") == 0 or die $!;
-        system("gh", "pr", "create", "--fill") == 0 or die $!;
+        system("gh", "pr", "create", "--base", "develop/$link_ref", "--fill") == 0 or die $!;
     }
 }
