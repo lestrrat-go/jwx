@@ -20,6 +20,10 @@ func ExampleJWT_ParseRequest_Authorization() {
 	req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, exampleJWTSignedECDSA))
 	req.Header.Set(`X-JWT-Token`, exampleJWTSignedRSA)
 
+	req.AddCookie(&http.Cookie{Name: "accessToken", Value: exampleJWTSignedHMAC})
+
+	var dst *http.Cookie
+
 	testcases := []struct {
 		options []jwt.ParseOption
 	}{
@@ -36,6 +40,11 @@ func ExampleJWT_ParseRequest_Authorization() {
 		// Looks under "Authorization" header and "access_token" form field
 		{
 			options: []jwt.ParseOption{jwt.WithFormKey(`access_token`)},
+		},
+		// Looks under "accessToken" cookie, and assigns the http.Cookie object
+		// where the token came from to the variable `dst`
+		{
+			options: []jwt.ParseOption{jwt.WithCookieKey(`accessToken`), jwt.WithCookie(&dst)},
 		},
 	}
 
@@ -54,6 +63,11 @@ func ExampleJWT_ParseRequest_Authorization() {
 			return
 		}
 		_ = tok
+	}
+
+	if dst == nil {
+		fmt.Printf("failed to assign cookie to dst\n")
+		return
 	}
 	// OUTPUT:
 }

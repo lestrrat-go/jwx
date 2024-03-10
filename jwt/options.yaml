@@ -108,6 +108,16 @@ options:
       
       While the type system allows this option to be passed to `jwt.Parse()` directly,
       doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: Cookie
+    interface: ParseOption
+    argument_type: '**http.Cookie'
+    comment: |
+      WithCookie is used to specify a variable to store the cookie used when `jwt.ParseCookie()`
+      is called. This allows you to inspect the cookie for additional information after a successful
+      parsing of the JWT token stored in the cookie.
+      
+      While the type system allows this option to be passed to `jwt.Parse()` directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
   - ident: CookieKey
     interface: ParseOption
     argument_type: string

@@ -13,11 +13,28 @@ import (
 // ParseCookie parses a JWT stored in a http.Cookie with the given name.
 // If the specified cookie is not found, http.ErrNoCookie is returned.
 func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token, error) {
+	var dst **http.Cookie
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identCookie{}:
+			dst = option.Value().(**http.Cookie)
+		}
+	}
+
 	cookie, err := req.Cookie(name)
 	if err != nil {
 		return nil, err
 	}
-	return ParseString(cookie.Value, options...)
+	tok, err := ParseString(cookie.Value, options...)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to parse token stored in cookie: %w`, err)
+	}
+
+	if dst != nil {
+		*dst = cookie
+	}
+	return tok, nil
 }
 
 // ParseHeader parses a JWT stored in a http.Header.

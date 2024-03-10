@@ -994,6 +994,17 @@ func TestParseRequest(t *testing.T) {
 			}
 		})
 	}
+
+	// One extra test. Make sure we can extract the cookie object that we used
+	// when parsing from cookies
+	t.Run("jwt.WithCookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, u, nil)
+		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
+		var dst *http.Cookie
+		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256, pubkey))
+		require.NoError(t, err, `jwt.ParseRequest should succeed`)
+		require.NotNil(t, dst, `cookie should be extracted`)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {
