@@ -105,6 +105,7 @@ There are some functions that accept `jwa.KeyAlgorithm`, while there are others 
 
 The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type.
 
+<<<<<<< HEAD
 ## Why are your options objects, and not callbacks?
 
 We get this one a lot. The short answer is that 1) the options API is not designed to be extended by users, and 2) callbacks introduce tight coupling between the options and the consumers.
@@ -150,6 +151,9 @@ Based on the reasons above, we decided to **decouple the option data** and the *
 Yes, we understand that this way we introduce more boilerplate code in each method's starting section. But our design choice is that this way fulfills our goals better, namely that **the overall structure is simpler**, **we do not expose unnecessary internal data to the end-user**, and because the options are all data, it's far **easier to re-use the same options for multiple methods** (as we do in cases such as `jws.WithKey()`, for example).
 
 
+=======
+<<<<<<< HEAD
+>>>>>>> 666d74d (Add FAQ about option format (#1102))
 ## Design
 
 ### Why does this library not provide a method similar to `Range()`?
@@ -165,3 +169,54 @@ obj.Range(func(k string, v interface{}) bool) { // This needs a read lock
 `sync.Map` actually solves this problem, but it involves a fairly complicated workaround. While it is theoretically possible to implement the same logic in this package, we have decided that it is not worth the effort for our purposes.
 
 If you would like to iterate through the keys,  use `Keys()` to retireve the list of keys. This also requires a read lock, but by necessity you can only proceed to execute the next piece of code only after the read lock has been released.
+<<<<<<< HEAD
+=======
+=======
+## Why are your options objects, and not callbacks?
+
+We get this one a lot. The short answer is that 1) the options API is not designed to be extended by users, and 2) callbacks introduce tight coupling between the options and the consumers.
+
+(1) should be obvious. We just never intended it to be extensible for end-users. That's a design choice, and at the point of writing this, we have no intention to change this.
+
+(2) is subtler: consider a case where you are setting a few instance variables on an object:
+
+```go
+func MyOption(obj *Object) {
+    obj.FieldA = ...
+    obj.FieldB = ...
+}
+```
+
+From this design you can see that we need to make a few assumptions.
+
+First, the callback must have a specific signature. This is not a deal breaker, but you have to be conscious of the fact that you are tying your option to this object type specifically, and you will not be able to change this.
+
+Second, you are setting values to an object. The library can either provide exported fields, or it can provide setter methods, but either way, it will need to expose those knobs to the end user. This means that internal details of the object _will_ have to be visible, even if this option is the only logical place that detail is to be used. You could maybe use a state (or a config) variable to avoid assigning to the object itself, and localize the effect of the option for the method:
+
+```go
+func (obj *Object) Method(options ...Options) error {
+    var cfg MethodConfig
+    for _, option := range options {
+        option(obj, cfg)
+    }
+    ...
+}
+
+func MyOption(obj *Object, cfg *MethodConfig) {
+    cfg.FieldA = ...
+    cfg.FieldB = ...
+}
+```
+
+But this means that you will have to have a state/config object for _each_ method call that takes options, and we have a lot of methods.
+
+And finally, as you have seen above, with a callback based option object you will have to change its signature for each usecase. It's just a lot of hassle to remember which option uses which signature.
+
+Based on the reasons above, we decided to **decouple the option data** and the **option handling logic**. Our option objects are simply data containers. They have an identity (`Ident()`), and they have a value (`Value()`). The option objects themselves do not know how they are going to be used. The consumers (the methods) are the ones who know how to deal with the data the options carry.
+
+Yes, we understand that this way we introduce more boilerplate code in each method's starting section. But our design choice is that this way fulfills our goals better, namely that **the overall structure is simpler**, **we do not expose unnecessary internal data to the end-user**, and because the options are all data, it's far **easier to re-use the same options for multiple methods** (as we do in cases such as `jws.WithKey()`, for example).
+
+
+
+>>>>>>> 548968cd (Add FAQ about option format (#1102))
+>>>>>>> 666d74d (Add FAQ about option format (#1102))
