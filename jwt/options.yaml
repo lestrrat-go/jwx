@@ -83,7 +83,9 @@ options:
 
       Using this option with the value `true` will remove all default checks, 
       and will expect you to specify validators as options. This is useful when you
-      want to skip the default validators and only use specific validators.
+      want to skip the default validators and only use specific validators, such as
+      for https://openid.net/specs/openid-connect-rpinitiated-1_0.html, where
+      the token could be accepted even if the token is expired.
 
       If you set this option to true and you do not specify any validators,
       `jwt.Validate()` will return an error.

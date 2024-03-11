@@ -32,6 +32,9 @@ v2.0.22 UNRELEASED
     default validators (`iat`, `exp`, and `nbf`), so that you can completely customize
     the validation with the validators you specify using `jwt.WithValidator()`.
 
+    This sort of behavior is useful for special cases such as 
+    https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+
 v2.0.21 07 Mar 2024
 [Security]
   * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the
