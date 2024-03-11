@@ -33,7 +33,9 @@ v2.0.22 UNRELEASED
     the validation with the validators you specify using `jwt.WithValidator()`.
 
     This sort of behavior is useful for special cases such as 
-    https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+    https://openid.net/specs/openid-connect-rpinitiated-1_0.html. However, you SHOULD NOT
+    use this option unless you know exactly what you are doing, as this will pose
+    significant security issues when used incorrectly.
 
 v2.0.21 07 Mar 2024
 [Security]

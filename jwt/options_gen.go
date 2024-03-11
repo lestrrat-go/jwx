@@ -372,14 +372,19 @@ func WithPedantic(v bool) ParseOption {
 // checks for the validity of JWT by checking `exp`, `nbf`, and `iat`, even
 // when you specify more validators through other options.
 //
+// You SHOULD NOT use this option unless you know exactly what you are doing,
+// as this will pose significant security issues when used incorrectly.
+//
 // Using this option with the value `true` will remove all default checks,
 // and will expect you to specify validators as options. This is useful when you
-// want to skip the default validators and only use specific validators.
+// want to skip the default validators and only use specific validators, such as
+// for https://openid.net/specs/openid-connect-rpinitiated-1_0.html, where
+// the token could be accepted even if the token is expired.
 //
 // If you set this option to true and you do not specify any validators,
 // `jwt.Validate()` will return an error.
 //
-// The default value is `false`.
+// The default value is `false` (`iat`, `exp`, and `nbf` are automatically checked).
 func WithResetValidators(v bool) ValidateOption {
 	return &validateOption{option.New(identResetValidators{}, v)}
 }
