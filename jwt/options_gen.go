@@ -139,6 +139,7 @@ type identNumericDateFormatPrecision struct{}
 type identNumericDateParsePedantic struct{}
 type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
+type identResetValidators struct{}
 type identSignOption struct{}
 type identToken struct{}
 type identTruncation struct{}
@@ -208,6 +209,10 @@ func (identNumericDateParsePrecision) String() string {
 
 func (identPedantic) String() string {
 	return "WithPedantic"
+}
+
+func (identResetValidators) String() string {
+	return "WithResetValidators"
 }
 
 func (identSignOption) String() string {
@@ -360,6 +365,23 @@ func WithNumericDateParsePrecision(v int) GlobalOption {
 // applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
 	return &parseOption{option.New(identPedantic{}, v)}
+}
+
+// WithResetValidators specifies that the default validators should be
+// reset before applying the custom validators. By default `jwt.Validate()`
+// checks for the validity of JWT by checking `exp`, `nbf`, and `iat`, even
+// when you specify more validators through other options.
+//
+// Using this option with the value `true` will remove all default checks,
+// and will expect you to specify validators as options. This is useful when you
+// want to skip the default validators and only use specific validators.
+//
+// If you set this option to true and you do not specify any validators,
+// `jwt.Validate()` will return an error.
+//
+// The default value is `false`.
+func WithResetValidators(v bool) ValidateOption {
+	return &validateOption{option.New(identResetValidators{}, v)}
 }
 
 // WithSignOption provides an escape hatch for cases where extra options to

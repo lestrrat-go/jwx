@@ -466,17 +466,31 @@ func TestValidateClaims(t *testing.T) {
 	t.Parallel()
 	// GitHub issue #37: tokens are invalid in the second they are created (because Now() is not after IssuedAt())
 	t.Run("Empty fields", func(t *testing.T) {
+		t.Parallel()
 		token := jwt.New()
+		require.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`)
+		require.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`)
+		require.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`)
+	})
+	t.Run("Reset Validator, No validator", func(t *testing.T) {
+		t.Parallel()
+		token := jwt.New()
+		now := time.Now().UTC()
+		token.Set(jwt.IssuedAtKey, now)
 
-		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`) {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`) {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`) {
-			return
-		}
+		err := jwt.Validate(token, jwt.WithResetValidators(true))
+		require.Error(t, err, `token.Validate should fail`)
+		require.Contains(t, err.Error(), "no validators specified", `error message should contain "no validators specified"`)
+	})
+	t.Run("Reset Validator, Check iss only", func(t *testing.T) {
+		t.Parallel()
+		token := jwt.New()
+		iat := time.Now().UTC().Add(time.Hour * 24)
+		token.Set(jwt.IssuedAtKey, iat)
+		token.Set(jwt.IssuerKey, "github.com/lestrrat-go")
+
+		err := jwt.Validate(token, jwt.WithResetValidators(true), jwt.WithIssuer("github.com/lestrrat-go"))
+		require.NoError(t, err, `token.Validate should succeed`)
 	})
 	t.Run(jwt.IssuedAtKey+"+skew", func(t *testing.T) {
 		t.Parallel()
