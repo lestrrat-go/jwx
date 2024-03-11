@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# github.com/lestrrat-go/jwx/v2 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg?branch=develop/v2) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v2.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v2)](https://codecov.io/github/lestrrat-go/jwx?branch=v2)
-=======
-# github.com/lestrrat-go/jwx/v3 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg?branch=v3) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
->>>>>>> 3b034e6 (Update README for v3)
+# github.com/lestrrat-go/jwx/v3 ![](https://github.com/lestrrat-go/jwx/workflows/CI/badge.svg?branch=develop/v3) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
