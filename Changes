@@ -6,15 +6,15 @@ v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jw
 
 v2.0.22 UNRELEASED
 [New Features]
-  * [jwt] Added jwt.ParseCookie() function
-  * [jwt] jwt.ParseRequest() can now accept a new option, jwt.WithCookieKey() to
+  * [jwt] Added `jwt.ParseCookie()` function
+  * [jwt] `jwt.ParseRequest()` can now accept a new option, jwt.WithCookieKey() to
     specify a cookie name to extract the token from.
-  * [jwt] jwt.ParseRequest() and jwt.ParseCookie can accept the jwt.WithCookie() option,
+  * [jwt] `jwt.ParseRequest()` and `jwt.ParseCookie()` can accept the `jwt.WithCookie()` option,
     which will, upon successful token parsing, make the functions assign the *http.Cookie
     used to parse the token. This allows users to further inspect the cookie where the
     token came from, should the need arise.
-  * [jwt] jwt.ParseRequest() no longer automatically looks for "Authorization" header when
-    only jwt.WithFormKey() is used. This behavior is the same for jwt.WithCookieKey() and
+  * [jwt] `jwt.ParseRequest()` no longer automatically looks for "Authorization" header when
+    only `jwt.WithFormKey()` is used. This behavior is the same for `jwt.WithCookieKey()` and
     any similar options that may be implemented in the future.
 
       # previously
@@ -26,7 +26,17 @@ v2.0.22 UNRELEASED
       jwt.ParseRequest(req) // same as before
       jwt.ParseRequest(req, jwt.WithFormKey("foo")) // looks under foo
       jwt.ParseReuqest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
-      
+
+  * [jwt] Add `jwt.WithResetValidators()` option to `jwt.Validate()`. This option
+    will allow you to tell `jwt.Validate()` to NOT automatically check the
+    default validators (`iat`, `exp`, and `nbf`), so that you can completely customize
+    the validation with the validators you specify using `jwt.WithValidator()`.
+
+    This sort of behavior is useful for special cases such as 
+    https://openid.net/specs/openid-connect-rpinitiated-1_0.html. However, you SHOULD NOT
+    use this option unless you know exactly what you are doing, as this will pose
+    significant security issues when used incorrectly.
+
 v2.0.21 07 Mar 2024
 [Security]
   * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the
