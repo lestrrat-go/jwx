@@ -51,7 +51,7 @@ We are willing to help, but only as long as you are being nice to us.
 [Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
 On most of the projects that we provide, we have example test code available,
-most likely in the [`examples/`](./examples) directory. Before asking questions or filing issues, please make sure to take a look at the examples.
+most likely in the [`examples/`](../examples) directory. Before asking questions or filing issues, please make sure to take a look at the examples.
 
 Specifically for Go projects, please first look for files with names `*_example_test.go`, which contain the runnable example code.
 
