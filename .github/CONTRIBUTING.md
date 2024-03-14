@@ -28,7 +28,7 @@ The following is a set of guidelines that we ask you to follow when you contribu
 
 # Please Be Nice
 
-[Main source; if wording differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
+[Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
 Please be nice when you contact us.
 
@@ -46,6 +46,18 @@ But we do not owe you anything. Please do not order us to work for you.
 We are not your support staff, and we are not here to do your research.
 We are willing to help, but only as long as you are being nice to us.
 
+# Please Read The Examples First
+
+[Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
+
+On most of the projects that we provide, we have example test code available,
+most likely in the [`examples/`](../examples) directory. Before asking questions or filing issues, please make sure to take a look at the examples.
+
+Specifically for Go projects, please first look for files with names `*_example_test.go`, which contain the runnable example code.
+
+If the examples do not solve your problems, feel free to proceed with your report. If there are missing examples or inaccuracies, please do not hesitate to contact us.
+
+
 # Please Use Correct Medium (GitHub Issues / Discussions)
 
 [Main source; this is a specialized version copied from the main source](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
@@ -58,7 +70,7 @@ questions/discussions should be posted to [GitHub Discussions](https://github.co
 
 # Please Include (Pseudo)code for Any Technical Issues
 
-[Main source; if wording differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
+[Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
 Your report should contain clear, concise description of the issue that you are facing.
 However, at the same time please always include (pseudo)code in report.
