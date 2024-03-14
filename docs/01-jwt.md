@@ -506,12 +506,82 @@ import (
   "context"
   "crypto/rand"
   "crypto/rsa"
+  "encoding/base64"
   "fmt"
 
   "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jws"
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
+
+func ExampleJWT_ParseWithKeyProvider_UseToken() {
+  // This example shows how one might use the information in the JWT to
+  // load different keys.
+
+  // Setup
+  tok, err := jwt.NewBuilder().
+    Issuer("me").
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  symmetricKey := []byte("Abracadabra")
+  alg := jwa.HS256
+  signed, err := jwt.Sign(tok, jwt.WithKey(alg, symmetricKey))
+  if err != nil {
+    fmt.Printf("failed to sign token: %s\n", err)
+    return
+  }
+
+  // This next example assumes that you want to minimize the number of
+  // times you parse the JWT JSON
+  {
+    _, b64payload, _, err := jws.SplitCompact(signed)
+    if err != nil {
+      fmt.Printf("failed to split jws: %s\n", err)
+      return
+    }
+
+    enc := base64.RawStdEncoding
+    payload := make([]byte, enc.DecodedLen(len(b64payload)))
+    _, err = enc.Decode(payload, b64payload)
+    if err != nil {
+      fmt.Printf("failed to decode base64 payload: %s\n", err)
+      return
+    }
+
+    parsed, err := jwt.Parse(payload, jwt.WithVerify(false))
+    if err != nil {
+      fmt.Printf("failed to parse JWT: %s\n", err)
+      return
+    }
+
+    _, err = jws.Verify(signed, jws.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+      switch parsed.Issuer() {
+      case "me":
+        sink.Key(alg, symmetricKey)
+        return nil
+      default:
+        return fmt.Errorf("unknown issuer %q", parsed.Issuer())
+      }
+    })))
+
+    if err != nil {
+      fmt.Printf("%s\n", err)
+      return
+    }
+
+    if parsed.Issuer() != tok.Issuer() {
+      fmt.Printf("issuers do not match\n")
+      return
+    }
+  }
+
+  // OUTPUT:
+  //
+}
 
 func ExampleJWT_ParseWithKeyProvider() {
   // Pretend that this is a storage somewhere (maybe a database) that maps
