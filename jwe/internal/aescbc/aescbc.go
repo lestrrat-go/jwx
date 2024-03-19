@@ -42,11 +42,12 @@ func pad(buf []byte, n int) []byte {
 		return buf
 	}
 
+	bufsiz := len(buf) + rem
 	mbs := atomic.LoadInt64(&maxBufSize)
-	if int64(len(buf)+rem) > mbs {
+	if int64(bufsiz) > mbs {
 		panic(fmt.Errorf("failed to allocate buffer"))
 	}
-	newbuf := make([]byte, len(buf)+rem)
+	newbuf := make([]byte, bufsiz)
 	copy(newbuf, buf)
 
 	for i := len(buf); i < len(newbuf); i++ {
@@ -203,7 +204,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 	if int64(bufsiz) > mbs {
 		panic(fmt.Errorf("failed to allocate buffer"))
 	}
-	ciphertext := make([]byte, ctlen+c.Overhead())[:ctlen]
+	ciphertext := make([]byte, bufsiz)[:ctlen]
 	copy(ciphertext, plaintext)
 	ciphertext = pad(ciphertext, c.blockCipher.BlockSize())
 
