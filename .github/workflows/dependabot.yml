@@ -10,6 +10,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@v0.12.2
       - run: |
           make tidy
       - run: |
