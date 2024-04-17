@@ -3,6 +3,7 @@ package keyconv_test
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/internal/jwxtest"
@@ -10,6 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestKeyconv(t *testing.T) {
@@ -23,16 +25,17 @@ func TestKeyconv(t *testing.T) {
 			testcases := []struct {
 				Src   interface{}
 				Error bool
+				Name  string
 			}{
-				{Src: key},
-				{Src: *key},
-				{Src: jwkKey},
-				{Src: struct{}{}, Error: true},
+				{Src: key, Name: "From rsa.PrivateKey"},
+				{Src: *key, Name: "From pointer to rsa.PrivateKey"},
+				{Src: jwkKey, Name: "From JWK"},
+				{Src: struct{}{}, Name: "From invalid value", Error: true},
 			}
 
 			for _, tc := range testcases {
 				tc := tc
-				t.Run("Assign to rsa.PrivateKey", func(t *testing.T) {
+				t.Run(fmt.Sprintf("Assign to rsa.PrivateKey (%s)", tc.Name), func(t *testing.T) {
 					var dst rsa.PrivateKey
 					var checker func(assert.TestingT, error, ...interface{}) bool
 					if tc.Error {
@@ -45,9 +48,7 @@ func TestKeyconv(t *testing.T) {
 						return
 					}
 					if !tc.Error {
-						if !assert.Equal(t, key, &dst, `keyconv.RSAPrivateKey should produce same value`) {
-							return
-						}
+						require.True(t, key.Equal(&dst), `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
 				t.Run("Assign to *rsa.PrivateKey", func(t *testing.T) {
@@ -63,9 +64,7 @@ func TestKeyconv(t *testing.T) {
 						return
 					}
 					if !tc.Error {
-						if !assert.Equal(t, key, dst, `keyconv.RSAPrivateKey should produce same value`) {
-							return
-						}
+						require.True(t, key.Equal(dst), `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
 			}
