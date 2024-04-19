@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "x509",
+    srcs = [ "x509.go", "x509_nosecp256k1.go", "x509_sepc256k1.go" ],
+    importpath = "github.com/lestrrat-go/jwx/v2/jwk/internal/x509",
+    visibility = ["//:__subpackages__"],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":x509",
+    visibility = ["//jwe:__subpackages__"],
+)
