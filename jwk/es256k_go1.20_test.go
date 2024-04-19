@@ -30,4 +30,15 @@ func TestES256KPem(t *testing.T) {
 			_ = parsed
 		})
 	}
+
+	t.Run("ParsePKCS8PrivateKey", func(t *testing.T) {
+		const src = `-----BEGIN PRIVATE KEY-----
+MIGEAgEAMBAGByqGSM49AgEGBSuBBAAKBG0wawIBAQQggS9t6iYyj9JSL+btkMEq
+pMYitWV4X+/Jg9zu3L8Ob5ShRANCAAT/YrxWHfw3e8lfDncJLLkPRbdby0L4qT95
+vyWU5lPpSwRbEAfSFR1E5RD9irkN1mCY8D1ko1PAlmHVB78pNzq4
+-----END PRIVATE KEY-----`
+		key, err := jwk.Parse([]byte(src), jwk.WithPEM(true))
+		require.NoError(t, err, `Parse should succeed`)
+		require.NotNil(t, key, `key should not be nil`)
+	})
 }

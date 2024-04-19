@@ -22,3 +22,7 @@ func MarshalPKIXPublicKey(pub any) ([]byte, error) {
 func ParsePKIXPublicKey(der []byte) (any, error) {
 	return x509.ParsePKIXPublicKey(der)
 }
+
+func ParsePKCS8PrivateKey(der []byte) (interface{}, error) {
+	return x509.ParsePKCS8PrivateKey(der)
+}

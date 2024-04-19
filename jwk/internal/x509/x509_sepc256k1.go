@@ -417,3 +417,63 @@ func parsePublicKey(keyData *publicKeyInfo) (any, error) {
 		return nil, errors.New("x509: unknown public key algorithm")
 	}
 }
+
+// See src/crypto/x509/pkcs8.go for original code
+func ParsePKCS8PrivateKey(der []byte) (key any, err error) {
+	var privKey pkcs8
+	if _, err := asn1.Unmarshal(der, &privKey); err != nil {
+		if _, err := asn1.Unmarshal(der, &ecPrivateKey{}); err == nil {
+			return nil, errors.New("x509: failed to parse private key (use ParseECPrivateKey instead for this key format)")
+		}
+		if _, err := asn1.Unmarshal(der, &pkcs1PrivateKey{}); err == nil {
+			return nil, errors.New("x509: failed to parse private key (use ParsePKCS1PrivateKey instead for this key format)")
+		}
+		return nil, err
+	}
+	switch {
+	case privKey.Algo.Algorithm.Equal(oidPublicKeyRSA):
+		key, err = ParsePKCS1PrivateKey(privKey.PrivateKey)
+		if err != nil {
+			return nil, errors.New("x509: failed to parse RSA private key embedded in PKCS#8: " + err.Error())
+		}
+		return key, nil
+
+	case privKey.Algo.Algorithm.Equal(oidPublicKeyECDSA):
+		bytes := privKey.Algo.Parameters.FullBytes
+		namedCurveOID := new(asn1.ObjectIdentifier)
+		if _, err := asn1.Unmarshal(bytes, namedCurveOID); err != nil {
+			namedCurveOID = nil
+		}
+		key, err = parseECPrivateKey(namedCurveOID, privKey.PrivateKey)
+		if err != nil {
+			return nil, errors.New("x509: failed to parse EC private key embedded in PKCS#8: " + err.Error())
+		}
+		return key, nil
+
+	case privKey.Algo.Algorithm.Equal(oidPublicKeyEd25519):
+		if l := len(privKey.Algo.Parameters.FullBytes); l != 0 {
+			return nil, errors.New("x509: invalid Ed25519 private key parameters")
+		}
+		var curvePrivateKey []byte
+		if _, err := asn1.Unmarshal(privKey.PrivateKey, &curvePrivateKey); err != nil {
+			return nil, fmt.Errorf("x509: invalid Ed25519 private key: %v", err)
+		}
+		if l := len(curvePrivateKey); l != ed25519.SeedSize {
+			return nil, fmt.Errorf("x509: invalid Ed25519 private key length: %d", l)
+		}
+		return ed25519.NewKeyFromSeed(curvePrivateKey), nil
+
+	case privKey.Algo.Algorithm.Equal(oidPublicKeyX25519):
+		if l := len(privKey.Algo.Parameters.FullBytes); l != 0 {
+			return nil, errors.New("x509: invalid X25519 private key parameters")
+		}
+		var curvePrivateKey []byte
+		if _, err := asn1.Unmarshal(privKey.PrivateKey, &curvePrivateKey); err != nil {
+			return nil, fmt.Errorf("x509: invalid X25519 private key: %v", err)
+		}
+		return ecdh.X25519().NewPrivateKey(curvePrivateKey)
+
+	default:
+		return nil, fmt.Errorf("x509: PKCS#8 wrapping contained private key with unknown algorithm: %v", privKey.Algo.Algorithm)
+	}
+}

@@ -26,10 +26,6 @@ func ParsePKCS1PublicKey(der []byte) (*rsa.PublicKey, error) {
 	return x509.ParsePKCS1PublicKey(der)
 }
 
-func ParsePKCS8PrivateKey(der []byte) (interface{}, error) {
-	return x509.ParsePKCS8PrivateKey(der)
-}
-
 func ParseCertificate(der []byte) (*x509.Certificate, error) {
 	return x509.ParseCertificate(der)
 }
