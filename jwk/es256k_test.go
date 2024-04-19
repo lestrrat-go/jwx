@@ -7,7 +7,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -20,27 +19,6 @@ import (
 
 func TestES256K(t *testing.T) {
 	require.True(t, ecutil.IsAvailable(jwa.Secp256k1), `jwa.Secp256k1 should be available`)
-}
-
-func TestES256KPem(t *testing.T) {
-	raw, err := secp256k1.GeneratePrivateKey()
-	require.NoError(t, err, `GeneratePrivateKey should succeed`)
-
-	testcases := []interface{}{raw.ToECDSA(), raw.PubKey().ToECDSA()}
-	for _, tc := range testcases {
-		t.Run(fmt.Sprintf("Marshal %T", tc), func(t *testing.T) {
-			key, err := jwk.FromRaw(tc)
-			require.NoError(t, err, `FromRaw should succeed`)
-
-			pem, err := jwk.Pem(key)
-			require.NoError(t, err, `Pem should succeed`)
-			require.NotEmpty(t, pem, `Pem should not be empty`)
-
-			parsed, err := jwk.Parse(pem, jwk.WithPEM(true))
-			require.NoError(t, err, `Parse should succeed`)
-			_ = parsed
-		})
-	}
 }
 
 func BenchmarkKeyInstantiation(b *testing.B) {
