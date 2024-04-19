@@ -36,6 +36,10 @@ v2.0.22 UNRELEASED
     https://openid.net/specs/openid-connect-rpinitiated-1_0.html. However, you SHOULD NOT
     use this option unless you know exactly what you are doing, as this will pose
     significant security issues when used incorrectly.
+  * [jwk] (EXPERIMENTAL) Work with PEM format ASN.1 DER encoded secp256k1 keys.
+    By suppliying the `WithPEM(true)` option, `jwk.Parse()` should be able to
+    read sep256k1 keys. Also, `jwk.Pem()` should be able to handle `jwk.Key` objects
+    that represent a secp256k1 key.
 
 v2.0.21 07 Mar 2024
 [Security]
