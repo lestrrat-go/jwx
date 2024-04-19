@@ -67,7 +67,7 @@ go_test(
         "//jwa",
         "//jws",
         "//x25519",
-	"//jwk/internal/x509",
+        "//jwk/internal/x509",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
