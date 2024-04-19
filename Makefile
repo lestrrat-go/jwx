@@ -25,6 +25,9 @@ test-goccy:
 test-es256k:
 	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k"
 
+test-secp256k1-pem:
+	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k,jwx_secp256k1_pem"
+
 test-asmbase64:
 	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64"
 

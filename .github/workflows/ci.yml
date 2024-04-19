@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go_tags: [ 'stdlib', 'goccy', 'es256k', 'asmbase64', 'alltags']
+        go_tags: [ 'stdlib', 'goccy', 'es256k', 'secp256k1-pem', 'asmbase64', 'alltags']
         go: [ '1.21', '1.20', '1.19' ]
     name: "Test [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:

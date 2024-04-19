@@ -1,4 +1,4 @@
-//go:build !jwx_es256k || !go1.20
+//go:build !jwx_es256k || !jwx_secp256k1_pem || !go1.20
 
 package x509
 
