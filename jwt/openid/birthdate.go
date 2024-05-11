@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math"
 	"regexp"
 	"strconv"
 
@@ -58,21 +57,17 @@ func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-var intSize int
-
-func init() {
-	switch math.MaxInt {
-	case math.MaxInt16:
-		intSize = 16
-	case math.MaxInt32:
-		intSize = 32
-	case math.MaxInt64:
-		intSize = 64
-	}
-}
+// This is true if the app is running on a 64-bit system
+// See: https://stackoverflow.com/a/60319709/192024
+const is64bit = uint64(^uintptr(0)) == ^uint64(0)
 
 func parseBirthdayInt(s string) int {
-	i, _ := strconv.ParseInt(s, 10, intSize)
+	var i int64
+	if is64bit {
+		i, _ = strconv.ParseInt(s, 10, 64)
+	} else {
+		i, _ = strconv.ParseInt(s, 10, 32)
+	}
 	return int(i)
 }
 
