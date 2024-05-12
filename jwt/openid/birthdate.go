@@ -60,7 +60,7 @@ func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 
 func parseBirthdayInt(s string) int {
 	i, _ := strconv.ParseInt(s, 10, 64)
-	if math.MaxInt == math.MaxInt32 && i > math.MaxInt32 {
+	if i < 0 || (math.MaxInt == math.MaxInt32 && i > math.MaxInt32) {
 		return 0
 	}
 	return int(i)
