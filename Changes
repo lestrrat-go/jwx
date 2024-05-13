@@ -37,6 +37,47 @@ v2.0.22 UNRELEASED
     use this option unless you know exactly what you are doing, as this will pose
     significant security issues when used incorrectly.
 
+  * [jwk] Provide a _stop-gap_ measure to work with PEM format ASN.1 DER encoded secp256k1 keys.
+  
+    In order to enable this feature, you must compile jwx with TWO build tags:
+    `jwx_es256k` to enable ES256K/secp256k1, and `jwx_secp256k1_pem` to enable PEM handling.
+    Not one, but BOTH tags need to be present.
+
+    With this change, by suppliying the `WithPEM(true)` option, `jwk.Parse()` is now
+    able to read sep256k1 keys. Also, `jwk.Pem()` should be able to handle `jwk.Key` objects
+    that represent a secp256k1 key.
+
+    Please do note that the implementation of this feature is dodgy at best. Currently
+    Go's crypto/x509 does not allow handling additional EC curves, and thus in order to
+    accomodate secp256k1 keys in PEM/ASN.1 DER format we need to "patch" the stdlib.
+    We do this by copy-and-pasting relevant parts of go 1.22.2's crypto/x509 code and
+    adding the minimum required code to make secp256k1 keys work.
+
+    Because of the above, there are several important caveats for this feature:
+
+    1. This feature is provided solely as a stop-gap measure until such time Go's stdlib
+    provides a way to handle non-standard EC curves, or another external module
+    is able to solve this issue. 
+
+    2. This feature should be considered unstable and not guaranteed by semantic versioning
+    backward compatibility. At any given point we may drop or modify this feature. It may be
+    because we can no longer maintain the code, or perhaps a security issue is found in the
+    version of the code that we ship with, etc.
+
+    3. Please always remember that we are now bundling a static set of code for handling
+    x509 formats. You are taking a possible security risk by code that could be outdated.
+    Please always do your own research, and if possible, please notify us if the bundled
+    code needs to be updated. Unless you know what you are doing, it is not recommended
+    that you enable this feature.
+
+    4. Please note that because we imported the code from go 1.22's src/crypto/x509,
+    it has some go1.20-isms in its code. Therefore you will not be able to use the
+    `jwx_secp256k1_pem` tag to enable secp256k1 key PEM handling against codebases
+    that are built using go 1.19 and below (the build will succeed, but the feature
+    will be unavailable).
+
+    5. We have no plans to include more curves this way. One is already one too many.
+
 v2.0.21 07 Mar 2024
 [Security]
   * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the

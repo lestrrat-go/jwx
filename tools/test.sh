@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export PATH="$(go env GOPATH)/bin:$PATH"
 ROOT=$(cd $(dirname $0)/..; pwd -P)
 DST="$ROOT/coverage.out"
 if [[ -e "$DST" ]]; then

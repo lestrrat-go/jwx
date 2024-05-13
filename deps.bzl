@@ -19,8 +19,8 @@ def go_dependencies():
         name = "com_github_decred_dcrd_dcrec_secp256k1_v4",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/decred/dcrd/dcrec/secp256k1/v4",
-        sum = "h1:8UrgZ3GkP4i/CLijOJx79Yu+etlyjdBU4sfcs2WYQMs=",
-        version = "v4.2.0",
+        sum = "h1:rpfIENRNNilwHwZeG5+P150SMrnNEcHYvcCuK6dPZSg=",
+        version = "v4.3.0",
     )
     go_repository(
         name = "com_github_goccy_go_json",
@@ -115,8 +115,8 @@ def go_dependencies():
         name = "org_golang_x_crypto",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/crypto",
-        sum = "h1:X31++rzVUdKhX5sWmSOFZxx8UW/ldWx55cbf08iNAMA=",
-        version = "v0.21.0",
+        sum = "h1:g1v0xeRhjcugydODzvb3mEM9SQ0HGp9s/nh3COQ/C30=",
+        version = "v0.22.0",
     )
 
     go_repository(
@@ -131,15 +131,15 @@ def go_dependencies():
         name = "org_golang_x_sys",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/sys",
-        sum = "h1:DBdB3niSjOA/O0blCZBqDefyWNYveAYMNF1Wum0DYQ4=",
-        version = "v0.18.0",
+        sum = "h1:q5f1RH2jigJ1MoAWp2KTp3gm5zAGFUTarQZ5U386+4o=",
+        version = "v0.19.0",
     )
     go_repository(
         name = "org_golang_x_term",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/term",
-        sum = "h1:FcHjZXDMxI8mM3nwhX9HlKop4C0YQvCVCdwYl2wOtE8=",
-        version = "v0.18.0",
+        sum = "h1:+ThwsDv+tYfnJFhF4L8jITxu1tdTWRTZpdsWgEgjL6Q=",
+        version = "v0.19.0",
     )
 
     go_repository(
