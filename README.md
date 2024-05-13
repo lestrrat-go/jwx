@@ -15,7 +15,7 @@ If you are using this module in your product or your company, please add  your p
 * Opinionated, but very uniform API. Everything is symmetric, and follows a standard convention
   * jws.Parse/Verify/Sign
   * jwe.Parse/Encrypt/Decrypt
-  * Arguments are organized as explicit required paramters and optional WithXXXX() style options.
+  * Arguments are organized as explicit required parameters and optional WithXXXX() style options.
 * Extra utilities
   * `jwk.Cache` to always keep a JWKS up-to-date
   * [bazel](https://bazel.build)-ready
@@ -226,7 +226,7 @@ For either bug reports or feature requests, failing tests are even better.
 
 ## Pull Requests
 
-Please make sure to include tests that excercise the changes you made.
+Please make sure to include tests that exercise the changes you made.
 
 If you are editing auto-generated files (those files with the `_gen.go` suffix, please make sure that you do the following:
 
