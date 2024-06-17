@@ -12,7 +12,7 @@ require (
 	github.com/lestrrat-go/option v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.24.0
 )
 
 retract v1.2.16 // Packaging problems.
