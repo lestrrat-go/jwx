@@ -78,6 +78,11 @@ v2.0.22 UNRELEASED
 
     5. We have no plans to include more curves this way. One is already one too many.
 
+  * [jwe] Fixed a bug when using encryption algorithms involving PBES2 along with the
+    jwx.WithUseNumber() global option. Enabling this option would turn all values
+    stored in the JSON content to be of type `json.Number`, but we did not account for
+    it when checking for the value of `p2c` header, resulting in a conversion error.
+
 v2.0.21 07 Mar 2024
 [Security]
   * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the

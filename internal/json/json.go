@@ -4,19 +4,24 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"sync"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 )
 
-var muGlobalConfig sync.RWMutex
-var useNumber bool
+var useNumber uint32 // TODO: at some point, change to atomic.Bool
+
+func UseNumber() bool {
+	return atomic.LoadUint32(&useNumber) == 1
+}
 
 // Sets the global configuration for json decoding
 func DecoderSettings(inUseNumber bool) {
-	muGlobalConfig.Lock()
-	useNumber = inUseNumber
-	muGlobalConfig.Unlock()
+	var val uint32
+	if inUseNumber {
+		val = 1
+	}
+	atomic.StoreUint32(&useNumber, val)
 }
 
 // Unmarshal respects the values specified in DecoderSettings,
