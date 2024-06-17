@@ -25,11 +25,9 @@ func Engine() string {
 func NewDecoder(r io.Reader) *json.Decoder {
 	dec := json.NewDecoder(r)
 
-	muGlobalConfig.RLock()
-	if useNumber {
+	if UseNumber() {
 		dec.UseNumber()
 	}
-	muGlobalConfig.RUnlock()
 
 	return dec
 }

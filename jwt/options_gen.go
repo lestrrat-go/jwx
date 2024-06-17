@@ -5,6 +5,7 @@ package jwt
 import (
 	"context"
 	"io/fs"
+	"net/http"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwe"
@@ -126,6 +127,8 @@ type identAcceptableSkew struct{}
 type identClock struct{}
 type identCompactOnly struct{}
 type identContext struct{}
+type identCookie struct{}
+type identCookieKey struct{}
 type identEncryptOption struct{}
 type identFS struct{}
 type identFlattenAudience struct{}
@@ -136,6 +139,7 @@ type identNumericDateFormatPrecision struct{}
 type identNumericDateParsePedantic struct{}
 type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
+type identResetValidators struct{}
 type identSignOption struct{}
 type identToken struct{}
 type identTruncation struct{}
@@ -157,6 +161,14 @@ func (identCompactOnly) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identCookie) String() string {
+	return "WithCookie"
+}
+
+func (identCookieKey) String() string {
+	return "WithCookieKey"
 }
 
 func (identEncryptOption) String() string {
@@ -197,6 +209,10 @@ func (identNumericDateParsePrecision) String() string {
 
 func (identPedantic) String() string {
 	return "WithPedantic"
+}
+
+func (identResetValidators) String() string {
+	return "WithResetValidators"
 }
 
 func (identSignOption) String() string {
@@ -253,6 +269,24 @@ func WithCompactOnly(v bool) GlobalOption {
 // `context.Context` object.
 func WithContext(v context.Context) ValidateOption {
 	return &validateOption{option.New(identContext{}, v)}
+}
+
+// WithCookie is used to specify a variable to store the cookie used when `jwt.ParseCookie()`
+// is called. This allows you to inspect the cookie for additional information after a successful
+// parsing of the JWT token stored in the cookie.
+//
+// While the type system allows this option to be passed to `jwt.Parse()` directly,
+// doing so will have no effect. Only use it for HTTP request parsing functions
+func WithCookie(v **http.Cookie) ParseOption {
+	return &parseOption{option.New(identCookie{}, v)}
+}
+
+// WithCookieKey is used to specify cookie keys to search for tokens.
+//
+// While the type system allows this option to be passed to `jwt.Parse()` directly,
+// doing so will have no effect. Only use it for HTTP request parsing functions
+func WithCookieKey(v string) ParseOption {
+	return &parseOption{option.New(identCookieKey{}, v)}
 }
 
 // WithEncryptOption provides an escape hatch for cases where extra options to
@@ -331,6 +365,28 @@ func WithNumericDateParsePrecision(v int) GlobalOption {
 // applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
 	return &parseOption{option.New(identPedantic{}, v)}
+}
+
+// WithResetValidators specifies that the default validators should be
+// reset before applying the custom validators. By default `jwt.Validate()`
+// checks for the validity of JWT by checking `exp`, `nbf`, and `iat`, even
+// when you specify more validators through other options.
+//
+// You SHOULD NOT use this option unless you know exactly what you are doing,
+// as this will pose significant security issues when used incorrectly.
+//
+// Using this option with the value `true` will remove all default checks,
+// and will expect you to specify validators as options. This is useful when you
+// want to skip the default validators and only use specific validators, such as
+// for https://openid.net/specs/openid-connect-rpinitiated-1_0.html, where
+// the token could be accepted even if the token is expired.
+//
+// If you set this option to true and you do not specify any validators,
+// `jwt.Validate()` will return an error.
+//
+// The default value is `false` (`iat`, `exp`, and `nbf` are automatically checked).
+func WithResetValidators(v bool) ValidateOption {
+	return &validateOption{option.New(identResetValidators{}, v)}
 }
 
 // WithSignOption provides an escape hatch for cases where extra options to

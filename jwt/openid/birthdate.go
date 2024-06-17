@@ -61,18 +61,17 @@ func (b *BirthdateClaim) UnmarshalJSON(data []byte) error {
 var intSize int
 
 func init() {
-	switch math.MaxInt {
-	case math.MaxInt16:
-		intSize = 16
-	case math.MaxInt32:
+	intSize = 64
+	if math.MaxInt == math.MaxInt32 {
 		intSize = 32
-	case math.MaxInt64:
-		intSize = 64
 	}
 }
 
 func parseBirthdayInt(s string) int {
-	i, _ := strconv.ParseInt(s, 10, intSize)
+	i, err := strconv.ParseInt(s, 10, intSize)
+	if err != nil {
+		return 0
+	}
 	return int(i)
 }
 

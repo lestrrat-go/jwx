@@ -94,9 +94,8 @@ func ExampleJWT_Parse() {
 source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
-Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
-This just reads the contents of src, and maps it into the token, period.
-In order to perform verification/validation, please see the methods described elsewhere in this document, and pass the appropriate option(s).
+Note that the above form performs only signature verification　andno validation of the JWT token itself.
+In order to perform validation, please use `Validate()`.
 
 ## Parse a JWT from file
 
@@ -151,24 +150,25 @@ import (
   "fmt"
   "net/http"
   "net/url"
-  "strings"
 
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 func ExampleJWT_ParseRequest_Authorization() {
-  values := url.Values{
-    `access_token`: []string{exampleJWTSignedHMAC},
-  }
-
-  req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, strings.NewReader(values.Encode()))
+  req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
   if err != nil {
     fmt.Printf("failed to create request: %s\n", err)
     return
   }
+  req.Form = url.Values{}
+  req.Form.Add("access_token", exampleJWTSignedHMAC)
 
   req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, exampleJWTSignedECDSA))
   req.Header.Set(`X-JWT-Token`, exampleJWTSignedRSA)
+
+  req.AddCookie(&http.Cookie{Name: "accessToken", Value: exampleJWTSignedHMAC})
+
+  var dst *http.Cookie
 
   testcases := []struct {
     options []jwt.ParseOption
@@ -187,16 +187,33 @@ func ExampleJWT_ParseRequest_Authorization() {
     {
       options: []jwt.ParseOption{jwt.WithFormKey(`access_token`)},
     },
+    // Looks under "accessToken" cookie, and assigns the http.Cookie object
+    // where the token came from to the variable `dst`
+    {
+      options: []jwt.ParseOption{jwt.WithCookieKey(`accessToken`), jwt.WithCookie(&dst)},
+    },
   }
 
   for _, tc := range testcases {
     options := append(tc.options, []jwt.ParseOption{jwt.WithVerify(false), jwt.WithValidate(false)}...)
     tok, err := jwt.ParseRequest(req, options...)
     if err != nil {
-      fmt.Printf("jwt.ParseRequest with options %#v failed: %s\n", tc.options, err)
+      fmt.Print("jwt.ParseRequest with options [")
+      for i, option := range tc.options {
+        if i > 0 {
+          fmt.Print(", ")
+        }
+        fmt.Printf("%s", option)
+      }
+      fmt.Printf("]: %s\n", err)
       return
     }
     _ = tok
+  }
+
+  if dst == nil {
+    fmt.Printf("failed to assign cookie to dst\n")
+    return
   }
   // OUTPUT:
 }
@@ -488,12 +505,82 @@ import (
   "context"
   "crypto/rand"
   "crypto/rsa"
+  "encoding/base64"
   "fmt"
 
   "github.com/lestrrat-go/jwx/v2/jwa"
   "github.com/lestrrat-go/jwx/v2/jws"
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
+
+func ExampleJWT_ParseWithKeyProvider_UseToken() {
+  // This example shows how one might use the information in the JWT to
+  // load different keys.
+
+  // Setup
+  tok, err := jwt.NewBuilder().
+    Issuer("me").
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  symmetricKey := []byte("Abracadabra")
+  alg := jwa.HS256
+  signed, err := jwt.Sign(tok, jwt.WithKey(alg, symmetricKey))
+  if err != nil {
+    fmt.Printf("failed to sign token: %s\n", err)
+    return
+  }
+
+  // This next example assumes that you want to minimize the number of
+  // times you parse the JWT JSON
+  {
+    _, b64payload, _, err := jws.SplitCompact(signed)
+    if err != nil {
+      fmt.Printf("failed to split jws: %s\n", err)
+      return
+    }
+
+    enc := base64.RawStdEncoding
+    payload := make([]byte, enc.DecodedLen(len(b64payload)))
+    _, err = enc.Decode(payload, b64payload)
+    if err != nil {
+      fmt.Printf("failed to decode base64 payload: %s\n", err)
+      return
+    }
+
+    parsed, err := jwt.Parse(payload, jwt.WithVerify(false))
+    if err != nil {
+      fmt.Printf("failed to parse JWT: %s\n", err)
+      return
+    }
+
+    _, err = jws.Verify(signed, jws.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+      switch parsed.Issuer() {
+      case "me":
+        sink.Key(alg, symmetricKey)
+        return nil
+      default:
+        return fmt.Errorf("unknown issuer %q", parsed.Issuer())
+      }
+    })))
+
+    if err != nil {
+      fmt.Printf("%s\n", err)
+      return
+    }
+
+    if parsed.Issuer() != tok.Issuer() {
+      fmt.Printf("issuers do not match\n")
+      return
+    }
+  }
+
+  // OUTPUT:
+  //
+}
 
 func ExampleJWT_ParseWithKeyProvider() {
   // Pretend that this is a storage somewhere (maybe a database) that maps

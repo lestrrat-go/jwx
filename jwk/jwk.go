@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rsa"
-	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -21,6 +20,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk/internal/x509"
 	"github.com/lestrrat-go/jwx/v2/x25519"
 )
 
@@ -675,7 +675,17 @@ func Pem(v interface{}) ([]byte, error) {
 
 func asnEncode(key Key) (string, []byte, error) {
 	switch key := key.(type) {
-	case RSAPrivateKey, ECDSAPrivateKey, OKPPrivateKey:
+	case ECDSAPrivateKey:
+		var rawkey ecdsa.PrivateKey
+		if err := key.Raw(&rawkey); err != nil {
+			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
+		}
+		buf, err := x509.MarshalECPrivateKey(&rawkey)
+		if err != nil {
+			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
+		}
+		return pmECPrivateKey, buf, nil
+	case RSAPrivateKey, OKPPrivateKey:
 		var rawkey interface{}
 		if err := key.Raw(&rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)

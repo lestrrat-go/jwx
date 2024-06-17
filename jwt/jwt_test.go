@@ -466,17 +466,31 @@ func TestValidateClaims(t *testing.T) {
 	t.Parallel()
 	// GitHub issue #37: tokens are invalid in the second they are created (because Now() is not after IssuedAt())
 	t.Run("Empty fields", func(t *testing.T) {
+		t.Parallel()
 		token := jwt.New()
+		require.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`)
+		require.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`)
+		require.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`)
+	})
+	t.Run("Reset Validator, No validator", func(t *testing.T) {
+		t.Parallel()
+		token := jwt.New()
+		now := time.Now().UTC()
+		token.Set(jwt.IssuedAtKey, now)
 
-		if !assert.Error(t, jwt.Validate(token, jwt.WithIssuer("foo")), `token.Validate should fail`) {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithJwtID("foo")), `token.Validate should fail`) {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(token, jwt.WithSubject("foo")), `token.Validate should fail`) {
-			return
-		}
+		err := jwt.Validate(token, jwt.WithResetValidators(true))
+		require.Error(t, err, `token.Validate should fail`)
+		require.Contains(t, err.Error(), "no validators specified", `error message should contain "no validators specified"`)
+	})
+	t.Run("Reset Validator, Check iss only", func(t *testing.T) {
+		t.Parallel()
+		token := jwt.New()
+		iat := time.Now().UTC().Add(time.Hour * 24)
+		token.Set(jwt.IssuedAtKey, iat)
+		token.Set(jwt.IssuerKey, "github.com/lestrrat-go")
+
+		err := jwt.Validate(token, jwt.WithResetValidators(true), jwt.WithIssuer("github.com/lestrrat-go"))
+		require.NoError(t, err, `token.Validate should succeed`)
 	})
 	t.Run(jwt.IssuedAtKey+"+skew", func(t *testing.T) {
 		t.Parallel()
@@ -824,6 +838,7 @@ func TestParseRequest(t *testing.T) {
 					jwt.WithHeaderKey("x-authorization"),
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
+					jwt.WithCookieKey("cookie"),
 					jwt.WithKey(jwa.ES256, pubkey))
 			},
 			Error: true,
@@ -912,6 +927,29 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
+			Name: "Token in cookie (w/ option)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+			},
+		},
+		{
+			Name: "Invalid token in cookie",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed) + "foobarbaz"})
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+			},
+			Error: true,
+		},
+		{
 			Name: "Token in access_token form field (w/o option)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, u, nil)
@@ -970,6 +1008,17 @@ func TestParseRequest(t *testing.T) {
 			}
 		})
 	}
+
+	// One extra test. Make sure we can extract the cookie object that we used
+	// when parsing from cookies
+	t.Run("jwt.WithCookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, u, nil)
+		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
+		var dst *http.Cookie
+		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256, pubkey))
+		require.NoError(t, err, `jwt.ParseRequest should succeed`)
+		require.NotNil(t, dst, `cookie should be extracted`)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {

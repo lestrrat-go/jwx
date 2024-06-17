@@ -10,6 +10,33 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/pool"
 )
 
+// ParseCookie parses a JWT stored in a http.Cookie with the given name.
+// If the specified cookie is not found, http.ErrNoCookie is returned.
+func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token, error) {
+	var dst **http.Cookie
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identCookie{}:
+			dst = option.Value().(**http.Cookie)
+		}
+	}
+
+	cookie, err := req.Cookie(name)
+	if err != nil {
+		return nil, err
+	}
+	tok, err := ParseString(cookie.Value, options...)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to parse token stored in cookie: %w`, err)
+	}
+
+	if dst != nil {
+		*dst = cookie
+	}
+	return tok, nil
+}
+
 // ParseHeader parses a JWT stored in a http.Header.
 //
 // For the header "Authorization", it will strip the prefix "Bearer " and will
@@ -46,9 +73,10 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 // header key. Specifying WithFormKey() will tell it to search under
 // a specific form field.
 //
-// By default, "Authorization" header will be searched.
-//
-// If WithHeaderKey() is used, you must explicitly re-enable searching for "Authorization" header.
+// If none of jwt.WithHeaderKey()/jwt.WithCookieKey()/jwt.WithFormKey() is
+// used, "Authorization" header will be searched. If any of these options
+// are specified, you must explicitly re-enable searching for "Authorization" header
+// if you also want to search for it.
 //
 //	# searches for "Authorization"
 //	jwt.ParseRequest(req)
@@ -58,9 +86,15 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 //
 //	# searches for "Authorization" AND "x-my-token"
 //	jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithHeaderKey("x-my-token"))
+//
+// Cookies are searched using (http.Request).Cookie(). If you have multiple
+// cookies with the same name, and you want to search for a specific one that
+// (http.Request).Cookie() would not return, you will need to implement your
+// own logic to extract the cookie and use jwt.ParseString().
 func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var hdrkeys []string
 	var formkeys []string
+	var cookiekeys []string
 	var parseOptions []ParseOption
 	for _, option := range options {
 		//nolint:forcetypeassert
@@ -69,11 +103,14 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 			hdrkeys = append(hdrkeys, option.Value().(string))
 		case identFormKey{}:
 			formkeys = append(formkeys, option.Value().(string))
+		case identCookieKey{}:
+			cookiekeys = append(cookiekeys, option.Value().(string))
 		default:
 			parseOptions = append(parseOptions, option)
 		}
 	}
-	if len(hdrkeys) == 0 {
+
+	if len(hdrkeys) == 0 && len(formkeys) == 0 && len(cookiekeys) == 0 {
 		hdrkeys = append(hdrkeys, "Authorization")
 	}
 
@@ -81,6 +118,8 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	defer pool.ReleaseKeyToErrorMap(mhdrs)
 	mfrms := pool.GetKeyToErrorMap()
 	defer pool.ReleaseKeyToErrorMap(mfrms)
+	mcookies := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mcookies)
 
 	for _, hdrkey := range hdrkeys {
 		// Check presence via a direct map lookup
@@ -92,6 +131,18 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		tok, err := ParseHeader(req.Header, hdrkey, parseOptions...)
 		if err != nil {
 			mhdrs[hdrkey] = err
+			continue
+		}
+		return tok, nil
+	}
+
+	for _, name := range cookiekeys {
+		tok, err := ParseCookie(req, name, parseOptions...)
+		if err != nil {
+			if err == http.ErrNoCookie {
+				// not fatal
+				mcookies[name] = err
+			}
 			continue
 		}
 		return tok, nil
@@ -135,20 +186,45 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		triedForms.WriteString(strconv.Quote(formkey))
 	}
 
+	var triedCookies strings.Builder
+	for i, cookiekey := range cookiekeys {
+		if i > 0 {
+			triedCookies.WriteString(", ")
+		}
+		triedCookies.WriteString(strconv.Quote(cookiekey))
+	}
+
 	var b strings.Builder
-	b.WriteString(`failed to find a valid token in any location of the request (tried: [header keys: `)
-	b.WriteString(triedHdrs.String())
-	b.WriteByte(']')
+	b.WriteString(`failed to find a valid token in any location of the request (tried: `)
+	olen := b.Len()
+	if triedHdrs.Len() > 0 {
+		b.WriteString(`header keys: [`)
+		b.WriteString(triedHdrs.String())
+		b.WriteByte(']')
+	}
 	if triedForms.Len() > 0 {
-		b.WriteString(", form keys: [")
+		if b.Len() > olen {
+			b.WriteString(", ")
+		}
+		b.WriteString("form keys: [")
 		b.WriteString(triedForms.String())
+		b.WriteByte(']')
+	}
+
+	if triedCookies.Len() > 0 {
+		if b.Len() > olen {
+			b.WriteString(", ")
+		}
+		b.WriteString("cookie keys: [")
+		b.WriteString(triedCookies.String())
 		b.WriteByte(']')
 	}
 	b.WriteByte(')')
 
 	lmhdrs := len(mhdrs)
 	lmfrms := len(mfrms)
-	if lmhdrs > 0 || lmfrms > 0 {
+	lmcookies := len(mcookies)
+	if lmhdrs > 0 || lmfrms > 0 || lmcookies > 0 {
 		b.WriteString(". Additionally, errors were encountered during attempts to parse")
 
 		if lmhdrs > 0 {
@@ -166,6 +242,22 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 				count++
 			}
 			b.WriteString(")")
+		}
+
+		if lmcookies > 0 {
+			count := 0
+			b.WriteString(" cookies: (")
+			for cookiekey, err := range mcookies {
+				if count > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString("[cookie key: ")
+				b.WriteString(strconv.Quote(cookiekey))
+				b.WriteString(", error: ")
+				b.WriteString(strconv.Quote(err.Error()))
+				b.WriteString("]")
+				count++
+			}
 		}
 
 		if lmfrms > 0 {

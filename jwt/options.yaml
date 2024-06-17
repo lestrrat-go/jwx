@@ -72,6 +72,28 @@ options:
       Please be aware that in the next major release of this library,
       `jwt.Validate()`'s signature will change to include an explicit
       `context.Context` object.
+  - ident: ResetValidators
+    interface: ValidateOption
+    argument_type: bool
+    comment: |
+      WithResetValidators specifies that the default validators should be
+      reset before applying the custom validators. By default `jwt.Validate()`
+      checks for the validity of JWT by checking `exp`, `nbf`, and `iat`, even
+      when you specify more validators through other options.
+
+      You SHOULD NOT use this option unless you know exactly what you are doing,
+      as this will pose significant security issues when used incorrectly.
+
+      Using this option with the value `true` will remove all default checks, 
+      and will expect you to specify validators as options. This is useful when you
+      want to skip the default validators and only use specific validators, such as
+      for https://openid.net/specs/openid-connect-rpinitiated-1_0.html, where
+      the token could be accepted even if the token is expired.
+
+      If you set this option to true and you do not specify any validators,
+      `jwt.Validate()` will return an error.
+
+      The default value is `false` (`iat`, `exp`, and `nbf` are automatically checked).
   - ident: FlattenAudience
     interface: GlobalOption
     argument_type: bool
@@ -105,6 +127,24 @@ options:
     argument_type: string
     comment: |
       WithHeaderKey is used to specify header keys to search for tokens.
+      
+      While the type system allows this option to be passed to `jwt.Parse()` directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: Cookie
+    interface: ParseOption
+    argument_type: '**http.Cookie'
+    comment: |
+      WithCookie is used to specify a variable to store the cookie used when `jwt.ParseCookie()`
+      is called. This allows you to inspect the cookie for additional information after a successful
+      parsing of the JWT token stored in the cookie.
+      
+      While the type system allows this option to be passed to `jwt.Parse()` directly,
+      doing so will have no effect. Only use it for HTTP request parsing functions
+  - ident: CookieKey
+    interface: ParseOption
+    argument_type: string
+    comment: |
+      WithCookieKey is used to specify cookie keys to search for tokens.
       
       While the type system allows this option to be passed to `jwt.Parse()` directly,
       doing so will have no effect. Only use it for HTTP request parsing functions
