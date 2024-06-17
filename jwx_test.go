@@ -635,3 +635,24 @@ func TestGH996(t *testing.T) {
 		})
 	}
 }
+
+func TestGH1140(t *testing.T) {
+	// Using WithUseNumber changes the type of value obtained from the
+	// source JSON, which may cause issues
+	jwx.DecoderSettings(jwx.WithUseNumber(true))
+	t.Cleanup(func() {
+		jwx.DecoderSettings(jwx.WithUseNumber(false))
+	})
+	key, err := jwk.FromRaw([]byte("secure-key"))
+	require.NoError(t, err, `jwk.FromRaw should succeed`)
+
+	var encrypted []byte
+	encrypted, err = jwe.Encrypt(
+		[]byte("test-encryption-payload"),
+		jwe.WithKey(jwa.PBES2_HS256_A128KW, key),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+}

@@ -745,10 +745,28 @@ func (dctx *decryptCtx) decryptContent(ctx context.Context, alg jwa.KeyEncryptio
 		if !ok {
 			return nil, fmt.Errorf(`failed to get 'p2c' field`)
 		}
-		countFlt, ok := count.(float64)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+
+		// check if WithUseNumber is effective, because it will change the
+		// type of the underlying value (#1140)
+		var countFlt float64
+		if json.UseNumber() {
+			num, ok := count.(json.Number)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+			}
+			v, err := num.Float64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert 'p2c' to float64: %w", err)
+			}
+			countFlt = v
+		} else {
+			v, ok := count.(float64)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type for 'p2c': %T", count)
+			}
+			countFlt = v
 		}
+
 		muSettings.RLock()
 		maxCount := maxPBES2Count
 		muSettings.RUnlock()
