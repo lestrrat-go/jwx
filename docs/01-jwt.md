@@ -94,9 +94,8 @@ func ExampleJWT_Parse() {
 source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
-Note that the above form does NOT perform any signature verification, or validation of the JWT token itself.
-This just reads the contents of src, and maps it into the token, period.
-In order to perform verification/validation, please see the methods described elsewhere in this document, and pass the appropriate option(s).
+Note that the above form performs only signature verification　andno validation of the JWT token itself.
+In order to perform validation, please use `Validate()`.
 
 ## Parse a JWT from file
 
