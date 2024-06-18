@@ -30,6 +30,8 @@ const (
 	RSA1_5             KeyEncryptionAlgorithm = "RSA1_5"             // RSA-PKCS1v1.5
 	RSA_OAEP           KeyEncryptionAlgorithm = "RSA-OAEP"           // RSA-OAEP-SHA1
 	RSA_OAEP_256       KeyEncryptionAlgorithm = "RSA-OAEP-256"       // RSA-OAEP-SHA256
+	RSA_OAEP_384       KeyEncryptionAlgorithm = "RSA-OAEP-384"       // RSA-OAEP-SHA384
+	RSA_OAEP_512       KeyEncryptionAlgorithm = "RSA-OAEP-512"       // RSA-OAEP-SHA512
 )
 
 var muKeyEncryptionAlgorithms sync.RWMutex
@@ -57,6 +59,8 @@ func init() {
 	allKeyEncryptionAlgorithms[RSA1_5] = struct{}{}
 	allKeyEncryptionAlgorithms[RSA_OAEP] = struct{}{}
 	allKeyEncryptionAlgorithms[RSA_OAEP_256] = struct{}{}
+	allKeyEncryptionAlgorithms[RSA_OAEP_384] = struct{}{}
+	allKeyEncryptionAlgorithms[RSA_OAEP_512] = struct{}{}
 	rebuildKeyEncryptionAlgorithm()
 }
 

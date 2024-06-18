@@ -623,6 +623,78 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`accept jwa constant RSA_OAEP_384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.RSA_OAEP_384), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept("RSA-OAEP-384"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "RSA-OAEP-384"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP-384", jwa.RSA_OAEP_384.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`accept jwa constant RSA_OAEP_512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.RSA_OAEP_512), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept("RSA-OAEP-512"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "RSA-OAEP-512"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP-512", jwa.RSA_OAEP_512.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`bail out on random integer value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -690,6 +762,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		t.Run(`RSA_OAEP_256`, func(t *testing.T) {
 			assert.False(t, jwa.RSA_OAEP_256.IsSymmetric(), `jwa.RSA_OAEP_256 should NOT be symmetric`)
 		})
+		t.Run(`RSA_OAEP_384`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP_384.IsSymmetric(), `jwa.RSA_OAEP_384 should NOT be symmetric`)
+		})
+		t.Run(`RSA_OAEP_512`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP_512.IsSymmetric(), `jwa.RSA_OAEP_512 should NOT be symmetric`)
+		})
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
@@ -711,6 +789,8 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			jwa.RSA1_5:             {},
 			jwa.RSA_OAEP:           {},
 			jwa.RSA_OAEP_256:       {},
+			jwa.RSA_OAEP_384:       {},
+			jwa.RSA_OAEP_512:       {},
 		}
 		for _, v := range jwa.KeyEncryptionAlgorithms() {
 			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {

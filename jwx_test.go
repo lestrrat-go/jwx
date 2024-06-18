@@ -188,7 +188,7 @@ func TestJoseCompatibility(t *testing.T) {
 
 		var tests []interopTest
 
-		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256} {
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512} {
 			if !set.Has(keyenc.String()) {
 				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
 				continue
@@ -297,7 +297,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 
 	t.Run("Parse JWK via jwx", func(t *testing.T) {
 		switch spec.alg {
-		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
 			var rawkey rsa.PrivateKey
 			if !assert.NoError(t, jwxJwk.Raw(&rawkey), `jwk.Raw should succeed`) {
 				return

@@ -286,7 +286,7 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 	var keyif interface{}
 
 	switch keyalg {
-	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
 		var rawkey rsa.PrivateKey
 		if err := key.Raw(&rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
