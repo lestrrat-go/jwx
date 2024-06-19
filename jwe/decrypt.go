@@ -278,7 +278,7 @@ func (d *decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 		}
 
 		return keyenc.NewRSAPKCS15Decrypt(alg, &privkey, cipher.KeySize()/2), nil
-	case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+	case jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
 			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)

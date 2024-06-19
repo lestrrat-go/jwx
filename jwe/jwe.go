@@ -118,7 +118,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 				return nil, nil, fmt.Errorf(`failed to create RSA PKCS encrypter: %w`, err)
 			}
 			enc = v
-		case jwa.RSA_OAEP, jwa.RSA_OAEP_256:
+		case jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
 			var pubkey rsa.PublicKey
 			if err := keyconv.RSAPublicKey(&pubkey, rawKey); err != nil {
 				return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, rawKey, err)

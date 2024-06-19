@@ -250,6 +250,16 @@ func _main() error {
 					comment: `RSA-OAEP-SHA256`,
 				},
 				{
+					name:    `RSA_OAEP_384`,
+					value:   "RSA-OAEP-384",
+					comment: `RSA-OAEP-SHA384`,
+				},
+				{
+					name:    `RSA_OAEP_512`,
+					value:   "RSA-OAEP-512",
+					comment: `RSA-OAEP-SHA512`,
+				},
+				{
 					name:    `A128KW`,
 					value:   "A128KW",
 					comment: `AES key wrap (128)`,
