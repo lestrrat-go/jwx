@@ -66,3 +66,8 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestInvalidKeyAlgorithm_IsSymmetric(t *testing.T) {
+	invalidKeyAlgorithm := jwa.InvalidKeyAlgorithm("")
+	assert.False(t, invalidKeyAlgorithm.IsSymmetric(), `invalid algorithm should NOT be symmetric`)
+}

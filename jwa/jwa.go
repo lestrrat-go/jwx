@@ -18,6 +18,7 @@ import "fmt"
 // jwk.Key directly
 type KeyAlgorithm interface {
 	String() string
+	IsSymmetric() bool
 }
 
 // InvalidKeyAlgorithm represents an algorithm that the library is not aware of.
@@ -29,6 +30,10 @@ func (s InvalidKeyAlgorithm) String() string {
 
 func (InvalidKeyAlgorithm) Accept(_ interface{}) error {
 	return fmt.Errorf(`jwa.InvalidKeyAlgorithm does not support Accept() method calls`)
+}
+
+func (InvalidKeyAlgorithm) IsSymmetric() bool {
+	return false
 }
 
 // KeyAlgorithmFrom takes either a string, `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`

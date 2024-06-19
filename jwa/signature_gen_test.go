@@ -565,6 +565,54 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`check symmetric values`, func(t *testing.T) {
+		t.Parallel()
+		t.Run(`ES256`, func(t *testing.T) {
+			assert.False(t, jwa.ES256.IsSymmetric(), `jwa.ES256 should NOT be symmetric`)
+		})
+		t.Run(`ES256K`, func(t *testing.T) {
+			assert.False(t, jwa.ES256K.IsSymmetric(), `jwa.ES256K should NOT be symmetric`)
+		})
+		t.Run(`ES384`, func(t *testing.T) {
+			assert.False(t, jwa.ES384.IsSymmetric(), `jwa.ES384 should NOT be symmetric`)
+		})
+		t.Run(`ES512`, func(t *testing.T) {
+			assert.False(t, jwa.ES512.IsSymmetric(), `jwa.ES512 should NOT be symmetric`)
+		})
+		t.Run(`EdDSA`, func(t *testing.T) {
+			assert.False(t, jwa.EdDSA.IsSymmetric(), `jwa.EdDSA should NOT be symmetric`)
+		})
+		t.Run(`HS256`, func(t *testing.T) {
+			assert.True(t, jwa.HS256.IsSymmetric(), `jwa.HS256 should be symmetric`)
+		})
+		t.Run(`HS384`, func(t *testing.T) {
+			assert.True(t, jwa.HS384.IsSymmetric(), `jwa.HS384 should be symmetric`)
+		})
+		t.Run(`HS512`, func(t *testing.T) {
+			assert.True(t, jwa.HS512.IsSymmetric(), `jwa.HS512 should be symmetric`)
+		})
+		t.Run(`NoSignature`, func(t *testing.T) {
+			assert.False(t, jwa.NoSignature.IsSymmetric(), `jwa.NoSignature should NOT be symmetric`)
+		})
+		t.Run(`PS256`, func(t *testing.T) {
+			assert.False(t, jwa.PS256.IsSymmetric(), `jwa.PS256 should NOT be symmetric`)
+		})
+		t.Run(`PS384`, func(t *testing.T) {
+			assert.False(t, jwa.PS384.IsSymmetric(), `jwa.PS384 should NOT be symmetric`)
+		})
+		t.Run(`PS512`, func(t *testing.T) {
+			assert.False(t, jwa.PS512.IsSymmetric(), `jwa.PS512 should NOT be symmetric`)
+		})
+		t.Run(`RS256`, func(t *testing.T) {
+			assert.False(t, jwa.RS256.IsSymmetric(), `jwa.RS256 should NOT be symmetric`)
+		})
+		t.Run(`RS384`, func(t *testing.T) {
+			assert.False(t, jwa.RS384.IsSymmetric(), `jwa.RS384 should NOT be symmetric`)
+		})
+		t.Run(`RS512`, func(t *testing.T) {
+			assert.False(t, jwa.RS512.IsSymmetric(), `jwa.RS512 should NOT be symmetric`)
+		})
+	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.SignatureAlgorithm]struct{}{

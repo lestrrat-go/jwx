@@ -125,3 +125,12 @@ func (v *SignatureAlgorithm) Accept(value interface{}) error {
 func (v SignatureAlgorithm) String() string {
 	return string(v)
 }
+
+// IsSymmetric returns true if the algorithm is a symmetric type
+func (v SignatureAlgorithm) IsSymmetric() bool {
+	switch v {
+	case HS256, HS384, HS512:
+		return true
+	}
+	return false
+}

@@ -158,19 +158,22 @@ func _main() error {
 					value: "none",
 				},
 				{
-					name:    `HS256`,
-					value:   "HS256",
-					comment: `HMAC using SHA-256`,
+					name:      `HS256`,
+					value:     "HS256",
+					symmetric: true,
+					comment:   `HMAC using SHA-256`,
 				},
 				{
-					name:    `HS384`,
-					value:   `HS384`,
-					comment: `HMAC using SHA-384`,
+					name:      `HS384`,
+					value:     `HS384`,
+					symmetric: true,
+					comment:   `HMAC using SHA-384`,
 				},
 				{
-					name:    `HS512`,
-					value:   "HS512",
-					comment: `HMAC using SHA-512`,
+					name:      `HS512`,
+					value:     "HS512",
+					symmetric: true,
+					comment:   `HMAC using SHA-512`,
 				},
 				{
 					name:    `RS256`,
@@ -260,24 +263,28 @@ func _main() error {
 					comment: `RSA-OAEP-SHA512`,
 				},
 				{
-					name:    `A128KW`,
-					value:   "A128KW",
-					comment: `AES key wrap (128)`,
+					name:      `A128KW`,
+					value:     "A128KW",
+					symmetric: true,
+					comment:   `AES key wrap (128)`,
 				},
 				{
-					name:    `A192KW`,
-					value:   "A192KW",
-					comment: `AES key wrap (192)`,
+					name:      `A192KW`,
+					value:     "A192KW",
+					symmetric: true,
+					comment:   `AES key wrap (192)`,
 				},
 				{
-					name:    `A256KW`,
-					value:   "A256KW",
-					comment: `AES key wrap (256)`,
+					name:      `A256KW`,
+					value:     "A256KW",
+					symmetric: true,
+					comment:   `AES key wrap (256)`,
 				},
 				{
-					name:    `DIRECT`,
-					value:   "dir",
-					comment: `Direct encryption`,
+					name:      `DIRECT`,
+					value:     "dir",
+					symmetric: true,
+					comment:   `Direct encryption`,
 				},
 				{
 					name:    `ECDH_ES`,
@@ -300,34 +307,40 @@ func _main() error {
 					comment: `ECDH-ES + AES key wrap (256)`,
 				},
 				{
-					name:    `A128GCMKW`,
-					value:   "A128GCMKW",
-					comment: `AES-GCM key wrap (128)`,
+					name:      `A128GCMKW`,
+					value:     "A128GCMKW",
+					symmetric: true,
+					comment:   `AES-GCM key wrap (128)`,
 				},
 				{
-					name:    `A192GCMKW`,
-					value:   "A192GCMKW",
-					comment: `AES-GCM key wrap (192)`,
+					name:      `A192GCMKW`,
+					value:     "A192GCMKW",
+					symmetric: true,
+					comment:   `AES-GCM key wrap (192)`,
 				},
 				{
-					name:    `A256GCMKW`,
-					value:   "A256GCMKW",
-					comment: `AES-GCM key wrap (256)`,
+					name:      `A256GCMKW`,
+					value:     "A256GCMKW",
+					symmetric: true,
+					comment:   `AES-GCM key wrap (256)`,
 				},
 				{
-					name:    `PBES2_HS256_A128KW`,
-					value:   "PBES2-HS256+A128KW",
-					comment: `PBES2 + HMAC-SHA256 + AES key wrap (128)`,
+					name:      `PBES2_HS256_A128KW`,
+					value:     "PBES2-HS256+A128KW",
+					symmetric: true,
+					comment:   `PBES2 + HMAC-SHA256 + AES key wrap (128)`,
 				},
 				{
-					name:    `PBES2_HS384_A192KW`,
-					value:   "PBES2-HS384+A192KW",
-					comment: `PBES2 + HMAC-SHA384 + AES key wrap (192)`,
+					name:      `PBES2_HS384_A192KW`,
+					value:     "PBES2-HS384+A192KW",
+					symmetric: true,
+					comment:   `PBES2 + HMAC-SHA384 + AES key wrap (192)`,
 				},
 				{
-					name:    `PBES2_HS512_A256KW`,
-					value:   "PBES2-HS512+A256KW",
-					comment: `PBES2 + HMAC-SHA512 + AES key wrap (256)`,
+					name:      `PBES2_HS512_A256KW`,
+					value:     "PBES2-HS512+A256KW",
+					symmetric: true,
+					comment:   `PBES2 + HMAC-SHA512 + AES key wrap (256)`,
 				},
 			},
 		},
@@ -360,24 +373,11 @@ type typ struct {
 }
 
 type element struct {
-	name    string
-	value   string
-	comment string
-	invalid bool
-}
-
-var isSymmetricKeyEncryption = map[string]struct{}{
-	`A128KW`:    {},
-	`A192KW`:    {},
-	`A256KW`:    {},
-	`DIRECT`:    {},
-	`A128GCMKW`: {},
-	`A192GCMKW`: {},
-	`A256GCMKW`: {},
-
-	`PBES2_HS256_A128KW`: {},
-	`PBES2_HS384_A192KW`: {},
-	`PBES2_HS512_A256KW`: {},
+	name      string
+	value     string
+	symmetric bool
+	comment   string
+	invalid   bool
 }
 
 func (t typ) Generate() error {
@@ -502,22 +502,21 @@ func (t typ) Generate() error {
 	o.L("return string(v)")
 	o.L("}")
 
-	if t.name == "KeyEncryptionAlgorithm" {
+	if t.name == "SignatureAlgorithm" || t.name == "KeyEncryptionAlgorithm" {
 		o.LL("// IsSymmetric returns true if the algorithm is a symmetric type")
 		o.L("func (v %s) IsSymmetric() bool {", t.name)
 		o.L("switch v {")
 		o.L("case ")
 		var count int
 		for _, e := range t.elements {
-			if _, ok := isSymmetricKeyEncryption[e.name]; !ok {
-				continue
+			if e.symmetric {
+				if count == 0 {
+					o.R("%s", e.name)
+				} else {
+					o.R(",%s", e.name)
+				}
+				count++
 			}
-			if count == 0 {
-				o.R("%s", e.name)
-			} else {
-				o.R(",%s", e.name)
-			}
-			count++
 		}
 		o.R(":")
 		o.L("return true")
@@ -633,12 +632,12 @@ func (t typ) GenerateTest() error {
 	o.L("}")
 	o.L("})")
 
-	if t.name == "KeyEncryptionAlgorithm" {
+	if t.name == "SignatureAlgorithm" || t.name == "KeyEncryptionAlgorithm" {
 		o.L("t.Run(`check symmetric values`, func(t *testing.T) {")
 		o.L("t.Parallel()")
 		for _, e := range t.elements {
 			o.L("t.Run(`%s`, func(t *testing.T) {", e.name)
-			if _, ok := isSymmetricKeyEncryption[e.name]; ok {
+			if e.symmetric {
 				o.L("assert.True(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should be symmetric`)", e.name)
 			} else {
 				o.L("assert.False(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should NOT be symmetric`)", e.name)
