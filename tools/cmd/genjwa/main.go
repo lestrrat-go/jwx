@@ -391,6 +391,8 @@ func (t typ) Generate() error {
 	o.LL("import (")
 	pkgs := []string{
 		"fmt",
+		"sort",
+		"sync",
 	}
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
