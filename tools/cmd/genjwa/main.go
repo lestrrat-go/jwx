@@ -412,7 +412,7 @@ func (t typ) Generate() error {
 	}
 	o.L(")") // end const
 
-	// Register%s and related tools are provided so users can register their own types.
+	// Register and related tools are provided so users can register their own types.
 	// This triggers some re-building of data structures that are otherwise
 	// reused for efficiency
 	o.LL("var mu%[1]ss sync.RWMutex", t.name)
