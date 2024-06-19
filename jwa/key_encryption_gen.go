@@ -142,3 +142,12 @@ func (v KeyEncryptionAlgorithm) IsSymmetric() bool {
 	}
 	return false
 }
+
+// IsAsymmetric returns true if the algorithm is an asymmetric type
+func (v KeyEncryptionAlgorithm) IsAsymmetric() bool {
+	switch v {
+	case ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW, RSA1_5, RSA_OAEP, RSA_OAEP_256, RSA_OAEP_384, RSA_OAEP_512:
+		return true
+	}
+	return false
+}

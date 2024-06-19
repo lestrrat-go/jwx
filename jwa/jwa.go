@@ -19,6 +19,7 @@ import "fmt"
 type KeyAlgorithm interface {
 	String() string
 	IsSymmetric() bool
+	IsAsymmetric() bool
 }
 
 // InvalidKeyAlgorithm represents an algorithm that the library is not aware of.
@@ -33,6 +34,10 @@ func (InvalidKeyAlgorithm) Accept(_ interface{}) error {
 }
 
 func (InvalidKeyAlgorithm) IsSymmetric() bool {
+	return false
+}
+
+func (InvalidKeyAlgorithm) IsAsymmetric() bool {
 	return false
 }
 

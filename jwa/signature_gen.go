@@ -134,3 +134,12 @@ func (v SignatureAlgorithm) IsSymmetric() bool {
 	}
 	return false
 }
+
+// IsAsymmetric returns true if the algorithm is an asymmetric type
+func (v SignatureAlgorithm) IsAsymmetric() bool {
+	switch v {
+	case ES256, ES256K, ES384, ES512, EdDSA, PS256, PS384, PS512, RS256, RS384, RS512:
+		return true
+	}
+	return false
+}
