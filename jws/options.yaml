@@ -23,14 +23,14 @@ interfaces:
   - name: WithJSONSuboption
     concrete_type: withJSONSuboption
     comment: |
-      JSONSuboption describes suboptions that can be passed to `jws.WithJSON()` option
+      JSONSuboption describes sub-options that can be passed to the `jws.WithJSON()` option.
   - name: WithKeySuboption
     comment: |
       WithKeySuboption describes option types that can be passed to the `jws.WithKey()`
       option.
   - name: WithKeySetSuboption
     comment: |
-      WithKeySetSuboption is a suboption passed to the `jws.WithKeySet()` option
+      WithKeySetSuboption is a sub-option passed to the `jws.WithKeySet()` option
   - name: ParseOption
     methods:
       - readFileOption
@@ -147,7 +147,7 @@ options:
     argument_type: bool
     comment: |
       WithUseDefault specifies that if and only if a jwk.Key contains
-      exactly one jwk.Key, that tkey should be used.
+      exactly one jwk.Key, that key should be used.
       (I think this should be removed)
   - ident: RequireKid
     interface: WithKeySetSuboption

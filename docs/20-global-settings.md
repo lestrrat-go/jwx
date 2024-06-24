@@ -13,7 +13,7 @@ If you do not provide these tags, the program will still compile, but it will re
 
 ## Switching to a faster JSON library
 
-By default we use the standard library's `encoding/json` for all of our JSON needs.
+By default, we use the standard library's `encoding/json` for all of our JSON needs.
 However, if performance for parsing/serializing JSON is really important to you, you might want to enable [github.com/goccy/go-json](https://github.com/goccy/go-json) by enabling the `jwx_goccy` tag.
 
 ```shell
@@ -21,25 +21,25 @@ However, if performance for parsing/serializing JSON is really important to you,
 ```
 
 [github.com/goccy/go-json](https://github.com/goccy/go-json) is *disabled* by default because it uses some really advanced black magic, and I really do not feel like debugging it **IF** it breaks. Please note that that's a big "if".
-As of github.com/goccy/go-json@v0.3.3 I haven't see any problems, and I would say that it is mostly stable.
+As of github.com/goccy/go-json@v0.3.3 I haven't seen any problems, and I would say that it is mostly stable.
 
 However, it is a dependency that you can go without, and I won't be of much help if it breaks -- therefore it is not the default.
 If you know what you are doing, I highly recommend enabling this module -- all you need to do is to enable this tag.
 Disable the tag if you feel like it's not worth the hassle.
 
-And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json) and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
+And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json), and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
 
 ## Enabling experimental base64 encoder/decoder
 
 This feature is currently considered experimental.
 
-Currently you can enable [github.com/segmentio/asm/base64](https://github.com/segmentio/asm/tree/main/base64) by specifying the `jwx_asmbase64` build tag
+Currently, you can enable [github.com/segmentio/asm/base64](https://github.com/segmentio/asm/tree/main/base64) by specifying the `jwx_asmbase64` build tag
 
 ```shell
 % go build -tags jwx_goccy ...
 ```
 
-In our limited testing, this does not seem to improve performance significantly: presumably the other bottlenecks are more dominant. If you care enough to use this option, you probably wantt o enable `jwx_goccy` build tag as well.
+In our limited testing, this does not seem to improve performance significantly: presumably the other bottlenecks are more dominant. If you care enough to use this option, you probably want to enable `jwx_goccy` build tag as well.
 
 ## Using json.Number
 
@@ -59,7 +59,7 @@ within `jwx` *will* use your settings.
 
 Packages within `github.com/lestrrat-go/jwx/v2` parses known fields into pre-defined types,
 but for everything else (usually called private fields/headers/claims) are decoded into
-wharever `"encoding/json".Unmarshal` deems appropriate.
+whatever `"encoding/json".Unmarshal` deems appropriate.
 
 For example, JSON objects are converted to `map[string]interface{}`, JSON arrays into
 `[]interface{}`, and so on.

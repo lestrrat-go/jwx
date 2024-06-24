@@ -43,7 +43,7 @@ type formatHint struct {
 // if you pass what you think is a JWT payload to this function.
 // If the function is in the "Compact" format, it means it's a JWS
 // signed message, and its payload is the JWT. Therefore this function
-// will reuturn JWS, not JWT.
+// will return JWS, not JWT.
 //
 // This function requires an extra parsing of the payload, and therefore
 // may be inefficient if you call it every time before parsing.

@@ -41,7 +41,7 @@ func makeJwsCmd() *cli.Command {
 func makeJwsParseCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "parse"
-	cmd.Usage = "Parse JWS mesage"
+	cmd.Usage = "Parse JWS message"
 	cmd.UsageText = `jwx jws parse [command options] FILE
 
    Parse FILE and display information about a JWS message.
@@ -203,7 +203,7 @@ func makeJwsSignCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "sign"
 	cmd.Aliases = []string{"sig"}
-	cmd.Usage = "Verify JWS mesage"
+	cmd.Usage = "Verify JWS message"
 	cmd.UsageText = `jwx jws sign [command options] FILE
 
    Signs the payload in FILE and generates a JWS message in compact format.

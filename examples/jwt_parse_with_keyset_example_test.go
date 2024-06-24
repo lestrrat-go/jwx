@@ -47,8 +47,7 @@ func ExampleJWT_ParseWithKeySet() {
 		// Normally these keys are available somewhere like https://www.googleapis.com/oauth2/v3/certs
 		// This key set contains two keys, the first one is the correct one
 
-		// We can use the jwk.PublicSetOf() utility to get a JWKS
-		// all of the public keys
+		// We can use the jwk.PublicSetOf() utility to get a JWKS of the public keys
 		{
 			privset := jwk.NewSet()
 			privset.AddKey(realKey)

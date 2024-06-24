@@ -139,7 +139,7 @@ func genOptions(objects *Objects) error {
 	o.LL(`package %s`, objects.PackageName)
 
 	imports := append(objects.Imports, []string{
-		`io/fs`, // for some reason without this the goimports in my environment tries to import a differnet package
+		`io/fs`, // for some reason without this the goimports in my environment tries to import a different package
 		`github.com/lestrrat-go/jwx/v2/jwa`,
 		`github.com/lestrrat-go/jwx/v2/jwe`,
 		`github.com/lestrrat-go/jwx/v2/jwk`,

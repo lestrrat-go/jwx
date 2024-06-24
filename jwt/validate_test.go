@@ -278,7 +278,7 @@ func TestGHIssue10(t *testing.T) {
 				},
 			},
 			{
-				Name:  `clock is set to some subseconds before nbf`,
+				Name:  `clock is set to some sub-seconds before nbf`,
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
@@ -286,13 +286,13 @@ func TestGHIssue10(t *testing.T) {
 				},
 			},
 			{
-				Name: `clock is set to some subseconds before nbf (but truncation = default)`,
+				Name: `clock is set to some sub-seconds before nbf (but truncation = default)`,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
 				},
 			},
 			{
-				Name: `clock is set to some subseconds after nbf`,
+				Name: `clock is set to some sub-seconds after nbf`,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
 					jwt.WithTruncation(0),
@@ -314,7 +314,7 @@ func TestGHIssue10(t *testing.T) {
 				if !assert.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`) {
 					return
 				}
-				if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpierd`) {
+				if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpired`) {
 					return
 				}
 				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
@@ -328,7 +328,7 @@ func TestGHIssue10(t *testing.T) {
 
 		tm := time.Now()
 		t1, err := jwt.NewBuilder().
-			// issuedat = 1 Hr before current time
+			// issuedAt = 1 Hr before current time
 			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
 			// valid for 2 minutes only from IssuedAt
 			Claim(jwt.ExpirationKey, tm).
@@ -362,7 +362,7 @@ func TestGHIssue10(t *testing.T) {
 				},
 			},
 			{
-				Name:  `clock is set to some subseconds after exp`,
+				Name:  `clock is set to some sub-seconds after exp`,
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
@@ -370,14 +370,14 @@ func TestGHIssue10(t *testing.T) {
 				},
 			},
 			{
-				Name:  `clock is set to some subseconds after exp (but truncation = default)`,
+				Name:  `clock is set to some sub-seconds after exp (but truncation = default)`,
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(time.Millisecond) })),
 				},
 			},
 			{
-				Name: `clock is set to some subseconds before exp`,
+				Name: `clock is set to some sub-seconds before exp`,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
 					jwt.WithTruncation(0),
@@ -398,7 +398,7 @@ func TestGHIssue10(t *testing.T) {
 				if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should not be ErrTokenNotYetValid`) {
 					return
 				}
-				if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpierd`) {
+				if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`) {
 					return
 				}
 				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
@@ -445,7 +445,7 @@ func TestGHIssue10(t *testing.T) {
 		t.Parallel()
 		tm := time.Now()
 		t1, err := jwt.NewBuilder().
-			// issuedat = 1 Hr before current time
+			// issuedAt = 1 Hr before current time
 			Claim(jwt.IssuedAtKey, tm.Add(-1*time.Hour)).
 			// valid for 2 minutes only from IssuedAt
 			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).

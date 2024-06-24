@@ -453,8 +453,8 @@ type claimContainsString struct {
 }
 
 // ClaimContainsString can be used to check if the claim called `name`, which is
-// expected to be a list of strings, contains `value`. Currently because of the
-// implementation this will probably only work for `aud` fields.
+// expected to be a list of strings, contains `value`. Currently, because of the
+// implementation, this will probably only work for `aud` fields.
 func ClaimContainsString(name, value string) Validator {
 	return claimContainsString{
 		name:    name,

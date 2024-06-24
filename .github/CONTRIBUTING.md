@@ -10,7 +10,7 @@ The following is a set of guidelines that we ask you to follow when you contribu
 * [Please Be Nice](#please-be-nice)
 * [Please Use Correct Medium (GitHub Issues / Discussions)](#please-use-correct-medium-github-issues--discussions)
 * [Please Include (Pseudo)code for Any Technical Issues](#please-include-pseudocode-for-any-technical-issues)
-* [Reviewer/Reviewee Guidelines](#reviewer-reviewee-guidelines)
+* [Reviewer/Reviewee Guidelines](#reviewerreviewee-guidelines)
 * [Brown M&M Clause](#brown-mm-clause)
 * [Pull Requests](#pull-requests)
   * [Branches](#branches)

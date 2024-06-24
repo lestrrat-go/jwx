@@ -39,7 +39,7 @@ func keyEncryptionFlag(required bool) cli.Flag {
 func makeJweEncryptCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "encrypt"
-	cmd.Usage = "Encrypt payload to generage JWE message"
+	cmd.Usage = "Encrypt payload to generate JWE message"
 	cmd.UsageText = `jwx jwe encrypt [command options] FILE
 
    Encrypt contents of FILE and generate a JWE message using

@@ -6,7 +6,7 @@ If you are looking to use JWT wit JWKs, look no further than [github.com/lestrra
 * Parse and work with RSA/EC/Symmetric/OKP JWK types
   * Convert to and from JSON
   * Convert to and from raw key types (e.g. *rsa.PrivateKey)
-* Ability to keep a JWKS fresh using *jwk.AutoRefersh
+* Ability to keep a JWKS fresh using *jwk.AutoRefresh
 
 ## Supported key types:
 
@@ -26,7 +26,7 @@ If you are looking to use JWT wit JWKs, look no further than [github.com/lestrra
 Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk), or
 the how-to style documentation on how to use JWK can be found in the [docs directory](../docs/04-jwk.md).
 
-# Auto-Refresh a key during a long running process
+# Auto-Refresh a key during a long-running process
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -95,7 +95,7 @@ MAIN:
     time.Sleep(time.Second)
 
     // Because we're a dummy program, we just cancel the loop now.
-    // If this were a real program, you prosumably loop forever
+    // If this were a real program, you presumably loop forever
     cancel()
   }
   // OUTPUT:

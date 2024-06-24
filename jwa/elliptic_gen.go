@@ -53,7 +53,7 @@ func RegisterEllipticCurveAlgorithm(v EllipticCurveAlgorithm) {
 }
 
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterEllipticCurveAlgorithm(v EllipticCurveAlgorithm) {
 	muEllipticCurveAlgorithms.Lock()
 	defer muEllipticCurveAlgorithms.Unlock()

@@ -1629,7 +1629,7 @@ func TestGH888(t *testing.T) {
 	_, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)))
 	require.Error(t, err, `jws.Sign with multiple keys (including alg=none) should fail`)
 
-	// This should pass because we can now have multiple signaures with JSON serialization
+	// This should pass because we can now have multiple signatures with JSON serialization
 	signed, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)), jws.WithJSON())
 	require.NoError(t, err, `jws.Sign should succeed`)
 

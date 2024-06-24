@@ -8,15 +8,14 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Encrypting](#encrypting)
   * [Generating a JWE message in compact serialization format](#generating-a-jwe-message-in-compact-serialization-format)
   * [Generating a JWE message in JSON serialization format](#generating-a-jwe-message-in-json-serialization-format)
-  * [Generating a JWE message with detached payload](#generating-a-jwe-message-with-detached-payload)
   * [Including arbitrary headers](#including-arbitrary-headers)
-* [Decrypting](#decryptingG)
+* [Decrypting](#decrypting)
   * [Decrypting using a single key](#decrypting-using-a-single-key)
   * [Decrypting using a JWKS](#decrypting-using-a-jwks)
 
 # Parsing
 
-Parsing a JWE message means taking either a JWE message serialized in JSON or Compact form and loading it into a `jwe.Message` object. No decryption is performed, and therefore you cannot access the raw payload as when you use `jwe.Decrypt()` to decrypt the message.
+Parsing a JWE message means taking either a JWE message serialized in JSON or Compact form and loading it into a `jwe.Message` object. No decryption is performed, and therefore you cannot access the raw payload like when you use `jwe.Decrypt()` to decrypt the message.
 
 Also, be aware that a `jwe.Message` is not meant to be used for either decryption nor encryption. It is only provided so that it can be inspected -- there is no way to decrypt or sign using an already parsed `jwe.Message`.
 
@@ -273,8 +272,7 @@ By default, only some header fields are included in the result from `jwe.Encrypt
 For global protected headers, you can use the `jwe.WithProtectedHeaders()` option.
 
 In order to provide extra headers to the encrypted message such as `apu` and `apv`, you will need to use
-`jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` suboption.
-
+`jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` sub-option.
 
 <!-- INCLUDE(examples/jwe_encrypt_with_headers_example_test.go) -->
 ```go
@@ -377,12 +375,12 @@ source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestr
 
 To decrypt a payload using JWKS, by default you will need your payload and JWKS to have matching `alg` field.
 
-The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jwe.Decrypt`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsdecrypt-)"
+The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)", it's the same for `jwe.Decrypt()`.
 
 Note that unlike in JWT, the `kid` is not required by default, although you _can_ make it so
 by passing `jwe.WithRequireKid(true)`.
 
-For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-decrypt-a-jwt-with-a-key-set-matching-kid)
+For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid).
 
 <!-- INCLUDE(examples/jwe_decrypt_with_keyset_example_test.go) -->
 ```go

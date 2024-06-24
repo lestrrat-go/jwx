@@ -37,7 +37,7 @@ import (
 //
 //	for sig in msg.Signatures {
 //	  for kp in keyProviders {
-//	    kp.FetcKeys(ctx, sink, sig, msg)
+//	    kp.FetchKeys(ctx, sink, sig, msg)
 //	    ...
 //	  }
 //	}
@@ -48,7 +48,7 @@ import (
 //
 // When called, the `KeyProvider` created by `jws.WithKey()` sends the same key,
 // `jws.WithKeySet()` sends keys that matches a particular `kid` and `alg`,
-// `jws.WithVerifyAuto()` fetchs a JWK from the `jku` URL,
+// `jws.WithVerifyAuto()` fetches a JWK from the `jku` URL,
 // and finally `jws.WithKeyProvider()` allows you to execute arbitrary
 // logic to provide keys. If you are providing a custom `KeyProvider`,
 // you should execute the necessary checks or retrieval of keys, and
@@ -61,7 +61,7 @@ import (
 //
 //	keys := sink.Keys()
 //	for key in keys {
-//	  if givenSignature == makeSignatre(key, payload, ...)) {
+//	  if givenSignature == makeSignature(key, payload, ...)) {
 //	    return OK
 //	  }
 //	}
@@ -221,7 +221,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
 	}
 
-	// errors here can't be reliablly passed to the consumers.
+	// errors here can't be reliably passed to the consumers.
 	// it's unfortunate, but if you need this control, you are
 	// going to have to write your own fetcher
 	u := sig.ProtectedHeaders().JWKSetURL()
@@ -254,7 +254,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 
 	hdrAlg := sig.ProtectedHeaders().Algorithm()
 	for _, alg := range algs {
-		// if we have a "alg" field in the JWS, we can only proceed if
+		// if we have an "alg" field in the JWS, we can only proceed if
 		// the inferred algorithm matches
 		if hdrAlg != "" && hdrAlg != alg {
 			continue

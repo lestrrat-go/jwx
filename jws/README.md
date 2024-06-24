@@ -74,7 +74,7 @@ func main() {
 }
 ```
 
-## Programatically manipulate `jws.Message`
+## Programmatically manipulate `jws.Message`
 
 ```go
 func ExampleMessage() {

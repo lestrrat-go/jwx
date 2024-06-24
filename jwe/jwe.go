@@ -272,7 +272,7 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	return encrypt(payload, nil, options...)
 }
 
-// Encryptstatic is exactly like Encrypt, except it accepts a static
+// EncryptStatic is exactly like Encrypt, except it accepts a static
 // content encryption key (CEK). It is separated out from the main
 // Encrypt function such that the latter does not accidentally use a static
 // CEK.
@@ -289,7 +289,7 @@ func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error
 	return encrypt(payload, cek, options...)
 }
 
-// encrypt is separate so it can receive cek from outside.
+// encrypt is separate, so it can receive cek from outside.
 // (but we don't want to receive it in the options slice)
 func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	// default content encryption algorithm
@@ -624,7 +624,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 			tried++
 			// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
 			// this may seem ugly, but we're trying to avoid declaring separate
-			// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
+			// structs for `alg jwa.KeyEncryptionAlgorithm` and `alg jwa.SignatureAlgorithm`
 			//nolint:forcetypeassert
 			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			key := pair.key

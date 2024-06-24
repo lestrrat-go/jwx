@@ -28,7 +28,7 @@ var verifierDB map[jwa.SignatureAlgorithm]VerifierFactory
 //
 // Unlike the `UnregisterVerifier` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
-// in the known algorithms database.
+// in the known-algorithms database.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 	jwa.RegisterSignatureAlgorithm(alg)
 	muVerifierDB.Lock()
@@ -40,7 +40,7 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 // the given algorithm.
 //
 // Note that when you call this function, the algorithm itself is
-// not automatically unregistered from the known algorithms database.
+// not automatically unregistered from the known-algorithms database.
 // This is because the algorithm may still be required for signing or
 // some other operation (however unlikely, it is still possible).
 // Therefore, in order to completely remove the algorithm, you must

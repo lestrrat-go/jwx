@@ -149,8 +149,8 @@ func (n NumericDate) String() string {
 		return strconv.FormatInt(n.Unix(), 10)
 	}
 
-	// This is cheating,but it's better (easier) than doing floating point math
-	// We basically munge with strings after formatting an integer balue
+	// This is cheating, but it's better (easier) than doing floating point math
+	// We basically munge with strings after formatting an integer value
 	// for nanoseconds since epoch
 	s := strconv.FormatInt(n.UnixNano(), 10)
 	for len(s) < int(MaxPrecision) {

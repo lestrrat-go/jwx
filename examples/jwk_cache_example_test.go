@@ -63,7 +63,7 @@ MAIN:
 		time.Sleep(time.Second)
 
 		// Because we're a dummy program, we just cancel the loop now.
-		// If this were a real program, you prosumably loop forever
+		// If this were a real program, you presumably loop forever
 		cancel()
 	}
 	// OUTPUT:

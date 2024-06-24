@@ -1547,7 +1547,7 @@ func TestVerifyAuto(t *testing.T) {
 }
 
 func TestSerializer(t *testing.T) {
-	t.Run(`Invalid sign suboption`, func(t *testing.T) {
+	t.Run(`Invalid sign sub-option`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
 			Sign(jwt.WithKey(jwa.HS256, []byte("abracadabra"), jwe.WithCompress(jwa.Deflate))).
 			Serialize(jwt.New())
@@ -1563,7 +1563,7 @@ func TestSerializer(t *testing.T) {
 			return
 		}
 	})
-	t.Run(`Invalid encrypt suboption`, func(t *testing.T) {
+	t.Run(`Invalid encrypt sub-option`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
 			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadabra"), jws.WithPretty(true))).
 			Serialize(jwt.New())

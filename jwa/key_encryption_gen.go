@@ -108,7 +108,7 @@ func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterKeyEncryptionAlgorithm(v KeyEncryptionAlgorithm) {
 	muKeyEncryptionAlgorithms.Lock()
 	defer muKeyEncryptionAlgorithms.Unlock()

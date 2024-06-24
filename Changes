@@ -19,13 +19,13 @@ v2.1.0 18 Jun 2024
 
       # previously
       jwt.ParseRequest(req) // looks under Authorization
-      jwt.ParseReuqest(req, jwt.WithFormKey("foo")) // looks under foo AND Authorization
-      jwt.ParseReuqest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
+      jwt.ParseRequest(req, jwt.WithFormKey("foo")) // looks under foo AND Authorization
+      jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
 
       # since this release
       jwt.ParseRequest(req) // same as before
       jwt.ParseRequest(req, jwt.WithFormKey("foo")) // looks under foo
-      jwt.ParseReuqest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
+      jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithFormKey("foo")) // looks under foo AND Authorization
 
   * [jwt] Add `jwt.WithResetValidators()` option to `jwt.Validate()`. This option
     will allow you to tell `jwt.Validate()` to NOT automatically check the
@@ -43,13 +43,13 @@ v2.1.0 18 Jun 2024
     `jwx_es256k` to enable ES256K/secp256k1, and `jwx_secp256k1_pem` to enable PEM handling.
     Not one, but BOTH tags need to be present.
 
-    With this change, by suppliying the `WithPEM(true)` option, `jwk.Parse()` is now
+    With this change, by supplying the `WithPEM(true)` option, `jwk.Parse()` is now
     able to read sep256k1 keys. Also, `jwk.Pem()` should be able to handle `jwk.Key` objects
     that represent a secp256k1 key.
 
     Please do note that the implementation of this feature is dodgy at best. Currently
     Go's crypto/x509 does not allow handling additional EC curves, and thus in order to
-    accomodate secp256k1 keys in PEM/ASN.1 DER format we need to "patch" the stdlib.
+    accommodate secp256k1 keys in PEM/ASN.1 DER format we need to "patch" the stdlib.
     We do this by copy-and-pasting relevant parts of go 1.22.2's crypto/x509 code and
     adding the minimum required code to make secp256k1 keys work.
 
@@ -106,7 +106,7 @@ v2.0.20 20 Feb 2024
     JWS message.
   * [jwt] Add `jwt.WithCompactOnly()` to specify that only compact serialization can
     be used for `jwt.Parse()`. Previously, by virtue of `jws.Parse()` allowing either
-    JSON or Compact serialization format, `jwt.Parse()` also alloed JSON serialization
+    JSON or Compact serialization format, `jwt.Parse()` also allowed JSON serialization
     where as RFC7519 explicitly states that only compact serialization should be
     used. For backward compatibility the default behavior is not changed, but you
     can set this global option for jwt: `jwt.Settings(jwt.WithCompactOnly(true))`
@@ -125,7 +125,7 @@ v2.0.19 09 Jan 2024
 [Security Fixes]
   * [jws] JWS messages formated in full JSON format (i.e. not the compact format, which
     consists of three base64 strings concatenated with a '.') with missing "protected"
-    headers could cause a panic, thereby introducing a possiblity of a DoS.
+    headers could cause a panic, thereby introducing a possibility of a DoS.
 
     This has been fixed so that the `jws.Parse` function succeeds in parsing a JWS message
     lacking a protected header. Calling `jws.Verify` on this same JWS message will result
@@ -219,7 +219,7 @@ v2.0.14 17 Oct 2023
     asymmetric key pair.
 [Security]
   * golang.org/x/crypto has been updated to 0.14.0. The update contains a fix for HTTP/2
-    rapid reset DoS vulnerability, which some security scanning softwares may flag.
+    rapid reset DoS vulnerability, which some security scanning software may flag.
     However, do note that this library is NOT affected by the issue, as it does not have
     the capability to serve as an HTTP/2 server. This is included in this release
     document so that users will be able to tell why this library may be flagged
@@ -261,7 +261,7 @@ v2.0.10 - 12 Jun 2023
 
     This feature is labeled experimental because the API for the above interfaces have not
     been battle tested, and may need to changed yet. Please be aware that until the API
-    is deemed stable, you may have to adapat our code to these possible changes,
+    is deemed stable, you may have to adapt your code to these possible changes,
     _even_ during minor version upgrades of this library.
    
 [Bug fixes]
@@ -283,7 +283,7 @@ v2.0.10 - 12 Jun 2023
     If you care about this performance improvement, you should probably enable
     `goccy` JSON parser as well, by specifying `jwx_goccy,jwx_asmbase64` in your build call.
   * Slightly changed the way global variables underneath `jwk.Fetch` are initialized and
-    configured. `jwk.Fetch` creates an object that spawns wokers to fetch JWKS when it's
+    configured. `jwk.Fetch` creates an object that spawns workers to fetch JWKS when it's
     first called.
     You can now also use `jwk.SetGlobalFetcher()` to set a fetcher object which you can
     control.
@@ -304,7 +304,7 @@ v2.0.9 - 21 Mar 2023
     Note that there is no way to call
     `jws.Verify()` while allowing `{"alg":"none"}` as you wouldn't be _verifying_
     the message if we allowed the "none" algorithm. `jws.Parse()` will parse such
-    messages witout verification.
+    messages without verification.
 
     `jwt` also allows you to sign using alg="none", but there's no symmetrical
     way to verify such messages.
@@ -373,7 +373,7 @@ v2.0.7 - 15 Nov 2022
 
 [Miscellaneous]
   * WithCompact's stringification should have been that of the
-    internal indentity struct ("WithSerialization"), but it was
+    internal identity struct ("WithSerialization"), but it was
     wrongly producing "WithCompact". This has been fixed.
   * Go Workspaces have been enabled within this module.
     - When developing, modules will refer to the main jwx module that they
@@ -426,13 +426,13 @@ v2.0.4 - 19 Jul 2022
 
   * [jwt] Before v2.0.1, sub-second accuracy for time based fields
     (i.e. `iat`, `exp`, `nbf`) were not respected. Because of this the code
-    to evaluate this code had always truncated any-subsecond portion
+    to evaluate this code had always truncated any sub-second portion
     of these fields, and therefore no sub-second comparisons worked.
     A new option for validation `jwt.WithTruncation()` has been added
     to workaround this. This option controls the value used to truncate
     the time fields. When set to 0, sub-second comparison would be
     possible.
-    FIY, truncatation will still happen because we do not want to
+    FIY, truncation will still happen because we do not want to
     use the monotonic clocks when making comparisons. It's just that
     truncating using `0` as its argument effectively only strips out
     the monotonic clock
@@ -450,14 +450,14 @@ v2.0.2 - 23 May 2022
 
 [New Features]
   * [jwt] RFC3339 timestamps are also accepted for Numeric Date types in JWT tokens.
-    This allows users to parse servers that errnously use RFC3339 timestamps in
+    This allows users to parse servers that erroneously use RFC3339 timestamps in
     some pre-defined fields. You can change this behavior by setting 
     `jwt.WithNumericDateParsePedantic` to `false`
   * [jwt] `jwt.WithNumericDateParsePedantic` has been added. This is a global
     option that is set using `jwt.Settings`
 
 v2.0.1 - 06 May 2022
-  * [jwk] `jwk.Set` had erronously been documented as not returning an error
+  * [jwk] `jwk.Set` had erroneously been documented as not returning an error
     when the same key already exists in the set. This is a behavior change
     since v2, and it was missing in the docs (#730)
   * [jwt] `jwt.ErrMissingRequiredClaim` has been deprecated. Please use

@@ -169,7 +169,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		return tok, nil
 	}
 
-	// Everything below is a preulde to error reporting.
+	// Everything below is a prelude to error reporting.
 	var triedHdrs strings.Builder
 	for i, hdrkey := range hdrkeys {
 		if i > 0 {

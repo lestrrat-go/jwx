@@ -118,20 +118,20 @@ type withKey struct {
 	options []Option
 }
 
-// WithKey is a multi-purpose option. It can be used for either jwt.Sign, jwt.Parse (and
+// WithKey is a multipurpose option. It can be used for either jwt.Sign, jwt.Parse (and
 // its siblings), and jwt.Serializer methods. For signatures, please see the documentation
 // for `jws.WithKey` for more details. For encryption, please see the documentation
 // for `jwe.WithKey`.
 //
-// It is the caller's responsibility to match the suboptions to the operation that they
+// It is the caller's responsibility to match the sub-options to the operation that they
 // are performing. For example, you are not allowed to do this, because the operation
 // is to generate a signature, and yet you are passing options for jwe:
 //
 //	jwt.Sign(token, jwt.WithKey(alg, key, jweOptions...))
 //
 // In the above example, the creation of the option via `jwt.WithKey()` will work, but
-// when `jwt.Sign()` is called, the fact that you passed JWE suboptions will be
-// detected, and it will be an error.
+// when `jwt.Sign()` is called, the fact that you passed JWE sub-options will be
+// detected, and an error will occur.
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, suboptions ...Option) SignEncryptParseOption {
 	return &signEncryptParseOption{option.New(identKey{}, &withKey{
 		alg:     alg,
@@ -153,7 +153,7 @@ type withKeySet struct {
 // verification.
 //
 // This is for security reasons. If you must disable it, you can do so by
-// specifying `jws.WithRequireKid(false)` in the suboptions. But we don't
+// specifying `jws.WithRequireKid(false)` in the sub-options. But we don't
 // recommend it unless you know exactly what the security implications are
 //
 // When using this option, keys MUST have a proper 'alg' field
@@ -297,7 +297,7 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 // package and the `jws.Verify()` or `jwk.Fetch()` functions is that
 // by default all fetching is disabled unless you explicitly whitelist urls.
 // Therefore, when you use this option you WILL have to specify at least
-// the `jwk.WithFetchWhitelist()` suboption: as:
+// the `jwk.WithFetchWhitelist()` sub-option: as:
 //
 //	jwt.Parse(data, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(...)))
 //

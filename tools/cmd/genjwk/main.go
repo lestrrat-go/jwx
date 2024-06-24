@@ -698,7 +698,7 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 			o.LL("// Algorithm returns the value of the `alg` field")
 			o.L("//")
 			o.L("// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.")
-			o.L("// This is why there exists a `jwa.KeyAlgorithm` type that encompases both types.")
+			o.L("// This is why a `jwa.KeyAlgorithm` type exists that encompasses both types.")
 		}
 		o.L("%s() ", f.GetterMethod(true))
 		if v := f.String(`getter_return_value`); v != "" {
