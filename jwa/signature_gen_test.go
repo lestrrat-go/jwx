@@ -613,54 +613,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 			assert.False(t, jwa.RS512.IsSymmetric(), `jwa.RS512 should NOT be symmetric`)
 		})
 	})
-	t.Run(`check asymmetric values`, func(t *testing.T) {
-		t.Parallel()
-		t.Run(`ES256`, func(t *testing.T) {
-			assert.True(t, jwa.ES256.IsAsymmetric(), `jwa.ES256 should be asymmetric`)
-		})
-		t.Run(`ES256K`, func(t *testing.T) {
-			assert.True(t, jwa.ES256K.IsAsymmetric(), `jwa.ES256K should be asymmetric`)
-		})
-		t.Run(`ES384`, func(t *testing.T) {
-			assert.True(t, jwa.ES384.IsAsymmetric(), `jwa.ES384 should be asymmetric`)
-		})
-		t.Run(`ES512`, func(t *testing.T) {
-			assert.True(t, jwa.ES512.IsAsymmetric(), `jwa.ES512 should be asymmetric`)
-		})
-		t.Run(`EdDSA`, func(t *testing.T) {
-			assert.True(t, jwa.EdDSA.IsAsymmetric(), `jwa.EdDSA should be asymmetric`)
-		})
-		t.Run(`HS256`, func(t *testing.T) {
-			assert.False(t, jwa.HS256.IsAsymmetric(), `jwa.HS256 should NOT be asymmetric`)
-		})
-		t.Run(`HS384`, func(t *testing.T) {
-			assert.False(t, jwa.HS384.IsAsymmetric(), `jwa.HS384 should NOT be asymmetric`)
-		})
-		t.Run(`HS512`, func(t *testing.T) {
-			assert.False(t, jwa.HS512.IsAsymmetric(), `jwa.HS512 should NOT be asymmetric`)
-		})
-		t.Run(`NoSignature`, func(t *testing.T) {
-			assert.False(t, jwa.NoSignature.IsAsymmetric(), `jwa.NoSignature should NOT be asymmetric`)
-		})
-		t.Run(`PS256`, func(t *testing.T) {
-			assert.True(t, jwa.PS256.IsAsymmetric(), `jwa.PS256 should be asymmetric`)
-		})
-		t.Run(`PS384`, func(t *testing.T) {
-			assert.True(t, jwa.PS384.IsAsymmetric(), `jwa.PS384 should be asymmetric`)
-		})
-		t.Run(`PS512`, func(t *testing.T) {
-			assert.True(t, jwa.PS512.IsAsymmetric(), `jwa.PS512 should be asymmetric`)
-		})
-		t.Run(`RS256`, func(t *testing.T) {
-			assert.True(t, jwa.RS256.IsAsymmetric(), `jwa.RS256 should be asymmetric`)
-		})
-		t.Run(`RS384`, func(t *testing.T) {
-			assert.True(t, jwa.RS384.IsAsymmetric(), `jwa.RS384 should be asymmetric`)
-		})
-		t.Run(`RS512`, func(t *testing.T) {
-			assert.True(t, jwa.RS512.IsAsymmetric(), `jwa.RS512 should be asymmetric`)
-		})
-	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.SignatureAlgorithm]struct{}{

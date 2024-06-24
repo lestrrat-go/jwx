@@ -126,19 +126,12 @@ func (v SignatureAlgorithm) String() string {
 	return string(v)
 }
 
-// IsSymmetric returns true if the algorithm is a symmetric type
+// IsSymmetric returns true if the algorithm is a symmetric type.
+// Algorithms registered with RegisterSignatureAlgorithm will always return false, these should be checked separately.
+// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.
 func (v SignatureAlgorithm) IsSymmetric() bool {
 	switch v {
 	case HS256, HS384, HS512:
-		return true
-	}
-	return false
-}
-
-// IsAsymmetric returns true if the algorithm is an asymmetric type
-func (v SignatureAlgorithm) IsAsymmetric() bool {
-	switch v {
-	case ES256, ES256K, ES384, ES512, EdDSA, PS256, PS384, PS512, RS256, RS384, RS512:
 		return true
 	}
 	return false

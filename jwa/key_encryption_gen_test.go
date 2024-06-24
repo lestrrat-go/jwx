@@ -769,66 +769,6 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			assert.False(t, jwa.RSA_OAEP_512.IsSymmetric(), `jwa.RSA_OAEP_512 should NOT be symmetric`)
 		})
 	})
-	t.Run(`check asymmetric values`, func(t *testing.T) {
-		t.Parallel()
-		t.Run(`A128GCMKW`, func(t *testing.T) {
-			assert.False(t, jwa.A128GCMKW.IsAsymmetric(), `jwa.A128GCMKW should NOT be asymmetric`)
-		})
-		t.Run(`A128KW`, func(t *testing.T) {
-			assert.False(t, jwa.A128KW.IsAsymmetric(), `jwa.A128KW should NOT be asymmetric`)
-		})
-		t.Run(`A192GCMKW`, func(t *testing.T) {
-			assert.False(t, jwa.A192GCMKW.IsAsymmetric(), `jwa.A192GCMKW should NOT be asymmetric`)
-		})
-		t.Run(`A192KW`, func(t *testing.T) {
-			assert.False(t, jwa.A192KW.IsAsymmetric(), `jwa.A192KW should NOT be asymmetric`)
-		})
-		t.Run(`A256GCMKW`, func(t *testing.T) {
-			assert.False(t, jwa.A256GCMKW.IsAsymmetric(), `jwa.A256GCMKW should NOT be asymmetric`)
-		})
-		t.Run(`A256KW`, func(t *testing.T) {
-			assert.False(t, jwa.A256KW.IsAsymmetric(), `jwa.A256KW should NOT be asymmetric`)
-		})
-		t.Run(`DIRECT`, func(t *testing.T) {
-			assert.False(t, jwa.DIRECT.IsAsymmetric(), `jwa.DIRECT should NOT be asymmetric`)
-		})
-		t.Run(`ECDH_ES`, func(t *testing.T) {
-			assert.True(t, jwa.ECDH_ES.IsAsymmetric(), `jwa.ECDH_ES should be asymmetric`)
-		})
-		t.Run(`ECDH_ES_A128KW`, func(t *testing.T) {
-			assert.True(t, jwa.ECDH_ES_A128KW.IsAsymmetric(), `jwa.ECDH_ES_A128KW should be asymmetric`)
-		})
-		t.Run(`ECDH_ES_A192KW`, func(t *testing.T) {
-			assert.True(t, jwa.ECDH_ES_A192KW.IsAsymmetric(), `jwa.ECDH_ES_A192KW should be asymmetric`)
-		})
-		t.Run(`ECDH_ES_A256KW`, func(t *testing.T) {
-			assert.True(t, jwa.ECDH_ES_A256KW.IsAsymmetric(), `jwa.ECDH_ES_A256KW should be asymmetric`)
-		})
-		t.Run(`PBES2_HS256_A128KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS256_A128KW.IsAsymmetric(), `jwa.PBES2_HS256_A128KW should NOT be asymmetric`)
-		})
-		t.Run(`PBES2_HS384_A192KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS384_A192KW.IsAsymmetric(), `jwa.PBES2_HS384_A192KW should NOT be asymmetric`)
-		})
-		t.Run(`PBES2_HS512_A256KW`, func(t *testing.T) {
-			assert.False(t, jwa.PBES2_HS512_A256KW.IsAsymmetric(), `jwa.PBES2_HS512_A256KW should NOT be asymmetric`)
-		})
-		t.Run(`RSA1_5`, func(t *testing.T) {
-			assert.True(t, jwa.RSA1_5.IsAsymmetric(), `jwa.RSA1_5 should be asymmetric`)
-		})
-		t.Run(`RSA_OAEP`, func(t *testing.T) {
-			assert.True(t, jwa.RSA_OAEP.IsAsymmetric(), `jwa.RSA_OAEP should be asymmetric`)
-		})
-		t.Run(`RSA_OAEP_256`, func(t *testing.T) {
-			assert.True(t, jwa.RSA_OAEP_256.IsAsymmetric(), `jwa.RSA_OAEP_256 should be asymmetric`)
-		})
-		t.Run(`RSA_OAEP_384`, func(t *testing.T) {
-			assert.True(t, jwa.RSA_OAEP_384.IsAsymmetric(), `jwa.RSA_OAEP_384 should be asymmetric`)
-		})
-		t.Run(`RSA_OAEP_512`, func(t *testing.T) {
-			assert.True(t, jwa.RSA_OAEP_512.IsAsymmetric(), `jwa.RSA_OAEP_512 should be asymmetric`)
-		})
-	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.KeyEncryptionAlgorithm]struct{}{

@@ -134,19 +134,11 @@ func (v KeyEncryptionAlgorithm) String() string {
 	return string(v)
 }
 
-// IsSymmetric returns true if the algorithm is a symmetric type
+// IsSymmetric returns true if the algorithm is a symmetric type.
+// Algorithms registered with RegisterKeyEncryptionAlgorithm will always return false, these should be checked separately.
 func (v KeyEncryptionAlgorithm) IsSymmetric() bool {
 	switch v {
 	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT, PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW:
-		return true
-	}
-	return false
-}
-
-// IsAsymmetric returns true if the algorithm is an asymmetric type
-func (v KeyEncryptionAlgorithm) IsAsymmetric() bool {
-	switch v {
-	case ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW, RSA1_5, RSA_OAEP, RSA_OAEP_256, RSA_OAEP_384, RSA_OAEP_512:
 		return true
 	}
 	return false
