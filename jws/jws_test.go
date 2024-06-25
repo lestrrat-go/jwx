@@ -354,7 +354,7 @@ func TestSignMulti2(t *testing.T) {
 			require.NoError(t, err, "Verify succeeded")
 			require.Equal(t, payload, verified, "verified payload matches")
 
-			// XXX This actally doesn't really test much, but if there was anything
+			// XXX This actually doesn't really test much, but if there was anything
 			// wrong, the process should have failed well before reaching here
 			require.Equal(t, payload, m.Payload(), "message payload matches")
 		})
@@ -1453,7 +1453,7 @@ func TestJKU(t *testing.T) {
 						return
 					}
 					require.Equal(t, payload, decoded, `decoded payload should match`)
-					// XXX This actally doesn't really test much, but if there was anything
+					// XXX This actually doesn't really test much, but if there was anything
 					// wrong, the process should have failed well before reaching here
 					require.Equal(t, payload, m.Payload(), "message payload matches")
 				}

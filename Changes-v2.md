@@ -38,7 +38,7 @@ key, err := jwk.FromRaw(rawKey)
 // Algorithm() now returns jwa.KeyAlgorithm type. `jws.Sign()`
 // and other function that receive JWK algorithm names accept
 // this new type, so you can use the same key and do the following
-// (previosly you needed to type assert)
+// (previously you needed to type assert)
 jws.Sign(payload, jws.WithKey(key.Algorithm(), key))
 
 // If you need the specific type, type assert

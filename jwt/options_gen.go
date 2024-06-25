@@ -290,7 +290,7 @@ func WithCookieKey(v string) ParseOption {
 }
 
 // WithEncryptOption provides an escape hatch for cases where extra options to
-// `(jws.Serializer).Encrypt()` must be specified when usng `jwt.Sign()`. Normally you do not
+// `(jws.Serializer).Encrypt()` must be specified when using `jwt.Sign()`. Normally you do not
 // need to use this.
 func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
 	return &encryptOption{option.New(identEncryptOption{}, v)}
@@ -390,7 +390,7 @@ func WithResetValidators(v bool) ValidateOption {
 }
 
 // WithSignOption provides an escape hatch for cases where extra options to
-// `jws.Sign()` must be specified when usng `jwt.Sign()`. Normally you do not
+// `jws.Sign()` must be specified when using `jwt.Sign()`. Normally you do not
 // need to use this.
 func WithSignOption(v jws.SignOption) SignOption {
 	return &signOption{option.New(identSignOption{}, v)}
@@ -402,7 +402,7 @@ func WithToken(v Token) ParseOption {
 	return &parseOption{option.New(identToken{}, v)}
 }
 
-// WithTruncation speficies the amount that should be used when
+// WithTruncation specifies the amount that should be used when
 // truncating time values used during time-based validation routines.
 // By default time values are truncated down to second accuracy.
 // If you want to use sub-second accuracy, you will need to set

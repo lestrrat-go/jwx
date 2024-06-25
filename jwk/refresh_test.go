@@ -469,10 +469,10 @@ func TestErrorSink(t *testing.T) {
 			// timing issues can cause this to be non-deterministic...
 			// we'll say it's okay as long as we're in +/- 1 range
 			l := errSink.Len()
-			if !assert.True(t, l <= 7, "number of errors shold be less than or equal to 7 (%d)", l) {
+			if !assert.True(t, l <= 7, "number of errors should be less than or equal to 7 (%d)", l) {
 				return
 			}
-			if !assert.True(t, l >= 5, "number of errors shold be greather than or equal to 5 (%d)", l) {
+			if !assert.True(t, l >= 5, "number of errors should be greater than or equal to 5 (%d)", l) {
 				return
 			}
 		})

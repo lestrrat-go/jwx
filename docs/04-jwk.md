@@ -889,7 +889,7 @@ The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) meth
 
 [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) may not alter the Key Type (`kty`) field of a key.
 
-the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
+the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head against the wall after finding out that you have a typo.
 
 ```go
 key.Set(jwk.KeyIDKey, `my-awesome-key`)
