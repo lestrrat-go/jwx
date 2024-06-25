@@ -5,6 +5,7 @@ package jwa
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -33,6 +34,7 @@ const (
 var muSignatureAlgorithms sync.RWMutex
 var allSignatureAlgorithms map[SignatureAlgorithm]struct{}
 var listSignatureAlgorithm []SignatureAlgorithm
+var symmetricSignatureAlgorithms map[SignatureAlgorithm]struct{}
 
 func init() {
 	muSignatureAlgorithms.Lock()
@@ -53,6 +55,10 @@ func init() {
 	allSignatureAlgorithms[RS256] = struct{}{}
 	allSignatureAlgorithms[RS384] = struct{}{}
 	allSignatureAlgorithms[RS512] = struct{}{}
+	symmetricSignatureAlgorithms = make(map[SignatureAlgorithm]struct{})
+	symmetricSignatureAlgorithms[HS256] = struct{}{}
+	symmetricSignatureAlgorithms[HS384] = struct{}{}
+	symmetricSignatureAlgorithms[HS512] = struct{}{}
 	rebuildSignatureAlgorithm()
 }
 
@@ -67,6 +73,33 @@ func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
 	}
 }
 
+// RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
+// but allows its behavior to change based on the provided options.
+// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
+// Errors can occur because of the options, so this function also returns an error.
+func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) error {
+	var symmetric bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identSymmetricAlgorithm{}:
+			symmetric = option.Value().(bool)
+		default:
+			return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%T", option.Ident()), "jwa.ident"))
+		}
+	}
+	muSignatureAlgorithms.Lock()
+	defer muSignatureAlgorithms.Unlock()
+	if _, ok := allSignatureAlgorithms[v]; !ok {
+		allSignatureAlgorithms[v] = struct{}{}
+		if symmetric {
+			symmetricSignatureAlgorithms[v] = struct{}{}
+		}
+		rebuildSignatureAlgorithm()
+	}
+	return nil
+}
+
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
 // Non-existentn entries will silently be ignored
 func UnregisterSignatureAlgorithm(v SignatureAlgorithm) {
@@ -74,6 +107,9 @@ func UnregisterSignatureAlgorithm(v SignatureAlgorithm) {
 	defer muSignatureAlgorithms.Unlock()
 	if _, ok := allSignatureAlgorithms[v]; ok {
 		delete(allSignatureAlgorithms, v)
+		if _, ok := symmetricSignatureAlgorithms[v]; ok {
+			delete(symmetricSignatureAlgorithms, v)
+		}
 		rebuildSignatureAlgorithm()
 	}
 }
@@ -127,12 +163,8 @@ func (v SignatureAlgorithm) String() string {
 }
 
 // IsSymmetric returns true if the algorithm is a symmetric type.
-// Algorithms registered with RegisterSignatureAlgorithm will always return false, these should be checked separately.
 // Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.
 func (v SignatureAlgorithm) IsSymmetric() bool {
-	switch v {
-	case HS256, HS384, HS512:
-		return true
-	}
-	return false
+	_, ok := symmetricSignatureAlgorithms[v]
+	return ok
 }

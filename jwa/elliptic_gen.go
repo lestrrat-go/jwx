@@ -5,6 +5,7 @@ package jwa
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -50,6 +51,27 @@ func RegisterEllipticCurveAlgorithm(v EllipticCurveAlgorithm) {
 		allEllipticCurveAlgorithms[v] = struct{}{}
 		rebuildEllipticCurveAlgorithm()
 	}
+}
+
+// RegisterEllipticCurveAlgorithmWithOptions is the same as RegisterEllipticCurveAlgorithm when used without options,
+// but allows its behavior to change based on the provided options.
+// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
+// Errors can occur because of the options, so this function also returns an error.
+func RegisterEllipticCurveAlgorithmWithOptions(v EllipticCurveAlgorithm, options ...RegisterAlgorithmOption) error {
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		default:
+			return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%T", option.Ident()), "jwa.ident"))
+		}
+	}
+	muEllipticCurveAlgorithms.Lock()
+	defer muEllipticCurveAlgorithms.Unlock()
+	if _, ok := allEllipticCurveAlgorithms[v]; !ok {
+		allEllipticCurveAlgorithms[v] = struct{}{}
+		rebuildEllipticCurveAlgorithm()
+	}
+	return nil
 }
 
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.

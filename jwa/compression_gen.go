@@ -5,6 +5,7 @@ package jwa
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -39,6 +40,27 @@ func RegisterCompressionAlgorithm(v CompressionAlgorithm) {
 		allCompressionAlgorithms[v] = struct{}{}
 		rebuildCompressionAlgorithm()
 	}
+}
+
+// RegisterCompressionAlgorithmWithOptions is the same as RegisterCompressionAlgorithm when used without options,
+// but allows its behavior to change based on the provided options.
+// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
+// Errors can occur because of the options, so this function also returns an error.
+func RegisterCompressionAlgorithmWithOptions(v CompressionAlgorithm, options ...RegisterAlgorithmOption) error {
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		default:
+			return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%T", option.Ident()), "jwa.ident"))
+		}
+	}
+	muCompressionAlgorithms.Lock()
+	defer muCompressionAlgorithms.Unlock()
+	if _, ok := allCompressionAlgorithms[v]; !ok {
+		allCompressionAlgorithms[v] = struct{}{}
+		rebuildCompressionAlgorithm()
+	}
+	return nil
 }
 
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.
