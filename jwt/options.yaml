@@ -51,7 +51,7 @@ options:
     interface: ValidateOption
     argument_type: time.Duration
     comment: |
-      WithTruncation speficies the amount that should be used when
+      WithTruncation specifies the amount that should be used when
       truncating time values used during time-based validation routines.
       By default time values are truncated down to second accuracy.
       If you want to use sub-second accuracy, you will need to set
