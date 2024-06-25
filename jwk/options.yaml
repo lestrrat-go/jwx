@@ -29,7 +29,7 @@ interfaces:
       ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
   - name: RegisterOption
     comment: |
-      RegisterOption desribes options that can be passed to `(jwk.Cache).Register()`
+      RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
 options:
   - ident: HTTPClient
     interface: FetchOption

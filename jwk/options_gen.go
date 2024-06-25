@@ -89,7 +89,7 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
-// RegisterOption desribes options that can be passed to `(jwk.Cache).Register()`
+// RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
 type RegisterOption interface {
 	Option
 	registerOption()

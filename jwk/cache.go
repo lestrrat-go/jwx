@@ -95,7 +95,7 @@ type PostFetcher interface {
 	PostFetch(string, Set) (Set, error)
 }
 
-// PostFetchFunc is a PostFetcher based on a functon.
+// PostFetchFunc is a PostFetcher based on a function.
 type PostFetchFunc func(string, Set) (Set, error)
 
 func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
@@ -217,7 +217,7 @@ func (c *Cache) Register(u string, options ...RegisterOption) error {
 		}
 	}
 
-	// Set the transfomer at the end so that nobody can override it
+	// Set the transformer at the end so that nobody can override it
 	hrropts = append(hrropts, httprc.WithTransformer(t))
 	return c.cache.Register(u, hrropts...)
 }
