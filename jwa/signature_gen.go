@@ -5,7 +5,6 @@ package jwa
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -75,17 +74,15 @@ func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
 
 // RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
 // but allows its behavior to change based on the provided options.
+// This is a stopgap function which will eventually be merged in RegisterSignatureAlgorithm, and subsequently removed.
 // E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
-// Errors can occur because of the options, so this function also returns an error.
-func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) error {
+func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) {
 	var symmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identSymmetricAlgorithm{}:
 			symmetric = option.Value().(bool)
-		default:
-			return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%T", option.Ident()), "jwa.ident"))
 		}
 	}
 	muSignatureAlgorithms.Lock()
@@ -97,7 +94,6 @@ func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...Regi
 		}
 		rebuildSignatureAlgorithm()
 	}
-	return nil
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.

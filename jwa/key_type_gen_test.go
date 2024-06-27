@@ -249,9 +249,4 @@ func TestKeyTypeCustomAlgorithm(t *testing.T) {
 			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
 		})
 	})
-
-	t.Run(`reject registering custom algorithm with WithSymmetricAlgorithm(true)`, func(t *testing.T) {
-		err := jwa.RegisterKeyTypeWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
-		assert.Error(t, err, `register failed`)
-	})
 }

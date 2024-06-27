@@ -465,38 +465,31 @@ func (t typ) Generate() error {
 	o.L("}")
 	o.L("}")
 
-	o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
-	o.L("// but allows its behavior to change based on the provided options.")
-	o.L("// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.")
-	o.L("// Errors can occur because of the options, so this function also returns an error.")
-	o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) error {", t.name)
 	if t.supports.Symmetric {
+		o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
+		o.L("// but allows its behavior to change based on the provided options.")
+		o.L("// This is a stopgap function which will eventually be merged in Register%[1]s, and subsequently removed.", t.name)
+		o.L("// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.")
+		o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) {", t.name)
 		o.L("var symmetric bool")
-	}
-	o.L("//nolint:forcetypeassert")
-	o.L("for _, option := range options {")
-	o.L("switch option.Ident() {")
-	if t.supports.Symmetric {
+		o.L("//nolint:forcetypeassert")
+		o.L("for _, option := range options {")
+		o.L("switch option.Ident() {")
 		o.L("case identSymmetricAlgorithm{}:")
 		o.L("symmetric = option.Value().(bool)")
-	}
-	o.L("default:")
-	o.L(`return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %%q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%%T", option.Ident()), "jwa.ident"))`)
-	o.L("}")
-	o.L("}")
-	o.L("mu%[1]ss.Lock()", t.name)
-	o.L("defer mu%[1]ss.Unlock()", t.name)
-	o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
-	o.L("all%[1]ss[v] = struct{}{}", t.name)
-	if t.supports.Symmetric {
+		o.L("}")
+		o.L("}")
+		o.L("mu%[1]ss.Lock()", t.name)
+		o.L("defer mu%[1]ss.Unlock()", t.name)
+		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
+		o.L("all%[1]ss[v] = struct{}{}", t.name)
 		o.L("if symmetric {")
 		o.L("symmetric%[1]ss[v] = struct{}{}", t.name)
 		o.L("}")
+		o.L("rebuild%[1]s()", t.name)
+		o.L("}")
+		o.L("}")
 	}
-	o.L("rebuild%[1]s()", t.name)
-	o.L("}")
-	o.L("return nil")
-	o.L("}")
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
 	o.L("// Non-existentn entries will silently be ignored")
@@ -793,10 +786,7 @@ func (t typ) GenerateTest() error {
 	if t.supports.Symmetric {
 		for _, value := range []bool{false, true} {
 			o.LL("t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(%t)`, func(t *testing.T) {", value)
-			o.L("err := jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(%[2]t))", t.name, value)
-			o.L("if !assert.NoError(t, err, `register is successful`) {")
-			o.L("return")
-			o.L("}")
+			o.L("jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(%[2]t))", t.name, value)
 			o.L("t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {")
 			o.L("t.Parallel()")
 			o.L("var dst jwa.%[1]s", t.name)
@@ -853,11 +843,6 @@ func (t typ) GenerateTest() error {
 			o.L("})")
 			o.L("})")
 		}
-	} else {
-		o.LL("t.Run(`reject registering custom algorithm with WithSymmetricAlgorithm(true)`, func(t *testing.T) {")
-		o.L("err := jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))", t.name)
-		o.L("assert.Error(t, err, `register failed`)")
-		o.L("})")
 	}
 	o.L("}")
 

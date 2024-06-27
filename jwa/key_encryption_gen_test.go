@@ -867,10 +867,7 @@ func TestKeyEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
 	})
 
 	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(false)`, func(t *testing.T) {
-		err := jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(false))
-		if !assert.NoError(t, err, `register is successful`) {
-			return
-		}
+		jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(false))
 		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyEncryptionAlgorithm
@@ -924,10 +921,7 @@ func TestKeyEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
 	})
 
 	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(true)`, func(t *testing.T) {
-		err := jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
-		if !assert.NoError(t, err, `register is successful`) {
-			return
-		}
+		jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
 		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyEncryptionAlgorithm

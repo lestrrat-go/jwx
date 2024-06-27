@@ -5,7 +5,6 @@ package jwa
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -90,17 +89,15 @@ func RegisterKeyEncryptionAlgorithm(v KeyEncryptionAlgorithm) {
 
 // RegisterKeyEncryptionAlgorithmWithOptions is the same as RegisterKeyEncryptionAlgorithm when used without options,
 // but allows its behavior to change based on the provided options.
+// This is a stopgap function which will eventually be merged in RegisterKeyEncryptionAlgorithm, and subsequently removed.
 // E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
-// Errors can occur because of the options, so this function also returns an error.
-func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options ...RegisterAlgorithmOption) error {
+func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options ...RegisterAlgorithmOption) {
 	var symmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identSymmetricAlgorithm{}:
 			symmetric = option.Value().(bool)
-		default:
-			return fmt.Errorf("invalid jwa.RegisterAlgorithmOption %q passed", "With"+strings.TrimPrefix(fmt.Sprintf("%T", option.Ident()), "jwa.ident"))
 		}
 	}
 	muKeyEncryptionAlgorithms.Lock()
@@ -112,7 +109,6 @@ func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options
 		}
 		rebuildKeyEncryptionAlgorithm()
 	}
-	return nil
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
