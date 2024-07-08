@@ -149,12 +149,10 @@ func _main() error {
 			},
 		},
 		{
-			name:     `SignatureAlgorithm`,
-			comment:  `SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1`,
-			filename: `signature_gen.go`,
-			supports: supportedOptions{
-				Symmetric: true,
-			},
+			name:      `SignatureAlgorithm`,
+			comment:   `SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1`,
+			filename:  `signature_gen.go`,
+			symmetric: true,
 			elements: []element{
 				{
 					name:  `NoSignature`,
@@ -236,12 +234,10 @@ func _main() error {
 			},
 		},
 		{
-			name:     `KeyEncryptionAlgorithm`,
-			comment:  `KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1`,
-			filename: `key_encryption_gen.go`,
-			supports: supportedOptions{
-				Symmetric: true,
-			},
+			name:      `KeyEncryptionAlgorithm`,
+			comment:   `KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1`,
+			filename:  `key_encryption_gen.go`,
+			symmetric: true,
 			elements: []element{
 				{
 					name:    `RSA1_5`,
@@ -372,15 +368,11 @@ func _main() error {
 }
 
 type typ struct {
-	name     string
-	comment  string
-	filename string
-	supports supportedOptions
-	elements []element
-}
-
-type supportedOptions struct {
-	Symmetric bool
+	name      string
+	comment   string
+	filename  string
+	elements  []element
+	symmetric bool
 }
 
 type element struct {
@@ -430,7 +422,7 @@ func (t typ) Generate() error {
 	o.LL("var mu%[1]ss sync.RWMutex", t.name)
 	o.L("var all%[1]ss map[%[1]s]struct{}", t.name)
 	o.L("var list%[1]s []%[1]s", t.name)
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("var symmetric%[1]ss map[%[1]s]struct{}", t.name)
 	}
 
@@ -443,7 +435,7 @@ func (t typ) Generate() error {
 			o.L("all%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
 		}
 	}
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("symmetric%[1]ss = make(map[%[1]s]struct{})", t.name)
 		for _, e := range t.elements {
 			if !e.invalid && e.sym {
@@ -454,22 +446,28 @@ func (t typ) Generate() error {
 	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
 
-	o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
-	o.L("// Duplicates will silently be ignored")
-	o.L("func Register%[1]s(v %[1]s) {", t.name)
-	o.L("mu%[1]ss.Lock()", t.name)
-	o.L("defer mu%[1]ss.Unlock()", t.name)
-	o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
-	o.L("all%[1]ss[v] = struct{}{}", t.name)
-	o.L("rebuild%[1]s()", t.name)
-	o.L("}")
-	o.L("}")
+	if !t.symmetric {
+		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
+		o.L("// Duplicates will silently be ignored")
+		o.L("func Register%[1]s(v %[1]s) {", t.name)
+		o.L("mu%[1]ss.Lock()", t.name)
+		o.L("defer mu%[1]ss.Unlock()", t.name)
+		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
+		o.L("all%[1]ss[v] = struct{}{}", t.name)
+		o.L("rebuild%[1]s()", t.name)
+		o.L("}")
+		o.L("}")
+	} else {
+		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
+		o.L("// Duplicates will silently be ignored")
+		o.L("func Register%[1]s(v %[1]s) {", t.name)
+		o.L("Register%[1]sWithOptions(v)", t.name)
+		o.L("}")
 
-	if t.supports.Symmetric {
 		o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
 		o.L("// but allows its behavior to change based on the provided options.")
-		o.L("// This is a stopgap function which will eventually be merged in Register%[1]s, and subsequently removed.", t.name)
-		o.L("// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.")
+		o.L("// This is a stopgap function which will eventually be merged in Register%[1]s, and subsequently removed in the future.", t.name)
+		o.L("// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.")
 		o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) {", t.name)
 		o.L("var symmetric bool")
 		o.L("//nolint:forcetypeassert")
@@ -498,7 +496,7 @@ func (t typ) Generate() error {
 	o.L("defer mu%[1]ss.Unlock()", t.name)
 	o.L("if _, ok := all%[1]ss[v]; ok {", t.name)
 	o.L("delete(all%[1]ss, v)", t.name)
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("if _, ok := symmetric%[1]ss[v]; ok {", t.name)
 		o.L("delete(symmetric%[1]ss, v)", t.name)
 		o.L("}")
@@ -556,7 +554,7 @@ func (t typ) Generate() error {
 	o.L("return string(v)")
 	o.L("}")
 
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.LL("// IsSymmetric returns true if the algorithm is a symmetric type.")
 		if t.name == "SignatureAlgorithm" {
 			o.L("// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.")
@@ -674,7 +672,7 @@ func (t typ) GenerateTest() error {
 	o.L("}")
 	o.L("})")
 
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("t.Run(`check symmetric values`, func(t *testing.T) {")
 		o.L("t.Parallel()")
 		for _, e := range t.elements {
@@ -751,7 +749,7 @@ func (t typ) GenerateTest() error {
 	o.L("}")
 	o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
 	o.L("})")
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
 		o.L("t.Parallel()")
 		o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
@@ -775,7 +773,7 @@ func (t typ) GenerateTest() error {
 	o.L("var dst jwa.%[1]s", t.name)
 	o.L("assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)")
 	o.L("})")
-	if t.supports.Symmetric {
+	if t.symmetric {
 		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
 		o.L("t.Parallel()")
 		o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
@@ -783,7 +781,7 @@ func (t typ) GenerateTest() error {
 	}
 	o.L("})")
 
-	if t.supports.Symmetric {
+	if t.symmetric {
 		for _, value := range []bool{false, true} {
 			o.LL("t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(%t)`, func(t *testing.T) {", value)
 			o.L("jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(%[2]t))", t.name, value)

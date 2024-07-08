@@ -64,18 +64,13 @@ func init() {
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm so that the jwx can properly handle the new value.
 // Duplicates will silently be ignored
 func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
-	muSignatureAlgorithms.Lock()
-	defer muSignatureAlgorithms.Unlock()
-	if _, ok := allSignatureAlgorithms[v]; !ok {
-		allSignatureAlgorithms[v] = struct{}{}
-		rebuildSignatureAlgorithm()
-	}
+	RegisterSignatureAlgorithmWithOptions(v)
 }
 
 // RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
 // but allows its behavior to change based on the provided options.
-// This is a stopgap function which will eventually be merged in RegisterSignatureAlgorithm, and subsequently removed.
-// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
+// This is a stopgap function which will eventually be merged in RegisterSignatureAlgorithm, and subsequently removed in the future.
+// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
 func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) {
 	var symmetric bool
 	//nolint:forcetypeassert

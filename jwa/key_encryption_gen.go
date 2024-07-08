@@ -79,18 +79,13 @@ func init() {
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm so that the jwx can properly handle the new value.
 // Duplicates will silently be ignored
 func RegisterKeyEncryptionAlgorithm(v KeyEncryptionAlgorithm) {
-	muKeyEncryptionAlgorithms.Lock()
-	defer muKeyEncryptionAlgorithms.Unlock()
-	if _, ok := allKeyEncryptionAlgorithms[v]; !ok {
-		allKeyEncryptionAlgorithms[v] = struct{}{}
-		rebuildKeyEncryptionAlgorithm()
-	}
+	RegisterKeyEncryptionAlgorithmWithOptions(v)
 }
 
 // RegisterKeyEncryptionAlgorithmWithOptions is the same as RegisterKeyEncryptionAlgorithm when used without options,
 // but allows its behavior to change based on the provided options.
-// This is a stopgap function which will eventually be merged in RegisterKeyEncryptionAlgorithm, and subsequently removed.
-// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm.
+// This is a stopgap function which will eventually be merged in RegisterKeyEncryptionAlgorithm, and subsequently removed in the future.
+// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
 func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options ...RegisterAlgorithmOption) {
 	var symmetric bool
 	//nolint:forcetypeassert
