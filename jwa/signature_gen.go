@@ -69,8 +69,9 @@ func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
 
 // RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
 // but allows its behavior to change based on the provided options.
-// This is a stopgap function which will eventually be merged in RegisterSignatureAlgorithm, and subsequently removed in the future.
-// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
+// This is an experimental AND stopgap function which will most likely be merged in RegisterSignatureAlgorithm, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.
+//
+// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
 func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) {
 	var symmetric bool
 	//nolint:forcetypeassert

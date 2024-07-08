@@ -466,8 +466,9 @@ func (t typ) Generate() error {
 
 		o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
 		o.L("// but allows its behavior to change based on the provided options.")
-		o.L("// This is a stopgap function which will eventually be merged in Register%[1]s, and subsequently removed in the future.", t.name)
-		o.L("// E.g. you can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.")
+		o.L("// This is an experimental AND stopgap function which will most likely be merged in Register%[1]s, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.", t.name)
+		o.L("//")
+		o.L("// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.")
 		o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) {", t.name)
 		o.L("var symmetric bool")
 		o.L("//nolint:forcetypeassert")
