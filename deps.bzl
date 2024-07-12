@@ -47,8 +47,8 @@ def go_dependencies():
         name = "com_github_lestrrat_go_httprc",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/lestrrat-go/httprc",
-        sum = "h1:bsTfiH8xaKOJPrg1R+E3iE/AWZr/x0Phj9PBTG/OLUk=",
-        version = "v1.0.5",
+        sum = "h1:qgmgIRhpvBqexMJjA/PmwSvhNk679oqD1RbovdCGW8k=",
+        version = "v1.0.6",
     )
     go_repository(
         name = "com_github_lestrrat_go_iter",
