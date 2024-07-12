@@ -9,10 +9,14 @@ go_library(
         "jwa.go",
         "key_encryption_gen.go",
         "key_type_gen.go",
+        "options_gen.go",
         "signature_gen.go",
     ],
     importpath = "github.com/lestrrat-go/jwx/v2/jwa",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_lestrrat_go_option//:option",
+    ],
 )
 
 go_test(
@@ -29,6 +33,7 @@ go_test(
     deps = [
         ":jwa",
         "@com_github_stretchr_testify//assert",
+        "@com_github_lestrrat_go_option//:option",
     ],
 )
 
