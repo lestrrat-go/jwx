@@ -565,6 +565,54 @@ func TestSignatureAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`check symmetric values`, func(t *testing.T) {
+		t.Parallel()
+		t.Run(`ES256`, func(t *testing.T) {
+			assert.False(t, jwa.ES256.IsSymmetric(), `jwa.ES256 should NOT be symmetric`)
+		})
+		t.Run(`ES256K`, func(t *testing.T) {
+			assert.False(t, jwa.ES256K.IsSymmetric(), `jwa.ES256K should NOT be symmetric`)
+		})
+		t.Run(`ES384`, func(t *testing.T) {
+			assert.False(t, jwa.ES384.IsSymmetric(), `jwa.ES384 should NOT be symmetric`)
+		})
+		t.Run(`ES512`, func(t *testing.T) {
+			assert.False(t, jwa.ES512.IsSymmetric(), `jwa.ES512 should NOT be symmetric`)
+		})
+		t.Run(`EdDSA`, func(t *testing.T) {
+			assert.False(t, jwa.EdDSA.IsSymmetric(), `jwa.EdDSA should NOT be symmetric`)
+		})
+		t.Run(`HS256`, func(t *testing.T) {
+			assert.True(t, jwa.HS256.IsSymmetric(), `jwa.HS256 should be symmetric`)
+		})
+		t.Run(`HS384`, func(t *testing.T) {
+			assert.True(t, jwa.HS384.IsSymmetric(), `jwa.HS384 should be symmetric`)
+		})
+		t.Run(`HS512`, func(t *testing.T) {
+			assert.True(t, jwa.HS512.IsSymmetric(), `jwa.HS512 should be symmetric`)
+		})
+		t.Run(`NoSignature`, func(t *testing.T) {
+			assert.False(t, jwa.NoSignature.IsSymmetric(), `jwa.NoSignature should NOT be symmetric`)
+		})
+		t.Run(`PS256`, func(t *testing.T) {
+			assert.False(t, jwa.PS256.IsSymmetric(), `jwa.PS256 should NOT be symmetric`)
+		})
+		t.Run(`PS384`, func(t *testing.T) {
+			assert.False(t, jwa.PS384.IsSymmetric(), `jwa.PS384 should NOT be symmetric`)
+		})
+		t.Run(`PS512`, func(t *testing.T) {
+			assert.False(t, jwa.PS512.IsSymmetric(), `jwa.PS512 should NOT be symmetric`)
+		})
+		t.Run(`RS256`, func(t *testing.T) {
+			assert.False(t, jwa.RS256.IsSymmetric(), `jwa.RS256 should NOT be symmetric`)
+		})
+		t.Run(`RS384`, func(t *testing.T) {
+			assert.False(t, jwa.RS384.IsSymmetric(), `jwa.RS384 should NOT be symmetric`)
+		})
+		t.Run(`RS512`, func(t *testing.T) {
+			assert.False(t, jwa.RS512.IsSymmetric(), `jwa.RS512 should NOT be symmetric`)
+		})
+	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.SignatureAlgorithm]struct{}{
@@ -593,5 +641,176 @@ func TestSignatureAlgorithm(t *testing.T) {
 		if !assert.Len(t, expected, 0) {
 			return
 		}
+	})
+}
+
+// Note: this test can NOT be run in parallel as it uses options with global effect.
+func TestSignatureAlgorithmCustomAlgorithm(t *testing.T) {
+	// These subtests can NOT be run in parallel as options with global effect change.
+	customAlgorithm := jwa.SignatureAlgorithm("custom-algorithm")
+	// Unregister the custom algorithm, in case tests fail.
+	t.Cleanup(func() {
+		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
+	})
+	t.Run(`with custom algorithm registered`, func(t *testing.T) {
+		jwa.RegisterSignatureAlgorithm(customAlgorithm)
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+
+	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(false)`, func(t *testing.T) {
+		jwa.RegisterSignatureAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(false))
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(false))`, func(t *testing.T) {
+		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+
+	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(true)`, func(t *testing.T) {
+		jwa.RegisterSignatureAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, customAlgorithm.IsSymmetric(), `custom algorithm should be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(true))`, func(t *testing.T) {
+		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.SignatureAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
 	})
 }

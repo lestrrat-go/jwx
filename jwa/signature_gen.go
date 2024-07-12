@@ -33,6 +33,7 @@ const (
 var muSignatureAlgorithms sync.RWMutex
 var allSignatureAlgorithms map[SignatureAlgorithm]struct{}
 var listSignatureAlgorithm []SignatureAlgorithm
+var symmetricSignatureAlgorithms map[SignatureAlgorithm]struct{}
 
 func init() {
 	muSignatureAlgorithms.Lock()
@@ -53,16 +54,40 @@ func init() {
 	allSignatureAlgorithms[RS256] = struct{}{}
 	allSignatureAlgorithms[RS384] = struct{}{}
 	allSignatureAlgorithms[RS512] = struct{}{}
+	symmetricSignatureAlgorithms = make(map[SignatureAlgorithm]struct{})
+	symmetricSignatureAlgorithms[HS256] = struct{}{}
+	symmetricSignatureAlgorithms[HS384] = struct{}{}
+	symmetricSignatureAlgorithms[HS512] = struct{}{}
 	rebuildSignatureAlgorithm()
 }
 
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm so that the jwx can properly handle the new value.
 // Duplicates will silently be ignored
 func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
+	RegisterSignatureAlgorithmWithOptions(v)
+}
+
+// RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
+// but allows its behavior to change based on the provided options.
+// This is an experimental AND stopgap function which will most likely be merged in RegisterSignatureAlgorithm, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.
+//
+// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
+func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) {
+	var symmetric bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identSymmetricAlgorithm{}:
+			symmetric = option.Value().(bool)
+		}
+	}
 	muSignatureAlgorithms.Lock()
 	defer muSignatureAlgorithms.Unlock()
 	if _, ok := allSignatureAlgorithms[v]; !ok {
 		allSignatureAlgorithms[v] = struct{}{}
+		if symmetric {
+			symmetricSignatureAlgorithms[v] = struct{}{}
+		}
 		rebuildSignatureAlgorithm()
 	}
 }
@@ -74,6 +99,9 @@ func UnregisterSignatureAlgorithm(v SignatureAlgorithm) {
 	defer muSignatureAlgorithms.Unlock()
 	if _, ok := allSignatureAlgorithms[v]; ok {
 		delete(allSignatureAlgorithms, v)
+		if _, ok := symmetricSignatureAlgorithms[v]; ok {
+			delete(symmetricSignatureAlgorithms, v)
+		}
 		rebuildSignatureAlgorithm()
 	}
 }
@@ -124,4 +152,11 @@ func (v *SignatureAlgorithm) Accept(value interface{}) error {
 // String returns the string representation of a SignatureAlgorithm
 func (v SignatureAlgorithm) String() string {
 	return string(v)
+}
+
+// IsSymmetric returns true if the algorithm is a symmetric type.
+// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.
+func (v SignatureAlgorithm) IsSymmetric() bool {
+	_, ok := symmetricSignatureAlgorithms[v]
+	return ok
 }

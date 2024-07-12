@@ -13,7 +13,7 @@ import "fmt"
 // like other fields.
 //
 // Ideally we would like to keep track of Signature Algorithms and
-// Content Encryption Algorithms separately, and force the APIs to
+// Key Encryption Algorithms separately, and force the APIs to
 // type-check at compile time, but this allows users to pass a value from a
 // jwk.Key directly
 type KeyAlgorithm interface {

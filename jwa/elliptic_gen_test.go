@@ -311,3 +311,58 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		}
 	})
 }
+
+// Note: this test can NOT be run in parallel as it uses options with global effect.
+func TestEllipticCurveAlgorithmCustomAlgorithm(t *testing.T) {
+	// These subtests can NOT be run in parallel as options with global effect change.
+	customAlgorithm := jwa.EllipticCurveAlgorithm("custom-algorithm")
+	// Unregister the custom algorithm, in case tests fail.
+	t.Cleanup(func() {
+		jwa.UnregisterEllipticCurveAlgorithm(customAlgorithm)
+	})
+	t.Run(`with custom algorithm registered`, func(t *testing.T) {
+		jwa.RegisterEllipticCurveAlgorithm(customAlgorithm)
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+		jwa.UnregisterEllipticCurveAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.EllipticCurveAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+	})
+}

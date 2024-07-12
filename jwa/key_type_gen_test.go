@@ -195,3 +195,58 @@ func TestKeyType(t *testing.T) {
 		}
 	})
 }
+
+// Note: this test can NOT be run in parallel as it uses options with global effect.
+func TestKeyTypeCustomAlgorithm(t *testing.T) {
+	// These subtests can NOT be run in parallel as options with global effect change.
+	customAlgorithm := jwa.KeyType("custom-algorithm")
+	// Unregister the custom algorithm, in case tests fail.
+	t.Cleanup(func() {
+		jwa.UnregisterKeyType(customAlgorithm)
+	})
+	t.Run(`with custom algorithm registered`, func(t *testing.T) {
+		jwa.RegisterKeyType(customAlgorithm)
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+		jwa.UnregisterKeyType(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyType
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+	})
+}
