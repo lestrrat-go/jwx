@@ -596,7 +596,7 @@ For example, you may act as an intermediary to some other service, and you may n
 
 Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch),
 but keys are usually routinely expired and rotated due to security reasons.
-In such cases you would need to re-fetch the JWK periodically, which is a pain.
+In such cases you would need to refetch the JWK periodically, which is a pain.
 
 `github.com/lestrrat-go/jwx/v2/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) to do this for you.
 
@@ -659,7 +659,7 @@ MAIN:
     // immediately after it has been rotated in the remote source. But it should be close\
     // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
     //
-    // If re-fetching the keyset fails, a cached version will be returned from the previous successful
+    // If refetching the keyset fails, a cached version will be returned from the previous successful
     // fetch upon calling `(jwk.Cache).Fetch()`.
 
     // Do interesting stuff with the keyset... but here, we just

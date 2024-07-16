@@ -410,7 +410,7 @@ v2.0.5 - 11 Aug 2022
 v2.0.4 - 19 Jul 2022
 [Bug Fixes]
   * [jwk] github.com/lestrrat-go/httprc, which jwk.Cache depends on,
-    had a problem with inserting URLs to be re-fetched into its queue.
+    had a problem with inserting URLs to be refetched into its queue.
     As a result it could have been the case that some JWKS were not
     updated properly. Please upgrade if you use jwk.Cache.
 

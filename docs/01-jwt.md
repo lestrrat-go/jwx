@@ -44,7 +44,7 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 # Parsing
 
-Parsing a (possible) JWT consists of multiple distinct operations. Typically, your JWTs are signed and serialized as JWS messages. The JWT is _enveloped_ in JWS. The following is a [sample JWS message serialized in compact form](https://datatracker.ietf.org/doc/html/rfc7515#appendix-A.1):
+Parsing a payload as JWT consists of multiple distinct operations. Typically, your JWTs are signed and serialized as JWS messages. The JWT is _enveloped_ in JWS. The following is a [sample JWS message serialized in compact form](https://datatracker.ietf.org/doc/html/rfc7515#appendix-A.1):
 
 ```
 eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjX

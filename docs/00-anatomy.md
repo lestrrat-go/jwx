@@ -28,7 +28,7 @@ JWTs are implemented in github.com/lestrrat-go/jwx/v2/jwt package. There is also
 
 In its essence, there is nothing special about JWTs: they are just a standardized format to exchange some piece of information.
 
-Most of the time this information must be integrity checked using signatures, securely encrypted, or both.
+Most of the times this information must be integrity checked using signatures, securely encrypted, or both.
 
 While they are referenced from RFC7519, the standardized message formats for signed and/or encrypted JWTs are not in the same RFC.
 
