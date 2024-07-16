@@ -419,7 +419,7 @@ v2.0.4 - 19 Jul 2022
   * [jwk] Fix doc buglet in `KeyType()` method
 
 [New Features]
-  * [jws] Add `jws.WithMultipleKeysPerKeyID()` sub-option to allow non-unique
+  * [jws] Add `jws.WithMultipleKeysPerKeyID()` suboption to allow non-unique
     key IDs in a given JWK set. By default we assume that a key ID is unique
     within a key set, but enabling this option allows you to handle JWK sets
     that contain multiple keys that contain the same key ID.

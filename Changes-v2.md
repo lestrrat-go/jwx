@@ -279,7 +279,7 @@ jws.Verify(signed, jws.WithKeySet(cachedSet))
   verification. By default `kid` AND `alg` must match between the signature
   and the key.
 
-  The option can take further sub-options:
+  The option can take further suboptions:
 
 ```go
 jws.Parse(serialized,
@@ -349,14 +349,14 @@ jws.Parse(serialized,
   `jwt.NewValidationError()`
 
 * `jwt.UseDefault()` has been removed. You should use `jws.WithUseDefault()`
-  as a sub-option in the `jwt.WithKeySet()` option.
+  as a suboption in the `jwt.WithKeySet()` option.
 
 ```go
 jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithUseDefault(true)))
 ```
 
 * `jwt.InferAlgorithmFromKey()` has been removed. You should use
-  `jws.WithInferAlgorithmFromKey()` as a sub-option in the `jwt.WithKeySet()` option.
+  `jws.WithInferAlgorithmFromKey()` as a suboption in the `jwt.WithKeySet()` option.
 
 ```go
 jwt.Parse(serialized, jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true)))

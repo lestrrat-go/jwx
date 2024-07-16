@@ -394,7 +394,7 @@ To verify a payload using JWKS, by default you will need your payload and JWKS t
 
 The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)".
 
-The `kid` field by default must match between the JWS signature and the key in JWKS. This can be explicitly disabled by specifying the `jws.WithRequireKid(false)` sub-option when using the `jws.WithKeySet()` option (i.e.: `jws.WithKeySet(keyset, jws.WithRequireKid(false))`).
+The `kid` field by default must match between the JWS signature and the key in JWKS. This can be explicitly disabled by specifying the `jws.WithRequireKid(false)` suboption when using the `jws.WithKeySet()` option (i.e.: `jws.WithKeySet(keyset, jws.WithRequireKid(false))`).
 
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid).
 

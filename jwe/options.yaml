@@ -28,10 +28,10 @@ interfaces:
   - name: WithJSONSuboption
     concrete_type: withJSONSuboption
     comment: |
-      JSONSuboption describes sub-options that can be passed to `jwe.WithJSON()` option
+      JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
   - name: WithKeySetSuboption
     comment: |
-      WithKeySetSuboption is a sub-option passed to the WithKeySet() option
+      WithKeySetSuboption is a suboption passed to the WithKeySet() option
   - name: ParseOption
     methods:
       - readFileOption

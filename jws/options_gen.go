@@ -112,7 +112,7 @@ func (*verifyOption) verifyOption() {}
 
 func (*verifyOption) parseOption() {}
 
-// JSONSuboption describes sub-options that can be passed to the `jws.WithJSON()` option.
+// JSONSuboption describes suboptions that can be passed to the `jws.WithJSON()` option.
 type WithJSONSuboption interface {
 	Option
 	withJSONSuboption()
@@ -124,7 +124,7 @@ type withJSONSuboption struct {
 
 func (*withJSONSuboption) withJSONSuboption() {}
 
-// WithKeySetSuboption is a sub-option passed to the `jws.WithKeySet()` option
+// WithKeySetSuboption is a suboption passed to the `jws.WithKeySet()` option
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()

@@ -473,7 +473,7 @@ know which is supposed to work beforehand, it is recommended that you parse the 
 and modify it manually so that it has a proper `kid` field. Unlike using `jws.WithRequireKid(false)`
 option, this will not allow unintended keys to slip by and have the verification succeed.
 
-Second, notice that there's a commented out section in the above code where it uses an extra sub-option
+Second, notice that there's a commented out section in the above code where it uses an extra suboption
 `jws.WithInferAlgorithmFromKey()` in the `jwt.Parse()` call. The above examples will correctly
 verify the message as we explicitly set the `alg` with a proper value. However, if the key in your
 particular JWKS does not contain an `alg` field, the above example would fail.
@@ -488,7 +488,7 @@ heuristics to deduce the algorithm used. It's a brute-force approach, and does n
 the best performance. But it will try all possible algorithms available for a given key type until
 one of them matches. For example, for an RSA key (either raw key or `jwk.Key`) algorithms such as RS256, RS384, RS512, PS256, PS384, and PS512 are tried.
 
-In most cases using this sub-option would Just Work. However, this type of "try until something works"
+In most cases using this suboption would Just Work. However, this type of "try until something works"
 is not really recommended from a security perspective, and that is why the option is not enabled by default.
 
 ## Parse and Verify a JWT (using arbitrary keys)

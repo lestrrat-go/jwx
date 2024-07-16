@@ -272,7 +272,7 @@ By default, only some header fields are included in the result from `jwe.Encrypt
 For global protected headers, you can use the `jwe.WithProtectedHeaders()` option.
 
 In order to provide extra headers to the encrypted message such as `apu` and `apv`, you will need to use
-`jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` sub-option.
+`jwe.WithKey()` option with the `jwe.WithPerRecipientHeaders()` suboption.
 
 <!-- INCLUDE(examples/jwe_encrypt_with_headers_example_test.go) -->
 ```go

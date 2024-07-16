@@ -113,7 +113,7 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
-// JSONSuboption describes sub-options that can be passed to `jwe.WithJSON()` option
+// JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
 type WithJSONSuboption interface {
 	Option
 	withJSONSuboption()
@@ -125,7 +125,7 @@ type withJSONSuboption struct {
 
 func (*withJSONSuboption) withJSONSuboption() {}
 
-// WithKeySetSuboption is a sub-option passed to the WithKeySet() option
+// WithKeySetSuboption is a suboption passed to the WithKeySet() option
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()

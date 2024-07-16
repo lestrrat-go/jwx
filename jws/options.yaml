@@ -23,14 +23,14 @@ interfaces:
   - name: WithJSONSuboption
     concrete_type: withJSONSuboption
     comment: |
-      JSONSuboption describes sub-options that can be passed to the `jws.WithJSON()` option.
+      JSONSuboption describes suboptions that can be passed to the `jws.WithJSON()` option.
   - name: WithKeySuboption
     comment: |
       WithKeySuboption describes option types that can be passed to the `jws.WithKey()`
       option.
   - name: WithKeySetSuboption
     comment: |
-      WithKeySetSuboption is a sub-option passed to the `jws.WithKeySet()` option
+      WithKeySetSuboption is a suboption passed to the `jws.WithKeySet()` option
   - name: ParseOption
     methods:
       - readFileOption
