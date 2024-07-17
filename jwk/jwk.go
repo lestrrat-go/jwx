@@ -247,9 +247,9 @@ const (
 // instance, but it must be one of the types supported by `x509` package.
 //
 // This function will try to do the right thing depending on the key type
-// (i.e. switch between `x509.MarshalPKCS1PRivateKey` and `x509.MarshalECPrivateKey`),
+// (i.e. switch between `x509.MarshalPKCS1PrivateKey` and `x509.MarshalECPrivateKey`),
 // but for public keys, it will always use `x509.MarshalPKIXPublicKey`.
-// Please manually perform the encoding if you need more fine grained control
+// Please manually perform the encoding if you need more fine-grained control
 //
 // The first return value is the name that can be used for `(pem.Block).Type`.
 // The second return value is the encoded byte sequence.

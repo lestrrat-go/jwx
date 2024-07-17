@@ -172,7 +172,7 @@ func TestKeyType(t *testing.T) {
 	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
+		if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {
 			return
 		}
 	})

@@ -73,7 +73,7 @@ jws.Verify(signed, jws.WithKeySet(jwks), jws.WithKeyUsed(&keyUsed))
 
 ```go
 // basic
-jwe.Encrypt(payload, jwe.WithKey(alg, key)) // other defaults are infered
+jwe.Encrypt(payload, jwe.WithKey(alg, key)) // other defaults are inferred
 jwe.Encrypt(payload, jwe.WithKey(alg, key), jwe.WithKey(alg, key), jwe.WithJSON(true))
 jwe.Decrypt(encrypted, jwe.WithKey(alg, key))
 
@@ -92,7 +92,7 @@ jwe.Verify(signed, jwe.WithKeySet(jwks), jwe.WithKeyUsed(&keyUsed))
 
 * Module now requires go 1.16
 
-* Use of github.com/pkg/errors is no more. If you were relying on bevaior
+* Use of github.com/pkg/errors is no more. If you were relying on behavior
   that depends on the errors being an instance of github.com/pkg/errors
   then you need to change your code
 
@@ -243,8 +243,8 @@ jws.Verify(signed, jws.WithKeySet(cachedSet))
   but this has been removed. This is to avoid unwanted clogging of the fetch workers
   which is the default processing mode in `github.com/lestrrat-go/httprc`.
 
-  If you are using backoffs, you need to control your inputs more carefully so as to
-  not clog your fetch queue, and therefore you should be writing custom code that
+  If you are using backoffs, you need to control your inputs more carefully so as
+  not to clog your fetch queue, and therefore you should be writing custom code that
   suits your needs
 
 ## JWS
@@ -306,7 +306,7 @@ jws.Parse(serialized,
   The rest of the arguments are treated as options passed to the
   `(jwk.Fetcher).Fetch()` function.
 
-* Remove `jws.WithPayloadSigner()`. This should be completely repleceable
+* Remove `jws.WithPayloadSigner()`. This should be completely replaceable
   using `jws.WithKey()`
 
 * jws.WithKeyProvider() has been added to specify arbitrary

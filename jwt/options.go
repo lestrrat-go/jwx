@@ -118,7 +118,7 @@ type withKey struct {
 	options []Option
 }
 
-// WithKey is a multi-purpose option. It can be used for either jwt.Sign, jwt.Parse (and
+// WithKey is a multipurpose option. It can be used for either jwt.Sign, jwt.Parse (and
 // its siblings), and jwt.Serializer methods. For signatures, please see the documentation
 // for `jws.WithKey` for more details. For encryption, please see the documentation
 // for `jwe.WithKey`.
@@ -131,7 +131,7 @@ type withKey struct {
 //
 // In the above example, the creation of the option via `jwt.WithKey()` will work, but
 // when `jwt.Sign()` is called, the fact that you passed JWE suboptions will be
-// detected, and it will be an error.
+// detected, and an error will occur.
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, suboptions ...Option) SignEncryptParseOption {
 	return &signEncryptParseOption{option.New(identKey{}, &withKey{
 		alg:     alg,

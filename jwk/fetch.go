@@ -70,7 +70,7 @@ func getGlobalFetcher() httprc.Fetcher {
 // the lifetime of the global fetcher, for example for tests
 // that require a clean shutdown.
 //
-// If you do use this function to set a custom fetcher and you
+// If you do use this function to set a custom fetcher, and you
 // control its termination, make sure that you call `jwk.SetGlobalFetcher()`
 // one more time (possibly with `nil`) to assign a valid fetcher.
 // Otherwise, once the fetcher is invalidated, subsequent calls to `jwk.Fetch`

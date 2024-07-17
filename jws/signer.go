@@ -29,7 +29,7 @@ var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 //
 // Unlike the `UnregisterSigner` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
-// in the known algorithms database.
+// in this module's algorithm database.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 	jwa.RegisterSignatureAlgorithm(alg)
 	muSignerDB.Lock()
@@ -45,7 +45,7 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
 // by the factory.
 //
 // Note that when you call this function, the algorithm itself is
-// not automatically unregistered from the known algorithms database.
+// not automatically unregistered from this module's algorithm database.
 // This is because the algorithm may still be required for verification or
 // some other operation (however unlikely, it is still possible).
 // Therefore, in order to completely remove the algorithm, you must

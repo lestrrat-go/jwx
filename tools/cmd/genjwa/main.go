@@ -491,7 +491,7 @@ func (t typ) Generate() error {
 	}
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
-	o.L("// Non-existentn entries will silently be ignored")
+	o.L("// Non-existent entries will silently be ignored")
 	o.L("func Unregister%[1]s(v %[1]s) {", t.name)
 	o.L("mu%[1]ss.Lock()", t.name)
 	o.L("defer mu%[1]ss.Unlock()", t.name)
@@ -668,7 +668,7 @@ func (t typ) GenerateTest() error {
 	o.L("t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%s", t.name)
-	o.L("if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {")
+	o.L("if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {")
 	o.L("return")
 	o.L("}")
 	o.L("})")

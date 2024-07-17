@@ -221,8 +221,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 
 	// Design note: while we could have easily set format = fmtJSON when
 	// lsigner > 1, I believe the decision to change serialization formats
-	// must be explicitly stated by the caller. Otherwise I'm pretty sure
-	// there would be people filing issues saying "I get JSON when I expcted
+	// must be explicitly stated by the caller. Otherwise, I'm pretty sure
+	// there would be people filing issues saying "I get JSON when I expected
 	// compact serialization".
 	//
 	// Therefore, instead of making implicit format conversions, we force the
@@ -309,8 +309,8 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 //
 // Because the use of "none" (jwa.NoSignature) algorithm is strongly discouraged,
 // this function DOES NOT consider it a success when `{"alg":"none"}` is
-// encountered in the message (it would also be counter intuitive when the code says
-// you _verified_ something when in fact it did no such thing). If you want to
+// encountered in the message (it would also be counterintuitive when the code says
+// it _verified_ something when in fact it did no such thing). If you want to
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
@@ -417,7 +417,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			for _, pair := range sink.list {
 				// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
 				// this may seem ugly, but we're trying to avoid declaring separate
-				// structs for `alg jwa.KeyAlgorithm` and `alg jwa.SignatureAlgorithm`
+				// structs for `alg jwa.KeyEncryptionAlgorithm` and `alg jwa.SignatureAlgorithm`
 				//nolint:forcetypeassert
 				alg := pair.alg.(jwa.SignatureAlgorithm)
 				key := pair.key

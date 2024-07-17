@@ -12,7 +12,7 @@ jobs:
           stale-issue-message: 'This issue is stale because it has been open 14 days with no activity. Remove stale label or comment or this will be closed in 7 days.'
           stale-pr-message: 'This PR is stale because it has been open 14 days with no activity. Remove stale label or comment or this will be closed in 14 days.'
           close-issue-message: 'This issue was closed because it has been stalled for 7 days with no activity. This does not mean your issue is rejected, but rather it is done to hide it from the view of the maintains for the time being. Feel free to reopen if you have new comments'
-          close-pr-message: 'This PR was closed because it has been stalled for 14 days with no activity. This does not mean your PR is rejected, but rather it is done to hide it from the view of the maintainers for the time being. Feel free to reopen if you have new comments or chnages that you would like to include. '
+          close-pr-message: 'This PR was closed because it has been stalled for 14 days with no activity. This does not mean your PR is rejected, but rather it is done to hide it from the view of the maintainers for the time being. Feel free to reopen if you have new comments or changes that you would like to include. '
           days-before-issue-stale: 14
           days-before-pr-stale: 14
           days-before-issue-close: 7

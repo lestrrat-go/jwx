@@ -120,14 +120,14 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // If you need JWE support on top of it, you will need to rollout your
 // own workaround.
 //
-// If the token is signed and you want to verify the payload matches the signature,
+// If the token is signed, and you want to verify the payload matches the signature,
 // you must pass the jwt.WithKey(alg, key) or jwt.WithKeySet(jwk.Set) option.
 // If you do not specify these parameters, no verification will be performed.
 //
 // During verification, if the JWS headers specify a key ID (`kid`), the
 // key used for verification must match the specified ID. If you are somehow
 // using a key without a `kid` (which is highly unlikely if you are working
-// with a JWT from a well know provider), you can workaround this by modifying
+// with a JWT from a well-know provider), you can work around this by modifying
 // the `jwk.Key` and setting the `kid` header.
 //
 // If you also want to assert the validity of the JWT itself (i.e. expiration

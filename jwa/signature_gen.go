@@ -93,7 +93,7 @@ func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...Regi
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterSignatureAlgorithm(v SignatureAlgorithm) {
 	muSignatureAlgorithms.Lock()
 	defer muSignatureAlgorithms.Unlock()

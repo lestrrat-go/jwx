@@ -44,9 +44,9 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 // either a raw key or `jwk.Key` may be passed as `key`.
 //
 // The `alg` parameter is the identifier for the key encryption algorithm that should be used.
-// It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.SignatureAlgorithm`
+// It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.KeyEncryptionAlgorithm`
 // types. It is this way so that the value in `(jwk.Key).Algorithm()` can be directly
-// passed to the option. If you specify other algorithm types such as `jwa.ContentEncryptionAlgorithm`,
+// passed to the option. If you specify other algorithm types such as `jwa.SignatureAlgorithm`,
 // then you will get an error when `jwe.Encrypt()` or `jwe.Decrypt()` is executed.
 //
 // Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
