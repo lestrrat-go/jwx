@@ -12,10 +12,10 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -1039,8 +1039,8 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := ioutil.TempFile("", "test-read-file-*.jws")
-	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+	f, err := os.CreateTemp("", "test-read-file-*.jws")
+	if !assert.NoError(t, err, `os.CreateTemp should succeed`) {
 		return
 	}
 	defer f.Close()
