@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx
 
-go 1.19
+go 1.20
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
@@ -12,7 +12,7 @@ require (
 	github.com/lestrrat-go/option v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 )
 
 require (
