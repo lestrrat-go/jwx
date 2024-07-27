@@ -1694,7 +1694,7 @@ func TestJKU(t *testing.T) {
 			}
 			set.Add(pubkey)
 		}
-		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(set)
 		}))

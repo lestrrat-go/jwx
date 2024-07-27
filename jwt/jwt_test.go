@@ -386,7 +386,7 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 
-			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(_ jwt.Token) (jwk.Set, error) {
 				return nil, errors.New(`dummy`)
 			})))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
