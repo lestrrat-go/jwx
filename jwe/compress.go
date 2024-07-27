@@ -35,7 +35,6 @@ func uncompress(src []byte, maxBufferSize int64) ([]byte, error) {
 
 		if readErr != nil {
 			// if it got here, then readErr == io.EOF, we're done
-			//nolint:nilerr
 			return dst.Bytes(), nil
 		}
 	}
