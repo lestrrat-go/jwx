@@ -11,12 +11,11 @@ linters:
   enable-all: true
   disable:
     - cyclop
-    - deadcode # deprecated
     - depguard
     - dupl
     - exhaustive
-    - exhaustivestruct
     - errorlint
+    - err113
     - funlen
     - gci
     - gochecknoglobals
@@ -26,31 +25,26 @@ linters:
     - gocyclo
     - godot
     - godox
-    - goerr113
     - gofumpt
-    - golint #deprecated
     - gomnd
     - gosec
     - govet
-    - interfacer # deprecated
-    - ifshort
+    - inamedparam # oh, sod off
     - ireturn # No, I _LIKE_ returning interfaces
     - lll
     - maintidx # Do this in code review
-    - maligned # deprecated
     - makezero
+    - mnd
     - nakedret
     - nestif
     - nlreturn
     - nonamedreturns # visit this back later
-    - nosnakecase
     - paralleltest
-    - scopelint # deprecated
-    - structcheck # deprecated
+    - perfsprint
     - tagliatelle
+    - testifylint # TODO: revisit when we have the chance
     - testpackage
     - thelper    # Tests are fine
-    - varcheck # deprecated
     - varnamelen # Short names are ok
     - wrapcheck
     - wsl
@@ -92,6 +86,10 @@ issues:
     - path: cmd/jwx/jwx.go
       linters:
         - forbidigo
+    - path: /*_test.go
+      text: "var-naming: "
+      litners:
+        - revive
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
   max-issues-per-linter: 0
