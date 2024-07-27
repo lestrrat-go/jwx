@@ -258,16 +258,18 @@ func makeJwsSignCmd() *cli.Command {
 			return fmt.Errorf(`invalid alg %s`, givenalg)
 		}
 
-		var options []jws.SignOption
+		// headers must go to WithKeySuboptions
+		var suboptions []jws.WithKeySuboption
 		if hdrbuf := c.String("header"); hdrbuf != "" {
 			h := jws.NewHeaders()
 			if err := json.Unmarshal([]byte(hdrbuf), h); err != nil {
 				return fmt.Errorf(`failed to parse header: %w`, err)
 			}
-			options = append(options, jws.WithHeaders(h))
+			suboptions = append(suboptions, jws.WithProtectedHeaders(h))
 		}
 
-		options = append(options, jws.WithKey(alg, key))
+		var options []jws.SignOption
+		options = append(options, jws.WithKey(alg, key, suboptions...))
 		signed, err := jws.Sign(buf, options...)
 		if err != nil {
 			return fmt.Errorf(`failed to sign payload: %w`, err)
