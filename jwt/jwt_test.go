@@ -1167,7 +1167,7 @@ func TestGH375(t *testing.T) {
 
 type Claim struct {
 	Foo string
-	Bar int
+	Bar int64
 }
 
 func TestJWTParseWithTypedClaim(t *testing.T) {
