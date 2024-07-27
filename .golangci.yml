@@ -45,6 +45,7 @@ linters:
     - nestif
     - nlreturn
     - paralleltest
+    - perfsprint
     - testifylint # TODO: re-enable when we can check again
     - tagliatelle
     - testpackage
