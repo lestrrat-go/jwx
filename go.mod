@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx/v2
 
-go 1.19
+go 1.20
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
