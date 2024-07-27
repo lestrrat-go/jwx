@@ -6,7 +6,6 @@ package jwt
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -86,7 +85,7 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 // ParseReader calls Parse against an io.Reader
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
-	data, err := ioutil.ReadAll(src)
+	data, err := io.ReadAll(src)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to read from token data source`)
 	}

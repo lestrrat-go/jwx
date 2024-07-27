@@ -13,7 +13,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 
@@ -560,7 +559,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 	// meh, there's no way to tell if a stream has "ended" a single
 	// JWKs except when we encounter an EOF, so just... ReadAll
-	buf, err := ioutil.ReadAll(src)
+	buf, err := io.ReadAll(src)
 	if err != nil {
 		return nil, errors.Wrap(err, `failed to read from io.Reader`)
 	}

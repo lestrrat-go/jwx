@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"github.com/lestrrat-go/jwx/internal/ecutil"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -255,7 +254,7 @@ func makeJwkFormatCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 		}

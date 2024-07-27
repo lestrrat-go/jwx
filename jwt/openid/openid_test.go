@@ -475,10 +475,10 @@ func TestOpenIDClaims(t *testing.T) {
 		t.Run(token.Name, func(t *testing.T) {
 			for _, value := range base {
 				value := value
-				t.Run(value.Key, func(t *testing.T) {
+				t.Run(value.Key, func(_ *testing.T) {
 					value.Check(token.Token)
 				})
-				t.Run(value.Key+" via Get()", func(t *testing.T) {
+				t.Run(value.Key+" via Get()", func(_ *testing.T) {
 					expected := value.Value
 					if expf := value.Expected; expf != nil {
 						expected = expf(value.Value)

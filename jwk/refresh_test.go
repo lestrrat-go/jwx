@@ -59,7 +59,7 @@ func TestAutoRefresh(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 
 			key := map[string]interface{}{
@@ -116,7 +116,7 @@ func TestAutoRefresh(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 
 			key := map[string]interface{}{
@@ -177,7 +177,7 @@ func TestAutoRefresh(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 			if accessCount > 1 && accessCount < 4 {
 				http.Error(w, "wait for it....", http.StatusForbidden)
@@ -315,13 +315,13 @@ func TestErrorSink(t *testing.T) {
 	}{
 		{
 			Name: "non-200 response",
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusForbidden)
 			}),
 		},
 		{
 			Name: "invalid JWK",
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"empty": "nonthingness"}`))
 			}),
@@ -335,7 +335,7 @@ func TestErrorSink(t *testing.T) {
 					})),
 				}
 			},
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(k)
 			}),
@@ -395,7 +395,7 @@ func TestAutoRefreshRace(t *testing.T) {
 	set.Add(k)
 
 	// set up a server that always success since we need to update the registered target
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(k)
 	}))
