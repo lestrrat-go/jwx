@@ -9,8 +9,10 @@ import (
 type identHeaders struct{}
 type identInsecureNoSignature struct{}
 
-// WithHeaders allows you to specify extra header values to include in the
-// final JWS message
+// WithHeaders is deprecated. See WithProtectedHeaders to specify
+// headers to include in the jws signature.
+//
+// Using this option has NO EFFECT.
 func WithHeaders(h Headers) SignOption {
 	return &signOption{option.New(identHeaders{}, h)}
 }

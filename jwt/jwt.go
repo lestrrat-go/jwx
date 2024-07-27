@@ -409,7 +409,7 @@ OUTER:
 //
 // The protected header will also automatically have the `typ` field set
 // to the literal value `JWT`, unless you provide a custom value for it
-// by jwt.WithHeaders option.
+// by jws.WithProtectedHeaders option, that can be passed to `jwt.WithKey“.
 func Sign(t Token, options ...SignOption) ([]byte, error) {
 	var soptions []jws.SignOption
 	if l := len(options); l > 0 {
