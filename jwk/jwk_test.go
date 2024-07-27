@@ -1447,7 +1447,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 
 type typedField struct {
 	Foo string
-	Bar int
+	Bar int64
 }
 
 func TestTypedFields(t *testing.T) {
