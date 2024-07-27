@@ -67,7 +67,7 @@ func TestCache(t *testing.T) {
 			}
 		}
 
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			hdrs := w.Header()
 			hdrs.Set(`Content-Type`, `application/json`)
 			hdrs.Set(`Cache-Control`, `max-age=5`)
@@ -125,7 +125,7 @@ func TestCache(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 
 			key := map[string]interface{}{
@@ -184,7 +184,7 @@ func TestCache(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 
 			key := map[string]interface{}{
@@ -248,7 +248,7 @@ func TestCache(t *testing.T) {
 		defer cancel()
 
 		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			accessCount++
 			if accessCount > 1 && accessCount < 4 {
 				http.Error(w, "wait for it....", http.StatusForbidden)
@@ -426,7 +426,7 @@ func TestErrorSink(t *testing.T) {
 					})),
 				}
 			},
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				json.NewEncoder(w).Encode(k)
 			}),

@@ -1890,7 +1890,7 @@ func TestFetch(t *testing.T) {
 		return
 	}
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(expected)
 	}))
@@ -2011,7 +2011,7 @@ func TestGH567(t *testing.T) {
   ]
 }`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set(`Content-Type`, `application/json`)
 		w.WriteHeader(http.StatusOK)
 

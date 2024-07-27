@@ -1261,7 +1261,7 @@ func TestJKU(t *testing.T) {
 	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 	set := jwk.NewSet()
 	set.AddKey(pubkey)
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
 	}))
@@ -1384,7 +1384,7 @@ func TestJKU(t *testing.T) {
 			require.Equal(t, pubkey.KeyID(), key.KeyID(), `key ID should be populated`)
 			set.AddKey(pubkey)
 		}
-		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(set)
 		}))
