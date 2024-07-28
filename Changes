@@ -1,6 +1,10 @@
 Changes
 =======
 
+v1.2.30 28 Jul 2024
+  * Update minimum required go version to 1.20
+  * Update tests so that they work on 32-bit systems
+
 v1.2.29 07 Mar 2024
   * [jwe] Added `jwe.Settings(jwe.WithMaxDecompressBufferSize(int64))` to specify the
     maximum size of a decompressed JWE payload. The default value is 10MB. If you
