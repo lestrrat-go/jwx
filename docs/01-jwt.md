@@ -10,22 +10,22 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Parse a JWT from file](#parse-a-jwt-from-file)
   * [Parse a JWT from a *http.Request](#parse-a-jwt-from-a-httprequest)
 * [Programmatically Creating a JWT](#programmatically-creating-a-jwt)
-  * [Using jwt.New](#using-jwt-new)
+  * [Using jwt.New](#using-jwtnew)
   * [Using Builder](#using-builder)
 * [Verification](#jwt-verification)
   * [Parse and Verify a JWT (with a single key)](#parse-and-verify-a-jwt-with-single-key)
-  * [Parse and Verify a JWT (with a key set, matching "kid")](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
+  * [Parse and Verify a JWT (with a key set, matching `kid`)](#parse-and-verify-a-jwt-with-a-key-set-matching-kid)
   * [Parse and Verify a JWT (using arbitrary keys)](#parse-and-verify-a-jwt-using-arbitrary-keys)
-  * [Parse and Verify a JWT (using key specified in "jku")](#parse-and-verify-a-jwt-using-key-specified-in-jku)
+  * [Parse and Verify a JWT (using key specified in `jku`)](#parse-and-verify-a-jwt-using-key-specified-in-jku)
 * [Validation](#jwt-validation)
-  * [Validate for specific claims](#validate-for-specific-claims)
+  * [Validate for specific claim values](#validate-for-specific-claim-values)
   * [Use a custom validator](#use-a-custom-validator)
   * [Detecting error types](#detecting-error-types)
 * [Serialization](#jwt-serialization)
   * [Serialize using JWS](#serialize-using-jws)
   * [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
-  * [Serialize the `aud` field as a string](#serialize-aud-field-as-a-string)
-* [Working with JWT](#working-with-jwt)
+  * [Serialize the `aud` field as a single string](#serialize-the-aud-field-as-a-single-string)
+* [Working with JWT](#working-with-jwt-1)
   * [Performance](#performance)
   * [Access JWS headers](#access-jws-headers)
   * [Get/Set fields](#getset-fields)
@@ -44,17 +44,17 @@ We use the terms "validate" and "validation" to describe the process of checking
 
 # Parsing
 
-Parsing a (possibly) JWT comprises of multiple distinct operations. Typically your JWTs are signed and serialized as JWS messages. The JWT is _enveloped_ in JWS. The following is a [sample JWS message serialized in compact form](https://datatracker.ietf.org/doc/html/rfc7515#appendix-A.1):
+Parsing a payload as JWT consists of multiple distinct operations. Typically, your JWTs are signed and serialized as JWS messages. The JWT is _enveloped_ in JWS. The following is a [sample JWS message serialized in compact form](https://datatracker.ietf.org/doc/html/rfc7515#appendix-A.1):
 
 ```
 eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjX
 ```
 
-This message is comprised of three data segments encoded in `base64`, concatenated with a `.`. Each part reads as follows:
+This message consists of three data segments encoded in `base64`, concatenated with a `.`. Each part reads as follows:
 
 * **Part 1**: The JWS protected headers. These are metadata required to verify the signed payload.
 * **Part 2**: The JWS payload. This can be any arbitrary data, but in our case it would be a JWT object.
-* **Part 3**: The JWS signature. This is the signature generated from the signinig key, the headers, and the payload.
+* **Part 3**: The JWS signature. This is the signature generated from the signing key, the headers, and the payload.
 
 It is important to realize that JWS in itself has nothing to do with JWT. The envelope and therefore the JWS mechanism itself does not care that the payload is JWT or not.
 
@@ -94,12 +94,12 @@ func ExampleJWT_Parse() {
 source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
-Note that the above form performs only signature verification　andno validation of the JWT token itself.
+Note that the above form performs only signature verification and no validation of the JWT token itself.
 In order to perform validation, please use `Validate()`.
 
 ## Parse a JWT from file
 
-To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
+To parse a JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse).
 
 <!-- INCLUDE(examples/jwt_readfile_example_test.go) -->
 ```go
@@ -123,9 +123,9 @@ func ExampleJWT_ReadFile() {
   fmt.Fprintf(f, exampleJWTSignedHMAC)
   f.Close()
 
-  // Note: this JWT has NOT been verified because we have not
-  // passed jwt.WithKey() et al. You need to pass these values
-  // if you want the token to be parsed and verified in one go
+  // Note: this JWT has NOT been verified because we have not passed jwt.WithKey() and used
+  // jwt.WithVerify(false). You need to pass jwt.WithKey() if you want the token to be parsed and
+  // verified in one go.
   tok, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
@@ -347,7 +347,7 @@ source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrra
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
 
-## Parse and Verify a JWT (with a key set, matching "kid")
+## Parse and Verify a JWT (with a key set, matching `kid`)
 
 To parse a JWT *and* verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwt#Parse) function.
 
@@ -406,8 +406,7 @@ func ExampleJWT_ParseWithKeySet() {
     // Normally these keys are available somewhere like https://www.googleapis.com/oauth2/v3/certs
     // This key set contains two keys, the first one is the correct one
 
-    // We can use the jwk.PublicSetOf() utility to get a JWKS
-    // all of the public keys
+    // We can use the jwk.PublicSetOf() utility to get a JWKS of the public keys
     {
       privset := jwk.NewSet()
       privset.AddKey(realKey)
@@ -466,11 +465,11 @@ There are a couple of things to note.
 First is that the signing key is initialized with key ID (`kid`). By using a `jwk.Key` with `kid` field set,
 the resulting JWS message will also have the field `kid` set to the same value in the
 corresponding protected headers. This is set because the default behavior is to ONLY accept
-keys if they have matching `kid` fields as the JWS protecte headers.
+keys if they have matching `kid` fields in the JWS protected headers.
 
-You may override this behavior if you explicitly specify to to turn this off using
+You may override this behavior if you explicitly specify to turn this off using
 the `jws.WithRequireKid(false)` option, but this is not recommended. If you already
-know which is supposed to work before hand, it is recommended that you parse the `jwk.Set`
+know which is supposed to work beforehand, it is recommended that you parse the `jwk.Set`
 and modify it manually so that it has a proper `kid` field. Unlike using `jws.WithRequireKid(false)`
 option, this will not allow unintended keys to slip by and have the verification succeed.
 
@@ -643,7 +642,7 @@ func ExampleJWT_ParseWithKeyProvider() {
 source: [examples/jwt_parse_with_key_provider_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_parse_with_key_provider_example_test.go)
 <!-- END INCLUDE -->
 
-## Parse and Verify a JWT (using key specified in "jku")
+## Parse and Verify a JWT (using key specified in `jku`)
 
 You can parse JWTs using the JWK Set specified in the`jku` field in the JWS message by telling `jwt.Parse()` to
 use `jws.VerifyAuto()` instead of `jws.Verify()`. This would effectively allow a JWS to be
@@ -722,7 +721,7 @@ func ExampleJWT_ParseWithJKU() {
 
   // We need to pass jwk.WithHTTPClient because we are using HTTPS,
   // and we need the certificates setup
-  // We also need to explicitly setup the whitelist, this is required
+  // We also need to explicitly set up the whitelist, this is required
   tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(nil, jwk.WithHTTPClient(srv.Client()), jwk.WithFetchWhitelist(jwk.InsecureWhitelist{})))
   if err != nil {
     fmt.Printf("failed to verify token: %s\n", err)
@@ -918,7 +917,7 @@ func ExampleJWT_ValidateDetectErrorType() {
   }
 
   {
-    // Case 1: Parsing error. We're not showing verification failure
+    // Case 1: Parsing error. We're not showing verification failure,
     // but it is about the same in the context of wanting to know
     // if it's a validation error or not
     _, err := jwt.Parse(buf[:len(buf)-1], jwt.WithVerify(false), jwt.WithValidate(true))
@@ -1067,7 +1066,7 @@ source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat
 
 The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors. 
 
-If for whatever reason the buil-tin `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()` -- but at this point it may just be easier if you hand-rolled your own serialization.
+If for whatever reason the built-in `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()` -- but at this point it may just be easier if you hand-rolled your own serialization.
 
 The following example, encrypts a token using JWE, then uses JWS to sign the encrypted payload:
 
@@ -1131,11 +1130,11 @@ func ExampleJWT_SerializeJWEJWS() {
 source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_serialize_jwe_jws_example_test.go)
 <!-- END INCLUDE -->
 
-## Serialize the the `aud` field as a single string
+## Serialize the `aud` field as a single string
 
 When you marshal `jwt.Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
 
-The examples below shoud both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/tree/v2/issues/368)).
+The examples below should both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/tree/v2/issues/368)).
 
 ```
 {
@@ -1151,7 +1150,7 @@ The examples below shoud both be valid, but apparently there are systems that do
 }
 ```
 
-To workaround these problematic parsers, you may use enable the option `jwt.FlattenAudience` on each token that you would like to see this behavior. If you do this for _all_ (or most) tokens, you may opt to change the global default value by settings `jwt.WithFlattenAudience(true)` option via `jwt.Settings()`. 
+To work around these problematic parsers, you may use enable the option `jwt.FlattenAudience` on each token that you would like to see this behavior. If you do this for _all_ (or most) tokens, you may opt to change the global default value by settings `jwt.WithFlattenAudience(true)` option via `jwt.Settings()`.
 
 <!-- INCLUDE(examples/jwt_flatten_audience_example_test.go) -->
 ```go
@@ -1303,7 +1302,7 @@ func ExampleJWTPlainStruct() {
 source: [examples/jwt_raw_struct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v2/examples/jwt_raw_struct_example_test.go)
 <!-- END INCLUDE -->
 
-This makes sure that you do not go through any extra layers of abstraction that causes performance panalties, and you get exactly the type of field that you want.
+This makes sure that you do not go through any extra layers of abstraction that causes performance penalties, and you get exactly the type of field that you want.
 
 ## Access JWS headers
 
@@ -1318,7 +1317,7 @@ Please [look at the JWS documentation for it](./02-jws.md#parse-a-jws-message-an
 
 ## Get/Set fields
 
-Any field in the token can be accessed in an uniform away using `(jwt.Token).Get()`
+Any field in the token can be accessed in a uniform away using `(jwt.Token).Get()`
 
 ```go
 v, ok := token.Get(name)

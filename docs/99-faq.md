@@ -20,7 +20,7 @@ Please read https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-li
 
 ## Why did you change the API?
 
-Presumably you are asking this because your code broke when we bumped the version and broke backwards compatibility. Then the short answer is: "You wouldn't have had to worry about it if you were properly using go.mod"
+Presumably you are asking this because your code broke when we bumped the version and broke backwards compatibility. Then the short answer is: "You wouldn't have had to worry about it if you were properly using `go.mod`"
 
 The longer answer is as follows: From time to time, we introduce API changes, because we learn of mistakes in our old ways.
 Maybe we used the wrong terminology. Maybe we made public something that should have been internal. Maybe we intended an API to be used one way, but it was confusing.
@@ -28,7 +28,7 @@ Maybe we used the wrong terminology. Maybe we made public something that should 
 So then we introduce API changes. Sorry if breaks your builds, but it's done because we deem it necessary.
 
 You should also know that we do not introduce API changes between micro versions.
-And on top of that, Go provides extremely good support for idempodent builds via Go modules.
+And on top of that, Go provides extremely good support for idempotent builds via Go modules.
 If you are in an environment where API changes disrupts your environment, you should definitely migrate to using Go modules now.
 
 
@@ -70,7 +70,7 @@ So, for example, a service like Google will sign their JWTs using their private 
 
 Often times we have people asking us about github.com/lestrrat-go/jwx/v2/jwt not being able to parse a token... except, they are not JWTs.
 
-For example, when a provider says they will give you an "access token" ... well, it *may* be a JWT, but often times they are just some sort of string key (which will definitely parse if you pass it to `jwt.Parse`). Sometimes what you really want is stored in a different token, and it may be called an "ID token". Who knows, these things vary between implementation to implemention.
+For example, when a provider says they will give you an "access token" ... well, it *may* be a JWT, but often times they are just some sort of string key (which will definitely parse if you pass it to `jwt.Parse`). Sometimes what you really want is stored in a different token, and it may be called an "ID token". Who knows, these things vary between implementation to implementation.
 
 After all, the only thing we can say is that you should check that you are parsing. 
 
@@ -122,7 +122,7 @@ func MyOption(obj *Object) {
 
 From this design you can see that we need to make a few assumptions.
 
-First, the callback must have a specific signature. This is not a deal breaker, but you have to be conscious of the fact that you are tying your option to this object type specifically, and you will not be able to change this.
+First, the callback must have a specific signature. This is not a deal-breaker, but you have to be conscious of the fact that you are tying your option to this object type specifically, and you will not be able to change this.
 
 Second, you are setting values to an object. The library can either provide exported fields, or it can provide setter methods, but either way, it will need to expose those knobs to the end user. This means that internal details of the object _will_ have to be visible, even if this option is the only logical place that detail is to be used. You could maybe use a state (or a config) variable to avoid assigning to the object itself, and localize the effect of the option for the method:
 
@@ -143,7 +143,7 @@ func MyOption(obj *Object, cfg *MethodConfig) {
 
 But this means that you will have to have a state/config object for _each_ method call that takes options, and we have a lot of methods.
 
-And finally, as you have seen above, with a callback based option object you will have to change its signature for each usecase. It's just a lot of hassle to remember which option uses which signature.
+And finally, as you have seen above, with a callback based option object you will have to change its signature for each use case. It's just a lot of hassle to remember which option uses which signature.
 
 Based on the reasons above, we decided to **decouple the option data** and the **option handling logic**. Our option objects are simply data containers. They have an identity (`Ident()`), and they have a value (`Value()`). The option objects themselves do not know how they are going to be used. The consumers (the methods) are the ones who know how to deal with the data the options carry.
 

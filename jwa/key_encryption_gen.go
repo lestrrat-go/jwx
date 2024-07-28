@@ -30,11 +30,14 @@ const (
 	RSA1_5             KeyEncryptionAlgorithm = "RSA1_5"             // RSA-PKCS1v1.5
 	RSA_OAEP           KeyEncryptionAlgorithm = "RSA-OAEP"           // RSA-OAEP-SHA1
 	RSA_OAEP_256       KeyEncryptionAlgorithm = "RSA-OAEP-256"       // RSA-OAEP-SHA256
+	RSA_OAEP_384       KeyEncryptionAlgorithm = "RSA-OAEP-384"       // RSA-OAEP-SHA384
+	RSA_OAEP_512       KeyEncryptionAlgorithm = "RSA-OAEP-512"       // RSA-OAEP-SHA512
 )
 
 var muKeyEncryptionAlgorithms sync.RWMutex
 var allKeyEncryptionAlgorithms map[KeyEncryptionAlgorithm]struct{}
 var listKeyEncryptionAlgorithm []KeyEncryptionAlgorithm
+var symmetricKeyEncryptionAlgorithms map[KeyEncryptionAlgorithm]struct{}
 
 func init() {
 	muKeyEncryptionAlgorithms.Lock()
@@ -57,27 +60,63 @@ func init() {
 	allKeyEncryptionAlgorithms[RSA1_5] = struct{}{}
 	allKeyEncryptionAlgorithms[RSA_OAEP] = struct{}{}
 	allKeyEncryptionAlgorithms[RSA_OAEP_256] = struct{}{}
+	allKeyEncryptionAlgorithms[RSA_OAEP_384] = struct{}{}
+	allKeyEncryptionAlgorithms[RSA_OAEP_512] = struct{}{}
+	symmetricKeyEncryptionAlgorithms = make(map[KeyEncryptionAlgorithm]struct{})
+	symmetricKeyEncryptionAlgorithms[A128GCMKW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[A128KW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[A192GCMKW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[A192KW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[A256GCMKW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[A256KW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[DIRECT] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[PBES2_HS256_A128KW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[PBES2_HS384_A192KW] = struct{}{}
+	symmetricKeyEncryptionAlgorithms[PBES2_HS512_A256KW] = struct{}{}
 	rebuildKeyEncryptionAlgorithm()
 }
 
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm so that the jwx can properly handle the new value.
 // Duplicates will silently be ignored
 func RegisterKeyEncryptionAlgorithm(v KeyEncryptionAlgorithm) {
+	RegisterKeyEncryptionAlgorithmWithOptions(v)
+}
+
+// RegisterKeyEncryptionAlgorithmWithOptions is the same as RegisterKeyEncryptionAlgorithm when used without options,
+// but allows its behavior to change based on the provided options.
+// This is an experimental AND stopgap function which will most likely be merged in RegisterKeyEncryptionAlgorithm, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.
+//
+// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
+func RegisterKeyEncryptionAlgorithmWithOptions(v KeyEncryptionAlgorithm, options ...RegisterAlgorithmOption) {
+	var symmetric bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identSymmetricAlgorithm{}:
+			symmetric = option.Value().(bool)
+		}
+	}
 	muKeyEncryptionAlgorithms.Lock()
 	defer muKeyEncryptionAlgorithms.Unlock()
 	if _, ok := allKeyEncryptionAlgorithms[v]; !ok {
 		allKeyEncryptionAlgorithms[v] = struct{}{}
+		if symmetric {
+			symmetricKeyEncryptionAlgorithms[v] = struct{}{}
+		}
 		rebuildKeyEncryptionAlgorithm()
 	}
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterKeyEncryptionAlgorithm(v KeyEncryptionAlgorithm) {
 	muKeyEncryptionAlgorithms.Lock()
 	defer muKeyEncryptionAlgorithms.Unlock()
 	if _, ok := allKeyEncryptionAlgorithms[v]; ok {
 		delete(allKeyEncryptionAlgorithms, v)
+		if _, ok := symmetricKeyEncryptionAlgorithms[v]; ok {
+			delete(symmetricKeyEncryptionAlgorithms, v)
+		}
 		rebuildKeyEncryptionAlgorithm()
 	}
 }
@@ -130,11 +169,8 @@ func (v KeyEncryptionAlgorithm) String() string {
 	return string(v)
 }
 
-// IsSymmetric returns true if the algorithm is a symmetric type
+// IsSymmetric returns true if the algorithm is a symmetric type.
 func (v KeyEncryptionAlgorithm) IsSymmetric() bool {
-	switch v {
-	case A128GCMKW, A128KW, A192GCMKW, A192KW, A256GCMKW, A256KW, DIRECT, PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW:
-		return true
-	}
-	return false
+	_, ok := symmetricKeyEncryptionAlgorithms[v]
+	return ok
 }

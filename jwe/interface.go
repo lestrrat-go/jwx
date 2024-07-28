@@ -96,7 +96,7 @@ type stdRecipient struct {
 // Message contains the entire encrypted JWE message. You should not
 // expect to use Message for anything other than inspecting the
 // state of an encrypted message. This is because encryption is
-// highly context sensitive, and once we parse the original payload
+// highly context-sensitive, and once we parse the original payload
 // into an object, we may not always be able to recreate the exact
 // context in which the encryption happened.
 //
@@ -132,7 +132,7 @@ type Message struct {
 	//    These Header Parameter values are not integrity protected.
 	//
 	// JWX note: This field is NOT mutually exclusive with per-recipient
-	// headers within the implmentation because... it's too much work.
+	// headers within the implementation because... it's too much work.
 	// It is _never_ populated (we don't provide a way to do this) upon encryption.
 	// When decrypting, if present its values are always merged with
 	// per-recipient header.

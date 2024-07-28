@@ -240,7 +240,7 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v2/discussions)
 
 # Related Modules
 
-* [github.com/lestrrat-go/echo-middileware-jwx](https://github.com/lestrrat-go/echo-middleware-jwx) - Sample Echo middleware
+* [github.com/lestrrat-go/echo-middleware-jwx](https://github.com/lestrrat-go/echo-middleware-jwx) - Sample Echo middleware
 * [github.com/jwx-go/crypto-signer/gcp](https://github.com/jwx-go/crypto-signer/tree/main/gcp) - GCP KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
 * [github.com/jwx-go/crypto-signer/aws](https://github.com/jwx-go/crypto-signer/tree/main/aws) - AWS KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
 

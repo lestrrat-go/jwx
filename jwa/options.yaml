@@ -1,0 +1,15 @@
+package_name: jwa
+output: jwa/options_gen.go
+interfaces:
+  - name: RegisterAlgorithmOption
+    comment: |
+      RegisterAlgorithmOption describes options that can be passed to the algorithm registering
+      functions that support options such as RegisterKeyEncryptionAlgorithmWithOptions.
+options:
+  - ident: SymmetricAlgorithm
+    interface: RegisterAlgorithmOption
+    argument_type: bool
+    comment: |
+      WithSymmetricAlgorithm lets the library know whether the algorithm is symmetric. This affects
+      the response of the `IsSymmetric` method of the algorithm. If the algorithms does not support
+      this method, using this option will result in an error.

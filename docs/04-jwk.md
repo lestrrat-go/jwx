@@ -14,8 +14,6 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Parse a key as a struct field](#parse-a-key-as-a-struct-field)
 * [Construction](#construction)
   * [Using jwk.FromRaw()](#using-jwkfromraw)
-  * [Construct a specific key type from scratch](#construct-a-specific-key-type-from-scratch)
-  * [Construct a specific key type from a raw key](#construct-a-specific-key-type-from-a-raw-key)
 * [Fetching JWK Sets](#fetching-jwk-sets)
   * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
@@ -45,7 +43,7 @@ and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Read
 
 Used to describe the underlying raw key that a JWK represents. For example, an RSA JWK can
 represent rsa.PrivateKey/rsa.PublicKey, ECDSA JWK can represent ecdsa.PrivateKey/ecdsa.PublicKey,
-and so forth
+and so forth.
 
 ---
 
@@ -63,7 +61,7 @@ If given anything else, `jwk.FromRaw` will return an error.
 
 ## Parse a set
 
-If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse)
+If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Parse).
 
 <!-- INCLUDE(examples/jwk_parse_jwks_example_test.go) -->
 ```go
@@ -110,7 +108,7 @@ source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go
 
 ## Parse a key
 
-If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseKey)
+If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseKey).
 
 <!-- INCLUDE(examples/jwk_parse_key_example_test.go) -->
 ```go
@@ -334,7 +332,7 @@ source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lest
 
 ## Parse a key as a struct field
 
-As `jwk.Key` is an interface, it can't directly be used as an argument in `json.Unmarsshal`.
+As `jwk.Key` is an interface, it can't directly be used as an argument in `json.Unmarshal`.
 For example, the following would fail:
 
 ```go
@@ -532,9 +530,9 @@ source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/j
 
 ## Parse a key from a remote resource
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
+To parse keys stored in a remote location pointed by an HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long-running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#CachedSet) described elsewhere in this document.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
@@ -593,8 +591,8 @@ source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/
 
 ## Auto-refreshing remote keys
 
-Sometimes you need to fetch a remote JWK, and use it mltiple times in a long-running process.
-For example, you may act as an itermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
+Sometimes you need to fetch a remote JWK, and use it multiple times in a long-running process.
+For example, you may act as an intermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
 
 Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fetch),
 but keys are usually routinely expired and rotated due to security reasons.
@@ -661,7 +659,7 @@ MAIN:
     // immediately after it has been rotated in the remote source. But it should be close\
     // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
     //
-    // If re-fetching the keyset fails, a cached version will be returned from the previous successful
+    // If refetching the keyset fails, a cached version will be returned from the previous successful
     // fetch upon calling `(jwk.Cache).Fetch()`.
 
     // Do interesting stuff with the keyset... but here, we just
@@ -669,7 +667,7 @@ MAIN:
     time.Sleep(time.Second)
 
     // Because we're a dummy program, we just cancel the loop now.
-    // If this were a real program, you prosumably loop forever
+    // If this were a real program, you presumably loop forever
     cancel()
   }
   // OUTPUT:
@@ -716,7 +714,7 @@ func ExampleJWK_CachedSet() {
   //
   //   jwk.Fetch(ctx, googleCerts)
   //
-  // But you are instead using a cached (and periodically refreshed)
+  // But you are instead using a cached (and periodically refreshed) set
   // for each operation.
   _ = jws.WithKeySet(cached)
 }
@@ -726,13 +724,13 @@ source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go
 
 ## Using Whitelists
 
-If you are fetching JWK Sets from a possibly untrusted source such as the URL in the`"jku"` field of a JWS message,
+If you are fetching JWK Sets from a possibly untrusted source such as the URL in the `jku` field of a JWS message,
 you may have to perform some sort of whitelist checking. You can provide a `jwk.Whitelist` object to either
 `jwk.Fetch()` or `(*jwk.Cache).Register()` methods to specify the use of a whitelist.
 
 Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases,
-as well as `jwk.InsecureWhitelist` for when you explicitly want to allo all URLs.
-If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement you own type of `jwk.Whitelist`.
+as well as `jwk.InsecureWhitelist` for when you explicitly want to allow all URLs.
+If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement your own type of `jwk.Whitelist`.
 
 <!-- INCLUDE(examples/jwk_whitelist_example_test.go) -->
 ```go
@@ -885,11 +883,11 @@ Using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Fro
 
 These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method.
 
-The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method takes the name of the key, and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others not.
+The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) method takes the name of the key and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced) and others don't.
 
 [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Set) may not alter the Key Type (`kty`) field of a key.
 
-the `jwk` package defines field key names for predefined keys as constants so you won't ever have to bang your head againt the wall after finding out that you have a typo.
+The `jwk` package defines field key names for predefined keys as constants, so you won't ever have to bang your head against the wall after finding out that you have a typo.
 
 ```go
 key.Set(jwk.KeyIDKey, `my-awesome-key`)
@@ -898,7 +896,7 @@ key.Set(`my-custom-field`, `unbelievable-value`)
 
 ## Converting a jwk.Key to a raw key
 
-As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc) as "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v2/jwk#Raw) method.
+As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc.) "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v2/jwk#Raw) method.
 
 ```go
 key, _ := jwk.ParseKey(src)
@@ -912,7 +910,7 @@ if err := key.Raw(&raw); err != nil {
 In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#Key) represents.
 If `key` represents an RSA key, it will contain either a `rsa.PublicKey` or `rsa.PrivateKey`. If it represents an ECDSA key, an `ecdsa.PublicKey`, or `ecdsa.PrivateKey`, etc.
 
-If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseRawKey)
+If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2/jwk#ParseRawKey).
 
 ```go
 var raw interface{}

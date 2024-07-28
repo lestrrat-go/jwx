@@ -69,7 +69,7 @@ func ExampleJWT_ParseWithJKU() {
 
 	// We need to pass jwk.WithHTTPClient because we are using HTTPS,
 	// and we need the certificates setup
-	// We also need to explicitly setup the whitelist, this is required
+	// We also need to explicitly set up the whitelist, this is required
 	tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(nil, jwk.WithHTTPClient(srv.Client()), jwk.WithFetchWhitelist(jwk.InsecureWhitelist{})))
 	if err != nil {
 		fmt.Printf("failed to verify token: %s\n", err)

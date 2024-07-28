@@ -34,7 +34,7 @@ func ExampleJWK_CachedSet() {
 	//
 	//   jwk.Fetch(ctx, googleCerts)
 	//
-	// But you are instead using a cached (and periodically refreshed)
+	// But you are instead using a cached (and periodically refreshed) set
 	// for each operation.
 	_ = jws.WithKeySet(cached)
 }

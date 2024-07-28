@@ -47,7 +47,7 @@ func RegisterKeyType(v KeyType) {
 }
 
 // UnregisterKeyType unregisters a KeyType from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterKeyType(v KeyType) {
 	muKeyTypes.Lock()
 	defer muKeyTypes.Unlock()

@@ -58,7 +58,7 @@ func (*fetchOption) parseOption() {}
 func (*fetchOption) registerOption() {}
 
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implmentsthe `ReadFileOption` and `CacheOption`,
+// ParseOption also implements the `ReadFileOption` and `CacheOption`,
 // and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
 type ParseOption interface {
 	Option
@@ -89,7 +89,7 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
-// RegisterOption desribes options that can be passed to `(jwk.Cache).Register()`
+// RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
 type RegisterOption interface {
 	Option
 	registerOption()

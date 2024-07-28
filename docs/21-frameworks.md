@@ -10,7 +10,7 @@ type Server struct {
 }
 ```
 
-The first step is to decide on the signature algorithm. Here we will show examples for using `jwa.HS256` and `jwa.RS256`. Choose the appropriate signature for your particular use case. You can find the full list of supported signature algorithms in the documentation or the source code for the [`jwa`](../jwa) package (remember tha there are some [optional algorithms](./global-settings.md#enabling-pptional-signature-methods).
+The first step is to decide on the signature algorithm. Here we will show examples for using `jwa.HS256` and `jwa.RS256`. Choose the appropriate signature for your particular use case. You can find the full list of supported signature algorithms in the documentation or the source code for the [`jwa`](../jwa) package (remember that there are some [optional algorithms](./20-global-settings.md#enabling-optional-signature-methods)).
 
 
 ### Using HS256
@@ -52,7 +52,7 @@ s.alg = jwa.RS256
 JWTs can be stored in HTTP headers, form values, etc, and you need to decide where to fetch the JWT payload from.
 
 The `jwt` package provides several ways to retrieve JWT data from an HTTP request.
-`jwt.ParseRequest` is the most generic front end, and the user will be able to dynamically change where to fetch the data from. By default the "Authorization" header is checked. If you want to check for more places, you can specify it as additional options. Please read the manual for `jwt.ParseRequest` for more details.
+`jwt.ParseRequest` is the most generic front end, and the user will be able to dynamically change where to fetch the data from. By default, the "Authorization" header is checked. If you want to check for more places, you can specify additional options. Please read the manual for `jwt.ParseRequest` for more details.
 
 The option `jwt.WithKey` is added to validate the JWS message. You will need to execute `jwt.Validate` to validate the content of the JWT message. You can control what gets validated by passing options to `jwt.Validate`. Please read the manual for `jwt.Validate` for more details.
 

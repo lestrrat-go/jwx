@@ -38,7 +38,7 @@ func ExampleJWS_UseJWSHeader() {
 	}
 
 	// While JWT enveloped with JWS in compact format only has 1 signature,
-	// a generic JWS message may have multiple signatures. Therefore we
+	// a generic JWS message may have multiple signatures. Therefore, we
 	// need to access the first element
 	fmt.Printf("%q\n", msg.Signatures()[0].ProtectedHeaders().KeyID())
 	// OUTPUT:

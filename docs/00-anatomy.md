@@ -6,7 +6,7 @@ In this article we will briefly go over what JOSE is, and how each JWX libraries
 
 # JOSE Overview
 
-Javascript Object Signing and Encryption is mainly comprised of specifications that span over 5 RFCs: namely RFC7515, RFC7516, RFC7517, RFC7518, and RFC7519.
+Javascript Object Signing and Encryption mainly consists of specifications that span over 5 RFCs: namely RFC7515, RFC7516, RFC7517, RFC7518, and RFC7519.
 
 * [RFC 7515 - JSON Web Signature (JWS)](https://tools.ietf.org/html/rfc7515)
 * [RFC 7516 - JSON Web Encryption (JWE)](https://tools.ietf.org/html/rfc7516)
@@ -32,7 +32,7 @@ Most of the times this information must be integrity checked using signatures, s
 
 While they are referenced from RFC7519, the standardized message formats for signed and/or encrypted JWTs are not in the same RFC.
 
-As a side note, many libraries bundle these signature/encryption features into one JWT package, and API becomes tightly coupled with the JWT, which I find confusing and hard to fix/extend- which is part of the reason why JWX was born.
+As a side note, many libraries bundle these signature/encryption features into one JWT package, and the API becomes tightly coupled with the JWT, which I find confusing and hard to fix/extend which is part of the reason why JWX was born.
 
 ## Documentation for `github.com/lestrrat-go/jwx/v2/jwt`
 
@@ -56,7 +56,7 @@ Please note that a JWS message may take three forms: compact, full JSON, and fla
 graph TD
     RawData[Raw Data] --> |"three base64 encoded segments,<br/> concatenated with ."| Compact[Compact Serialization]
     RawData --> | JSON | JSON[JSON Serialization]
-    JSON --> |"does NOT have'signature'"| FullJSON[Full JSON Serialization]
+    JSON --> |"does NOT have 'signature'"| FullJSON[Full JSON Serialization]
     JSON --> |"has 'signature'"| Flat[Flattened JSON Serialization]
 ```
 
@@ -86,7 +86,7 @@ JWE is implemented in github.com/lestrrat-go/jwe package. This package provides 
 
 # JWK - RFC7517
 
-So JWTs can be signed and/or encrypted using JWS and JWE. However in order to do either operation one needs some sort of a key. This is where RFC757 which describes JWK comes into play.
+So JWTs can be signed and/or encrypted using JWS and JWE. However, in order to do either operation one needs some sort of key. This is where RFC757 which describes JWK comes into play.
 
 JWKs describe formats to describe keys, such as RSA keys, Elliptic Curve keys, symmetric keys, etc. Each family of keys have a slightly different, unique format, but they are all encoded as JSON objects. 
 
@@ -110,6 +110,6 @@ JWK is implemented in github.com/lestrrat-go/jwx/v2/jwk package. This package pr
 
 # JWA - RFC7518
 
-And finally, RFC exists to define commonly used algorithm names in JWT, JWS, JWE, and JWK. 
+And finally, an RFC exists to define commonly used algorithm names in JWT, JWS, JWE, and JWK.
 
 This is implemented in github.com/lestrrat-go/jwx/v2/jwa.

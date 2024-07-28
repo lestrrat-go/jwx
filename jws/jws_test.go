@@ -354,7 +354,7 @@ func TestSignMulti2(t *testing.T) {
 			require.NoError(t, err, "Verify succeeded")
 			require.Equal(t, payload, verified, "verified payload matches")
 
-			// XXX This actally doesn't really test much, but if there was anything
+			// XXX This actually doesn't really test much, but if there was anything
 			// wrong, the process should have failed well before reaching here
 			require.Equal(t, payload, m.Payload(), "message payload matches")
 		})
@@ -1261,7 +1261,7 @@ func TestJKU(t *testing.T) {
 	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 	set := jwk.NewSet()
 	set.AddKey(pubkey)
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(set)
 	}))
@@ -1384,7 +1384,7 @@ func TestJKU(t *testing.T) {
 			require.Equal(t, pubkey.KeyID(), key.KeyID(), `key ID should be populated`)
 			set.AddKey(pubkey)
 		}
-		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(set)
 		}))
@@ -1453,7 +1453,7 @@ func TestJKU(t *testing.T) {
 						return
 					}
 					require.Equal(t, payload, decoded, `decoded payload should match`)
-					// XXX This actally doesn't really test much, but if there was anything
+					// XXX This actually doesn't really test much, but if there was anything
 					// wrong, the process should have failed well before reaching here
 					require.Equal(t, payload, m.Payload(), "message payload matches")
 				}
@@ -1629,7 +1629,7 @@ func TestGH888(t *testing.T) {
 	_, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)))
 	require.Error(t, err, `jws.Sign with multiple keys (including alg=none) should fail`)
 
-	// This should pass because we can now have multiple signaures with JSON serialization
+	// This should pass because we can now have multiple signatures with JSON serialization
 	signed, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)), jws.WithJSON())
 	require.NoError(t, err, `jws.Sign should succeed`)
 

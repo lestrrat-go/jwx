@@ -50,7 +50,7 @@ func RegisterContentEncryptionAlgorithm(v ContentEncryptionAlgorithm) {
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterContentEncryptionAlgorithm(v ContentEncryptionAlgorithm) {
 	muContentEncryptionAlgorithms.Lock()
 	defer muContentEncryptionAlgorithms.Unlock()

@@ -256,7 +256,7 @@ func WithClock(v Clock) ValidateOption {
 // should be serialized in JWS compact form only, but historically this library
 // allowed for deserialization of JWTs in JWS's JSON serialization format.
 // Specifying this option will disable this behavior, and will report
-// errots if the token is not in compact serialization format.
+// errors if the token is not in compact serialization format.
 func WithCompactOnly(v bool) GlobalOption {
 	return &globalOption{option.New(identCompactOnly{}, v)}
 }
@@ -290,7 +290,7 @@ func WithCookieKey(v string) ParseOption {
 }
 
 // WithEncryptOption provides an escape hatch for cases where extra options to
-// `(jws.Serializer).Encrypt()` must be specified when usng `jwt.Sign()`. Normally you do not
+// `(jws.Serializer).Encrypt()` must be specified when using `jwt.Sign()`. Normally you do not
 // need to use this.
 func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
 	return &encryptOption{option.New(identEncryptOption{}, v)}
@@ -336,7 +336,7 @@ func WithKeyProvider(v jws.KeyProvider) ParseOption {
 
 // WithNumericDateFormatPrecision sets the precision up to which the
 // library uses to format fractional dates found in the numeric date
-// fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+// fields. Default is 0 (second, no fractions), max is 9 (nanosecond)
 func WithNumericDateFormatPrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateFormatPrecision{}, v)}
 }
@@ -346,7 +346,7 @@ func WithNumericDateFormatPrecision(v int) GlobalOption {
 // attempts to interpret timestamps as a numeric value representing
 // number of seconds (with an optional fractional part), but if that fails
 // it tries to parse using a RFC3339 parser. This allows us to parse
-// payloads from non-comforming servers.
+// payloads from non-conforming servers.
 //
 // However, when you set WithNumericDateParePedantic to `true`, the
 // RFC3339 parser is not tried, and we expect a numeric value strictly
@@ -356,7 +356,7 @@ func WithNumericDateParsePedantic(v bool) GlobalOption {
 
 // WithNumericDateParsePrecision sets the precision up to which the
 // library uses to parse fractional dates found in the numeric date
-// fields. Default is 0 (second, no fractionals), max is 9 (nanosecond)
+// fields. Default is 0 (second, no fractions), max is 9 (nanosecond)
 func WithNumericDateParsePrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateParsePrecision{}, v)}
 }
@@ -390,19 +390,19 @@ func WithResetValidators(v bool) ValidateOption {
 }
 
 // WithSignOption provides an escape hatch for cases where extra options to
-// `jws.Sign()` must be specified when usng `jwt.Sign()`. Normally you do not
+// `jws.Sign()` must be specified when using `jwt.Sign()`. Normally you do not
 // need to use this.
 func WithSignOption(v jws.SignOption) SignOption {
 	return &signOption{option.New(identSignOption{}, v)}
 }
 
-// WithToken specifies the token instance where the result JWT is stored
-// when parsing JWT tokensthat is used when parsing
+// WithToken specifies the token instance in which the resulting JWT is stored
+// when parsing JWT tokens
 func WithToken(v Token) ParseOption {
 	return &parseOption{option.New(identToken{}, v)}
 }
 
-// WithTruncation speficies the amount that should be used when
+// WithTruncation specifies the amount that should be used when
 // truncating time values used during time-based validation routines.
 // By default time values are truncated down to second accuracy.
 // If you want to use sub-second accuracy, you will need to set

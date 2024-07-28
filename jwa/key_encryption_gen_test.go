@@ -623,6 +623,78 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			return
 		}
 	})
+	t.Run(`accept jwa constant RSA_OAEP_384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.RSA_OAEP_384), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept("RSA-OAEP-384"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "RSA-OAEP-384"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_384, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RSA-OAEP-384`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP-384", jwa.RSA_OAEP_384.String(), `stringified value matches`) {
+			return
+		}
+	})
+	t.Run(`accept jwa constant RSA_OAEP_512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(jwa.RSA_OAEP_512), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept the string RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept("RSA-OAEP-512"), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`accept fmt.Stringer for RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		if !assert.NoError(t, dst.Accept(stringer{src: "RSA-OAEP-512"}), `accept is successful`) {
+			return
+		}
+		if !assert.Equal(t, jwa.RSA_OAEP_512, dst, `accepted value should be equal to constant`) {
+			return
+		}
+	})
+	t.Run(`stringification for RSA-OAEP-512`, func(t *testing.T) {
+		t.Parallel()
+		if !assert.Equal(t, "RSA-OAEP-512", jwa.RSA_OAEP_512.String(), `stringified value matches`) {
+			return
+		}
+	})
 	t.Run(`bail out on random integer value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
@@ -633,7 +705,7 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyEncryptionAlgorithm
-		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
+		if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {
 			return
 		}
 	})
@@ -690,6 +762,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		t.Run(`RSA_OAEP_256`, func(t *testing.T) {
 			assert.False(t, jwa.RSA_OAEP_256.IsSymmetric(), `jwa.RSA_OAEP_256 should NOT be symmetric`)
 		})
+		t.Run(`RSA_OAEP_384`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP_384.IsSymmetric(), `jwa.RSA_OAEP_384 should NOT be symmetric`)
+		})
+		t.Run(`RSA_OAEP_512`, func(t *testing.T) {
+			assert.False(t, jwa.RSA_OAEP_512.IsSymmetric(), `jwa.RSA_OAEP_512 should NOT be symmetric`)
+		})
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
@@ -711,6 +789,8 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			jwa.RSA1_5:             {},
 			jwa.RSA_OAEP:           {},
 			jwa.RSA_OAEP_256:       {},
+			jwa.RSA_OAEP_384:       {},
+			jwa.RSA_OAEP_512:       {},
 		}
 		for _, v := range jwa.KeyEncryptionAlgorithms() {
 			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
@@ -721,5 +801,176 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		if !assert.Len(t, expected, 0) {
 			return
 		}
+	})
+}
+
+// Note: this test can NOT be run in parallel as it uses options with global effect.
+func TestKeyEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
+	// These subtests can NOT be run in parallel as options with global effect change.
+	customAlgorithm := jwa.KeyEncryptionAlgorithm("custom-algorithm")
+	// Unregister the custom algorithm, in case tests fail.
+	t.Cleanup(func() {
+		jwa.UnregisterKeyEncryptionAlgorithm(customAlgorithm)
+	})
+	t.Run(`with custom algorithm registered`, func(t *testing.T) {
+		jwa.RegisterKeyEncryptionAlgorithm(customAlgorithm)
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+		jwa.UnregisterKeyEncryptionAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+
+	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(false)`, func(t *testing.T) {
+		jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(false))
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(false))`, func(t *testing.T) {
+		jwa.UnregisterKeyEncryptionAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
+	})
+
+	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(true)`, func(t *testing.T) {
+		jwa.RegisterKeyEncryptionAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, customAlgorithm.IsSymmetric(), `custom algorithm should be symmetric`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(true))`, func(t *testing.T) {
+		jwa.UnregisterKeyEncryptionAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.KeyEncryptionAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
+		t.Run(`check symmetric`, func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
+		})
 	})
 }

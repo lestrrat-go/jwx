@@ -42,7 +42,7 @@ func RegisterCompressionAlgorithm(v CompressionAlgorithm) {
 }
 
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.
-// Non-existentn entries will silently be ignored
+// Non-existent entries will silently be ignored
 func UnregisterCompressionAlgorithm(v CompressionAlgorithm) {
 	muCompressionAlgorithms.Lock()
 	defer muCompressionAlgorithms.Unlock()

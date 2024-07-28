@@ -22,14 +22,14 @@ interfaces:
       - readFileOption
     comment: |
       ParseOption is a type of Option that can be passed to `jwk.Parse()`
-      ParseOption also implmentsthe `ReadFileOption` and `CacheOption`,
+      ParseOption also implements the `ReadFileOption` and `CacheOption`,
       and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
   - name: RegisterOption
     comment: |
-      RegisterOption desribes options that can be passed to `(jwk.Cache).Register()`
+      RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
 options:
   - ident: HTTPClient
     interface: FetchOption

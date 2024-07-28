@@ -40,18 +40,18 @@ func (e errStep) Serialize(_ SerializeCtx, _ interface{}) (interface{}, error) {
 	return nil, e.err
 }
 
-// Serializer is a generic serializer for JWTs. Whereas other conveinience
+// Serializer is a generic serializer for JWTs. Whereas other convenience
 // functions can only do one thing (such as generate a JWS signed JWT),
 // Using this construct you can serialize the token however you want.
 //
-// By default the serializer only marshals the token into a JSON payload.
+// By default, the serializer only marshals the token into a JSON payload.
 // You must set up the rest of the steps that should be taken by the
 // serializer.
 //
 // For example, to marshal the token into JSON, then apply JWS and JWE
 // in that order, you would do:
 //
-//	serialized, err := jwt.NewSerialer().
+//	serialized, err := jwt.NewSerializer().
 //	   Sign(jwa.RS256, key).
 //	   Encrypt(jwa.RSA_OAEP, key.PublicKey).
 //	   Serialize(token)

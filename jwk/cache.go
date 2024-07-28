@@ -50,7 +50,7 @@ type Whitelist = httprc.Whitelist
 // that can go down often, you should consider alternatives such as
 // providing `http.Client` with a caching `http.RoundTripper` configured
 // (see `jwk.WithHTTPClient`), setting up a reverse proxy, etc.
-// These techniques allow you to setup a more robust way to both cache
+// These techniques allow you to set up a more robust way to both cache
 // and report precise causes of the problems than using `jwk.Cache` or
 // `jwk.CachedSet`. If you handle the caching at the HTTP level like this,
 // you will be able to use a simple `jwk.Fetch` call and not worry about the cache.
@@ -72,7 +72,7 @@ type Whitelist = httprc.Whitelist
 //
 // We also know that these stable JWKS objects are rotated periodically,
 // which is a perfect use for `jwk.Cache` and `jwk.CachedSet`. The caches
-// can be configured to perodically refresh the JWKS thereby keeping them
+// can be configured to periodically refresh the JWKS thereby keeping them
 // fresh without extra intervention from the developer.
 //
 // Notice that for these recommended use-cases the requirement to check
@@ -87,7 +87,7 @@ type Cache struct {
 // PostFetcher is an interface for objects that want to perform
 // operations on the `Set` that was fetched.
 type PostFetcher interface {
-	// PostFetch revceives the URL and the JWKS, after a successful
+	// PostFetch receives the URL and the JWKS, after a successful
 	// fetch and parse.
 	//
 	// It should return a `Set`, optionally modified, to be stored
@@ -95,14 +95,14 @@ type PostFetcher interface {
 	PostFetch(string, Set) (Set, error)
 }
 
-// PostFetchFunc is a PostFetcher based on a functon.
+// PostFetchFunc is a PostFetcher based on a function.
 type PostFetchFunc func(string, Set) (Set, error)
 
 func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
 	return f(u, set)
 }
 
-// httprc.Transofmer that transforms the response into a JWKS
+// httprc.Transformer that transforms the response into a JWKS
 type jwksTransform struct {
 	postFetch    PostFetcher
 	parseOptions []ParseOption
@@ -217,7 +217,7 @@ func (c *Cache) Register(u string, options ...RegisterOption) error {
 		}
 	}
 
-	// Set the transfomer at the end so that nobody can override it
+	// Set the transformer at the end so that nobody can override it
 	hrropts = append(hrropts, httprc.WithTransformer(t))
 	return c.cache.Register(u, hrropts...)
 }
@@ -278,7 +278,7 @@ func (c *Cache) Snapshot() *httprc.Snapshot {
 	return c.cache.Snapshot()
 }
 
-// CachedSet is a thin shim over jwk.Cache that allows the user to cloack
+// CachedSet is a thin shim over jwk.Cache that allows the user to cloak
 // jwk.Cache as if it's a `jwk.Set`. Behind the scenes, the `jwk.Set` is
 // retrieved from the `jwk.Cache` for every operation.
 //

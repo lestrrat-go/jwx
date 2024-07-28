@@ -13,7 +13,7 @@ import (
 // Multiple `jwe.KeyProvider`s can be passed to `jwe.Encrypt()` or `jwe.Decrypt()`
 //
 // `jwe.Encrypt()` can only accept static key providers via `jwe.WithKey()`,
-// while `jwe.Derypt()` can accept `jwe.WithKey()`, `jwe.WithKeySet()`,
+// while `jwe.Decrypt()` can accept `jwe.WithKey()`, `jwe.WithKeySet()`,
 // and `jwe.WithKeyProvider()`.
 //
 // Understanding how this works is crucial to learn how this package works.
@@ -34,11 +34,11 @@ import (
 //
 // Then, remember that a JWE message may contain multiple recipients in the
 // message. For each recipient, we call on the KeyProviders to give us
-// the key(s) to use on this signature:
+// the key(s) to use on this CEK:
 //
 //	for r in msg.Recipients {
 //	  for kp in keyProviders {
-//	    kp.FetcKeys(ctx, sink, r, msg)
+//	    kp.FetchKeys(ctx, sink, r, msg)
 //	    ...
 //	  }
 //	}
@@ -56,7 +56,7 @@ import (
 //
 //	sink.Key(alg, key)
 //
-// These keys are then retrieved and tried for each signature, until
+// These keys are then retrieved and tried for each recipient, until
 // a match is found:
 //
 //	keys := sink.Keys()

@@ -149,9 +149,10 @@ func _main() error {
 			},
 		},
 		{
-			name:     `SignatureAlgorithm`,
-			comment:  `SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1`,
-			filename: `signature_gen.go`,
+			name:      `SignatureAlgorithm`,
+			comment:   `SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1`,
+			filename:  `signature_gen.go`,
+			symmetric: true,
 			elements: []element{
 				{
 					name:  `NoSignature`,
@@ -161,16 +162,19 @@ func _main() error {
 					name:    `HS256`,
 					value:   "HS256",
 					comment: `HMAC using SHA-256`,
+					sym:     true,
 				},
 				{
 					name:    `HS384`,
 					value:   `HS384`,
 					comment: `HMAC using SHA-384`,
+					sym:     true,
 				},
 				{
 					name:    `HS512`,
 					value:   "HS512",
 					comment: `HMAC using SHA-512`,
+					sym:     true,
 				},
 				{
 					name:    `RS256`,
@@ -230,9 +234,10 @@ func _main() error {
 			},
 		},
 		{
-			name:     `KeyEncryptionAlgorithm`,
-			comment:  `KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1`,
-			filename: `key_encryption_gen.go`,
+			name:      `KeyEncryptionAlgorithm`,
+			comment:   `KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1`,
+			filename:  `key_encryption_gen.go`,
+			symmetric: true,
 			elements: []element{
 				{
 					name:    `RSA1_5`,
@@ -250,24 +255,38 @@ func _main() error {
 					comment: `RSA-OAEP-SHA256`,
 				},
 				{
+					name:    `RSA_OAEP_384`,
+					value:   "RSA-OAEP-384",
+					comment: `RSA-OAEP-SHA384`,
+				},
+				{
+					name:    `RSA_OAEP_512`,
+					value:   "RSA-OAEP-512",
+					comment: `RSA-OAEP-SHA512`,
+				},
+				{
 					name:    `A128KW`,
 					value:   "A128KW",
 					comment: `AES key wrap (128)`,
+					sym:     true,
 				},
 				{
 					name:    `A192KW`,
 					value:   "A192KW",
 					comment: `AES key wrap (192)`,
+					sym:     true,
 				},
 				{
 					name:    `A256KW`,
 					value:   "A256KW",
 					comment: `AES key wrap (256)`,
+					sym:     true,
 				},
 				{
 					name:    `DIRECT`,
 					value:   "dir",
 					comment: `Direct encryption`,
+					sym:     true,
 				},
 				{
 					name:    `ECDH_ES`,
@@ -293,31 +312,37 @@ func _main() error {
 					name:    `A128GCMKW`,
 					value:   "A128GCMKW",
 					comment: `AES-GCM key wrap (128)`,
+					sym:     true,
 				},
 				{
 					name:    `A192GCMKW`,
 					value:   "A192GCMKW",
 					comment: `AES-GCM key wrap (192)`,
+					sym:     true,
 				},
 				{
 					name:    `A256GCMKW`,
 					value:   "A256GCMKW",
 					comment: `AES-GCM key wrap (256)`,
+					sym:     true,
 				},
 				{
 					name:    `PBES2_HS256_A128KW`,
 					value:   "PBES2-HS256+A128KW",
 					comment: `PBES2 + HMAC-SHA256 + AES key wrap (128)`,
+					sym:     true,
 				},
 				{
 					name:    `PBES2_HS384_A192KW`,
 					value:   "PBES2-HS384+A192KW",
 					comment: `PBES2 + HMAC-SHA384 + AES key wrap (192)`,
+					sym:     true,
 				},
 				{
 					name:    `PBES2_HS512_A256KW`,
 					value:   "PBES2-HS512+A256KW",
 					comment: `PBES2 + HMAC-SHA512 + AES key wrap (256)`,
+					sym:     true,
 				},
 			},
 		},
@@ -343,10 +368,11 @@ func _main() error {
 }
 
 type typ struct {
-	name     string
-	comment  string
-	filename string
-	elements []element
+	name      string
+	comment   string
+	filename  string
+	elements  []element
+	symmetric bool
 }
 
 type element struct {
@@ -354,20 +380,7 @@ type element struct {
 	value   string
 	comment string
 	invalid bool
-}
-
-var isSymmetricKeyEncryption = map[string]struct{}{
-	`A128KW`:    {},
-	`A192KW`:    {},
-	`A256KW`:    {},
-	`DIRECT`:    {},
-	`A128GCMKW`: {},
-	`A192GCMKW`: {},
-	`A256GCMKW`: {},
-
-	`PBES2_HS256_A128KW`: {},
-	`PBES2_HS384_A192KW`: {},
-	`PBES2_HS512_A256KW`: {},
+	sym     bool
 }
 
 func (t typ) Generate() error {
@@ -381,6 +394,9 @@ func (t typ) Generate() error {
 	o.LL("import (")
 	pkgs := []string{
 		"fmt",
+		"sort",
+		"sync",
+		"strings",
 	}
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
@@ -400,12 +416,15 @@ func (t typ) Generate() error {
 	}
 	o.L(")") // end const
 
-	// Register%s and related tools are provided so users can register their own types.
+	// Register and related tools are provided so users can register their own types.
 	// This triggers some re-building of data structures that are otherwise
 	// reused for efficiency
 	o.LL("var mu%[1]ss sync.RWMutex", t.name)
 	o.L("var all%[1]ss map[%[1]s]struct{}", t.name)
 	o.L("var list%[1]s []%[1]s", t.name)
+	if t.symmetric {
+		o.L("var symmetric%[1]ss map[%[1]s]struct{}", t.name)
+	}
 
 	o.LL("func init() {")
 	o.L("mu%[1]ss.Lock()", t.name)
@@ -416,27 +435,73 @@ func (t typ) Generate() error {
 			o.L("all%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
 		}
 	}
+	if t.symmetric {
+		o.L("symmetric%[1]ss = make(map[%[1]s]struct{})", t.name)
+		for _, e := range t.elements {
+			if !e.invalid && e.sym {
+				o.L("symmetric%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
+			}
+		}
+	}
 	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
 
-	o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
-	o.L("// Duplicates will silently be ignored")
-	o.L("func Register%[1]s(v %[1]s) {", t.name)
-	o.L("mu%[1]ss.Lock()", t.name)
-	o.L("defer mu%[1]ss.Unlock()", t.name)
-	o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
-	o.L("all%[1]ss[v] = struct{}{}", t.name)
-	o.L("rebuild%[1]s()", t.name)
-	o.L("}")
-	o.L("}")
+	if !t.symmetric {
+		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
+		o.L("// Duplicates will silently be ignored")
+		o.L("func Register%[1]s(v %[1]s) {", t.name)
+		o.L("mu%[1]ss.Lock()", t.name)
+		o.L("defer mu%[1]ss.Unlock()", t.name)
+		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
+		o.L("all%[1]ss[v] = struct{}{}", t.name)
+		o.L("rebuild%[1]s()", t.name)
+		o.L("}")
+		o.L("}")
+	} else {
+		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
+		o.L("// Duplicates will silently be ignored")
+		o.L("func Register%[1]s(v %[1]s) {", t.name)
+		o.L("Register%[1]sWithOptions(v)", t.name)
+		o.L("}")
+
+		o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
+		o.L("// but allows its behavior to change based on the provided options.")
+		o.L("// This is an experimental AND stopgap function which will most likely be merged in Register%[1]s, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.", t.name)
+		o.L("//")
+		o.L("// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.")
+		o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) {", t.name)
+		o.L("var symmetric bool")
+		o.L("//nolint:forcetypeassert")
+		o.L("for _, option := range options {")
+		o.L("switch option.Ident() {")
+		o.L("case identSymmetricAlgorithm{}:")
+		o.L("symmetric = option.Value().(bool)")
+		o.L("}")
+		o.L("}")
+		o.L("mu%[1]ss.Lock()", t.name)
+		o.L("defer mu%[1]ss.Unlock()", t.name)
+		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
+		o.L("all%[1]ss[v] = struct{}{}", t.name)
+		o.L("if symmetric {")
+		o.L("symmetric%[1]ss[v] = struct{}{}", t.name)
+		o.L("}")
+		o.L("rebuild%[1]s()", t.name)
+		o.L("}")
+		o.L("}")
+	}
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
-	o.L("// Non-existentn entries will silently be ignored")
+	o.L("// Non-existent entries will silently be ignored")
 	o.L("func Unregister%[1]s(v %[1]s) {", t.name)
 	o.L("mu%[1]ss.Lock()", t.name)
 	o.L("defer mu%[1]ss.Unlock()", t.name)
 	o.L("if _, ok := all%[1]ss[v]; ok {", t.name)
 	o.L("delete(all%[1]ss, v)", t.name)
+	if t.symmetric {
+		o.L("if _, ok := symmetric%[1]ss[v]; ok {", t.name)
+		o.L("delete(symmetric%[1]ss, v)", t.name)
+		o.L("}")
+	}
 	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
 	o.L("}")
@@ -490,27 +555,14 @@ func (t typ) Generate() error {
 	o.L("return string(v)")
 	o.L("}")
 
-	if t.name == "KeyEncryptionAlgorithm" {
-		o.LL("// IsSymmetric returns true if the algorithm is a symmetric type")
-		o.L("func (v %s) IsSymmetric() bool {", t.name)
-		o.L("switch v {")
-		o.L("case ")
-		var count int
-		for _, e := range t.elements {
-			if _, ok := isSymmetricKeyEncryption[e.name]; !ok {
-				continue
-			}
-			if count == 0 {
-				o.R("%s", e.name)
-			} else {
-				o.R(",%s", e.name)
-			}
-			count++
+	if t.symmetric {
+		o.LL("// IsSymmetric returns true if the algorithm is a symmetric type.")
+		if t.name == "SignatureAlgorithm" {
+			o.L("// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.")
 		}
-		o.R(":")
-		o.L("return true")
-		o.L("}")
-		o.L("return false")
+		o.L("func (v %s) IsSymmetric() bool {", t.name)
+		o.L("_, ok := symmetric%[1]ss[v]", t.name)
+		o.L("return ok")
 		o.L("}")
 	}
 
@@ -616,17 +668,17 @@ func (t typ) GenerateTest() error {
 	o.L("t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%s", t.name)
-	o.L("if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {")
+	o.L("if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {")
 	o.L("return")
 	o.L("}")
 	o.L("})")
 
-	if t.name == "KeyEncryptionAlgorithm" {
+	if t.symmetric {
 		o.L("t.Run(`check symmetric values`, func(t *testing.T) {")
 		o.L("t.Parallel()")
 		for _, e := range t.elements {
 			o.L("t.Run(`%s`, func(t *testing.T) {", e.name)
-			if _, ok := isSymmetricKeyEncryption[e.name]; ok {
+			if e.sym {
 				o.L("assert.True(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should be symmetric`)", e.name)
 			} else {
 				o.L("assert.False(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should NOT be symmetric`)", e.name)
@@ -662,7 +714,135 @@ func (t typ) GenerateTest() error {
 	o.L("return")
 	o.L("}")
 	o.L("})")
+	o.L("}")
 
+	o.LL("// Note: this test can NOT be run in parallel as it uses options with global effect.")
+	o.L("func Test%sCustomAlgorithm(t *testing.T) {", t.name)
+	o.L("// These subtests can NOT be run in parallel as options with global effect change.")
+	o.L(`customAlgorithm := jwa.%[1]s("custom-algorithm")`, t.name)
+	o.L("// Unregister the custom algorithm, in case tests fail.")
+	o.L("t.Cleanup(func() {")
+	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
+	o.L("})")
+	o.L("t.Run(`with custom algorithm registered`, func(t *testing.T) {")
+	o.L("jwa.Register%[1]s(customAlgorithm)", t.name)
+	o.L("t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {")
+	o.L("return")
+	o.L("}")
+	o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+	o.L("})")
+	o.L("t.Run(`accept the string custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {")
+	o.L("return")
+	o.L("}")
+	o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+	o.L("})")
+	o.L("t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {")
+	o.L("return")
+	o.L("}")
+	o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+	o.L("})")
+	if t.symmetric {
+		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
+		o.L("t.Parallel()")
+		o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
+		o.L("})")
+	}
+	o.L("})")
+	o.L("t.Run(`with custom algorithm deregistered`, func(t *testing.T) {")
+	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
+	o.L("t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)")
+	o.L("})")
+	o.L("t.Run(`reject the string custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)")
+	o.L("})")
+	o.L("t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Parallel()")
+	o.L("var dst jwa.%[1]s", t.name)
+	o.L("assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)")
+	o.L("})")
+	if t.symmetric {
+		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
+		o.L("t.Parallel()")
+		o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
+		o.L("})")
+	}
+	o.L("})")
+
+	if t.symmetric {
+		for _, value := range []bool{false, true} {
+			o.LL("t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(%t)`, func(t *testing.T) {", value)
+			o.L("jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(%[2]t))", t.name, value)
+			o.L("t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {")
+			o.L("return")
+			o.L("}")
+			o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+			o.L("})")
+			o.L("t.Run(`accept the string custom-algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {")
+			o.L("return")
+			o.L("}")
+			o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+			o.L("})")
+			o.L("t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {")
+			o.L("return")
+			o.L("}")
+			o.L("assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+			o.L("})")
+			o.L("t.Run(`check symmetric`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			if value {
+				o.L("assert.True(t, customAlgorithm.IsSymmetric(), `custom algorithm should be symmetric`)")
+			} else {
+				o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
+			}
+			o.L("})")
+			o.L("})")
+			o.L("t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(%t))`, func(t *testing.T) {", value)
+			o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
+			o.L("t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)")
+			o.L("})")
+			o.L("t.Run(`reject the string custom-algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)")
+			o.L("})")
+			o.L("t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("var dst jwa.%[1]s", t.name)
+			o.L("assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)")
+			o.L("})")
+			o.L("t.Run(`check symmetric`, func(t *testing.T) {")
+			o.L("t.Parallel()")
+			o.L("assert.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
+			o.L("})")
+			o.L("})")
+		}
+	}
 	o.L("}")
 
 	filename := strings.Replace(t.filename, "_gen.go", "_gen_test.go", 1)

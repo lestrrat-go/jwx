@@ -112,7 +112,7 @@ func (*verifyOption) verifyOption() {}
 
 func (*verifyOption) parseOption() {}
 
-// JSONSuboption describes suboptions that can be passed to `jws.WithJSON()` option
+// JSONSuboption describes suboptions that can be passed to the `jws.WithJSON()` option.
 type WithJSONSuboption interface {
 	Option
 	withJSONSuboption()
@@ -360,7 +360,7 @@ func WithCompact() SignVerifyParseOption {
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains
-// exactly one jwk.Key, that tkey should be used.
+// exactly one jwk.Key, that key should be used.
 // (I think this should be removed)
 func WithUseDefault(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identUseDefault{}, v)}

@@ -237,7 +237,7 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		if !assert.Error(t, dst.Accept(`totallyInvfalidValue`), `accept should fail`) {
+		if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {
 			return
 		}
 	})
@@ -260,5 +260,60 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 		if !assert.Len(t, expected, 0) {
 			return
 		}
+	})
+}
+
+// Note: this test can NOT be run in parallel as it uses options with global effect.
+func TestContentEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
+	// These subtests can NOT be run in parallel as options with global effect change.
+	customAlgorithm := jwa.ContentEncryptionAlgorithm("custom-algorithm")
+	// Unregister the custom algorithm, in case tests fail.
+	t.Cleanup(func() {
+		jwa.UnregisterContentEncryptionAlgorithm(customAlgorithm)
+	})
+	t.Run(`with custom algorithm registered`, func(t *testing.T) {
+		jwa.RegisterContentEncryptionAlgorithm(customAlgorithm)
+		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
+				return
+			}
+			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		})
+	})
+	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+		jwa.UnregisterContentEncryptionAlgorithm(customAlgorithm)
+		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+		})
+		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+		})
+		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
+			t.Parallel()
+			var dst jwa.ContentEncryptionAlgorithm
+			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+		})
 	})
 }
