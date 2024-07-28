@@ -30,7 +30,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -650,13 +649,13 @@ func (ctx *verifyCtx) tryVerify(verifier Verifier, hdr Headers, buf, decodedSign
 	return decodedPayload, nil
 }
 
-// This is an "optimized" ioutil.ReadAll(). It will attempt to read
+// This is an "optimized" io.ReadAll(). It will attempt to read
 // all of the contents from the reader IF the reader is of a certain
 // concrete type.
 func readAll(rdr io.Reader) ([]byte, bool) {
 	switch rdr.(type) {
 	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
-		data, err := ioutil.ReadAll(rdr)
+		data, err := io.ReadAll(rdr)
 		if err != nil {
 			return nil, false
 		}

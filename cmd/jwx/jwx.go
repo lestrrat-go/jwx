@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -77,7 +76,7 @@ func dumpJSON(dst io.Writer, v interface{}) error {
 func getSource(filename string) (io.ReadCloser, error) {
 	var src io.ReadCloser
 	if filename == "-" {
-		src = ioutil.NopCloser(os.Stdin)
+		src = io.NopCloser(os.Stdin)
 	} else {
 		if filename == "" {
 			return nil, errors.New(`filename required (use "-" to read from stdin)`)

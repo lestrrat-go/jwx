@@ -9,10 +9,10 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -386,7 +386,7 @@ func TestJWTParseVerify(t *testing.T) {
 				return
 			}
 
-			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(tok jwt.Token) (jwk.Set, error) {
+			_, err = jwt.Parse(signed, jwt.WithKeySetProvider(jwt.KeySetProviderFunc(func(_ jwt.Token) (jwk.Set, error) {
 				return nil, errors.New(`dummy`)
 			})))
 			if !assert.Error(t, err, `jwt.Parse should fail`) {
@@ -770,8 +770,8 @@ func TestSignTyp(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := ioutil.TempFile("", "test-read-file-*.jwt")
-	if !assert.NoError(t, err, `ioutil.TempFile should succeed`) {
+	f, err := os.CreateTemp("", "test-read-file-*.jwt")
+	if !assert.NoError(t, err, `os.CreateTemp should succeed`) {
 		return
 	}
 	defer f.Close()
@@ -838,6 +838,7 @@ func TestCustomField(t *testing.T) {
 
 func TestParseRequest(t *testing.T) {
 	const u = "https://github.com/lestrrat-gow/jwx/jwt"
+	const xauth = "X-Authorization"
 
 	privkey, _ := jwxtest.GenerateEcdsaJwk()
 	privkey.Set(jwk.AlgorithmKey, jwa.ES256)
@@ -865,7 +866,7 @@ func TestParseRequest(t *testing.T) {
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				return jwt.ParseRequest(req,
 					jwt.WithHeaderKey("Authorization"),
-					jwt.WithHeaderKey("x-authorization"),
+					jwt.WithHeaderKey(xauth),
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
 					jwt.WithVerify(jwa.ES256, pubkey))
@@ -914,30 +915,30 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithVerify(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
 		{
-			Name: "Token in x-authorization header (w/ option)",
+			Name: fmt.Sprintf("Token in %s header (w/ option)", xauth),
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
-				req.Header.Add("x-authorization", string(signed))
+				req.Header.Add(xauth, string(signed))
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithVerify(jwa.ES256, pubkey))
 			},
 		},
 		{
-			Name: "Invalid token in x-authorization header",
+			Name: fmt.Sprintf("Invalid token in %s header", xauth),
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
-				req.Header.Add("x-authorization", string(signed)+"foobarbaz")
+				req.Header.Add(xauth, string(signed)+"foobarbaz")
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey("x-authorization"), jwt.WithVerify(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithVerify(jwa.ES256, pubkey))
 			},
 			Error: true,
 		},
@@ -1116,7 +1117,7 @@ func TestGH375(t *testing.T) {
 
 type Claim struct {
 	Foo string
-	Bar int
+	Bar int64
 }
 
 func TestJWTParseWithTypedClaim(t *testing.T) {

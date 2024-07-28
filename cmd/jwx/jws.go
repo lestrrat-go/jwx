@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/lestrrat-go/jwx/internal/base64"
@@ -59,7 +59,7 @@ func makeJwsParseCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
@@ -198,7 +198,7 @@ func makeJwsVerifyCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
@@ -287,7 +287,7 @@ func makeJwsSignCmd() *cli.Command {
 		}
 		defer src.Close()
 
-		buf, err := ioutil.ReadAll(src)
+		buf, err := io.ReadAll(src)
 		if err != nil {
 			return errors.Wrap(err, `failed to read data from source`)
 			if err != nil {
