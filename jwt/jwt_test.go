@@ -1853,3 +1853,20 @@ func TestParseJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestGH1175(t *testing.T) {
+	token, err := jwt.NewBuilder().
+		Expiration(time.Now().Add(-1 * time.Hour)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+	secret := []byte("secret")
+	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256, secret))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	req := httptest.NewRequest(http.MethodGet, `http://example.com`, nil)
+	req.Header.Set("Authorization", "Bearer "+string(signed))
+
+	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256, secret))
+	require.Error(t, err, `jwt.ParseRequest should fail`)
+	require.ErrorIs(t, err, jwt.ErrTokenExpired(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
+}
