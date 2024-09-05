@@ -224,6 +224,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	lmhdrs := len(mhdrs)
 	lmfrms := len(mfrms)
 	lmcookies := len(mcookies)
+	var errors []interface{}
 	if lmhdrs > 0 || lmfrms > 0 || lmcookies > 0 {
 		b.WriteString(". Additionally, errors were encountered during attempts to parse")
 
@@ -236,9 +237,8 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 				}
 				b.WriteString("[header key: ")
 				b.WriteString(strconv.Quote(hdrkey))
-				b.WriteString(", error: ")
-				b.WriteString(strconv.Quote(err.Error()))
-				b.WriteString("]")
+				b.WriteString(", error: %w]")
+				errors = append(errors, err)
 				count++
 			}
 			b.WriteString(")")
@@ -253,9 +253,8 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 				}
 				b.WriteString("[cookie key: ")
 				b.WriteString(strconv.Quote(cookiekey))
-				b.WriteString(", error: ")
-				b.WriteString(strconv.Quote(err.Error()))
-				b.WriteString("]")
+				b.WriteString(", error: %w]")
+				errors = append(errors, err)
 				count++
 			}
 		}
@@ -269,12 +268,11 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 				}
 				b.WriteString("[form key: ")
 				b.WriteString(strconv.Quote(formkey))
-				b.WriteString(", error: ")
-				b.WriteString(strconv.Quote(err.Error()))
-				b.WriteString("]")
+				b.WriteString(", error: %w]")
+				errors = append(errors, err)
 				count++
 			}
 		}
 	}
-	return nil, fmt.Errorf(b.String())
+	return nil, fmt.Errorf(b.String(), errors...)
 }
