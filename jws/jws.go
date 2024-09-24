@@ -345,6 +345,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		case identKeyUsed{}:
 			keyUsed = option.Value()
 		case identContext{}:
+			//nolint:fatcontext
 			ctx = option.Value().(context.Context)
 		case identValidateKey{}:
 			validateKey = option.Value().(bool)
