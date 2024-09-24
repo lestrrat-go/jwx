@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Auto-assign issue'
-        uses: pozil/auto-assign-issue@v2
+        uses: pozil/auto-assign-issue@c5bca5027e680b9e8411b826d16947afd8c76b32 # v2.0.0
         with:
           assignees: lestrrat
