@@ -603,7 +603,7 @@ func asnEncode(key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case ECDSAPrivateKey:
 		var rawkey ecdsa.PrivateKey
-		if err := key.Raw(&rawkey); err != nil {
+		if err := Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalECPrivateKey(&rawkey)
