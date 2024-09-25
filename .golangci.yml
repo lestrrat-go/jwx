@@ -60,6 +60,9 @@ issues:
       text: "don't use an underscore in package name"
       linters:
         - revive
+    - linters:
+        - staticcheck
+      text: 'SA1019'
     - path: /*.go
       linters:
         - contextcheck

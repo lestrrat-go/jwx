@@ -593,10 +593,10 @@ func TestGH52(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	const max = 100
+	const iterations = 100
 	var wg sync.WaitGroup
-	wg.Add(max)
-	for i := 0; i < max; i++ {
+	wg.Add(iterations)
+	for i := 0; i < iterations; i++ {
 		// Do not use t.Run here as it will clutter up the outpuA
 		go func(t *testing.T, priv *ecdsa.PrivateKey, i int) {
 			defer wg.Done()

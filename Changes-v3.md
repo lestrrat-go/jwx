@@ -28,6 +28,10 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## JWK
 
+* Experimental secp256k1 encoding/decoding for PEM encoded ASN.1 DER Format 
+  has been removed. Instead, `jwk.PEMDecoder` and `jwk.PEMEncoder` have been
+  added to support those who want to perform non-standard PEM encoding/decoding
+
 * Iterators have been completely removed.
 
 * `jwk/x25519` has been removed. To use X25519 keys, use `(crypto/ecdh).PrivateKey` and

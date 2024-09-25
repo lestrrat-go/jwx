@@ -128,7 +128,7 @@ func TestJoseCompatibility(t *testing.T) {
 				Name:     "RSA Private Key with Private Parameters",
 				Raw:      rsa.PrivateKey{},
 				Template: `{"alg": "RS256", "x-jwx": 1234}`,
-				VerifyKey: func(ctx context.Context, t *testing.T, key jwk.Key) bool {
+				VerifyKey: func(_ context.Context, t *testing.T, key jwk.Key) bool {
 					var v float64
 					require.NoError(t, key.Get(`x-jwx`, &v), `key.Get should succeed`)
 					require.Equal(t, float64(1234), v, `private parameters should match`)

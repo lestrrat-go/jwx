@@ -318,12 +318,12 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 		110, 97, 116, 105, 111, 110, 46,
 	}
 
-	max := 100
+	iterations := 100
 	if testing.Short() {
-		max = 1
+		iterations = 1
 	}
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < iterations; i++ {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, &rsaPrivKey.PublicKey))
 		if !assert.NoError(t, err, "Encrypt should succeed") {
 			return
@@ -346,12 +346,12 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 		112, 114, 111, 115, 112, 101, 114, 46,
 	}
 
-	max := 100
+	iterations := 100
 	if testing.Short() {
-		max = 1
+		iterations = 1
 	}
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < iterations; i++ {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5, &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
@@ -379,12 +379,12 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 		25, 172, 32, 130, 225, 114, 26, 181, 138, 106, 254, 192, 95, 133, 74, 82,
 	}
 
-	max := 100
+	iterations := 100
 	if testing.Short() {
-		max = 1
+		iterations = 1
 	}
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < iterations; i++ {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW, sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
