@@ -14,16 +14,16 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags' ]
-        go: [ '1.22', '1.21', '1.20' ]
+        go: [ '1.22', '1.21' ]
     name: "Smoke [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Check documentation generator
         run: |
           find . -name '*.md' | xargs env AUTODOC_DRYRUN=1 perl tools/autodoc.pl
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.20
         with:
           path: |
             ~/go/pkg/mod
@@ -33,7 +33,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install Go stable version
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
@@ -50,6 +50,6 @@ jobs:
         run: make tidy
       - name: Run smoke tests
         run: make smoke-${{ matrix.go_tags }}
-      - uses: bazelbuild/setup-bazelisk@v3
+      - uses: bazelbuild/setup-bazelisk@b39c379c82683a5f25d34f0d062761f62693e0b2 # v3.0.0
       - run: bazel build //...
 
