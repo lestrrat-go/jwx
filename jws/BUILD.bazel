@@ -25,7 +25,6 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
-        "//internal/iter",
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
