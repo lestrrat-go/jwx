@@ -546,7 +546,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 
 	// if format is 0 or both JSON/Compact, auto detect
 	if v := formats & (fmtJSON | fmtCompact); v == 0 || v == fmtJSON|fmtCompact {
-		for i := range len(src) {
+		for i := range src {
 			r := rune(src[i])
 			if r >= utf8.RuneSelf {
 				r, _ = utf8.DecodeRune(src)
