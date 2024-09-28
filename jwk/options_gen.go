@@ -58,7 +58,7 @@ func (*fetchOption) parseOption() {}
 func (*fetchOption) registerOption() {}
 
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implements the `ReadFileOption` and `CacheOption`,
+// ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
 // and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
 type ParseOption interface {
 	Option
@@ -89,6 +89,24 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
+// RegisterFetchOption describes options that can be passed to `(jwk.Cache).Register()` and `jwk.Fetch()`
+type RegisterFetchOption interface {
+	Option
+	fetchOption()
+	registerOption()
+	parseOption()
+}
+
+type registerFetchOption struct {
+	Option
+}
+
+func (*registerFetchOption) fetchOption() {}
+
+func (*registerFetchOption) registerOption() {}
+
+func (*registerFetchOption) parseOption() {}
+
 // RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
 type RegisterOption interface {
 	Option
@@ -101,7 +119,19 @@ type registerOption struct {
 
 func (*registerOption) registerOption() {}
 
-type identErrSink struct{}
+// ResourceOption is a type of Option that can be passed to the `httprc.NewResource` function
+// by way of RegisterOption.
+type ResourceOption interface {
+	Option
+	resourceOption()
+}
+
+type resourceOption struct {
+	Option
+}
+
+func (*resourceOption) resourceOption() {}
+
 type identFS struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
@@ -110,14 +140,8 @@ type identLocalRegistry struct{}
 type identMinRefreshInterval struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
-type identPostFetcher struct{}
 type identRefreshInterval struct{}
-type identRefreshWindow struct{}
 type identThumbprintHash struct{}
-
-func (identErrSink) String() string {
-	return "WithErrSink"
-}
 
 func (identFS) String() string {
 	return "WithFS"
@@ -151,28 +175,12 @@ func (identPEMDecoder) String() string {
 	return "WithPEMDecoder"
 }
 
-func (identPostFetcher) String() string {
-	return "WithPostFetcher"
-}
-
 func (identRefreshInterval) String() string {
 	return "WithRefreshInterval"
 }
 
-func (identRefreshWindow) String() string {
-	return "WithRefreshWindow"
-}
-
 func (identThumbprintHash) String() string {
 	return "WithThumbprintHash"
-}
-
-// WithErrSink specifies the `httprc.ErrSink` object that handles errors
-// that occurred during the cache's execution.
-//
-// See the documentation in `httprc.WithErrSink` for more details.
-func WithErrSink(v ErrSink) CacheOption {
-	return &cacheOption{option.New(identErrSink{}, v)}
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.
@@ -189,8 +197,8 @@ func WithFetchWhitelist(v Whitelist) FetchOption {
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
-func WithHTTPClient(v HTTPClient) FetchOption {
-	return &fetchOption{option.New(identHTTPClient{}, v)}
+func WithHTTPClient(v HTTPClient) RegisterFetchOption {
+	return &registerFetchOption{option.New(identHTTPClient{}, v)}
 }
 
 // WithIgnoreParseError is only applicable when used with `jwk.Parse()`
@@ -255,14 +263,6 @@ func WithPEMDecoder(v PEMDecoder) ParseOption {
 	return &parseOption{option.New(identPEMDecoder{}, v)}
 }
 
-// WithPostFetcher specifies the PostFetcher object to be used on the
-// jwk.Set object obtained in `jwk.Cache`. This option can be used
-// to, for example, modify the jwk.Set to give it key IDs or algorithm
-// names after it has been fetched and parsed, but before it is cached.
-func WithPostFetcher(v PostFetcher) RegisterOption {
-	return &registerOption{option.New(identPostFetcher{}, v)}
-}
-
 // WithRefreshInterval specifies the static interval between refreshes
 // of jwk.Set objects controlled by jwk.Cache.
 //
@@ -271,13 +271,6 @@ func WithPostFetcher(v PostFetcher) RegisterOption {
 // and refreshes will *always* happen in this interval.
 func WithRefreshInterval(v time.Duration) RegisterOption {
 	return &registerOption{option.New(identRefreshInterval{}, v)}
-}
-
-// WithRefreshWindow specifies the interval between checks for refreshes.
-//
-// See the documentation in `httprc.WithRefreshWindow` for more details.
-func WithRefreshWindow(v time.Duration) CacheOption {
-	return &cacheOption{option.New(identRefreshWindow{}, v)}
 }
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {

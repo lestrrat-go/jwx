@@ -1,6 +1,9 @@
 package jwk
 
 import (
+	"time"
+
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/option"
 )
 
@@ -34,5 +37,20 @@ func WithTypedField(name string, object interface{}) ParseOption {
 		option.New(identTypedField{},
 			typedFieldPair{Name: name, Value: object},
 		),
+	}
+}
+
+type registerResourceOption struct {
+	option.Interface
+}
+
+func (registerResourceOption) registerOption() {}
+func (registerResourceOption) resourceOption() {}
+
+type identConstantInterval struct{}
+
+func WithConstantInterval(d time.Duration) RegisterOption {
+	return &registerResourceOption{
+		option.New(identConstantInterval{}, httprc.WithConstantInterval(d)),
 	}
 }

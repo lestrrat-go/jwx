@@ -28,6 +28,10 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## JWK
 
+* `jwk.Cache` has been completely re-worked based on github.com/lestrrat-go/httprc/v3.
+  In particular, the default whitelist mode has changed from "block everything" to
+  "allow everything".
+
 * Experimental secp256k1 encoding/decoding for PEM encoded ASN.1 DER Format 
   has been removed. Instead, `jwk.PEMDecoder` and `jwk.PEMEncoder` have been
   added to support those who want to perform non-standard PEM encoding/decoding

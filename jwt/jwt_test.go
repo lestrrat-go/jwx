@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -1459,6 +1460,9 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 }
 
 func TestVerifyAuto(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	key, err := jwxtest.GenerateRsaJwk()
 	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
 		return
@@ -1528,7 +1532,8 @@ func TestVerifyAuto(t *testing.T) {
 	}
 
 	// now with Cache
-	c := jwk.NewCache(context.TODO())
+	c, err := jwk.NewCache(ctx, httprc.NewClient())
+	require.NoError(t, err, `jwk.NewCache should succeed`)
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(
 			jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
@@ -1538,8 +1543,9 @@ func TestVerifyAuto(t *testing.T) {
 				for _, option := range options {
 					registeropts = append(registeropts, option)
 				}
-				c.Register(u, registeropts...)
-				return c.Get(ctx, u)
+				c.Register(ctx, u, registeropts...)
+				c.Ready(ctx, u)
+				return c.Lookup(ctx, u)
 			}),
 			jwk.WithHTTPClient(srv.Client()),
 			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),

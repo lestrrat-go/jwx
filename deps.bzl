@@ -44,13 +44,12 @@ def go_dependencies():
         version = "v1.0.1",
     )
     go_repository(
-        name = "com_github_lestrrat_go_httprc_v2",
+        name = "com_github_lestrrat_go_httprc_v3",
         build_file_proto_mode = "disable_global",
-        importpath = "github.com/lestrrat-go/httprc/v2",
-        sum = "h1:dZia9gCSXkYYZN9YUe4U3KU4rvpKXzmGB4QTYDDrOU0=",
-        version = "v2.0.0",
+        importpath = "github.com/lestrrat-go/httprc/v3",
+        sum = "h1:2N7qLEyqctmBzsDF6Hsh0OsfmEzzB+wvejgJU6sp6o8=",
+        version = "v3.0.0-alpha1",
     )
-
     go_repository(
         name = "com_github_lestrrat_go_option",
         build_file_proto_mode = "disable_global",
@@ -58,7 +57,6 @@ def go_dependencies():
         sum = "h1:oAzP2fvZGQKWkvHa1/SAcFolBEca1oN+mQ7eooNBEYU=",
         version = "v1.0.1",
     )
-
     go_repository(
         name = "com_github_pmezard_go_difflib",
         build_file_proto_mode = "disable_global",
@@ -73,7 +71,6 @@ def go_dependencies():
         sum = "h1:9BQrFxC+YOHJlTlHGkTrFWf59nbL3XnCoFLTwDCI7ys=",
         version = "v1.2.0",
     )
-
     go_repository(
         name = "com_github_stretchr_objx",
         build_file_proto_mode = "disable_global",
@@ -88,7 +85,6 @@ def go_dependencies():
         sum = "h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=",
         version = "v1.9.0",
     )
-
     go_repository(
         name = "in_gopkg_check_v1",
         build_file_proto_mode = "disable_global",
@@ -96,7 +92,6 @@ def go_dependencies():
         sum = "h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=",
         version = "v0.0.0-20161208181325-20d25e280405",
     )
-
     go_repository(
         name = "in_gopkg_yaml_v3",
         build_file_proto_mode = "disable_global",
@@ -111,7 +106,6 @@ def go_dependencies():
         sum = "h1:RrRspgV4mU+YwB4FYnuBoKsUapNIL5cohGAmSH3azsw=",
         version = "v0.26.0",
     )
-
     go_repository(
         name = "org_golang_x_net",
         build_file_proto_mode = "disable_global",
@@ -119,7 +113,6 @@ def go_dependencies():
         sum = "h1:AQyQV4dYCvJ7vGmJyKki9+PBdyvhkSd8EIx/qb0AYv4=",
         version = "v0.21.0",
     )
-
     go_repository(
         name = "org_golang_x_sys",
         build_file_proto_mode = "disable_global",
@@ -134,7 +127,6 @@ def go_dependencies():
         sum = "h1:F6D4vR+EHoL9/sWAWgAR1H2DcHr4PareCbAaCo1RpuU=",
         version = "v0.23.0",
     )
-
     go_repository(
         name = "org_golang_x_text",
         build_file_proto_mode = "disable_global",

@@ -5,20 +5,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
-	"github.com/lestrrat-go/httprc/v2"
+	"github.com/lestrrat-go/httprc/v3"
 )
 
-type Transformer = httprc.Transformer
 type HTTPClient = httprc.HTTPClient
-type ErrSink = httprc.ErrSink
-
-// Whitelist describes a set of rules that allows users to access
-// a particular URL. By default all URLs are blocked for security
-// reasons. You will HAVE to provide some sort of whitelist. See
-// the documentation for github.com/lestrrat-go/httprc/v2 for more details.
-type Whitelist = httprc.Whitelist
+type ErrorSink = httprc.ErrorSink
+type TraceSink = httprc.TraceSink
 
 // Cache is a container that keeps track of Set object by their source URLs.
 // The Set objects are stored in memory, and are refreshed automatically
@@ -79,41 +72,18 @@ type Whitelist = httprc.Whitelist
 // caching mechanism can hide intermittent connectivity problems as well
 // as keep the objects mostly fresh.
 type Cache struct {
-	cache *httprc.Cache
+	ctrl httprc.Controller
 }
 
-// PostFetcher is an interface for objects that want to perform
-// operations on the `Set` that was fetched.
-type PostFetcher interface {
-	// PostFetch receives the URL and the JWKS, after a successful
-	// fetch and parse.
-	//
-	// It should return a `Set`, optionally modified, to be stored
-	// in the cache for subsequent use
-	PostFetch(string, Set) (Set, error)
-}
-
-// PostFetchFunc is a PostFetcher based on a function.
-type PostFetchFunc func(string, Set) (Set, error)
-
-func (f PostFetchFunc) PostFetch(u string, set Set) (Set, error) {
-	return f(u, set)
-}
-
-// httprc.Transformer that transforms the response into a JWKS
-type jwksTransform struct {
-	postFetch    PostFetcher
+// Transformer is a specialized version of `httprc.Transformer` that implements
+// conversion from a `http.Response` object to a `jwk.Set` object. Use this in
+// conjection with `httprc.NewResource` to create a `httprc.Resource` object
+// to auto-update `jwk.Set` objects.
+type Transformer struct {
 	parseOptions []ParseOption
 }
 
-// Default transform has no postFetch. This can be shared
-// by multiple fetchers
-var defaultTransform = &jwksTransform{}
-
-func (t *jwksTransform) Transform(u string, res *http.Response) (interface{}, error) {
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(`failed to process response: non-200 response code %q`, res.Status)
-	}
+func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, error) {
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read response body status: %w`, err)
@@ -121,39 +91,40 @@ func (t *jwksTransform) Transform(u string, res *http.Response) (interface{}, er
 
 	set, err := Parse(buf, t.parseOptions...)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to parse JWK set at %q: %w`, u, err)
+		return nil, fmt.Errorf(`failed to parse JWK set at %q: %w`, res.Request.URL.String(), err)
 	}
 
-	if pf := t.postFetch; pf != nil {
-		v, err := pf.PostFetch(u, set)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to execute PostFetch: %w`, err)
+	/*
+		if pf := t.postFetch; pf != nil {
+			v, err := pf.PostFetch(u, set)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to execute PostFetch: %w`, err)
+			}
+			set = v
 		}
-		set = v
-	}
+	*/
 
 	return set, nil
 }
 
 // NewCache creates a new `jwk.Cache` object.
 //
-// Please refer to the documentation for `httprc.New` for more
-// details.
-func NewCache(ctx context.Context, options ...CacheOption) *Cache {
-	var hrcopts []httprc.CacheOption
-	for _, option := range options {
-		//nolint:forcetypeassert
-		switch option.Ident() {
-		case identRefreshWindow{}:
-			hrcopts = append(hrcopts, httprc.WithRefreshWindow(option.Value().(time.Duration)))
-		case identErrSink{}:
-			hrcopts = append(hrcopts, httprc.WithErrSink(option.Value().(ErrSink)))
-		}
+// Under the hood, `jwk.Cache` uses `httprc.Client` manage the
+// fetching and caching of JWKS objects, and thus spawns multiple goroutines
+// per `jwk.Cache` object.
+//
+// The provided `httprc.Client` object must NOT be started prior to
+// passing it to `jwk.NewCache`. The `jwk.Cache` object will start
+// the `httprc.Client` object on its own.
+func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
+	ctrl, err := client.Start(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to start httprc.Client: %w`, err)
 	}
 
 	return &Cache{
-		cache: httprc.NewCache(ctx, hrcopts...),
-	}
+		ctrl: ctrl,
+	}, nil
 }
 
 // Register registers a URL to be managed by the cache. URLs must
@@ -177,64 +148,66 @@ func NewCache(ctx context.Context, options ...CacheOption) *Cache {
 //	  // url is not a valid JWKS
 //	  panic(err)
 //	}
-func (c *Cache) Register(u string, options ...RegisterOption) error {
-	var hrropts []httprc.RegisterOption
-	var pf PostFetcher
+func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
-
-	// Note: we do NOT accept Transform option
+	var resourceOptions []httprc.NewResourceOption
 	for _, option := range options {
-		if parseOpt, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, parseOpt)
-			continue
-		}
-
-		//nolint:forcetypeassert
-		switch option.Ident() {
-		case identHTTPClient{}:
-			hrropts = append(hrropts, httprc.WithHTTPClient(option.Value().(HTTPClient)))
-		case identRefreshInterval{}:
-			hrropts = append(hrropts, httprc.WithRefreshInterval(option.Value().(time.Duration)))
-		case identMinRefreshInterval{}:
-			hrropts = append(hrropts, httprc.WithMinRefreshInterval(option.Value().(time.Duration)))
-		case identFetchWhitelist{}:
-			hrropts = append(hrropts, httprc.WithWhitelist(option.Value().(httprc.Whitelist)))
-		case identPostFetcher{}:
-			pf = option.Value().(PostFetcher)
+		switch option := option.(type) {
+		case ParseOption:
+			parseOptions = append(parseOptions, option)
+		case ResourceOption:
+			resourceOptions = append(resourceOptions, option.Value().(httprc.NewResourceOption))
+		default:
+			switch option.Ident() {
+			case identHTTPClient{}:
+				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(option.Value().(HTTPClient)))
+			}
 		}
 	}
 
-	var t *jwksTransform
-	if pf == nil && len(parseOptions) == 0 {
-		t = defaultTransform
-	} else {
-		// User-supplied PostFetcher is attached to the transformer
-		t = &jwksTransform{
-			postFetch:    pf,
-			parseOptions: parseOptions,
-		}
+	r, err := httprc.NewResource[Set](u, &Transformer{
+		parseOptions: parseOptions,
+	}, resourceOptions...)
+	if err != nil {
+		return fmt.Errorf(`failed to create httprc.Resource: %w`, err)
 	}
-
-	// Set the transformer at the end so that nobody can override it
-	hrropts = append(hrropts, httprc.WithTransformer(t))
-	return c.cache.Register(u, hrropts...)
+	if err := c.ctrl.Add(ctx, r); err != nil {
+		return fmt.Errorf(`failed to add resource to httprc.Client: %w`, err)
+	}
+	return nil
 }
 
-// Get returns the stored JWK set (`Set`) from the cache.
-//
-// Please refer to the documentation for `(httprc.Cache).Get` for more
-// details.
-func (c *Cache) Get(ctx context.Context, u string) (Set, error) {
-	v, err := c.cache.Get(ctx, u)
+// LookupResource returns the `httprc.Resource` object associated with the
+// given URL `u`. If the URL has not been registered, an error is returned.
+func (c *Cache) LookupResource(ctx context.Context, u string) (*httprc.ResourceBase[Set], error) {
+	r, err := c.ctrl.Lookup(ctx, u)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
 	}
+	return r.(*httprc.ResourceBase[Set]), nil
+}
 
-	set, ok := v.(Set)
-	if !ok {
-		return nil, fmt.Errorf(`cached object is not a Set (was %T)`, v)
+func (c *Cache) Lookup(ctx context.Context, u string) (Set, error) {
+	r, err := c.LookupResource(ctx, u)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
+	}
+	set := r.Resource()
+	if set == nil {
+		return nil, fmt.Errorf(`resource %q is not ready`, u)
 	}
 	return set, nil
+}
+
+func (c *Cache) Ready(ctx context.Context, u string) bool {
+	r, err := c.LookupResource(ctx, u)
+	if err != nil {
+		return false
+	}
+	if err := r.Ready(ctx); err != nil {
+		return false
+	}
+	return true
 }
 
 // Refresh is identical to Get(), except it always fetches the
@@ -243,16 +216,10 @@ func (c *Cache) Get(ctx context.Context, u string) (Set, error) {
 // Please refer to the documentation for `(httprc.Cache).Refresh` for
 // more details
 func (c *Cache) Refresh(ctx context.Context, u string) (Set, error) {
-	v, err := c.cache.Refresh(ctx, u)
-	if err != nil {
-		return nil, err
+	if err := c.ctrl.Refresh(ctx, u); err != nil {
+		return nil, fmt.Errorf(`failed to refresh resource %q: %w`, u, err)
 	}
-
-	set, ok := v.(Set)
-	if !ok {
-		return nil, fmt.Errorf(`cached object is not a Set (was %T)`, v)
-	}
-	return set, nil
+	return c.Lookup(ctx, u)
 }
 
 // IsRegistered returns true if the given URL `u` has already been registered
@@ -260,20 +227,17 @@ func (c *Cache) Refresh(ctx context.Context, u string) (Set, error) {
 //
 // Please refer to the documentation for `(httprc.Cache).IsRegistered` for more
 // details.
-func (c *Cache) IsRegistered(u string) bool {
-	return c.cache.IsRegistered(u)
+func (c *Cache) IsRegistered(ctx context.Context, u string) bool {
+	_, err := c.LookupResource(ctx, u)
+	return err == nil
 }
 
 // Unregister removes the given URL `u` from the cache.
 //
 // Please refer to the documentation for `(httprc.Cache).Unregister` for more
 // details.
-func (c *Cache) Unregister(u string) error {
-	return c.cache.Unregister(u)
-}
-
-func (c *Cache) Snapshot() *httprc.Snapshot {
-	return c.cache.Snapshot()
+func (c *Cache) Unregister(ctx context.Context, u string) error {
+	return c.ctrl.Remove(ctx, u)
 }
 
 // CachedSet is a thin shim over jwk.Cache that allows the user to cloak
@@ -289,51 +253,62 @@ func (c *Cache) Snapshot() *httprc.Snapshot {
 // wait for in case of a fetch failure using `context.Context`)
 //
 // Make sure that you read the documentation for `jwk.Cache` as well.
-type CachedSet struct {
-	cache *Cache
-	url   string
+type CachedSet interface {
+	Set
 }
 
-var _ Set = &CachedSet{}
+type cachedSet struct {
+	r *httprc.ResourceBase[Set]
+}
 
-func NewCachedSet(cache *Cache, url string) Set {
-	return &CachedSet{
-		cache: cache,
-		url:   url,
+func (c *Cache) CachedSet(u string) (CachedSet, error) {
+	r, err := c.LookupResource(context.Background(), u)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
+	}
+	return NewCachedSet(r), nil
+}
+
+func NewCachedSet(r *httprc.ResourceBase[Set]) CachedSet {
+	return &cachedSet{
+		r: r,
 	}
 }
 
-func (cs *CachedSet) cached() (Set, error) {
-	return cs.cache.Get(context.Background(), cs.url)
+func (cs *cachedSet) cached() (Set, error) {
+	if err := cs.r.Ready(context.Background()); err != nil {
+		return nil, fmt.Errorf(`failed to fetch resource: %w`, err)
+	}
+	return cs.r.Resource(), nil
 }
 
 // Add is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*CachedSet) AddKey(_ Key) error {
+func (*cachedSet) AddKey(_ Key) error {
 	return fmt.Errorf(`(jwk.Cachedset).AddKey: jwk.CachedSet is immutable`)
 }
 
 // Clear is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*CachedSet) Clear() error {
-	return fmt.Errorf(`(jwk.CachedSet).Clear: jwk.CachedSet is immutable`)
+func (*cachedSet) Clear() error {
+	return fmt.Errorf(`(jwk.cachedSet).Clear: jwk.CachedSet is immutable`)
 }
 
 // Set is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*CachedSet) Set(_ string, _ interface{}) error {
-	return fmt.Errorf(`(jwk.CachedSet).Set: jwk.CachedSet is immutable`)
+func (*cachedSet) Set(_ string, _ interface{}) error {
+	return fmt.Errorf(`(jwk.cachedSet).Set: jwk.CachedSet is immutable`)
 }
 
 // Remove is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*CachedSet) Remove(_ string) error {
+func (*cachedSet) Remove(_ string) error {
 	// TODO: Remove() should be renamed to Remove(string) error
-	return fmt.Errorf(`(jwk.CachedSet).Remove: jwk.CachedSet is immutable`)
+	return fmt.Errorf(`(jwk.cachedSet).Remove: jwk.CachedSet is immutable`)
 }
 
 // RemoveKey is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*CachedSet) RemoveKey(_ Key) error {
-	return fmt.Errorf(`(jwk.CachedSet).RemoveKey: jwk.CachedSet is immutable`)
+func (*cachedSet) RemoveKey(_ Key) error {
+	return fmt.Errorf(`(jwk.cachedSet).RemoveKey: jwk.CachedSet is immutable`)
 }
 
-func (cs *CachedSet) Clone() (Set, error) {
+func (cs *cachedSet) Clone() (Set, error) {
 	set, err := cs.cached()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to get cached jwk.Set: %w`, err)
@@ -343,7 +318,7 @@ func (cs *CachedSet) Clone() (Set, error) {
 }
 
 // Get returns the value of non-Key field stored in the jwk.Set
-func (cs *CachedSet) Get(name string, dst interface{}) error {
+func (cs *cachedSet) Get(name string, dst interface{}) error {
 	set, err := cs.cached()
 	if err != nil {
 		return err
@@ -353,7 +328,7 @@ func (cs *CachedSet) Get(name string, dst interface{}) error {
 }
 
 // Key returns the Key at the specified index
-func (cs *CachedSet) Key(idx int) (Key, bool) {
+func (cs *cachedSet) Key(idx int) (Key, bool) {
 	set, err := cs.cached()
 	if err != nil {
 		return nil, false
@@ -362,7 +337,7 @@ func (cs *CachedSet) Key(idx int) (Key, bool) {
 	return set.Key(idx)
 }
 
-func (cs *CachedSet) Index(key Key) int {
+func (cs *cachedSet) Index(key Key) int {
 	set, err := cs.cached()
 	if err != nil {
 		return -1
@@ -371,7 +346,7 @@ func (cs *CachedSet) Index(key Key) int {
 	return set.Index(key)
 }
 
-func (cs *CachedSet) Keys() []string {
+func (cs *cachedSet) Keys() []string {
 	set, err := cs.cached()
 	if err != nil {
 		return nil
@@ -380,7 +355,7 @@ func (cs *CachedSet) Keys() []string {
 	return set.Keys()
 }
 
-func (cs *CachedSet) Len() int {
+func (cs *cachedSet) Len() int {
 	set, err := cs.cached()
 	if err != nil {
 		return -1
@@ -389,7 +364,7 @@ func (cs *CachedSet) Len() int {
 	return set.Len()
 }
 
-func (cs *CachedSet) LookupKeyID(kid string) (Key, bool) {
+func (cs *cachedSet) LookupKeyID(kid string) (Key, bool) {
 	set, err := cs.cached()
 	if err != nil {
 		return nil, false

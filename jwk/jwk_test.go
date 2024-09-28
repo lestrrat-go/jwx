@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
@@ -2072,21 +2073,26 @@ func TestGH567(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c := jwk.NewCache(ctx)
-			c.Register(srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
+			c, err := jwk.NewCache(ctx, httprc.NewClient())
+			require.NoError(t, err, `jwk.NewCache should succeed`)
 
-			set, err := c.Get(ctx, srv.URL)
+			require.NoError(t, c.Register(ctx, srv.URL, jwk.WithIgnoreParseError(ignoreParseError)), `c.Register should succeed`)
+
+			ctx2, cancel2 := context.WithTimeout(ctx, 1*time.Second)
+			defer cancel2()
 			if ignoreParseError {
-				if !assert.NoError(t, err, `ar.Fetch should succeed`) {
-					return
-				}
-				if !assert.Equal(t, set.Len(), 2, `JWKS should contain two keys`) {
-					return
-				}
+				require.True(t, c.Ready(ctx2, srv.URL), `c.Ready should be true`)
+
 			} else {
-				if !assert.Error(t, err, `ar.Fetch should fail`) {
-					return
-				}
+				require.False(t, c.Ready(ctx2, srv.URL), `c.Ready should be false`)
+			}
+			set, err := c.Lookup(ctx, srv.URL)
+			if ignoreParseError {
+				require.NoError(t, err, `c.Fetch should succeed`)
+				require.NotNil(t, set, `c.Fetch should return a set`)
+				require.Equal(t, set.Len(), 2, `JWKS should contain two keys`)
+			} else {
+				require.Error(t, err, `c.Fetch should fail`)
 			}
 		})
 	}

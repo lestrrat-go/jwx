@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/httprc/v2"
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -1331,6 +1331,9 @@ func TestGH485(t *testing.T) {
 }
 
 func TestJKU(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
@@ -1386,11 +1389,10 @@ func TestJKU(t *testing.T) {
 			{
 				Name: "Cache",
 				Fetcher: func() jwk.Fetcher {
-					c := jwk.NewCache(context.TODO())
-					c.Register(srv.URL,
-						jwk.WithHTTPClient(srv.Client()),
-						jwk.WithFetchWhitelist(httprc.InsecureWhitelist{}),
-					)
+					c, err := jwk.NewCache(ctx, httprc.NewClient())
+					require.NoError(t, err, `jwk.NewCache should succeed`)
+					require.NoError(t, c.Register(ctx, srv.URL, jwk.WithHTTPClient(srv.Client())), `c.Register should succeed`)
+					require.True(t, c.Ready(ctx, srv.URL), `c.Ready should return true`)
 					return jwk.NewCachedFetcher(c)
 				},
 			},
