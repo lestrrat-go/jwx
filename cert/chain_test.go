@@ -45,32 +45,20 @@ func TestChain(t *testing.T) {
 
 	var chain cert.Chain
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
-			if !assert.NoError(t, chain.Add(tc.Data), `chain.Add should succeed`) {
-				return
-			}
+			require.NoError(t, chain.Add(tc.Data), `chain.Add should succeed`)
 		})
 	}
 
-	if !assert.Equal(t, len(testcases), chain.Len(), `certificates in chain should match`) {
-		return
-	}
+	require.Equal(t, len(testcases), chain.Len(), `certificates in chain should match`)
 
-	for i := 0; i < chain.Len(); i++ {
+	for i := range chain.Len() {
 		der, ok := chain.Get(i)
-		if !assert.True(t, ok, `chain.Get(%d) should succeed`, i) {
-			return
-		}
+		require.True(t, ok, `chain.Get(%d) should succeed`, i)
 
 		c, err := cert.Parse(der)
-		if !assert.NoError(t, err, `cert.Parse should match`) {
-			return
-		}
-
-		if !assert.True(t, c.Equal(goldenCert), `certificates should match`) {
-			return
-		}
+		require.NoError(t, err, `cert.Parse should match`)
+		require.True(t, c.Equal(goldenCert), `certificates should match`)
 	}
 
 	for _, i := range []int{-1, chain.Len()} {

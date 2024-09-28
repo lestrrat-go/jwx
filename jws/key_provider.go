@@ -182,7 +182,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		// if multipleKeysPerKeyID is true, we attempt all keys whose key ID matches
 		// the wantedKey
 		var ok bool
-		for i := 0; i < kp.set.Len(); i++ {
+		for i := range kp.set.Len() {
 			key, _ := kp.set.Key(i)
 			if key.KeyID() != wantedKid {
 				continue
@@ -201,7 +201,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	}
 
 	// Otherwise just try all keys
-	for i := 0; i < kp.set.Len(); i++ {
+	for i := range kp.set.Len() {
 		key, _ := kp.set.Key(i)
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue

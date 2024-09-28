@@ -32,7 +32,6 @@ func TestDecode(t *testing.T) {
 
 	var payload = []byte("Hello, World")
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			dst := make([]byte, tc.Encoding.EncodedLen(len(payload)))
 			tc.Encoding.Encode(dst, payload)

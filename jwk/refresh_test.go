@@ -58,14 +58,10 @@ func TestCache(t *testing.T) {
 		defer cancel()
 
 		set := jwk.NewSet()
-		for i := 0; i < numKeys; i++ {
+		for range numKeys {
 			key, err := jwxtest.GenerateRsaJwk()
-			if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
-				return
-			}
-			if !assert.NoError(t, set.AddKey(key), `set.AddKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+			require.NoError(t, set.AddKey(key), `set.AddKey should succeed`)
 		}
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -89,7 +85,7 @@ func TestCache(t *testing.T) {
 		require.Error(t, cs.RemoveKey(nil), `cs.RemoveKey should be an error`)
 		require.Equal(t, set.Len(), cs.Len(), `value of Len() should be the same`)
 
-		for i := 0; i < set.Len(); i++ {
+		for i := range set.Len() {
 			k, err := set.Key(i)
 			ck, cerr := cs.Key(i)
 			if !assert.Equal(t, k, ck, `key %d should match`, i) {
@@ -134,7 +130,7 @@ func TestCache(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(retries)
-		for i := 0; i < retries; i++ {
+		for range retries {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
 				defer wg.Done()
@@ -194,7 +190,7 @@ func TestCache(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(retries)
-		for i := 0; i < retries; i++ {
+		for range retries {
 			// Run these in separate goroutines to emulate a possible thundering herd
 			go func() {
 				defer wg.Done()
@@ -329,7 +325,6 @@ func TestErrorSink(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

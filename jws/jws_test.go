@@ -219,7 +219,6 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 	}
 
 	for _, key := range signKeys {
-		key := key
 		t.Run(key.Name, func(t *testing.T) {
 			signed, err := jws.Sign(payload, jws.WithKey(alg, key.Key))
 			require.NoError(t, err, "jws.Sign should succeed")
@@ -230,8 +229,6 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 				"ParseString(string)":    func(b []byte) (*jws.Message, error) { return jws.ParseString(string(b)) },
 			}
 			for name, f := range parsers {
-				name := name
-				f := f
 				t.Run(name, func(t *testing.T) {
 					t.Parallel()
 					m, err := f(signed)
@@ -241,8 +238,6 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 			}
 
 			for name, testKey := range keys {
-				name := name
-				testKey := testKey
 				t.Run(name, func(t *testing.T) {
 					verified, err := jws.Verify(signed, jws.WithKey(alg, testKey))
 					require.NoError(t, err, "(%s) Verify is successful", alg)
@@ -267,7 +262,6 @@ func TestRoundtrip(t *testing.T) {
 		}
 		hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
 		for _, alg := range hmacAlgorithms {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, sharedkey, keys)
@@ -285,7 +279,6 @@ func TestRoundtrip(t *testing.T) {
 			"Verify(jwk.Key)":          jwkKey,
 		}
 		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -303,7 +296,6 @@ func TestRoundtrip(t *testing.T) {
 			"Verify(jwk.Key)":        jwkKey,
 		}
 		for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -323,7 +315,6 @@ func TestRoundtrip(t *testing.T) {
 			"Verify(jwk.Key)": jwkKey,
 		}
 		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA} {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -347,7 +338,6 @@ func TestSignMulti2(t *testing.T) {
 		require.NoError(t, err, `jws.SignMulti should succeed`)
 	})
 	for _, alg := range hmacAlgorithms {
-		alg := alg
 		t.Run("Verify "+alg.String(), func(t *testing.T) {
 			m := jws.NewMessage()
 			verified, err := jws.Verify(signed, jws.WithKey(alg, sharedkey), jws.WithMessage(m))
@@ -779,16 +769,16 @@ func TestEncode(t *testing.T) {
 				t.Parallel()
 				// Create payload with X.Y.Z
 				var payload []byte
-				for i := 0; i < size; i++ {
+				for range size {
 					payload = append(payload, 'X')
 				}
 				payload = append(payload, '.')
-				for i := 0; i < size; i++ {
+				for range size {
 					payload = append(payload, 'Y')
 				}
 				payload = append(payload, '.')
 
-				for i := 0; i < size; i++ {
+				for range size {
 					payload = append(payload, 'Y')
 				}
 
@@ -940,11 +930,9 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		wrongKey, err := tc.Key().Clone()
 		require.NoError(t, err, `cloning wrong key should succeed`)
 		for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
-			set := set
 			t.Run(tc.Name, func(t *testing.T) {
 				// Try matching in different orders
 				var usedKey jwk.Key
@@ -973,7 +961,6 @@ func TestVerifySet(t *testing.T) {
 	}
 
 	for _, useJSON := range []bool{true, false} {
-		useJSON := useJSON
 		t.Run(fmt.Sprintf("useJSON=%t", useJSON), func(t *testing.T) {
 			t.Parallel()
 			t.Run(`match via "alg"`, func(t *testing.T) {
@@ -1215,7 +1202,6 @@ func TestRFC7797(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				hdrs := jws.NewHeaders()
 				hdrs.Set("b64", false)
@@ -1293,7 +1279,6 @@ func TestRFC7797(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				options := tc.VerifyOptions
 				options = append(options, jws.WithKey(jwa.HS256, key))
@@ -1399,7 +1384,6 @@ func TestJKU(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				hdr := jws.NewHeaders()
 				u := srv.URL
@@ -1435,7 +1419,7 @@ func TestJKU(t *testing.T) {
 		// present in the JWKS.
 		// Only the second signature uses a key found in the JWKS
 		var keys []jwk.Key
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			key, err := jwxtest.GenerateRsaJwk()
 			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 			key.Set(jwk.KeyIDKey, fmt.Sprintf(`used-%d`, i))
@@ -1443,7 +1427,7 @@ func TestJKU(t *testing.T) {
 		}
 
 		var unusedKeys []jwk.Key
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			key, err := jwxtest.GenerateRsaJwk()
 			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 			key.Set(jwk.KeyIDKey, fmt.Sprintf(`unused-%d`, i))
@@ -1506,7 +1490,6 @@ func TestJKU(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				m := jws.NewMessage()
 				var options []jwk.FetchOption
@@ -1631,8 +1614,6 @@ func TestAlgorithmsForKey(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
-
 		if hasES256K {
 			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
 				tc.Expected = append(tc.Expected, jwa.ES256K)

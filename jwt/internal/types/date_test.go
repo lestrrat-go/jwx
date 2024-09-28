@@ -91,7 +91,6 @@ func TestDate(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			precision := tc.Precision
 			t.Run(fmt.Sprintf("%v(type=%T, precision=%d)", tc.Input, tc.Input, precision), func(t *testing.T) {
 				jwt.Settings(jwt.WithNumericDateParsePrecision(precision))

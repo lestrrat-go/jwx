@@ -102,7 +102,7 @@ func PublicSetOf(v Set) (Set, error) {
 	newSet := NewSet()
 
 	n := v.Len()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		k, ok := v.Key(i)
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
@@ -466,7 +466,7 @@ func Pem(v interface{}) ([]byte, error) {
 	}
 
 	var ret []byte
-	for i := 0; i < set.Len(); i++ {
+	for i := range set.Len() {
 		key, _ := set.Key(i)
 		typ, buf, err := asnEncode(key)
 		if err != nil {

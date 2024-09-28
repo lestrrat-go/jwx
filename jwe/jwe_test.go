@@ -241,7 +241,6 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			options := tc.Options
 			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
@@ -323,7 +322,7 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 		iterations = 1
 	}
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, &rsaPrivKey.PublicKey))
 		if !assert.NoError(t, err, "Encrypt should succeed") {
 			return
@@ -351,7 +350,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 		iterations = 1
 	}
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5, &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
@@ -384,7 +383,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 		iterations = 1
 	}
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW, sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		if !assert.NoError(t, err, "Encrypt is successful") {
 			return
@@ -413,7 +412,6 @@ func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}
 	}
 
 	for _, alg := range algorithms {
-		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
 			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(alg, pubkey))
 			if !assert.NoError(t, err, "Encrypt succeeds") {
@@ -441,7 +439,6 @@ func TestEncode_ECDH(t *testing.T) {
 		elliptic.P521(),
 	}
 	for _, crv := range curves {
-		crv := crv
 		t.Run(crv.Params().Name, func(t *testing.T) {
 			privkey, err := ecdsa.GenerateKey(crv, rand.Reader)
 			if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
@@ -484,7 +481,6 @@ func Test_GHIssue207(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			webKey, err := jwk.ParseKey([]byte(tc.Key))
 			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
@@ -536,7 +532,6 @@ func TestEncode_Direct(t *testing.T) {
 	plaintext := []byte("Lorem ipsum")
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			key := make([]byte, tc.KeySize)
 			/*
@@ -611,7 +606,6 @@ func TestDecodePredefined_Direct(t *testing.T) {
 	plaintext := "Lorem ipsum"
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			webKey, err := jwk.ParseKey([]byte(tc.Key))
 			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
@@ -1036,7 +1030,6 @@ func TestMaxDecompressBufferSize(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			jwe.Settings(jwe.WithMaxDecompressBufferSize(tc.GlobalMaxSize))
 

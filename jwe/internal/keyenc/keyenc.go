@@ -593,7 +593,7 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 	n := len(cek) / keywrapChunkLen
 	r := make([][]byte, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		r[i] = make([]byte, keywrapChunkLen)
 		copy(r[i], cek[i*keywrapChunkLen:])
 	}
@@ -602,14 +602,14 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 	tBytes := make([]byte, keywrapChunkLen)
 	copy(buffer, keywrapDefaultIV)
 
-	for t := 0; t < 6*n; t++ {
+	for t := range 6 * n {
 		copy(buffer[keywrapChunkLen:], r[t%n])
 
 		kek.Encrypt(buffer, buffer)
 
 		binary.BigEndian.PutUint64(tBytes, uint64(t+1))
 
-		for i := 0; i < keywrapChunkLen; i++ {
+		for i := range keywrapChunkLen {
 			buffer[i] = buffer[i] ^ tBytes[i]
 		}
 		copy(r[t%n], buffer[keywrapChunkLen:])
@@ -644,7 +644,7 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	for t := 6*n - 1; t >= 0; t-- {
 		binary.BigEndian.PutUint64(tBytes, uint64(t+1))
 
-		for i := 0; i < keywrapChunkLen; i++ {
+		for i := range keywrapChunkLen {
 			buffer[i] = buffer[i] ^ tBytes[i]
 		}
 		copy(buffer[keywrapChunkLen:], r[t%n])

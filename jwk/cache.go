@@ -151,6 +151,7 @@ func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option := option.(type) {
 		case ParseOption:
@@ -184,6 +185,7 @@ func (c *Cache) LookupResource(ctx context.Context, u string) (*httprc.ResourceB
 	if err != nil {
 		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
 	}
+	//nolint:forcetypeassert
 	return r.(*httprc.ResourceBase[Set]), nil
 }
 
