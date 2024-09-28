@@ -1377,7 +1377,6 @@ func TestJKU(t *testing.T) {
 					c, err := jwk.NewCache(ctx, httprc.NewClient())
 					require.NoError(t, err, `jwk.NewCache should succeed`)
 					require.NoError(t, c.Register(ctx, srv.URL, jwk.WithHTTPClient(srv.Client())), `c.Register should succeed`)
-					require.True(t, c.Ready(ctx, srv.URL), `c.Ready should return true`)
 					return jwk.NewCachedFetcher(c)
 				},
 			},

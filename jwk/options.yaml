@@ -134,3 +134,12 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
+  - ident: WaitReady
+    interface: RegisterOption
+    argument_type: bool
+    comment: |
+      WithWaitReady specifies that the `jwk.Cache` should wait until the
+      first fetch is done before returning from the `Register()` call.
+      
+      This option is by default true. Specify a false value if you would
+      like to return immediately from the `Register()` call.

@@ -2054,14 +2054,14 @@ func TestGH567(t *testing.T) {
 			c, err := jwk.NewCache(ctx, httprc.NewClient())
 			require.NoError(t, err, `jwk.NewCache should succeed`)
 
-			require.NoError(t, c.Register(ctx, srv.URL, jwk.WithIgnoreParseError(ignoreParseError)), `c.Register should succeed`)
-
 			ctx2, cancel2 := context.WithTimeout(ctx, 1*time.Second)
 			defer cancel2()
+			err = c.Register(ctx2, srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
+
 			if ignoreParseError {
-				require.True(t, c.Ready(ctx2, srv.URL), `c.Ready should be true`)
+				require.NoError(t, err, `c.Register should succeed`)
 			} else {
-				require.False(t, c.Ready(ctx2, srv.URL), `c.Ready should be false`)
+				require.Error(t, err, `c.Register should fail`)
 			}
 			set, err := c.Lookup(ctx, srv.URL)
 			if ignoreParseError {

@@ -142,6 +142,7 @@ type identPEM struct{}
 type identPEMDecoder struct{}
 type identRefreshInterval struct{}
 type identThumbprintHash struct{}
+type identWaitReady struct{}
 
 func (identFS) String() string {
 	return "WithFS"
@@ -181,6 +182,10 @@ func (identRefreshInterval) String() string {
 
 func (identThumbprintHash) String() string {
 	return "WithThumbprintHash"
+}
+
+func (identWaitReady) String() string {
+	return "WithWaitReady"
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.
@@ -275,4 +280,13 @@ func WithRefreshInterval(v time.Duration) RegisterOption {
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
+}
+
+// WithWaitReady specifies that the `jwk.Cache` should wait until the
+// first fetch is done before returning from the `Register()` call.
+//
+// This option is by default true. Specify a false value if you would
+// like to return immediately from the `Register()` call.
+func WithWaitReady(v bool) RegisterOption {
+	return &registerOption{option.New(identWaitReady{}, v)}
 }

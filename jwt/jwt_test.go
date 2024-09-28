@@ -1535,7 +1535,6 @@ func TestVerifyAuto(t *testing.T) {
 					registeropts = append(registeropts, option)
 				}
 				c.Register(ctx, u, registeropts...)
-				c.Ready(ctx, u)
 				return c.Lookup(ctx, u)
 			}),
 			jwk.WithHTTPClient(srv.Client()),

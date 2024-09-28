@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
@@ -16,15 +17,22 @@ func ExampleJWK_CachedSet() {
 	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
 	// The first steps are the same as examples/jwk_cache_example_test.go
-	c := jwk.NewCache(ctx)
-	c.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
-	_, err := c.Refresh(ctx, googleCerts)
+	c, err := jwk.NewCache(ctx, httprc.NewClient())
 	if err != nil {
-		fmt.Printf("failed to refresh google JWKS: %s\n", err)
+		fmt.Printf("failed to create cache: %s\n", err)
 		return
 	}
 
-	cached := jwk.NewCachedSet(c, googleCerts)
+	if err := c.Register(ctx, googleCerts, jwk.WithMinRefreshInterval(15*time.Minute)); err != nil {
+		fmt.Printf("failed to register google JWKS: %s\n", err)
+		return
+	}
+
+	cached, err := c.CachedSet(googleCerts)
+	if err != nil {
+		fmt.Printf("failed to get cached keyset: %s\n", err)
+		return
+	}
 
 	// cached fulfills the jwk.Set interface.
 	var _ jwk.Set = cached

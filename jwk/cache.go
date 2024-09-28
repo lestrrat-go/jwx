@@ -151,6 +151,7 @@ func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
+	waitReady := true
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option := option.(type) {
@@ -162,6 +163,8 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 			switch option.Ident() {
 			case identHTTPClient{}:
 				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(option.Value().(HTTPClient)))
+			case identWaitReady{}:
+				waitReady = option.Value().(bool)
 			}
 		}
 	}
@@ -174,6 +177,12 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	}
 	if err := c.ctrl.Add(ctx, r); err != nil {
 		return fmt.Errorf(`failed to add resource to httprc.Client: %w`, err)
+	}
+
+	if waitReady {
+		if err := r.Ready(ctx); err != nil {
+			return fmt.Errorf(`failed to wait for resource to be ready: %w`, err)
+		}
 	}
 	return nil
 }

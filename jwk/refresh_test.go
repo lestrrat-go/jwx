@@ -124,7 +124,6 @@ func TestCache(t *testing.T) {
 		))
 		require.NoError(t, err, `jwk.NewCache should succeed`)
 		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithConstantInterval(2*time.Second+500*time.Millisecond)), `c.Register should succeed`)
-		require.True(t, c.Ready(ctx, srv.URL), `c.Ready should be true`)
 
 		retries := 5
 
@@ -184,7 +183,6 @@ func TestCache(t *testing.T) {
 		require.NoError(t, err, `jwk.NewCache should succeed`)
 		require.NoError(t, c.Register(ctx, srv.URL), `c.Register should succeed`)
 		require.True(t, c.IsRegistered(ctx, srv.URL), `c.IsRegistered should be true`)
-		require.True(t, c.Ready(ctx, srv.URL), `c.Ready should be true`)
 
 		retries := 5
 
@@ -246,7 +244,6 @@ func TestCache(t *testing.T) {
 		))
 		require.NoError(t, err, `jwk.NewCache should succeed`)
 		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinRefreshInterval(time.Second)), `c.Register should succeed`)
-		require.True(t, c.Ready(ctx, srv.URL), `c.Ready should be true`)
 
 		// First fetch should succeed
 		ks, err := c.Lookup(ctx, srv.URL)
