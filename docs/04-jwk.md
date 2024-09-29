@@ -429,7 +429,7 @@ It automatically creates the appropriate underlying key based on the given argum
 | x25519.PrivateKey | OKP Private Key | |
 | x25519.PubliKey | OKP Public Key | |
 
-<!-- INCLUDE(examples/jwk_from_raw_example_test.go) -->
+<!-- INCLUDE(examples/jwk_import_example_test.go) -->
 ```go
 package examples_test
 
@@ -523,7 +523,7 @@ func ExampleJWK_Import() {
   // OUTPUT:
 }
 ```
-source: [examples/jwk_from_raw_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_from_raw_example_test.go)
+source: [examples/jwk_import_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_import_example_test.go)
 <!-- END INCLUDE -->
 
 # Fetching JWK Sets
