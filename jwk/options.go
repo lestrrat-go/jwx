@@ -47,28 +47,30 @@ type registerResourceOption struct {
 func (registerResourceOption) registerOption() {}
 func (registerResourceOption) resourceOption() {}
 
-type identConstantInterval struct{}
+type identNewResourceOption struct{}
 
+// WithHttprcResourceOption can be used to pass arbitrary `httprc.NewResourceOption`
+// to `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
+func WithHttprcResourceOption(o httprc.NewResourceOption) RegisterOption {
+	return &registerResourceOption{
+		option.New(identNewResourceOption{}, o),
+	}
+}
+
+// WithConstantInterval can be used to pass `httprc.WithConstantInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
 func WithConstantInterval(d time.Duration) RegisterOption {
-	return &registerResourceOption{
-		option.New(identConstantInterval{}, httprc.WithConstantInterval(d)),
-	}
+	return WithHttprcResourceOption(httprc.WithConstantInterval(d))
 }
 
-type identMinInterval struct{}
-
-// WithMinInterval sets the minimum interval for refreshing the resource.
+// WithMinInterval can be used to pass `httprc.WithMinInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
 func WithMinInterval(d time.Duration) RegisterOption {
-	return &registerResourceOption{
-		option.New(identMinInterval{}, httprc.WithMinInterval(d)),
-	}
+	return WithHttprcResourceOption(httprc.WithMinInterval(d))
 }
 
-type identMaxInterval struct{}
-
-// WithMaxInterval sets the maximum interval for refreshing the resource.
+// WithMaxInterval can be used to pass `httprc.WithMaxInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
 func WithMaxInterval(d time.Duration) RegisterOption {
-	return &registerResourceOption{
-		option.New(identMaxInterval{}, httprc.WithMaxInterval(d)),
-	}
+	return WithHttprcResourceOption(httprc.WithMaxInterval(d))
 }
