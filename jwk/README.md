@@ -37,6 +37,7 @@ import (
   "fmt"
   "time"
 
+  "github.com/lestrrat-go/httprc/v3"
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
@@ -47,23 +48,15 @@ func ExampleJWK_Cache() {
 
   // First, set up the `jwk.Cache` object. You need to pass it a
   // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  //
-  // Note that by default refreshes only happen very 15 minutes at the
-  // earliest. If you need to control this, use `jwk.WithRefreshWindow()`
-  c := jwk.NewCache(ctx)
-
-  // Tell *jwk.Cache that we only want to refresh this JWKS
-  // when it needs to (based on Cache-Control or Expires header from
-  // the HTTP response). If the calculated minimum refresh interval is less
-  // than 15 minutes, don't go refreshing any earlier than 15 minutes.
-  c.Register(googleCerts, jwk.WithMinRefreshInterval(15*time.Minute))
-
-  // Refresh the JWKS once before getting into the main loop.
-  // This allows you to check if the JWKS is available before we start
-  // a long-running program
-  _, err := c.Refresh(ctx, googleCerts)
+  c, err := jwk.NewCache(ctx, httprc.NewClient())
   if err != nil {
-    fmt.Printf("failed to refresh google JWKS: %s\n", err)
+    fmt.Printf("failed to create cache: %s\n", err)
+    return
+  }
+
+  // Tell *jwk.Cache that we only want to refresh this JWKS periodically.
+  if err := c.Register(ctx, googleCerts); err != nil {
+    fmt.Printf("failed to register google JWKS: %s\n", err)
     return
   }
 
@@ -75,7 +68,7 @@ MAIN:
       break MAIN
     default:
     }
-    keyset, err := c.Get(ctx, googleCerts)
+    keyset, err := c.Lookup(ctx, googleCerts)
     if err != nil {
       fmt.Printf("failed to fetch google JWKS: %s\n", err)
       return
