@@ -41,7 +41,6 @@ func TestDecoderSetting(t *testing.T) {
 	// DO NOT MAKE THIS TEST PARALLEL. This test uses features with global side effects
 	const src = `{"foo": 1}`
 	for _, useNumber := range []bool{true, false} {
-		useNumber := useNumber
 		t.Run(fmt.Sprintf("jwx.WithUseNumber(%t)", useNumber), func(t *testing.T) {
 			if useNumber {
 				jwx.DecoderSettings(jwx.WithUseNumber(useNumber))
@@ -60,7 +59,6 @@ func TestDecoderSetting(t *testing.T) {
 			}
 
 			for _, tc := range decoders {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					var m map[string]interface{}
 					if !assert.NoError(t, tc.Decoder.Decode(&m), `Decode should succeed`) {
@@ -138,7 +136,6 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				t.Parallel()
 
@@ -223,7 +220,6 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			test := test
 			t.Run(fmt.Sprintf("%s-%s", test.alg, test.enc), func(t *testing.T) {
 				t.Parallel()
 				ctx, cancel := context.WithCancel(context.Background())
@@ -251,7 +247,6 @@ func TestJoseCompatibility(t *testing.T) {
 			jwa.RS512,
 		}
 		for _, test := range tests {
-			test := test
 			t.Run(test.String(), func(t *testing.T) {
 				t.Parallel()
 				ctx, cancel := context.WithCancel(context.Background())
@@ -488,7 +483,6 @@ func TestGuessFormat(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			got := jwx.GuessFormat(tc.Source)
 			if !assert.Equal(t, got, tc.Expected, `value of jwx.GuessFormat should match (%s != %s)`, got, tc.Expected) {
@@ -534,7 +528,6 @@ func TestFormat(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Expected, func(t *testing.T) {
 			if !assert.Equal(t, tc.Expected, tc.Value.String(), `stringification should match`) {
 				return
@@ -590,10 +583,8 @@ func TestGH996(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			for _, valid := range tc.ValidSigningKeys {
-				valid := valid
 				t.Run(fmt.Sprintf("Sign Valid(%T)", valid), func(t *testing.T) {
 					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, valid))
 					require.NoError(t, err, `signing with %T should succeed`, valid)
@@ -601,7 +592,6 @@ func TestGH996(t *testing.T) {
 			}
 
 			for _, invalid := range tc.InvalidSigningKeys {
-				invalid := invalid
 				t.Run(fmt.Sprintf("Sign Invalid(%T)", invalid), func(t *testing.T) {
 					_, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(tc.Algorithm, invalid))
 					require.Error(t, err, `signing with %T should fail`, invalid)
@@ -612,7 +602,6 @@ func TestGH996(t *testing.T) {
 			require.NoError(t, err, `jws.Sign with valid key should succeed`)
 
 			for _, valid := range tc.ValidVerificationKeys {
-				valid := valid
 				t.Run(fmt.Sprintf("Verify Valid(%T)", valid), func(t *testing.T) {
 					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, valid))
 					require.NoError(t, err, `verifying with %T should succeed`, valid)
@@ -620,7 +609,6 @@ func TestGH996(t *testing.T) {
 			}
 
 			for _, invalid := range tc.InvalidVerificationKeys {
-				invalid := invalid
 				t.Run(fmt.Sprintf("Verify Invalid(%T)", invalid), func(t *testing.T) {
 					_, err := jws.Verify(signed, jws.WithKey(tc.Algorithm, invalid))
 					require.Error(t, err, `verifying with %T should fail`, invalid)

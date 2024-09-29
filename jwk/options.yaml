@@ -5,6 +5,10 @@ interfaces:
     comment: |
       CacheOption is a type of Option that can be passed to the
       the `jwk.NewCache()` function.
+  - name: ResourceOption
+    comment: |
+      ResourceOption is a type of Option that can be passed to the `httprc.NewResource` function
+      by way of RegisterOption.
   - name: AssignKeyIDOption
   - name: FetchOption
     methods:
@@ -22,7 +26,7 @@ interfaces:
       - readFileOption
     comment: |
       ParseOption is a type of Option that can be passed to `jwk.Parse()`
-      ParseOption also implements the `ReadFileOption` and `CacheOption`,
+      ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
       and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
   - name: ReadFileOption
     comment: |
@@ -30,9 +34,16 @@ interfaces:
   - name: RegisterOption
     comment: |
       RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
+  - name: RegisterFetchOption
+    methods:
+      - fetchOption
+      - registerOption
+      - parseOption
+    comment: |
+      RegisterFetchOption describes options that can be passed to `(jwk.Cache).Register()` and `jwk.Fetch()`
 options:
   - ident: HTTPClient
-    interface: FetchOption
+    interface: RegisterFetchOption
     argument_type: HTTPClient
     comment: |
       WithHTTPClient allows users to specify the "net/http".Client object that
@@ -40,39 +51,6 @@ options:
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
-  - ident: RefreshInterval
-    interface: RegisterOption
-    argument_type: time.Duration
-    comment: |
-      WithRefreshInterval specifies the static interval between refreshes
-      of jwk.Set objects controlled by jwk.Cache.
-      
-      Providing this option overrides the adaptive token refreshing based
-      on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
-      and refreshes will *always* happen in this interval.
-  - ident: MinRefreshInterval
-    interface: RegisterOption
-    argument_type: time.Duration
-    comment: |
-      WithMinRefreshInterval specifies the minimum refresh interval to be used
-      when using `jwk.Cache`. This value is ONLY used if you did not specify
-      a user-supplied static refresh interval via `WithRefreshInterval`.
-      
-      This value is used as a fallback value when tokens are refreshed.
-      
-      When we fetch the key from a remote URL, we first look at the max-age
-      directive from Cache-Control response header. If this value is present,
-      we compare the max-age value and the value specified by this option
-      and take the larger one.
-      
-      Next we check for the Expires header, and similarly if the header is
-      present, we compare it against the value specified by this option,
-      and take the larger one.
-      
-      Finally, if neither of the above headers are present, we use the
-      value specified by this option as the next refresh timing
-      
-      If unspecified, the minimum refresh interval is 1 hour
   - ident: LocalRegistry
     option_name: withLocalRegistry
     interface: ParseOption
@@ -123,26 +101,12 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
-  - ident: PostFetcher
+  - ident: WaitReady
     interface: RegisterOption
-    argument_type: PostFetcher
+    argument_type: bool
     comment: |
-      WithPostFetcher specifies the PostFetcher object to be used on the
-      jwk.Set object obtained in `jwk.Cache`. This option can be used
-      to, for example, modify the jwk.Set to give it key IDs or algorithm
-      names after it has been fetched and parsed, but before it is cached.
-  - ident: RefreshWindow
-    interface: CacheOption
-    argument_type: time.Duration
-    comment: |
-      WithRefreshWindow specifies the interval between checks for refreshes.
-
-      See the documentation in `httprc.WithRefreshWindow` for more details.
-  - ident: ErrSink
-    interface: CacheOption
-    argument_type: ErrSink
-    comment: |
-      WithErrSink specifies the `httprc.ErrSink` object that handles errors
-      that occurred during the cache's execution.
-
-      See the documentation in `httprc.WithErrSink` for more details.
+      WithWaitReady specifies that the `jwk.Cache` should wait until the
+      first fetch is done before returning from the `Register()` call.
+      
+      This option is by default true. Specify a false value if you would
+      like to return immediately from the `Register()` call.

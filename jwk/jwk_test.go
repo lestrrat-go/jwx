@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
@@ -179,8 +180,6 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
-			k := k
-			kdef := kdef
 			t.Run(k, func(t *testing.T) {
 				var getval interface{}
 				require.NoError(t, key.Get(k, &getval), `key.Get(%s) should succeed`, k)
@@ -335,7 +334,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for i := 0; i < set.Len(); i++ {
+			for i := range set.Len() {
 				key, err := set.Key(i)
 				require.True(t, err, `set.Key(%d) should succeed`, i)
 				require.True(t, reflect.TypeOf(key).AssignableTo(expected), "key should be a %s", expected)
@@ -352,7 +351,7 @@ func TestParse(t *testing.T) {
 				return
 			}
 
-			for i := 0; i < set.Len(); i++ {
+			for i := range set.Len() {
 				key, ok := set.Key(i)
 				require.True(t, ok, `set.Key(%d) should succeed`, i)
 				switch key := key.(type) {
@@ -910,7 +909,6 @@ func TestPublicKeyOf(t *testing.T) {
 	}
 
 	for _, key := range keys {
-		key := key
 		t.Run(fmt.Sprintf("%T", key.Key), func(t *testing.T) {
 			t.Parallel()
 
@@ -1006,7 +1004,7 @@ func TestIssue207(t *testing.T) {
 
 	// Using a loop here because we're using sync.Pool
 	// just for sanity.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		k, err := jwk.ParseKey([]byte(src))
 		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
@@ -1273,7 +1271,6 @@ func TestECDSA(t *testing.T) {
 		algorithms := ourecdsa.Algorithms()
 		require.True(t, len(algorithms) >= 3, `algorithm length should be greater than or equal to 3`)
 		for _, alg := range algorithms {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				key, err := jwxtest.GenerateEcdsaKey(alg)
 				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
@@ -1422,11 +1419,9 @@ func TestOKP(t *testing.T) {
 	}
 
 	for typ, keys := range keys {
-		keys := keys
 		t.Run(typ, func(t *testing.T) {
 			t.Parallel()
 			for _, key := range keys {
-				key := key
 				t.Run(key.Name, func(t *testing.T) {
 					t.Parallel()
 					VerifyKey(t, key.Data)
@@ -1597,32 +1592,19 @@ func TestTypedFields(t *testing.T) {
 	}
 
 	for _, key := range keys {
-		key := key
 		serialized, err := json.Marshal(key)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `json.Marshal should succeed`)
 		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
 			for _, tc := range testcases {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					got, err := jwk.ParseKey(serialized, tc.Options...)
-					if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-						return
-					}
-
+					require.NoError(t, err, `jwk.Parse should succeed`)
 					var v interface{}
 					require.NoError(t, got.Get("typed-field", &v), `got.Get() should succeed`)
 
 					field, err := tc.PostProcess(t, v)
-					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
-						return
-					}
-
-					if !assert.Equal(t, field, expected, `field should match expected value`) {
-						return
-					}
+					require.NoError(t, err, `tc.PostProcess should succeed`)
+					require.Equal(t, field, expected, `field should match expected value`)
 				})
 			}
 		})
@@ -1640,14 +1622,13 @@ func TestTypedFields(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				got, err := jwk.Parse(serialized, tc.Options...)
 				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
 					return
 				}
 
-				for i := 0; i < got.Len(); i++ {
+				for i := range got.Len() {
 					key, ok := got.Key(i)
 					require.True(t, ok, `got.Key() should succeed`)
 					var v interface{}
@@ -1671,7 +1652,7 @@ func TestGH412(t *testing.T) {
 
 	const iterations = 5
 	kids := make(map[string]struct{})
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		k, err := jwxtest.GenerateRsaJwk()
 		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
 			return
@@ -1683,7 +1664,7 @@ func TestGH412(t *testing.T) {
 		kids[kid] = struct{}{}
 	}
 
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		idx := i
 		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
@@ -1718,7 +1699,7 @@ func TestGH412(t *testing.T) {
 				expected[k] = struct{}{}
 			}
 
-			for i := 0; i < set.Len(); i++ {
+			for i := range set.Len() {
 				key, ok := set.Key(i)
 				require.True(t, ok, `set.Key() should succeed`)
 				require.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`)
@@ -1982,7 +1963,6 @@ func TestFetch(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
@@ -2067,26 +2047,29 @@ func TestGH567(t *testing.T) {
 	defer srv.Close()
 
 	for _, ignoreParseError := range []bool{true, false} {
-		ignoreParseError := ignoreParseError
 		t.Run(fmt.Sprintf(`Parse with ignoreParseError=%t`, ignoreParseError), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c := jwk.NewCache(ctx)
-			c.Register(srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
+			c, err := jwk.NewCache(ctx, httprc.NewClient())
+			require.NoError(t, err, `jwk.NewCache should succeed`)
 
-			set, err := c.Get(ctx, srv.URL)
+			ctx2, cancel2 := context.WithTimeout(ctx, 1*time.Second)
+			defer cancel2()
+			err = c.Register(ctx2, srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
+
 			if ignoreParseError {
-				if !assert.NoError(t, err, `ar.Fetch should succeed`) {
-					return
-				}
-				if !assert.Equal(t, set.Len(), 2, `JWKS should contain two keys`) {
-					return
-				}
+				require.NoError(t, err, `c.Register should succeed`)
 			} else {
-				if !assert.Error(t, err, `ar.Fetch should fail`) {
-					return
-				}
+				require.Error(t, err, `c.Register should fail`)
+			}
+			set, err := c.Lookup(ctx, srv.URL)
+			if ignoreParseError {
+				require.NoError(t, err, `c.Fetch should succeed`)
+				require.NotNil(t, set, `c.Fetch should return a set`)
+				require.Equal(t, set.Len(), 2, `JWKS should contain two keys`)
+			} else {
+				require.Error(t, err, `c.Fetch should fail`)
 			}
 		})
 	}
@@ -2131,8 +2114,7 @@ func TestGH664(t *testing.T) {
 	privkey.Primes = privkey.Primes[:2]
 
 	// nuke p and q, dp, dq, qi
-	for i := 0; i < 3; i++ {
-		i := i
+	for i := range 3 {
 		t.Run(fmt.Sprintf("Check what happens when primes are reduced to %d", i), func(t *testing.T) {
 			privkey.Primes = privkey.Primes[:i]
 			privkey.Precomputed.Dp = nil

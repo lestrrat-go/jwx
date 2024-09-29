@@ -51,7 +51,6 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(fmt.Sprintf("%T", tc.Input), func(t *testing.T) {
 			alg := jwa.KeyAlgorithmFrom(tc.Input)
 			if tc.Error {

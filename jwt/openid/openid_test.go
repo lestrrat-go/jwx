@@ -69,7 +69,6 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.KeyName, func(t *testing.T) {
 			t.Run("Accessor", func(t *testing.T) {
 				if !assert.Equal(t, tc.Value, tc.Accessor(), "values should match") {
@@ -471,10 +470,8 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	for _, token := range tokens {
-		token := token
 		t.Run(token.Name, func(t *testing.T) {
 			for _, value := range base {
-				value := value
 				t.Run(value.Key, func(_ *testing.T) {
 					value.Check(token.Token)
 				})
@@ -561,7 +558,6 @@ func TestBirthdateClaim(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Source, func(t *testing.T) {
 				var b openid.BirthdateClaim
 				if tc.Error {

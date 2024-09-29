@@ -45,7 +45,6 @@ func TestGHIssue10(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.ClaimName, func(t *testing.T) {
 			t.Parallel()
 			t1, err := tc.BuildFunc(tc.ClaimValue)
@@ -142,7 +141,6 @@ func TestGHIssue10(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				log.Printf("%s", tc.Name)
 				err := jwt.Validate(t1, tc.Options...)
@@ -300,7 +298,6 @@ func TestGHIssue10(t *testing.T) {
 			},
 		}
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
@@ -386,7 +383,6 @@ func TestGHIssue10(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
@@ -549,7 +545,6 @@ func TestClaimValidator(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			t1 := tc.MakeToken()

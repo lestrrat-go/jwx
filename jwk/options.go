@@ -1,6 +1,9 @@
 package jwk
 
 import (
+	"time"
+
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/option"
 )
 
@@ -35,4 +38,39 @@ func WithTypedField(name string, object interface{}) ParseOption {
 			typedFieldPair{Name: name, Value: object},
 		),
 	}
+}
+
+type registerResourceOption struct {
+	option.Interface
+}
+
+func (registerResourceOption) registerOption() {}
+func (registerResourceOption) resourceOption() {}
+
+type identNewResourceOption struct{}
+
+// WithHttprcResourceOption can be used to pass arbitrary `httprc.NewResourceOption`
+// to `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
+func WithHttprcResourceOption(o httprc.NewResourceOption) RegisterOption {
+	return &registerResourceOption{
+		option.New(identNewResourceOption{}, o),
+	}
+}
+
+// WithConstantInterval can be used to pass `httprc.WithConstantInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
+func WithConstantInterval(d time.Duration) RegisterOption {
+	return WithHttprcResourceOption(httprc.WithConstantInterval(d))
+}
+
+// WithMinInterval can be used to pass `httprc.WithMinInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
+func WithMinInterval(d time.Duration) RegisterOption {
+	return WithHttprcResourceOption(httprc.WithMinInterval(d))
+}
+
+// WithMaxInterval can be used to pass `httprc.WithMaxInterval` option to
+// `(httprc.Client).Add` by way of `(jwk.Cache).Register`.
+func WithMaxInterval(d time.Duration) RegisterOption {
+	return WithHttprcResourceOption(httprc.WithMaxInterval(d))
 }

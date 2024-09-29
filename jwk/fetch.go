@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/lestrrat-go/httprc/v2"
 )
 
 // Fetcher is an interface that represents an object that fetches a JWKS.
@@ -50,14 +48,18 @@ func NewCachedFetcher(cache *Cache) *CachedFetcher {
 // Fetch fetches a JWKS from the cache. If the JWKS URL has not been registered with
 // the cache, an error is returned.
 func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (Set, error) {
-	if !f.cache.IsRegistered(u) {
+	if !f.cache.IsRegistered(ctx, u) {
 		return nil, fmt.Errorf(`jwk.CachedFetcher: url %q has not been registered`, u)
 	}
-	return f.cache.Get(ctx, u)
+	return f.cache.Lookup(ctx, u)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be
 // pointing to a resource that is supported by `net/http`.
+//
+// This function is just a wrapper around `net/http` and `jwk.Parse`.
+// There is nothing special here, so you are safe to use your own
+// mechanism to fetch the JWKS.
 //
 // If you are using the same `jwk.Set` for long periods of time during
 // the lifecycle of your program, and would like to periodically refresh the
@@ -79,7 +81,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		case identHTTPClient{}:
 			client = option.Value().(HTTPClient)
 		case identFetchWhitelist{}:
-			wl = option.Value().(httprc.Whitelist)
+			wl = option.Value().(Whitelist)
 		}
 	}
 

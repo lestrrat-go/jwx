@@ -31,7 +31,6 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				tc := tc
 				t.Run("Assign to rsa.PrivateKey", func(t *testing.T) {
 					var dst rsa.PrivateKey
 					var checker func(assert.TestingT, error, ...interface{}) bool
@@ -91,7 +90,6 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				tc := tc
 				t.Run("Assign to rsa.PublicKey", func(t *testing.T) {
 					var dst rsa.PublicKey
 					var checker func(assert.TestingT, error, ...interface{}) bool
@@ -150,7 +148,6 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				tc := tc
 				t.Run("Assign to ecdsa.PrivateKey", func(t *testing.T) {
 					var dst ecdsa.PrivateKey
 					var checker func(assert.TestingT, error, ...interface{}) bool
@@ -203,7 +200,6 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				tc := tc
 				t.Run("Assign to ecdsa.PublicKey", func(t *testing.T) {
 					var dst ecdsa.PublicKey
 					var checker func(assert.TestingT, error, ...interface{}) bool

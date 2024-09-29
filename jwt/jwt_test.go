@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -149,7 +150,6 @@ func TestJWTParseVerify(t *testing.T) {
 	keys = append(keys, ed25519PrivKey)
 
 	for _, key := range keys {
-		key := key
 		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
 			t.Parallel()
 			algs, err := jws.AlgorithmsForKey(key)
@@ -238,9 +238,7 @@ func TestJWTParseVerify(t *testing.T) {
 				},
 			}
 			for _, alg := range algs {
-				alg := alg
 				for _, tc := range testcases {
-					tc := tc
 					t.Run(fmt.Sprintf("Algorithm=%s, SetAlgorithm=%t, SetKid=%t, InferAlgorithm=%t, Expect Error=%t", alg, tc.SetAlgorithm, tc.SetKid, tc.InferAlgorithm, tc.Error), func(t *testing.T) {
 						t.Parallel()
 
@@ -276,7 +274,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 						// Permute on the location of the correct key, to check for possible
 						// cases where we loop too little or too much.
-						for i := 0; i < 6; i++ {
+						for i := range 6 {
 							var name string
 							set := jwk.NewSet()
 							switch i {
@@ -556,7 +554,6 @@ func TestUnmarshal(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Title, func(t *testing.T) {
 			t.Parallel()
 			token := jwt.New()
@@ -596,7 +593,7 @@ func TestGH52(t *testing.T) {
 	const iterations = 100
 	var wg sync.WaitGroup
 	wg.Add(iterations)
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		// Do not use t.Run here as it will clutter up the outpuA
 		go func(t *testing.T, priv *ecdsa.PrivateKey, i int) {
 			defer wg.Done()
@@ -991,7 +988,6 @@ func TestParseRequest(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			got, err := tc.Parse(tc.Request())
 			if tc.Error {
@@ -1034,9 +1030,7 @@ func TestGHIssue368(t *testing.T) {
 	// DO NOT RUN THIS IN PARALLEL
 	t.Run("Per-object control of flatten audience", func(t *testing.T) {
 		for _, globalFlatten := range []bool{true, false} {
-			globalFlatten := globalFlatten
 			for _, perObjectFlatten := range []bool{true, false} {
-				perObjectFlatten := perObjectFlatten
 				// per-object settings always wins
 				t.Run(fmt.Sprintf("Global=%t, Per-Object=%t", globalFlatten, perObjectFlatten), func(t *testing.T) {
 					defer jwt.Settings(jwt.WithFlattenAudience(false))
@@ -1078,7 +1072,6 @@ func TestGHIssue368(t *testing.T) {
 	})
 
 	for _, flatten := range []bool{true, false} {
-		flatten := flatten
 		t.Run(fmt.Sprintf("Test serialization (WithFlattenAudience(%t))", flatten), func(t *testing.T) {
 			jwt.Settings(jwt.WithFlattenAudience(flatten))
 
@@ -1236,7 +1229,6 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			options := append(tc.Options, jwt.WithVerify(false))
 			got, err := jwt.Parse(signed, options...)
@@ -1459,6 +1451,9 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 }
 
 func TestVerifyAuto(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	key, err := jwxtest.GenerateRsaJwk()
 	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
 		return
@@ -1528,7 +1523,8 @@ func TestVerifyAuto(t *testing.T) {
 	}
 
 	// now with Cache
-	c := jwk.NewCache(context.TODO())
+	c, err := jwk.NewCache(ctx, httprc.NewClient())
+	require.NoError(t, err, `jwk.NewCache should succeed`)
 	parsed, err = jwt.Parse(signed,
 		jwt.WithVerifyAuto(
 			jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
@@ -1538,8 +1534,8 @@ func TestVerifyAuto(t *testing.T) {
 				for _, option := range options {
 					registeropts = append(registeropts, option)
 				}
-				c.Register(u, registeropts...)
-				return c.Get(ctx, u)
+				c.Register(ctx, u, registeropts...)
+				return c.Lookup(ctx, u)
 			}),
 			jwk.WithHTTPClient(srv.Client()),
 			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
@@ -1635,7 +1631,6 @@ func TestFractional(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
 				jwt.Settings(jwt.WithNumericDateFormatPrecision(tc.Precision))
 				require.Equal(t, tc.Expected, tc.Input.String())
@@ -1684,7 +1679,6 @@ func TestFractional(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
 				jwt.Settings(jwt.WithNumericDateParsePrecision(tc.Precision))
 				tok, err := jwt.Parse(
