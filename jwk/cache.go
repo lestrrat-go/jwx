@@ -13,15 +13,16 @@ type HTTPClient = httprc.HTTPClient
 type ErrorSink = httprc.ErrorSink
 type TraceSink = httprc.TraceSink
 
-// Cache is a container that keeps track of Set object by their source URLs.
+// Cache is a container built on top of github.com/lestrrat-go/httprc/v3
+// that keeps track of Set object by their source URLs.
 // The Set objects are stored in memory, and are refreshed automatically
 // behind the scenes.
 //
 // Before retrieving the Set objects, the user must pre-register the
 // URLs they intend to use by calling `Register()`
 //
-//	c := jwk.NewCache(ctx)
-//	c.Register(url, options...)
+//	c := jwk.NewCache(ctx, httprc.NewClient())
+//	c.Register(ctx, url, options...)
 //
 // Once registered, you can call `Get()` to retrieve the Set object.
 //
@@ -94,16 +95,6 @@ func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, erro
 		return nil, fmt.Errorf(`failed to parse JWK set at %q: %w`, res.Request.URL.String(), err)
 	}
 
-	/*
-		if pf := t.postFetch; pf != nil {
-			v, err := pf.PostFetch(u, set)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to execute PostFetch: %w`, err)
-			}
-			set = v
-		}
-	*/
-
 	return set, nil
 }
 
@@ -130,24 +121,7 @@ func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 // Register registers a URL to be managed by the cache. URLs must
 // be registered before issuing `Get`
 //
-// This method is almost identical to `(httprc.Cache).Register`, except
-// it accepts some extra options.
-//
-// Use `jwk.WithParser` to configure how the JWKS should be parsed,
-// such as passing it extra options.
-//
-// Please refer to the documentation for `(httprc.Cache).Register` for more
-// details.
-//
-// Register does not check for the validity of the url being registered.
-// If you need to make sure that a url is valid before entering your main
-// loop, call `Refresh` once to make sure the JWKS is available.
-//
-//	_ = cache.Register(url)
-//	if _, err := cache.Refresh(ctx, url); err != nil {
-//	  // url is not a valid JWKS
-//	  panic(err)
-//	}
+// The `Register` method is a thin wrapper around `(httprc.Controller).Add`
 func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
@@ -235,18 +209,12 @@ func (c *Cache) Refresh(ctx context.Context, u string) (Set, error) {
 
 // IsRegistered returns true if the given URL `u` has already been registered
 // in the cache.
-//
-// Please refer to the documentation for `(httprc.Cache).IsRegistered` for more
-// details.
 func (c *Cache) IsRegistered(ctx context.Context, u string) bool {
 	_, err := c.LookupResource(ctx, u)
 	return err == nil
 }
 
 // Unregister removes the given URL `u` from the cache.
-//
-// Please refer to the documentation for `(httprc.Cache).Unregister` for more
-// details.
 func (c *Cache) Unregister(ctx context.Context, u string) error {
 	return c.ctrl.Remove(ctx, u)
 }
