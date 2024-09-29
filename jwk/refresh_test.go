@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
+	"github.com/lestrrat-go/httprc/v3/tracesink"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -239,7 +242,7 @@ func TestCache_backoff(t *testing.T) {
 	defer srv.Close()
 
 	c, err := jwk.NewCache(ctx, httprc.NewClient(
-	//		httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+		httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
 	))
 	require.NoError(t, err, `jwk.NewCache should succeed`)
 	require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
