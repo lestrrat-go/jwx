@@ -45,234 +45,233 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 	return assert.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
 }
 
-func TestCache(t *testing.T) {
+func TestCachedSet(t *testing.T) {
 	t.Parallel()
+	const numKeys = 3
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-	t.Run("CachedSet", func(t *testing.T) {
-		const numKeys = 3
-		t.Parallel()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
+	set := jwk.NewSet()
+	for range numKeys {
+		key, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+		require.NoError(t, set.AddKey(key), `set.AddKey should succeed`)
+	}
 
-		set := jwk.NewSet()
-		for range numKeys {
-			key, err := jwxtest.GenerateRsaJwk()
-			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
-			require.NoError(t, set.AddKey(key), `set.AddKey should succeed`)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hdrs := w.Header()
+		hdrs.Set(`Content-Type`, `application/json`)
+		hdrs.Set(`Cache-Control`, `max-age=5`)
+
+		json.NewEncoder(w).Encode(set)
+	}))
+	defer srv.Close()
+
+	c, err := jwk.NewCache(ctx, httprc.NewClient())
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+	require.NoError(t, c.Register(ctx, srv.URL), `af.Register should succeed`)
+
+	cs, err := c.CachedSet(srv.URL)
+	require.NoError(t, err, `c.CachedSet should succeed`)
+	require.Error(t, cs.Set("bogus", nil), `cs.Set should be an error`)
+	require.Error(t, cs.Remove("bogus"), `cs.Remove should be an error`)
+	require.Error(t, cs.AddKey(nil), `cs.AddKey should be an error`)
+	require.Error(t, cs.RemoveKey(nil), `cs.RemoveKey should be an error`)
+	require.Equal(t, set.Len(), cs.Len(), `value of Len() should be the same`)
+
+	for i := range set.Len() {
+		k, err := set.Key(i)
+		ck, cerr := cs.Key(i)
+		if !assert.Equal(t, k, ck, `key %d should match`, i) {
+			return
 		}
+		if !assert.Equal(t, err, cerr, `error %d should match`, i) {
+			return
+		}
+	}
+}
 
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			hdrs := w.Header()
-			hdrs.Set(`Content-Type`, `application/json`)
-			hdrs.Set(`Cache-Control`, `max-age=5`)
+func TestCache_explicit_refresh_interval(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-			json.NewEncoder(w).Encode(set)
-		}))
-		defer srv.Close()
+	var accessCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		accessCount++
+		key := map[string]interface{}{
+			"kty":         "EC",
+			"crv":         "P-256",
+			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+			"accessCount": accessCount,
+		}
+		hdrs := w.Header()
+		hdrs.Set(`Content-Type`, `application/json`)
+		hdrs.Set(`Cache-Control`, `max-age=7200`) // Make sure this is ignored
 
-		c, err := jwk.NewCache(ctx, httprc.NewClient())
-		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL), `af.Register should succeed`)
+		json.NewEncoder(w).Encode(key)
+	}))
+	defer srv.Close()
 
-		cs, err := c.CachedSet(srv.URL)
-		require.NoError(t, err, `c.CachedSet should succeed`)
-		require.Error(t, cs.Set("bogus", nil), `cs.Set should be an error`)
-		require.Error(t, cs.Remove("bogus"), `cs.Remove should be an error`)
-		require.Error(t, cs.AddKey(nil), `cs.AddKey should be an error`)
-		require.Error(t, cs.RemoveKey(nil), `cs.RemoveKey should be an error`)
-		require.Equal(t, set.Len(), cs.Len(), `value of Len() should be the same`)
+	c, err := jwk.NewCache(ctx, httprc.NewClient(
+	//		httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+	))
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+	require.NoError(t, c.Register(ctx, srv.URL, jwk.WithConstantInterval(2*time.Second+500*time.Millisecond)), `c.Register should succeed`)
 
-		for i := range set.Len() {
-			k, err := set.Key(i)
-			ck, cerr := cs.Key(i)
-			if !assert.Equal(t, k, ck, `key %d should match`, i) {
+	retries := 5
+
+	var wg sync.WaitGroup
+	wg.Add(retries)
+	for range retries {
+		// Run these in separate goroutines to emulate a possible thundering herd
+		go func() {
+			defer wg.Done()
+			ks, err := c.Lookup(ctx, srv.URL)
+			require.NoError(t, err, `c.Lookup should succeed`)
+			require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
+			if !checkAccessCount(t, ks, 1) {
 				return
 			}
-			if !assert.Equal(t, err, cerr, `error %d should match`, i) {
+		}()
+	}
+
+	t.Logf("Waiting for fetching goroutines...")
+	wg.Wait()
+	t.Logf("Waiting for the refresh ...")
+	time.Sleep(6 * time.Second)
+
+	ks, err := c.Lookup(ctx, srv.URL)
+	require.NoError(t, err, `c.Lookup should succeed`)
+	if !checkAccessCount(t, ks, 2, 3) {
+		return
+	}
+}
+
+func TestCache_calculate_interval_from_cache_control(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	var accessCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		accessCount++
+
+		key := map[string]interface{}{
+			"kty":         "EC",
+			"crv":         "P-256",
+			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+			"accessCount": accessCount,
+		}
+		hdrs := w.Header()
+		hdrs.Set(`Content-Type`, `application/json`)
+		hdrs.Set(`Cache-Control`, `max-age=3`)
+
+		json.NewEncoder(w).Encode(key)
+	}))
+	defer srv.Close()
+
+	c, err := jwk.NewCache(ctx, httprc.NewClient(
+	//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+	))
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+	require.NoError(t, c.Register(ctx, srv.URL,
+		jwk.WithMinInterval(3*time.Second),
+	), `c.Register should succeed`)
+	require.True(t, c.IsRegistered(ctx, srv.URL), `c.IsRegistered should be true`)
+
+	retries := 5
+
+	var wg sync.WaitGroup
+	wg.Add(retries)
+	for range retries {
+		// Run these in separate goroutines to emulate a possible thundering herd
+		go func() {
+			defer wg.Done()
+			ks, err := c.Lookup(ctx, srv.URL)
+			require.NoError(t, err, `c.Lookup should succeed`)
+			require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
+			if !checkAccessCount(t, ks, 1) {
 				return
 			}
-		}
-	})
-	t.Run("Specify explicit refresh interval", func(t *testing.T) {
-		t.Parallel()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
+		}()
+	}
 
-		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			accessCount++
-			key := map[string]interface{}{
-				"kty":         "EC",
-				"crv":         "P-256",
-				"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
-				"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-				"accessCount": accessCount,
-			}
-			hdrs := w.Header()
-			hdrs.Set(`Content-Type`, `application/json`)
-			hdrs.Set(`Cache-Control`, `max-age=7200`) // Make sure this is ignored
+	t.Logf("Waiting for fetching goroutines...")
+	wg.Wait()
+	t.Logf("Waiting for the refresh ...")
+	time.Sleep(4 * time.Second)
+	ks, err := c.Lookup(ctx, srv.URL)
+	require.NoError(t, err, `c.Lookup should succeed`)
+	if !checkAccessCount(t, ks, 2) {
+		return
+	}
+}
 
-			json.NewEncoder(w).Encode(key)
-		}))
-		defer srv.Close()
+func TestCache_backoff(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-		c, err := jwk.NewCache(ctx, httprc.NewClient(
-		//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
-		))
-		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithConstantInterval(2*time.Second+500*time.Millisecond)), `c.Register should succeed`)
-
-		retries := 5
-
-		var wg sync.WaitGroup
-		wg.Add(retries)
-		for range retries {
-			// Run these in separate goroutines to emulate a possible thundering herd
-			go func() {
-				defer wg.Done()
-				ks, err := c.Lookup(ctx, srv.URL)
-				require.NoError(t, err, `c.Lookup should succeed`)
-				require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
-				if !checkAccessCount(t, ks, 1) {
-					return
-				}
-			}()
-		}
-
-		t.Logf("Waiting for fetching goroutines...")
-		wg.Wait()
-		t.Logf("Waiting for the refresh ...")
-		time.Sleep(6 * time.Second)
-		ks, err := c.Lookup(ctx, srv.URL)
-		require.NoError(t, err, `c.Lookup should succeed`)
-
-		if !checkAccessCount(t, ks, 2, 3) {
-			return
-		}
-	})
-	t.Run("Calculate next refresh from Cache-Control header", func(t *testing.T) {
-		t.Parallel()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			accessCount++
-
-			key := map[string]interface{}{
-				"kty":         "EC",
-				"crv":         "P-256",
-				"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
-				"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-				"accessCount": accessCount,
-			}
-			hdrs := w.Header()
-			hdrs.Set(`Content-Type`, `application/json`)
-			hdrs.Set(`Cache-Control`, `max-age=3`)
-
-			json.NewEncoder(w).Encode(key)
-		}))
-		defer srv.Close()
-
-		c, err := jwk.NewCache(ctx, httprc.NewClient(
-		//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
-		))
-		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL,
-			jwk.WithMinInterval(3*time.Second),
-		), `c.Register should succeed`)
-		require.True(t, c.IsRegistered(ctx, srv.URL), `c.IsRegistered should be true`)
-
-		retries := 5
-
-		var wg sync.WaitGroup
-		wg.Add(retries)
-		for range retries {
-			// Run these in separate goroutines to emulate a possible thundering herd
-			go func() {
-				defer wg.Done()
-				ks, err := c.Lookup(ctx, srv.URL)
-				require.NoError(t, err, `c.Lookup should succeed`)
-				require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
-				if !checkAccessCount(t, ks, 1) {
-					return
-				}
-			}()
-		}
-
-		t.Logf("Waiting for fetching goroutines...")
-		wg.Wait()
-		t.Logf("Waiting for the refresh ...")
-		time.Sleep(4 * time.Second)
-		ks, err := c.Lookup(ctx, srv.URL)
-		require.NoError(t, err, `c.Lookup should succeed`)
-		if !checkAccessCount(t, ks, 2) {
-			return
-		}
-	})
-	t.Run("Backoff", func(t *testing.T) {
-		t.Parallel()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		var accessCount int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			hdrs := w.Header()
-			hdrs.Set(`Cache-Control`, `max-age=1`)
-			accessCount++
-			if accessCount > 1 && accessCount < 4 {
-				http.Error(w, "wait for it....", http.StatusForbidden)
-				return
-			}
-
-			key := map[string]interface{}{
-				"kty":         "EC",
-				"crv":         "P-256",
-				"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
-				"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-				"accessCount": accessCount,
-			}
-			hdrs.Set(`Content-Type`, `application/json`)
-
-			json.NewEncoder(w).Encode(key)
-		}))
-		defer srv.Close()
-
-		c, err := jwk.NewCache(ctx, httprc.NewClient(
-		//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
-		))
-		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
-
-		// First fetch should succeed
-		ks, err := c.Lookup(ctx, srv.URL)
-		require.NoError(t, err, `c.Lookup (#1) should succeed`)
-		require.NotNil(t, ks, `c.Lookup (#1) should return a non-nil key set`)
-		if !checkAccessCount(t, ks, 1) {
+	var accessCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hdrs := w.Header()
+		hdrs.Set(`Cache-Control`, `max-age=1`)
+		accessCount++
+		if accessCount > 1 && accessCount < 4 {
+			http.Error(w, "wait for it....", http.StatusForbidden)
 			return
 		}
 
-		// enough time for 1 refresh to have occurred
-		time.Sleep(1500 * time.Millisecond)
-		ks, err = c.Lookup(ctx, srv.URL)
-		require.NoError(t, err, `c.Lookup (#2) should succeed`)
-		require.NotNil(t, ks, `c.Lookup (#2) should return a non-nil key set`)
-		// Should be using the cached version
-		if !checkAccessCount(t, ks, 1) {
-			return
+		key := map[string]interface{}{
+			"kty":         "EC",
+			"crv":         "P-256",
+			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
+			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
+			"accessCount": accessCount,
 		}
+		hdrs.Set(`Content-Type`, `application/json`)
 
-		// enough time for 2 refreshes to have occurred
-		time.Sleep(5000 * time.Second)
+		json.NewEncoder(w).Encode(key)
+	}))
+	defer srv.Close()
 
-		ks, err = c.Lookup(ctx, srv.URL)
-		require.NoError(t, err, `c.Lookup (#3) should succeed`)
-		require.NotNil(t, ks, `c.Lookup (#3) should return a non-nil key set`)
-		// should be new
-		if !checkAccessCount(t, ks, 4, 5) {
-			return
-		}
-	})
+	c, err := jwk.NewCache(ctx, httprc.NewClient(
+	//		httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+	))
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+	require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
+
+	// First fetch should succeed
+	ks, err := c.Lookup(ctx, srv.URL)
+	require.NoError(t, err, `c.Lookup (#1) should succeed`)
+	require.NotNil(t, ks, `c.Lookup (#1) should return a non-nil key set`)
+	if !checkAccessCount(t, ks, 1) {
+		return
+	}
+
+	// enough time for 1 refresh to have occurred
+	time.Sleep(1500 * time.Millisecond)
+	ks, err = c.Lookup(ctx, srv.URL)
+	require.NoError(t, err, `c.Lookup (#2) should succeed`)
+	require.NotNil(t, ks, `c.Lookup (#2) should return a non-nil key set`)
+	// Should be using the cached version
+	if !checkAccessCount(t, ks, 1) {
+		return
+	}
+
+	// enough time for 2 refreshes to have occurred
+	time.Sleep(5000 * time.Millisecond)
+
+	ks, err = c.Lookup(ctx, srv.URL)
+	require.NoError(t, err, `c.Lookup (#3) should succeed`)
+	require.NotNil(t, ks, `c.Lookup (#3) should return a non-nil key set`)
+	// should be new
+	if !checkAccessCount(t, ks, 4, 5) {
+		return
+	}
 }
 
 type accumulateErrs struct {
