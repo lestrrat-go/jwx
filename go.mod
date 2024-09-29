@@ -6,7 +6,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/goccy/go-json v0.10.3
 	github.com/lestrrat-go/blackmagic v1.0.2
-	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929094851-9de8a68ef69c
+	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929101117-a47356dbd7b5
 	github.com/lestrrat-go/option v1.0.1
 	github.com/segmentio/asm v1.2.0
 	github.com/stretchr/testify v1.9.0

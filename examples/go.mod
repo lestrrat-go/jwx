@@ -5,7 +5,7 @@ go 1.22.6
 require (
 	github.com/cloudflare/circl v1.3.7
 	github.com/emmansun/gmsm v0.21.5
-	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929094851-9de8a68ef69c
+	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929101117-a47356dbd7b5
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 )
 
