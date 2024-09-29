@@ -149,7 +149,7 @@ func TestCache(t *testing.T) {
 		ks, err := c.Lookup(ctx, srv.URL)
 		require.NoError(t, err, `c.Lookup should succeed`)
 
-		if !checkAccessCount(t, ks, 2) {
+		if !checkAccessCount(t, ks, 2, 3) {
 			return
 		}
 	})
