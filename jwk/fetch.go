@@ -57,6 +57,10 @@ func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (
 // Fetch fetches a JWK resource specified by a URL. The url must be
 // pointing to a resource that is supported by `net/http`.
 //
+// This function is just a wrapper around `net/http` and `jwk.Parse`.
+// There is nothing special here, so you are safe to use your own
+// mechanism to fetch the JWKS.
+//
 // If you are using the same `jwk.Set` for long periods of time during
 // the lifecycle of your program, and would like to periodically refresh the
 // contents of the object with the data at the remote resource,

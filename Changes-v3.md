@@ -8,7 +8,7 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## Module
 
-* This module now requires Go 1.21
+* This module now requires Go 1.22
 
 * All `xxx.Get()` methods have been changed from `Get(string) (interface{}, error)` to
   `Get(string, interface{}) error`, where the second argument should be a pointer
@@ -56,9 +56,15 @@ These are changes that are incompatible with the v2.x.x version.
 * Added `jwk/ecdsa` to keep track of which curves are available for ECDSA keys.
 
 * `(jwk.Key).Raw()` has been deprecated. Use `jwk.Export()` instead.
+  This is to allow third parties to register custom key types that this library does not
+  natively support: Whereas a method must be bound to an object, and thus does not necessarily
+  have a way to hook into a global settings (i.e. custom exporter/importer) for arbitrary
+  key types, if the entrypoint is a function it's much easier and cleaner to for third-parties
+  to take advantage and hook into the mechanisms.
 
-* `jwk.SetGlobalFetcher` has been deprecated. The required version for `github.com/lestrrat-go/httprc`
-  has been upgraded, and thus we no longer have a pool of workers that need to be controlled.
+* `jwk.Fetch` is marked as a simple wrapper around `net/http` and `jwk.Parse`.
+
+* `jwk.SetGlobalFetcher` has been deprecated.
 
 * `jwk.Fetcher` has been clearly marked as something that has limited
   usage for `jws.WithVerifyAuto`
