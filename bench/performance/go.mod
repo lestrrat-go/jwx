@@ -10,7 +10,7 @@ require (
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
-	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929101117-a47356dbd7b5 // indirect
+	github.com/lestrrat-go/httprc/v3 v3.0.0-alpha1.0.20240929120351-2d1b7c694bbf // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
