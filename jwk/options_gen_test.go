@@ -14,10 +14,8 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithHTTPClient", identHTTPClient{}.String())
 	require.Equal(t, "WithIgnoreParseError", identIgnoreParseError{}.String())
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
-	require.Equal(t, "WithMinRefreshInterval", identMinRefreshInterval{}.String())
 	require.Equal(t, "WithPEM", identPEM{}.String())
 	require.Equal(t, "WithPEMDecoder", identPEMDecoder{}.String())
-	require.Equal(t, "WithRefreshInterval", identRefreshInterval{}.String())
 	require.Equal(t, "WithThumbprintHash", identThumbprintHash{}.String())
 	require.Equal(t, "WithWaitReady", identWaitReady{}.String())
 }

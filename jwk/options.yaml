@@ -51,39 +51,6 @@ options:
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
-  - ident: RefreshInterval
-    interface: RegisterOption
-    argument_type: time.Duration
-    comment: |
-      WithRefreshInterval specifies the static interval between refreshes
-      of jwk.Set objects controlled by jwk.Cache.
-      
-      Providing this option overrides the adaptive token refreshing based
-      on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
-      and refreshes will *always* happen in this interval.
-  - ident: MinRefreshInterval
-    interface: RegisterOption
-    argument_type: time.Duration
-    comment: |
-      WithMinRefreshInterval specifies the minimum refresh interval to be used
-      when using `jwk.Cache`. This value is ONLY used if you did not specify
-      a user-supplied static refresh interval via `WithRefreshInterval`.
-      
-      This value is used as a fallback value when tokens are refreshed.
-      
-      When we fetch the key from a remote URL, we first look at the max-age
-      directive from Cache-Control response header. If this value is present,
-      we compare the max-age value and the value specified by this option
-      and take the larger one.
-      
-      Next we check for the Expires header, and similarly if the header is
-      present, we compare it against the value specified by this option,
-      and take the larger one.
-      
-      Finally, if neither of the above headers are present, we use the
-      value specified by this option as the next refresh timing
-      
-      If unspecified, the minimum refresh interval is 1 hour
   - ident: LocalRegistry
     option_name: withLocalRegistry
     interface: ParseOption

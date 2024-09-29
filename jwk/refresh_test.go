@@ -181,7 +181,9 @@ func TestCache(t *testing.T) {
 		//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
 		))
 		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL), `c.Register should succeed`)
+		require.NoError(t, c.Register(ctx, srv.URL,
+			jwk.WithMinInterval(3*time.Second),
+		), `c.Register should succeed`)
 		require.True(t, c.IsRegistered(ctx, srv.URL), `c.IsRegistered should be true`)
 
 		retries := 5
@@ -243,7 +245,7 @@ func TestCache(t *testing.T) {
 			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
 		))
 		require.NoError(t, err, `jwk.NewCache should succeed`)
-		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinRefreshInterval(time.Second)), `c.Register should succeed`)
+		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
 
 		// First fetch should succeed
 		ks, err := c.Lookup(ctx, srv.URL)

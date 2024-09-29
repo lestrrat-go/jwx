@@ -54,3 +54,21 @@ func WithConstantInterval(d time.Duration) RegisterOption {
 		option.New(identConstantInterval{}, httprc.WithConstantInterval(d)),
 	}
 }
+
+type identMinInterval struct{}
+
+// WithMinInterval sets the minimum interval for refreshing the resource.
+func WithMinInterval(d time.Duration) RegisterOption {
+	return &registerResourceOption{
+		option.New(identMinInterval{}, httprc.WithMinInterval(d)),
+	}
+}
+
+type identMaxInterval struct{}
+
+// WithMaxInterval sets the maximum interval for refreshing the resource.
+func WithMaxInterval(d time.Duration) RegisterOption {
+	return &registerResourceOption{
+		option.New(identMaxInterval{}, httprc.WithMaxInterval(d)),
+	}
+}

@@ -5,7 +5,6 @@ package jwk
 import (
 	"crypto"
 	"io/fs"
-	"time"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/option"
@@ -137,10 +136,8 @@ type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
-type identMinRefreshInterval struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
-type identRefreshInterval struct{}
 type identThumbprintHash struct{}
 type identWaitReady struct{}
 
@@ -164,20 +161,12 @@ func (identLocalRegistry) String() string {
 	return "withLocalRegistry"
 }
 
-func (identMinRefreshInterval) String() string {
-	return "WithMinRefreshInterval"
-}
-
 func (identPEM) String() string {
 	return "WithPEM"
 }
 
 func (identPEMDecoder) String() string {
 	return "WithPEMDecoder"
-}
-
-func (identRefreshInterval) String() string {
-	return "WithRefreshInterval"
 }
 
 func (identThumbprintHash) String() string {
@@ -234,29 +223,6 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
 }
 
-// WithMinRefreshInterval specifies the minimum refresh interval to be used
-// when using `jwk.Cache`. This value is ONLY used if you did not specify
-// a user-supplied static refresh interval via `WithRefreshInterval`.
-//
-// This value is used as a fallback value when tokens are refreshed.
-//
-// When we fetch the key from a remote URL, we first look at the max-age
-// directive from Cache-Control response header. If this value is present,
-// we compare the max-age value and the value specified by this option
-// and take the larger one.
-//
-// Next we check for the Expires header, and similarly if the header is
-// present, we compare it against the value specified by this option,
-// and take the larger one.
-//
-// Finally, if neither of the above headers are present, we use the
-// value specified by this option as the next refresh timing
-//
-// If unspecified, the minimum refresh interval is 1 hour
-func WithMinRefreshInterval(v time.Duration) RegisterOption {
-	return &registerOption{option.New(identMinRefreshInterval{}, v)}
-}
-
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
 func WithPEM(v bool) ParseOption {
 	return &parseOption{option.New(identPEM{}, v)}
@@ -266,16 +232,6 @@ func WithPEM(v bool) ParseOption {
 // PEM encoded keys. This option can be passed to `jwk.Parse()`
 func WithPEMDecoder(v PEMDecoder) ParseOption {
 	return &parseOption{option.New(identPEMDecoder{}, v)}
-}
-
-// WithRefreshInterval specifies the static interval between refreshes
-// of jwk.Set objects controlled by jwk.Cache.
-//
-// Providing this option overrides the adaptive token refreshing based
-// on Cache-Control/Expires header (and jwk.WithMinRefreshInterval),
-// and refreshes will *always* happen in this interval.
-func WithRefreshInterval(v time.Duration) RegisterOption {
-	return &registerOption{option.New(identRefreshInterval{}, v)}
 }
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
