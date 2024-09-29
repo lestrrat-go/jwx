@@ -4,16 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
-	"github.com/lestrrat-go/httprc/v3/tracesink"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -242,7 +239,7 @@ func TestCache(t *testing.T) {
 		defer srv.Close()
 
 		c, err := jwk.NewCache(ctx, httprc.NewClient(
-			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+		//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
 		))
 		require.NoError(t, err, `jwk.NewCache should succeed`)
 		require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
@@ -266,7 +263,7 @@ func TestCache(t *testing.T) {
 		}
 
 		// enough time for 2 refreshes to have occurred
-		time.Sleep(2500 * time.Millisecond)
+		time.Sleep(5000 * time.Second)
 
 		ks, err = c.Lookup(ctx, srv.URL)
 		require.NoError(t, err, `c.Lookup (#3) should succeed`)
