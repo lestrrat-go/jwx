@@ -266,7 +266,7 @@ func TestCache_backoff(t *testing.T) {
 	}
 
 	// enough time for 2 refreshes to have occurred
-	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(4000 * time.Millisecond)
 
 	ks, err = c.Lookup(ctx, srv.URL)
 	require.NoError(t, err, `c.Lookup (#3) should succeed`)
