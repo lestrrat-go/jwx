@@ -262,7 +262,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				}
 			})
 			t.Run("WithKeySet", func(t *testing.T) {
-				pkJwk, err := jwk.FromRaw(rawkey)
+				pkJwk, err := jwk.Import(rawkey)
 				if !assert.NoError(t, err, `jwk.New should succeed`) {
 					return
 				}
@@ -909,8 +909,8 @@ func TestGH1001(t *testing.T) {
 
 func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	token := []byte("eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJlbmMiOiJBMjU2R0NNIiwicDJjIjoyMDAwMDAwMDAwLCJwMnMiOiJNNzczSnlmV2xlX2FsSXNrc0NOTU9BIn0=.S8B1kXdIR7BM6i_TaGsgqEOxU-1Sgdakp4mHq7UVhn-_REzOiGz2gg.gU_LfzhBXtQdwYjh.9QUIS-RWkLc.m9TudmzUoCzDhHsGGfzmCA")
-	key, err := jwk.FromRaw([]byte(`abcdefg`))
-	require.NoError(t, err, `jwk.FromRaw should succeed`)
+	key, err := jwk.Import([]byte(`abcdefg`))
+	require.NoError(t, err, `jwk.Import should succeed`)
 
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

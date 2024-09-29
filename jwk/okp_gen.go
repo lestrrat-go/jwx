@@ -24,7 +24,6 @@ const (
 
 type OKPPublicKey interface {
 	Key
-	FromRaw(interface{}) error
 	Crv() jwa.EllipticCurveAlgorithm
 	X() []byte
 }
@@ -645,7 +644,6 @@ func (h *okpPublicKey) Keys() []string {
 
 type OKPPrivateKey interface {
 	Key
-	FromRaw(interface{}) error
 	Crv() jwa.EllipticCurveAlgorithm
 	D() []byte
 	X() []byte

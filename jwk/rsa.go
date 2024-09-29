@@ -16,7 +16,7 @@ func init() {
 	RegisterKeyExporter(jwa.RSA, KeyExportFunc(rsaJWKToRaw))
 }
 
-func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
+func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
@@ -60,7 +60,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	}
 
 	// public key part
-	n, e, err := rsaPublicKeyByteValuesFromRaw(&rawKey.PublicKey)
+	n, e, err := importRsaPublicKeyByteValues(&rawKey.PublicKey)
 	if err != nil {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}
@@ -70,7 +70,7 @@ func (k *rsaPrivateKey) FromRaw(rawKey *rsa.PrivateKey) error {
 	return nil
 }
 
-func rsaPublicKeyByteValuesFromRaw(rawKey *rsa.PublicKey) ([]byte, []byte, error) {
+func importRsaPublicKeyByteValues(rawKey *rsa.PublicKey) ([]byte, []byte, error) {
 	n, err := bigIntToBytes(rawKey.N)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`invalid rsa.PublicKey: %w`, err)
@@ -87,11 +87,11 @@ func rsaPublicKeyByteValuesFromRaw(rawKey *rsa.PublicKey) ([]byte, []byte, error
 	return n, data[i:], nil
 }
 
-func (k *rsaPublicKey) FromRaw(rawKey *rsa.PublicKey) error {
+func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
-	n, e, err := rsaPublicKeyByteValuesFromRaw(rawKey)
+	n, e, err := importRsaPublicKeyByteValues(rawKey)
 	if err != nil {
 		return fmt.Errorf(`invalid rsa.PrivateKey: %w`, err)
 	}

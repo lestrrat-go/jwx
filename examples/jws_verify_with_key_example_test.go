@@ -11,7 +11,7 @@ import (
 func ExampleJWS_VerifyWithKey() {
 	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
-	key, err := jwk.FromRaw([]byte(`abracadabra`))
+	key, err := jwk.Import([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)
 		return

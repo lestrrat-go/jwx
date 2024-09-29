@@ -184,7 +184,7 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, _ crypto.S
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
 
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
-	jwkKey, err := jwk.FromRaw(signKey)
+	jwkKey, err := jwk.Import(signKey)
 	require.NoError(t, err, `jwk.New should succeed`)
 	signKeys := []struct {
 		Name string
@@ -255,7 +255,7 @@ func TestRoundtrip(t *testing.T) {
 	t.Run("HMAC", func(t *testing.T) {
 		t.Parallel()
 		sharedkey := []byte("Avracadabra")
-		jwkKey, _ := jwk.FromRaw(sharedkey)
+		jwkKey, _ := jwk.Import(sharedkey)
 		keys := map[string]interface{}{
 			"[]byte":  sharedkey,
 			"jwk.Key": jwkKey,
@@ -272,7 +272,7 @@ func TestRoundtrip(t *testing.T) {
 		t.Parallel()
 		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
 		require.NoError(t, err, "ECDSA key generated")
-		jwkKey, _ := jwk.FromRaw(key.PublicKey)
+		jwkKey, _ := jwk.Import(key.PublicKey)
 		keys := map[string]interface{}{
 			"Verify(ecdsa.PublicKey)":  key.PublicKey,
 			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
@@ -289,7 +289,7 @@ func TestRoundtrip(t *testing.T) {
 		t.Parallel()
 		key, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, "RSA key generated")
-		jwkKey, _ := jwk.FromRaw(key.PublicKey)
+		jwkKey, _ := jwk.Import(key.PublicKey)
 		keys := map[string]interface{}{
 			"Verify(rsa.PublicKey)":  key.PublicKey,
 			"Verify(*rsa.PublicKey)": &key.PublicKey,
@@ -307,7 +307,7 @@ func TestRoundtrip(t *testing.T) {
 		key, err := jwxtest.GenerateEd25519Key()
 		require.NoError(t, err, "ed25519 key generated")
 		pubkey := key.Public()
-		jwkKey, _ := jwk.FromRaw(pubkey)
+		jwkKey, _ := jwk.Import(pubkey)
 		keys := map[string]interface{}{
 			"Verify(ed25519.Public())": pubkey,
 			// Meh, this doesn't work
@@ -813,7 +813,7 @@ func TestPublicHeaders(t *testing.T) {
 	_ = signer // TODO
 
 	pubkey := key.PublicKey
-	pubjwk, err := jwk.FromRaw(&pubkey)
+	pubjwk, err := jwk.Import(&pubkey)
 	require.NoError(t, err, "NewRsaPublicKey should succeed")
 	_ = pubjwk // TODO
 }
@@ -950,9 +950,9 @@ func TestVerifySet(t *testing.T) {
 
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
-		k1, _ := jwk.FromRaw([]byte("abracadabra"))
+		k1, _ := jwk.Import([]byte("abracadabra"))
 		set.AddKey(k1)
-		k2, _ := jwk.FromRaw([]byte("opensesame"))
+		k2, _ := jwk.Import([]byte("opensesame"))
 		set.AddKey(k2)
 		pubkey, _ := jwk.PublicKeyOf(privkey)
 		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
@@ -1791,8 +1791,8 @@ func TestUnpaddedSignatureR(t *testing.T) {
 			rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P256)
 			require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
 
-			key, err := jwk.FromRaw(rawKey)
-			require.NoError(t, err, `jwk.FromRaw should succeed`)
+			key, err := jwk.Import(rawKey)
+			require.NoError(t, err, `jwk.Import should succeed`)
 
 			pubkey, _ := key.PublicKey()
 

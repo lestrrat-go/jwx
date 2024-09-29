@@ -24,7 +24,7 @@ var keyExporters = make(map[jwa.KeyType][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.FromRaw()` is called,
+// RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.Import()` is called,
 // the library will look up the appropriate KeyImporter for the given raw key type (via `reflect`)
 // and execute the KeyImporters in succession until either one of them succeeds, or all of them fail.
 func RegisterKeyImporter(from interface{}, conv KeyImporter) {
@@ -133,8 +133,8 @@ func init() {
 }
 
 // These may seem a bit repetitive and redandunt, but the problem is that
-// each key type has its own FromRaw method -- for example, FromRaw(*ecdsa.PrivateKey)
-// vs FromRaw(*rsa.PrivateKey), and therefore they can't just be bundled into
+// each key type has its own Import method -- for example, Import(*ecdsa.PrivateKey)
+// vs Import(*rsa.PrivateKey), and therefore they can't just be bundled into
 // a single function.
 func rsaPrivateKeyToJWK(src interface{}) (Key, error) {
 	var raw *rsa.PrivateKey
@@ -147,7 +147,7 @@ func rsaPrivateKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
 	}
 	k := newRSAPrivateKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -164,7 +164,7 @@ func rsaPublicKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
 	}
 	k := newRSAPublicKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -181,7 +181,7 @@ func ecdsaPrivateKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
 	}
 	k := newECDSAPrivateKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -198,7 +198,7 @@ func ecdsaPublicKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
 	}
 	k := newECDSAPublicKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -215,7 +215,7 @@ func okpPrivateKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`cannot convert key type '%T' to OKP jwk.Key`, src)
 	}
 	k := newOKPPrivateKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -232,7 +232,7 @@ func okpPublicKeyToJWK(src interface{}) (Key, error) {
 		return nil, fmt.Errorf(`jwk: convert raw to OKP jwk.Key: cannot convert key type '%T' to OKP jwk.Key`, src)
 	}
 	k := newOKPPublicKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
@@ -248,7 +248,7 @@ func bytesToKey(src interface{}) (Key, error) {
 	}
 
 	k := newSymmetricKey()
-	if err := k.FromRaw(raw); err != nil {
+	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil

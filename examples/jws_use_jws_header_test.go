@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleJWS_UseJWSHeader() {
-	key, err := jwk.FromRaw([]byte(`abracadabra`))
+	key, err := jwk.Import([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf(`failed to create new symmetric key: %s`, err)
 		return

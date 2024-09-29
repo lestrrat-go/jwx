@@ -311,7 +311,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 func TestNew(t *testing.T) {
 	t.Parallel()
-	k, err := jwk.FromRaw(nil)
+	k, err := jwk.Import(nil)
 	if !assert.Nil(t, k, "key should be nil") {
 		return
 	}
@@ -921,9 +921,9 @@ func TestPublicKeyOf(t *testing.T) {
 				return
 			}
 
-			// Go through jwk.FromRaw
-			jwkKey, err := jwk.FromRaw(key.Key)
-			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+			// Go through jwk.Import
+			jwkKey, err := jwk.Import(key.Key)
+			if !assert.NoError(t, err, `jwk.Import should succeed`) {
 				return
 			}
 
@@ -954,8 +954,8 @@ func TestPublicKeyOf(t *testing.T) {
 			if reflect.TypeOf(key.Key) == key.PublicKeyType {
 				continue
 			}
-			jwkKey, err := jwk.FromRaw(key.Key)
-			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+			jwkKey, err := jwk.Import(key.Key)
+			if !assert.NoError(t, err, `jwk.Import should succeed`) {
 				return
 			}
 			jwkKey.Set(jwk.KeyIDKey, fmt.Sprintf("key%d", count))
@@ -1081,8 +1081,8 @@ func TestRSA(t *testing.T) {
 			for _, raw := range []rsa.PublicKey{
 				{},
 			} {
-				_, err := jwk.FromRaw(raw)
-				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
+				_, err := jwk.Import(raw)
+				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
 					return
 				}
 			}
@@ -1147,8 +1147,8 @@ func TestRSA(t *testing.T) {
 					Primes: []*big.Int{{}, {}},
 				},
 			} {
-				_, err := jwk.FromRaw(raw)
-				if !assert.Error(t, err, `jwk.FromRaw should fail for empty key`) {
+				_, err := jwk.Import(raw)
+				if !assert.Error(t, err, `jwk.Import should fail for empty key`) {
 					return
 				}
 			}
@@ -1202,8 +1202,8 @@ func TestECDSA(t *testing.T) {
 					},
 				},
 			} {
-				_, err := jwk.FromRaw(raw)
-				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
+				_, err := jwk.Import(raw)
+				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
 					return
 				}
 			}
@@ -1242,8 +1242,8 @@ func TestECDSA(t *testing.T) {
 					X: &big.Int{},
 				},
 			} {
-				_, err := jwk.FromRaw(raw)
-				if !assert.Error(t, err, `jwk.FromRaw should fail for invalid key`) {
+				_, err := jwk.Import(raw)
+				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
 					return
 				}
 			}
@@ -1277,12 +1277,12 @@ func TestECDSA(t *testing.T) {
 					return
 				}
 
-				privkey, err := jwk.FromRaw(key)
-				if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+				privkey, err := jwk.Import(key)
+				if !assert.NoError(t, err, `jwk.Import should succeed`) {
 					return
 				}
-				pubkey, err := jwk.FromRaw(key)
-				if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+				pubkey, err := jwk.Import(key)
+				if !assert.NoError(t, err, `jwk.Import should succeed`) {
 					return
 				}
 
@@ -1853,8 +1853,8 @@ func TestSetWithPrivateParams(t *testing.T) {
 			return
 		}
 
-		k, err := jwk.FromRaw([]byte("foobar"))
-		if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+		k, err := jwk.Import([]byte("foobar"))
+		if !assert.NoError(t, err, `jwk.Import should succeed`) {
 			return
 		}
 		keys := []jwk.Key{k}
@@ -2106,8 +2106,8 @@ func TestGH664(t *testing.T) {
 
 	// first, test a stupid case where Primes > 2
 	privkey.Primes = append(privkey.Primes, &big.Int{})
-	_, err = jwk.FromRaw(privkey)
-	if !assert.Error(t, err, `jwk.FromRaw should fail`) {
+	_, err = jwk.Import(privkey)
+	if !assert.Error(t, err, `jwk.Import should fail`) {
 		return
 	}
 
@@ -2122,8 +2122,8 @@ func TestGH664(t *testing.T) {
 			privkey.Precomputed.Qinv = nil
 			privkey.Precomputed.CRTValues = nil
 
-			jwkPrivkey, err := jwk.FromRaw(privkey)
-			if !assert.NoError(t, err, `jwk.FromRaw should succeed`) {
+			jwkPrivkey, err := jwk.Import(privkey)
+			if !assert.NoError(t, err, `jwk.Import should succeed`) {
 				return
 			}
 
@@ -2152,8 +2152,8 @@ func TestGH664(t *testing.T) {
 }
 
 func TestGH730(t *testing.T) {
-	key, err := jwk.FromRaw([]byte(`abracadabra`))
-	require.NoError(t, err, `jwk.FromRaw should succeed`)
+	key, err := jwk.Import([]byte(`abracadabra`))
+	require.NoError(t, err, `jwk.Import should succeed`)
 	set := jwk.NewSet()
 	require.NoError(t, set.AddKey(key), `first AddKey should succeed`)
 	require.Error(t, set.AddKey(key), `second AddKey should fail`)

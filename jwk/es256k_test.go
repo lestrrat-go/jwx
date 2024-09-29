@@ -49,7 +49,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 			_ = key
 		}
 	})
-	b.Run("Use jwk.FromRaw", func(b *testing.B) {
+	b.Run("Use jwk.Import", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var raw ecdsa.PublicKey
 			raw.Curve = secp256k1.S256()
@@ -58,7 +58,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 			raw.X.SetBytes(x)
 			raw.Y.SetBytes(y)
 
-			key, err := jwk.FromRaw(&raw)
+			key, err := jwk.Import(&raw)
 			if err != nil {
 				panic(err)
 			}

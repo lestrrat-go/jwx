@@ -44,7 +44,7 @@ func ExampleJWK_Usage() {
 		_ = rawkey
 
 		// You can create jwk.Key from a raw key, too
-		fromRawKey, err := jwk.FromRaw(rawkey)
+		fromRawKey, err := jwk.Import(rawkey)
 		if err != nil {
 			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
 			return
@@ -80,7 +80,7 @@ func ExampleJWK_MarshalJSON() {
 	raw := []byte("01234567890123456789012345678901234567890123456789ABCDEF")
 
 	// This would create a symmetric key
-	key, err := jwk.FromRaw(raw)
+	key, err := jwk.Import(raw)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

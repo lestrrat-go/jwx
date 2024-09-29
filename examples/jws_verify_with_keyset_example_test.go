@@ -27,13 +27,13 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// Create a JWK Set
 	set := jwk.NewSet()
 	// Add some bogus keys
-	k1, _ := jwk.FromRaw([]byte("abracadabra"))
+	k1, _ := jwk.Import([]byte("abracadabra"))
 	set.AddKey(k1)
-	k2, _ := jwk.FromRaw([]byte("opensesame"))
+	k2, _ := jwk.Import([]byte("opensesame"))
 	set.AddKey(k2)
 	// AddKey the real thing
 	pubkey, _ := jwk.PublicRawKeyOf(privkey)
-	k3, _ := jwk.FromRaw(pubkey)
+	k3, _ := jwk.Import(pubkey)
 	k3.Set(jwk.AlgorithmKey, jwa.RS256)
 	set.AddKey(k3)
 

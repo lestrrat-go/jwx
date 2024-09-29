@@ -625,8 +625,8 @@ func TestGH1140(t *testing.T) {
 	t.Cleanup(func() {
 		jwx.DecoderSettings(jwx.WithUseNumber(false))
 	})
-	key, err := jwk.FromRaw([]byte("secure-key"))
-	require.NoError(t, err, `jwk.FromRaw should succeed`)
+	key, err := jwk.Import([]byte("secure-key"))
+	require.NoError(t, err, `jwk.Import should succeed`)
 
 	var encrypted []byte
 	encrypted, err = jwe.Encrypt(

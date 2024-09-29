@@ -9,7 +9,7 @@ import (
 )
 
 func ExampleJWS_Sign() {
-	key, err := jwk.FromRaw([]byte(`abracadabra`))
+	key, err := jwk.Import([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)
 		return

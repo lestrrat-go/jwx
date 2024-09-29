@@ -21,7 +21,7 @@ func init() {
 	RegisterKeyExporter(jwa.EC, KeyExportFunc(ecdsaJWKToRaw))
 }
 
-func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
+func (k *ecdsaPublicKey) Import(rawKey *ecdsa.PublicKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
@@ -52,7 +52,7 @@ func (k *ecdsaPublicKey) FromRaw(rawKey *ecdsa.PublicKey) error {
 	return nil
 }
 
-func (k *ecdsaPrivateKey) FromRaw(rawKey *ecdsa.PrivateKey) error {
+func (k *ecdsaPrivateKey) Import(rawKey *ecdsa.PrivateKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 

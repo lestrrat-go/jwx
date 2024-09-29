@@ -15,7 +15,7 @@ func ExampleJWK_Comparison() {
 			return nil, fmt.Errorf("failed to generate new RSA private key: %s", err)
 		}
 
-		key, err := jwk.FromRaw(raw)
+		key, err := jwk.Import(raw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create RSA key: %s", err)
 		}

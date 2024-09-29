@@ -129,7 +129,7 @@ import (
 )
 
 func ExampleJWS_UseJWSHeader() {
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf(`failed to create new symmetric key: %s`, err)
     return
@@ -189,7 +189,7 @@ import (
 )
 
 func ExampleJWS_Sign() {
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -230,7 +230,7 @@ func ExampleJWS_SignJSON() {
   var keys []jwk.Key
 
   for i := 0; i < 3; i++ {
-    key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
+    key, err := jwk.Import([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
     if err != nil {
       fmt.Printf("failed to create key: %s\n", err)
       return
@@ -276,7 +276,7 @@ import (
 func ExampleJWS_SignDetachedPayload() {
   payload := `$.02`
 
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
@@ -317,7 +317,7 @@ import (
 )
 
 func ExampleJWS_SignWithHeaders() {
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -369,7 +369,7 @@ import (
 func ExampleJWS_VerifyWithKey() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -429,13 +429,13 @@ func ExampleJWS_VerifyWithJWKSet() {
   // Create a JWK Set
   set := jwk.NewSet()
   // Add some bogus keys
-  k1, _ := jwk.FromRaw([]byte("abracadabra"))
+  k1, _ := jwk.Import([]byte("abracadabra"))
   set.AddKey(k1)
-  k2, _ := jwk.FromRaw([]byte("opensesame"))
+  k2, _ := jwk.Import([]byte("opensesame"))
   set.AddKey(k2)
   // AddKey the real thing
   pubkey, _ := jwk.PublicRawKeyOf(privkey)
-  k3, _ := jwk.FromRaw(pubkey)
+  k3, _ := jwk.Import(pubkey)
   k3.Set(jwk.AlgorithmKey, jwa.RS256)
   set.AddKey(k3)
 
@@ -472,7 +472,7 @@ func ExampleJWS_VerifyDetachedPayload() {
   serialized := `eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk`
   payload := `$.02`
 
-  key, err := jwk.FromRaw([]byte(`abracadabra`))
+  key, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return

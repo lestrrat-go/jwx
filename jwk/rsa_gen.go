@@ -4,7 +4,6 @@ package jwk
 
 import (
 	"bytes"
-	"crypto/rsa"
 	"fmt"
 	"sort"
 	"sync"
@@ -30,7 +29,6 @@ const (
 
 type RSAPublicKey interface {
 	Key
-	FromRaw(*rsa.PublicKey) error
 	E() []byte
 	N() []byte
 }
@@ -646,7 +644,6 @@ func (h *rsaPublicKey) Keys() []string {
 
 type RSAPrivateKey interface {
 	Key
-	FromRaw(*rsa.PrivateKey) error
 	D() []byte
 	DP() []byte
 	DQ() []byte

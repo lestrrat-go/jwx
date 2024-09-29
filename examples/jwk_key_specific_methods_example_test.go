@@ -15,7 +15,7 @@ func ExampleJWK_KeySpecificMethods() {
 		return
 	}
 
-	key, err := jwk.FromRaw(raw)
+	key, err := jwk.Import(raw)
 	if err != nil {
 		fmt.Printf("failed to create jwk.Key from RSA private key: %s\n", err)
 		return

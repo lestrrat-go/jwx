@@ -124,7 +124,7 @@ func ExampleJWE_Encrypt() {
     fmt.Printf("failed to create raw private key: %s\n", err)
     return
   }
-  privkey, err := jwk.FromRaw(rawprivkey)
+  privkey, err := jwk.Import(rawprivkey)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
     return
@@ -182,7 +182,7 @@ func ExampleJWE_EncryptJSON() {
     fmt.Printf("failed to create raw private key: %s\n", err)
     return
   }
-  privkey, err := jwk.FromRaw(rawprivkey)
+  privkey, err := jwk.Import(rawprivkey)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
     return
@@ -221,7 +221,7 @@ func ExampleJWE_EncryptJSONMulti() {
       fmt.Printf("failed to create raw private key: %s\n", err)
       return
     }
-    privkey, err := jwk.FromRaw(rawprivkey)
+    privkey, err := jwk.Import(rawprivkey)
     if err != nil {
       fmt.Printf("failed to create private key: %s\n", err)
       return
@@ -412,12 +412,12 @@ func ExampleJWE_VerifyWithJWKSet() {
   // Create a JWK Set
   set := jwk.NewSet()
   // Add some bogus keys
-  k1, _ := jwk.FromRaw([]byte("abracadabra"))
+  k1, _ := jwk.Import([]byte("abracadabra"))
   set.AddKey(k1)
-  k2, _ := jwk.FromRaw([]byte("opensesame"))
+  k2, _ := jwk.Import([]byte("opensesame"))
   set.AddKey(k2)
   // Add the real thing
-  k3, _ := jwk.FromRaw(privkey)
+  k3, _ := jwk.Import(privkey)
   k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP)
   set.AddKey(k3)
 

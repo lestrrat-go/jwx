@@ -13,7 +13,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Parse a key from a file](#parse-a-key-from-a-file)
   * [Parse a key as a struct field](#parse-a-key-as-a-struct-field)
 * [Construction](#construction)
-  * [Using jwk.FromRaw()](#using-jwkfromraw)
+  * [Using jwk.Import()](#using-jwkfromraw)
 * [Fetching JWK Sets](#fetching-jwk-sets)
   * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
@@ -48,7 +48,7 @@ and so forth.
 ---
 
 The table below shows the matrix of key types and their respective `jwk.Key` and "raw" types.
-If given anything else, `jwk.FromRaw` will return an error.
+If given anything else, `jwk.Import` will return an error.
 
 |           | `jwk.Key` Type                               | Raw Key Type                              |
 |-----------|----------------------------------------------|-------------------------------------------|
@@ -409,13 +409,13 @@ source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-
 
 # Construction
 
-## Using jwk.FromRaw()
+## Using jwk.Import()
 
-Users can create a new key from scratch using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw).
+Users can create a new key from scratch using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import).
 
-[`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) requires the raw key as its argument.
+[`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) requires the raw key as its argument.
 There are other ways to creating keys from a raw key, but they require knowing its type in advance.
-Use [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) when you have a key type which you do not know its underlying type in advance.
+Use [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
 
@@ -443,15 +443,15 @@ import (
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_FromRaw() {
-  // First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
+func ExampleJWK_Import() {
+  // First, THIS IS THE WRONG WAY TO USE jwk.Import().
   //
   // Assume that the file contains a JWK in JSON format
   //
   //  buf, _ := os.ReadFile(file)
-  //  key, _ := jwk.FromRaw(buf)
+  //  key, _ := jwk.Import(buf)
   //
-  // This is not right, because the jwk.FromRaw() function determines
+  // This is not right, because the jwk.Import() function determines
   // the type of `jwk.Key` to create based on the TYPE of the argument.
   // In this case the type of `buf` is always []byte, and therefore
   // it will always create a symmetric key.
@@ -467,7 +467,7 @@ func ExampleJWK_FromRaw() {
   // []byte -> jwk.SymmetricKey
   {
     raw := []byte("Lorem Ipsum")
-    key, err := jwk.FromRaw(raw)
+    key, err := jwk.Import(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -487,7 +487,7 @@ func ExampleJWK_FromRaw() {
       return
     }
 
-    key, err := jwk.FromRaw(raw)
+    key, err := jwk.Import(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -508,7 +508,7 @@ func ExampleJWK_FromRaw() {
       return
     }
 
-    key, err := jwk.FromRaw(raw)
+    key, err := jwk.Import(raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
@@ -846,7 +846,7 @@ func ExampleJWK_KeySpecificMethods() {
     return
   }
 
-  key, err := jwk.FromRaw(raw)
+  key, err := jwk.Import(raw)
   if err != nil {
     fmt.Printf("failed to create jwk.Key from RSA private key: %s\n", err)
     return
@@ -879,7 +879,7 @@ source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/l
 
 ## Setting values to fields
 
-Using [`jwk.FromRaw()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#FromRaw) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
+Using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
 
 These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) method.
 

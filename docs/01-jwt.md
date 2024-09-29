@@ -385,7 +385,7 @@ func ExampleJWT_ParseWithKeySet() {
       return
     }
     // This is the key we will use to sign
-    realKey, err := jwk.FromRaw(privKey)
+    realKey, err := jwk.Import(privKey)
     if err != nil {
       fmt.Printf("failed to create JWK: %s\n", err)
       return
@@ -394,7 +394,7 @@ func ExampleJWT_ParseWithKeySet() {
     realKey.Set(jwk.AlgorithmKey, jwa.RS256)
 
     // For demonstration purposes, we also create a bogus key
-    bogusKey, err := jwk.FromRaw([]byte("bogus"))
+    bogusKey, err := jwk.Import([]byte("bogus"))
     if err != nil {
       fmt.Printf("failed to create bogus JWK: %s\n", err)
       return
@@ -680,7 +680,7 @@ func ExampleJWT_ParseWithJKU() {
     }
     // too lazy to write a proper algorithm. just assign every
     // time, and signingKey will end up being the last key generated
-    privkey, err := jwk.FromRaw(pk)
+    privkey, err := jwk.Import(pk)
     if err != nil {
       fmt.Printf("failed to create jwk.Key: %s\n", err)
       return
@@ -1030,7 +1030,7 @@ func ExampleJWT_SerializeJWS() {
   }
 
   rawKey := []byte(`abracadabra`)
-  jwkKey, err := jwk.FromRaw(rawKey)
+  jwkKey, err := jwk.Import(rawKey)
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
@@ -1101,13 +1101,13 @@ func ExampleJWT_SerializeJWEJWS() {
     return
   }
 
-  enckey, err := jwk.FromRaw(privkey.PublicKey)
+  enckey, err := jwk.Import(privkey.PublicKey)
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
   }
 
-  signkey, err := jwk.FromRaw([]byte(`abracadabra`))
+  signkey, err := jwk.Import([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
