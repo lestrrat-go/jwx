@@ -478,7 +478,7 @@ func TestGuessFormat(t *testing.T) {
 		{
 			Name:     "JWT",
 			Expected: jwx.JWT,
-			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx/v2"}`),
+			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx/v3"}`),
 		},
 	}
 
