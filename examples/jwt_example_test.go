@@ -42,7 +42,7 @@ func ExampleJWT_ParseWithJWKS() {
 		{ // Preparation:
 			// Unlike our previous example, we DO NOT want to sign the payload.
 			// Therefore we do NOT set the "kid" value
-			realKey, err := jwk.FromRaw(privKey)
+			realKey, err := jwk.Import(privKey)
 			if err != nil {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
@@ -64,7 +64,7 @@ func ExampleJWT_ParseWithJWKS() {
 
 			// Now create a key set that users will use to verity the signed payload against
 			// Normally these keys are available somewhere like https://www.googleapis.com/oauth2/v3/certs
-			pubKey, err := jwk.FromRaw(privKey.PublicKey)
+			pubKey, err := jwk.Import(privKey.PublicKey)
 			if err != nil {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
@@ -252,7 +252,7 @@ func ExampleJWT_SignToken() {
 
 	{
 		// Signing a token (using JWK)
-		jwkKey, err := jwk.FromRaw(key)
+		jwkKey, err := jwk.Import(key)
 		if err != nil {
 			log.Printf("failed to create JWK key: %s", err)
 			return

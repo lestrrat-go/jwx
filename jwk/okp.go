@@ -32,7 +32,7 @@ func init() {
 // OKP keys are used to represent private/public pairs of thse elliptic curve
 // keys. But note that the name just means Octet Key Pair.
 
-func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
+func (k *okpPublicKey) Import(rawKeyIf interface{}) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
@@ -53,7 +53,7 @@ func (k *okpPublicKey) FromRaw(rawKeyIf interface{}) error {
 	return nil
 }
 
-func (k *okpPrivateKey) FromRaw(rawKeyIf interface{}) error {
+func (k *okpPrivateKey) Import(rawKeyIf interface{}) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 

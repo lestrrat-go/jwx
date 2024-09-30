@@ -176,7 +176,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("type %s interface {", ifName)
 	o.L("Key")
-	o.L("FromRaw(%s) error", obj.MustString(`raw_key_type`))
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
 			continue

@@ -64,7 +64,7 @@ func IsContinueError(err error) bool {
 	return errors.Is(err, &continueError{})
 }
 
-// FromRaw creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
+// Import creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
 // based on the input type:
@@ -74,16 +74,16 @@ func IsContinueError(err error) bool {
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
 //   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey creates an OKP based key
 //   - []byte creates a symmetric key
-func FromRaw(raw interface{}) (Key, error) {
+func Import(raw interface{}) (Key, error) {
 	if raw == nil {
-		return nil, fmt.Errorf(`jwk.FromRaw requires a non-nil key`)
+		return nil, fmt.Errorf(`jwk.Import requires a non-nil key`)
 	}
 
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf(`jwk.FromRaw: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		return nil, fmt.Errorf(`jwk.Import: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
 	return conv.Import(raw)
@@ -134,7 +134,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 		return pk.PublicKey()
 	}
 
-	jk, err := FromRaw(v)
+	jk, err := Import(v)
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.PublicKeyOf: failed to convert key into JWK: %w`, err)
 	}
@@ -155,7 +155,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 func PublicRawKeyOf(v interface{}) (interface{}, error) {
 	pk, ok := v.(PublicKeyer)
 	if !ok {
-		k, err := FromRaw(v)
+		k, err := Import(v)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.Key: %w`, err)
 		}
@@ -250,7 +250,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 		}
-		return FromRaw(raw)
+		return Import(raw)
 	}
 
 	probe, err := keyProbe.Probe(data)
@@ -330,7 +330,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
 			}
-			key, err := FromRaw(raw)
+			key, err := Import(raw)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to create jwk.Key from %T: %w`, raw, err)
 			}

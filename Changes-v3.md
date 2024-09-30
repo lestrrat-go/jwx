@@ -55,12 +55,19 @@ These are changes that are incompatible with the v2.x.x version.
 
 * Added `jwk/ecdsa` to keep track of which curves are available for ECDSA keys.
 
-* `(jwk.Key).Raw()` has been deprecated. Use `jwk.Export()` instead.
+* `(jwk.Key).Raw()` has been deprecated. Use `jwk.Export()` instead to convert `jwk.Key`
+  objects into their "raw" versions (e.g. `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, etc).
   This is to allow third parties to register custom key types that this library does not
   natively support: Whereas a method must be bound to an object, and thus does not necessarily
   have a way to hook into a global settings (i.e. custom exporter/importer) for arbitrary
   key types, if the entrypoint is a function it's much easier and cleaner to for third-parties
   to take advantage and hook into the mechanisms.
+
+* `jwk.FromRaw()` has been derepcated. Use `jwk.Import()` instead to convert "raw"
+  keys (e.g. `*rsa.PrivateKEy`, `*Ecdsa.PrivateKey`, etc) int `jwk.Key`s.
+
+* `(jwk.Key).FromRaw()` has been deprecated. The method `(jwk.Key).Import()` still exist for
+  built-in types, but it is no longer part of any public API (`interface{}`).
 
 * `jwk.Fetch` is marked as a simple wrapper around `net/http` and `jwk.Parse`.
 

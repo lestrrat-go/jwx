@@ -370,7 +370,7 @@ func WithUseDefault(v bool) WithKeySetSuboption {
 // should be validated before using. Note that this means calling
 // `key.Validate()` on the key, which in turn means that your key
 // must be a `jwk.Key` instance, or a key that can be converted to
-// a `jwk.Key` by calling `jwk.FromRaw()`. This means that your
+// a `jwk.Key` by calling `jwk.Import()`. This means that your
 // custom hardware-backed keys will probably not work.
 //
 // You can directly call `key.Validate()` yourself if you need to

@@ -52,7 +52,7 @@ func Setup() error {
 	}
 
 	{
-		v, err := jwk.FromRaw(rawRSAPrivateKey)
+		v, err := jwk.Import(rawRSAPrivateKey)
 		if err != nil {
 			return fmt.Errorf(`failed to create jwk.Key from RSA private key: %w`, err)
 		}
@@ -68,7 +68,7 @@ func Setup() error {
 	}
 
 	{
-		v, err := jwk.FromRaw(rawRSAPublicKey)
+		v, err := jwk.Import(rawRSAPublicKey)
 		if err != nil {
 			return fmt.Errorf(`failed to create jwk.Key from RSA public key: %w`, err)
 		}
@@ -84,7 +84,7 @@ func Setup() error {
 	}
 
 	{
-		v, err := jwk.FromRaw([]byte(`abracadabra`))
+		v, err := jwk.Import([]byte(`abracadabra`))
 		if err != nil {
 			return fmt.Errorf(`failed to create jwk.Key from symmetric key: %w`, err)
 		}

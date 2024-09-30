@@ -10,15 +10,15 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_FromRaw() {
-	// First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
+func ExampleJWK_Import() {
+	// First, THIS IS THE WRONG WAY TO USE jwk.Import().
 	//
 	// Assume that the file contains a JWK in JSON format
 	//
 	//  buf, _ := os.ReadFile(file)
-	//  key, _ := jwk.FromRaw(buf)
+	//  key, _ := jwk.Import(buf)
 	//
-	// This is not right, because the jwk.FromRaw() function determines
+	// This is not right, because the jwk.Import() function determines
 	// the type of `jwk.Key` to create based on the TYPE of the argument.
 	// In this case the type of `buf` is always []byte, and therefore
 	// it will always create a symmetric key.
@@ -34,7 +34,7 @@ func ExampleJWK_FromRaw() {
 	// []byte -> jwk.SymmetricKey
 	{
 		raw := []byte("Lorem Ipsum")
-		key, err := jwk.FromRaw(raw)
+		key, err := jwk.Import(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -54,7 +54,7 @@ func ExampleJWK_FromRaw() {
 			return
 		}
 
-		key, err := jwk.FromRaw(raw)
+		key, err := jwk.Import(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
@@ -75,7 +75,7 @@ func ExampleJWK_FromRaw() {
 			return
 		}
 
-		key, err := jwk.FromRaw(raw)
+		key, err := jwk.Import(raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return

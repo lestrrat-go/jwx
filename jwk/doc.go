@@ -9,7 +9,7 @@
 // work for third party key types (see section on "Registering a key type" below).
 //
 // Users can create a JWK in two ways. One is to unmarshal a JSON representation of a
-// key. The second one is to use `jwk.FromRaw()` to import a raw key and convert it to
+// key. The second one is to use `jwk.Import()` to import a raw key and convert it to
 // a jwk.Key.
 //
 // # Simple Usage
@@ -20,7 +20,7 @@
 //
 // You can go back and forth between raw key types and JWKs:
 //
-//	jwkKey, _ := jwk.FromRaw(rsaPrivateKey)
+//	jwkKey, _ := jwk.Import(rsaPrivateKey)
 //	var rawKey *rsa.PRrivateKey
 //	jwkKey.Raw(&rawKey)
 //
@@ -200,11 +200,11 @@
 // raw keys and JWKs. Conversion from raw keys to jwk.Keys are done by KeyImporters,
 // and conversion from jwk.Keys to raw keys are done by KeyExporters.
 //
-// ## Using jwk.FromRaw() using KeyImporter
+// ## Using jwk.Import() using KeyImporter
 //
 // Each KeyImporter is hooked to run against a specific raw key type.
 //
-// When `jwk.FromRaw()` is called, the library will iterate over all registered
+// When `jwk.Import()` is called, the library will iterate over all registered
 // KeyImporters for the specified raw key type, and attempt to convert the raw
 // key to a JWK by calling the `Import()` method on each KeyImporter.
 //
@@ -212,7 +212,7 @@
 // and should return a JWK or an error if the conversion fails, or the return
 // `jwk.ContinueError()` if the specified raw key cannot be handled by ths/ KeyImporter.
 //
-// Once a KeyImporter is available, you will be able to pass the raw key to `jwk.FromRaw()`.
+// Once a KeyImporter is available, you will be able to pass the raw key to `jwk.Import()`.
 // The following example shows how you might register a KeyImporter for a hypotheical
 // mypkg.SuperSecretKey:
 //
@@ -259,7 +259,7 @@
 // not compatible with your key.
 //
 //	var raw mypkg.PrivateKey // assume a hypothetical private key type using a different curve than standard ones lie P-256
-//	key, _ := jwk.FromRaw(raw)
+//	key, _ := jwk.Import(raw)
 //	// key could be jwk.ECDSAPrivateKey, with different curve than P-256
 //
 //	var dst *ecdsa.PrivateKey

@@ -16,7 +16,7 @@ func ExampleJWE_EncryptJSON() {
 		fmt.Printf("failed to create raw private key: %s\n", err)
 		return
 	}
-	privkey, err := jwk.FromRaw(rawprivkey)
+	privkey, err := jwk.Import(rawprivkey)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)
 		return
@@ -55,7 +55,7 @@ func ExampleJWE_EncryptJSONMulti() {
 			fmt.Printf("failed to create raw private key: %s\n", err)
 			return
 		}
-		privkey, err := jwk.FromRaw(rawprivkey)
+		privkey, err := jwk.Import(rawprivkey)
 		if err != nil {
 			fmt.Printf("failed to create private key: %s\n", err)
 			return

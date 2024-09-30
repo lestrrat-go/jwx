@@ -12,7 +12,7 @@ func init() {
 	RegisterKeyExporter(jwa.OctetSeq, KeyExportFunc(octetSeqToRaw))
 }
 
-func (k *symmetricKey) FromRaw(rawKey []byte) error {
+func (k *symmetricKey) Import(rawKey []byte) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 

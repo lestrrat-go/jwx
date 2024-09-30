@@ -47,7 +47,7 @@ func convertShangMiSm2(key interface{}) (jwk.Key, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid SM2 private key")
 	}
-	return jwk.FromRaw(shangmi2pk.PrivateKey)
+	return jwk.Import(shangmi2pk.PrivateKey)
 }
 
 func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) {
@@ -79,7 +79,7 @@ func ExampleShangMiSm2() {
 	shangmi2pk, _ := sm2.GenerateKey(rand.Reader)
 
 	// Create a jwk.Key from ShangMi SM2 private key
-	shangmi2JWK, err := jwk.FromRaw(shangmi2pk)
+	shangmi2JWK, err := jwk.Import(shangmi2pk)
 	if err != nil {
 		fmt.Printf("failed to create jwk.Key from raw ShangMi private key: %s\n", err)
 		return
@@ -130,7 +130,7 @@ func ExampleShangMiSm2() {
 			fmt.Println(err)
 			return
 		}
-		eckjwk, err := jwk.FromRaw(ecprivkey)
+		eckjwk, err := jwk.Import(ecprivkey)
 		if err != nil {
 			fmt.Printf("failed to create jwk.Key from raw ShangMi public key: %s\n", err)
 			return

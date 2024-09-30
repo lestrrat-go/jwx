@@ -24,7 +24,7 @@ func TestES256K(t *testing.T) {
 	if !assert.NoError(t, err, "ECDSA key generated") {
 		return
 	}
-	jwkKey, _ := jwk.FromRaw(key.PublicKey)
+	jwkKey, _ := jwk.Import(key.PublicKey)
 	keys := map[string]interface{}{
 		"Verify(ecdsa.PublicKey)":  key.PublicKey,
 		"Verify(*ecdsa.PublicKey)": &key.PublicKey,

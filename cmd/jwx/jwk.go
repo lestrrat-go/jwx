@@ -189,7 +189,7 @@ func makeJwkGenerateCmd() *cli.Command {
 				return fmt.Errorf(`failed to unmarshal template: %w`, err)
 			}
 		}
-		key, err := jwk.FromRaw(rawkey)
+		key, err := jwk.Import(rawkey)
 		if err != nil {
 			return fmt.Errorf(`failed to create new JWK from raw key: %w`, err)
 		}

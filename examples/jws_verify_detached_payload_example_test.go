@@ -12,7 +12,7 @@ func ExampleJWS_VerifyDetachedPayload() {
 	serialized := `eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk`
 	payload := `$.02`
 
-	key, err := jwk.FromRaw([]byte(`abracadabra`))
+	key, err := jwk.Import([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

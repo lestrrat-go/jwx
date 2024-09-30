@@ -117,7 +117,7 @@ var _ = fmtMax
 func validateKeyBeforeUse(key interface{}) error {
 	jwkKey, ok := key.(jwk.Key)
 	if !ok {
-		converted, err := jwk.FromRaw(key)
+		converted, err := jwk.Import(key)
 		if err != nil {
 			return fmt.Errorf(`could not convert key of type %T to jwk.Key for validation: %w`, key, err)
 		}
