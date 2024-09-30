@@ -177,7 +177,9 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	defer srv.Close()
 
 	c, err := jwk.NewCache(ctx, httprc.NewClient(
-	//			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+		httprc.WithTraceSink(tracesink.NewSlog(
+			slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("test", "Cache_calculate_interval_from_cache_control"),
+		)),
 	))
 	require.NoError(t, err, `jwk.NewCache should succeed`)
 	require.NoError(t, c.Register(ctx, srv.URL,
@@ -242,7 +244,9 @@ func TestCache_backoff(t *testing.T) {
 	defer srv.Close()
 
 	c, err := jwk.NewCache(ctx, httprc.NewClient(
-		httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stdout, nil)))),
+		httprc.WithTraceSink(tracesink.NewSlog(
+			slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("test", "Cache_bacckoff"),
+		)),
 	))
 	require.NoError(t, err, `jwk.NewCache should succeed`)
 	require.NoError(t, c.Register(ctx, srv.URL, jwk.WithMinInterval(time.Second)), `c.Register should succeed`)
