@@ -149,15 +149,10 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	if err != nil {
 		return fmt.Errorf(`failed to create httprc.Resource: %w`, err)
 	}
-	if err := c.ctrl.Add(ctx, r); err != nil {
+	if err := c.ctrl.Add(ctx, r, httprc.WithWaitReady(waitReady)); err != nil {
 		return fmt.Errorf(`failed to add resource to httprc.Client: %w`, err)
 	}
 
-	if waitReady {
-		if err := r.Ready(ctx); err != nil {
-			return fmt.Errorf(`failed to wait for resource to be ready: %w`, err)
-		}
-	}
 	return nil
 }
 
