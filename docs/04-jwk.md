@@ -652,8 +652,8 @@ MAIN:
     // immediately after it has been rotated in the remote source. But it should be close\
     // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
     //
-    // If refetching the keyset fails, a cached version will be returned from the previous
-    // successful sync
+    // If refetching the keyset fails, a cached version will be returned from the previous successful
+    // fetch upon calling `(jwk.Cache).Fetch()`.
 
     // Do interesting stuff with the keyset... but here, we just
     // sleep for a bit
