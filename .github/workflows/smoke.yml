@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags' ]
-        go: [ '1.22', '1.21', '1.20' ]
+        go: [ '1.23', '1.22', '1.21' ]
     name: "Smoke [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
