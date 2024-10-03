@@ -9,7 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func mustHexDecode(s string) []byte {
@@ -55,26 +55,13 @@ func TestRFC3394_Wrap(t *testing.T) {
 		expected := mustHexDecode(v.Expected)
 
 		block, err := aes.NewCipher(kek)
-		if !assert.NoError(t, err, "NewCipher is successful") {
-			return
-		}
+		require.NoError(t, err, "NewCipher is successful")
 		out, err := keyenc.Wrap(block, data)
-		if !assert.NoError(t, err, "Wrap is successful") {
-			return
-		}
-
-		if !assert.Equal(t, expected, out, "Wrap generates expected output") {
-			return
-		}
-
+		require.NoError(t, err, "Wrap is successful")
+		require.Equal(t, expected, out, "Wrap generates expected output")
 		unwrapped, err := keyenc.Unwrap(block, out)
-		if !assert.NoError(t, err, "Unwrap is successful") {
-			return
-		}
-
-		if !assert.Equal(t, data, unwrapped, "Unwrapped data matches") {
-			return
-		}
+		require.NoError(t, err, "Unwrap is successful")
+		require.Equal(t, data, unwrapped, "Unwrapped data matches")
 	}
 }
 
@@ -98,20 +85,12 @@ func TestDeriveECDHES(t *testing.T) {
      }`
 
 	aliceWebKey, err := jwk.ParseKey([]byte(aliceKeySrc))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
-	if !assert.NoError(t, jwk.Export(aliceWebKey, &aliceKey), `jwk.Export(aliceWebKey) should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+	require.NoError(t, jwk.Export(aliceWebKey, &aliceKey), `jwk.Export(aliceWebKey) should succeed`)
 
 	bobWebKey, err := jwk.ParseKey([]byte(bobKeySrc))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
-	if !assert.NoError(t, jwk.Export(bobWebKey, &bobKey), `jwk.Export(bobWebKey) should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+	require.NoError(t, jwk.Export(bobWebKey, &bobKey), `jwk.Export(bobWebKey) should succeed`)
 
 	apuData := []byte("Alice")
 	apvData := []byte("Bob")
@@ -119,13 +98,8 @@ func TestDeriveECDHES(t *testing.T) {
 	expected := []byte{86, 170, 141, 234, 248, 35, 109, 32, 92, 34, 40, 205, 113, 167, 16, 26}
 
 	output, err := keyenc.DeriveECDHES([]byte("A128GCM"), apuData, apvData, &bobKey, &aliceKey.PublicKey, 16)
-	if !assert.NoError(t, err, `keyenc.DeriveECDHES should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, output, expected, `result should match`) {
-		return
-	}
+	require.NoError(t, err, `keyenc.DeriveECDHES should succeed`)
+	require.Equal(t, output, expected, `result should match`)
 }
 
 func TestKeyWrap(t *testing.T) {

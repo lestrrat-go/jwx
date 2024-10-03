@@ -22,7 +22,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,7 +62,7 @@ func TestSanityCheck_JWEExamplePayload(t *testing.T) {
 		101, 100, 103, 101, 32, 98, 117, 116, 32, 105, 109, 97, 103, 105,
 		110, 97, 116, 105, 111, 110, 46,
 	}
-	assert.Equal(t, expected, []byte(examplePayload), "examplePayload OK")
+	require.Equal(t, expected, []byte(examplePayload), "examplePayload OK")
 }
 
 func TestParse(t *testing.T) {
@@ -71,77 +70,52 @@ func TestParse(t *testing.T) {
 	t.Run("Compact format", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			msg, err := jwe.Parse([]byte(s))
-			if !assert.NoError(t, err, "Parsing JWE is successful") {
-				return
-			}
-			if !assert.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient") {
-				return
-			}
+			require.NoError(t, err, "Parsing JWE is successful")
+			require.Len(t, msg.Recipients(), 1, "There is exactly 1 recipient")
 		})
 
 		parts := strings.Split(s, ".")
 		t.Run("Missing parts", func(t *testing.T) {
 			s2 := strings.Join(parts[:4], ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with missing parts`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with missing parts`)
 		})
 		t.Run("Invalid header", func(t *testing.T) {
 			s2 := strings.Join(append(append([]string(nil), "!!invalidheader!!"), parts[1:]...), ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with invalid header`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with invalid header`)
 		})
 		t.Run("Invalid encrypted key", func(t *testing.T) {
 			s2 := strings.Join(append(append(append([]string(nil), parts[0]), "!!invalidenckey!!"), parts[2:]...), ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with invalid encrypted key`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with invalid encrypted key`)
 		})
 		t.Run("Invalid initialization vector", func(t *testing.T) {
 			s2 := strings.Join(append(append(append([]string(nil), parts[:2]...), "!!invalidiv!!"), parts[3:]...), ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with invalid initialization vector`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with invalid initialization vector`)
 		})
 		t.Run("Invalid content", func(t *testing.T) {
 			s2 := strings.Join(append(append(append([]string(nil), parts[:3]...), "!!invalidcontent!!"), parts[4:]...), ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with invalid content`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with invalid content`)
 		})
 		t.Run("Invalid tag", func(t *testing.T) {
 			s2 := strings.Join(append(parts[:4], "!!invalidtag!!"), ".")
 			_, err := jwe.Parse([]byte(s2))
-			if !assert.Error(t, err, `should fail to parse compact format with invalid tag`) {
-				return
-			}
+			require.Error(t, err, `should fail to parse compact format with invalid tag`)
 		})
 	})
 	t.Run("JSON format", func(t *testing.T) {
 		msg, err := jwe.Parse([]byte(s))
-		if !assert.NoError(t, err, "Parsing JWE is successful") {
-			return
-		}
+		require.NoError(t, err, "Parsing JWE is successful")
 
 		buf, err := json.Marshal(msg)
-		if !assert.NoError(t, err, "Serializing to JSON format should succeed") {
-			return
-		}
+		require.NoError(t, err, "Serializing to JSON format should succeed")
 
 		msg2, err := jwe.Parse(buf)
-		if !assert.NoError(t, err, "Parsing JWE in JSON format should succeed") {
-			return
-		}
-
-		if !assert.Equal(t, msg, msg2, "messages should match") {
-			return
-		}
+		require.NoError(t, err, "Parsing JWE in JSON format should succeed")
+		require.Equal(t, msg, msg2, "messages should match")
 	})
 }
 
@@ -163,28 +137,16 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
      }`)
 
 	privkey, err := jwk.ParseKey(jwkstr)
-	if !assert.NoError(t, err, `parsing jwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `parsing jwk should succeed`)
 
 	var rawkey rsa.PrivateKey
-	if !assert.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`) {
-		return
-	}
+	require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
 	msg := jwe.NewMessage()
 	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP, rawkey), jwe.WithMessage(msg))
-	if !assert.NoError(t, err, "jwe.Decrypt should be successful") {
-		return
-	}
-
-	if !assert.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1") {
-		return
-	}
-
-	if !assert.Equal(t, payload, string(plaintext), "decrypted value does not match") {
-		return
-	}
+	require.NoError(t, err, "jwe.Decrypt should be successful")
+	require.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1")
+	require.Equal(t, payload, string(plaintext), "decrypted value does not match")
 
 	templates := []*struct {
 		Name     string
@@ -246,26 +208,17 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
 
 			encrypted, err := jwe.Encrypt(plaintext, options...)
-			if !assert.NoError(t, err, "jwe.Encrypt should succeed") {
-				return
-			}
+			require.NoError(t, err, "jwe.Encrypt should succeed")
 			t.Logf("%s", encrypted)
 
 			t.Run("WithKey", func(t *testing.T) {
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawkey))
-				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-					return
-				}
-
-				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-					return
-				}
+				require.NoError(t, err, "jwe.Decrypt should succeed")
+				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
 			})
 			t.Run("WithKeySet", func(t *testing.T) {
 				pkJwk, err := jwk.Import(rawkey)
-				if !assert.NoError(t, err, `jwk.New should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwk.New should succeed`)
 				// Keys are not going to be selected without an algorithm
 				_ = pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP)
 				set := jwk.NewSet()
@@ -273,17 +226,9 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 
 				var used interface{}
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
-				if !assert.NoError(t, err, "jwe.Decrypt should succeed") {
-					return
-				}
 
-				if !assert.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext") {
-					return
-				}
-
-				if !assert.Equal(t, pkJwk, used) {
-					return
-				}
+				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
+				require.Equal(t, pkJwk, used)
 			})
 		})
 	}
@@ -291,19 +236,11 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	// Test direct marshaling and unmarshaling
 	t.Run("Marshal/Unmarshal", func(t *testing.T) {
 		buf, err := json.Marshal(msg)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
 
 		m2 := jwe.NewMessage()
-		if !assert.NoError(t, json.Unmarshal(buf, m2), `json.Unmarshal should succeed`) {
-			t.Logf("%s", buf)
-			return
-		}
-
-		if !assert.Equal(t, msg, m2, `messages should be the same after roundtrip`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal(buf, m2), `json.Unmarshal should succeed`)
+		require.Equal(t, msg, m2, `messages should be the same after roundtrip`)
 	})
 }
 
@@ -324,18 +261,11 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 
 	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, &rsaPrivKey.PublicKey))
-		if !assert.NoError(t, err, "Encrypt should succeed") {
-			return
-		}
+		require.NoError(t, err, "Encrypt should succeed")
 
 		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rsaPrivKey))
-		if !assert.NoError(t, err, "Decrypt should succeed") {
-			return
-		}
-
-		if !assert.Equal(t, plaintext, decrypted, "Decrypted content should match") {
-			return
-		}
+		require.NoError(t, err, "Decrypt should succeed")
+		require.Equal(t, plaintext, decrypted, "Decrypted content should match")
 	}
 }
 
@@ -352,18 +282,11 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 
 	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5, &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
-		if !assert.NoError(t, err, "Encrypt is successful") {
-			return
-		}
+		require.NoError(t, err, "Encrypt is successful")
 
 		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5, rsaPrivKey))
-		if !assert.NoError(t, err, "Decrypt successful") {
-			return
-		}
-
-		if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
-			return
-		}
+		require.NoError(t, err, "Decrypt successful")
+		require.Equal(t, plaintext, decrypted, "Decrypted correct plaintext")
 	}
 }
 
@@ -385,18 +308,11 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 
 	for range iterations {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW, sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
-		if !assert.NoError(t, err, "Encrypt is successful") {
-			return
-		}
+		require.NoError(t, err, "Encrypt is successful")
 
 		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW, sharedkey))
-		if !assert.NoError(t, err, "Decrypt successful") {
-			return
-		}
-
-		if !assert.Equal(t, plaintext, decrypted, "Decrypted correct plaintext") {
-			return
-		}
+		require.NoError(t, err, "Decrypt successful")
+		require.Equal(t, plaintext, decrypted, "Decrypted correct plaintext")
 	}
 }
 
@@ -414,19 +330,13 @@ func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}
 	for _, alg := range algorithms {
 		t.Run(alg.String(), func(t *testing.T) {
 			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(alg, pubkey))
-			if !assert.NoError(t, err, "Encrypt succeeds") {
-				return
-			}
+			require.NoError(t, err, "Encrypt succeeds")
 
 			_, err = jwe.Parse(encrypted)
-			if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwe.Parse should succeed`)
 
 			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(alg, privkey))
-			if !assert.NoError(t, err, "Decrypt succeeds") {
-				return
-			}
+			require.NoError(t, err, "Decrypt succeeds")
 			t.Logf("%s", decrypted)
 		})
 	}
@@ -441,10 +351,7 @@ func TestEncode_ECDH(t *testing.T) {
 	for _, crv := range curves {
 		t.Run(crv.Params().Name, func(t *testing.T) {
 			privkey, err := ecdsa.GenerateKey(crv, rand.Reader)
-			if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
-				return
-			}
-
+			require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
 			testEncodeECDHWithKey(t, privkey, &privkey.PublicKey)
 		})
 	}
@@ -483,35 +390,21 @@ func Test_GHIssue207(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
 			webKey, err := jwk.ParseKey([]byte(tc.Key))
-			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
-			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Thumbprint should succeed`)
+			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
 			var key ecdsa.PrivateKey
-			if !assert.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`) {
-				return
-			}
+			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
 				sink.Key(r.Headers().Algorithm(), &key)
 				return nil
 			})))
-			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, string(decrypted), plaintext, `plaintext should match`) {
-				return
-			}
+			require.NoError(t, err, `jwe.Decrypt should succeed`)
+			require.Equal(t, string(decrypted), plaintext, `plaintext should match`)
 		})
 	}
 }
@@ -536,24 +429,18 @@ func TestEncode_Direct(t *testing.T) {
 			key := make([]byte, tc.KeySize)
 			/*
 				_, err := rand.Read(key)
-				if !assert.NoError(t, err, "Key generation succeeds") {
-					return
-				}*/
+				require.NoError(t, err, "Key generation succeeds")
+			*/
 			for n := 0; n < len(key); {
 				w := copy(key[n:], []byte(`12345678`))
 				n += w
 			}
 
 			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT, key), jwe.WithContentEncryption(tc.Algorithm))
-			if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwe.Encrypt should succeed`)
 			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT, key))
-			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-				return
-			}
-
-			assert.Equal(t, plaintext, decrypted, `jwe.Decrypt should match input plaintext`)
+			require.NoError(t, err, `jwe.Decrypt should succeed`)
+			require.Equal(t, plaintext, decrypted, `jwe.Decrypt should match input plaintext`)
 		})
 	}
 }
@@ -608,32 +495,18 @@ func TestDecodePredefined_Direct(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			webKey, err := jwk.ParseKey([]byte(tc.Key))
-			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
-			if !assert.NoError(t, err, `jwk.Thumbprint should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Thumbprint should succeed`)
+			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
 			var key []byte
-			if !assert.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`) {
-				return
-			}
+			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT, key))
-			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, plaintext, string(decrypted), `plaintext should match`) {
-				return
-			}
+			require.NoError(t, err, `jwe.Decrypt should succeed`)
+			require.Equal(t, plaintext, string(decrypted), `plaintext should match`)
 		})
 	}
 }
@@ -644,41 +517,27 @@ func TestGHIssue230(t *testing.T) {
 	const data = `{"ciphertext":"wko","encrypted_key":"","iv":"y-wj7nfa-T8XG58z","protected":"eyJhbGciOiJkaXIiLCJjbGV2aXMiOnsicGluIjoidHBtMiIsInRwbTIiOnsiaGFzaCI6InNoYTI1NiIsImp3a19wcml2IjoiQU80QUlCSTFRYjQ2SHZXUmNSRHVxRXdoN2ZWc3hSNE91MVhsOHBRX2hMMTlPeUc3QUJDVG80S2RqWEZYcEFUOWtLeWptVVJPOTVBaXc4U1o4MGZXRmtDMGdEazJLTXEtamJTZU1wcFZFaFJaWEpxQmhWNXVGZ1V0T0J4eUFjRzFZRjhFMW5Ob1dPWk9Eek5EUkRrOE1ZVWZrWVNpS0ZKb2pPZ0UxSjRIZkRoM0lBelY2MFR6V2NWcXJ0QnlwX2EyZ1V2a0JqcGpTeVF2Nmc2amJMSXpEaG10VnZLMmxDazhlMjUzdG1MSDNPQWk0Q0tZcWFZY0tjTTltSTdTRXBpVldlSjZZVFBEdmtORndpa0tNRjE3czVYQUlFUjZpczNNTVBpNkZTOWQ3ZmdMV25hUkpabDVNNUJDMldxN2NsVmYiLCJqd2tfcHViIjoiQUM0QUNBQUxBQUFFMGdBQUFCQUFJREpTSVhRSVVocjVPaDVkNXZWaWVGUDBmZG9pVFd3S1RicXJRRVRhVmx4QyIsImtleSI6ImVjYyJ9fSwiZW5jIjoiQTI1NkdDTSJ9","tag":"lir7v9YbCCZQKf5-yJ0BTQ"}`
 
 	msg, err := jwe.Parse([]byte(data))
-	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwe.Parse should succeed`)
 
 	compact, err := jwe.Compact(msg)
-	if !assert.NoError(t, err, `jwe.Compact should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwe.Compact should succeed`)
 
 	msg2, err := jwe.Parse(compact)
-	if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, msg, msg2, `data -> msg -> compact -> msg2 produces msg == msg2`) {
-		t.Logf("msg -> %#v", msg)
-		t.Logf("msg2 -> %#v", msg2)
-		return
-	}
+	require.NoError(t, err, `jwe.Parse should succeed`)
+	require.Equal(t, msg, msg2, `data -> msg -> compact -> msg2 produces msg == msg2`)
 }
 
 func TestReadFile(t *testing.T) {
 	const s = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`
 
 	f, err := os.CreateTemp("", "test-read-file-*.jwe")
-	if !assert.NoError(t, err, `os.CreateTemp should succeed`) {
-		return
-	}
+	require.NoError(t, err, `os.CreateTemp should succeed`)
 	defer f.Close()
 
 	fmt.Fprintf(f, "%s", s)
 
-	if _, err := jwe.ReadFile(f.Name()); !assert.NoError(t, err, `jwe.ReadFile should succeed`) {
-		return
-	}
+	_, err = jwe.ReadFile(f.Name())
+	require.NoError(t, err, `jwe.ReadFile should succeed`)
 }
 
 func TestCustomField(t *testing.T) {
@@ -716,11 +575,7 @@ func TestCustomField(t *testing.T) {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
 		msg, err := jwe.Parse(encrypted)
-		if !assert.NoError(t, err, `jwe.Parse should succeed`) {
-			t.Logf("%q", encrypted)
-			return
-		}
-
+		require.NoError(t, err, `jwe.Parse should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
 			var v time.Time
 			require.NoError(t, msg.ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
@@ -735,9 +590,7 @@ func TestCustomField(t *testing.T) {
 		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected), jwe.WithJSON())
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
 		msg := jwe.NewMessage()
-		if !assert.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
 
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
 			var v time.Time
@@ -751,38 +604,25 @@ func TestGH554(t *testing.T) {
 	const keyID = `very-secret-key`
 	const plaintext = `hello world!`
 	privkey, err := jwxtest.GenerateEcdsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateEcdsaJwk() should succeed`)
 
 	_ = privkey.Set(jwk.KeyIDKey, keyID)
 
 	pubkey, err := jwk.PublicKeyOf(privkey)
-	if !assert.NoError(t, err, `jwk.PublicKeyOf() should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, keyID, pubkey.KeyID(), `key ID should match`) {
-		return
-	}
+	require.NoError(t, err, `jwk.PublicKeyOf() should succeed`)
+	require.Equal(t, keyID, pubkey.KeyID(), `key ID should match`)
 
 	encrypted, err := jwe.Encrypt([]byte(plaintext), jwe.WithKey(jwa.ECDH_ES, pubkey))
-	if !assert.NoError(t, err, `jwk.Encrypt() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.Encrypt() should succeed`)
 
 	msg, err := jwe.Parse(encrypted)
-	if !assert.NoError(t, err, `jwe.Parse() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwe.Parse() should succeed`)
 
 	recipients := msg.Recipients()
 
 	// The epk must have the same key ID as the original
 	kid := recipients[0].Headers().KeyID()
-	if !assert.Equal(t, keyID, kid, `key ID in epk should match`) {
-		return
-	}
+	require.Equal(t, keyID, kid, `key ID in epk should match`)
 }
 
 func TestGH803(t *testing.T) {

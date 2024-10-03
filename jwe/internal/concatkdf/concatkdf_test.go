@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // https://tools.ietf.org/html/rfc7518#appendix-C
@@ -25,18 +25,12 @@ func TestAppendix(t *testing.T) {
 	out := make([]byte, 16) // 128bits
 
 	n, err := kdf.Read(out[:5])
-	if !assert.Equal(t, 5, n, "first read bytes matches") ||
-		!assert.NoError(t, err, "first read successful") {
-		return
-	}
+	require.Equal(t, 5, n, "first read bytes matches")
+	require.NoError(t, err, "first read successful")
 
 	n, err = kdf.Read(out[5:])
-	if !assert.Equal(t, 11, n, "second read bytes matches") ||
-		!assert.NoError(t, err, "second read successful") {
-		return
-	}
+	require.Equal(t, 11, n, "second read bytes matches")
+	require.NoError(t, err, "second read successful")
 
-	if !assert.Equal(t, expected, out, "generated value matches") {
-		return
-	}
+	require.Equal(t, expected, out, "generated value matches")
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,9 +72,7 @@ func TestGH402(t *testing.T) {
 			})),
 		)
 
-		if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
 
 		if string(plain) != "testing Shamir Secret Sharing" {
 			t.Errorf("expected 'testing Shamir Secret Sharing', got %s", string(plain))
@@ -83,9 +80,7 @@ func TestGH402(t *testing.T) {
 		}
 
 		if customField {
-			if !assert.NotNil(t, m.ProtectedHeaders(), `m.ProtectedHeaders should be non-nil`) {
-				return
-			}
+			require.NotNil(t, m.ProtectedHeaders(), `m.ProtectedHeaders should be non-nil`)
 
 			var v Pin
 			require.NoError(t, m.ProtectedHeaders().Get("clevis", &v), `m.Get("clevis") should be succeed`)
