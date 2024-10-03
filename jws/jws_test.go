@@ -32,7 +32,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -859,9 +858,8 @@ func TestReadFile(t *testing.T) {
 
 	fmt.Fprintf(f, "%s", exampleCompactSerialization)
 
-	if _, err := jws.ReadFile(f.Name()); !assert.NoError(t, err, `jws.ReadFile should succeed`) {
-		return
-	}
+	_, err = jws.ReadFile(f.Name())
+	require.NoError(t, err, `jws.ReadFile should succeed`)
 }
 
 func TestVerifyNonUniqueKid(t *testing.T) {
@@ -1049,11 +1047,7 @@ func TestCustomField(t *testing.T) {
 		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)))
 		require.NoError(t, err, `jws.Sign should succeed`)
 		msg, err := jws.Parse(encrypted)
-		if !assert.NoError(t, err, `jws.Parse should succeed`) {
-			t.Logf("%q", encrypted)
-			return
-		}
-
+		require.NoError(t, err, `jws.Parse should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
 			var v time.Time
 			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
@@ -1068,9 +1062,7 @@ func TestCustomField(t *testing.T) {
 		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)), jws.WithJSON())
 		require.NoError(t, err, `jws.Sign should succeed`)
 		msg := jws.NewMessage()
-		if !assert.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
 
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
 			var v time.Time
@@ -1089,48 +1081,34 @@ func TestCustomField(t *testing.T) {
 
 		payload := "Hello, World!"
 		privkey, err := jwxtest.GenerateRsaJwk()
-		if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`)
 
 		hdrs := jws.NewHeaders()
 		hdrs.Set(`x-birthday`, string(bdaybytes))
 
 		signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtectedHeaders(hdrs)))
-		if !assert.NoError(t, err, `jws.Sign should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jws.Sign should succeed`)
 
 		t.Run("jws.Parse + json.Unmarshal", func(t *testing.T) {
 			msg, err := jws.Parse(signed)
-			if !assert.NoError(t, err, `jws.Parse should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jws.Parse should succeed`)
 
 			var v interface{}
 			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 
-			if !assert.Equal(t, expected, v, `values should match`) {
-				return
-			}
+			require.Equal(t, expected, v, `values should match`)
 
 			// Create JSON from jws.Message
 			buf, err := json.Marshal(msg)
-			if !assert.NoError(t, err, `json.Marshal should succeed`) {
-				return
-			}
+			require.NoError(t, err, `json.Marshal should succeed`)
 
 			var msg2 jws.Message
-			if !assert.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`) {
-				return
-			}
+			require.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`)
 
 			v = nil
 			require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 
-			if !assert.Equal(t, expected, v, `values should match`) {
-				return
-			}
+			require.Equal(t, expected, v, `values should match`)
 		})
 	*/
 }
@@ -1501,14 +1479,7 @@ func TestJKU(t *testing.T) {
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
 				} else {
-					if !assert.NoError(t, err, `jws.Verify should succeed`) {
-						set, _ := jwk.Fetch(context.Background(), srv.URL, options...)
-						{
-							buf, _ := json.MarshalIndent(set, "", "  ")
-							t.Logf("%s", buf)
-						}
-						return
-					}
+					require.NoError(t, err, `jws.Verify should succeed`)
 					require.Equal(t, payload, decoded, `decoded payload should match`)
 					// XXX This actually doesn't really test much, but if there was anything
 					// wrong, the process should have failed well before reaching here
