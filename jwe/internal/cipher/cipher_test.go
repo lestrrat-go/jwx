@@ -5,7 +5,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAES(t *testing.T) {
@@ -19,9 +19,7 @@ func TestAES(t *testing.T) {
 	}
 	for _, alg := range algs {
 		c, err := cipher.NewAES(alg)
-		if !assert.NoError(t, err, "BuildCipher for %s succeeds", alg) {
-			return
-		}
+		require.NoError(t, err, "BuildCipher for %s succeeds", alg)
 		t.Logf("keysize = %d", c.KeySize())
 	}
 }

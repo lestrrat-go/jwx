@@ -7,7 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMessage(t *testing.T) {
@@ -33,18 +33,11 @@ func TestMessage(t *testing.T) {
 }`
 
 		var m jws.Message
-		if !assert.NoError(t, json.Unmarshal([]byte(src), &m), `json.Unmarshal should succeed`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal([]byte(src), &m), `json.Unmarshal should succeed`)
 
 		buf, err := json.MarshalIndent(m, "", "  ")
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, src, string(buf), `roundtrip should match`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
+		require.Equal(t, src, string(buf), `roundtrip should match`)
 	})
 	t.Run("Construction/Manipulation", func(t *testing.T) {
 		const payload = `eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ`
@@ -52,19 +45,13 @@ func TestMessage(t *testing.T) {
 		const encodedSig2 = "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
 
 		decodedPayload, err := base64.DecodeString(payload)
-		if !assert.NoError(t, err, `base64.DecodeString should succeed (payload)`) {
-			return
-		}
+		require.NoError(t, err, `base64.DecodeString should succeed (payload)`)
 
 		decodedSig1, err := base64.DecodeString(encodedSig1)
-		if !assert.NoError(t, err, `base64.DecodeString should succeed (sig1)`) {
-			return
-		}
+		require.NoError(t, err, `base64.DecodeString should succeed (sig1)`)
 
 		decodedSig2, err := base64.DecodeString(encodedSig2)
-		if !assert.NoError(t, err, `base64.DecodeString should succeed (sig2)`) {
-			return
-		}
+		require.NoError(t, err, `base64.DecodeString should succeed (sig2)`)
 
 		public1 := jws.NewHeaders()
 		_ = public1.Set(jws.AlgorithmKey, jwa.RS256)
@@ -112,12 +99,7 @@ func TestMessage(t *testing.T) {
 }`
 
 		buf, err := json.MarshalIndent(m, "", "  ")
-		if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, expected, string(buf), `output should match`) {
-			return
-		}
+		require.NoError(t, err, `json.MarshalIndent should succeed`)
+		require.Equal(t, expected, string(buf), `output should match`)
 	})
 }

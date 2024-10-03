@@ -13,7 +13,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func parseCIDR(s string) *net.IPNet {
@@ -34,9 +34,7 @@ func parseURI(s string) *url.URL {
 
 func TestCert(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, `jwxtest.GenerateRsaKey`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateRsaKey`)
 
 	testExtKeyUsage := []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 	testUnknownExtKeyUsage := []asn1.ObjectIdentifier{[]int{1, 2, 3}, []int{2, 59, 1}}
@@ -111,12 +109,8 @@ func TestCert(t *testing.T) {
 	}
 
 	b64, err := cert.Create(rand.Reader, &template, &template, &privkey.PublicKey, privkey)
-	if !assert.NoError(t, err, `cert.Certificate should succeed`) {
-		return
-	}
+	require.NoError(t, err, `cert.Certificate should succeed`)
 
 	_, err = cert.Parse(b64)
-	if !assert.NoError(t, err, `cert.Parse should succeed`) {
-		return
-	}
+	require.NoError(t, err, `cert.Parse should succeed`)
 }

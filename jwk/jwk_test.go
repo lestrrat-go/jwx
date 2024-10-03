@@ -32,7 +32,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -188,24 +187,15 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 				if expected == nil {
 					expected = kdef.Value
 				}
-				if !assert.Equal(t, expected, getval) {
-					return
-				}
+				require.Equal(t, expected, getval)
 
 				if mname := kdef.Method; mname != "" {
 					method := reflect.ValueOf(key).MethodByName(mname)
-					if !assert.NotEqual(t, zeroval, method, `method should not be a zero value`) {
-						return
-					}
+					require.NotEqual(t, zeroval, method, `method should not be a zero value`)
 					retvals := method.Call(nil)
 
-					if !assert.Len(t, retvals, 1, `there should be 1 return value`) {
-						return
-					}
-
-					if !assert.Equal(t, expected, retvals[0].Interface()) {
-						return
-					}
+					require.Len(t, retvals, 1, `there should be 1 return value`)
+					require.Equal(t, expected, retvals[0].Interface())
 				}
 			})
 		}
@@ -226,24 +216,17 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 				var buf []byte
 				if usePEM {
 					pem, err := jwk.EncodePEM(key)
-					if !assert.NoError(t, err, `jwk.EncodePEM should succeed`) {
-						return
-					}
+					require.NoError(t, err, `jwk.EncodePEM should succeed`)
 					buf = pem
 				} else {
 					jsonbuf, err := json.Marshal(key)
-					if !assert.NoError(t, err, `json.Marshal should succeed`) {
-						return
-					}
+					require.NoError(t, err, `json.Marshal should succeed`)
 					buf = jsonbuf
 					t.Logf("%s", buf)
 				}
 
 				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
-				if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-					return
-				}
-
+				require.NoError(t, err, `jwk.ParseKey should succeed`)
 			LOOP:
 				for _, k := range key.Keys() {
 					if usePEM {
@@ -271,28 +254,19 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	})
 	t.Run("PublicKey", func(t *testing.T) {
 		_, err := jwk.PublicKeyOf(key)
-		if !assert.NoError(t, err, `jwk.PublicKeyOf should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 	})
 	t.Run("IsPrivate", func(t *testing.T) {
 		_, err := jwk.IsPrivateKey(key)
 		if _, ok := key.(jwk.SymmetricKey); ok {
-			if !assert.Error(t, err, `jwk.IsPrivateKey should fail`) {
-				return
-			}
+			require.Error(t, err, `jwk.IsPrivateKey should fail`)
 		} else {
-			if !assert.NoError(t, err, `jwk.IsPrivateKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.IsPrivateKey should succeed`)
 		}
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
 		newkey, err := key.Clone()
-		if !assert.NoError(t, err, `key.Clone should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `key.Clone should succeed`)
 		for _, k := range key.Keys() {
 			require.NoError(t, newkey.Remove(k), `newkey.Remove should succeed`)
 		}
@@ -312,12 +286,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 	k, err := jwk.Import(nil)
-	if !assert.Nil(t, k, "key should be nil") {
-		return
-	}
-	if !assert.Error(t, err, "nil key should cause an error") {
-		return
-	}
+	require.Nil(t, k, "key should be nil")
+	require.Error(t, err, "nil key should cause an error")
 }
 
 func TestParse(t *testing.T) {
@@ -326,14 +296,10 @@ func TestParse(t *testing.T) {
 		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
 			set := jwk.NewSet()
-			if err := json.Unmarshal([]byte(src), set); !assert.NoError(t, err, `json.Unmarshal should succeed`) {
-				return
-			}
+			err := json.Unmarshal([]byte(src), set)
+			require.NoError(t, err, `json.Unmarshal should succeed`)
 
-			if !assert.True(t, set.Len() > 0, "set.Keys should be greater than 0") {
-				return
-			}
-
+			require.True(t, set.Len() > 0, "set.Keys should be greater than 0")
 			for i := range set.Len() {
 				key, err := set.Key(i)
 				require.True(t, err, `set.Key(%d) should succeed`, i)
@@ -343,13 +309,8 @@ func TestParse(t *testing.T) {
 		t.Run("jwk.Parse", func(t *testing.T) {
 			t.Helper()
 			set, err := jwk.Parse([]byte(`{"keys":[` + src + `]}`))
-			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-				return
-			}
-
-			if !assert.True(t, set.Len() > 0, "set.Len should be greater than 0") {
-				return
-			}
+			require.NoError(t, err, `jwk.Parse should succeed`)
+			require.True(t, set.Len() > 0, "set.Len should be greater than 0")
 
 			for i := range set.Len() {
 				key, ok := set.Key(i)
@@ -357,75 +318,51 @@ func TestParse(t *testing.T) {
 				switch key := key.(type) {
 				case jwk.RSAPrivateKey, jwk.ECDSAPrivateKey, jwk.OKPPrivateKey, jwk.RSAPublicKey, jwk.ECDSAPublicKey, jwk.OKPPublicKey, jwk.SymmetricKey:
 				default:
-					assert.Fail(t, fmt.Sprintf("invalid type: %T", key))
+					require.Fail(t, fmt.Sprintf("invalid type: %T", key))
 				}
 			}
 		})
 		t.Run("jwk.ParseKey", func(t *testing.T) {
 			t.Helper()
 			key, err := jwk.ParseKey([]byte(src))
-			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			t.Run("Raw", func(t *testing.T) {
 				t.Helper()
 
 				var irawkey interface{}
-				if !assert.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`) {
-					return
-				}
+				require.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`)
 
 				isPrivate, err := jwk.IsPrivateKey(key)
-				if !assert.NoError(t, err, "jwk.IsPrivateKey(%T) should succeed", key) {
-					return
-				}
+				require.NoError(t, err, "jwk.IsPrivateKey(%T) should succeed", key)
 
 				var crawkey interface{}
 				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&rsa.PrivateKey) should be true`) {
-						return
-					}
+					require.True(t, isPrivate, `jwk.IsPrivateKey(&rsa.PrivateKey) should be true`)
 					var rawkey rsa.PrivateKey
-					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PrivateKey) should succeed`) {
-						return
-					}
+					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PrivateKey) should succeed`)
 					crawkey = &rawkey
 				case jwk.RSAPublicKey:
-					if !assert.False(t, isPrivate, `jwk.IsPrivateKey(&rsa.PublicKey) should be false`) {
-						return
-					}
+					require.False(t, isPrivate, `jwk.IsPrivateKey(&rsa.PublicKey) should be false`)
 					var rawkey rsa.PublicKey
-					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PublicKey) should succeed`) {
-						return
-					}
+					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PublicKey) should succeed`)
 					crawkey = &rawkey
 				case jwk.ECDSAPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&ecdsa.PrivateKey) should be true`) {
-						return
-					}
+					require.True(t, isPrivate, `jwk.IsPrivateKey(&ecdsa.PrivateKey) should be true`)
 					var rawkey ecdsa.PrivateKey
-					if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`) {
-						return
-					}
+					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`)
 					crawkey = &rawkey
 				case jwk.OKPPrivateKey:
-					if !assert.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`) {
-						return
-					}
+					require.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`)
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PrivateKey
-						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`) {
-							return
-						}
+						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`)
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PrivateKey
-						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`) {
-							return
-						}
+						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`)
 						crawkey = &rawkey
 					default:
 						t.Errorf(`invalid curve %s`, k.Crv())
@@ -434,21 +371,15 @@ func TestParse(t *testing.T) {
 				// key, since it's a subset of the
 				// private key variant.
 				case jwk.OKPPublicKey:
-					if !assert.False(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PublicKey) should be false`) {
-						return
-					}
+					require.False(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PublicKey) should be false`)
 					switch k.Crv() {
 					case jwa.Ed25519:
 						var rawkey ed25519.PublicKey
-						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`) {
-							return
-						}
+						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`)
 						crawkey = rawkey
 					case jwa.X25519:
 						var rawkey ecdh.PublicKey
-						if !assert.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`) {
-							return
-						}
+						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`)
 						crawkey = &rawkey
 					default:
 						t.Errorf(`invalid curve %s`, k.Crv())
@@ -458,16 +389,12 @@ func TestParse(t *testing.T) {
 					return
 				}
 
-				if !assert.IsType(t, crawkey, irawkey, `key types should match`) {
-					return
-				}
+				require.IsType(t, crawkey, irawkey, `key types should match`)
 			})
 		})
 		t.Run("ParseRawKey", func(t *testing.T) {
 			var v interface{}
-			if !assert.NoError(t, jwk.ParseRawKey([]byte(src), &v), `jwk.ParseRawKey should succeed`) {
-				return
-			}
+			require.NoError(t, jwk.ParseRawKey([]byte(src), &v), `jwk.ParseRawKey should succeed`)
 		})
 	}
 
@@ -517,9 +444,7 @@ func TestParse(t *testing.T) {
 		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
 		}`
 		_, err := jwk.ParseString(src)
-		if !assert.Error(t, err, `jwk.ParseString should fail`) {
-			return
-		}
+		require.Error(t, err, `jwk.ParseString should fail`)
 	})
 	t.Run("Ed25519 Public Key", func(t *testing.T) {
 		t.Parallel()
@@ -687,41 +612,26 @@ func TestRoundtrip(t *testing.T) {
 	ks1 := jwk.NewSet()
 	for _, tc := range tests {
 		key, err := tc.generate(tc.use, tc.keyID)
-		if !assert.NoError(t, err, `tc.generate should succeed`) {
-			return
-		}
-		if !assert.NoError(t, ks1.AddKey(key), `ks1.Add should succeed`) {
-			return
-		}
+		require.NoError(t, err, `tc.generate should succeed`)
+		require.NoError(t, ks1.AddKey(key), `ks1.Add should succeed`)
 	}
 
 	buf, err := json.MarshalIndent(ks1, "", "  ")
-	if !assert.NoError(t, err, "JSON marshal succeeded") {
-		return
-	}
+	require.NoError(t, err, "JSON marshal succeeded")
 
 	ks2, err := jwk.Parse(buf)
-	if !assert.NoError(t, err, "JSON unmarshal succeeded") {
-		t.Logf("%s", buf)
-		return
-	}
+	require.NoError(t, err, "JSON unmarshal succeeded")
 
 	for _, tc := range tests {
 		key1, ok := ks2.LookupKeyID(tc.keyID)
-		if !assert.True(t, ok, "ks2.LookupKeyID should succeed") {
-			return
-		}
+		require.True(t, ok, "ks2.LookupKeyID should succeed")
 
 		key2, ok := ks1.LookupKeyID(tc.keyID)
-		if !assert.True(t, ok, "ks1.LookupKeyID should succeed") {
-			return
-		}
+		require.True(t, ok, "ks1.LookupKeyID should succeed")
 
 		pk1json, _ := json.Marshal(key1)
 		pk2json, _ := json.Marshal(key2)
-		if !assert.Equal(t, pk1json, pk2json, "Keys should match (kid = %s)", tc.keyID) {
-			return
-		}
+		require.Equal(t, pk1json, pk2json, "Keys should match (kid = %s)", tc.keyID)
 	}
 }
 
@@ -757,13 +667,9 @@ func TestAccept(t *testing.T) {
 		for _, test := range testcases {
 			var ops jwk.KeyOperationList
 			if test.Error {
-				if !assert.Error(t, ops.Accept(test.Args), `KeyOperationList.Accept should fail`) {
-					return
-				}
+				require.Error(t, ops.Accept(test.Args), `KeyOperationList.Accept should fail`)
 			} else {
-				if !assert.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`) {
-					return
-				}
+				require.NoError(t, ops.Accept(test.Args), `KeyOperationList.Accept should succeed`)
 			}
 		}
 	})
@@ -804,20 +710,10 @@ func TestAssignKeyID(t *testing.T) {
 
 	for _, generator := range generators {
 		k, err := generator()
-		if !assert.NoError(t, err, `jwk generation should be successful`) {
-			return
-		}
-
-		if !assert.Empty(t, k.KeyID(), `k.KeyID should be non-empty`) {
-			return
-		}
-		if !assert.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`) {
-			return
-		}
-
-		if !assert.NotEmpty(t, k.KeyID(), `k.KeyID should be non-empty`) {
-			return
-		}
+		require.NoError(t, err, `jwk generation should be successful`)
+		require.Empty(t, k.KeyID(), `k.KeyID should be non-empty`)
+		require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
+		require.NotEmpty(t, k.KeyID(), `k.KeyID should be non-empty`)
 	}
 }
 
@@ -825,26 +721,18 @@ func TestPublicKeyOf(t *testing.T) {
 	t.Parallel()
 
 	rsakey, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, `generating raw RSA key should succeed`) {
-		return
-	}
+	require.NoError(t, err, `generating raw RSA key should succeed`)
 
 	ecdsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
-	if !assert.NoError(t, err, `generating raw ECDSA key should succeed`) {
-		return
-	}
+	require.NoError(t, err, `generating raw ECDSA key should succeed`)
 
 	octets := jwxtest.GenerateSymmetricKey()
 
 	ed25519key, err := jwxtest.GenerateEd25519Key()
-	if !assert.NoError(t, err, `generating raw Ed25519 key should succeed`) {
-		return
-	}
+	require.NoError(t, err, `generating raw Ed25519 key should succeed`)
 
 	x25519key, err := jwxtest.GenerateX25519Key()
-	if !assert.NoError(t, err, `generating raw X25519 key should succeed`) {
-		return
-	}
+	require.NoError(t, err, `generating raw X25519 key should succeed`)
 
 	keys := []struct {
 		Key           interface{}
@@ -909,34 +797,20 @@ func TestPublicKeyOf(t *testing.T) {
 			t.Parallel()
 
 			pubkey, err := jwk.PublicRawKeyOf(key.Key)
-			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, key.Key) {
-				return
-			}
-
-			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(pubkey), `public key types should match (got %T)`, pubkey) {
-				return
-			}
+			require.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, key.Key)
+			require.Equal(t, key.PublicKeyType, reflect.TypeOf(pubkey), `public key types should match (got %T)`, pubkey)
 
 			// Go through jwk.Import
 			jwkKey, err := jwk.Import(key.Key)
-			if !assert.NoError(t, err, `jwk.Import should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Import should succeed`)
 
 			pubJwkKey, err := jwk.PublicKeyOf(jwkKey)
-			if !assert.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey) {
-				return
-			}
+			require.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey)
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey) {
-				return
-			}
+			require.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`)
+			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		})
 	}
 	t.Run("Set", func(t *testing.T) {
@@ -951,9 +825,8 @@ func TestPublicKeyOf(t *testing.T) {
 				continue
 			}
 			jwkKey, err := jwk.Import(key.Key)
-			if !assert.NoError(t, err, `jwk.Import should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Import should succeed`)
+
 			jwkKey.Set(jwk.KeyIDKey, fmt.Sprintf("key%d", count))
 			setKeys = append(setKeys, struct {
 				Key           jwk.Key
@@ -967,29 +840,17 @@ func TestPublicKeyOf(t *testing.T) {
 		}
 
 		newSet, err := jwk.PublicSetOf(set)
-		if !assert.NoError(t, err, `jwk.PublicKeyOf(jwk.Set) should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.PublicKeyOf(jwk.Set) should succeed`)
 
 		for i, key := range setKeys {
 			setKey, ok := newSet.Key(i)
-			if !assert.True(t, ok, `element %d should be present`, i) {
-				return
-			}
-
-			if !assert.Equal(t, fmt.Sprintf("key%d", i), setKey.KeyID(), `KeyID() should match for %T`, setKey) {
-				return
-			}
+			require.True(t, ok, `element %d should be present`, i)
+			require.Equal(t, fmt.Sprintf("key%d", i), setKey.KeyID(), `KeyID() should match for %T`, setKey)
 
 			// Get the raw key to compare
 			var rawKey interface{}
-			if !assert.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey) {
-				return
-			}
+			require.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`)
+			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		}
 	})
 }
@@ -1002,18 +863,11 @@ func TestIssue207(t *testing.T) {
 	// just for sanity.
 	for range 10 {
 		k, err := jwk.ParseKey([]byte(src))
-		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		thumb, err := k.Thumbprint(crypto.SHA1)
-		if !assert.NoError(t, err, `k.Thumbprint should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, `2Mc_43O_BOrOJTNrGX7uJ6JsIYE`, base64.EncodeToString(thumb), `thumbprints should match`) {
-			return
-		}
+		require.NoError(t, err, `k.Thumbprint should succeed`)
+		require.Equal(t, `2Mc_43O_BOrOJTNrGX7uJ6JsIYE`, base64.EncodeToString(thumb), `thumbprints should match`)
 	}
 }
 
@@ -1021,17 +875,11 @@ func TestIssue270(t *testing.T) {
 	t.Parallel()
 	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
 	k, err := jwk.ParseKey([]byte(src))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	for _, usage := range []string{"sig", "enc"} {
-		if !assert.NoError(t, k.Set(jwk.KeyUsageKey, usage)) {
-			return
-		}
-		if !assert.NoError(t, k.Set(jwk.KeyUsageKey, jwk.KeyUsageType(usage))) {
-			return
-		}
+		require.NoError(t, k.Set(jwk.KeyUsageKey, usage))
+		require.NoError(t, k.Set(jwk.KeyUsageKey, jwk.KeyUsageType(usage)))
 	}
 }
 
@@ -1045,14 +893,11 @@ func TestReadFile(t *testing.T) {
 	defer cancel()
 
 	fn, clean, err := jose.GenerateJwk(ctx, t, `{"alg": "RS256"}`)
-	if !assert.NoError(t, err, `jose.GenerateJwk`) {
-		return
-	}
+	require.NoError(t, err, `jose.GenerateJwk`)
 
 	defer clean()
-	if _, err := jwk.ReadFile(fn); !assert.NoError(t, err, `jwk.ReadFile should succeed`) {
-		return
-	}
+	_, err = jwk.ReadFile(fn)
+	require.NoError(t, err, `jwk.ReadFile should succeed`)
 }
 
 func TestRSA(t *testing.T) {
@@ -1078,9 +923,7 @@ func TestRSA(t *testing.T) {
 				{},
 			} {
 				_, err := jwk.Import(raw)
-				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
-					return
-				}
+				require.Error(t, err, `jwk.Import should fail for invalid key`)
 			}
 		})
 	})
@@ -1144,9 +987,7 @@ func TestRSA(t *testing.T) {
 				},
 			} {
 				_, err := jwk.Import(raw)
-				if !assert.Error(t, err, `jwk.Import should fail for empty key`) {
-					return
-				}
+				require.Error(t, err, `jwk.Import should fail for empty key`)
 			}
 		})
 	})
@@ -1162,18 +1003,11 @@ func TestRSA(t *testing.T) {
 	   		}`
 
 		key, err := jwk.ParseKey([]byte(src))
-		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		tp, err := key.Thumbprint(crypto.SHA256)
-		if !assert.NoError(t, err, "Thumbprint should succeed") {
-			return
-		}
-
-		if !assert.Equal(t, expected, tp, "Thumbprint should match") {
-			return
-		}
+		require.NoError(t, err, "Thumbprint should succeed")
+		require.Equal(t, expected, tp, "Thumbprint should match")
 	})
 }
 
@@ -1199,9 +1033,7 @@ func TestECDSA(t *testing.T) {
 				},
 			} {
 				_, err := jwk.Import(raw)
-				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
-					return
-				}
+				require.Error(t, err, `jwk.Import should fail for invalid key`)
 			}
 		})
 		VerifyKey(t, map[string]keyDef{
@@ -1239,9 +1071,7 @@ func TestECDSA(t *testing.T) {
 				},
 			} {
 				_, err := jwk.Import(raw)
-				if !assert.Error(t, err, `jwk.Import should fail for invalid key`) {
-					return
-				}
+				require.Error(t, err, `jwk.Import should fail for invalid key`)
 			}
 		})
 		VerifyKey(t, map[string]keyDef{
@@ -1269,32 +1099,20 @@ func TestECDSA(t *testing.T) {
 		for _, alg := range algorithms {
 			t.Run(alg.String(), func(t *testing.T) {
 				key, err := jwxtest.GenerateEcdsaKey(alg)
-				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 
 				privkey, err := jwk.Import(key)
-				if !assert.NoError(t, err, `jwk.Import should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwk.Import should succeed`)
+
 				pubkey, err := jwk.Import(key)
-				if !assert.NoError(t, err, `jwk.Import should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwk.Import should succeed`)
 
 				privtp, err := privkey.Thumbprint(crypto.SHA512)
-				if !assert.NoError(t, err, `privkey.Thumbprint should succeed`) {
-					return
-				}
+				require.NoError(t, err, `privkey.Thumbprint should succeed`)
 
 				pubtp, err := pubkey.Thumbprint(crypto.SHA512)
-				if !assert.NoError(t, err, `pubkey.Thumbprint should succeed`) {
-					return
-				}
-
-				if !assert.Equal(t, privtp, pubtp, `Thumbprints should match`) {
-					return
-				}
+				require.NoError(t, err, `pubkey.Thumbprint should succeed`)
+				require.Equal(t, privtp, pubtp, `Thumbprints should match`)
 			})
 		}
 	})
@@ -1320,6 +1138,7 @@ func TestOKP(t *testing.T) {
 
 	ecdhkey, err := ecdh.P256().GenerateKey(rand.Reader)
 	require.NoError(t, err, `ecdh.P256().GenerateKey should succeed`)
+
 	x, err := ecdhkey.ECDH(ecdhkey.PublicKey())
 	require.NoError(t, err, `ecdhkey.ECDH should succeed`)
 
@@ -1461,9 +1280,7 @@ func TestCustomField(t *testing.T) {
 
 	t.Run("jwk.ParseKey", func(t *testing.T) {
 		key, err := jwk.ParseKey([]byte(src))
-		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		for _, name := range []string{rfc3339Key, rfc1123Key} {
 			var v time.Time
@@ -1502,29 +1319,17 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
-	if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, jwa.RSA, key.KeyType(), `key type should be RSA`) {
-		return
-	}
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+	require.Equal(t, jwa.RSA, key.KeyType(), `key type should be RSA`)
 
 	var pubkey rsa.PublicKey
-	if !assert.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`) {
-		return
-	}
+	require.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`)
 
 	N := &big.Int{}
 	N, _ = N.SetString(`779390807991489150242580488277564408218067197694419403671246387831173881192316375931050469298375090533614189460270485948672580508192398132571230359681952349714254730569052029178325305344289615160181016909374016900403698428293142159695593998453788610098596363011884623801134548926432366560975619087466760747503535615491182090094278093592303467050094984372887804234341012289019841973178427045121609424191835554013017436743418746919496835541323790719629313070434897002108079086472354410640690933161025543816362962891190753195691593288890628966181309776957070655619665306995097798188588453327627252794498823229009195585001242181503742627414517186199717150645163224325403559815442522031412813762764879089624715721999552786759649849125487587658121901233329199571710176245013452847516179837767710027433169340850618643815395642568876192931279303797384539146396956216244189819533317558165234451499206045369678277987397913889177569796721689284116762473340601498426367267765652880247655009239893325078809797979771964770948333084772104541394544131668212262901583064272659565503500144472388676955404823979083054620299811247635425415371418720649368570747531327436083928369741631909855731133100553629456091216238379430154237251461586878393695925917`, 10)
 
-	if !assert.Equal(t, N, pubkey.N, `value for N should match`) {
-		return
-	}
-
-	if !assert.Equal(t, 65537, pubkey.E, `value for E should amtch`) {
-		return
-	}
+	require.Equal(t, N, pubkey.N, `value for N should match`)
+	require.Equal(t, 65537, pubkey.E, `value for E should amtch`)
 }
 
 type typedField struct {
@@ -1613,16 +1418,12 @@ func TestTypedFields(t *testing.T) {
 		}
 
 		serialized, err := json.Marshal(s)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
 
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				got, err := jwk.Parse(serialized, tc.Options...)
-				if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwk.Parse should succeed`)
 
 				for i := range got.Len() {
 					key, ok := got.Key(i)
@@ -1630,13 +1431,9 @@ func TestTypedFields(t *testing.T) {
 					var v interface{}
 					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
 					field, err := tc.PostProcess(t, v)
-					if !assert.NoError(t, err, `tc.PostProcess should succeed`) {
-						return
-					}
+					require.NoError(t, err, `tc.PostProcess should succeed`)
 
-					if !assert.Equal(t, field, expected, `field should match expected value`) {
-						return
-					}
+					require.Equal(t, field, expected, `field should match expected value`)
 				}
 			})
 		}
@@ -1650,9 +1447,7 @@ func TestGH412(t *testing.T) {
 	kids := make(map[string]struct{})
 	for i := range iterations {
 		k, err := jwxtest.GenerateRsaJwk()
-		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`)
 
 		kid := "key-" + strconv.Itoa(i)
 		k.Set(jwk.KeyIDKey, kid)
@@ -1665,27 +1460,15 @@ func TestGH412(t *testing.T) {
 		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
 			set, err := base.Clone()
-			if !assert.NoError(t, err, `base.Clone() should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, iterations, set.Len(), `set.Len should be %d`, iterations) {
-				return
-			}
+			require.NoError(t, err, `base.Clone() should succeed`)
+			require.Equal(t, iterations, set.Len(), `set.Len should be %d`, iterations)
 
 			k, ok := set.Key(idx)
-			if !assert.True(t, ok, `set.Get should succeed`) {
-				return
-			}
-
-			if !assert.NoError(t, set.RemoveKey(k), `set.Remove should succeed`) {
-				return
-			}
+			require.True(t, ok, `set.Get should succeed`)
+			require.NoError(t, set.RemoveKey(k), `set.Remove should succeed`)
 			t.Logf("deleted key %s", k.KeyID())
 
-			if !assert.Equal(t, iterations-1, set.Len(), `set.Len should be %d`, iterations-1) {
-				return
-			}
+			require.Equal(t, iterations-1, set.Len(), `set.Len should be %d`, iterations-1)
 
 			expected := make(map[string]struct{})
 			for k := range kids {
@@ -1702,9 +1485,7 @@ func TestGH412(t *testing.T) {
 				delete(expected, key.KeyID())
 			}
 
-			if !assert.Len(t, expected, 0, `expected map should be empty`) {
-				return
-			}
+			require.Len(t, expected, 0, `expected map should be empty`)
 		})
 	}
 }
@@ -1712,31 +1493,23 @@ func TestGH412(t *testing.T) {
 func TestGH491(t *testing.T) {
 	msg := `{"keys":[{"alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"kty":"EC","x":"AEFldixpd6xWI1rPigk_i_fW_9SLXh3q3h_CbmRIJ2vmnneWnfylvg37q9_BeSxhLpTQkq580tP-7QiOoNem4ubg","y":"AD8MroFIWQI4nm1rVKOb0ImO0Y7EzPt1HTQfZxagv2IoMez8H_vV7Ra9fU7lJhoe3v-Th6x3-4540FodeIxxiphn"},{"alg":"ES512","crv":"P-521","key_ops":["verify"],"kty":"EC","x":"AFZApUzXzvjVJCZQX1De3LUudI7fiWZcZS3t4F2yrxn0tItCYIZrfygPiCZfV1hVKa3WuH2YMrISZUPrSgi_RN2d","y":"ASEyw-_9xcwNBnvpT7thmAF5qHv9-UPYf38AC7y5QBVejQH_DO1xpKzlTbrHCz0jrMeEir8TyW5ywZIYnqGzPBpn"}]}`
 	keys, err := jwk.Parse([]byte(msg))
-	if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.Parse should succeed`)
 
 	// there should be 2 keys , get the first key
 	k, _ := keys.Key(0)
 	ops := k.KeyOps()
-	if !assert.Equal(t, jwk.KeyOperationList{jwk.KeyOpDeriveKey}, ops, `k.KeyOps should match`) {
-		return
-	}
+	require.Equal(t, jwk.KeyOperationList{jwk.KeyOpDeriveKey}, ops, `k.KeyOps should match`)
 }
 
 func TestSetWithPrivateParams(t *testing.T) {
 	k1, err := jwxtest.GenerateRsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
 	k2, err := jwxtest.GenerateEcdsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
+
 	k3, err := jwxtest.GenerateSymmetricJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
 
 	t.Run("JWK instead of JWKS", func(t *testing.T) {
 		var buf bytes.Buffer
@@ -1745,32 +1518,21 @@ func TestSetWithPrivateParams(t *testing.T) {
 
 		var check = func(t *testing.T, buf []byte) {
 			set, err := jwk.Parse(buf)
-			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, 1, set.Len(), `set.Len() should be 1`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Parse should succeed`)
+			require.Equal(t, 1, set.Len(), `set.Len() should be 1`)
 
 			var kid string
 			require.NoError(t, set.Get(`renewal_kid`, &kid), `set.Get("renewal_kid") should succeed`)
 
-			if !assert.Equal(t, `foo`, kid, `set.Get("renewal_kid") should return "foo"`) {
-				return
-			}
+			require.Equal(t, `foo`, kid, `set.Get("renewal_kid") should return "foo"`)
 
 			key, ok := set.Key(0)
-			if !assert.True(t, ok, `set.Key(0) should return ok = true`) {
-				return
-			}
+			require.True(t, ok, `set.Key(0) should return ok = true`)
 
 			kid = ""
 			require.NoError(t, key.Get(`renewal_kid`, &kid), `key.Get("renewal_kid") should return ok = true`)
 
-			if !assert.Equal(t, `foo`, kid, `key.Get("renewal_kid") should return "foo"`) {
-				return
-			}
+			require.Equal(t, `foo`, kid, `key.Get("renewal_kid") should return "foo"`)
 		}
 
 		t.Run("Check original buffer", func(t *testing.T) {
@@ -1778,13 +1540,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 		})
 		t.Run("Check serialized", func(t *testing.T) {
 			set, err := jwk.Parse(buf.Bytes())
-			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Parse should succeed`)
+
 			js, err := json.MarshalIndent(set, "", "  ")
-			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-				return
-			}
+			require.NoError(t, err, `json.MarshalIndent should succeed`)
 			check(t, js)
 		})
 	})
@@ -1801,20 +1560,13 @@ func TestSetWithPrivateParams(t *testing.T) {
 
 		var check = func(t *testing.T, buf []byte) {
 			set, err := jwk.Parse(buf)
-			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, 3, set.Len(), `set.Len() should be 3`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Parse should succeed`)
+			require.Equal(t, 3, set.Len(), `set.Len() should be 3`)
 
 			var v interface{}
 			require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`)
 
-			if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
-				return
-			}
+			require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)
 		}
 
 		t.Run("Check original buffer", func(t *testing.T) {
@@ -1822,46 +1574,29 @@ func TestSetWithPrivateParams(t *testing.T) {
 		})
 		t.Run("Check serialized", func(t *testing.T) {
 			set, err := jwk.Parse(buf.Bytes())
-			if !assert.NoError(t, err, `jwk.Parse should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Parse should succeed`)
+
 			js, err := json.MarshalIndent(set, "", "  ")
-			if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-				return
-			}
+			require.NoError(t, err, `json.MarshalIndent should succeed`)
 			check(t, js)
 		})
 	})
 	t.Run("Set private parameters", func(t *testing.T) {
 		set := jwk.NewSet()
-		if !assert.NoError(t, set.Set(`renewal_kid`, `foo`), `set.Set should succeed`) {
-			return
-		}
+		require.NoError(t, set.Set(`renewal_kid`, `foo`), `set.Set should succeed`)
 
 		var v interface{}
 		require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should succeed`)
 
-		if !assert.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`) {
-			return
-		}
-
-		if !assert.Error(t, set.Set(`keys`, []string{"foo"}), `set.Set should fail`) {
-			return
-		}
+		require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)
+		require.Error(t, set.Set(`keys`, []string{"foo"}), `set.Set should fail`)
 
 		k, err := jwk.Import([]byte("foobar"))
-		if !assert.NoError(t, err, `jwk.Import should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.Import should succeed`)
+
 		keys := []jwk.Key{k}
-
-		if !assert.NoError(t, set.Set(`keys`, keys), `set.Set should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, set.Len(), 1, `set should have 1 key`) {
-			return
-		}
+		require.NoError(t, set.Set(`keys`, keys), `set.Set should succeed`)
+		require.Equal(t, set.Len(), 1, `set should have 1 key`)
 	})
 }
 
@@ -1875,26 +1610,21 @@ func (t *DummyRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
 }
 func TestFetch(t *testing.T) {
 	k1, err := jwxtest.GenerateRsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
 	k2, err := jwxtest.GenerateEcdsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
+
 	k3, err := jwxtest.GenerateSymmetricJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
 	set := jwk.NewSet()
 	set.AddKey(k1)
 	set.AddKey(k2)
 	set.AddKey(k3)
 
 	expected, err := json.MarshalIndent(set, "", "  ")
-	if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-		return
-	}
+	require.NoError(t, err, `json.MarshalIndent should succeed`)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -1967,28 +1697,16 @@ func TestFetch(t *testing.T) {
 
 				_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
 				if tc.Error {
-					if !assert.Error(t, err, `jwk.Fetch should fail`) {
-						return
-					}
-					if !assert.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`) {
-						t.Logf("error was %q", err.Error())
-						return
-					}
+					require.Error(t, err, `jwk.Fetch should fail`)
+					require.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`)
 				}
 
 				fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
-				if !assert.NoError(t, err, `jwk.Fetch should succeed`) {
-					return
-				}
+				require.NoError(t, err, `jwk.Fetch should succeed`)
 
 				got, err := json.MarshalIndent(fetched, "", "  ")
-				if !assert.NoError(t, err, `json.MarshalIndent should succeed`) {
-					return
-				}
-
-				if !assert.Equal(t, expected, got, `data should match`) {
-					return
-				}
+				require.NoError(t, err, `json.MarshalIndent should succeed`)
+				require.Equal(t, expected, got, `data should match`)
 			})
 		}
 	})
@@ -2073,39 +1791,27 @@ func TestGH567(t *testing.T) {
 	// Test the case when WithIgnoreParseError is passed to ParseKey
 	t.Run(`ParseKey + WithIgnoreParseError should be an error`, func(t *testing.T) {
 		key, err := jwxtest.GenerateRsaJwk()
-		if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk() should succeed`)
 
 		buf, err := json.Marshal(key)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
 
 		_, err = jwk.ParseKey(buf)
-		if !assert.NoError(t, err, `jwk.ParseKey (no WithIgnoreParseError) should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.ParseKey (no WithIgnoreParseError) should succeed`)
 
 		_, err = jwk.ParseKey(buf, jwk.WithIgnoreParseError(true))
-		if !assert.Error(t, err, `jwk.ParseKey (no WithIgnoreParseError) should fail`) {
-			return
-		}
+		require.Error(t, err, `jwk.ParseKey (no WithIgnoreParseError) should fail`)
 	})
 }
 
 func TestGH664(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
-	if !assert.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`)
 
 	// first, test a stupid case where Primes > 2
 	privkey.Primes = append(privkey.Primes, &big.Int{})
 	_, err = jwk.Import(privkey)
-	if !assert.Error(t, err, `jwk.Import should fail`) {
-		return
-	}
+	require.Error(t, err, `jwk.Import should fail`)
 
 	privkey.Primes = privkey.Primes[:2]
 
@@ -2119,30 +1825,19 @@ func TestGH664(t *testing.T) {
 			privkey.Precomputed.CRTValues = nil
 
 			jwkPrivkey, err := jwk.Import(privkey)
-			if !assert.NoError(t, err, `jwk.Import should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.Import should succeed`)
 
 			buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
 			parsed, err := jwk.ParseKey(buf)
-			if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			payload := []byte(`hello , world!`)
 			signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, parsed))
-			if !assert.NoError(t, err, `jws.Sign should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jws.Sign should succeed`)
 
 			verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, privkey.PublicKey))
-			if !assert.NoError(t, err, `jws.Verify should succeed`) {
-				return
-			}
-
-			if !assert.Equal(t, payload, verified, `verified content should match`) {
-				return
-			}
+			require.NoError(t, err, `jws.Verify should succeed`)
+			require.Equal(t, payload, verified, `verified content should match`)
 		})
 	}
 }

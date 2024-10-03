@@ -55,7 +55,6 @@ go_test(
         "//jwk",
         "//jwt",
         "@com_github_lestrrat_go_httprc_v3//:httprc",
-        "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
 )

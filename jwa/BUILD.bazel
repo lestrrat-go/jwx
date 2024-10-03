@@ -32,7 +32,7 @@ go_test(
     ],
     deps = [
         ":jwa",
-        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

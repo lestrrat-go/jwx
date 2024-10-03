@@ -9,27 +9,19 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDate(t *testing.T) {
 	t.Run("Get from a nil NumericDate", func(t *testing.T) {
 		var n *types.NumericDate
-		if !assert.Equal(t, time.Time{}, n.Get()) {
-			return
-		}
+		require.Equal(t, time.Time{}, n.Get())
 	})
 	t.Run("MarshalJSON with a zero value", func(t *testing.T) {
 		var n *types.NumericDate
 		buf, err := json.Marshal(n)
-		if !assert.NoError(t, err, `json.Marshal against a zero value should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, []byte(`null`), buf, `result should be null`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal against a zero value should succeed`)
+		require.Equal(t, []byte(`null`), buf, `result should be null`)
 	})
 
 	// This test alters global behavior, and can't be ran in parallel
@@ -97,15 +89,10 @@ func TestDate(t *testing.T) {
 
 				t1 := jwt.New()
 				err := t1.Set(jwt.IssuedAtKey, tc.Input)
-				if !assert.NoError(t, err) {
-					return
-				}
+				require.NoError(t, err)
 				var v time.Time
 				require.NoError(t, t1.Get(jwt.IssuedAtKey, &v), `t1.Get should succeed`)
-
-				if !assert.Equal(t, tc.Expected, v) {
-					return
-				}
+				require.Equal(t, tc.Expected, v)
 			})
 		}
 	})

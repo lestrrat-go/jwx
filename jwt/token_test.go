@@ -8,7 +8,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,9 +34,7 @@ func TestHeader(t *testing.T) {
 		t.Parallel()
 		h := jwt.New()
 		for k, v := range values {
-			if !assert.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k) {
-				return
-			}
+			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
 			var got interface{}
 			require.NoError(t, h.Get(k, &got), `h.Get should succeed for key %#v`, k)
 			if !reflect.DeepEqual(v, got) {
@@ -138,18 +135,10 @@ func TestTokenMarshal(t *testing.T) {
 	}
 
 	t2 := jwt.New()
-	if !assert.NoError(t, json.Unmarshal(jsonbuf1, t2), `json.Unmarshal should succeed`) {
-		return
-	}
-
-	if !assert.Equal(t, t1, t2, "tokens should match") {
-		return
-	}
-
+	require.NoError(t, json.Unmarshal(jsonbuf1, t2), `json.Unmarshal should succeed`)
+	require.Equal(t, t1, t2, "tokens should match")
 	_, err = json.MarshalIndent(t2, "", "  ")
-	if err != nil {
-		t.Fatalf("JSON marshal error: %s", err.Error())
-	}
+	require.NoError(t, err, `json.MarshalIndent should succeed`)
 }
 
 func TestToken(t *testing.T) {
@@ -194,9 +183,7 @@ func TestToken(t *testing.T) {
 
 	t.Run("Set", func(t *testing.T) {
 		for k, kdef := range def {
-			if !assert.NoError(t, tok.Set(k, kdef.Value), `tok.Set(%s) should succeed`, k) {
-				return
-			}
+			require.NoError(t, tok.Set(k, kdef.Value), `tok.Set(%s) should succeed`, k)
 		}
 	})
 	t.Run("Get", func(t *testing.T) {
@@ -207,50 +194,28 @@ func TestToken(t *testing.T) {
 
 			if mname := kdef.Method; mname != "" {
 				method := rv.MethodByName(mname)
-				if !assert.NotEqual(t, zeroval, method, `method %s should not be zero value`, mname) {
-					return
-				}
-
+				require.NotEqual(t, zeroval, method, `method %s should not be zero value`, mname)
 				retvals := method.Call(nil)
-				if !assert.Len(t, retvals, 1, `should have exactly one return value`) {
-					return
-				}
-
-				if !assert.Equal(t, getval, retvals[0].Interface(), `values should match`) {
-					return
-				}
+				require.Len(t, retvals, 1, `should have exactly one return value`)
+				require.Equal(t, getval, retvals[0].Interface(), `values should match`)
 			}
 		}
 	})
 	t.Run("Roundtrip", func(t *testing.T) {
 		buf, err := json.Marshal(tok)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `json.Marshal should succeed`)
 		newtok, err := jwt.ParseInsecure(buf)
-		if !assert.NoError(t, err, `jwt.Parse should succeed`) {
-			return
-		}
-
-		if !assert.True(t, jwt.Equal(tok, newtok), `tokens should match`) {
-			return
-		}
+		require.NoError(t, err, `jwt.Parse should succeed`)
+		require.True(t, jwt.Equal(tok, newtok), `tokens should match`)
 	})
 	t.Run("Set/Remove", func(t *testing.T) {
 		newtok, err := tok.Clone()
-		if !assert.NoError(t, err, `tok.Clone should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `tok.Clone should succeed`)
 		for _, k := range tok.Keys() {
 			newtok.Remove(k)
 		}
 
-		if !assert.Len(t, newtok.Keys(), 0, `toks should have 0 tok`) {
-			return
-		}
-
+		require.Len(t, newtok.Keys(), 0, `toks should have 0 tok`)
 		for _, k := range tok.Keys() {
 			var v interface{}
 			require.NoError(t, tok.Get(k, &v), `tok.Get(%s) should succeed`, k)

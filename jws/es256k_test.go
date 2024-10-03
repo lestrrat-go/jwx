@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -21,9 +21,7 @@ func TestES256K(t *testing.T) {
 
 	t.Parallel()
 	key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1)
-	if !assert.NoError(t, err, "ECDSA key generated") {
-		return
-	}
+	require.NoError(t, err, "ECDSA key generated")
 	jwkKey, _ := jwk.Import(key.PublicKey)
 	keys := map[string]interface{}{
 		"Verify(ecdsa.PublicKey)":  key.PublicKey,

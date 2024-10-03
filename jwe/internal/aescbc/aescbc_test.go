@@ -4,7 +4,7 @@ import (
 	"crypto/aes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVectorsAESCBC128(t *testing.T) {
@@ -36,30 +36,15 @@ func TestVectorsAESCBC128(t *testing.T) {
 		3, 22, 60, 12, 43, 67, 104, 105, 108, 108, 105, 99, 111, 116, 104, 101}
 
 	enc, err := New(key, aes.NewCipher)
-	if !assert.NoError(t, err, "aescbc.New") {
-		return
-	}
+	require.NoError(t, err, "aescbc.New")
 	out := enc.Seal(nil, nonce, plaintext, aad)
-	if !assert.NoError(t, err, "enc.Seal") {
-		return
-	}
-
-	if !assert.Equal(t, ciphertext, out[:len(out)-enc.keysize], "Ciphertext tag should match") {
-		return
-	}
-
-	if !assert.Equal(t, authtag, out[len(out)-enc.keysize:], "Auth tag should match") {
-		return
-	}
+	require.NoError(t, err, "enc.Seal")
+	require.Equal(t, ciphertext, out[:len(out)-enc.keysize], "Ciphertext tag should match")
+	require.Equal(t, authtag, out[len(out)-enc.keysize:], "Auth tag should match")
 
 	out, err = enc.Open(nil, nonce, out, aad)
-	if !assert.NoError(t, err, "Open should succeed") {
-		return
-	}
-
-	if !assert.Equal(t, plaintext, out, "Open should get us original text") {
-		return
-	}
+	require.NoError(t, err, "Open should succeed")
+	require.Equal(t, plaintext, out, "Open should get us original text")
 }
 
 func TestPad(t *testing.T) {
@@ -67,18 +52,12 @@ func TestPad(t *testing.T) {
 		buf := make([]byte, i)
 		pb := pad(buf, 16)
 
-		if !assert.Equal(t, len(pb)%16, 0, "pb should be multiple of 16") {
-			return
-		}
+		require.Equal(t, len(pb)%16, 0, "pb should be multiple of 16")
 
 		toRemove, good := extractPadding(pb)
-		if !assert.Equal(t, 1, int(good)&1, "padding should be good") {
-			return
-		}
+		require.Equal(t, 1, int(good)&1, "padding should be good")
 		pb = pb[:len(pb)-toRemove]
 
-		if !assert.Len(t, pb, i, "Unpad should result in len = %d", i) {
-			return
-		}
+		require.Len(t, pb, i, "Unpad should result in len = %d", i)
 	}
 }

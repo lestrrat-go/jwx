@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestKeyType(t *testing.T) {
@@ -14,167 +14,105 @@ func TestKeyType(t *testing.T) {
 	t.Run(`accept jwa constant EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(jwa.EC), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(jwa.EC), `accept is successful`)
+		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept the string EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept("EC"), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept("EC"), `accept is successful`)
+		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept fmt.Stringer for EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(stringer{src: "EC"}), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(stringer{src: "EC"}), `accept is successful`)
+		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`stringification for EC`, func(t *testing.T) {
 		t.Parallel()
-		if !assert.Equal(t, "EC", jwa.EC.String(), `stringified value matches`) {
-			return
-		}
+		require.Equal(t, "EC", jwa.EC.String(), `stringified value matches`)
 	})
 	t.Run(`accept jwa constant OKP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(jwa.OKP), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(jwa.OKP), `accept is successful`)
+		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept the string OKP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept("OKP"), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept("OKP"), `accept is successful`)
+		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept fmt.Stringer for OKP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(stringer{src: "OKP"}), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(stringer{src: "OKP"}), `accept is successful`)
+		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`stringification for OKP`, func(t *testing.T) {
 		t.Parallel()
-		if !assert.Equal(t, "OKP", jwa.OKP.String(), `stringified value matches`) {
-			return
-		}
+		require.Equal(t, "OKP", jwa.OKP.String(), `stringified value matches`)
 	})
 	t.Run(`accept jwa constant OctetSeq`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(jwa.OctetSeq), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(jwa.OctetSeq), `accept is successful`)
+		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept the string oct`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept("oct"), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept("oct"), `accept is successful`)
+		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept fmt.Stringer for oct`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(stringer{src: "oct"}), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(stringer{src: "oct"}), `accept is successful`)
+		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`stringification for oct`, func(t *testing.T) {
 		t.Parallel()
-		if !assert.Equal(t, "oct", jwa.OctetSeq.String(), `stringified value matches`) {
-			return
-		}
+		require.Equal(t, "oct", jwa.OctetSeq.String(), `stringified value matches`)
 	})
 	t.Run(`accept jwa constant RSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(jwa.RSA), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(jwa.RSA), `accept is successful`)
+		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept the string RSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept("RSA"), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept("RSA"), `accept is successful`)
+		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`accept fmt.Stringer for RSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.NoError(t, dst.Accept(stringer{src: "RSA"}), `accept is successful`) {
-			return
-		}
-		if !assert.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`) {
-			return
-		}
+		require.NoError(t, dst.Accept(stringer{src: "RSA"}), `accept is successful`)
+		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`stringification for RSA`, func(t *testing.T) {
 		t.Parallel()
-		if !assert.Equal(t, "RSA", jwa.RSA.String(), `stringified value matches`) {
-			return
-		}
+		require.Equal(t, "RSA", jwa.RSA.String(), `stringified value matches`)
 	})
 	t.Run(`do not accept invalid constant InvalidKeyType`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.Error(t, dst.Accept(jwa.InvalidKeyType), `accept should fail`) {
-			return
-		}
+		require.Error(t, dst.Accept(jwa.InvalidKeyType), `accept should fail`)
 	})
 	t.Run(`bail out on random integer value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.Error(t, dst.Accept(1), `accept should fail`) {
-			return
-		}
+		require.Error(t, dst.Accept(1), `accept should fail`)
 	})
 	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		if !assert.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`) {
-			return
-		}
+		require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
@@ -185,14 +123,11 @@ func TestKeyType(t *testing.T) {
 			jwa.RSA:      {},
 		}
 		for _, v := range jwa.KeyTypes() {
-			if _, ok := expected[v]; !assert.True(t, ok, `%s should be in the expected list`, v) {
-				return
-			}
+			_, ok := expected[v]
+			require.True(t, ok, `%s should be in the expected list`, v)
 			delete(expected, v)
 		}
-		if !assert.Len(t, expected, 0) {
-			return
-		}
+		require.Len(t, expected, 0)
 	})
 }
 
@@ -209,26 +144,20 @@ func TestKeyTypeCustomAlgorithm(t *testing.T) {
 		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			if !assert.NoError(t, dst.Accept(customAlgorithm), `accept is successful`) {
-				return
-			}
-			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
+			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			if !assert.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`) {
-				return
-			}
-			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
+			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			if !assert.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`) {
-				return
-			}
-			assert.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
+			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})
 	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
@@ -236,17 +165,17 @@ func TestKeyTypeCustomAlgorithm(t *testing.T) {
 		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			assert.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
 		})
 		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			assert.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
+			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
 		})
 		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			assert.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
 		})
 	})
 }

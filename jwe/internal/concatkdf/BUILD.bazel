@@ -13,7 +13,7 @@ go_test(
     embed = [":concatkdf"],
     deps = [
         "//jwa",
-        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )
 

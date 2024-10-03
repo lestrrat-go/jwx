@@ -5,7 +5,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSet(t *testing.T) {
@@ -21,52 +21,32 @@ func TestSet(t *testing.T) {
 	var keys []jwk.Key
 	for _, gen := range keygens {
 		k, err := gen()
-		if !assert.NoError(t, err, `key generation should succeed`) {
-			return
-		}
-		if !assert.NoError(t, set.AddKey(k), `set.AddKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `key generation should succeed`)
+		require.NoError(t, set.AddKey(k), `set.AddKey should succeed`)
 		keys = append(keys, k)
 	}
 
-	if !assert.Equal(t, set.Len(), 3, `set.Len should be 3`) {
-		return
-	}
+	require.Equal(t, set.Len(), 3, `set.Len should be 3`)
 
 	for i, k := range keys {
-		if !assert.Equal(t, i, set.Index(k), `set.Index should return %d`, i) {
-			return
-		}
+		require.Equal(t, i, set.Index(k), `set.Index should return %d`, i)
 	}
 
 	for _, k := range keys {
-		if !assert.NoError(t, set.RemoveKey(k), `set.RemoveKey should succeed`) {
-			return
-		}
+		require.NoError(t, set.RemoveKey(k), `set.RemoveKey should succeed`)
 	}
 
-	if !assert.Equal(t, set.Len(), 0, `set.Len should be 0`) {
-		return
-	}
+	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
 
 	for _, gen := range keygens {
 		k, err := gen()
-		if !assert.NoError(t, err, `key generation should succeed`) {
-			return
-		}
-		if !assert.NoError(t, set.AddKey(k), `set.Add should succeed`) {
-			return
-		}
+		require.NoError(t, err, `key generation should succeed`)
+		require.NoError(t, set.AddKey(k), `set.Add should succeed`)
 	}
 
-	if !assert.Equal(t, set.Len(), 3, `set.Len should be 3`) {
-		return
-	}
+	require.Equal(t, set.Len(), 3, `set.Len should be 3`)
 
 	set.Clear()
 
-	if !assert.Equal(t, set.Len(), 0, `set.Len should be 0`) {
-		return
-	}
+	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
 }

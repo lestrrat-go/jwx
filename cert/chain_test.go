@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,9 +24,7 @@ KpDY+K+bsqw=`)
 
 func TestChain(t *testing.T) {
 	goldenCert, err := cert.Parse(certBytes)
-	if !assert.NoError(t, err, `x509.ParseCertificate should succeed`) {
-		return
-	}
+	require.NoError(t, err, `x509.ParseCertificate should succeed`)
 
 	testcases := []struct {
 		Name string

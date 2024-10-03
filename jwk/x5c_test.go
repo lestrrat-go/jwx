@@ -5,8 +5,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_X5CHeader(t *testing.T) {
@@ -18,32 +17,18 @@ func Test_X5CHeader(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal", func(t *testing.T) {
 		expected, err := json.Marshal(certs)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
 
 		// Take the input, and create a json
 		jsonbuf, err := json.Marshal(certs)
-		if !assert.NoError(t, err, `json.Marshal should succeed (for input)`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed (for input)`)
 
 		var c cert.Chain
-		if !assert.NoError(t, json.Unmarshal(jsonbuf, &c), `json.Unmarshal should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, c.Len(), 3, `should have three certs`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal(jsonbuf, &c), `json.Unmarshal should succeed`)
+		require.Equal(t, c.Len(), 3, `should have three certs`)
 
 		buf, err := json.Marshal(c)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, expected, buf, `json output should match`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
+		require.Equal(t, expected, buf, `json output should match`)
 	})
 }

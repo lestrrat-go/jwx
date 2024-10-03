@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStringList_Accept(t *testing.T) {
@@ -14,7 +14,5 @@ func TestStringList_Accept(t *testing.T) {
 	interfaceList := make([]interface{}, 0)
 	interfaceList = append(interfaceList, "first")
 	interfaceList = append(interfaceList, "second")
-	if !assert.NoError(t, x.Accept(interfaceList), "failed to convert []interface{} into StringList") {
-		return
-	}
+	require.NoError(t, x.Accept(interfaceList), "failed to convert []interface{} into StringList")
 }

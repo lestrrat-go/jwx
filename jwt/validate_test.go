@@ -9,7 +9,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,24 +47,15 @@ func TestGHIssue10(t *testing.T) {
 		t.Run(tc.ClaimName, func(t *testing.T) {
 			t.Parallel()
 			t1, err := tc.BuildFunc(tc.ClaimValue)
-			if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-				return
-			}
+			require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 			// This should succeed, because validation option (tc.OptionFunc)
 			// is not provided in the optional parameters
-			if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
-				return
-			}
+			require.NoError(t, jwt.Validate(t1), "t1.Validate should succeed")
 
 			// This should succeed, because the option is provided with same value
-			if !assert.NoError(t, jwt.Validate(t1, tc.OptionFunc(tc.ClaimValue)), "t1.Validate should succeed") {
-				return
-			}
-
-			if !assert.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail") {
-				return
-			}
+			require.NoError(t, jwt.Validate(t1, tc.OptionFunc(tc.ClaimValue)), "t1.Validate should succeed")
+			require.Error(t, jwt.Validate(t1, jwt.WithIssuer("poop")), "t1.Validate should fail")
 		})
 	}
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
@@ -73,33 +63,19 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Issuer("github.com/lestrrat-go/jwx/v3").
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should succeed, because WithIssuer is not provided in the
 		// optional parameters
-		if !assert.NoError(t, jwt.Validate(t1), "jwt.Validate should succeed") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1), "jwt.Validate should succeed")
 
 		// This should succeed, because WithIssuer is provided with same value
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "jwt.Validate should succeed") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "jwt.Validate should succeed")
 
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
-		if !assert.Error(t, err, "jwt.Validate should fail") {
-			return
-		}
-
-		if !assert.ErrorIs(t, err, jwt.ErrInvalidIssuer(), "error should be jwt.ErrInvalidIssuer") {
-			return
-		}
-
-		if !assert.True(t, jwt.IsValidationError(err), "error should be a validation error") {
-			return
-		}
+		require.Error(t, err, "jwt.Validate should fail")
+		require.ErrorIs(t, err, jwt.ErrInvalidIssuer(), "error should be jwt.ErrInvalidIssuer")
+		require.True(t, jwt.IsValidationError(err), "error should be a validation error")
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
@@ -107,10 +83,7 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.IssuedAtKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 		testcases := []struct {
 			Name    string
 			Options []jwt.ValidateOption
@@ -145,25 +118,14 @@ func TestGHIssue10(t *testing.T) {
 				log.Printf("%s", tc.Name)
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
-					assert.NoError(t, err, `jwt.Validate should succeed`)
+					require.NoError(t, err, `jwt.Validate should succeed`)
 					return
 				}
 
-				if !assert.Error(t, err, `jwt.Validate should fail`) {
-					return
-				}
-
-				if !assert.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`) {
-					return
-				}
-
-				if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`) {
-					return
-				}
-
-				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-					return
-				}
+				require.Error(t, err, `jwt.Validate should fail`)
+				require.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`)
+				require.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`)
+				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
 			})
 		}
 	})
@@ -172,40 +134,28 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.AudienceKey, []string{"foo", "bar", "baz"}).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should succeed, because WithAudience is not provided in the
 		// optional parameters
 		t.Run("`aud` check disabled", func(t *testing.T) {
 			t.Parallel()
-			if !assert.NoError(t, jwt.Validate(t1), `jwt.Validate should succeed`) {
-				return
-			}
+			require.NoError(t, jwt.Validate(t1), `jwt.Validate should succeed`)
 		})
 
 		// This should succeed, because WithAudience is provided, and its
 		// value matches one of the audience values
 		t.Run("`aud` contains `baz`", func(t *testing.T) {
 			t.Parallel()
-			if !assert.NoError(t, jwt.Validate(t1, jwt.WithAudience("baz")), "jwt.Validate should succeed") {
-				return
-			}
+			require.NoError(t, jwt.Validate(t1, jwt.WithAudience("baz")), "jwt.Validate should succeed")
 		})
 
 		t.Run("check `aud` contains `poop`", func(t *testing.T) {
 			t.Parallel()
 			err := jwt.Validate(t1, jwt.WithAudience("poop"))
-			if !assert.Error(t, err, "token.Validate should fail") {
-				return
-			}
-			if !assert.ErrorIs(t, err, jwt.ErrInvalidAudience(), `error should be ErrInvalidAudience`) {
-				return
-			}
-			if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-				return
-			}
+			require.Error(t, err, "token.Validate should fail")
+			require.ErrorIs(t, err, jwt.ErrInvalidAudience(), `error should be ErrInvalidAudience`)
+			require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
 		})
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
@@ -213,24 +163,15 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v3").
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should succeed, because WithSubject is not provided in the
 		// optional parameters
-		if !assert.NoError(t, jwt.Validate(t1), "token.Validate should succeed") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1), "token.Validate should succeed")
 
 		// This should succeed, because WithSubject is provided with same value
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithSubject(t1.Subject())), "token.Validate should succeed") {
-			return
-		}
-
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithSubject("poop")), "token.Validate should fail") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1, jwt.WithSubject(t1.Subject())), "token.Validate should succeed")
+		require.Error(t, jwt.Validate(t1, jwt.WithSubject("poop")), "token.Validate should fail")
 	})
 	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
 		t.Parallel()
@@ -241,10 +182,7 @@ func TestGHIssue10(t *testing.T) {
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.NotBeforeKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 		testcases := []struct {
 			Name    string
 			Options []jwt.ValidateOption
@@ -301,22 +239,14 @@ func TestGHIssue10(t *testing.T) {
 			t.Run(tc.Name, func(t *testing.T) {
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
-					assert.NoError(t, err, "token.Validate should succeed")
+					require.NoError(t, err, "token.Validate should succeed")
 					return
 				}
 
-				if !assert.Error(t, err, "token.Validate should fail") {
-					return
-				}
-				if !assert.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`) {
-					return
-				}
-				if !assert.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpired`) {
-					return
-				}
-				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-					return
-				}
+				require.Error(t, err, "token.Validate should fail")
+				require.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`)
+				require.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpired`)
+				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
 			})
 		}
 	})
@@ -330,10 +260,7 @@ func TestGHIssue10(t *testing.T) {
 			// valid for 2 minutes only from IssuedAt
 			Claim(jwt.ExpirationKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
-
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 		testcases := []struct {
 			Name    string
 			Options []jwt.ValidateOption
@@ -386,20 +313,14 @@ func TestGHIssue10(t *testing.T) {
 			t.Run(tc.Name, func(t *testing.T) {
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
-					assert.NoError(t, err, `jwt.Validate should succeed`)
+					require.NoError(t, err, `jwt.Validate should succeed`)
 					return
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				if !assert.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should not be ErrTokenNotYetValid`) {
-					return
-				}
-				if !assert.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`) {
-					return
-				}
-				if !assert.True(t, jwt.IsValidationError(err), `error should be a validation error`) {
-					return
-				}
+				require.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should not be ErrTokenNotYetValid`)
+				require.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`)
+				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
 			})
 		}
 	})
@@ -411,14 +332,10 @@ func TestGHIssue10(t *testing.T) {
 			Claim(jwt.IssuedAtKey, tm).
 			Claim(jwt.ExpirationKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should pass because the unix zero times should be ignored
-		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1), "token.Validate should pass")
 	})
 	t.Run("Go zero times", func(t *testing.T) {
 		t.Parallel()
@@ -428,14 +345,10 @@ func TestGHIssue10(t *testing.T) {
 			Claim(jwt.IssuedAtKey, tm).
 			Claim(jwt.ExpirationKey, tm).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should pass because the go zero times should be ignored
-		if assert.NoError(t, jwt.Validate(t1), "token.Validate should pass") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1), "token.Validate should pass")
 	})
 	t.Run("Parse and validate", func(t *testing.T) {
 		t.Parallel()
@@ -446,27 +359,19 @@ func TestGHIssue10(t *testing.T) {
 			// valid for 2 minutes only from IssuedAt
 			Claim(jwt.ExpirationKey, tm.Add(-58*time.Minute)).
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		buf, err := json.Marshal(t1)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
 
 		_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
 		// This should fail, because exp is set in the past
-		if !assert.Error(t, err, "jwt.Parse should fail") {
-			return
-		}
+		require.Error(t, err, "jwt.Parse should fail")
 
 		_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithAcceptableSkew(time.Hour))
 		// This should succeed, because we have given big skew
 		// that is well enough to get us accepted
-		if !assert.NoError(t, err, "jwt.Parse should succeed (1)") {
-			return
-		}
+		require.NoError(t, err, "jwt.Parse should succeed (1)")
 
 		// This should succeed, because we have given a time
 		// that is well enough into the past
@@ -474,39 +379,24 @@ func TestGHIssue10(t *testing.T) {
 			return tm.Add(-59 * time.Minute)
 		})
 		_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithClock(clock))
-		if !assert.NoError(t, err, "jwt.Parse should succeed (2)") {
-			return
-		}
+		require.NoError(t, err, "jwt.Parse should succeed (2)")
 	})
 	t.Run("any claim value", func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
 			Claim("email", "email@example.com").
 			Build()
-		if !assert.NoError(t, err, `jwt.NewBuilder should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 		// This should succeed, because WithClaimValue("email", "xxx") is not provided in the
 		// optional parameters
-		if !assert.NoError(t, jwt.Validate(t1), "t1.Validate should succeed") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1), "t1.Validate should succeed")
 
 		// This should succeed, because WithClaimValue is provided with same value
-		if !assert.NoError(t, jwt.Validate(t1, jwt.WithClaimValue("email", "email@example.com")), "t1.Validate should succeed") {
-			return
-		}
-
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithClaimValue("email", "poop")), "t1.Validate should fail") {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "email@example.com")), "t1.Validate should fail") {
-			return
-		}
-		if !assert.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "")), "t1.Validate should fail") {
-			return
-		}
+		require.NoError(t, jwt.Validate(t1, jwt.WithClaimValue("email", "email@example.com")), "t1.Validate should succeed")
+		require.Error(t, jwt.Validate(t1, jwt.WithClaimValue("email", "poop")), "t1.Validate should fail")
+		require.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "email@example.com")), "t1.Validate should fail")
+		require.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "")), "t1.Validate should fail")
 	})
 }
 
@@ -549,15 +439,11 @@ func TestClaimValidator(t *testing.T) {
 			t.Parallel()
 			t1 := tc.MakeToken()
 			if err := tc.Error; err != nil {
-				if !assert.ErrorIs(t, jwt.Validate(t1, jwt.WithValidator(v)), err) {
-					return
-				}
+				require.ErrorIs(t, jwt.Validate(t1, jwt.WithValidator(v)), err)
 				return
 			}
 
-			if !assert.NoError(t, jwt.Validate(t1, jwt.WithValidator(v))) {
-				return
-			}
+			require.NoError(t, jwt.Validate(t1, jwt.WithValidator(v)))
 		})
 	}
 }

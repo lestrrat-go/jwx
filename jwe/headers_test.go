@@ -9,7 +9,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,18 +26,12 @@ func TestHeaders(t *testing.T) {
 	}
 
 	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
-	if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 	privKey, err := jwk.Import(rawKey)
-	if !assert.NoError(t, err, `jwk.Import should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.Import should succeed`)
 
 	pubKey, err := jwk.Import(rawKey.PublicKey)
-	if !assert.NoError(t, err, `jwk.Import should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwk.Import should succeed`)
 
 	data := []struct {
 		Key      string
@@ -117,9 +110,7 @@ func TestHeaders(t *testing.T) {
 	t.Run("Set values", func(t *testing.T) {
 		// DO NOT RUN THIS IN PARALLEL. THIS IS AN INITIALIZER
 		for _, tc := range data {
-			if !assert.NoError(t, base.Set(tc.Key, tc.Value), "Headers.Set should succeed") {
-				return
-			}
+			require.NoError(t, base.Set(tc.Key, tc.Value), "Headers.Set should succeed")
 		}
 	})
 
@@ -133,21 +124,15 @@ func TestHeaders(t *testing.T) {
 		for _, tc := range data {
 			var values []interface{}
 			var viaGet interface{}
-			if !assert.NoError(t, h.Get(tc.Key, &viaGet), `h.Get should be successful`) {
-				return
-			}
+			require.NoError(t, h.Get(tc.Key, &viaGet), `h.Get should be successful`)
 			values = append(values, viaGet)
 
 			if method := tc.Method; method != "" {
 				m := reflect.ValueOf(h).MethodByName(method)
-				if !assert.NotEqual(t, m, zeroval, "method %s should be available", method) {
-					return
-				}
+				require.NotEqual(t, m, zeroval, "method %s should be available", method)
 
 				ret := m.Call(nil)
-				if !assert.Len(t, ret, 1, `should get exactly 1 value as return value`) {
-					return
-				}
+				require.Len(t, ret, 1, `should get exactly 1 value as return value`)
 				values = append(values, ret[0].Interface())
 			}
 
@@ -156,9 +141,7 @@ func TestHeaders(t *testing.T) {
 				expected = tc.Value
 			}
 			for i, got := range values {
-				if !assert.Equal(t, expected, got, "value %d should match", i) {
-					return
-				}
+				require.Equal(t, expected, got, "value %d should match", i)
 			}
 		}
 	})
@@ -175,18 +158,12 @@ func TestHeaders(t *testing.T) {
 		h1.Set("foo", "bar")
 
 		buf, err := h1.Encode()
-		if !assert.NoError(t, err, `h1.Encode should succeed`) {
-			return
-		}
+		require.NoError(t, err, `h1.Encode should succeed`)
 
 		h2 := jwe.NewHeaders()
-		if !assert.NoError(t, h2.Decode(buf), `h2.Decode should succeed`) {
-			return
-		}
+		require.NoError(t, h2.Decode(buf), `h2.Decode should succeed`)
 
-		if !assert.Equal(t, h1, h2, `objects should match`) {
-			return
-		}
+		require.Equal(t, h1, h2, `objects should match`)
 	})
 
 	t.Run("Range", func(t *testing.T) {
@@ -203,7 +180,7 @@ func TestHeaders(t *testing.T) {
 			h := base
 
 			for _, k := range h.Keys() {
-				assert.NoError(t, h.Remove(k), `h.Remove should succeed`)
+				require.NoError(t, h.Remove(k), `h.Remove should succeed`)
 			}
 
 			require.Len(t, h.Keys(), 0, `len should be zero`)

@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/stretchr/testify/require"
 
 	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRecipient(t *testing.T) {
@@ -14,17 +14,10 @@ func TestRecipient(t *testing.T) {
 		const src = `{"header":{"foo":"bar"},"encrypted_key":"Zm9vYmFyYmF6"}`
 		r1 := jwe.NewRecipient()
 
-		if !assert.NoError(t, json.Unmarshal([]byte(src), r1), `json.Unmarshal should succeed`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal([]byte(src), r1), `json.Unmarshal should succeed`)
 
 		buf, err := json.Marshal(r1)
-		if !assert.NoError(t, err, `json.Marshal should succeed`) {
-			return
-		}
-
-		if !assert.Equal(t, []byte(src), buf, `json representation should match`) {
-			return
-		}
+		require.NoError(t, err, `json.Marshal should succeed`)
+		require.Equal(t, []byte(src), buf, `json representation should match`)
 	})
 }
