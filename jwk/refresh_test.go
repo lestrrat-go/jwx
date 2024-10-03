@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
+func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 	t.Helper()
 
 	key, ok := src.Key(0)
@@ -32,7 +32,9 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 
 	for _, e := range expected {
 		if v == float64(e) {
-			return assert.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
+			// We _know_ this is going to pass
+			assert.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
+			return
 		}
 	}
 
@@ -45,7 +47,7 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) bool {
 		}
 	}
 	fmt.Fprintf(&buf, "]")
-	return assert.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
+	require.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
 }
 
 func TestCachedSet(t *testing.T) {
@@ -85,12 +87,8 @@ func TestCachedSet(t *testing.T) {
 	for i := range set.Len() {
 		k, err := set.Key(i)
 		ck, cerr := cs.Key(i)
-		if !assert.Equal(t, k, ck, `key %d should match`, i) {
-			return
-		}
-		if !assert.Equal(t, err, cerr, `error %d should match`, i) {
-			return
-		}
+		require.Equal(t, k, ck, `key %d should match`, i)
+		require.Equal(t, err, cerr, `error %d should match`, i)
 	}
 }
 
@@ -134,9 +132,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 			ks, err := c.Lookup(ctx, srv.URL)
 			require.NoError(t, err, `c.Lookup should succeed`)
 			require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
-			if !checkAccessCount(t, ks, 1) {
-				return
-			}
+			checkAccessCount(t, ks, 1)
 		}()
 	}
 
@@ -147,9 +143,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 
 	ks, err := c.Lookup(ctx, srv.URL)
 	require.NoError(t, err, `c.Lookup should succeed`)
-	if !checkAccessCount(t, ks, 2, 3) {
-		return
-	}
+	checkAccessCount(t, ks, 2, 3)
 }
 
 func TestCache_calculate_interval_from_cache_control(t *testing.T) {
@@ -198,9 +192,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 			ks, err := c.Lookup(ctx, srv.URL)
 			require.NoError(t, err, `c.Lookup should succeed`)
 			require.NotNil(t, ks, `c.Lookup should return a non-nil key set`)
-			if !checkAccessCount(t, ks, 1) {
-				return
-			}
+			checkAccessCount(t, ks, 1)
 		}()
 	}
 
@@ -210,9 +202,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	time.Sleep(4 * time.Second)
 	ks, err := c.Lookup(ctx, srv.URL)
 	require.NoError(t, err, `c.Lookup should succeed`)
-	if !checkAccessCount(t, ks, 2) {
-		return
-	}
+	checkAccessCount(t, ks, 2)
 }
 
 func TestCache_backoff(t *testing.T) {
@@ -255,9 +245,7 @@ func TestCache_backoff(t *testing.T) {
 	ks, err := c.Lookup(ctx, srv.URL)
 	require.NoError(t, err, `c.Lookup (#1) should succeed`)
 	require.NotNil(t, ks, `c.Lookup (#1) should return a non-nil key set`)
-	if !checkAccessCount(t, ks, 1) {
-		return
-	}
+	checkAccessCount(t, ks, 1)
 
 	// enough time for 1 refresh to have occurred
 	time.Sleep(1500 * time.Millisecond)
@@ -265,9 +253,7 @@ func TestCache_backoff(t *testing.T) {
 	require.NoError(t, err, `c.Lookup (#2) should succeed`)
 	require.NotNil(t, ks, `c.Lookup (#2) should return a non-nil key set`)
 	// Should be using the cached version
-	if !checkAccessCount(t, ks, 1) {
-		return
-	}
+	checkAccessCount(t, ks, 1)
 
 	// enough time for 2 refreshes to have occurred
 	time.Sleep(3000 * time.Millisecond)
@@ -276,9 +262,7 @@ func TestCache_backoff(t *testing.T) {
 	require.NoError(t, err, `c.Lookup (#3) should succeed`)
 	require.NotNil(t, ks, `c.Lookup (#3) should return a non-nil key set`)
 	// should be new
-	if !checkAccessCount(t, ks, 4, 5) {
-		return
-	}
+	checkAccessCount(t, ks, 4, 5)
 }
 
 type accumulateErrs struct {
@@ -302,9 +286,7 @@ func TestErrorSink(t *testing.T) {
 	t.Parallel()
 
 	k, err := jwxtest.GenerateRsaJwk()
-	if !assert.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`) {
-		return
-	}
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 	set := jwk.NewSet()
 	_ = set.AddKey(k)
 	testcases := []struct {

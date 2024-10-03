@@ -5,7 +5,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,25 +25,15 @@ func TestHeader(t *testing.T) {
 		}
 
 		h, err := jwk.Import([]byte("dummy"))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.New should succeed`)
 
 		for k, v := range values {
-			if !assert.NoError(t, h.Set(k, v), "Set works for '%s'", k) {
-				return
-			}
+			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
 
 			var got interface{}
 			require.NoError(t, h.Get(k, &got), "Get works for '%s'", k)
-
-			if !assert.Equal(t, v, got, "values match '%s'", k) {
-				return
-			}
-
-			if !assert.NoError(t, h.Set(k, v), "Set works for '%s'", k) {
-				return
-			}
+			require.Equal(t, v, got, "values match '%s'", k)
+			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
 		}
 
 		t.Run("Private params", func(t *testing.T) {
@@ -73,21 +62,15 @@ func TestHeader(t *testing.T) {
 		}
 
 		h, err := jwk.Import([]byte("dummy"))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.New should succeed`)
 		for k, v := range values {
 			err := h.Set(k, v)
 			if err == nil {
 				t.Fatalf("Setting %s value should have failed", k)
 			}
 		}
-		if !assert.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`) {
-			return
-		}
-		if !assert.Empty(t, h.Algorithm().String(), "Algorithm should be empty string") {
-			return
-		}
+		require.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`)
+		require.Empty(t, h.Algorithm().String(), "Algorithm should be empty string")
 		if h.KeyID() != "" {
 			t.Fatalf("KeyID should be empty string")
 		}
@@ -102,20 +85,13 @@ func TestHeader(t *testing.T) {
 	t.Run("Algorithm", func(t *testing.T) {
 		t.Parallel()
 		h, err := jwk.Import([]byte("dummy"))
-		if !assert.NoError(t, err, `jwk.New should succeed`) {
-			return
-		}
+		require.NoError(t, err, `jwk.New should succeed`)
 		for _, value := range []interface{}{jwa.RS256, jwa.RSA1_5} {
-			if !assert.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed") {
-				return
-			}
+			require.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed")
 
 			var got jwa.KeyAlgorithm
 			require.NoError(t, h.Get("alg", &got), "Get for alg should succeed")
-
-			if !assert.Equal(t, value, got, "values match") {
-				return
-			}
+			require.Equal(t, value, got, "values match")
 		}
 	})
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,15 +33,11 @@ func TestX509CertChain(t *testing.T) {
 	} {
 		key := key
 		t.Run("Set X509CertChainKey", func(t *testing.T) {
-			if !assert.NoError(t, key.Set(X509CertChainKey, &c), "Set for x5c should succeed") {
-				return
-			}
+			require.NoError(t, key.Set(X509CertChainKey, &c), "Set for x5c should succeed")
 
 			var gotcerts cert.Chain
 			require.NoError(t, key.Get(X509CertChainKey, &gotcerts), "Get for x5c should succeed")
-			if !assert.Equal(t, gotcerts.Len(), 3, `should have 3 cert`) {
-				return
-			}
+			require.Equal(t, gotcerts.Len(), 3, `should have 3 cert`)
 		})
 	}
 }
@@ -66,13 +61,9 @@ func TestIterator(t *testing.T) {
 
 				var getV interface{}
 				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
-				if !assert.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`) {
-					return
-				}
+				require.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`)
 			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
+			require.Equal(t, expected, seen, `values should match`)
 		})
 		t.Run("Walk", func(t *testing.T) {
 			seen := make(map[string]interface{})
@@ -80,18 +71,12 @@ func TestIterator(t *testing.T) {
 				seen[key] = value
 				return nil
 			}))
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
+			require.Equal(t, expected, seen, `values should match`)
 		})
 		t.Run("AsMap", func(t *testing.T) {
 			seen, err := v.AsMap(context.TODO())
-			if !assert.NoError(t, err, `v.AsMap should succeed`) {
-				return
-			}
-			if !assert.Equal(t, expected, seen, `values should match`) {
-				return
-			}
+			require.NoError(t, err, `v.AsMap should succeed`)
+			require.Equal(t, expected, seen, `values should match`)
 		})
 	}
 
@@ -176,15 +161,11 @@ func TestIterator(t *testing.T) {
 		expected := make(map[string]interface{})
 		expected[KeyTypeKey] = key.KeyType()
 		for k, v := range commonValues {
-			if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
-				return
-			}
+			require.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k)
 			expected[k] = v
 		}
 		for k, v := range test.Extras {
-			if !assert.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k) {
-				return
-			}
+			require.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k)
 			expected[k] = v
 		}
 
@@ -193,14 +174,8 @@ func TestIterator(t *testing.T) {
 		})
 		t.Run(fmt.Sprintf("%T (after json roundtripping)", key), func(t *testing.T) {
 			buf, err := json.Marshal(key)
-			if !assert.NoError(t, err, `json.Marshal should succeed`) {
-				return
-			}
-
-			if !assert.NoError(t, json.Unmarshal(buf, key2), `json.Unmarshal should succeed`) {
-				t.Logf("%s", buf)
-				return
-			}
+			require.NoError(t, err, `json.Marshal should succeed`)
+			require.NoError(t, json.Unmarshal(buf, key2), `json.Unmarshal should succeed`)
 
 			verifyIterators(t, key2, expected)
 		})
