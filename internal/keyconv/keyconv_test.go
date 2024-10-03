@@ -9,15 +9,13 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestKeyconv(t *testing.T) {
 	t.Run("RSA", func(t *testing.T) {
 		key, err := jwxtest.GenerateRsaKey()
-		if !assert.NoError(t, err, `rsa.GenerateKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
 		t.Run("PrivateKey", func(t *testing.T) {
 			jwkKey, _ := jwk.Import(key)
 			testcases := []struct {
@@ -33,45 +31,36 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to rsa.PrivateKey", func(t *testing.T) {
 					var dst rsa.PrivateKey
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.RSAPrivateKey(&dst, tc.Src), `keyconv.RSAPrivateKey should succeed`) {
-						return
-					}
-
+					checker(t, keyconv.RSAPrivateKey(&dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
 					if !tc.Error {
 						// From Go 1.20 on, for purposes of our test, we need the
 						// precomputed values as well
 						dst.Precompute()
-						if !assert.Equal(t, key, &dst, `keyconv.RSAPrivateKey should produce same value`) {
-							return
-						}
+						require.Equal(t, key, &dst, `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
 				t.Run("Assign to *rsa.PrivateKey", func(t *testing.T) {
 					dst := &rsa.PrivateKey{}
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.RSAPrivateKey(dst, tc.Src), `keyconv.RSAPrivateKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.RSAPrivateKey(dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
 					if !tc.Error {
 						// From Go 1.20 on, for purposes of our test, we need the
 						// precomputed values as well
 						dst.Precompute()
-						if !assert.Equal(t, key, dst, `keyconv.RSAPrivateKey should produce same value`) {
-							return
-						}
+						require.Equal(t, key, dst, `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
 			}
@@ -92,38 +81,30 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to rsa.PublicKey", func(t *testing.T) {
 					var dst rsa.PublicKey
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.RSAPublicKey(&dst, tc.Src), `keyconv.RSAPublicKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.RSAPublicKey(&dst, tc.Src), `keyconv.RSAPublicKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, pubkey, &dst, `keyconv.RSAPublicKey should produce same value`) {
-							return
-						}
+						require.Equal(t, pubkey, &dst, `keyconv.RSAPublicKey should produce same value`)
 					}
 				})
 				t.Run("Assign to *rsa.PublicKey", func(t *testing.T) {
 					dst := &rsa.PublicKey{}
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.RSAPublicKey(dst, tc.Src), `keyconv.RSAPublicKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.RSAPublicKey(dst, tc.Src), `keyconv.RSAPublicKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, pubkey, dst, `keyconv.RSAPublicKey should produce same value`) {
-							return
-						}
+						require.Equal(t, pubkey, dst, `keyconv.RSAPublicKey should produce same value`)
 					}
 				})
 			}
@@ -131,9 +112,7 @@ func TestKeyconv(t *testing.T) {
 	})
 	t.Run("ECDSA", func(t *testing.T) {
 		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
-		if !assert.NoError(t, err, `ecdsa.GenerateKey should succeed`) {
-			return
-		}
+		require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
 
 		t.Run("PrivateKey", func(t *testing.T) {
 			jwkKey, _ := jwk.Import(key)
@@ -150,38 +129,30 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to ecdsa.PrivateKey", func(t *testing.T) {
 					var dst ecdsa.PrivateKey
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.ECDSAPrivateKey(&dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.ECDSAPrivateKey(&dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, key, &dst, `keyconv.ECDSAPrivateKey should produce same value`) {
-							return
-						}
+						require.Equal(t, key, &dst, `keyconv.ECDSAPrivateKey should produce same value`)
 					}
 				})
 				t.Run("Assign to *ecdsa.PrivateKey", func(t *testing.T) {
 					dst := &ecdsa.PrivateKey{}
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.ECDSAPrivateKey(dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.ECDSAPrivateKey(dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, key, dst, `keyconv.ECDSAPrivateKey should produce same value`) {
-							return
-						}
+						require.Equal(t, key, dst, `keyconv.ECDSAPrivateKey should produce same value`)
 					}
 				})
 			}
@@ -202,38 +173,30 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to ecdsa.PublicKey", func(t *testing.T) {
 					var dst ecdsa.PublicKey
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.ECDSAPublicKey(&dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.ECDSAPublicKey(&dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, pubkey, &dst, `keyconv.ECDSAPublicKey should produce same value`) {
-							return
-						}
+						require.Equal(t, pubkey, &dst, `keyconv.ECDSAPublicKey should produce same value`)
 					}
 				})
 				t.Run("Assign to *ecdsa.PublicKey", func(t *testing.T) {
 					dst := &ecdsa.PublicKey{}
-					var checker func(assert.TestingT, error, ...interface{}) bool
+					var checker func(require.TestingT, error, ...interface{})
 					if tc.Error {
-						checker = assert.Error
+						checker = require.Error
 					} else {
-						checker = assert.NoError
+						checker = require.NoError
 					}
 
-					if !checker(t, keyconv.ECDSAPublicKey(dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`) {
-						return
-					}
+					checker(t, keyconv.ECDSAPublicKey(dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`)
 					if !tc.Error {
-						if !assert.Equal(t, pubkey, dst, `keyconv.ECDSAPublicKey should produce same value`) {
-							return
-						}
+						require.Equal(t, pubkey, dst, `keyconv.ECDSAPublicKey should produce same value`)
 					}
 				})
 			}
