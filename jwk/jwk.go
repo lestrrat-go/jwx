@@ -619,3 +619,20 @@ func IsKeyValidationError(err error) bool {
 	var kve keyValidationError
 	return errors.Is(err, &kve)
 }
+
+// Configure is used to configure global behavior of the jwk package.
+func Configure(options ...GlobalOption) {
+	var strictKeyUsagePtr *bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identStrictKeyUsage{}:
+			v := option.Value().(bool)
+			strictKeyUsagePtr = &v
+		}
+	}
+
+	if strictKeyUsagePtr != nil {
+		strictKeyUsage.Store(*strictKeyUsagePtr)
+	}
+}

@@ -783,13 +783,9 @@ func TestAccept(t *testing.T) {
 		for _, test := range testcases {
 			var usage jwk.KeyUsageType
 			if test.Error {
-				if !assert.Error(t, usage.Accept(test.Args), `KeyUsage.Accept should fail`) {
-					return
-				}
+				require.Error(t, usage.Accept(test.Args), `KeyUsage.Accept should fail`)
 			} else {
-				if !assert.NoError(t, usage.Accept(test.Args), `KeyUsage.Accept should succeed`) {
-					return
-				}
+				require.NoError(t, usage.Accept(test.Args), `KeyUsage.Accept should succeed`)
 			}
 		}
 	})
