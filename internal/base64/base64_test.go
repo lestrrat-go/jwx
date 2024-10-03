@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecode(t *testing.T) {
@@ -37,12 +37,8 @@ func TestDecode(t *testing.T) {
 			tc.Encoding.Encode(dst, payload)
 
 			decoded, err := Decode(dst)
-			if !assert.NoError(t, err, `Decode should succeed`) {
-				return
-			}
-			if !assert.Equal(t, payload, decoded, `decoded content should match`) {
-				return
-			}
+			require.NoError(t, err, `Decode should succeed`)
+			require.Equal(t, payload, decoded, `decoded content should match`)
 		})
 	}
 }

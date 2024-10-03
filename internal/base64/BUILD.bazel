@@ -11,7 +11,7 @@ go_test(
     name = "base64_test",
     srcs = ["base64_test.go"],
     embed = [":base64"],
-    deps = ["@com_github_stretchr_testify//assert"],
+    deps = ["@com_github_stretchr_testify//require"],
 )
 
 alias(
