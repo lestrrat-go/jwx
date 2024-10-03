@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type stringer struct {
@@ -18,19 +18,16 @@ func (s stringer) String() string {
 
 func TestSanity(t *testing.T) {
 	var k1 jwa.KeyAlgorithm = jwa.RS256
-	if _, ok := k1.(jwa.SignatureAlgorithm); !assert.True(t, ok, `converting k1 to jws.SignatureAlgorithm should succeed`) {
-		return
-	}
-	if _, ok := k1.(jwa.KeyEncryptionAlgorithm); !assert.False(t, ok, `converting k1 to jws.KeyEncryptionAlgorithm should fail`) {
-		return
-	}
+	_, ok := k1.(jwa.SignatureAlgorithm)
+	require.True(t, ok, `converting k1 to jws.SignatureAlgorithm should succeed`)
+	_, ok = k1.(jwa.KeyEncryptionAlgorithm)
+	require.False(t, ok, `converting k1 to jws.KeyEncryptionAlgorithm should fail`)
+
 	var k2 jwa.KeyAlgorithm = jwa.DIRECT
-	if _, ok := k2.(jwa.SignatureAlgorithm); !assert.False(t, ok, `converting k2 to jws.SignatureAlgorithm should fail`) {
-		return
-	}
-	if _, ok := k2.(jwa.KeyEncryptionAlgorithm); !assert.True(t, ok, `converting k2 to jws.KeyEncryptionAlgorithm should succeed`) {
-		return
-	}
+	_, ok = k2.(jwa.SignatureAlgorithm)
+	require.False(t, ok, `converting k2 to jws.SignatureAlgorithm should fail`)
+	_, ok = k2.(jwa.KeyEncryptionAlgorithm)
+	require.True(t, ok, `converting k2 to jws.KeyEncryptionAlgorithm should succeed`)
 }
 
 func TestKeyAlgorithmFrom(t *testing.T) {
@@ -54,13 +51,9 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", tc.Input), func(t *testing.T) {
 			alg := jwa.KeyAlgorithmFrom(tc.Input)
 			if tc.Error {
-				if !assert.IsType(t, alg, jwa.InvalidKeyAlgorithm(""), `key should be invalid`) {
-					return
-				}
+				require.IsType(t, alg, jwa.InvalidKeyAlgorithm(""), `key should be invalid`)
 			} else {
-				if !assert.Equal(t, alg, tc.Input, `key should be valid`) {
-					return
-				}
+				require.Equal(t, alg, tc.Input, `key should be valid`)
 			}
 		})
 	}
