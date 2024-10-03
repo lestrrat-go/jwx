@@ -56,6 +56,19 @@ func (*fetchOption) parseOption() {}
 
 func (*fetchOption) registerOption() {}
 
+// GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
+// change the global configuration of the jwk package.
+type GlobalOption interface {
+	Option
+	globalOption()
+}
+
+type globalOption struct {
+	Option
+}
+
+func (*globalOption) globalOption() {}
+
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
 // ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
 // and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
@@ -138,6 +151,7 @@ type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
+type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identWaitReady struct{}
 
@@ -167,6 +181,10 @@ func (identPEM) String() string {
 
 func (identPEMDecoder) String() string {
 	return "WithPEMDecoder"
+}
+
+func (identStrictKeyUsage) String() string {
+	return "WithStrictKeyUsage"
 }
 
 func (identThumbprintHash) String() string {
@@ -234,6 +252,19 @@ func WithPEMDecoder(v PEMDecoder) ParseOption {
 	return &parseOption{option.New(identPEMDecoder{}, v)}
 }
 
+// WithStrictKeyUsage specifies if during JWK parsing, the "use" field
+// should be confined to the values that have been registered via
+// `jwk.RegisterKeyType()`. By default this option is true, and the
+// initial allowed values are "use" and "enc" only.
+//
+// If this option is set to false, then the "use" field can be any
+// value. If this options is set to true, then the "use" field must
+// be one of the registered values, and otherwise an error will be
+// reported during parsing / assignment to `jwk.KeyUsageType`
+func WithStrictKeyUsage(v bool) GlobalOption {
+	return &globalOption{option.New(identStrictKeyUsage{}, v)}
+}
+
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
 }
@@ -243,6 +274,8 @@ func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 //
 // This option is by default true. Specify a false value if you would
 // like to return immediately from the `Register()` call.
+//
+// This options is exactly the same as `httprc.WithWaitReady()`
 func WithWaitReady(v bool) RegisterOption {
 	return &registerOption{option.New(identWaitReady{}, v)}
 }
