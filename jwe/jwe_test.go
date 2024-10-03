@@ -226,7 +226,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 
 				var used interface{}
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
-
+				require.NoError(t, err)
 				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
 				require.Equal(t, pkJwk, used)
 			})
