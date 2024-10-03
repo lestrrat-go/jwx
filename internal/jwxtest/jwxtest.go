@@ -20,7 +20,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func GenerateRsaKey() (*rsa.PrivateKey, error) {
@@ -165,9 +165,7 @@ func WriteJSONFile(template string, v interface{}) (string, func(), error) {
 
 func DumpFile(t *testing.T, file string) {
 	buf, err := os.ReadFile(file)
-	if !assert.NoError(t, err, `failed to read file %s for debugging`, file) {
-		return
-	}
+	require.NoError(t, err, `failed to read file %s for debugging`, file)
 
 	if isHash, isArray := bytes.ContainsRune(buf, '{'), bytes.ContainsRune(buf, '['); isHash || isArray {
 		// Looks like a JSON-like thing. Dump that in a formatted manner, and
@@ -180,9 +178,7 @@ func DumpFile(t *testing.T, file string) {
 			v = []interface{}{}
 		}
 
-		if !assert.NoError(t, json.Unmarshal(buf, &v), `failed to parse contents as JSON`) {
-			return
-		}
+		require.NoError(t, json.Unmarshal(buf, &v), `failed to parse contents as JSON`)
 
 		buf, _ = json.MarshalIndent(v, "", "  ")
 		t.Logf("=== BEGIN %s (formatted JSON) ===", file)
@@ -200,9 +196,7 @@ func DumpFile(t *testing.T, file string) {
 	if strings.HasSuffix(file, ".jwe") {
 		// cross our fingers our jwe implementation works
 		m, err := jwe.Parse(buf)
-		if !assert.NoError(t, err, `failed to parse JWE encrypted message`) {
-			return
-		}
+		require.NoError(t, err, `failed to parse JWE encrypted message`)
 
 		buf, _ = json.MarshalIndent(m, "", "  ")
 	}
