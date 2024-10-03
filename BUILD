@@ -46,7 +46,6 @@ go_test(
         "//jwk",
         "//jwk/ecdsa",
         "//jws",
-        "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
 )
