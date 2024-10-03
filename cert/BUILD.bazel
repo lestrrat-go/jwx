@@ -20,7 +20,6 @@ go_test(
     deps = [
         ":cert",
         "//internal/jwxtest",
-        "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
 )
