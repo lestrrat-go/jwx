@@ -939,7 +939,7 @@ func TestRSA(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.RSA,
+				Value:  jwa.RSA(),
 			},
 			jwk.RSANKey: expectBase64(keyDef{
 				Method: "N",

@@ -270,14 +270,14 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+		case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:
 			tmp, err := jwa.KeyAlgorithmFrom(v)
 			if err != nil {
-				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+				return fmt.Errorf(`invalid algorithm for %q key: %w`, AlgorithmKey, err)
 			}
 			h.algorithm = &tmp
 		default:
-			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %q key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case RSAEKey:
@@ -983,14 +983,14 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
+		case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:
 			tmp, err := jwa.KeyAlgorithmFrom(v)
 			if err != nil {
-				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+				return fmt.Errorf(`invalid algorithm for %q key: %w`, AlgorithmKey, err)
 			}
 			h.algorithm = &tmp
 		default:
-			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %q key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case RSADKey:

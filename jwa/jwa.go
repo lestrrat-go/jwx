@@ -29,7 +29,8 @@ func ErrInvalidKeyAlgorithm() error {
 	return errInvalidKeyAlgorithm
 }
 
-// KeyAlgorithmFrom takes either a string, `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`
+// KeyAlgorithmFrom takes either a string, `jwa.SignatureAlgorithm`,
+// `jwa.KeyEncryptionAlgorithm`, or `jwa.ContentEncryptionAlgorithm`.
 // and returns a `jwa.KeyAlgorithm`.
 //
 // If the value cannot be handled, it returns an `jwa.InvalidKeyAlgorithm`
@@ -41,6 +42,8 @@ func KeyAlgorithmFrom(v any) (KeyAlgorithm, error) {
 		return v, nil
 	case KeyEncryptionAlgorithm:
 		return v, nil
+	case ContentEncryptionAlgorithm:
+		return v, nil
 	case string:
 		salg, ok := LookupSignatureAlgorithm(v)
 		if ok {
@@ -50,6 +53,11 @@ func KeyAlgorithmFrom(v any) (KeyAlgorithm, error) {
 		kalg, ok := LookupKeyEncryptionAlgorithm(v)
 		if ok {
 			return kalg, nil
+		}
+
+		calg, ok := LookupContentEncryptionAlgorithm(v)
+		if ok {
+			return calg, nil
 		}
 
 		return nil, fmt.Errorf(`invalid key value: %q: %w`, v, errInvalidKeyAlgorithm)

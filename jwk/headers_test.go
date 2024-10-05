@@ -70,7 +70,7 @@ func TestHeader(t *testing.T) {
 			}
 		}
 		require.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`)
-		require.Empty(t, h.Algorithm().String(), "Algorithm should be empty string")
+		require.Nil(t, h.Algorithm(), "Algorithm should be nil")
 		if h.KeyID() != "" {
 			t.Fatalf("KeyID should be empty string")
 		}

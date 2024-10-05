@@ -220,7 +220,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				pkJwk, err := jwk.Import(rawkey)
 				require.NoError(t, err, `jwk.New should succeed`)
 				// Keys are not going to be selected without an algorithm
-				_ = pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP)
+				require.NoError(t, pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP()), `jwk.Set should succeed`)
 				set := jwk.NewSet()
 				set.AddKey(pkJwk)
 

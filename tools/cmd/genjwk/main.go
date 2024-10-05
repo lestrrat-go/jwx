@@ -328,14 +328,14 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		o.L("case %s:", keyName)
 		if f.Name(false) == `algorithm` {
 			o.L("switch v := value.(type) {")
-			o.L("case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:")
+			o.L("case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:")
 			o.L("tmp, err := jwa.KeyAlgorithmFrom(v)")
 			o.L("if err != nil {")
-			o.L("return fmt.Errorf(`invalid algorithm for %%s key: %%w`, %s, err)", keyName)
+			o.L("return fmt.Errorf(`invalid algorithm for %%q key: %%w`, %s, err)", keyName)
 			o.L("}	")
 			o.L("h.algorithm = &tmp")
 			o.L("default:")
-			o.L("return fmt.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
+			o.L("return fmt.Errorf(`invalid type for %%q key: %%T`, %s, value)", keyName)
 			o.L("}")
 			o.L("return nil")
 		} else if f.Name(false) == `keyUsage` {

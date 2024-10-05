@@ -35,6 +35,9 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		},
 		{
 			Input: jwa.A128CBC_HS256(),
+		},
+		{
+			Input: "dummy",
 			Error: true,
 		},
 	}
