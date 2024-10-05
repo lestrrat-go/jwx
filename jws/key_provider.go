@@ -235,7 +235,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 	// it's unfortunate, but if you need this control, you are
 	// going to have to write your own fetcher
 	u, ok := sig.ProtectedHeaders().JWKSetURL()
-	if u == "" {
+	if !ok || u == "" {
 		return fmt.Errorf(`use of "jku" field specified, but the field is empty`)
 	}
 	uo, err := url.Parse(u)
