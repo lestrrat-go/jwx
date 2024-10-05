@@ -3,11 +3,11 @@
 
 package jwa
 
-var sepc256k1Algorithm = NewEllipticCurveAlgorithm("secp256k1")
+var secp256k1Algorithm = NewEllipticCurveAlgorithm("secp256k1")
 
 // This constant is only available if compiled with jwx_es256k build tag
 func Secp256k1() EllipticCurveAlgorithm {
-	return sepc256k1Algorithm
+	return secp256k1Algorithm
 }
 
 func init() {
