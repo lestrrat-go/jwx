@@ -4,6 +4,7 @@ package jwa_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -18,10 +19,10 @@ func TestCompressionAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.Deflate(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string DEF`, func(t *testing.T) {
+	t.Run(`Unmarshal the string DEF`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("DEF"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("DEF")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.Deflate(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for DEF`, func(t *testing.T) {
@@ -34,10 +35,10 @@ func TestCompressionAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.NoCompress(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string `, func(t *testing.T) {
+	t.Run(`Unmarshal the string `, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(""), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.NoCompress(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for `, func(t *testing.T) {
@@ -84,7 +85,7 @@ func TestCompressionAlgorithmCustomAlgorithm(t *testing.T) {
 		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.CompressionAlgorithm
-			require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
+			require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})

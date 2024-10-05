@@ -19,7 +19,7 @@ func init() {
 	// builtin values for KeyType
 	algorithms := make([]KeyType, 0, 5)
 
-	for _, alg := range []string{"EC", "", "OKP", "oct", "RSA"} {
+	for _, alg := range []string{"EC", "OKP", "oct", "RSA"} {
 		algorithms = append(algorithms, NewKeyType(alg))
 	}
 
@@ -31,9 +31,11 @@ func EC() KeyType {
 	return lookupBuiltinKeyType("EC")
 }
 
+var invalidKeyType = NewKeyType("")
+
 // InvalidKeyType returns the InvalidKeyType algorithm object.
 func InvalidKeyType() KeyType {
-	return lookupBuiltinKeyType("")
+	return invalidKeyType
 }
 
 // OKP returns the OKP algorithm object.

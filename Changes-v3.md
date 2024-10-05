@@ -14,6 +14,16 @@ These are changes that are incompatible with the v2.x.x version.
   `Get(string, interface{}) error`, where the second argument should be a pointer
   to the storage destination of the field.
 
+## JWA
+
+* All string constants have been renamed to equivalent functions that return a struct.
+* By default, only known algorithm names are accepted. For example, in our JWK tests,
+  there are tests that deal with "ECMR" algorithm, but this will now fail by default.
+  If you want this algorithm to succeed parsing, you need to call `jwa.RegisterXXXX`
+  functions before using them
+* Previously, unmarshaling unquoted strings used to work (e.g. `var s = "RS256"`),
+  but now they must conform to the JSON standard and be quoted (e.g. `var s = strconv.Quote("RS256")`)
+
 ## JWS
 
 * Iterators have been completely removed.

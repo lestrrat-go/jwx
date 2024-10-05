@@ -19,7 +19,7 @@ func init() {
 	// builtin values for EllipticCurveAlgorithm
 	algorithms := make([]EllipticCurveAlgorithm, 0, 8)
 
-	for _, alg := range []string{"Ed25519", "Ed448", "P-invalid", "P-256", "P-384", "P-521", "X25519", "X448"} {
+	for _, alg := range []string{"Ed25519", "Ed448", "P-256", "P-384", "P-521", "X25519", "X448"} {
 		algorithms = append(algorithms, NewEllipticCurveAlgorithm(alg))
 	}
 
@@ -36,9 +36,11 @@ func Ed448() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("Ed448")
 }
 
+var invalidEllipticCurve = NewEllipticCurveAlgorithm("P-invalid")
+
 // InvalidEllipticCurve returns the InvalidEllipticCurve algorithm object.
 func InvalidEllipticCurve() EllipticCurveAlgorithm {
-	return lookupBuiltinEllipticCurveAlgorithm("P-invalid")
+	return invalidEllipticCurve
 }
 
 // P256 returns the P256 algorithm object.

@@ -4,6 +4,7 @@ package jwa_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -18,10 +19,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.Ed25519(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string Ed25519`, func(t *testing.T) {
+	t.Run(`Unmarshal the string Ed25519`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("Ed25519"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("Ed25519")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.Ed25519(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for Ed25519`, func(t *testing.T) {
@@ -34,10 +35,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.Ed448(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string Ed448`, func(t *testing.T) {
+	t.Run(`Unmarshal the string Ed448`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("Ed448"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("Ed448")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.Ed448(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for Ed448`, func(t *testing.T) {
@@ -50,10 +51,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.P256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string P-256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string P-256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("P-256"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("P-256")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.P256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for P-256`, func(t *testing.T) {
@@ -66,10 +67,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.P384(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string P-384`, func(t *testing.T) {
+	t.Run(`Unmarshal the string P-384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("P-384"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("P-384")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.P384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for P-384`, func(t *testing.T) {
@@ -82,10 +83,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.P521(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string P-521`, func(t *testing.T) {
+	t.Run(`Unmarshal the string P-521`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("P-521"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("P-521")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.P521(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for P-521`, func(t *testing.T) {
@@ -98,10 +99,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.X25519(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string X25519`, func(t *testing.T) {
+	t.Run(`Unmarshal the string X25519`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("X25519"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("X25519")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.X25519(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for X25519`, func(t *testing.T) {
@@ -114,10 +115,10 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.X448(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string X448`, func(t *testing.T) {
+	t.Run(`Unmarshal the string X448`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("X448"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("X448")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.X448(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for X448`, func(t *testing.T) {
@@ -174,7 +175,7 @@ func TestEllipticCurveAlgorithmCustomAlgorithm(t *testing.T) {
 		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.EllipticCurveAlgorithm
-			require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
+			require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})

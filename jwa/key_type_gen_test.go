@@ -4,6 +4,7 @@ package jwa_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -18,10 +19,10 @@ func TestKeyType(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.EC(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string EC`, func(t *testing.T) {
+	t.Run(`Unmarshal the string EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, json.Unmarshal([]byte("EC"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("EC")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.EC(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for EC`, func(t *testing.T) {
@@ -34,10 +35,10 @@ func TestKeyType(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.OKP(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string OKP`, func(t *testing.T) {
+	t.Run(`Unmarshal the string OKP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, json.Unmarshal([]byte("OKP"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("OKP")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.OKP(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for OKP`, func(t *testing.T) {
@@ -50,10 +51,10 @@ func TestKeyType(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.OctetSeq(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string oct`, func(t *testing.T) {
+	t.Run(`Unmarshal the string oct`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, json.Unmarshal([]byte("oct"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("oct")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.OctetSeq(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for oct`, func(t *testing.T) {
@@ -66,10 +67,10 @@ func TestKeyType(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.RSA(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string RSA`, func(t *testing.T) {
+	t.Run(`Unmarshal the string RSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, json.Unmarshal([]byte("RSA"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RSA")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.RSA(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RSA`, func(t *testing.T) {
@@ -118,7 +119,7 @@ func TestKeyTypeCustomAlgorithm(t *testing.T) {
 		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
+			require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})

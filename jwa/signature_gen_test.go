@@ -4,6 +4,7 @@ package jwa_test
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -18,10 +19,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ES256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string ES256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string ES256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("ES256"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES256")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.ES256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES256`, func(t *testing.T) {
@@ -34,10 +35,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ES256K(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string ES256K`, func(t *testing.T) {
+	t.Run(`Unmarshal the string ES256K`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("ES256K"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES256K")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.ES256K(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES256K`, func(t *testing.T) {
@@ -50,10 +51,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ES384(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string ES384`, func(t *testing.T) {
+	t.Run(`Unmarshal the string ES384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("ES384"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES384")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.ES384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES384`, func(t *testing.T) {
@@ -66,10 +67,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ES512(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string ES512`, func(t *testing.T) {
+	t.Run(`Unmarshal the string ES512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("ES512"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES512")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.ES512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES512`, func(t *testing.T) {
@@ -82,10 +83,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.EdDSA(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string EdDSA`, func(t *testing.T) {
+	t.Run(`Unmarshal the string EdDSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("EdDSA"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("EdDSA")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.EdDSA(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for EdDSA`, func(t *testing.T) {
@@ -98,10 +99,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.HS256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string HS256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("HS256"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS256")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.HS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS256`, func(t *testing.T) {
@@ -114,10 +115,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.HS384(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string HS384`, func(t *testing.T) {
+	t.Run(`Unmarshal the string HS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("HS384"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS384")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.HS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS384`, func(t *testing.T) {
@@ -130,10 +131,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.HS512(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string HS512`, func(t *testing.T) {
+	t.Run(`Unmarshal the string HS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("HS512"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS512")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.HS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS512`, func(t *testing.T) {
@@ -146,10 +147,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.NoSignature(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string none`, func(t *testing.T) {
+	t.Run(`Unmarshal the string none`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("none"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("none")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.NoSignature(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for none`, func(t *testing.T) {
@@ -162,10 +163,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.PS256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string PS256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string PS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("PS256"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS256")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.PS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS256`, func(t *testing.T) {
@@ -178,10 +179,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.PS384(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string PS384`, func(t *testing.T) {
+	t.Run(`Unmarshal the string PS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("PS384"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS384")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.PS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS384`, func(t *testing.T) {
@@ -194,10 +195,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.PS512(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string PS512`, func(t *testing.T) {
+	t.Run(`Unmarshal the string PS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("PS512"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS512")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.PS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS512`, func(t *testing.T) {
@@ -210,10 +211,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.RS256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string RS256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string RS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("RS256"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS256")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.RS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS256`, func(t *testing.T) {
@@ -226,10 +227,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.RS384(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string RS384`, func(t *testing.T) {
+	t.Run(`Unmarshal the string RS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("RS384"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS384")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.RS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS384`, func(t *testing.T) {
@@ -242,10 +243,10 @@ func TestSignatureAlgorithm(t *testing.T) {
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.RS512(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`Unmarhal the string RS512`, func(t *testing.T) {
+	t.Run(`Unmarshal the string RS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte("RS512"), &dst), `UnmarshalJSON is successful`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS512")), &dst), `UnmarshalJSON is successful`)
 		require.Equal(t, jwa.RS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS512`, func(t *testing.T) {
@@ -354,7 +355,7 @@ func TestSignatureAlgorithmCustomAlgorithm(t *testing.T) {
 			t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 				t.Parallel()
 				var dst jwa.SignatureAlgorithm
-				require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
+				require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
 				require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 			})
 			t.Run(`check symmetric`, func(t *testing.T) {

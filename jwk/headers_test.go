@@ -86,7 +86,7 @@ func TestHeader(t *testing.T) {
 		t.Parallel()
 		h, err := jwk.Import([]byte("dummy"))
 		require.NoError(t, err, `jwk.New should succeed`)
-		for _, value := range []interface{}{jwa.RS256, jwa.RSA1_5} {
+		for _, value := range []interface{}{jwa.RS256(), jwa.RSA1_5()} {
 			require.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed")
 
 			var got jwa.KeyAlgorithm

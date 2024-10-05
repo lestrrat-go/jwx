@@ -143,7 +143,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
 	msg := jwe.NewMessage()
-	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP, rawkey), jwe.WithMessage(msg))
+	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP(), rawkey), jwe.WithMessage(msg))
 	require.NoError(t, err, "jwe.Decrypt should be successful")
 	require.Equal(t, 1, len(msg.Recipients()), "message recipients header length is 1")
 	require.Equal(t, payload, string(plaintext), "decrypted value does not match")
@@ -190,7 +190,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		options := make([]jwe.EncryptOption, len(tmpl.Options))
 		copy(options, tmpl.Options)
 
-		for j, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress, jwa.Deflate} {
+		for j, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress(), jwa.Deflate()} {
 			compName := compression.String()
 			if compName == "" {
 				compName = "none"
@@ -205,14 +205,14 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
 			options := tc.Options
-			options = append(options, jwe.WithKey(jwa.RSA_OAEP, rawkey.PublicKey))
+			options = append(options, jwe.WithKey(jwa.RSA_OAEP(), rawkey.PublicKey))
 
 			encrypted, err := jwe.Encrypt(plaintext, options...)
 			require.NoError(t, err, "jwe.Encrypt should succeed")
 			t.Logf("%s", encrypted)
 
 			t.Run("WithKey", func(t *testing.T) {
-				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawkey))
+				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), rawkey))
 				require.NoError(t, err, "jwe.Decrypt should succeed")
 				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
 			})
@@ -281,7 +281,7 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 	}
 
 	for range iterations {
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5(), &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5(), &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
 		require.NoError(t, err, "Encrypt is successful")
 
 		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), rsaPrivKey))
@@ -307,10 +307,10 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 	}
 
 	for range iterations {
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW, sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.A128KW(), sharedkey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
 		require.NoError(t, err, "Encrypt is successful")
 
-		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW, sharedkey))
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW(), sharedkey))
 		require.NoError(t, err, "Decrypt successful")
 		require.Equal(t, plaintext, decrypted, "Decrypted correct plaintext")
 	}
@@ -321,10 +321,10 @@ func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}
 	plaintext := []byte("Lorem ipsum")
 
 	algorithms := []jwa.KeyEncryptionAlgorithm{
-		jwa.ECDH_ES,
-		jwa.ECDH_ES_A256KW,
-		jwa.ECDH_ES_A192KW,
-		jwa.ECDH_ES_A128KW,
+		jwa.ECDH_ES(),
+		jwa.ECDH_ES_A256KW(),
+		jwa.ECDH_ES_A192KW(),
+		jwa.ECDH_ES_A128KW(),
 	}
 
 	for _, alg := range algorithms {
@@ -400,7 +400,11 @@ func Test_GHIssue207(t *testing.T) {
 			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
-				sink.Key(r.Headers().Algorithm(), &key)
+				alg, ok := r.Headers().Algorithm()
+				if !ok {
+					return fmt.Errorf(`attempted to fetch algorithm, could not find it`)
+				}
+				sink.Key(alg, &key)
 				return nil
 			})))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
@@ -415,12 +419,12 @@ func TestEncode_Direct(t *testing.T) {
 		Algorithm jwa.ContentEncryptionAlgorithm
 		KeySize   int // in bytes
 	}{
-		{jwa.A128CBC_HS256, 32},
-		{jwa.A128GCM, 16},
-		{jwa.A192CBC_HS384, 48},
-		{jwa.A192GCM, 24},
-		{jwa.A256CBC_HS512, 64},
-		{jwa.A256GCM, 32},
+		{jwa.A128CBC_HS256(), 32},
+		{jwa.A128GCM(), 16},
+		{jwa.A192CBC_HS384(), 48},
+		{jwa.A192GCM(), 24},
+		{jwa.A256CBC_HS512(), 64},
+		{jwa.A256GCM(), 32},
 	}
 	plaintext := []byte("Lorem ipsum")
 
@@ -436,9 +440,9 @@ func TestEncode_Direct(t *testing.T) {
 				n += w
 			}
 
-			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT, key), jwe.WithContentEncryption(tc.Algorithm))
+			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(tc.Algorithm))
 			require.NoError(t, err, `jwe.Encrypt should succeed`)
-			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT, key))
+			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
 			require.Equal(t, plaintext, decrypted, `jwe.Decrypt should match input plaintext`)
 		})
@@ -454,37 +458,37 @@ func TestDecodePredefined_Direct(t *testing.T) {
 		Data       string // generated with 'jose jwe enc -I msg.txt -k key.jwk -o msg.jwe'
 	}{
 		{
-			jwa.A128CBC_HS256,
+			jwa.A128CBC_HS256(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
 		},
 		{
-			jwa.A128GCM,
+			jwa.A128GCM(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
 		},
 		{
-			jwa.A192CBC_HS384,
+			jwa.A192CBC_HS384(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
 		},
 		{
-			jwa.A192GCM,
+			jwa.A192GCM(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
 		},
 		{
-			jwa.A256CBC_HS512,
+			jwa.A256CBC_HS512(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
 		},
 		{
-			jwa.A256GCM,
+			jwa.A256GCM(),
 			`{"alg":"A128GCM","k":"9hexZKVSV9pZhPNzgXiD8g","key_ops":["encrypt","decrypt"],"kty":"oct"}`,
 			`RwW22IemrIJLFwlqZ-OQUe_Lnbo`,
 			`{"ciphertext":"FX_px9cuyO_hZfo","encrypted_key":"","header":{"alg":"dir"},"iv":"Z9CRJCFPtpEI5Pwq","protected":"eyJlbmMiOiJBMTI4R0NNIn0","tag":"1iq0MNDX40XVtqGYinhUtQ"}`,
@@ -504,7 +508,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 			var key []byte
 			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
 
-			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT, key))
+			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
 			require.Equal(t, plaintext, string(decrypted), `plaintext should match`)
 		})
@@ -572,7 +576,7 @@ func TestCustomField(t *testing.T) {
 		protected.Set(rfc3339Key, string(rfc3339bytes))
 		protected.Set(rfc1123Key, rfc1123bytes)
 
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected))
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP(), pubkey), jwe.WithProtectedHeaders(protected))
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
 		msg, err := jwe.Parse(encrypted)
 		require.NoError(t, err, `jwe.Parse should succeed`)
@@ -587,7 +591,7 @@ func TestCustomField(t *testing.T) {
 		protected.Set(rfc3339Key, string(rfc3339bytes))
 		protected.Set(rfc1123Key, rfc1123bytes)
 
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, pubkey), jwe.WithProtectedHeaders(protected), jwe.WithJSON())
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP(), pubkey), jwe.WithProtectedHeaders(protected), jwe.WithJSON())
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
 		msg := jwe.NewMessage()
 		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
@@ -612,7 +616,7 @@ func TestGH554(t *testing.T) {
 	require.NoError(t, err, `jwk.PublicKeyOf() should succeed`)
 	require.Equal(t, keyID, pubkey.KeyID(), `key ID should match`)
 
-	encrypted, err := jwe.Encrypt([]byte(plaintext), jwe.WithKey(jwa.ECDH_ES, pubkey))
+	encrypted, err := jwe.Encrypt([]byte(plaintext), jwe.WithKey(jwa.ECDH_ES(), pubkey))
 	require.NoError(t, err, `jwk.Encrypt() should succeed`)
 
 	msg, err := jwe.Parse(encrypted)
@@ -621,7 +625,8 @@ func TestGH554(t *testing.T) {
 	recipients := msg.Recipients()
 
 	// The epk must have the same key ID as the original
-	kid := recipients[0].Headers().KeyID()
+	kid, ok := recipients[0].Headers().KeyID()
+	require.True(t, ok, `key ID should be present`)
 	require.Equal(t, keyID, kid, `key ID in epk should match`)
 }
 
@@ -638,21 +643,26 @@ func TestGH803(t *testing.T) {
 	encrypted, err := jwe.Encrypt(
 		payload,
 		jwe.WithJSON(),
-		jwe.WithKey(jwa.ECDH_ES, privateKey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)),
-		jwe.WithContentEncryption(jwa.A128GCM),
+		jwe.WithKey(jwa.ECDH_ES(), privateKey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)),
+		jwe.WithContentEncryption(jwa.A128GCM()),
 	)
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
 	var msg jwe.Message
 	decrypted, err := jwe.Decrypt(
 		encrypted,
-		jwe.WithKey(jwa.ECDH_ES, privateKey),
+		jwe.WithKey(jwa.ECDH_ES(), privateKey),
 		jwe.WithMessage(&msg),
 	)
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
-	require.Equal(t, apu, msg.ProtectedHeaders().AgreementPartyUInfo())
-	require.Equal(t, apv, msg.ProtectedHeaders().AgreementPartyVInfo())
+	gotapu, ok := msg.ProtectedHeaders().AgreementPartyUInfo()
+	require.True(t, ok, `apu should be present`)
+	require.Equal(t, apu, gotapu, `apu should match`)
+
+	gotapv, ok := msg.ProtectedHeaders().AgreementPartyVInfo()
+	require.True(t, ok, `apv should be present`)
+	require.Equal(t, apv, gotapv, `apv should match`)
 }
 
 func TestGH840(t *testing.T) {
@@ -673,7 +683,7 @@ func TestGH840(t *testing.T) {
 	require.NoError(t, err, `privkey.PublicKey should succeed`)
 
 	const payload = `Lorem ipsum`
-	_, err = jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A128KW, pubkey))
+	_, err = jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A128KW(), pubkey))
 	require.Error(t, err, `jwe.Encrypt should fail (instead of panic)`)
 }
 
@@ -686,7 +696,7 @@ func (kd *dummyKeyEncrypterDecrypter) DecryptKey(_ jwa.KeyEncryptionAlgorithm, c
 }
 
 func (kd *dummyKeyEncrypterDecrypter) Algorithm() jwa.KeyEncryptionAlgorithm {
-	return jwa.A128GCMKW
+	return jwa.A128GCMKW()
 }
 
 func (kd *dummyKeyEncrypterDecrypter) EncryptKey(key []byte) ([]byte, error) {
@@ -704,15 +714,15 @@ func TestGH924(t *testing.T) {
 	encrypted, err := jwe.Encrypt(
 		payload,
 		jwe.WithJSON(),
-		jwe.WithKey(jwa.A128GCMKW, ked),
-		jwe.WithContentEncryption(jwa.A128GCM),
+		jwe.WithKey(jwa.A128GCMKW(), ked),
+		jwe.WithContentEncryption(jwa.A128GCM()),
 	)
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
 	var msg jwe.Message
 	decrypted, err := jwe.Decrypt(
 		encrypted,
-		jwe.WithKey(jwa.A128GCMKW, ked),
+		jwe.WithKey(jwa.A128GCMKW(), ked),
 		jwe.WithMessage(&msg),
 	)
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
@@ -723,24 +733,24 @@ func TestGH1001(t *testing.T) {
 	rawKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
 
-	encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), rawKey.PublicKey))
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 	var cek []byte
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rawKey), jwe.WithCEK(&cek))
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), rawKey), jwe.WithCEK(&cek))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 
 	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
 	require.NotNil(t, cek, `cek should not be nil`)
 
-	reEncrypted, err := jwe.EncryptStatic([]byte("Lorem Ipsum"), cek, jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	reEncrypted, err := jwe.EncryptStatic([]byte("Lorem Ipsum"), cek, jwe.WithKey(jwa.RSA_OAEP(), rawKey.PublicKey))
 	require.NoError(t, err, `jwe.EncryptStatic should succeed`)
 
 	// sanity. empty CEKs should be rejected
-	_, err = jwe.EncryptStatic([]byte("Lorem Ipsum"), nil, jwe.WithKey(jwa.RSA_OAEP, rawKey.PublicKey))
+	_, err = jwe.EncryptStatic([]byte("Lorem Ipsum"), nil, jwe.WithKey(jwa.RSA_OAEP(), rawKey.PublicKey))
 	require.Error(t, err, `jwe.Encryptstatic should fail with empty cek`)
 
 	cek = []byte(nil)
-	decrypted, err = jwe.Decrypt(reEncrypted, jwe.WithKey(jwa.RSA_OAEP, rawKey), jwe.WithCEK(&cek))
+	decrypted, err = jwe.Decrypt(reEncrypted, jwe.WithKey(jwa.RSA_OAEP(), rawKey), jwe.WithCEK(&cek))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 
 	require.Equal(t, "Lorem Ipsum", string(decrypted), `decrypted message should match`)
@@ -758,7 +768,7 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 
 		done := make(chan struct{})
 		go func(t *testing.T, done chan struct{}) {
-			_, err := jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+			_, err := jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 			require.Error(t, err, `jwe.Decrypt should fail`)
 			close(done)
 		}(t, done)
@@ -782,7 +792,7 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 
 		done := make(chan struct{})
 		go func(done chan struct{}) {
-			_, _ = jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+			_, _ = jwe.Decrypt(token, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 			close(done)
 		}(done)
 
@@ -803,7 +813,7 @@ func TestMaxBufferSize(t *testing.T) {
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	_, err = jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithContentEncryption(jwa.A128CBC_HS256), jwe.WithKey(jwa.RSA_OAEP, key))
+	_, err = jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithContentEncryption(jwa.A128CBC_HS256()), jwe.WithKey(jwa.RSA_OAEP(), key))
 	require.Error(t, err, `jwe.Encrypt should fail`)
 }
 
@@ -873,11 +883,11 @@ func TestMaxDecompressBufferSize(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			jwe.Settings(jwe.WithMaxDecompressBufferSize(tc.GlobalMaxSize))
 
-			encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, tc.PublicKey), jwe.WithContentEncryption("A128CBC-HS256"), jwe.WithCompress(jwa.Deflate))
+			encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), tc.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()), jwe.WithCompress(jwa.Deflate()))
 
 			require.NoError(t, err, `jwe.Encrypt should succeed`)
 
-			decryptOptions := []jwe.DecryptOption{jwe.WithKey(jwa.RSA_OAEP, privkey)}
+			decryptOptions := []jwe.DecryptOption{jwe.WithKey(jwa.RSA_OAEP(), privkey)}
 
 			if fn := tc.ProcessDecryptOptions; fn != nil {
 				decryptOptions = fn(decryptOptions)

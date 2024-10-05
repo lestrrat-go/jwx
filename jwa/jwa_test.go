@@ -28,13 +28,13 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		Error bool
 	}{
 		{
-			Input: jwa.RS256,
+			Input: jwa.RS256(),
 		},
 		{
-			Input: jwa.DIRECT,
+			Input: jwa.DIRECT(),
 		},
 		{
-			Input: jwa.A128CBC_HS256,
+			Input: jwa.A128CBC_HS256(),
 			Error: true,
 		},
 	}

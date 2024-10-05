@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/lestrrat-go/codegen"
 )
@@ -436,6 +437,9 @@ func (t typ) Generate() error {
 		if e.sym {
 			continue
 		}
+		if e.invalid {
+			continue
+		}
 		if ecount > 0 {
 			o.R(", ")
 		}
@@ -451,9 +455,16 @@ func (t typ) Generate() error {
 
 	// Accessors for builtin algorithms
 	for _, e := range t.elements {
+		if e.invalid {
+			o.L("var %s = New%s(%q)", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]), t.name, e.value)
+		}
 		o.LL("// %s returns the %s algorithm object.", e.name, e.name)
 		o.L("func %s() %s {", e.name, t.name)
-		o.L("return lookupBuiltin%s(%q)", t.name, e.value)
+		if e.invalid {
+			o.L("return %s", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]))
+		} else {
+			o.L("return lookupBuiltin%s(%q)", t.name, e.value)
+		}
 		o.L("}")
 	}
 
@@ -608,6 +619,7 @@ func (t typ) GenerateTest() error {
 
 	o.L("import (")
 	pkgs := []string{
+		"strconv",
 		"testing",
 		"github.com/lestrrat-go/jwx/v3/jwa",
 		"github.com/stretchr/testify/require",
@@ -627,10 +639,10 @@ func (t typ) GenerateTest() error {
 		o.L("require.Equal(t, jwa.%s(), v, `Lookup value should be equal to constant`)", e.name)
 		o.L("})")
 
-		o.L("t.Run(`Unmarhal the string %s`, func(t *testing.T) {", e.value)
+		o.L("t.Run(`Unmarshal the string %s`, func(t *testing.T) {", e.value)
 		o.L("t.Parallel()")
 		o.L("var dst jwa.%s", t.name)
-		o.L("require.NoError(t, json.Unmarshal([]byte(%q), &dst), `UnmarshalJSON is successful`)", e.value)
+		o.L("require.NoError(t, json.Unmarshal([]byte(strconv.Quote(%q)), &dst), `UnmarshalJSON is successful`)", e.value)
 		o.L("require.Equal(t, jwa.%s(), dst, `unmarshaled value should be equal to constant`)", e.name)
 		o.L("})")
 
@@ -715,7 +727,7 @@ func (t typ) GenerateTest() error {
 	o.L("t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)")
+	o.L("require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)")
 	o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
 	o.L("})")
 	if t.symmetric {
