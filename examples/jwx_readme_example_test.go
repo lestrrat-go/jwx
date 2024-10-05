@@ -40,7 +40,7 @@ func ExampleJWX() {
 		}
 
 		// Sign a JWT!
-		signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, privkey))
+		signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), privkey))
 		if err != nil {
 			fmt.Printf("failed to sign token: %s\n", err)
 			return
@@ -48,7 +48,7 @@ func ExampleJWX() {
 
 		// Verify a JWT!
 		{
-			verifiedToken, err := jwt.Parse(signed, jwt.WithKey(jwa.RS256, pubkey))
+			verifiedToken, err := jwt.Parse(signed, jwt.WithKey(jwa.RS256(), pubkey))
 			if err != nil {
 				fmt.Printf("failed to verify JWS: %s\n", err)
 				return
@@ -61,7 +61,7 @@ func ExampleJWX() {
 			req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
 			req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, signed))
 
-			verifiedToken, err := jwt.ParseRequest(req, jwt.WithKey(jwa.RS256, pubkey))
+			verifiedToken, err := jwt.ParseRequest(req, jwt.WithKey(jwa.RS256(), pubkey))
 			if err != nil {
 				fmt.Printf("failed to verify token from HTTP request: %s\n", err)
 				return
@@ -72,13 +72,13 @@ func ExampleJWX() {
 
 	// Encrypt and Decrypt arbitrary payload with JWE!
 	{
-		encrypted, err := jwe.Encrypt(payloadLoremIpsum, jwe.WithKey(jwa.RSA_OAEP, jwkRSAPublicKey))
+		encrypted, err := jwe.Encrypt(payloadLoremIpsum, jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPublicKey))
 		if err != nil {
 			fmt.Printf("failed to encrypt payload: %s\n", err)
 			return
 		}
 
-		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, jwkRSAPrivateKey))
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPrivateKey))
 		if err != nil {
 			fmt.Printf("failed to decrypt payload: %s\n", err)
 			return
@@ -92,13 +92,13 @@ func ExampleJWX() {
 
 	// Sign and Verify arbitrary payload with JWS!
 	{
-		signed, err := jws.Sign(payloadLoremIpsum, jws.WithKey(jwa.RS256, jwkRSAPrivateKey))
+		signed, err := jws.Sign(payloadLoremIpsum, jws.WithKey(jwa.RS256(), jwkRSAPrivateKey))
 		if err != nil {
 			fmt.Printf("failed to sign payload: %s\n", err)
 			return
 		}
 
-		verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, jwkRSAPublicKey))
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256(), jwkRSAPublicKey))
 		if err != nil {
 			fmt.Printf("failed to verify payload: %s\n", err)
 			return

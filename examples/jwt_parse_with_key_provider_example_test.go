@@ -26,7 +26,7 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
 	}
 
 	symmetricKey := []byte("Abracadabra")
-	alg := jwa.HS256
+	alg := jwa.HS256()
 	signed, err := jwt.Sign(tok, jwt.WithKey(alg, symmetricKey))
 	if err != nil {
 		fmt.Printf("failed to sign token: %s\n", err)
@@ -86,9 +86,9 @@ func ExampleJWT_ParseWithKeyProvider() {
 	// a signature algorithm to a key
 	store := make(map[jwa.KeyAlgorithm]interface{})
 	algorithms := []jwa.SignatureAlgorithm{
-		jwa.RS256,
-		jwa.RS384,
-		jwa.RS512,
+		jwa.RS256(),
+		jwa.RS384(),
+		jwa.RS512(),
 	}
 	var signingKey *rsa.PrivateKey
 	for _, alg := range algorithms {
@@ -118,7 +118,10 @@ func ExampleJWT_ParseWithKeyProvider() {
 	// you should probably use a reusable object that implements
 	// jws.KeyProvider
 	tok, err := jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, _ *jws.Message) error {
-		alg := sig.ProtectedHeaders().Algorithm()
+		alg, ok := sig.ProtectedHeaders().Algorithm()
+		if !ok {
+			return nil
+		}
 		key, ok := store[alg]
 		if !ok {
 			// nothing found

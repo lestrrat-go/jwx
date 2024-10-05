@@ -17,7 +17,7 @@ func ExampleJWT_ParseWithKey() {
 		return
 	}
 
-	tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256, key), jwt.WithValidate(false))
+	tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false))
 	if err != nil {
 		fmt.Printf("jwt.Parse failed: %s\n", err)
 		return

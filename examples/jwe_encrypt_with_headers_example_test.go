@@ -21,7 +21,7 @@ func ExampleJWE_SignWithHeaders() {
 
 	hdrs := jwe.NewHeaders()
 	hdrs.Set(`x-example`, true)
-	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)))
+	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), privkey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)))
 	if err != nil {
 		fmt.Printf("failed to encrypt payload: %s\n", err)
 		return

@@ -40,8 +40,8 @@ func ExampleJWT_SerializeJWEJWS() {
 	}
 
 	serialized, err := jwt.NewSerializer().
-		Encrypt(jwt.WithKey(jwa.RSA_OAEP, enckey)).
-		Sign(jwt.WithKey(jwa.HS256, signkey)).
+		Encrypt(jwt.WithKey(jwa.RSA_OAEP(), enckey)).
+		Sign(jwt.WithKey(jwa.HS256(), signkey)).
 		Serialize(tok)
 	if err != nil {
 		fmt.Printf("failed to encrypt and sign token: %s\n", err)

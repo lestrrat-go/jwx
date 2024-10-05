@@ -53,7 +53,7 @@ func ExampleJWT_ParseWithJWKS() {
 			token.Set(`foo`, `bar`)
 
 			// Sign the token and generate a payload
-			signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, realKey))
+			signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), realKey))
 			if err != nil {
 				fmt.Printf("failed to generate signed payload: %s\n", err)
 				return
@@ -69,7 +69,7 @@ func ExampleJWT_ParseWithJWKS() {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
 			}
-			pubKey.Set(jwk.AlgorithmKey, jwa.RS256)
+			pubKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
 			// This JWKS can *only* have 1 key.
 			keyset = jwk.NewSet()
@@ -141,7 +141,7 @@ func ExampleJWT_Sign_WithImportJWK() {
 	}
 
 	// signed and return a jwt
-	signed, _ := jwt.Sign(t, jwt.WithKey(jwa.RS256, jwkey))
+	signed, _ := jwt.Sign(t, jwt.WithKey(jwa.RS256(), jwkey))
 
 	fmt.Println(string(signed[:]))
 
@@ -160,7 +160,7 @@ func ExampleJWT_Sign() {
 	{ // Create signed payload
 		token := jwt.New()
 		token.Set(`foo`, `bar`)
-		payload, err = jwt.Sign(token, jwt.WithKey(jwa.RS256, privKey))
+		payload, err = jwt.Sign(token, jwt.WithKey(jwa.RS256(), privKey))
 		if err != nil {
 			fmt.Printf("failed to generate signed payload: %s\n", err)
 			return
@@ -173,7 +173,7 @@ func ExampleJWT_Sign() {
 		token, err := jwt.Parse(
 			payload,
 			jwt.WithValidate(true),
-			jwt.WithKey(jwa.RS256, &privKey.PublicKey),
+			jwt.WithKey(jwa.RS256(), &privKey.PublicKey),
 		)
 		if err != nil {
 			fmt.Printf("failed to parse JWT token: %s\n", err)
@@ -242,7 +242,7 @@ func ExampleJWT_SignToken() {
 
 	{
 		// Signing a token (using raw rsa.PrivateKey)
-		signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, key))
+		signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256(), key))
 		if err != nil {
 			log.Printf("failed to sign token: %s", err)
 			return
@@ -258,7 +258,7 @@ func ExampleJWT_SignToken() {
 			return
 		}
 
-		signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256, jwkKey))
+		signed, err := jwt.Sign(t, jwt.WithKey(jwa.RS256(), jwkKey))
 		if err != nil {
 			log.Printf("failed to sign token: %s", err)
 			return

@@ -29,13 +29,13 @@ func ExampleJWE_Encrypt() {
 	}
 
 	const payload = `Lorem ipsum`
-	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, pubkey))
+	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), pubkey))
 	if err != nil {
 		fmt.Printf("failed to encrypt payload: %s\n", err)
 		return
 	}
 
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, privkey))
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
 	if err != nil {
 		fmt.Printf("failed to decrypt payload: %s\n", err)
 		return

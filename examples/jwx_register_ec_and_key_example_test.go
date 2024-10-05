@@ -24,7 +24,7 @@ import (
 //
 // For demonstration purposes, it could as well be a random string, as long
 // as its consistent in your usage.
-const SM2 jwa.EllipticCurveAlgorithm = "SM2"
+var SM2 = jwa.NewEllipticCurveAlgorithm("SM2")
 
 func init() {
 	// Register the algorithm name so it can be looked up
@@ -39,7 +39,7 @@ func init() {
 	// is exactly the same type as *ecdsa.PublicKey
 	jwk.RegisterKeyImporter(&sm2.PrivateKey{}, jwk.KeyImportFunc(convertShangMiSm2))
 
-	jwk.RegisterKeyExporter(jwa.EC, jwk.KeyExportFunc(convertJWKToShangMiSm2))
+	jwk.RegisterKeyExporter(jwa.EC(), jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
 
 func convertShangMiSm2(key interface{}) (jwk.Key, error) {
@@ -143,7 +143,7 @@ func ExampleShangMiSm2() {
 	}
 
 	payload := []byte("Lorem ipsum")
-	signed, err := jws.Sign(payload, jws.WithKey(jwa.ES256, shangmi2JWK))
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), shangmi2JWK))
 	if err != nil {
 		fmt.Printf("Failed to sign using ShangMi key: %s\n", err)
 		return
@@ -155,7 +155,7 @@ func ExampleShangMiSm2() {
 		return
 	}
 
-	verified, err := jws.Verify(signed, jws.WithKey(jwa.ES256, shangmi2PubJWK))
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.ES256(), shangmi2PubJWK))
 	if err != nil {
 		fmt.Printf("Failed to verify using ShangMi key: %s\n", err)
 		return

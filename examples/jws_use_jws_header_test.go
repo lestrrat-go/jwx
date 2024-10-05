@@ -25,7 +25,7 @@ func ExampleJWS_UseJWSHeader() {
 		return
 	}
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf(`failed to sign token: %s`, err)
 		return
@@ -40,7 +40,12 @@ func ExampleJWS_UseJWSHeader() {
 	// While JWT enveloped with JWS in compact format only has 1 signature,
 	// a generic JWS message may have multiple signatures. Therefore, we
 	// need to access the first element
-	fmt.Printf("%q\n", msg.Signatures()[0].ProtectedHeaders().KeyID())
+	kid, ok := msg.Signatures()[0].ProtectedHeaders().KeyID()
+	if !ok {
+		fmt.Printf("failed to get key ID from protected headers")
+		return
+	}
+	fmt.Printf("%q\n", kid)
 	// OUTPUT:
 	// "secret-key"
 }

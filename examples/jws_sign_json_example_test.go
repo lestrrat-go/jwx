@@ -22,7 +22,7 @@ func ExampleJWS_SignJSON() {
 
 	options := []jws.SignOption{jws.WithJSON()}
 	for _, key := range keys {
-		options = append(options, jws.WithKey(jwa.HS256, key))
+		options = append(options, jws.WithKey(jwa.HS256(), key))
 	}
 
 	buf, err := jws.Sign([]byte("Lorem ipsum"), options...)

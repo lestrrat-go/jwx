@@ -18,7 +18,7 @@ func ExampleJWS_VerifyDetachedPayload() {
 		return
 	}
 
-	verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+	verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload([]byte(payload)))
 	if err != nil {
 		fmt.Printf("failed to verify payload: %s\n", err)
 		return

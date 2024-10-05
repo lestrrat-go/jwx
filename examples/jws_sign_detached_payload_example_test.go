@@ -17,7 +17,7 @@ func ExampleJWS_SignDetachedPayload() {
 		return
 	}
 
-	serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+	serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload([]byte(payload)))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
 		return

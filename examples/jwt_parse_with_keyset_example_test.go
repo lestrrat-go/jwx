@@ -32,7 +32,7 @@ func ExampleJWT_ParseWithKeySet() {
 			return
 		}
 		realKey.Set(jwk.KeyIDKey, `mykey`)
-		realKey.Set(jwk.AlgorithmKey, jwa.RS256)
+		realKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
 		// For demonstration purposes, we also create a bogus key
 		bogusKey, err := jwk.Import([]byte("bogus"))
@@ -40,7 +40,7 @@ func ExampleJWT_ParseWithKeySet() {
 			fmt.Printf("failed to create bogus JWK: %s\n", err)
 			return
 		}
-		bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature)
+		bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature())
 		bogusKey.Set(jwk.KeyIDKey, "otherkey")
 
 		// Now create a key set that users will use to verity the signed serialized against
@@ -68,7 +68,7 @@ func ExampleJWT_ParseWithKeySet() {
 	token.Set(`foo`, `bar`)
 
 	// Sign the token and generate a JWS message
-	signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, signingKey))
+	signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), signingKey))
 	if err != nil {
 		fmt.Printf("failed to generate signed serialized: %s\n", err)
 		return

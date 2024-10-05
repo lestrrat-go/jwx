@@ -20,7 +20,7 @@ func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 
 	payload := []byte("Lorem Ipsum")
 
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5, &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5(), &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -34,7 +34,7 @@ func ExampleJWE_Decrypt() {
 		return
 	}
 
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5, privkey))
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), privkey))
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
 		return
@@ -68,7 +68,7 @@ func ExampleJWE_ComplexDecrypt() {
 	protected.Set(`jwx-hints`, `foobar`) // in real life this would a more meaningful value
 	encrypted, err := jwe.Encrypt(
 		[]byte(payload),
-		jwe.WithKey(jwa.RSA_OAEP, privkey.PublicKey),
+		jwe.WithKey(jwa.RSA_OAEP(), privkey.PublicKey),
 		jwe.WithProtectedHeaders(protected),
 	)
 	if err != nil {
@@ -93,7 +93,7 @@ func ExampleJWE_ComplexDecrypt() {
 				// You may opt to set both the algorithm and key here as well.
 				// BUT BE CAREFUL so that you don't accidentally create a
 				// vulnerability
-				sink.Key(jwa.RSA_OAEP, privkey)
+				sink.Key(jwa.RSA_OAEP(), privkey)
 				return nil
 			}
 		}

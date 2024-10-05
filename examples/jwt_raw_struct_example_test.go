@@ -21,12 +21,12 @@ func ExampleJWTPlainStruct() {
 	}
 
 	key := []byte("secret")
-	signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256, key))
+	signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to sign JWT: %s\n", err)
 	}
 
-	rawJWT, err := jws.Verify(signed, jws.WithKey(jwa.HS256, key))
+	rawJWT, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to verify JWS: %s\n", err)
 	}

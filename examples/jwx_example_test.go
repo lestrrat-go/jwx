@@ -92,7 +92,7 @@ func Setup() error {
 	}
 
 	{
-		v, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
+		v, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), jwkSymmetricKey))
 		if err != nil {
 			return fmt.Errorf(`failed to sign token with HS256: %w`, err)
 		}

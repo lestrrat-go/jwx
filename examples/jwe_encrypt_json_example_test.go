@@ -29,13 +29,13 @@ func ExampleJWE_EncryptJSON() {
 	}
 
 	const payload = `Lorem ipsum`
-	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithJSON(), jwe.WithKey(jwa.RSA_OAEP, pubkey))
+	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithJSON(), jwe.WithKey(jwa.RSA_OAEP(), pubkey))
 	if err != nil {
 		fmt.Printf("failed to encrypt payload: %s\n", err)
 		return
 	}
 
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, privkey))
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
 	if err != nil {
 		fmt.Printf("failed to decrypt payload: %s\n", err)
 		return
@@ -72,7 +72,7 @@ func ExampleJWE_EncryptJSONMulti() {
 
 	options := []jwe.EncryptOption{jwe.WithJSON()}
 	for _, key := range pubkeys {
-		options = append(options, jwe.WithKey(jwa.RSA_OAEP, key))
+		options = append(options, jwe.WithKey(jwa.RSA_OAEP(), key))
 	}
 
 	const payload = `Lorem ipsum`
@@ -83,7 +83,7 @@ func ExampleJWE_EncryptJSONMulti() {
 	}
 
 	for _, key := range privkeys {
-		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, key))
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), key))
 		if err != nil {
 			fmt.Printf("failed to decrypt payload: %s\n", err)
 			return

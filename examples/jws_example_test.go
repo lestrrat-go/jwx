@@ -33,12 +33,12 @@ func ExampleJWS_Message() {
 	}
 
 	public1 := jws.NewHeaders()
-	_ = public1.Set(jws.AlgorithmKey, jwa.RS256)
+	_ = public1.Set(jws.AlgorithmKey, jwa.RS256())
 	protected1 := jws.NewHeaders()
 	_ = protected1.Set(jws.KeyIDKey, "2010-12-29")
 
 	public2 := jws.NewHeaders()
-	_ = public2.Set(jws.AlgorithmKey, jwa.ES256)
+	_ = public2.Set(jws.AlgorithmKey, jwa.ES256())
 	protected2 := jws.NewHeaders()
 	_ = protected2.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 
