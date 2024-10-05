@@ -10,5 +10,5 @@ import (
 )
 
 func init() {
-	ourecdsa.RegisterCurve(jwa.Secp256k1, secp256k1.S256())
+	ourecdsa.RegisterCurve(jwa.Secp256k1(), secp256k1.S256())
 }
