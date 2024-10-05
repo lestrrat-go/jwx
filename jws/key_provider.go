@@ -164,7 +164,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 			// if we got here, then useDefault == true AND there is exactly
 			// one key in the set.
-			key, _ := kp.set.Key(0)
+			key, ok := kp.set.Key(0)
+			if !ok {
+				return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
+			}
 			return kp.selectKey(sink, key, sig, msg)
 		}
 
