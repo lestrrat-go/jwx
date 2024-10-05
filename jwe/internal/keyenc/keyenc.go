@@ -148,13 +148,13 @@ func NewPBES2Encrypt(alg jwa.KeyEncryptionAlgorithm, password []byte) (*PBES2Enc
 	var hashFunc func() hash.Hash
 	var keylen int
 	switch alg {
-	case jwa.PBES2_HS256_A128KW:
+	case jwa.PBES2_HS256_A128KW():
 		hashFunc = sha256.New
 		keylen = 16
-	case jwa.PBES2_HS384_A192KW:
+	case jwa.PBES2_HS384_A192KW():
 		hashFunc = sha512.New384
 		keylen = 24
-	case jwa.PBES2_HS512_A256KW:
+	case jwa.PBES2_HS512_A256KW():
 		hashFunc = sha512.New
 		keylen = 32
 	default:
@@ -188,7 +188,7 @@ func (kw PBES2Encrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return nil, fmt.Errorf(`failed to get random salt: %w`, err)
 	}
 
-	fullsalt := []byte(kw.algorithm)
+	fullsalt := []byte(kw.algorithm.String())
 	fullsalt = append(fullsalt, byte(0))
 	fullsalt = append(fullsalt, salt...)
 	sharedkey := pbkdf2.Key(kw.password, fullsalt, count, kw.keylen, kw.hashFunc)
@@ -255,7 +255,7 @@ func (kw ECDHESEncrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return nil, fmt.Errorf(`key generator generated invalid key (expected ByteWithECPrivateKey)`)
 	}
 
-	if kw.algorithm == jwa.ECDH_ES {
+	if kw.algorithm == jwa.ECDH_ES() {
 		return bwpk, nil
 	}
 
@@ -350,7 +350,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	algBytes = []byte(kw.keyalg.String())
 
 	switch kw.keyalg {
-	case jwa.ECDH_ES:
+	case jwa.ECDH_ES():
 		// Create a content cipher from the content encryption algorithm
 		c, err := contentcipher.NewAES(kw.contentalg)
 		if err != nil {
@@ -358,11 +358,11 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		}
 		keysize = uint32(c.KeySize())
 		algBytes = []byte(kw.contentalg.String())
-	case jwa.ECDH_ES_A128KW:
+	case jwa.ECDH_ES_A128KW():
 		keysize = 16
-	case jwa.ECDH_ES_A192KW:
+	case jwa.ECDH_ES_A192KW():
 		keysize = 24
-	case jwa.ECDH_ES_A256KW:
+	case jwa.ECDH_ES_A256KW():
 		keysize = 32
 	default:
 		return nil, fmt.Errorf("invalid ECDH-ES key wrap algorithm (%s)", kw.keyalg)
@@ -374,7 +374,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	}
 
 	// ECDH-ES does not wrap keys
-	if kw.keyalg == jwa.ECDH_ES {
+	if kw.keyalg == jwa.ECDH_ES() {
 		return key, nil
 	}
 
@@ -389,7 +389,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 // NewRSAOAEPEncrypt creates a new key encrypter using RSA OAEP
 func NewRSAOAEPEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAOAEPEncrypt, error) {
 	switch alg {
-	case jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
+	case jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 	default:
 		return nil, fmt.Errorf("invalid RSA OAEP encrypt algorithm (%s)", alg)
 	}
@@ -402,7 +402,7 @@ func NewRSAOAEPEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*
 // NewRSAPKCSEncrypt creates a new key encrypter using PKCS1v15
 func NewRSAPKCSEncrypt(alg jwa.KeyEncryptionAlgorithm, pubkey *rsa.PublicKey) (*RSAPKCSEncrypt, error) {
 	switch alg {
-	case jwa.RSA1_5:
+	case jwa.RSA1_5():
 	default:
 		return nil, fmt.Errorf("invalid RSA PKCS encrypt algorithm (%s)", alg)
 	}
@@ -443,7 +443,7 @@ func (e RSAOAEPEncrypt) KeyID() string {
 
 // KeyEncrypt encrypts the content encryption key using RSA PKCS1v15
 func (e RSAPKCSEncrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
-	if e.alg != jwa.RSA1_5 {
+	if e.alg != jwa.RSA1_5() {
 		return nil, fmt.Errorf("invalid RSA PKCS encrypt algorithm (%s)", e.alg)
 	}
 	encrypted, err := rsa.EncryptPKCS1v15(rand.Reader, e.pubkey, cek)
@@ -457,13 +457,13 @@ func (e RSAPKCSEncrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 func (e RSAOAEPEncrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 	var hash hash.Hash
 	switch e.alg {
-	case jwa.RSA_OAEP:
+	case jwa.RSA_OAEP():
 		hash = sha1.New()
-	case jwa.RSA_OAEP_256:
+	case jwa.RSA_OAEP_256():
 		hash = sha256.New()
-	case jwa.RSA_OAEP_384:
+	case jwa.RSA_OAEP_384():
 		hash = sha512.New384()
-	case jwa.RSA_OAEP_512:
+	case jwa.RSA_OAEP_512():
 		hash = sha512.New()
 	default:
 		return nil, fmt.Errorf(`failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256/RSA_OAEP_384/RSA_OAEP_512 required`)
@@ -539,7 +539,7 @@ func (d RSAPKCS15Decrypt) Decrypt(enckey []byte) ([]byte, error) {
 // NewRSAOAEPDecrypt creates a new key decrypter using RSA OAEP
 func NewRSAOAEPDecrypt(alg jwa.KeyEncryptionAlgorithm, privkey *rsa.PrivateKey) (*RSAOAEPDecrypt, error) {
 	switch alg {
-	case jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
+	case jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 	default:
 		return nil, fmt.Errorf("invalid RSA OAEP decrypt algorithm (%s)", alg)
 	}
@@ -559,13 +559,13 @@ func (d RSAOAEPDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 func (d RSAOAEPDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 	var hash hash.Hash
 	switch d.alg {
-	case jwa.RSA_OAEP:
+	case jwa.RSA_OAEP():
 		hash = sha1.New()
-	case jwa.RSA_OAEP_256:
+	case jwa.RSA_OAEP_256():
 		hash = sha256.New()
-	case jwa.RSA_OAEP_384:
+	case jwa.RSA_OAEP_384():
 		hash = sha512.New384()
-	case jwa.RSA_OAEP_512:
+	case jwa.RSA_OAEP_512():
 		hash = sha512.New()
 	default:
 		return nil, fmt.Errorf(`failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256/RSA_OAEP_384/RSA_OAEP_512 required`)

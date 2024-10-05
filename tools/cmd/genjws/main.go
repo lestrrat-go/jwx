@@ -21,7 +21,7 @@ func main() {
 }
 
 func _main() error {
-	codegen.RegisterZeroVal(`jwa.SignatureAlgorithm`, `""`)
+	codegen.RegisterZeroVal(`jwa.SignatureAlgorithm`, `jwa.EmptySignatureAlgorithm()`)
 
 	var objectsFile = flag.String("objects", "objects.yml", "")
 	flag.Parse()
@@ -97,9 +97,9 @@ func generateHeaders(obj *codegen.Object) error {
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
 		if f.Bool(`noDeref`) {
-			o.L("%s() %s", f.GetterMethod(true), f.Type())
+			o.L("%s() (%s, bool)", f.GetterMethod(true), f.Type())
 		} else {
-			o.L("%s() %s", f.GetterMethod(true), PointerElem(f))
+			o.L("%s() (%s, bool)", f.GetterMethod(true), PointerElem(f))
 		}
 	}
 
@@ -147,16 +147,16 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 
 	for _, f := range obj.Fields() {
-		o.LL("func (h *stdHeaders) %s() %s{", f.GetterMethod(true), f.Type())
+		o.LL("func (h *stdHeaders) %s() (%s, bool) {", f.GetterMethod(true), f.Type())
 		o.L("h.mu.RLock()")
 		o.L("defer h.mu.RUnlock()")
 		if fieldStorageTypeIsIndirect(f.Type()) {
 			o.L("if h.%s == nil {", f.Name(false))
-			o.L("return %s", codegen.ZeroVal(f.Type()))
+			o.L("return %s, false", codegen.ZeroVal(f.Type()))
 			o.L("}")
-			o.L("return *(h.%s)", f.Name(false))
+			o.L("return *(h.%s), true", f.Name(false))
 		} else {
-			o.L("return h.%s", f.Name(false))
+			o.L("return h.%s, true", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
@@ -247,7 +247,17 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
-		if f.Bool(`hasAccept`) {
+		if f.Name(true) == `Algorithm` {
+			o.L(`alg, err := jwa.KeyAlgorithmFrom(value)`)
+			o.L(`if err != nil {`)
+			o.L(`return fmt.Errorf("invalid value for %%s key: %%w", %sKey, err)`, f.Name(true))
+			o.L(`}`)
+			o.L(`if salg, ok := alg.(jwa.SignatureAlgorithm); ok {`)
+			o.L(`h.%s = &salg`, f.Name(false))
+			o.L(`return nil`)
+			o.L(`}`)
+			o.L(`return fmt.Errorf("expecte jwa.SignatureAlgorithm, received %%T", alg)`)
+		} else if f.Bool(`hasAccept`) {
 			o.L("var acceptor %s", PointerElem(f))
 			o.L("if err := acceptor.Accept(value); err != nil {")
 			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %sKey, err)", f.Name(true))

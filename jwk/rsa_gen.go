@@ -60,7 +60,7 @@ func newRSAPublicKey() *rsaPublicKey {
 }
 
 func (h rsaPublicKey) KeyType() jwa.KeyType {
-	return jwa.RSA
+	return jwa.RSA()
 }
 
 func (h rsaPublicKey) IsPrivate() bool {
@@ -71,7 +71,7 @@ func (h *rsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *rsaPublicKey) E() []byte {
@@ -271,11 +271,10 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
 			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -440,7 +439,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.RSA.String() {
+				if val != jwa.RSA().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -448,7 +447,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case RSAEKey:
 				if err := json.AssignNextBytesToken(&h.e, dec); err != nil {
@@ -523,7 +525,7 @@ LOOP:
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 10)
-	data[KeyTypeKey] = jwa.RSA
+	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
@@ -687,7 +689,7 @@ func newRSAPrivateKey() *rsaPrivateKey {
 }
 
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
-	return jwa.RSA
+	return jwa.RSA()
 }
 
 func (h rsaPrivateKey) IsPrivate() bool {
@@ -698,7 +700,7 @@ func (h *rsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *rsaPrivateKey) D() []byte {
@@ -982,11 +984,10 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
 			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -1205,7 +1206,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.RSA.String() {
+				if val != jwa.RSA().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -1213,7 +1214,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case RSADKey:
 				if err := json.AssignNextBytesToken(&h.d, dec); err != nil {
@@ -1315,7 +1319,7 @@ LOOP:
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 16)
-	data[KeyTypeKey] = jwa.RSA
+	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)

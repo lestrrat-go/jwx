@@ -18,24 +18,24 @@ func init() {
 		Hash crypto.Hash
 		PSS  bool
 	}{
-		jwa.RS256: {
+		jwa.RS256(): {
 			Hash: crypto.SHA256,
 		},
-		jwa.RS384: {
+		jwa.RS384(): {
 			Hash: crypto.SHA384,
 		},
-		jwa.RS512: {
+		jwa.RS512(): {
 			Hash: crypto.SHA512,
 		},
-		jwa.PS256: {
+		jwa.PS256(): {
 			Hash: crypto.SHA256,
 			PSS:  true,
 		},
-		jwa.PS384: {
+		jwa.PS384(): {
 			Hash: crypto.SHA384,
 			PSS:  true,
 		},
-		jwa.PS512: {
+		jwa.PS512(): {
 			Hash: crypto.SHA512,
 			PSS:  true,
 		},

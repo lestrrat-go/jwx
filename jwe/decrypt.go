@@ -129,7 +129,7 @@ func (d *decrypter) CEK(ptr *[]byte) *decrypter {
 func (d *decrypter) ContentCipher() (content_crypt.Cipher, error) {
 	if d.cipher == nil {
 		switch d.ctalg {
-		case jwa.A128GCM, jwa.A192GCM, jwa.A256GCM, jwa.A128CBC_HS256, jwa.A192CBC_HS384, jwa.A256CBC_HS512:
+		case jwa.A128GCM(), jwa.A192GCM(), jwa.A256GCM(), jwa.A128CBC_HS256(), jwa.A192CBC_HS384(), jwa.A256CBC_HS512():
 			cipher, err := cipher.NewAES(d.ctalg)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to build content cipher for %s: %w`, d.ctalg, err)
@@ -175,28 +175,28 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 
 func (d *decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error) {
 	switch d.keyalg {
-	case jwa.DIRECT:
+	case jwa.DIRECT():
 		return cek, nil
-	case jwa.PBES2_HS256_A128KW, jwa.PBES2_HS384_A192KW, jwa.PBES2_HS512_A256KW:
+	case jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
 		var hashFunc func() hash.Hash
 		var keylen int
 		switch d.keyalg {
-		case jwa.PBES2_HS256_A128KW:
+		case jwa.PBES2_HS256_A128KW():
 			hashFunc = sha256.New
 			keylen = 16
-		case jwa.PBES2_HS384_A192KW:
+		case jwa.PBES2_HS384_A192KW():
 			hashFunc = sha512.New384
 			keylen = 24
-		case jwa.PBES2_HS512_A256KW:
+		case jwa.PBES2_HS512_A256KW():
 			hashFunc = sha512.New
 			keylen = 32
 		}
-		salt := []byte(d.keyalg)
+		salt := []byte(d.keyalg.String())
 		salt = append(salt, byte(0))
 		salt = append(salt, d.keysalt...)
 		cek = pbkdf2.Key(cek, salt, d.keycount, keylen, hashFunc)
 		fallthrough
-	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+	case jwa.A128KW(), jwa.A192KW(), jwa.A256KW():
 		block, err := aes.NewCipher(cek)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
@@ -208,7 +208,7 @@ func (d *decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error
 		}
 
 		return jek, nil
-	case jwa.A128GCMKW, jwa.A192GCMKW, jwa.A256GCMKW:
+	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
 		if len(d.keyiv) != 12 {
 			return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
 		}
@@ -271,28 +271,28 @@ func (d *decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
 	}
 
 	switch alg := d.keyalg; alg {
-	case jwa.RSA1_5:
+	case jwa.RSA1_5():
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
 			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
 		}
 
 		return keyenc.NewRSAPKCS15Decrypt(alg, &privkey, cipher.KeySize()/2), nil
-	case jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
+	case jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 		var privkey rsa.PrivateKey
 		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
 			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
 		}
 
 		return keyenc.NewRSAOAEPDecrypt(alg, &privkey)
-	case jwa.A128KW, jwa.A192KW, jwa.A256KW:
+	case jwa.A128KW(), jwa.A192KW(), jwa.A256KW():
 		sharedkey, ok := d.privkey.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("[]byte is required as the key to build %s key decrypter", alg)
 		}
 
 		return keyenc.NewAES(alg, sharedkey)
-	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
 		switch d.pubkey.(type) {
 		case *ecdh.PublicKey:
 			return keyenc.NewECDHESDecrypt(alg, d.ctalg, d.pubkey, d.apu, d.apv, d.privkey), nil

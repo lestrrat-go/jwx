@@ -112,12 +112,12 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, _ Recipient, _ *M
 	}
 
 	if v := key.Algorithm(); v.String() != "" {
-		var alg jwa.KeyEncryptionAlgorithm
-		if err := alg.Accept(v); err != nil {
-			return fmt.Errorf(`invalid key encryption algorithm %s: %w`, key.Algorithm(), err)
+		kalg, ok := jwa.LookupKeyEncryptionAlgorithm(v.String())
+		if !ok {
+			return fmt.Errorf(`invalid key encryption algorithm %s`, key.Algorithm())
 		}
 
-		sink.Key(alg, key)
+		sink.Key(kalg, key)
 		return nil
 	}
 
@@ -128,8 +128,8 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, r Recipient
 	if kp.requireKid {
 		var key jwk.Key
 
-		wantedKid := r.Headers().KeyID()
-		if wantedKid == "" {
+		wantedKid, ok := r.Headers().KeyID()
+		if !ok || wantedKid == "" {
 			return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
 		}
 		// Otherwise we better be able to look up the key, baby.

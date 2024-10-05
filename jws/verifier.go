@@ -54,7 +54,7 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 func init() {
 	verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
 				return newRSAVerifier(alg), nil
@@ -62,7 +62,7 @@ func init() {
 		}(alg))
 	}
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512, jwa.ES256K} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
 				return newECDSAVerifier(alg), nil
@@ -70,7 +70,7 @@ func init() {
 		}(alg))
 	}
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
 				return newHMACVerifier(alg), nil
@@ -78,7 +78,7 @@ func init() {
 		}(alg))
 	}
 
-	RegisterVerifier(jwa.EdDSA, VerifierFactoryFn(func() (Verifier, error) {
+	RegisterVerifier(jwa.EdDSA(), VerifierFactoryFn(func() (Verifier, error) {
 		return newEdDSAVerifier(), nil
 	}))
 }

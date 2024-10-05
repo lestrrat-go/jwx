@@ -47,7 +47,7 @@ std_fields:
 key_types:
   - filename: rsa_gen.go
     prefix: RSA
-    key_type: jwa.RSA
+    key_type: jwa.RSA()
     objects:
       - name: publicKey
         raw_key_type: "*rsa.PublicKey"
@@ -88,7 +88,7 @@ key_types:
             required: true
   - filename: ecdsa_gen.go
     prefix: ECDSA
-    key_type: jwa.EC
+    key_type: jwa.EC()
     objects:
       - name: publicKey
         raw_key_type: "*ecdsa.PublicKey"
@@ -121,7 +121,7 @@ key_types:
             required: true
   - filename: symmetric_gen.go
     prefix: Symmetric
-    key_type:  jwa.OctetSeq
+    key_type:  jwa.OctetSeq()
     objects:
       - name: symmetricKey
         interface: SymmetricKey
@@ -134,7 +134,7 @@ key_types:
             required: true
   - filename: okp_gen.go
     prefix: OKP
-    key_type: jwa.OKP
+    key_type: jwa.OKP()
     objects:
       - name: publicKey
         raw_key_type: "interface{}"

@@ -17,7 +17,7 @@ func newEdDSASigner() Signer {
 }
 
 func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
-	return jwa.EdDSA
+	return jwa.EdDSA()
 }
 
 func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {

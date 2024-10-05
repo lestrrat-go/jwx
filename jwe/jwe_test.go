@@ -260,10 +260,10 @@ func TestRoundtrip_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}
 
 	for range iterations {
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP, &rsaPrivKey.PublicKey))
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey))
 		require.NoError(t, err, "Encrypt should succeed")
 
-		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP, rsaPrivKey))
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), rsaPrivKey))
 		require.NoError(t, err, "Decrypt should succeed")
 		require.Equal(t, plaintext, decrypted, "Decrypted content should match")
 	}
@@ -281,10 +281,10 @@ func TestRoundtrip_RSA1_5_A128CBC_HS256(t *testing.T) {
 	}
 
 	for range iterations {
-		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5, &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
+		encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5(), &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256))
 		require.NoError(t, err, "Encrypt is successful")
 
-		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5, rsaPrivKey))
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), rsaPrivKey))
 		require.NoError(t, err, "Decrypt successful")
 		require.Equal(t, plaintext, decrypted, "Decrypted correct plaintext")
 	}

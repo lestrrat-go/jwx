@@ -3,160 +3,218 @@
 package jwa
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 )
 
-// SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1
-type SignatureAlgorithm string
-
-// Supported values for SignatureAlgorithm
-const (
-	ES256       SignatureAlgorithm = "ES256"  // ECDSA using P-256 and SHA-256
-	ES256K      SignatureAlgorithm = "ES256K" // ECDSA using secp256k1 and SHA-256
-	ES384       SignatureAlgorithm = "ES384"  // ECDSA using P-384 and SHA-384
-	ES512       SignatureAlgorithm = "ES512"  // ECDSA using P-521 and SHA-512
-	EdDSA       SignatureAlgorithm = "EdDSA"  // EdDSA signature algorithms
-	HS256       SignatureAlgorithm = "HS256"  // HMAC using SHA-256
-	HS384       SignatureAlgorithm = "HS384"  // HMAC using SHA-384
-	HS512       SignatureAlgorithm = "HS512"  // HMAC using SHA-512
-	NoSignature SignatureAlgorithm = "none"
-	PS256       SignatureAlgorithm = "PS256" // RSASSA-PSS using SHA256 and MGF1-SHA256
-	PS384       SignatureAlgorithm = "PS384" // RSASSA-PSS using SHA384 and MGF1-SHA384
-	PS512       SignatureAlgorithm = "PS512" // RSASSA-PSS using SHA512 and MGF1-SHA512
-	RS256       SignatureAlgorithm = "RS256" // RSASSA-PKCS-v1.5 using SHA-256
-	RS384       SignatureAlgorithm = "RS384" // RSASSA-PKCS-v1.5 using SHA-384
-	RS512       SignatureAlgorithm = "RS512" // RSASSA-PKCS-v1.5 using SHA-512
-)
-
-var muSignatureAlgorithms sync.RWMutex
-var allSignatureAlgorithms map[SignatureAlgorithm]struct{}
+var muAllSignatureAlgorithm sync.RWMutex
+var allSignatureAlgorithm = map[string]SignatureAlgorithm{}
+var muListSignatureAlgorithm sync.RWMutex
 var listSignatureAlgorithm []SignatureAlgorithm
-var symmetricSignatureAlgorithms map[SignatureAlgorithm]struct{}
+var builtinSignatureAlgorithm = map[string]struct{}{}
 
 func init() {
-	muSignatureAlgorithms.Lock()
-	defer muSignatureAlgorithms.Unlock()
-	allSignatureAlgorithms = make(map[SignatureAlgorithm]struct{})
-	allSignatureAlgorithms[ES256] = struct{}{}
-	allSignatureAlgorithms[ES256K] = struct{}{}
-	allSignatureAlgorithms[ES384] = struct{}{}
-	allSignatureAlgorithms[ES512] = struct{}{}
-	allSignatureAlgorithms[EdDSA] = struct{}{}
-	allSignatureAlgorithms[HS256] = struct{}{}
-	allSignatureAlgorithms[HS384] = struct{}{}
-	allSignatureAlgorithms[HS512] = struct{}{}
-	allSignatureAlgorithms[NoSignature] = struct{}{}
-	allSignatureAlgorithms[PS256] = struct{}{}
-	allSignatureAlgorithms[PS384] = struct{}{}
-	allSignatureAlgorithms[PS512] = struct{}{}
-	allSignatureAlgorithms[RS256] = struct{}{}
-	allSignatureAlgorithms[RS384] = struct{}{}
-	allSignatureAlgorithms[RS512] = struct{}{}
-	symmetricSignatureAlgorithms = make(map[SignatureAlgorithm]struct{})
-	symmetricSignatureAlgorithms[HS256] = struct{}{}
-	symmetricSignatureAlgorithms[HS384] = struct{}{}
-	symmetricSignatureAlgorithms[HS512] = struct{}{}
-	rebuildSignatureAlgorithm()
+	// builtin values for SignatureAlgorithm
+	algorithms := make([]SignatureAlgorithm, 0, 15)
+	for _, alg := range []string{"HS256", "HS384", "HS512"} {
+		algorithms = append(algorithms, NewSignatureAlgorithm(alg, WithIsSymmetric(true)))
+	}
+
+	for _, alg := range []string{"ES256", "ES256K", "ES384", "ES512", "EdDSA", "none", "PS256", "PS384", "PS512", "RS256", "RS384", "RS512"} {
+		algorithms = append(algorithms, NewSignatureAlgorithm(alg))
+	}
+
+	RegisterSignatureAlgorithm(algorithms...)
 }
 
-// RegisterSignatureAlgorithm registers a new SignatureAlgorithm so that the jwx can properly handle the new value.
-// Duplicates will silently be ignored
-func RegisterSignatureAlgorithm(v SignatureAlgorithm) {
-	RegisterSignatureAlgorithmWithOptions(v)
+// ES256 returns the ES256 algorithm object.
+func ES256() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("ES256")
 }
 
-// RegisterSignatureAlgorithmWithOptions is the same as RegisterSignatureAlgorithm when used without options,
-// but allows its behavior to change based on the provided options.
-// This is an experimental AND stopgap function which will most likely be merged in RegisterSignatureAlgorithm, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.
-//
-// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.
-func RegisterSignatureAlgorithmWithOptions(v SignatureAlgorithm, options ...RegisterAlgorithmOption) {
-	var symmetric bool
+// ES256K returns the ES256K algorithm object.
+func ES256K() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("ES256K")
+}
+
+// ES384 returns the ES384 algorithm object.
+func ES384() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("ES384")
+}
+
+// ES512 returns the ES512 algorithm object.
+func ES512() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("ES512")
+}
+
+// EdDSA returns the EdDSA algorithm object.
+func EdDSA() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("EdDSA")
+}
+
+// HS256 returns the HS256 algorithm object.
+func HS256() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("HS256")
+}
+
+// HS384 returns the HS384 algorithm object.
+func HS384() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("HS384")
+}
+
+// HS512 returns the HS512 algorithm object.
+func HS512() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("HS512")
+}
+
+// NoSignature returns the NoSignature algorithm object.
+func NoSignature() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("none")
+}
+
+// PS256 returns the PS256 algorithm object.
+func PS256() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("PS256")
+}
+
+// PS384 returns the PS384 algorithm object.
+func PS384() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("PS384")
+}
+
+// PS512 returns the PS512 algorithm object.
+func PS512() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("PS512")
+}
+
+// RS256 returns the RS256 algorithm object.
+func RS256() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("RS256")
+}
+
+// RS384 returns the RS384 algorithm object.
+func RS384() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("RS384")
+}
+
+// RS512 returns the RS512 algorithm object.
+func RS512() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("RS512")
+}
+
+func lookupBuiltinSignatureAlgorithm(name string) SignatureAlgorithm {
+	muAllSignatureAlgorithm.RLock()
+	v, ok := allSignatureAlgorithm[name]
+	muAllSignatureAlgorithm.RUnlock()
+	if !ok {
+		panic(fmt.Sprintf(`jwa: SignatureAlgorithm %q not registered`, name))
+	}
+	return v
+}
+
+type SignatureAlgorithm struct {
+	name        string
+	isSymmetric bool
+}
+
+func (s SignatureAlgorithm) String() string {
+	return s.name
+}
+
+func (s SignatureAlgorithm) IsSymmetric() bool {
+	return s.isSymmetric
+}
+
+// EmptySignatureAlgorithm returns an empty SignatureAlgorithm object, used as a zero value
+func EmptySignatureAlgorithm() SignatureAlgorithm {
+	return SignatureAlgorithm{}
+}
+
+// NewSignatureAlgorithm creates a new SignatureAlgorithm object
+func NewSignatureAlgorithm(name string, options ...NewKeyAlgorithmOption) SignatureAlgorithm {
+	var isSymmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identSymmetricAlgorithm{}:
-			symmetric = option.Value().(bool)
+			isSymmetric = option.Value().(bool)
 		}
 	}
-	muSignatureAlgorithms.Lock()
-	defer muSignatureAlgorithms.Unlock()
-	if _, ok := allSignatureAlgorithms[v]; !ok {
-		allSignatureAlgorithms[v] = struct{}{}
-		if symmetric {
-			symmetricSignatureAlgorithms[v] = struct{}{}
-		}
-		rebuildSignatureAlgorithm()
+	return SignatureAlgorithm{name: name, isSymmetric: isSymmetric}
+}
+
+// LookupSignatureAlgorithm returns the SignatureAlgorithm object for the given name
+func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
+	muAllSignatureAlgorithm.RLock()
+	v, ok := allSignatureAlgorithm[name]
+	muAllSignatureAlgorithm.RUnlock()
+	return v, ok
+}
+
+// RegisterSignatureAlgorithm registers a new SignatureAlgorithm. The signature value must be immutable
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
+	muAllSignatureAlgorithm.Lock()
+	for _, alg := range algorithms {
+		allSignatureAlgorithm[alg.String()] = alg
 	}
+	muAllSignatureAlgorithm.Unlock()
+	rebuildSignatureAlgorithm()
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
-// Non-existent entries will silently be ignored
-func UnregisterSignatureAlgorithm(v SignatureAlgorithm) {
-	muSignatureAlgorithms.Lock()
-	defer muSignatureAlgorithms.Unlock()
-	if _, ok := allSignatureAlgorithms[v]; ok {
-		delete(allSignatureAlgorithms, v)
-		if _, ok := symmetricSignatureAlgorithms[v]; ok {
-			delete(symmetricSignatureAlgorithms, v)
+// Non-existent entries, as well as built-in algorithms will silently be ignored
+func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
+	muAllSignatureAlgorithm.Lock()
+	for _, alg := range algorithms {
+		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
+			continue
 		}
-		rebuildSignatureAlgorithm()
+		delete(allSignatureAlgorithm, alg.String())
 	}
+	muAllSignatureAlgorithm.Unlock()
+	rebuildSignatureAlgorithm()
 }
 
 func rebuildSignatureAlgorithm() {
-	listSignatureAlgorithm = make([]SignatureAlgorithm, 0, len(allSignatureAlgorithms))
-	for v := range allSignatureAlgorithms {
-		listSignatureAlgorithm = append(listSignatureAlgorithm, v)
+	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
+	muAllSignatureAlgorithm.RLock()
+	for _, v := range allSignatureAlgorithm {
+		list = append(list, v)
 	}
-	sort.Slice(listSignatureAlgorithm, func(i, j int) bool {
-		return string(listSignatureAlgorithm[i]) < string(listSignatureAlgorithm[j])
+	muAllSignatureAlgorithm.RUnlock()
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].String() < list[j].String()
 	})
+	muListSignatureAlgorithm.Lock()
+	listSignatureAlgorithm = list
+	muListSignatureAlgorithm.Unlock()
 }
 
 // SignatureAlgorithms returns a list of all available values for SignatureAlgorithm
 func SignatureAlgorithms() []SignatureAlgorithm {
-	muSignatureAlgorithms.RLock()
-	defer muSignatureAlgorithms.RUnlock()
+	muListSignatureAlgorithm.RLock()
+	defer muListSignatureAlgorithm.RUnlock()
 	return listSignatureAlgorithm
 }
 
-// Accept is used when conversion from values given by
-// outside sources (such as JSON payloads) is required
-func (v *SignatureAlgorithm) Accept(value interface{}) error {
-	var tmp SignatureAlgorithm
-	if x, ok := value.(SignatureAlgorithm); ok {
-		tmp = x
-	} else {
-		var s string
-		switch x := value.(type) {
-		case fmt.Stringer:
-			s = x.String()
-		case string:
-			s = x
-		default:
-			return fmt.Errorf(`invalid type for jwa.SignatureAlgorithm: %T`, value)
-		}
-		tmp = SignatureAlgorithm(s)
-	}
-	if _, ok := allSignatureAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.SignatureAlgorithm value`)
-	}
+// MarshalJSON serializes the SignatureAlgorithm object to a JSON string
+func (s SignatureAlgorithm) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
 
-	*v = tmp
+// UnmarshalJSON deserializes the JSON string to a SignatureAlgorithm object
+func (s *SignatureAlgorithm) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return fmt.Errorf(`failed to unmarshal SignatureAlgorithm: %w`, err)
+	}
+	v, ok := LookupSignatureAlgorithm(name)
+	if !ok {
+		return fmt.Errorf(`unknown SignatureAlgorithm: %s`, name)
+	}
+	*s = v
 	return nil
-}
-
-// String returns the string representation of a SignatureAlgorithm
-func (v SignatureAlgorithm) String() string {
-	return string(v)
-}
-
-// IsSymmetric returns true if the algorithm is a symmetric type.
-// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.
-func (v SignatureAlgorithm) IsSymmetric() bool {
-	_, ok := symmetricSignatureAlgorithms[v]
-	return ok
 }

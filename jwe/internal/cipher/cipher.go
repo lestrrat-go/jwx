@@ -47,27 +47,27 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 	var tagsize int
 	var fetcher Fetcher
 	switch alg {
-	case jwa.A128GCM:
+	case jwa.A128GCM():
 		keysize = 16
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A192GCM:
+	case jwa.A192GCM():
 		keysize = 24
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A256GCM:
+	case jwa.A256GCM():
 		keysize = 32
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A128CBC_HS256:
+	case jwa.A128CBC_HS256():
 		tagsize = 16
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A192CBC_HS384:
+	case jwa.A192CBC_HS384():
 		tagsize = 24
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A256CBC_HS512:
+	case jwa.A256CBC_HS512():
 		tagsize = 32
 		keysize = tagsize * 2
 		fetcher = cbc

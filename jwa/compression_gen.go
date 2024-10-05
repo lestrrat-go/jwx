@@ -3,99 +3,137 @@
 package jwa
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 )
 
-// CompressionAlgorithm represents the compression algorithms as described in https://tools.ietf.org/html/rfc7518#section-7.3
-type CompressionAlgorithm string
-
-// Supported values for CompressionAlgorithm
-const (
-	Deflate    CompressionAlgorithm = "DEF" // DEFLATE (RFC 1951)
-	NoCompress CompressionAlgorithm = ""    // No compression
-)
-
-var muCompressionAlgorithms sync.RWMutex
-var allCompressionAlgorithms map[CompressionAlgorithm]struct{}
+var muAllCompressionAlgorithm sync.RWMutex
+var allCompressionAlgorithm = map[string]CompressionAlgorithm{}
+var muListCompressionAlgorithm sync.RWMutex
 var listCompressionAlgorithm []CompressionAlgorithm
+var builtinCompressionAlgorithm = map[string]struct{}{}
 
 func init() {
-	muCompressionAlgorithms.Lock()
-	defer muCompressionAlgorithms.Unlock()
-	allCompressionAlgorithms = make(map[CompressionAlgorithm]struct{})
-	allCompressionAlgorithms[Deflate] = struct{}{}
-	allCompressionAlgorithms[NoCompress] = struct{}{}
+	// builtin values for CompressionAlgorithm
+	algorithms := make([]CompressionAlgorithm, 0, 2)
+
+	for _, alg := range []string{"DEF", ""} {
+		algorithms = append(algorithms, NewCompressionAlgorithm(alg))
+	}
+
+	RegisterCompressionAlgorithm(algorithms...)
+}
+
+// Deflate returns the Deflate algorithm object.
+func Deflate() CompressionAlgorithm {
+	return lookupBuiltinCompressionAlgorithm("DEF")
+}
+
+// NoCompress returns the NoCompress algorithm object.
+func NoCompress() CompressionAlgorithm {
+	return lookupBuiltinCompressionAlgorithm("")
+}
+
+func lookupBuiltinCompressionAlgorithm(name string) CompressionAlgorithm {
+	muAllCompressionAlgorithm.RLock()
+	v, ok := allCompressionAlgorithm[name]
+	muAllCompressionAlgorithm.RUnlock()
+	if !ok {
+		panic(fmt.Sprintf(`jwa: CompressionAlgorithm %q not registered`, name))
+	}
+	return v
+}
+
+type CompressionAlgorithm struct {
+	name string
+}
+
+func (s CompressionAlgorithm) String() string {
+	return s.name
+}
+
+// EmptyCompressionAlgorithm returns an empty CompressionAlgorithm object, used as a zero value
+func EmptyCompressionAlgorithm() CompressionAlgorithm {
+	return CompressionAlgorithm{}
+}
+
+// NewCompressionAlgorithm creates a new CompressionAlgorithm object
+func NewCompressionAlgorithm(name string, options ...NewKeyAlgorithmOption) CompressionAlgorithm {
+	return CompressionAlgorithm{name: name}
+}
+
+// LookupCompressionAlgorithm returns the CompressionAlgorithm object for the given name
+func LookupCompressionAlgorithm(name string) (CompressionAlgorithm, bool) {
+	muAllCompressionAlgorithm.RLock()
+	v, ok := allCompressionAlgorithm[name]
+	muAllCompressionAlgorithm.RUnlock()
+	return v, ok
+}
+
+// RegisterCompressionAlgorithm registers a new CompressionAlgorithm. The signature value must be immutable
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
+	muAllCompressionAlgorithm.Lock()
+	for _, alg := range algorithms {
+		allCompressionAlgorithm[alg.String()] = alg
+	}
+	muAllCompressionAlgorithm.Unlock()
 	rebuildCompressionAlgorithm()
 }
 
-// RegisterCompressionAlgorithm registers a new CompressionAlgorithm so that the jwx can properly handle the new value.
-// Duplicates will silently be ignored
-func RegisterCompressionAlgorithm(v CompressionAlgorithm) {
-	muCompressionAlgorithms.Lock()
-	defer muCompressionAlgorithms.Unlock()
-	if _, ok := allCompressionAlgorithms[v]; !ok {
-		allCompressionAlgorithms[v] = struct{}{}
-		rebuildCompressionAlgorithm()
-	}
-}
-
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.
-// Non-existent entries will silently be ignored
-func UnregisterCompressionAlgorithm(v CompressionAlgorithm) {
-	muCompressionAlgorithms.Lock()
-	defer muCompressionAlgorithms.Unlock()
-	if _, ok := allCompressionAlgorithms[v]; ok {
-		delete(allCompressionAlgorithms, v)
-		rebuildCompressionAlgorithm()
+// Non-existent entries, as well as built-in algorithms will silently be ignored
+func UnregisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
+	muAllCompressionAlgorithm.Lock()
+	for _, alg := range algorithms {
+		if _, ok := builtinCompressionAlgorithm[alg.String()]; ok {
+			continue
+		}
+		delete(allCompressionAlgorithm, alg.String())
 	}
+	muAllCompressionAlgorithm.Unlock()
+	rebuildCompressionAlgorithm()
 }
 
 func rebuildCompressionAlgorithm() {
-	listCompressionAlgorithm = make([]CompressionAlgorithm, 0, len(allCompressionAlgorithms))
-	for v := range allCompressionAlgorithms {
-		listCompressionAlgorithm = append(listCompressionAlgorithm, v)
+	list := make([]CompressionAlgorithm, 0, len(allCompressionAlgorithm))
+	muAllCompressionAlgorithm.RLock()
+	for _, v := range allCompressionAlgorithm {
+		list = append(list, v)
 	}
-	sort.Slice(listCompressionAlgorithm, func(i, j int) bool {
-		return string(listCompressionAlgorithm[i]) < string(listCompressionAlgorithm[j])
+	muAllCompressionAlgorithm.RUnlock()
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].String() < list[j].String()
 	})
+	muListCompressionAlgorithm.Lock()
+	listCompressionAlgorithm = list
+	muListCompressionAlgorithm.Unlock()
 }
 
 // CompressionAlgorithms returns a list of all available values for CompressionAlgorithm
 func CompressionAlgorithms() []CompressionAlgorithm {
-	muCompressionAlgorithms.RLock()
-	defer muCompressionAlgorithms.RUnlock()
+	muListCompressionAlgorithm.RLock()
+	defer muListCompressionAlgorithm.RUnlock()
 	return listCompressionAlgorithm
 }
 
-// Accept is used when conversion from values given by
-// outside sources (such as JSON payloads) is required
-func (v *CompressionAlgorithm) Accept(value interface{}) error {
-	var tmp CompressionAlgorithm
-	if x, ok := value.(CompressionAlgorithm); ok {
-		tmp = x
-	} else {
-		var s string
-		switch x := value.(type) {
-		case fmt.Stringer:
-			s = x.String()
-		case string:
-			s = x
-		default:
-			return fmt.Errorf(`invalid type for jwa.CompressionAlgorithm: %T`, value)
-		}
-		tmp = CompressionAlgorithm(s)
-	}
-	if _, ok := allCompressionAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.CompressionAlgorithm value`)
-	}
-
-	*v = tmp
-	return nil
+// MarshalJSON serializes the CompressionAlgorithm object to a JSON string
+func (s CompressionAlgorithm) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
-// String returns the string representation of a CompressionAlgorithm
-func (v CompressionAlgorithm) String() string {
-	return string(v)
+// UnmarshalJSON deserializes the JSON string to a CompressionAlgorithm object
+func (s *CompressionAlgorithm) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return fmt.Errorf(`failed to unmarshal CompressionAlgorithm: %w`, err)
+	}
+	v, ok := LookupCompressionAlgorithm(name)
+	if !ok {
+		return fmt.Errorf(`unknown CompressionAlgorithm: %s`, name)
+	}
+	*s = v
+	return nil
 }

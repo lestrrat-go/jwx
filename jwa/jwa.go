@@ -3,7 +3,10 @@
 // Package jwa defines the various algorithm described in https://tools.ietf.org/html/rfc7518
 package jwa
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // KeyAlgorithm is a workaround for jwk.Key being able to contain different
 // types of algorithms in its `alg` field.
@@ -20,15 +23,10 @@ type KeyAlgorithm interface {
 	String() string
 }
 
-// InvalidKeyAlgorithm represents an algorithm that the library is not aware of.
-type InvalidKeyAlgorithm string
+var errInvalidKeyAlgorithm = errors.New(`invalid key algorithm`)
 
-func (s InvalidKeyAlgorithm) String() string {
-	return string(s)
-}
-
-func (InvalidKeyAlgorithm) Accept(_ interface{}) error {
-	return fmt.Errorf(`jwa.InvalidKeyAlgorithm does not support Accept() method calls`)
+func ErrInvalidKeyAlgorithm() error {
+	return errInvalidKeyAlgorithm
 }
 
 // KeyAlgorithmFrom takes either a string, `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`
@@ -37,25 +35,25 @@ func (InvalidKeyAlgorithm) Accept(_ interface{}) error {
 // If the value cannot be handled, it returns an `jwa.InvalidKeyAlgorithm`
 // object instead of returning an error. This design choice was made to allow
 // users to directly pass the return value to functions such as `jws.Sign()`
-func KeyAlgorithmFrom(v interface{}) KeyAlgorithm {
+func KeyAlgorithmFrom(v any) (KeyAlgorithm, error) {
 	switch v := v.(type) {
 	case SignatureAlgorithm:
-		return v
+		return v, nil
 	case KeyEncryptionAlgorithm:
-		return v
+		return v, nil
 	case string:
-		var salg SignatureAlgorithm
-		if err := salg.Accept(v); err == nil {
-			return salg
+		salg, ok := LookupSignatureAlgorithm(v)
+		if ok {
+			return salg, nil
 		}
 
-		var kealg KeyEncryptionAlgorithm
-		if err := kealg.Accept(v); err == nil {
-			return kealg
+		kalg, ok := LookupKeyEncryptionAlgorithm(v)
+		if ok {
+			return kalg, nil
 		}
 
-		return InvalidKeyAlgorithm(v)
+		return nil, fmt.Errorf(`invalid key value: %q: %w`, v, errInvalidKeyAlgorithm)
 	default:
-		return InvalidKeyAlgorithm(fmt.Sprintf("%s", v))
+		return nil, fmt.Errorf(`invalid key type: %T: %w`, v, errInvalidKeyAlgorithm)
 	}
 }

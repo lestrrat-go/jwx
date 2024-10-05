@@ -21,9 +21,9 @@ func main() {
 }
 
 func _main() error {
-	codegen.RegisterZeroVal(`jwa.KeyEncryptionAlgorithm`, `""`)
-	codegen.RegisterZeroVal(`jwa.CompressionAlgorithm`, `jwa.NoCompress`)
-	codegen.RegisterZeroVal(`jwa.ContentEncryptionAlgorithm`, `""`)
+	codegen.RegisterZeroVal(`jwa.KeyEncryptionAlgorithm`, `jwa.EmptyKeyEncryptionAlgorithm()`)
+	codegen.RegisterZeroVal(`jwa.CompressionAlgorithm`, `jwa.NoCompress()`)
+	codegen.RegisterZeroVal(`jwa.ContentEncryptionAlgorithm`, `jwa.EmptyContentEncryptionAlgorithm()`)
 	var objectsFile = flag.String("objects", "objects.yml", "")
 	flag.Parse()
 	jsonSrc, err := yaml2json(*objectsFile)
@@ -98,7 +98,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("type Headers interface {")
 	// These are the basic values that most jws have
 	for _, f := range obj.Fields() {
-		o.L("%s() %s", f.GetterMethod(true), f.Type()) //PointerElem())
+		o.L("%s() (%s, bool)", f.GetterMethod(true), f.Type()) //PointerElem())
 	}
 
 	// These are used to access a single element by key name
@@ -150,16 +150,16 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 
 	for _, f := range obj.Fields() {
-		o.LL("func (h *stdHeaders) %s() %s{", f.GetterMethod(true), f.Type())
+		o.LL("func (h *stdHeaders) %s() (%s, bool) {", f.GetterMethod(true), f.Type())
 		o.L("h.mu.RLock()")
 		o.L("defer h.mu.RUnlock()")
 		if !fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("return h.%s", f.Name(false))
+			o.L("return h.%[1]s, h.%[1]s!=nil", f.Name(false))
 		} else {
 			o.L("if h.%s == nil {", f.Name(false))
-			o.L("return %s", codegen.ZeroVal(f.Type()))
+			o.L("return %s, false", codegen.ZeroVal(f.Type()))
 			o.L("}")
-			o.L("return *(h.%s)", f.Name(false))
+			o.L("return *(h.%s), true", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
@@ -237,7 +237,7 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("if v, ok := value.(%s); ok {", f.Type())
 			if f.Name(false) == "contentEncryption" {
 				// check for non-empty string, because empty content encryption is just baaaaaad
-				o.L("if v == \"\" {")
+				o.L("if v == jwa.EmptyContentEncryptionAlgorithm() {")
 				o.L("return fmt.Errorf(`%#v field cannot be an empty string`)", f.JSON())
 				o.L("}")
 			}

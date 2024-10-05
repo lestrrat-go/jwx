@@ -91,7 +91,7 @@ type Key interface {
 	KeyOps() KeyOperationList
 	// Algorithm returns `alg` of a JWK
 
-	// Algorithm returns the value of the `alg` field
+	// Algorithm returns the value of the `alg` field.
 	//
 	// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.
 	// This is why there exists a `jwa.KeyAlgorithm` type that encompasses both types.

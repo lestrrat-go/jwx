@@ -19,10 +19,10 @@ var ecdsaVerifiers map[jwa.SignatureAlgorithm]*ecdsaVerifier
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]crypto.Hash{
-		jwa.ES256:  crypto.SHA256,
-		jwa.ES384:  crypto.SHA384,
-		jwa.ES512:  crypto.SHA512,
-		jwa.ES256K: crypto.SHA256,
+		jwa.ES256():  crypto.SHA256,
+		jwa.ES384():  crypto.SHA384,
+		jwa.ES512():  crypto.SHA512,
+		jwa.ES256K(): crypto.SHA256,
 	}
 	ecdsaSigners = make(map[jwa.SignatureAlgorithm]*ecdsaSigner)
 	ecdsaVerifiers = make(map[jwa.SignatureAlgorithm]*ecdsaVerifier)

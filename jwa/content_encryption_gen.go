@@ -3,107 +3,157 @@
 package jwa
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 )
 
-// ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
-type ContentEncryptionAlgorithm string
-
-// Supported values for ContentEncryptionAlgorithm
-const (
-	A128CBC_HS256 ContentEncryptionAlgorithm = "A128CBC-HS256" // AES-CBC + HMAC-SHA256 (128)
-	A128GCM       ContentEncryptionAlgorithm = "A128GCM"       // AES-GCM (128)
-	A192CBC_HS384 ContentEncryptionAlgorithm = "A192CBC-HS384" // AES-CBC + HMAC-SHA384 (192)
-	A192GCM       ContentEncryptionAlgorithm = "A192GCM"       // AES-GCM (192)
-	A256CBC_HS512 ContentEncryptionAlgorithm = "A256CBC-HS512" // AES-CBC + HMAC-SHA512 (256)
-	A256GCM       ContentEncryptionAlgorithm = "A256GCM"       // AES-GCM (256)
-)
-
-var muContentEncryptionAlgorithms sync.RWMutex
-var allContentEncryptionAlgorithms map[ContentEncryptionAlgorithm]struct{}
+var muAllContentEncryptionAlgorithm sync.RWMutex
+var allContentEncryptionAlgorithm = map[string]ContentEncryptionAlgorithm{}
+var muListContentEncryptionAlgorithm sync.RWMutex
 var listContentEncryptionAlgorithm []ContentEncryptionAlgorithm
+var builtinContentEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
-	muContentEncryptionAlgorithms.Lock()
-	defer muContentEncryptionAlgorithms.Unlock()
-	allContentEncryptionAlgorithms = make(map[ContentEncryptionAlgorithm]struct{})
-	allContentEncryptionAlgorithms[A128CBC_HS256] = struct{}{}
-	allContentEncryptionAlgorithms[A128GCM] = struct{}{}
-	allContentEncryptionAlgorithms[A192CBC_HS384] = struct{}{}
-	allContentEncryptionAlgorithms[A192GCM] = struct{}{}
-	allContentEncryptionAlgorithms[A256CBC_HS512] = struct{}{}
-	allContentEncryptionAlgorithms[A256GCM] = struct{}{}
+	// builtin values for ContentEncryptionAlgorithm
+	algorithms := make([]ContentEncryptionAlgorithm, 0, 6)
+
+	for _, alg := range []string{"A128CBC-HS256", "A128GCM", "A192CBC-HS384", "A192GCM", "A256CBC-HS512", "A256GCM"} {
+		algorithms = append(algorithms, NewContentEncryptionAlgorithm(alg))
+	}
+
+	RegisterContentEncryptionAlgorithm(algorithms...)
+}
+
+// A128CBC_HS256 returns the A128CBC_HS256 algorithm object.
+func A128CBC_HS256() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A128CBC-HS256")
+}
+
+// A128GCM returns the A128GCM algorithm object.
+func A128GCM() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A128GCM")
+}
+
+// A192CBC_HS384 returns the A192CBC_HS384 algorithm object.
+func A192CBC_HS384() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A192CBC-HS384")
+}
+
+// A192GCM returns the A192GCM algorithm object.
+func A192GCM() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A192GCM")
+}
+
+// A256CBC_HS512 returns the A256CBC_HS512 algorithm object.
+func A256CBC_HS512() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A256CBC-HS512")
+}
+
+// A256GCM returns the A256GCM algorithm object.
+func A256GCM() ContentEncryptionAlgorithm {
+	return lookupBuiltinContentEncryptionAlgorithm("A256GCM")
+}
+
+func lookupBuiltinContentEncryptionAlgorithm(name string) ContentEncryptionAlgorithm {
+	muAllContentEncryptionAlgorithm.RLock()
+	v, ok := allContentEncryptionAlgorithm[name]
+	muAllContentEncryptionAlgorithm.RUnlock()
+	if !ok {
+		panic(fmt.Sprintf(`jwa: ContentEncryptionAlgorithm %q not registered`, name))
+	}
+	return v
+}
+
+type ContentEncryptionAlgorithm struct {
+	name string
+}
+
+func (s ContentEncryptionAlgorithm) String() string {
+	return s.name
+}
+
+// EmptyContentEncryptionAlgorithm returns an empty ContentEncryptionAlgorithm object, used as a zero value
+func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
+	return ContentEncryptionAlgorithm{}
+}
+
+// NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object
+func NewContentEncryptionAlgorithm(name string, options ...NewKeyAlgorithmOption) ContentEncryptionAlgorithm {
+	return ContentEncryptionAlgorithm{name: name}
+}
+
+// LookupContentEncryptionAlgorithm returns the ContentEncryptionAlgorithm object for the given name
+func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, bool) {
+	muAllContentEncryptionAlgorithm.RLock()
+	v, ok := allContentEncryptionAlgorithm[name]
+	muAllContentEncryptionAlgorithm.RUnlock()
+	return v, ok
+}
+
+// RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm. The signature value must be immutable
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
+	muAllContentEncryptionAlgorithm.Lock()
+	for _, alg := range algorithms {
+		allContentEncryptionAlgorithm[alg.String()] = alg
+	}
+	muAllContentEncryptionAlgorithm.Unlock()
 	rebuildContentEncryptionAlgorithm()
 }
 
-// RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm so that the jwx can properly handle the new value.
-// Duplicates will silently be ignored
-func RegisterContentEncryptionAlgorithm(v ContentEncryptionAlgorithm) {
-	muContentEncryptionAlgorithms.Lock()
-	defer muContentEncryptionAlgorithms.Unlock()
-	if _, ok := allContentEncryptionAlgorithms[v]; !ok {
-		allContentEncryptionAlgorithms[v] = struct{}{}
-		rebuildContentEncryptionAlgorithm()
-	}
-}
-
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
-// Non-existent entries will silently be ignored
-func UnregisterContentEncryptionAlgorithm(v ContentEncryptionAlgorithm) {
-	muContentEncryptionAlgorithms.Lock()
-	defer muContentEncryptionAlgorithms.Unlock()
-	if _, ok := allContentEncryptionAlgorithms[v]; ok {
-		delete(allContentEncryptionAlgorithms, v)
-		rebuildContentEncryptionAlgorithm()
+// Non-existent entries, as well as built-in algorithms will silently be ignored
+func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
+	muAllContentEncryptionAlgorithm.Lock()
+	for _, alg := range algorithms {
+		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
+			continue
+		}
+		delete(allContentEncryptionAlgorithm, alg.String())
 	}
+	muAllContentEncryptionAlgorithm.Unlock()
+	rebuildContentEncryptionAlgorithm()
 }
 
 func rebuildContentEncryptionAlgorithm() {
-	listContentEncryptionAlgorithm = make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithms))
-	for v := range allContentEncryptionAlgorithms {
-		listContentEncryptionAlgorithm = append(listContentEncryptionAlgorithm, v)
+	list := make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithm))
+	muAllContentEncryptionAlgorithm.RLock()
+	for _, v := range allContentEncryptionAlgorithm {
+		list = append(list, v)
 	}
-	sort.Slice(listContentEncryptionAlgorithm, func(i, j int) bool {
-		return string(listContentEncryptionAlgorithm[i]) < string(listContentEncryptionAlgorithm[j])
+	muAllContentEncryptionAlgorithm.RUnlock()
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].String() < list[j].String()
 	})
+	muListContentEncryptionAlgorithm.Lock()
+	listContentEncryptionAlgorithm = list
+	muListContentEncryptionAlgorithm.Unlock()
 }
 
 // ContentEncryptionAlgorithms returns a list of all available values for ContentEncryptionAlgorithm
 func ContentEncryptionAlgorithms() []ContentEncryptionAlgorithm {
-	muContentEncryptionAlgorithms.RLock()
-	defer muContentEncryptionAlgorithms.RUnlock()
+	muListContentEncryptionAlgorithm.RLock()
+	defer muListContentEncryptionAlgorithm.RUnlock()
 	return listContentEncryptionAlgorithm
 }
 
-// Accept is used when conversion from values given by
-// outside sources (such as JSON payloads) is required
-func (v *ContentEncryptionAlgorithm) Accept(value interface{}) error {
-	var tmp ContentEncryptionAlgorithm
-	if x, ok := value.(ContentEncryptionAlgorithm); ok {
-		tmp = x
-	} else {
-		var s string
-		switch x := value.(type) {
-		case fmt.Stringer:
-			s = x.String()
-		case string:
-			s = x
-		default:
-			return fmt.Errorf(`invalid type for jwa.ContentEncryptionAlgorithm: %T`, value)
-		}
-		tmp = ContentEncryptionAlgorithm(s)
-	}
-	if _, ok := allContentEncryptionAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.ContentEncryptionAlgorithm value`)
-	}
-
-	*v = tmp
-	return nil
+// MarshalJSON serializes the ContentEncryptionAlgorithm object to a JSON string
+func (s ContentEncryptionAlgorithm) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
-// String returns the string representation of a ContentEncryptionAlgorithm
-func (v ContentEncryptionAlgorithm) String() string {
-	return string(v)
+// UnmarshalJSON deserializes the JSON string to a ContentEncryptionAlgorithm object
+func (s *ContentEncryptionAlgorithm) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return fmt.Errorf(`failed to unmarshal ContentEncryptionAlgorithm: %w`, err)
+	}
+	v, ok := LookupContentEncryptionAlgorithm(name)
+	if !ok {
+		return fmt.Errorf(`unknown ContentEncryptionAlgorithm: %s`, name)
+	}
+	*s = v
+	return nil
 }

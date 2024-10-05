@@ -15,9 +15,9 @@ var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]func() hash.Hash{
-		jwa.HS256: sha256.New,
-		jwa.HS384: sha512.New384,
-		jwa.HS512: sha512.New,
+		jwa.HS256(): sha256.New,
+		jwa.HS384(): sha512.New384,
+		jwa.HS512(): sha512.New,
 	}
 
 	for alg, h := range algs {

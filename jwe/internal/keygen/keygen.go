@@ -65,7 +65,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	}
 
 	var algorithm string
-	if g.algorithm == jwa.ECDH_ES {
+	if g.algorithm == jwa.ECDH_ES() {
 		algorithm = g.enc.String()
 	} else {
 		algorithm = g.algorithm.String()
@@ -115,7 +115,7 @@ func (g X25519) Generate() (ByteSource, error) {
 	}
 
 	var algorithm string
-	if g.algorithm == jwa.ECDH_ES {
+	if g.algorithm == jwa.ECDH_ES() {
 		algorithm = g.enc.String()
 	} else {
 		algorithm = g.algorithm.String()

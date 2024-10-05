@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(jwa.RSA, KeyExportFunc(rsaJWKToRaw))
+	RegisterKeyExporter(jwa.RSA(), KeyExportFunc(rsaJWKToRaw))
 }
 
 func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {

@@ -60,7 +60,7 @@ func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error)
 }
 
 func GenerateEcdsaJwk() (jwk.Key, error) {
-	key, err := GenerateEcdsaKey(jwa.P521)
+	key, err := GenerateEcdsaKey(jwa.P521())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 	}
@@ -277,13 +277,13 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 	var keyif interface{}
 
 	switch keyalg {
-	case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
+	case jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 		var rawkey rsa.PrivateKey
 		if err := jwk.Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 		}
 		keyif = rawkey.PublicKey
-	case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
 		var rawkey ecdsa.PrivateKey
 		if err := jwk.Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)

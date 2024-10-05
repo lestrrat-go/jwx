@@ -3,6 +3,7 @@
 package jwa_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -11,157 +12,116 @@ import (
 
 func TestContentEncryptionAlgorithm(t *testing.T) {
 	t.Parallel()
-	t.Run(`accept jwa constant A128CBC_HS256`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A128CBC_HS256), `accept is successful`)
-		require.Equal(t, jwa.A128CBC_HS256, dst, `accepted value should be equal to constant`)
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A128CBC-HS256")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A128CBC_HS256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`accept the string A128CBC-HS256`, func(t *testing.T) {
+	t.Run(`Unmarhal the string A128CBC-HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A128CBC-HS256"), `accept is successful`)
-		require.Equal(t, jwa.A128CBC_HS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A128CBC-HS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A128CBC-HS256"}), `accept is successful`)
-		require.Equal(t, jwa.A128CBC_HS256, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A128CBC-HS256"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A128CBC_HS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A128CBC-HS256`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A128CBC-HS256", jwa.A128CBC_HS256.String(), `stringified value matches`)
+		require.Equal(t, "A128CBC-HS256", jwa.A128CBC_HS256().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant A128GCM`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A128GCM")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A128GCM(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string A128GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A128GCM), `accept is successful`)
-		require.Equal(t, jwa.A128GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string A128GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A128GCM"), `accept is successful`)
-		require.Equal(t, jwa.A128GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A128GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A128GCM"}), `accept is successful`)
-		require.Equal(t, jwa.A128GCM, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A128GCM"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A128GCM(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A128GCM`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A128GCM", jwa.A128GCM.String(), `stringified value matches`)
+		require.Equal(t, "A128GCM", jwa.A128GCM().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant A192CBC_HS384`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A192CBC-HS384")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A192CBC_HS384(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string A192CBC-HS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A192CBC_HS384), `accept is successful`)
-		require.Equal(t, jwa.A192CBC_HS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string A192CBC-HS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A192CBC-HS384"), `accept is successful`)
-		require.Equal(t, jwa.A192CBC_HS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A192CBC-HS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A192CBC-HS384"}), `accept is successful`)
-		require.Equal(t, jwa.A192CBC_HS384, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A192CBC-HS384"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A192CBC_HS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A192CBC-HS384`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A192CBC-HS384", jwa.A192CBC_HS384.String(), `stringified value matches`)
+		require.Equal(t, "A192CBC-HS384", jwa.A192CBC_HS384().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant A192GCM`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A192GCM")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A192GCM(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string A192GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A192GCM), `accept is successful`)
-		require.Equal(t, jwa.A192GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string A192GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A192GCM"), `accept is successful`)
-		require.Equal(t, jwa.A192GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A192GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A192GCM"}), `accept is successful`)
-		require.Equal(t, jwa.A192GCM, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A192GCM"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A192GCM(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A192GCM`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A192GCM", jwa.A192GCM.String(), `stringified value matches`)
+		require.Equal(t, "A192GCM", jwa.A192GCM().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant A256CBC_HS512`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A256CBC-HS512")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A256CBC_HS512(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string A256CBC-HS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A256CBC_HS512), `accept is successful`)
-		require.Equal(t, jwa.A256CBC_HS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string A256CBC-HS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A256CBC-HS512"), `accept is successful`)
-		require.Equal(t, jwa.A256CBC_HS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A256CBC-HS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A256CBC-HS512"}), `accept is successful`)
-		require.Equal(t, jwa.A256CBC_HS512, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A256CBC-HS512"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A256CBC_HS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A256CBC-HS512`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A256CBC-HS512", jwa.A256CBC_HS512.String(), `stringified value matches`)
+		require.Equal(t, "A256CBC-HS512", jwa.A256CBC_HS512().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant A256GCM`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupContentEncryptionAlgorithm("A256GCM")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.A256GCM(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string A256GCM`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(jwa.A256GCM), `accept is successful`)
-		require.Equal(t, jwa.A256GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string A256GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept("A256GCM"), `accept is successful`)
-		require.Equal(t, jwa.A256GCM, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for A256GCM`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "A256GCM"}), `accept is successful`)
-		require.Equal(t, jwa.A256GCM, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("A256GCM"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.A256GCM(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for A256GCM`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "A256GCM", jwa.A256GCM.String(), `stringified value matches`)
+		require.Equal(t, "A256GCM", jwa.A256GCM().String(), `stringified value matches`)
 	})
-	t.Run(`bail out on random integer value`, func(t *testing.T) {
+	t.Run(`Unmarshal should fail for invalid value (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.ContentEncryptionAlgorithm
-		require.Error(t, dst.Accept(1), `accept should fail`)
-	})
-	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.ContentEncryptionAlgorithm
-		require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)
+		require.Error(t, json.Unmarshal([]byte(`totallyInvalidValue`), &dst), `Unmarshal should fail`)
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.ContentEncryptionAlgorithm]struct{}{
-			jwa.A128CBC_HS256: {},
-			jwa.A128GCM:       {},
-			jwa.A192CBC_HS384: {},
-			jwa.A192GCM:       {},
-			jwa.A256CBC_HS512: {},
-			jwa.A256GCM:       {},
+			jwa.A128CBC_HS256(): {},
+			jwa.A128GCM():       {},
+			jwa.A192CBC_HS384(): {},
+			jwa.A192GCM():       {},
+			jwa.A256CBC_HS512(): {},
+			jwa.A256GCM():       {},
 		}
 		for _, v := range jwa.ContentEncryptionAlgorithms() {
 			_, ok := expected[v]
@@ -175,48 +135,38 @@ func TestContentEncryptionAlgorithm(t *testing.T) {
 // Note: this test can NOT be run in parallel as it uses options with global effect.
 func TestContentEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
 	// These subtests can NOT be run in parallel as options with global effect change.
-	customAlgorithm := jwa.ContentEncryptionAlgorithm("custom-algorithm")
+	const customAlgorithmValue = `custom-algorithm`
+	customAlgorithm := jwa.NewContentEncryptionAlgorithm(customAlgorithmValue)
 	// Unregister the custom algorithm, in case tests fail.
 	t.Cleanup(func() {
 		jwa.UnregisterContentEncryptionAlgorithm(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
 		jwa.RegisterContentEncryptionAlgorithm(customAlgorithm)
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.ContentEncryptionAlgorithm
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			v, ok := jwa.LookupContentEncryptionAlgorithm(customAlgorithmValue)
+			require.True(t, ok, `Lookup should succeed`)
+			require.Equal(t, customAlgorithm, v, `Lookup value should be equal to constant`)
 		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.ContentEncryptionAlgorithm
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.ContentEncryptionAlgorithm
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
+			require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})
 	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
 		jwa.UnregisterContentEncryptionAlgorithm(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.ContentEncryptionAlgorithm
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+			_, ok := jwa.LookupContentEncryptionAlgorithm(customAlgorithmValue)
+			require.False(t, ok, `Lookup should fail`)
 		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.ContentEncryptionAlgorithm
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.ContentEncryptionAlgorithm
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+			require.Error(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal should fail`)
 		})
 	})
 }

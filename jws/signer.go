@@ -61,7 +61,7 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 func init() {
 	signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
 				return newRSASigner(alg), nil
@@ -69,7 +69,7 @@ func init() {
 		}(alg))
 	}
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512, jwa.ES256K} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
 				return newECDSASigner(alg), nil
@@ -77,7 +77,7 @@ func init() {
 		}(alg))
 	}
 
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
 				return newHMACSigner(alg), nil
@@ -85,7 +85,7 @@ func init() {
 		}(alg))
 	}
 
-	RegisterSigner(jwa.EdDSA, SignerFactoryFn(func() (Signer, error) {
+	RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
 		return newEdDSASigner(), nil
 	}))
 }
@@ -105,7 +105,7 @@ func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 type noneSigner struct{}
 
 func (noneSigner) Algorithm() jwa.SignatureAlgorithm {
-	return jwa.NoSignature
+	return jwa.NoSignature()
 }
 
 func (noneSigner) Sign([]byte, interface{}) ([]byte, error) {

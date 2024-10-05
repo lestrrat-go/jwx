@@ -25,7 +25,7 @@ func TestHeaders(t *testing.T) {
 		_ = certs.AddString(src)
 	}
 
-	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 	privKey, err := jwk.Import(rawKey)
 	require.NoError(t, err, `jwk.Import should succeed`)

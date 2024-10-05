@@ -55,7 +55,7 @@ func newOKPPublicKey() *okpPublicKey {
 }
 
 func (h okpPublicKey) KeyType() jwa.KeyType {
-	return jwa.OKP
+	return jwa.OKP()
 }
 
 func (h okpPublicKey) IsPrivate() bool {
@@ -66,14 +66,14 @@ func (h *okpPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *okpPublicKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
-	return jwa.InvalidEllipticCurve
+	return jwa.InvalidEllipticCurve()
 }
 
 func (h *okpPublicKey) KeyID() string {
@@ -269,11 +269,10 @@ func (h *okpPublicKey) setNoLock(name string, value interface{}) error {
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
 			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -438,7 +437,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.OKP.String() {
+				if val != jwa.OKP().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -446,7 +445,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case OKPCrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
@@ -523,7 +525,7 @@ LOOP:
 func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 10)
-	data[KeyTypeKey] = jwa.OKP
+	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
@@ -677,7 +679,7 @@ func newOKPPrivateKey() *okpPrivateKey {
 }
 
 func (h okpPrivateKey) KeyType() jwa.KeyType {
-	return jwa.OKP
+	return jwa.OKP()
 }
 
 func (h okpPrivateKey) IsPrivate() bool {
@@ -688,14 +690,14 @@ func (h *okpPrivateKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *okpPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
-	return jwa.InvalidEllipticCurve
+	return jwa.InvalidEllipticCurve()
 }
 
 func (h *okpPrivateKey) D() []byte {
@@ -905,11 +907,10 @@ func (h *okpPrivateKey) setNoLock(name string, value interface{}) error {
 	case AlgorithmKey:
 		switch v := value.(type) {
 		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %s key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
 			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
@@ -1083,7 +1084,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.OKP.String() {
+				if val != jwa.OKP().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -1091,7 +1092,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case OKPCrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
@@ -1175,7 +1179,7 @@ LOOP:
 func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 11)
-	data[KeyTypeKey] = jwa.OKP
+	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)

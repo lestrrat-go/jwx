@@ -3,6 +3,7 @@
 package jwa_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -11,65 +12,48 @@ import (
 
 func TestCompressionAlgorithm(t *testing.T) {
 	t.Parallel()
-	t.Run(`accept jwa constant Deflate`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept(jwa.Deflate), `accept is successful`)
-		require.Equal(t, jwa.Deflate, dst, `accepted value should be equal to constant`)
+		v, ok := jwa.LookupCompressionAlgorithm("DEF")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.Deflate(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`accept the string DEF`, func(t *testing.T) {
+	t.Run(`Unmarhal the string DEF`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept("DEF"), `accept is successful`)
-		require.Equal(t, jwa.Deflate, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for DEF`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "DEF"}), `accept is successful`)
-		require.Equal(t, jwa.Deflate, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte("DEF"), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.Deflate(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for DEF`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "DEF", jwa.Deflate.String(), `stringified value matches`)
+		require.Equal(t, "DEF", jwa.Deflate().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant NoCompress`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupCompressionAlgorithm("")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.NoCompress(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarhal the string `, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept(jwa.NoCompress), `accept is successful`)
-		require.Equal(t, jwa.NoCompress, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string `, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept(""), `accept is successful`)
-		require.Equal(t, jwa.NoCompress, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for `, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.CompressionAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: ""}), `accept is successful`)
-		require.Equal(t, jwa.NoCompress, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(""), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.NoCompress(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for `, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "", jwa.NoCompress.String(), `stringified value matches`)
+		require.Equal(t, "", jwa.NoCompress().String(), `stringified value matches`)
 	})
-	t.Run(`bail out on random integer value`, func(t *testing.T) {
+	t.Run(`Unmarshal should fail for invalid value (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.CompressionAlgorithm
-		require.Error(t, dst.Accept(1), `accept should fail`)
-	})
-	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.CompressionAlgorithm
-		require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)
+		require.Error(t, json.Unmarshal([]byte(`totallyInvalidValue`), &dst), `Unmarshal should fail`)
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.CompressionAlgorithm]struct{}{
-			jwa.Deflate:    {},
-			jwa.NoCompress: {},
+			jwa.Deflate():    {},
+			jwa.NoCompress(): {},
 		}
 		for _, v := range jwa.CompressionAlgorithms() {
 			_, ok := expected[v]
@@ -83,48 +67,38 @@ func TestCompressionAlgorithm(t *testing.T) {
 // Note: this test can NOT be run in parallel as it uses options with global effect.
 func TestCompressionAlgorithmCustomAlgorithm(t *testing.T) {
 	// These subtests can NOT be run in parallel as options with global effect change.
-	customAlgorithm := jwa.CompressionAlgorithm("custom-algorithm")
+	const customAlgorithmValue = `custom-algorithm`
+	customAlgorithm := jwa.NewCompressionAlgorithm(customAlgorithmValue)
 	// Unregister the custom algorithm, in case tests fail.
 	t.Cleanup(func() {
 		jwa.UnregisterCompressionAlgorithm(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
 		jwa.RegisterCompressionAlgorithm(customAlgorithm)
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.CompressionAlgorithm
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			v, ok := jwa.LookupCompressionAlgorithm(customAlgorithmValue)
+			require.True(t, ok, `Lookup should succeed`)
+			require.Equal(t, customAlgorithm, v, `Lookup value should be equal to constant`)
 		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.CompressionAlgorithm
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.CompressionAlgorithm
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
+			require.NoError(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})
 	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
 		jwa.UnregisterCompressionAlgorithm(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.CompressionAlgorithm
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+			_, ok := jwa.LookupCompressionAlgorithm(customAlgorithmValue)
+			require.False(t, ok, `Lookup should fail`)
 		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.CompressionAlgorithm
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.CompressionAlgorithm
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+			require.Error(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal should fail`)
 		})
 	})
 }

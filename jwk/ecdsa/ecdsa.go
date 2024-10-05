@@ -57,7 +57,7 @@ func Algorithms() []jwa.EllipticCurveAlgorithm {
 func AlgorithmFromCurve(crv elliptic.Curve) (jwa.EllipticCurveAlgorithm, error) {
 	alg, ok := curveToAlgMap[crv]
 	if !ok {
-		return jwa.InvalidEllipticCurve, fmt.Errorf(`unknown elliptic curve: %q`, crv)
+		return jwa.InvalidEllipticCurve(), fmt.Errorf(`unknown elliptic curve: %q`, crv)
 	}
 	return alg, nil
 }
