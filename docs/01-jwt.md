@@ -82,7 +82,7 @@ import (
 )
 
 func ExampleJWT_Parse() {
-  tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
+  tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256(), jwkSymmetricKey))
   if err != nil {
     fmt.Printf("%s\n", err)
     return
@@ -333,7 +333,7 @@ func ExampleJWT_ParseWithKey() {
     return
   }
 
-  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256, key), jwt.WithValidate(false))
+  tok, err := jwt.Parse([]byte(exampleJWTSignedHMAC), jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("jwt.Parse failed: %s\n", err)
     return
@@ -391,7 +391,7 @@ func ExampleJWT_ParseWithKeySet() {
       return
     }
     realKey.Set(jwk.KeyIDKey, `mykey`)
-    realKey.Set(jwk.AlgorithmKey, jwa.RS256)
+    realKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
     // For demonstration purposes, we also create a bogus key
     bogusKey, err := jwk.Import([]byte("bogus"))
@@ -399,7 +399,7 @@ func ExampleJWT_ParseWithKeySet() {
       fmt.Printf("failed to create bogus JWK: %s\n", err)
       return
     }
-    bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature)
+    bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature())
     bogusKey.Set(jwk.KeyIDKey, "otherkey")
 
     // Now create a key set that users will use to verity the signed serialized against
@@ -427,7 +427,7 @@ func ExampleJWT_ParseWithKeySet() {
   token.Set(`foo`, `bar`)
 
   // Sign the token and generate a JWS message
-  signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, signingKey))
+  signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), signingKey))
   if err != nil {
     fmt.Printf("failed to generate signed serialized: %s\n", err)
     return
@@ -526,7 +526,7 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
   }
 
   symmetricKey := []byte("Abracadabra")
-  alg := jwa.HS256
+  alg := jwa.HS256()
   signed, err := jwt.Sign(tok, jwt.WithKey(alg, symmetricKey))
   if err != nil {
     fmt.Printf("failed to sign token: %s\n", err)
@@ -586,9 +586,9 @@ func ExampleJWT_ParseWithKeyProvider() {
   // a signature algorithm to a key
   store := make(map[jwa.KeyAlgorithm]interface{})
   algorithms := []jwa.SignatureAlgorithm{
-    jwa.RS256,
-    jwa.RS384,
-    jwa.RS512,
+    jwa.RS256(),
+    jwa.RS384(),
+    jwa.RS512(),
   }
   var signingKey *rsa.PrivateKey
   for _, alg := range algorithms {
@@ -618,7 +618,10 @@ func ExampleJWT_ParseWithKeyProvider() {
   // you should probably use a reusable object that implements
   // jws.KeyProvider
   tok, err := jwt.Parse(serialized, jwt.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, _ *jws.Message) error {
-    alg := sig.ProtectedHeaders().Algorithm()
+    alg, ok := sig.ProtectedHeaders().Algorithm()
+    if !ok {
+      return nil
+    }
     key, ok := store[alg]
     if !ok {
       // nothing found
@@ -713,7 +716,7 @@ func ExampleJWT_ParseWithJKU() {
   hdrs := jws.NewHeaders()
   hdrs.Set(jws.JWKSetURLKey, srv.URL)
 
-  serialized, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, signingKey, jws.WithProtectedHeaders(hdrs)))
+  serialized, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), signingKey, jws.WithProtectedHeaders(hdrs)))
   if err != nil {
     fmt.Printf("failed to seign token: %s\n", err)
     return
@@ -1045,7 +1048,7 @@ func ExampleJWT_SerializeJWS() {
   // If this were using RSA/ECDSA keys, you would be using
   // *rsa.PrivateKey/*ecdsa.PrivateKey as the raw key.
   for _, key := range []interface{}{rawKey, jwkKey} {
-    serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
+    serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
     if err != nil {
       fmt.Printf("failed to sign token: %s\n", err)
       return
@@ -1114,8 +1117,8 @@ func ExampleJWT_SerializeJWEJWS() {
   }
 
   serialized, err := jwt.NewSerializer().
-    Encrypt(jwt.WithKey(jwa.RSA_OAEP, enckey)).
-    Sign(jwt.WithKey(jwa.HS256, signkey)).
+    Encrypt(jwt.WithKey(jwa.RSA_OAEP(), enckey)).
+    Sign(jwt.WithKey(jwa.HS256(), signkey)).
     Serialize(tok)
   if err != nil {
     fmt.Printf("failed to encrypt and sign token: %s\n", err)
@@ -1273,12 +1276,12 @@ func ExampleJWTPlainStruct() {
   }
 
   key := []byte("secret")
-  signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256, key))
+  signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256(), key))
   if err != nil {
     fmt.Printf("failed to sign JWT: %s\n", err)
   }
 
-  rawJWT, err := jws.Verify(signed, jws.WithKey(jwa.HS256, key))
+  rawJWT, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
   if err != nil {
     fmt.Printf("failed to verify JWS: %s\n", err)
   }
