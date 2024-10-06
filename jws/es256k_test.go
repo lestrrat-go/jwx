@@ -20,7 +20,7 @@ func TestES256K(t *testing.T) {
 	payload := []byte("Hello, World!")
 
 	t.Parallel()
-	key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1)
+	key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1())
 	require.NoError(t, err, "ECDSA key generated")
 	jwkKey, _ := jwk.Import(key.PublicKey)
 	keys := map[string]interface{}{
@@ -28,5 +28,5 @@ func TestES256K(t *testing.T) {
 		"Verify(*ecdsa.PublicKey)": &key.PublicKey,
 		"Verify(jwk.Key)":          jwkKey,
 	}
-	testRoundtrip(t, payload, jwa.ES256K, key, keys)
+	testRoundtrip(t, payload, jwa.ES256K(), key, keys)
 }
