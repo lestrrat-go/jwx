@@ -58,7 +58,7 @@ func newECDSAPublicKey() *ecdsaPublicKey {
 }
 
 func (h ecdsaPublicKey) KeyType() jwa.KeyType {
-	return jwa.EC
+	return jwa.EC()
 }
 
 func (h ecdsaPublicKey) IsPrivate() bool {
@@ -69,14 +69,14 @@ func (h *ecdsaPublicKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *ecdsaPublicKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
-	return jwa.InvalidEllipticCurve
+	return jwa.InvalidEllipticCurve()
 }
 
 func (h *ecdsaPublicKey) KeyID() string {
@@ -285,15 +285,14 @@ func (h *ecdsaPublicKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+		case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %q key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
-			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %q key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case ECDSACrvKey:
@@ -464,7 +463,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.EC.String() {
+				if val != jwa.EC().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -472,7 +471,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case ECDSACrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
@@ -556,7 +558,7 @@ LOOP:
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 11)
-	data[KeyTypeKey] = jwa.EC
+	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
@@ -719,7 +721,7 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 }
 
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
-	return jwa.EC
+	return jwa.EC()
 }
 
 func (h ecdsaPrivateKey) IsPrivate() bool {
@@ -730,14 +732,14 @@ func (h *ecdsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *ecdsaPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
 	if h.crv != nil {
 		return *(h.crv)
 	}
-	return jwa.InvalidEllipticCurve
+	return jwa.InvalidEllipticCurve()
 }
 
 func (h *ecdsaPrivateKey) D() []byte {
@@ -960,15 +962,14 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+		case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %q key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
-			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %q key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case ECDSACrvKey:
@@ -1148,7 +1149,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.EC.String() {
+				if val != jwa.EC().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -1156,7 +1157,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case ECDSACrvKey:
 				var decoded jwa.EllipticCurveAlgorithm
@@ -1247,7 +1251,7 @@ LOOP:
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 12)
-	data[KeyTypeKey] = jwa.EC
+	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)

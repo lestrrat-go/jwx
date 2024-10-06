@@ -35,7 +35,7 @@ func TestHeader(t *testing.T) {
 	}{
 		{
 			Key:    jws.AlgorithmKey,
-			Value:  jwa.ES256,
+			Value:  jwa.ES256(),
 			Method: "Algorithm",
 		},
 		{
@@ -113,7 +113,8 @@ func TestHeader(t *testing.T) {
 				m := reflect.ValueOf(h).MethodByName(method)
 				require.NotEqual(t, m, zeroval, "method %s should be available", method)
 				ret := m.Call(nil)
-				require.Len(t, ret, 1, `should get exactly 1 value as return value`)
+				require.Len(t, ret, 2, `should get exactly 2 value as return value`)
+				require.True(t, ret[1].Bool(), `method %s should return true`, method)
 				values = append(values, ret[0].Interface())
 			}
 

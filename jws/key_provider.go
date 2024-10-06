@@ -114,13 +114,13 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 		return nil
 	}
 
-	if v := key.Algorithm(); v.String() != "" {
-		var alg jwa.SignatureAlgorithm
-		if err := alg.Accept(v); err != nil {
-			return fmt.Errorf(`invalid signature algorithm %s: %w`, key.Algorithm(), err)
+	if v := key.Algorithm(); v != nil {
+		salg, ok := jwa.LookupSignatureAlgorithm(v.String())
+		if !ok {
+			return fmt.Errorf(`invalid signature algorithm %q`, key.Algorithm())
 		}
 
-		sink.Key(alg, key)
+		sink.Key(salg, key)
 		return nil
 	}
 
@@ -131,7 +131,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 		}
 
 		// bail out if the JWT has a `alg` field, and it doesn't match
-		if tokAlg := sig.ProtectedHeaders().Algorithm(); tokAlg != "" {
+		if tokAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
 			for _, alg := range algs {
 				if tokAlg == alg {
 					sink.Key(alg, key)
@@ -152,8 +152,8 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
 	if kp.requireKid {
-		wantedKid := sig.ProtectedHeaders().KeyID()
-		if wantedKid == "" {
+		wantedKid, ok := sig.ProtectedHeaders().KeyID()
+		if !ok {
 			// If the kid is NOT specified... kp.useDefault needs to be true, and the
 			// JWKs must have exactly one key in it
 			if !kp.useDefault {
@@ -164,7 +164,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 			// if we got here, then useDefault == true AND there is exactly
 			// one key in the set.
-			key, _ := kp.set.Key(0)
+			key, ok := kp.set.Key(0)
+			if !ok {
+				return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
+			}
 			return kp.selectKey(sink, key, sig, msg)
 		}
 
@@ -181,7 +184,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 		// if multipleKeysPerKeyID is true, we attempt all keys whose key ID matches
 		// the wantedKey
-		var ok bool
+		ok = false
 		for i := range kp.set.Len() {
 			key, _ := kp.set.Key(i)
 			if key.KeyID() != wantedKid {
@@ -202,7 +205,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 	// Otherwise just try all keys
 	for i := range kp.set.Len() {
-		key, _ := kp.set.Key(i)
+		key, ok := kp.set.Key(i)
+		if !ok {
+			return fmt.Errorf(`failed to get key at index %d`, i)
+		}
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue
 		}
@@ -220,16 +226,16 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		kp.fetcher = jwk.FetchFunc(jwk.Fetch)
 	}
 
-	kid := sig.ProtectedHeaders().KeyID()
-	if kid == "" {
+	kid, ok := sig.ProtectedHeaders().KeyID()
+	if !ok {
 		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
 	}
 
 	// errors here can't be reliably passed to the consumers.
 	// it's unfortunate, but if you need this control, you are
 	// going to have to write your own fetcher
-	u := sig.ProtectedHeaders().JWKSetURL()
-	if u == "" {
+	u, ok := sig.ProtectedHeaders().JWKSetURL()
+	if !ok || u == "" {
 		return fmt.Errorf(`use of "jku" field specified, but the field is empty`)
 	}
 	uo, err := url.Parse(u)
@@ -256,16 +262,18 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		return fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
 	}
 
-	hdrAlg := sig.ProtectedHeaders().Algorithm()
-	for _, alg := range algs {
-		// if we have an "alg" field in the JWS, we can only proceed if
-		// the inferred algorithm matches
-		if hdrAlg != "" && hdrAlg != alg {
-			continue
-		}
+	hdrAlg, ok := sig.ProtectedHeaders().Algorithm()
+	if ok {
+		for _, alg := range algs {
+			// if we have an "alg" field in the JWS, we can only proceed if
+			// the inferred algorithm matches
+			if hdrAlg != alg {
+				continue
+			}
 
-		sink.Key(alg, key)
-		break
+			sink.Key(alg, key)
+			break
+		}
 	}
 	return nil
 }

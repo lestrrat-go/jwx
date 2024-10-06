@@ -13,7 +13,7 @@ import (
 )
 
 func BenchmarkJWT(b *testing.B) {
-	alg := jwa.RS256
+	alg := jwa.RS256()
 
 	key, err := jwxtest.GenerateRsaJwk()
 	if err != nil {

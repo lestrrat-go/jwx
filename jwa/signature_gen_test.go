@@ -3,6 +3,8 @@
 package jwa_test
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -11,412 +13,317 @@ import (
 
 func TestSignatureAlgorithm(t *testing.T) {
 	t.Parallel()
-	t.Run(`accept jwa constant ES256`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.ES256), `accept is successful`)
-		require.Equal(t, jwa.ES256, dst, `accepted value should be equal to constant`)
+		v, ok := jwa.LookupSignatureAlgorithm("ES256")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.ES256(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`accept the string ES256`, func(t *testing.T) {
+	t.Run(`Unmarshal the string ES256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("ES256"), `accept is successful`)
-		require.Equal(t, jwa.ES256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for ES256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "ES256"}), `accept is successful`)
-		require.Equal(t, jwa.ES256, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES256")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.ES256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES256`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "ES256", jwa.ES256.String(), `stringified value matches`)
+		require.Equal(t, "ES256", jwa.ES256().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant ES256K`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("ES256K")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.ES256K(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string ES256K`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.ES256K), `accept is successful`)
-		require.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string ES256K`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("ES256K"), `accept is successful`)
-		require.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for ES256K`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "ES256K"}), `accept is successful`)
-		require.Equal(t, jwa.ES256K, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES256K")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.ES256K(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES256K`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "ES256K", jwa.ES256K.String(), `stringified value matches`)
+		require.Equal(t, "ES256K", jwa.ES256K().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant ES384`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("ES384")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.ES384(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string ES384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.ES384), `accept is successful`)
-		require.Equal(t, jwa.ES384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string ES384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("ES384"), `accept is successful`)
-		require.Equal(t, jwa.ES384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for ES384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "ES384"}), `accept is successful`)
-		require.Equal(t, jwa.ES384, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES384")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.ES384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES384`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "ES384", jwa.ES384.String(), `stringified value matches`)
+		require.Equal(t, "ES384", jwa.ES384().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant ES512`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("ES512")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.ES512(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string ES512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.ES512), `accept is successful`)
-		require.Equal(t, jwa.ES512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string ES512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("ES512"), `accept is successful`)
-		require.Equal(t, jwa.ES512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for ES512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "ES512"}), `accept is successful`)
-		require.Equal(t, jwa.ES512, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES512")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.ES512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for ES512`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "ES512", jwa.ES512.String(), `stringified value matches`)
+		require.Equal(t, "ES512", jwa.ES512().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant EdDSA`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("EdDSA")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.EdDSA(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string EdDSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.EdDSA), `accept is successful`)
-		require.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string EdDSA`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("EdDSA"), `accept is successful`)
-		require.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for EdDSA`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "EdDSA"}), `accept is successful`)
-		require.Equal(t, jwa.EdDSA, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("EdDSA")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.EdDSA(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for EdDSA`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "EdDSA", jwa.EdDSA.String(), `stringified value matches`)
+		require.Equal(t, "EdDSA", jwa.EdDSA().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant HS256`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("HS256")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HS256(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.HS256), `accept is successful`)
-		require.Equal(t, jwa.HS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string HS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("HS256"), `accept is successful`)
-		require.Equal(t, jwa.HS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for HS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "HS256"}), `accept is successful`)
-		require.Equal(t, jwa.HS256, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS256")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS256`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "HS256", jwa.HS256.String(), `stringified value matches`)
+		require.Equal(t, "HS256", jwa.HS256().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant HS384`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("HS384")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HS384(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.HS384), `accept is successful`)
-		require.Equal(t, jwa.HS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string HS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("HS384"), `accept is successful`)
-		require.Equal(t, jwa.HS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for HS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "HS384"}), `accept is successful`)
-		require.Equal(t, jwa.HS384, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS384")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS384`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "HS384", jwa.HS384.String(), `stringified value matches`)
+		require.Equal(t, "HS384", jwa.HS384().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant HS512`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("HS512")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HS512(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.HS512), `accept is successful`)
-		require.Equal(t, jwa.HS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string HS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("HS512"), `accept is successful`)
-		require.Equal(t, jwa.HS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for HS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "HS512"}), `accept is successful`)
-		require.Equal(t, jwa.HS512, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HS512")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for HS512`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "HS512", jwa.HS512.String(), `stringified value matches`)
+		require.Equal(t, "HS512", jwa.HS512().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant NoSignature`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("none")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.NoSignature(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string none`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.NoSignature), `accept is successful`)
-		require.Equal(t, jwa.NoSignature, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string none`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("none"), `accept is successful`)
-		require.Equal(t, jwa.NoSignature, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for none`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "none"}), `accept is successful`)
-		require.Equal(t, jwa.NoSignature, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("none")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.NoSignature(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for none`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "none", jwa.NoSignature.String(), `stringified value matches`)
+		require.Equal(t, "none", jwa.NoSignature().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant PS256`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("PS256")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.PS256(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string PS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.PS256), `accept is successful`)
-		require.Equal(t, jwa.PS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string PS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("PS256"), `accept is successful`)
-		require.Equal(t, jwa.PS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for PS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "PS256"}), `accept is successful`)
-		require.Equal(t, jwa.PS256, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS256")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.PS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS256`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "PS256", jwa.PS256.String(), `stringified value matches`)
+		require.Equal(t, "PS256", jwa.PS256().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant PS384`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("PS384")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.PS384(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string PS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.PS384), `accept is successful`)
-		require.Equal(t, jwa.PS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string PS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("PS384"), `accept is successful`)
-		require.Equal(t, jwa.PS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for PS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "PS384"}), `accept is successful`)
-		require.Equal(t, jwa.PS384, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS384")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.PS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS384`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "PS384", jwa.PS384.String(), `stringified value matches`)
+		require.Equal(t, "PS384", jwa.PS384().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant PS512`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("PS512")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.PS512(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string PS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.PS512), `accept is successful`)
-		require.Equal(t, jwa.PS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string PS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("PS512"), `accept is successful`)
-		require.Equal(t, jwa.PS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for PS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "PS512"}), `accept is successful`)
-		require.Equal(t, jwa.PS512, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("PS512")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.PS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for PS512`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "PS512", jwa.PS512.String(), `stringified value matches`)
+		require.Equal(t, "PS512", jwa.PS512().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant RS256`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("RS256")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.RS256(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string RS256`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.RS256), `accept is successful`)
-		require.Equal(t, jwa.RS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string RS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("RS256"), `accept is successful`)
-		require.Equal(t, jwa.RS256, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for RS256`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "RS256"}), `accept is successful`)
-		require.Equal(t, jwa.RS256, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS256")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.RS256(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS256`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "RS256", jwa.RS256.String(), `stringified value matches`)
+		require.Equal(t, "RS256", jwa.RS256().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant RS384`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("RS384")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.RS384(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string RS384`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.RS384), `accept is successful`)
-		require.Equal(t, jwa.RS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string RS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("RS384"), `accept is successful`)
-		require.Equal(t, jwa.RS384, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for RS384`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "RS384"}), `accept is successful`)
-		require.Equal(t, jwa.RS384, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS384")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.RS384(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS384`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "RS384", jwa.RS384.String(), `stringified value matches`)
+		require.Equal(t, "RS384", jwa.RS384().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant RS512`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("RS512")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.RS512(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string RS512`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(jwa.RS512), `accept is successful`)
-		require.Equal(t, jwa.RS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string RS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept("RS512"), `accept is successful`)
-		require.Equal(t, jwa.RS512, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for RS512`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "RS512"}), `accept is successful`)
-		require.Equal(t, jwa.RS512, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RS512")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.RS512(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RS512`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "RS512", jwa.RS512.String(), `stringified value matches`)
+		require.Equal(t, "RS512", jwa.RS512().String(), `stringified value matches`)
 	})
-	t.Run(`bail out on random integer value`, func(t *testing.T) {
+	t.Run(`Unmarshal should fail for invalid value (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.SignatureAlgorithm
-		require.Error(t, dst.Accept(1), `accept should fail`)
-	})
-	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)
+		require.Error(t, json.Unmarshal([]byte(`totallyInvalidValue`), &dst), `Unmarshal should fail`)
 	})
 	t.Run(`check symmetric values`, func(t *testing.T) {
 		t.Parallel()
 		t.Run(`ES256`, func(t *testing.T) {
-			require.False(t, jwa.ES256.IsSymmetric(), `jwa.ES256 should NOT be symmetric`)
+			require.False(t, jwa.ES256().IsSymmetric(), `jwa.ES256 returns expected value`)
 		})
 		t.Run(`ES256K`, func(t *testing.T) {
-			require.False(t, jwa.ES256K.IsSymmetric(), `jwa.ES256K should NOT be symmetric`)
+			require.False(t, jwa.ES256K().IsSymmetric(), `jwa.ES256K returns expected value`)
 		})
 		t.Run(`ES384`, func(t *testing.T) {
-			require.False(t, jwa.ES384.IsSymmetric(), `jwa.ES384 should NOT be symmetric`)
+			require.False(t, jwa.ES384().IsSymmetric(), `jwa.ES384 returns expected value`)
 		})
 		t.Run(`ES512`, func(t *testing.T) {
-			require.False(t, jwa.ES512.IsSymmetric(), `jwa.ES512 should NOT be symmetric`)
+			require.False(t, jwa.ES512().IsSymmetric(), `jwa.ES512 returns expected value`)
 		})
 		t.Run(`EdDSA`, func(t *testing.T) {
-			require.False(t, jwa.EdDSA.IsSymmetric(), `jwa.EdDSA should NOT be symmetric`)
+			require.False(t, jwa.EdDSA().IsSymmetric(), `jwa.EdDSA returns expected value`)
 		})
 		t.Run(`HS256`, func(t *testing.T) {
-			require.True(t, jwa.HS256.IsSymmetric(), `jwa.HS256 should be symmetric`)
+			require.True(t, jwa.HS256().IsSymmetric(), `jwa.HS256 returns expected value`)
 		})
 		t.Run(`HS384`, func(t *testing.T) {
-			require.True(t, jwa.HS384.IsSymmetric(), `jwa.HS384 should be symmetric`)
+			require.True(t, jwa.HS384().IsSymmetric(), `jwa.HS384 returns expected value`)
 		})
 		t.Run(`HS512`, func(t *testing.T) {
-			require.True(t, jwa.HS512.IsSymmetric(), `jwa.HS512 should be symmetric`)
+			require.True(t, jwa.HS512().IsSymmetric(), `jwa.HS512 returns expected value`)
 		})
 		t.Run(`NoSignature`, func(t *testing.T) {
-			require.False(t, jwa.NoSignature.IsSymmetric(), `jwa.NoSignature should NOT be symmetric`)
+			require.False(t, jwa.NoSignature().IsSymmetric(), `jwa.NoSignature returns expected value`)
 		})
 		t.Run(`PS256`, func(t *testing.T) {
-			require.False(t, jwa.PS256.IsSymmetric(), `jwa.PS256 should NOT be symmetric`)
+			require.False(t, jwa.PS256().IsSymmetric(), `jwa.PS256 returns expected value`)
 		})
 		t.Run(`PS384`, func(t *testing.T) {
-			require.False(t, jwa.PS384.IsSymmetric(), `jwa.PS384 should NOT be symmetric`)
+			require.False(t, jwa.PS384().IsSymmetric(), `jwa.PS384 returns expected value`)
 		})
 		t.Run(`PS512`, func(t *testing.T) {
-			require.False(t, jwa.PS512.IsSymmetric(), `jwa.PS512 should NOT be symmetric`)
+			require.False(t, jwa.PS512().IsSymmetric(), `jwa.PS512 returns expected value`)
 		})
 		t.Run(`RS256`, func(t *testing.T) {
-			require.False(t, jwa.RS256.IsSymmetric(), `jwa.RS256 should NOT be symmetric`)
+			require.False(t, jwa.RS256().IsSymmetric(), `jwa.RS256 returns expected value`)
 		})
 		t.Run(`RS384`, func(t *testing.T) {
-			require.False(t, jwa.RS384.IsSymmetric(), `jwa.RS384 should NOT be symmetric`)
+			require.False(t, jwa.RS384().IsSymmetric(), `jwa.RS384 returns expected value`)
 		})
 		t.Run(`RS512`, func(t *testing.T) {
-			require.False(t, jwa.RS512.IsSymmetric(), `jwa.RS512 should NOT be symmetric`)
+			require.False(t, jwa.RS512().IsSymmetric(), `jwa.RS512 returns expected value`)
 		})
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.SignatureAlgorithm]struct{}{
-			jwa.ES256:       {},
-			jwa.ES256K:      {},
-			jwa.ES384:       {},
-			jwa.ES512:       {},
-			jwa.EdDSA:       {},
-			jwa.HS256:       {},
-			jwa.HS384:       {},
-			jwa.HS512:       {},
-			jwa.NoSignature: {},
-			jwa.PS256:       {},
-			jwa.PS384:       {},
-			jwa.PS512:       {},
-			jwa.RS256:       {},
-			jwa.RS384:       {},
-			jwa.RS512:       {},
+			jwa.ES256():       {},
+			jwa.ES256K():      {},
+			jwa.ES384():       {},
+			jwa.ES512():       {},
+			jwa.EdDSA():       {},
+			jwa.HS256():       {},
+			jwa.HS384():       {},
+			jwa.HS512():       {},
+			jwa.NoSignature(): {},
+			jwa.PS256():       {},
+			jwa.PS384():       {},
+			jwa.PS512():       {},
+			jwa.RS256():       {},
+			jwa.RS384():       {},
+			jwa.RS512():       {},
 		}
 		for _, v := range jwa.SignatureAlgorithms() {
 			_, ok := expected[v]
@@ -430,152 +337,44 @@ func TestSignatureAlgorithm(t *testing.T) {
 // Note: this test can NOT be run in parallel as it uses options with global effect.
 func TestSignatureAlgorithmCustomAlgorithm(t *testing.T) {
 	// These subtests can NOT be run in parallel as options with global effect change.
-	customAlgorithm := jwa.SignatureAlgorithm("custom-algorithm")
-	// Unregister the custom algorithm, in case tests fail.
-	t.Cleanup(func() {
-		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
-	})
-	t.Run(`with custom algorithm registered`, func(t *testing.T) {
-		jwa.RegisterSignatureAlgorithm(customAlgorithm)
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+	const customAlgorithmValue = `custom-algorithm`
+	for _, symmetric := range []bool{true, false} {
+		customAlgorithm := jwa.NewSignatureAlgorithm(customAlgorithmValue, jwa.WithIsSymmetric(symmetric))
+		// Unregister the custom algorithm, in case tests fail.
+		t.Cleanup(func() {
+			jwa.UnregisterSignatureAlgorithm(customAlgorithm)
 		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		t.Run(`with custom algorithm registered`, func(t *testing.T) {
+			jwa.RegisterSignatureAlgorithm(customAlgorithm)
+			t.Run(`Lookup the object`, func(t *testing.T) {
+				t.Parallel()
+				v, ok := jwa.LookupSignatureAlgorithm(customAlgorithmValue)
+				require.True(t, ok, `Lookup should succeed`)
+				require.Equal(t, customAlgorithm, v, `Lookup value should be equal to constant`)
+			})
+			t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
+				t.Parallel()
+				var dst jwa.SignatureAlgorithm
+				require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
+				require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			})
+			t.Run(`check symmetric`, func(t *testing.T) {
+				t.Parallel()
+				require.Equal(t, symmetric, customAlgorithm.IsSymmetric(), `custom algorithm's symmetric attribute should match`)
+			})
 		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+		t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
+			jwa.UnregisterSignatureAlgorithm(customAlgorithm)
+			t.Run(`Lookup the object`, func(t *testing.T) {
+				t.Parallel()
+				_, ok := jwa.LookupSignatureAlgorithm(customAlgorithmValue)
+				require.False(t, ok, `Lookup should fail`)
+			})
+			t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
+				t.Parallel()
+				var dst jwa.SignatureAlgorithm
+				require.Error(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal should fail`)
+			})
 		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
-		})
-	})
-	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
-		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
-		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
-		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
-		})
-	})
-
-	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(false)`, func(t *testing.T) {
-		jwa.RegisterSignatureAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(false))
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
-		})
-	})
-	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(false))`, func(t *testing.T) {
-		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
-		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
-		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
-		})
-	})
-
-	t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(true)`, func(t *testing.T) {
-		jwa.RegisterSignatureAlgorithmWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(true))
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.True(t, customAlgorithm.IsSymmetric(), `custom algorithm should be symmetric`)
-		})
-	})
-	t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(true))`, func(t *testing.T) {
-		jwa.UnregisterSignatureAlgorithm(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
-		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.SignatureAlgorithm
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
-		})
-		t.Run(`check symmetric`, func(t *testing.T) {
-			t.Parallel()
-			require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)
-		})
-	})
+	}
 }

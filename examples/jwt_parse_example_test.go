@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleJWT_Parse() {
-	tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
+	tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256(), jwkSymmetricKey))
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

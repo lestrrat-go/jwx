@@ -3,6 +3,8 @@
 package jwa_test
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -11,116 +13,82 @@ import (
 
 func TestKeyType(t *testing.T) {
 	t.Parallel()
-	t.Run(`accept jwa constant EC`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(jwa.EC), `accept is successful`)
-		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
+		v, ok := jwa.LookupKeyType("EC")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.EC(), v, `Lookup value should be equal to constant`)
 	})
-	t.Run(`accept the string EC`, func(t *testing.T) {
+	t.Run(`Unmarshal the string EC`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, dst.Accept("EC"), `accept is successful`)
-		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for EC`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(stringer{src: "EC"}), `accept is successful`)
-		require.Equal(t, jwa.EC, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("EC")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.EC(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for EC`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "EC", jwa.EC.String(), `stringified value matches`)
+		require.Equal(t, "EC", jwa.EC().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant OKP`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyType("OKP")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.OKP(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string OKP`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(jwa.OKP), `accept is successful`)
-		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string OKP`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept("OKP"), `accept is successful`)
-		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for OKP`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(stringer{src: "OKP"}), `accept is successful`)
-		require.Equal(t, jwa.OKP, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("OKP")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.OKP(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for OKP`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "OKP", jwa.OKP.String(), `stringified value matches`)
+		require.Equal(t, "OKP", jwa.OKP().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant OctetSeq`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyType("oct")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.OctetSeq(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string oct`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(jwa.OctetSeq), `accept is successful`)
-		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string oct`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept("oct"), `accept is successful`)
-		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for oct`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(stringer{src: "oct"}), `accept is successful`)
-		require.Equal(t, jwa.OctetSeq, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("oct")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.OctetSeq(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for oct`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "oct", jwa.OctetSeq.String(), `stringified value matches`)
+		require.Equal(t, "oct", jwa.OctetSeq().String(), `stringified value matches`)
 	})
-	t.Run(`accept jwa constant RSA`, func(t *testing.T) {
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyType("RSA")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.RSA(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string RSA`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(jwa.RSA), `accept is successful`)
-		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string RSA`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept("RSA"), `accept is successful`)
-		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for RSA`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.NoError(t, dst.Accept(stringer{src: "RSA"}), `accept is successful`)
-		require.Equal(t, jwa.RSA, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("RSA")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.RSA(), dst, `unmarshaled value should be equal to constant`)
 	})
 	t.Run(`stringification for RSA`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "RSA", jwa.RSA.String(), `stringified value matches`)
+		require.Equal(t, "RSA", jwa.RSA().String(), `stringified value matches`)
 	})
-	t.Run(`do not accept invalid constant InvalidKeyType`, func(t *testing.T) {
+	t.Run(`Unmarshal should fail for invalid value (totally made up) string value`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.KeyType
-		require.Error(t, dst.Accept(jwa.InvalidKeyType), `accept should fail`)
-	})
-	t.Run(`bail out on random integer value`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.Error(t, dst.Accept(1), `accept should fail`)
-	})
-	t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyType
-		require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)
+		require.Error(t, json.Unmarshal([]byte(`totallyInvalidValue`), &dst), `Unmarshal should fail`)
 	})
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.KeyType]struct{}{
-			jwa.EC:       {},
-			jwa.OKP:      {},
-			jwa.OctetSeq: {},
-			jwa.RSA:      {},
+			jwa.EC():       {},
+			jwa.OKP():      {},
+			jwa.OctetSeq(): {},
+			jwa.RSA():      {},
 		}
 		for _, v := range jwa.KeyTypes() {
 			_, ok := expected[v]
@@ -134,48 +102,38 @@ func TestKeyType(t *testing.T) {
 // Note: this test can NOT be run in parallel as it uses options with global effect.
 func TestKeyTypeCustomAlgorithm(t *testing.T) {
 	// These subtests can NOT be run in parallel as options with global effect change.
-	customAlgorithm := jwa.KeyType("custom-algorithm")
+	const customAlgorithmValue = `custom-algorithm`
+	customAlgorithm := jwa.NewKeyType(customAlgorithmValue)
 	// Unregister the custom algorithm, in case tests fail.
 	t.Cleanup(func() {
 		jwa.UnregisterKeyType(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
 		jwa.RegisterKeyType(customAlgorithm)
-		t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.KeyType
-			require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
+			v, ok := jwa.LookupKeyType(customAlgorithmValue)
+			require.True(t, ok, `Lookup should succeed`)
+			require.Equal(t, customAlgorithm, v, `Lookup value should be equal to constant`)
 		})
-		t.Run(`accept the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)
-			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
-		})
-		t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.KeyType
-			require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)
+			require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)
 			require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)
 		})
 	})
 	t.Run(`with custom algorithm deregistered`, func(t *testing.T) {
 		jwa.UnregisterKeyType(customAlgorithm)
-		t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {
+		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
-			var dst jwa.KeyType
-			require.Error(t, dst.Accept(customAlgorithm), `accept failed`)
+			_, ok := jwa.LookupKeyType(customAlgorithmValue)
+			require.False(t, ok, `Lookup should fail`)
 		})
-		t.Run(`reject the string custom-algorithm`, func(t *testing.T) {
+		t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {
 			t.Parallel()
 			var dst jwa.KeyType
-			require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)
-		})
-		t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {
-			t.Parallel()
-			var dst jwa.KeyType
-			require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)
+			require.Error(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal should fail`)
 		})
 	})
 }

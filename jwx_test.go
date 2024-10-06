@@ -161,42 +161,42 @@ func TestJoseCompatibility(t *testing.T) {
 
 		var tests []interopTest
 
-		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512} {
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512()} {
 			if !set.Has(keyenc.String()) {
 				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
 				continue
 			}
-			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256, jwa.A256CBC_HS512} {
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM(), jwa.A128CBC_HS256(), jwa.A256CBC_HS512()} {
 				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
-		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.A128KW, jwa.A128GCMKW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS256_A128KW, jwa.DIRECT} {
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.A128KW(), jwa.A128GCMKW(), jwa.A256KW(), jwa.A256GCMKW(), jwa.PBES2_HS256_A128KW(), jwa.DIRECT()} {
 			if !set.Has(keyenc.String()) {
 				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
 				continue
 			}
-			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM, jwa.A128CBC_HS256} {
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A128GCM(), jwa.A128CBC_HS256()} {
 				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
-		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES, jwa.ECDH_ES_A256KW, jwa.A256KW, jwa.A256GCMKW, jwa.PBES2_HS512_A256KW, jwa.DIRECT} {
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.ECDH_ES(), jwa.ECDH_ES_A256KW(), jwa.A256KW(), jwa.A256GCMKW(), jwa.PBES2_HS512_A256KW(), jwa.DIRECT()} {
 			if !set.Has(keyenc.String()) {
 				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
 				continue
 			}
-			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A256GCM, jwa.A256CBC_HS512} {
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A256GCM(), jwa.A256CBC_HS512()} {
 				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
 
-		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.PBES2_HS384_A192KW} {
+		for _, keyenc := range []jwa.KeyEncryptionAlgorithm{jwa.PBES2_HS384_A192KW()} {
 			if !set.Has(keyenc.String()) {
 				t.Logf("jose does not support key encryption algorithm %q: skipping", keyenc)
 				continue
 			}
-			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A192GCM, jwa.A192CBC_HS384} {
+			for _, contentenc := range []jwa.ContentEncryptionAlgorithm{jwa.A192GCM(), jwa.A192CBC_HS384()} {
 				tests = append(tests, interopTest{keyenc, contentenc})
 			}
 		}
@@ -213,20 +213,20 @@ func TestJoseCompatibility(t *testing.T) {
 	t.Run("jws", func(t *testing.T) {
 		t.Parallel()
 		tests := []jwa.SignatureAlgorithm{
-			jwa.ES256,
+			jwa.ES256(),
 			//jwa.ES256K,
-			jwa.ES384,
-			jwa.ES512,
+			jwa.ES384(),
+			jwa.ES512(),
 			//jwa.EdDSA,
-			jwa.HS256,
-			jwa.HS384,
-			jwa.HS512,
-			jwa.PS256,
-			jwa.PS384,
-			jwa.PS512,
-			jwa.RS256,
-			jwa.RS384,
-			jwa.RS512,
+			jwa.HS256(),
+			jwa.HS384(),
+			jwa.HS512(),
+			jwa.PS256(),
+			jwa.PS384(),
+			jwa.PS512(),
+			jwa.RS256(),
+			jwa.RS384(),
+			jwa.RS512(),
 		}
 		for _, test := range tests {
 			t.Run(test.String(), func(t *testing.T) {
@@ -251,7 +251,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 
 	// let jose generate a key file
 	alg := spec.alg.String()
-	if spec.alg == jwa.DIRECT {
+	if spec.alg == jwa.DIRECT() {
 		alg = spec.enc.String()
 	}
 	joseJwkFile, joseJwkCleanup, err := jose.GenerateJwk(ctx, t, fmt.Sprintf(`{"alg": "%s"}`, alg))
@@ -264,10 +264,10 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 
 	t.Run("Parse JWK via jwx", func(t *testing.T) {
 		switch spec.alg {
-		case jwa.RSA1_5, jwa.RSA_OAEP, jwa.RSA_OAEP_256, jwa.RSA_OAEP_384, jwa.RSA_OAEP_512:
+		case jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 			var rawkey rsa.PrivateKey
 			require.NoError(t, jwk.Export(jwxJwk, &rawkey), `jwk.Export should succeed`)
-		case jwa.ECDH_ES, jwa.ECDH_ES_A128KW, jwa.ECDH_ES_A192KW, jwa.ECDH_ES_A256KW:
+		case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
 			var rawkey ecdsa.PrivateKey
 			require.NoError(t, jwk.Export(jwxJwk, &rawkey), `jwk.Export should succeed`)
 		default:
@@ -289,7 +289,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 		require.Equal(t, expected, payload, `decrypted payloads should match`)
 	})
 	t.Run("Encrypt with jwx, Decrypt with jose", func(t *testing.T) {
-		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress)
+		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress())
 		require.NoError(t, err, `jwxtest.EncryptJweFile should succeed`)
 		defer jwxCryptCleanup()
 
@@ -464,7 +464,7 @@ func TestFormat(t *testing.T) {
 }
 
 func TestGH996(t *testing.T) {
-	ecdsaKey, err := jwxtest.GenerateEcdsaKey(jwa.P256)
+	ecdsaKey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 
 	rsaKey, err := jwxtest.GenerateRsaKey()
@@ -485,7 +485,7 @@ func TestGH996(t *testing.T) {
 	}{
 		{
 			Name:                    `ECDSA`,
-			Algorithm:               jwa.ES256,
+			Algorithm:               jwa.ES256(),
 			ValidSigningKeys:        []interface{}{ecdsaKey},
 			InvalidSigningKeys:      []interface{}{rsaKey, okpKey, symmetricKey},
 			ValidVerificationKeys:   []interface{}{ecdsaKey.PublicKey},
@@ -493,7 +493,7 @@ func TestGH996(t *testing.T) {
 		},
 		{
 			Name:                    `RSA`,
-			Algorithm:               jwa.RS256,
+			Algorithm:               jwa.RS256(),
 			ValidSigningKeys:        []interface{}{rsaKey},
 			InvalidSigningKeys:      []interface{}{ecdsaKey, okpKey, symmetricKey},
 			ValidVerificationKeys:   []interface{}{rsaKey.PublicKey},
@@ -501,7 +501,7 @@ func TestGH996(t *testing.T) {
 		},
 		{
 			Name:                    `OKP`,
-			Algorithm:               jwa.EdDSA,
+			Algorithm:               jwa.EdDSA(),
 			ValidSigningKeys:        []interface{}{okpKey},
 			InvalidSigningKeys:      []interface{}{ecdsaKey, rsaKey, symmetricKey},
 			ValidVerificationKeys:   []interface{}{okpKey.Public()},
@@ -558,10 +558,10 @@ func TestGH1140(t *testing.T) {
 	var encrypted []byte
 	encrypted, err = jwe.Encrypt(
 		[]byte("test-encryption-payload"),
-		jwe.WithKey(jwa.PBES2_HS256_A128KW, key),
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
 	)
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
-	_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW, key))
+	_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 }

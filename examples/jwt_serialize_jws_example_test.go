@@ -35,7 +35,7 @@ func ExampleJWT_SerializeJWS() {
 	// If this were using RSA/ECDSA keys, you would be using
 	// *rsa.PrivateKey/*ecdsa.PrivateKey as the raw key.
 	for _, key := range []interface{}{rawKey, jwkKey} {
-		serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
+		serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
 		if err != nil {
 			fmt.Printf("failed to sign token: %s\n", err)
 			return

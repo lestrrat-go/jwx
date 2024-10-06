@@ -130,17 +130,26 @@ func makeJwkGenerateCmd() *cli.Command {
 
 	cmd.Action = func(c *cli.Context) error {
 		var rawkey interface{}
-		switch typ := jwa.KeyType(c.String("type")); typ {
-		case jwa.RSA:
+		typ, ok := jwa.LookupKeyType(c.String("type"))
+		if !ok {
+			return fmt.Errorf(`invalid key type %s`, c.String("type"))
+		}
+
+		switch typ {
+		case jwa.RSA():
 			v, err := rsa.GenerateKey(rand.Reader, c.Int("keysize"))
 			if err != nil {
 				return fmt.Errorf(`failed to generate rsa private key: %w`, err)
 			}
 			rawkey = v
-		case jwa.EC:
+		case jwa.EC():
 			var crvalg jwa.EllipticCurveAlgorithm
-			if err := crvalg.Accept(c.String("curve")); err != nil {
-				return fmt.Errorf(`invalid elliptic curve name %s: %w`, c.String("curve"), err)
+			{
+				v, ok := jwa.LookupEllipticCurveAlgorithm(c.String("curve"))
+				if !ok {
+					return fmt.Errorf(`invalid elliptic curve name %q`, c.String("curve"))
+				}
+				crvalg = v
 			}
 
 			crv, err := ourecdsa.CurveFromAlgorithm(crvalg)
@@ -153,32 +162,36 @@ func makeJwkGenerateCmd() *cli.Command {
 				return fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 			}
 			rawkey = v
-		case jwa.OctetSeq:
+		case jwa.OctetSeq():
 			octets := make([]byte, c.Int("keysize"))
 			io.ReadFull(rand.Reader, octets)
 
 			rawkey = octets
-		case jwa.OKP:
+		case jwa.OKP():
 			var crvalg jwa.EllipticCurveAlgorithm
-			if err := crvalg.Accept(c.String("curve")); err != nil {
-				return fmt.Errorf(`invalid elliptic curve name: %w`, err)
+			{
+				v, ok := jwa.LookupEllipticCurveAlgorithm(c.String("curve"))
+				if !ok {
+					return fmt.Errorf(`invalid elliptic curve name %q`, c.String("curve"))
+				}
+				crvalg = v
 			}
 
 			switch crvalg {
-			case jwa.Ed25519:
+			case jwa.Ed25519():
 				_, priv, err := ed25519.GenerateKey(rand.Reader)
 				if err != nil {
 					return fmt.Errorf(`failed to generate ed25519 private key: %w`, err)
 				}
 				rawkey = priv
-			case jwa.X25519:
+			case jwa.X25519():
 				priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 				if err != nil {
 					return fmt.Errorf(`failed to generate x25519 private key: %w`, err)
 				}
 				rawkey = priv
 			default:
-				return fmt.Errorf(`invalid elliptic curve for OKP: %s (expected %s/%s)`, crvalg, jwa.Ed25519, jwa.X25519)
+				return fmt.Errorf(`invalid elliptic curve for OKP: %s (expected %s/%s)`, crvalg, jwa.Ed25519(), jwa.X25519())
 			}
 		default:
 			return fmt.Errorf(`invalid key type %s`, typ)

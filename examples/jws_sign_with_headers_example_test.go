@@ -17,7 +17,7 @@ func ExampleJWS_SignWithHeaders() {
 
 	hdrs := jws.NewHeaders()
 	hdrs.Set(`x-example`, true)
-	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)))
+	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
 		return

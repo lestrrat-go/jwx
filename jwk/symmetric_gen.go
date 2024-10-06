@@ -51,14 +51,14 @@ func newSymmetricKey() *symmetricKey {
 }
 
 func (h symmetricKey) KeyType() jwa.KeyType {
-	return jwa.OctetSeq
+	return jwa.OctetSeq()
 }
 
 func (h *symmetricKey) Algorithm() jwa.KeyAlgorithm {
 	if h.algorithm != nil {
 		return *(h.algorithm)
 	}
-	return jwa.InvalidKeyAlgorithm("")
+	return nil
 }
 
 func (h *symmetricKey) KeyID() string {
@@ -243,15 +243,14 @@ func (h *symmetricKey) setNoLock(name string, value interface{}) error {
 		return nil
 	case AlgorithmKey:
 		switch v := value.(type) {
-		case string, jwa.SignatureAlgorithm, jwa.ContentEncryptionAlgorithm:
-			var tmp = jwa.KeyAlgorithmFrom(v)
-			h.algorithm = &tmp
-		case fmt.Stringer:
-			s := v.String()
-			var tmp = jwa.KeyAlgorithmFrom(s)
+		case string, jwa.SignatureAlgorithm, jwa.KeyEncryptionAlgorithm, jwa.ContentEncryptionAlgorithm:
+			tmp, err := jwa.KeyAlgorithmFrom(v)
+			if err != nil {
+				return fmt.Errorf(`invalid algorithm for %q key: %w`, AlgorithmKey, err)
+			}
 			h.algorithm = &tmp
 		default:
-			return fmt.Errorf(`invalid type for %s key: %T`, AlgorithmKey, value)
+			return fmt.Errorf(`invalid type for %q key: %T`, AlgorithmKey, value)
 		}
 		return nil
 	case KeyIDKey:
@@ -404,7 +403,7 @@ LOOP:
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
-				if val != jwa.OctetSeq.String() {
+				if val != jwa.OctetSeq().String() {
 					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 				}
 			case AlgorithmKey:
@@ -412,7 +411,10 @@ LOOP:
 				if err := dec.Decode(&s); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
-				alg := jwa.KeyAlgorithmFrom(s)
+				alg, err := jwa.KeyAlgorithmFrom(s)
+				if err != nil {
+					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+				}
 				h.algorithm = &alg
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
@@ -480,7 +482,7 @@ LOOP:
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]interface{})
 	fields := make([]string, 0, 9)
-	data[KeyTypeKey] = jwa.OctetSeq
+	data[KeyTypeKey] = jwa.OctetSeq()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)

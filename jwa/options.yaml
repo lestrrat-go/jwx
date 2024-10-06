@@ -1,15 +1,22 @@
 package_name: jwa
 output: jwa/options_gen.go
 interfaces:
-  - name: RegisterAlgorithmOption
+  - name: NewSignatureAlgorithmOption
     comment: |
-      RegisterAlgorithmOption describes options that can be passed to the algorithm registering
-      functions that support options such as RegisterKeyEncryptionAlgorithmWithOptions.
+      NewSignatureAlgorithmOption represents an option that can be passed to the NewSignatureAlgorithm
+  - name: NewKeyEncryptionAlgorithmOption
+    comment: |
+      NewKeyEncryptionAlgorithmOption represents an option that can be passed to the NewKeyEncryptionAlgorithm
+  - name: NewSignatureKeyEncryptionAlgorithmOption
+    comment: |
+      NewSignatureKeyEncryptionAlgorithmOption represents an option that can be passed to both
+      NewSignatureAlgorithm and NewKeyEncryptionAlgorithm
+    methods:
+      - newSignatureAlgorithmOption
+      - newKeyEncryptionAlgorithmOption
 options:
-  - ident: SymmetricAlgorithm
-    interface: RegisterAlgorithmOption
+  - ident: IsSymmetric
+    interface: NewSignatureKeyEncryptionAlgorithmOption
     argument_type: bool
     comment: |
-      WithSymmetricAlgorithm lets the library know whether the algorithm is symmetric. This affects
-      the response of the `IsSymmetric` method of the algorithm. If the algorithms does not support
-      this method, using this option will result in an error.
+      IsSymmetric specifies that the algorithm is symmetric

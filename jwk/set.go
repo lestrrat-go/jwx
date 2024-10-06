@@ -3,6 +3,7 @@ package jwk
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -87,6 +88,10 @@ func (s *set) Index(key Key) int {
 func (s *set) AddKey(key Key) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if reflect.ValueOf(key).IsNil() {
+		panic("nil key")
+	}
 
 	if i := s.indexNL(key); i > -1 {
 		return fmt.Errorf(`(jwk.Set).AddKey: key already exists`)

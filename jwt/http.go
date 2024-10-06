@@ -54,7 +54,11 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 		v = strings.TrimSpace(strings.TrimPrefix(v, "Bearer"))
 	}
 
-	return ParseString(v, options...)
+	tok, err := ParseString(v, options...)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to parse token stored in header (%s): %w`, key, err)
+	}
+	return tok, nil
 }
 
 // ParseForm parses a JWT stored in a url.Value.
@@ -226,7 +230,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	lmcookies := len(mcookies)
 	var errors []interface{}
 	if lmhdrs > 0 || lmfrms > 0 || lmcookies > 0 {
-		b.WriteString(". Additionally, errors were encountered during attempts to parse")
+		b.WriteString(". Additionally, errors were encountered during attempts to verify using:")
 
 		if lmhdrs > 0 {
 			b.WriteString(" headers: (")

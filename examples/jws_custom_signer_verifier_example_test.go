@@ -20,7 +20,7 @@ func NewCirclEdDSAVerifier() (jws.Verifier, error) {
 }
 
 func (s CirclEdDSASignerVerifier) Algorithm() jwa.SignatureAlgorithm {
-	return jwa.EdDSA
+	return jwa.EdDSA()
 }
 
 func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byte, error) {
@@ -47,8 +47,8 @@ func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif
 func ExampleJWS_CustomSignerVerifier() {
 	// This example shows how to register external jws.Signer / jws.Verifier for
 	// a given algorithm.
-	jws.RegisterSigner(jwa.EdDSA, jws.SignerFactoryFn(NewCirclEdDSASigner))
-	jws.RegisterVerifier(jwa.EdDSA, jws.VerifierFactoryFn(NewCirclEdDSAVerifier))
+	jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(NewCirclEdDSASigner))
+	jws.RegisterVerifier(jwa.EdDSA(), jws.VerifierFactoryFn(NewCirclEdDSAVerifier))
 
 	pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -57,13 +57,13 @@ func ExampleJWS_CustomSignerVerifier() {
 	}
 
 	const payload = "Lorem Ipsum"
-	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA, privkey))
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA(), privkey))
 	if err != nil {
 		fmt.Printf(`failed to generate signed message: %s`, err)
 		return
 	}
 
-	verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA, pubkey))
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), pubkey))
 	if err != nil {
 		fmt.Printf(`failed to verify signed message: %s`, err)
 		return

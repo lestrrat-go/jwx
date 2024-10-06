@@ -48,7 +48,7 @@ func TestSanity(t *testing.T) {
     "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   }`))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
-		payload, err := jws.Verify([]byte(exampleCompactSerialization), jws.WithKey(jwa.HS256, key))
+		payload, err := jws.Verify([]byte(exampleCompactSerialization), jws.WithKey(jwa.HS256(), key))
 		require.NoError(t, err, `jws.Verify should succeed`)
 		require.Equal(t, []byte(examplePayload), payload, `payloads should match`)
 	})
@@ -259,7 +259,7 @@ func TestRoundtrip(t *testing.T) {
 			"[]byte":  sharedkey,
 			"jwk.Key": jwkKey,
 		}
-		hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+		hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()}
 		for _, alg := range hmacAlgorithms {
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
@@ -269,7 +269,7 @@ func TestRoundtrip(t *testing.T) {
 	})
 	t.Run("ECDSA", func(t *testing.T) {
 		t.Parallel()
-		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 		require.NoError(t, err, "ECDSA key generated")
 		jwkKey, _ := jwk.Import(key.PublicKey)
 		keys := map[string]interface{}{
@@ -277,7 +277,7 @@ func TestRoundtrip(t *testing.T) {
 			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
 			"Verify(jwk.Key)":          jwkKey,
 		}
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -294,7 +294,7 @@ func TestRoundtrip(t *testing.T) {
 			"Verify(*rsa.PublicKey)": &key.PublicKey,
 			"Verify(jwk.Key)":        jwkKey,
 		}
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -313,7 +313,7 @@ func TestRoundtrip(t *testing.T) {
 			// "Verify(*ed25519.Public())": &pubkey,
 			"Verify(jwk.Key)": jwkKey,
 		}
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA} {
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA()} {
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
@@ -325,7 +325,7 @@ func TestRoundtrip(t *testing.T) {
 func TestSignMulti2(t *testing.T) {
 	sharedkey := []byte("Avracadabra")
 	payload := []byte("Lorem ipsum")
-	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512}
+	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()}
 	var signed []byte
 	t.Run("Sign", func(t *testing.T) {
 		var options = []jws.SignOption{jws.WithJSON()}
@@ -374,7 +374,7 @@ func TestEncode(t *testing.T) {
 			[]byte{'.'},
 		)
 
-		sign, err := jws.NewSigner(jwa.HS256)
+		sign, err := jws.NewSigner(jwa.HS256())
 		require.NoError(t, err, "HMAC signer created successfully")
 
 		signature, err := sign.Sign(signingInput, hmacKeyDecoded)
@@ -396,12 +396,12 @@ func TestEncode(t *testing.T) {
 		signatures := msg.Signatures()
 		require.Len(t, signatures, 1, `there should be exactly one signature`)
 
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != jwa.HS256 {
+		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
+		if !ok || algorithm != jwa.HS256() {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := jws.NewVerifier(jwa.HS256)
+		v, err := jws.NewVerifier(jwa.HS256())
 		require.NoError(t, err, "HmacVerify created")
 
 		require.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded), "Verify succeeds")
@@ -424,8 +424,8 @@ func TestEncode(t *testing.T) {
 		standardHeaders := jws.NewHeaders()
 		require.NoError(t, json.Unmarshal(hdr, standardHeaders), `parsing headers should succeed`)
 
-		alg := standardHeaders.Algorithm()
-
+		alg, ok := standardHeaders.Algorithm()
+		require.True(t, ok, `algorithm should be present in headers`)
 		jwkKey, err := jwk.ParseKey([]byte(jwksrc))
 		if err != nil {
 			t.Fatal("Failed to parse JWK")
@@ -495,7 +495,7 @@ func TestEncode(t *testing.T) {
 		var rawkey rsa.PrivateKey
 		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
-		sign, err := jws.NewSigner(jwa.RS256)
+		sign, err := jws.NewSigner(jwa.RS256())
 		require.NoError(t, err, "RsaSign created successfully")
 
 		hdrbuf := base64.Encode([]byte(hdr))
@@ -527,12 +527,12 @@ func TestEncode(t *testing.T) {
 		signatures := msg.Signatures()
 		require.Len(t, signatures, 1, `there should be exactly one signature`)
 
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != jwa.RS256 {
+		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
+		if !ok || algorithm != jwa.RS256() {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := jws.NewVerifier(jwa.RS256)
+		v, err := jws.NewVerifier(jwa.RS256())
 		require.NoError(t, err, "Verify created")
 		require.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds")
 	})
@@ -553,7 +553,7 @@ func TestEncode(t *testing.T) {
 		var rawkey ecdsa.PrivateKey
 		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
-		signer, err := jws.NewSigner(jwa.ES256)
+		signer, err := jws.NewSigner(jwa.ES256())
 		require.NoError(t, err, "RsaSign created successfully")
 
 		hdrbuf := base64.Encode([]byte(hdr))
@@ -588,12 +588,12 @@ func TestEncode(t *testing.T) {
 		signatures := msg.Signatures()
 		require.Len(t, signatures, 1, `there should be exactly one signature`)
 
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != jwa.ES256 {
+		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
+		if !ok || algorithm != jwa.ES256() {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := jws.NewVerifier(jwa.ES256)
+		v, err := jws.NewVerifier(jwa.ES256())
 		require.NoError(t, err, "EcdsaVerify created")
 		require.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds")
 	})
@@ -618,7 +618,7 @@ func TestEncode(t *testing.T) {
 		var rawkey ed25519.PrivateKey
 		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
 
-		signer, err := jws.NewSigner(jwa.EdDSA)
+		signer, err := jws.NewSigner(jwa.EdDSA())
 		require.NoError(t, err, "EdDSASign created successfully")
 
 		hdrbuf := base64.Encode([]byte(hdr))
@@ -652,12 +652,12 @@ func TestEncode(t *testing.T) {
 		signatures := msg.Signatures()
 		require.Len(t, signatures, 1, `there should be exactly one signature`)
 
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != jwa.EdDSA {
+		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
+		if !ok || algorithm != jwa.EdDSA() {
 			t.Fatal("Algorithm in header does not match")
 		}
 
-		v, err := jws.NewVerifier(jwa.EdDSA)
+		v, err := jws.NewVerifier(jwa.EdDSA())
 		require.NoError(t, err, "EcdsaVerify created")
 		require.NoError(t, v.Verify(signingInput, signature, rawkey.Public()), "Verify succeeds")
 		require.Equal(t, signature, expectedDecoded, "signatures match")
@@ -680,8 +680,8 @@ func TestEncode(t *testing.T) {
 		require.Len(t, m.Signatures(), 1, "There should be 1 signature")
 
 		signatures := m.Signatures()
-		algorithm := signatures[0].ProtectedHeaders().Algorithm()
-		if algorithm != jwa.NoSignature {
+		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
+		if !ok || algorithm != jwa.NoSignature() {
 			t.Fatal("Algorithm in header does not match")
 		}
 
@@ -807,7 +807,7 @@ func TestPublicHeaders(t *testing.T) {
 	key, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "GenerateKey should succeed")
 
-	signer, err := jws.NewSigner(jwa.RS256)
+	signer, err := jws.NewSigner(jwa.RS256())
 	require.NoError(t, err, "jws.NewSigner should succeed")
 	_ = signer // TODO
 
@@ -833,7 +833,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 	var rawkey ecdsa.PublicKey
 	require.NoError(t, jwk.Export(pubkey, &rawkey), `obtaining raw key should succeed`)
 
-	v, err := jws.NewVerifier(jwa.ES384)
+	v, err := jws.NewVerifier(jwa.ES384())
 	require.NoError(t, err, "EcdsaVerify created")
 
 	protected, payload, signature, err := jws.SplitCompact([]byte(incoming))
@@ -868,10 +868,10 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 	privateKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, "jwxtest.GenerateJwk should succeed")
 	_ = privateKey.Set(jwk.KeyIDKey, kid)
-	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privateKey))
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), privateKey))
 	require.NoError(t, err, `jws.Sign should succeed`)
 	correctKey, _ := jwk.PublicKeyOf(privateKey)
-	_ = correctKey.Set(jwk.AlgorithmKey, jwa.RS256)
+	_ = correctKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
 	makeSet := func(keys ...jwk.Key) jwk.Set {
 		set := jwk.NewSet()
@@ -891,7 +891,7 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 				privateKey, _ := jwxtest.GenerateRsaJwk()
 				wrongKey, _ := jwk.PublicKeyOf(privateKey)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
-				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS256)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS256())
 				return wrongKey
 			},
 		},
@@ -900,7 +900,7 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 			Key: func() jwk.Key {
 				wrongKey, _ := correctKey.Clone()
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
-				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512())
 				return wrongKey
 			},
 		},
@@ -910,18 +910,18 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 				privateKey, _ := jwxtest.GenerateRsaJwk()
 				wrongKey, _ := jwk.PublicKeyOf(privateKey)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
-				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.RS512())
 				return wrongKey
 			},
 		},
 		{
 			Name: `match 2 keys via same "kid" and different key type / alg`,
 			Key: func() jwk.Key {
-				privateKey, _ := jwxtest.GenerateEcdsaKey(jwa.P256)
+				privateKey, _ := jwxtest.GenerateEcdsaKey(jwa.P256())
 				wrongKey, err := jwk.PublicKeyOf(privateKey)
 				require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
-				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K)
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K())
 				return wrongKey
 			},
 		},
@@ -948,12 +948,15 @@ func TestVerifySet(t *testing.T) {
 
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
-		k1, _ := jwk.Import([]byte("abracadabra"))
+		k1, err := jwk.Import([]byte("abracadabra"))
+		require.NoError(t, err, `jwk.Import should succeed`)
 		set.AddKey(k1)
-		k2, _ := jwk.Import([]byte("opensesame"))
+		k2, err := jwk.Import([]byte("opensesame"))
+		require.NoError(t, err, `jwk.Import should succeed`)
 		set.AddKey(k2)
-		pubkey, _ := jwk.PublicKeyOf(privkey)
-		pubkey.Set(jwk.AlgorithmKey, jwa.RS256)
+		pubkey, err := jwk.PublicKeyOf(privkey)
+		require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
+		require.NoError(t, pubkey.Set(jwk.AlgorithmKey, jwa.RS256()), `setting algorithm should succeed`)
 		set.AddKey(pubkey)
 		return set
 	}
@@ -967,7 +970,7 @@ func TestVerifySet(t *testing.T) {
 				require.NoError(t, err, "jwxtest.GenerateJwk should succeed")
 
 				set := makeSet(key)
-				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, key))
+				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), key))
 				require.NoError(t, err, `jws.Sign should succeed`)
 				if useJSON {
 					m, err := jws.Parse(signed)
@@ -993,7 +996,7 @@ func TestVerifySet(t *testing.T) {
 				key.Set(jwk.KeyIDKey, `mykey`)
 
 				set := makeSet(key)
-				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, key))
+				signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), key))
 				require.NoError(t, err, `jws.Sign should succeed`)
 				if useJSON {
 					m, err := jws.Parse(signed)
@@ -1044,7 +1047,7 @@ func TestCustomField(t *testing.T) {
 		protected.Set(rfc3339Key, string(rfc3339bytes))
 		protected.Set(rfc1123Key, rfc1123bytes)
 
-		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)))
+		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256(), rsakey, jws.WithProtectedHeaders(protected)))
 		require.NoError(t, err, `jws.Sign should succeed`)
 		msg, err := jws.Parse(encrypted)
 		require.NoError(t, err, `jws.Parse should succeed`)
@@ -1059,7 +1062,7 @@ func TestCustomField(t *testing.T) {
 		protected.Set(rfc3339Key, string(rfc3339bytes))
 		protected.Set(rfc1123Key, rfc1123bytes)
 
-		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256, rsakey, jws.WithProtectedHeaders(protected)), jws.WithJSON())
+		encrypted, err := jws.Sign(plaintext, jws.WithKey(jwa.RS256(), rsakey, jws.WithProtectedHeaders(protected)), jws.WithJSON())
 		require.NoError(t, err, `jws.Sign should succeed`)
 		msg := jws.NewMessage()
 		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
@@ -1086,7 +1089,7 @@ func TestCustomField(t *testing.T) {
 		hdrs := jws.NewHeaders()
 		hdrs.Set(`x-birthday`, string(bdaybytes))
 
-		signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey, jws.WithProtectedHeaders(hdrs)))
+		signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), privkey, jws.WithProtectedHeaders(hdrs)))
 		require.NoError(t, err, `jws.Sign should succeed`)
 
 		t.Run("jws.Parse + json.Unmarshal", func(t *testing.T) {
@@ -1118,11 +1121,11 @@ func TestWithMessage(t *testing.T) {
 	require.NoError(t, err, "jwxtest.Generate should succeed")
 
 	const text = "hello, world"
-	signed, err := jws.Sign([]byte(text), jws.WithKey(jwa.RS256, key))
+	signed, err := jws.Sign([]byte(text), jws.WithKey(jwa.RS256(), key))
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	m := jws.NewMessage()
-	payload, err := jws.Verify(signed, jws.WithKey(jwa.RS256, key.PublicKey), jws.WithMessage(m))
+	payload, err := jws.Verify(signed, jws.WithKey(jwa.RS256(), key.PublicKey), jws.WithMessage(m))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, payload, []byte(text), `jws.Verify should produce the correct payload`)
 
@@ -1150,7 +1153,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
 		require.Error(t, err, `jws.Sign should fail`)
 	})
 	t.Run("Invalid usage when b64 = false and NOT detached", func(t *testing.T) {
@@ -1159,7 +1162,7 @@ func TestRFC7797(t *testing.T) {
 		hdrs.Set("b64", false)
 		hdrs.Set("crit", "b64")
 
-		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)), jws.WithDetachedPayload([]byte(payload)))
+		_, err := jws.Sign([]byte(payload), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)), jws.WithDetachedPayload([]byte(payload)))
 		require.Error(t, err, `jws.Sign should fail`)
 	})
 	t.Run("Valid payload when b64 = false", func(t *testing.T) {
@@ -1186,9 +1189,9 @@ func TestRFC7797(t *testing.T) {
 				hdrs.Set("crit", "b64")
 
 				payload := tc.Payload
-				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs))}
+				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs))}
 				var verifyOptions []jws.VerifyOption
-				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256, key))
+				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256(), key))
 				if tc.Detached {
 					signOptions = append(signOptions, jws.WithDetachedPayload(payload))
 					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
@@ -1259,7 +1262,7 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				options := tc.VerifyOptions
-				options = append(options, jws.WithKey(jwa.HS256, key))
+				options = append(options, jws.WithKey(jwa.HS256(), key))
 				payload, err := jws.Verify(tc.Input, options...)
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
@@ -1283,12 +1286,12 @@ func TestGH485(t *testing.T) {
     "signatures": [{"protected": %q, "signature": %q}]
 }`, payload, protected, signature)
 
-	verified, err := jws.Verify([]byte(signed), jws.WithKey(jwa.HS256, []byte("secret")))
+	verified, err := jws.Verify([]byte(signed), jws.WithKey(jwa.HS256(), []byte("secret")))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, expected, string(verified), `verified payload should match`)
 
 	compact := strings.Join([]string{protected, payload, signature}, ".")
-	verified, err = jws.Verify([]byte(compact), jws.WithKey(jwa.HS256, []byte("secret")))
+	verified, err = jws.Verify([]byte(compact), jws.WithKey(jwa.HS256(), []byte("secret")))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, expected, string(verified), `verified payload should match`)
 }
@@ -1368,7 +1371,7 @@ func TestJKU(t *testing.T) {
 					u += "?" + tc.Query
 				}
 				hdr.Set(jws.JWKSetURLKey, u)
-				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdr)))
+				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdr)))
 				require.NoError(t, err, `jws.Sign should succeed`)
 
 				var options []jwk.FetchOption
@@ -1431,7 +1434,7 @@ func TestJKU(t *testing.T) {
 		for _, key := range keys {
 			hdr := jws.NewHeaders()
 			hdr.Set(jws.JWKSetURLKey, srv.URL)
-			signOptions = append(signOptions, jws.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdr)))
+			signOptions = append(signOptions, jws.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdr)))
 		}
 
 		signed, err := jws.Sign(payload, signOptions...)
@@ -1509,84 +1512,84 @@ func TestAlgorithmsForKey(t *testing.T) {
 		{
 			Name:     "Octet sequence",
 			Key:      []byte("hello"),
-			Expected: []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()},
 		},
 		{
 			Name:     "rsa.PublicKey",
 			Key:      rsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "*rsa.PublicKey",
 			Key:      &rsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "jwk.RSAPublicKey",
 			Key:      rsapubkey,
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "ecdsa.PublicKey",
 			Key:      ecdsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "*ecdsa.PublicKey",
 			Key:      &ecdsa.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "jwk.ECDSAPublicKey",
 			Key:      ecdsapubkey,
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "rsa.PrivateKey",
 			Key:      rsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "*rsa.PrivateKey",
 			Key:      &rsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "jwk.RSAPrivateKey",
 			Key:      rsapubkey,
-			Expected: []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512},
+			Expected: []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()},
 		},
 		{
 			Name:     "ecdsa.PrivateKey",
 			Key:      ecdsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "*ecdsa.PrivateKey",
 			Key:      &ecdsa.PrivateKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "jwk.ECDSAPrivateKey",
 			Key:      ecdsaprivkey,
-			Expected: []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512},
+			Expected: []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()},
 		},
 		{
 			Name:     "ed25519.PublicKey",
 			Key:      ed25519.PublicKey(nil),
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
 		},
 		{
 			Name:     "x25519.PublicKey",
 			Key:      &ecdh.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA},
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
 		},
 	}
 
 	for _, tc := range testcases {
 		if hasES256K {
 			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
-				tc.Expected = append(tc.Expected, jwa.ES256K)
+				tc.Expected = append(tc.Expected, jwa.ES256K())
 			}
 		}
 
@@ -1609,12 +1612,12 @@ func TestGH681(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "failed to create private key")
 
-	buf, err := jws.Sign(nil, jws.WithKey(jwa.RS256, privkey), jws.WithDetachedPayload([]byte("Lorem ipsum")))
+	buf, err := jws.Sign(nil, jws.WithKey(jwa.RS256(), privkey), jws.WithDetachedPayload([]byte("Lorem ipsum")))
 	require.NoError(t, err, "failed to sign payload")
 
 	t.Logf("%s", buf)
 
-	_, err = jws.Verify(buf, jws.WithKey(jwa.RS256, &privkey.PublicKey), jws.WithDetachedPayload([]byte("Lorem ipsum")))
+	_, err = jws.Verify(buf, jws.WithKey(jwa.RS256(), &privkey.PublicKey), jws.WithDetachedPayload([]byte("Lorem ipsum")))
 	require.NoError(t, err, "failed to verify JWS message")
 }
 
@@ -1642,21 +1645,21 @@ func TestGH840(t *testing.T) {
 		Build()
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), privkey))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
-	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256(), pubkey))
 	require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
 }
 
 func TestGH888(t *testing.T) {
 	// This should fail because we're passing multiple keys (i.e. multiple signatures)
 	// and yet we haven't specified JSON serialization
-	_, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)))
+	_, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256(), []byte(`bar`)))
 	require.Error(t, err, `jws.Sign with multiple keys (including alg=none) should fail`)
 
 	// This should pass because we can now have multiple signatures with JSON serialization
-	signed, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256, []byte(`bar`)), jws.WithJSON())
+	signed, err := jws.Sign([]byte(`foo`), jws.WithInsecureNoSignature(), jws.WithKey(jwa.HS256(), []byte(`bar`)), jws.WithJSON())
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	message, err := jws.Parse(signed)
@@ -1665,7 +1668,7 @@ func TestGH888(t *testing.T) {
 	// Look for alg=none signature
 	var foundNoSignature bool
 	for _, sig := range message.Signatures() {
-		if sig.ProtectedHeaders().Algorithm() != jwa.NoSignature {
+		if v, ok := sig.ProtectedHeaders().Algorithm(); !ok || v != jwa.NoSignature() {
 			continue
 		}
 
@@ -1677,12 +1680,12 @@ func TestGH888(t *testing.T) {
 	_, err = jws.Verify(signed)
 	require.Error(t, err, `jws.Verify should fail`)
 
-	_, err = jws.Verify(signed, jws.WithKey(jwa.NoSignature, nil))
+	_, err = jws.Verify(signed, jws.WithKey(jwa.NoSignature(), nil))
 	require.Error(t, err, `jws.Verify should fail`)
 
 	// Note: you can't do jws.Verify(..., jws.WithInsecureNoSignature())
 
-	verified, err := jws.Verify(signed, jws.WithKey(jwa.HS256, []byte(`bar`)))
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), []byte(`bar`)))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, []byte(`foo`), verified)
 }
@@ -1693,7 +1696,7 @@ func TestGH888(t *testing.T) {
 // users to download an optional dependency
 type s256SignerVerifier struct{}
 
-const sha256Algo jwa.SignatureAlgorithm = "SillyTest256"
+var sha256Algo = jwa.NewSignatureAlgorithm("SillyTest256")
 
 func (s256SignerVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return sha256Algo
@@ -1724,9 +1727,6 @@ func TestGH910(t *testing.T) {
 	}))
 	defer jws.UnregisterVerifier(sha256Algo)
 	defer jwa.UnregisterSignatureAlgorithm(sha256Algo)
-
-	var sa jwa.SignatureAlgorithm
-	require.NoError(t, sa.Accept(sha256Algo.String()), `jwa.SignatureAlgorithm.Accept should succeed`)
 
 	// Now that we have established that the signature algorithm works,
 	// we can proceed with the test
@@ -1767,7 +1767,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 
 			pubkey, _ := key.PublicKey()
 
-			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.ES256, key))
+			signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.ES256(), key))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
 			message, err := jws.Parse(signed)
@@ -1794,7 +1794,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 					t.Logf("JWS payload with unpadded signature: %q", modified)
 
 					// jws.Verify for sanity
-					verified, err := jws.Verify(modified, jws.WithKey(jwa.ES256, pubkey))
+					verified, err := jws.Verify(modified, jws.WithKey(jwa.ES256(), pubkey))
 					require.NoError(t, err, `jws.Verify should succeed`)
 					t.Logf("verified payload: %q", verified)
 
@@ -1820,12 +1820,12 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 
 	// Should always succeed
-	payload, err := jws.Verify([]byte(padded), jws.WithKey(jwa.ES256, pubKey))
+	payload, err := jws.Verify([]byte(padded), jws.WithKey(jwa.ES256(), pubKey))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, "Lorem Ipsum", string(payload))
 
 	// Should fail
-	_, err = jws.Verify([]byte(unpadded), jws.WithKey(jwa.ES256, pubKey))
+	_, err = jws.Verify([]byte(unpadded), jws.WithKey(jwa.ES256(), pubKey))
 	require.Error(t, err, `jws.Verify should fail`)
 }
 
@@ -1833,12 +1833,12 @@ func TestValidateKey(t *testing.T) {
 	privKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey), jws.WithValidateKey(true))
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	// This should fail because D is empty
 	require.NoError(t, privKey.Set(jwk.RSADKey, []byte(nil)), `jwk.Set should succeed`)
-	_, err = jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	_, err = jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey), jws.WithValidateKey(true))
 	require.Error(t, err, `jws.Sign should fail`)
 
 	pubKey, err := jwk.PublicKeyOf(privKey)
@@ -1852,13 +1852,13 @@ func TestValidateKey(t *testing.T) {
 	// This is going to fail regardless, because the public key is now
 	// invalid (empty N), but we want to make sure that it fails because
 	// of the validation failing
-	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256, pubKey), jws.WithValidateKey(true))
+	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), pubKey), jws.WithValidateKey(true))
 	require.Error(t, err, `jws.Verify should fail`)
 	require.True(t, jwk.IsKeyValidationError(err), `jwk.IsKeyValidationError should return true`)
 
 	// The following should now succeed, because N has been reinstated
 	require.NoError(t, pubKey.Set(jwk.RSANKey, n), `jwk.Set should succeed`)
-	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256, pubKey), jws.WithValidateKey(true))
+	_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), pubKey), jws.WithValidateKey(true))
 	require.NoError(t, err, `jws.Verify should succeed`)
 }
 
@@ -1881,11 +1881,11 @@ func TestEmptyProtectedField(t *testing.T) {
 	// This fails. `jws.Parse` works, but the subsequent verification
 	// workflow fails to verify anything without the presence of a signature or
 	// a protected header.
-	_, err = jws.Verify([]byte(`{"signature": ""}`), jws.WithKey(jwa.RS256, privKey))
+	_, err = jws.Verify([]byte(`{"signature": ""}`), jws.WithKey(jwa.RS256(), privKey))
 	require.Error(t, err, `jws.Parse should fail`)
 
 	// Create a valid signatre.
-	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey))
+	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey))
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	_, payload, signature, err := jws.SplitCompact(signed)
@@ -1895,7 +1895,7 @@ func TestEmptyProtectedField(t *testing.T) {
 	// key to verify it, but no protected headers
 	_, err = jws.Verify(
 		[]byte(fmt.Sprintf(`{"signature": "%s"}`, signature)),
-		jws.WithKey(jwa.RS256, privKey),
+		jws.WithKey(jwa.RS256(), privKey),
 	)
 	require.Error(t, err, `jws.Verify should fail`)
 
@@ -1918,16 +1918,16 @@ func TestParseFormat(t *testing.T) {
 	privKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	signedCompact, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true))
+	signedCompact, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey), jws.WithValidateKey(true))
 	require.NoError(t, err, `jws.Sign should succeed`)
 
-	signedJSON, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true), jws.WithJSON())
+	signedJSON, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey), jws.WithValidateKey(true), jws.WithJSON())
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	// Only compact formats should succeed
-	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithCompact())
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256(), privKey), jws.WithCompact())
 	require.NoError(t, err, `jws.Verify should succeed`)
-	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithCompact())
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256(), privKey), jws.WithCompact())
 	require.Error(t, err, `jws.Verify should fail`)
 	_, err = jws.Parse(signedCompact, jws.WithCompact())
 	require.NoError(t, err, `jws.Parse should succeed`)
@@ -1935,9 +1935,9 @@ func TestParseFormat(t *testing.T) {
 	require.Error(t, err, `jws.Parse should fail`)
 
 	// Only JSON formats should succeed
-	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithJSON())
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256(), privKey), jws.WithJSON())
 	require.Error(t, err, `jws.Verify should fail`)
-	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithJSON())
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256(), privKey), jws.WithJSON())
 	require.NoError(t, err, `jws.Verify should succeed`)
 	_, err = jws.Parse(signedJSON, jws.WithJSON())
 	require.NoError(t, err, `jws.Parse should succeed`)
@@ -1945,18 +1945,18 @@ func TestParseFormat(t *testing.T) {
 	require.Error(t, err, `jws.Parse should fail`)
 
 	// Either format should succeed
-	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey))
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256(), privKey))
 	require.NoError(t, err, `jws.Verify should succeed`)
-	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256, privKey), jws.WithJSON(), jws.WithCompact())
+	_, err = jws.Verify(signedCompact, jws.WithKey(jwa.RS256(), privKey), jws.WithJSON(), jws.WithCompact())
 	require.NoError(t, err, `jws.Verify should succeed`)
 	_, err = jws.Parse(signedCompact)
 	require.NoError(t, err, `jws.Parse should succeed`)
 	_, err = jws.Parse(signedCompact, jws.WithJSON(), jws.WithCompact())
 	require.NoError(t, err, `jws.Parse should succeed`)
 
-	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey))
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256(), privKey))
 	require.NoError(t, err, `jws.Verify should succeed`)
-	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey), jws.WithJSON(), jws.WithCompact())
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256(), privKey), jws.WithJSON(), jws.WithCompact())
 	require.NoError(t, err, `jws.Verify should succeed`)
 	_, err = jws.Parse(signedJSON)
 	require.NoError(t, err, `jws.Parse should succeed`)

@@ -57,9 +57,6 @@ func makeJwsParseCmd() *cli.Command {
 		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
-			if err != nil {
-				return fmt.Errorf(`failed to read message: %w`, err)
-			}
 		}
 
 		msg, err := jws.Parse(buf)
@@ -153,9 +150,6 @@ func makeJwsVerifyCmd() *cli.Command {
 		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
-			if err != nil {
-				return fmt.Errorf(`failed to verify message: %w`, err)
-			}
 		}
 
 		output, err := getOutput(c.String("output"))
@@ -172,13 +166,12 @@ func makeJwsVerifyCmd() *cli.Command {
 			}
 		} else {
 			var alg jwa.SignatureAlgorithm
-			givenalg := c.String("alg")
-			if givenalg == "" {
-				return fmt.Errorf(`option --alg must be given`)
-			}
-
-			if err := alg.Accept(givenalg); err != nil {
-				return fmt.Errorf(`invalid alg %s`, givenalg)
+			{
+				v, ok := jwa.LookupSignatureAlgorithm(c.String("alg"))
+				if !ok {
+					return fmt.Errorf(`invalid algorithm %s`, c.String("alg"))
+				}
+				alg = v
 			}
 
 			for i := 0; i < keyset.Len(); i++ {
@@ -243,19 +236,15 @@ func makeJwsSignCmd() *cli.Command {
 		buf, err := io.ReadAll(src)
 		if err != nil {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
-			if err != nil {
-				return fmt.Errorf(`failed to sign message: %w`, err)
-			}
 		}
 
 		var alg jwa.SignatureAlgorithm
-		givenalg := c.String("alg")
-		if givenalg == "" {
-			return fmt.Errorf(`option --alg must be given`)
-		}
-
-		if err := alg.Accept(givenalg); err != nil {
-			return fmt.Errorf(`invalid alg %s`, givenalg)
+		{
+			v, ok := jwa.LookupSignatureAlgorithm(c.String("alg"))
+			if !ok {
+				return fmt.Errorf(`invalid algorithm %s`, c.String("alg"))
+			}
+			alg = v
 		}
 
 		// headers must go to WithKeySuboptions

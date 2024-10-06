@@ -18,7 +18,7 @@ func ExampleJWS_VerifyWithJWKSet() {
 		return
 	}
 	const payload = "Lorem ipsum"
-	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), privkey))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
 		return
@@ -34,7 +34,7 @@ func ExampleJWS_VerifyWithJWKSet() {
 	// AddKey the real thing
 	pubkey, _ := jwk.PublicRawKeyOf(privkey)
 	k3, _ := jwk.Import(pubkey)
-	k3.Set(jwk.AlgorithmKey, jwa.RS256)
+	k3.Set(jwk.AlgorithmKey, jwa.RS256())
 	set.AddKey(k3)
 
 	// Up to this point, you probably will replace with a simple jwk.Fetch()

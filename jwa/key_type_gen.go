@@ -3,104 +3,154 @@
 package jwa
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 )
 
-// KeyType represents the key type ("kty") that are supported
-type KeyType string
-
-// Supported values for KeyType
-const (
-	EC             KeyType = "EC"  // Elliptic Curve
-	InvalidKeyType KeyType = ""    // Invalid KeyType
-	OKP            KeyType = "OKP" // Octet string key pairs
-	OctetSeq       KeyType = "oct" // Octet sequence (used to represent symmetric keys)
-	RSA            KeyType = "RSA" // RSA
-)
-
-var muKeyTypes sync.RWMutex
-var allKeyTypes map[KeyType]struct{}
+var muAllKeyType sync.RWMutex
+var allKeyType = map[string]KeyType{}
+var muListKeyType sync.RWMutex
 var listKeyType []KeyType
+var builtinKeyType = map[string]struct{}{}
 
 func init() {
-	muKeyTypes.Lock()
-	defer muKeyTypes.Unlock()
-	allKeyTypes = make(map[KeyType]struct{})
-	allKeyTypes[EC] = struct{}{}
-	allKeyTypes[OKP] = struct{}{}
-	allKeyTypes[OctetSeq] = struct{}{}
-	allKeyTypes[RSA] = struct{}{}
+	// builtin values for KeyType
+	algorithms := make([]KeyType, 0, 5)
+
+	for _, alg := range []string{"EC", "OKP", "oct", "RSA"} {
+		algorithms = append(algorithms, NewKeyType(alg))
+	}
+
+	RegisterKeyType(algorithms...)
+}
+
+// EC returns the EC algorithm object.
+func EC() KeyType {
+	return lookupBuiltinKeyType("EC")
+}
+
+var invalidKeyType = NewKeyType("")
+
+// InvalidKeyType returns the InvalidKeyType algorithm object.
+func InvalidKeyType() KeyType {
+	return invalidKeyType
+}
+
+// OKP returns the OKP algorithm object.
+func OKP() KeyType {
+	return lookupBuiltinKeyType("OKP")
+}
+
+// OctetSeq returns the OctetSeq algorithm object.
+func OctetSeq() KeyType {
+	return lookupBuiltinKeyType("oct")
+}
+
+// RSA returns the RSA algorithm object.
+func RSA() KeyType {
+	return lookupBuiltinKeyType("RSA")
+}
+
+func lookupBuiltinKeyType(name string) KeyType {
+	muAllKeyType.RLock()
+	v, ok := allKeyType[name]
+	muAllKeyType.RUnlock()
+	if !ok {
+		panic(fmt.Sprintf(`jwa: KeyType %q not registered`, name))
+	}
+	return v
+}
+
+type KeyType struct {
+	name string
+}
+
+func (s KeyType) String() string {
+	return s.name
+}
+
+// EmptyKeyType returns an empty KeyType object, used as a zero value
+func EmptyKeyType() KeyType {
+	return KeyType{}
+}
+
+// NewKeyType creates a new KeyType object
+func NewKeyType(name string) KeyType {
+	return KeyType{name: name}
+}
+
+// LookupKeyType returns the KeyType object for the given name
+func LookupKeyType(name string) (KeyType, bool) {
+	muAllKeyType.RLock()
+	v, ok := allKeyType[name]
+	muAllKeyType.RUnlock()
+	return v, ok
+}
+
+// RegisterKeyType registers a new KeyType. The signature value must be immutable
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+func RegisterKeyType(algorithms ...KeyType) {
+	muAllKeyType.Lock()
+	for _, alg := range algorithms {
+		allKeyType[alg.String()] = alg
+	}
+	muAllKeyType.Unlock()
 	rebuildKeyType()
 }
 
-// RegisterKeyType registers a new KeyType so that the jwx can properly handle the new value.
-// Duplicates will silently be ignored
-func RegisterKeyType(v KeyType) {
-	muKeyTypes.Lock()
-	defer muKeyTypes.Unlock()
-	if _, ok := allKeyTypes[v]; !ok {
-		allKeyTypes[v] = struct{}{}
-		rebuildKeyType()
-	}
-}
-
 // UnregisterKeyType unregisters a KeyType from its known database.
-// Non-existent entries will silently be ignored
-func UnregisterKeyType(v KeyType) {
-	muKeyTypes.Lock()
-	defer muKeyTypes.Unlock()
-	if _, ok := allKeyTypes[v]; ok {
-		delete(allKeyTypes, v)
-		rebuildKeyType()
+// Non-existent entries, as well as built-in algorithms will silently be ignored
+func UnregisterKeyType(algorithms ...KeyType) {
+	muAllKeyType.Lock()
+	for _, alg := range algorithms {
+		if _, ok := builtinKeyType[alg.String()]; ok {
+			continue
+		}
+		delete(allKeyType, alg.String())
 	}
+	muAllKeyType.Unlock()
+	rebuildKeyType()
 }
 
 func rebuildKeyType() {
-	listKeyType = make([]KeyType, 0, len(allKeyTypes))
-	for v := range allKeyTypes {
-		listKeyType = append(listKeyType, v)
+	list := make([]KeyType, 0, len(allKeyType))
+	muAllKeyType.RLock()
+	for _, v := range allKeyType {
+		list = append(list, v)
 	}
-	sort.Slice(listKeyType, func(i, j int) bool {
-		return string(listKeyType[i]) < string(listKeyType[j])
+	muAllKeyType.RUnlock()
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].String() < list[j].String()
 	})
+	muListKeyType.Lock()
+	listKeyType = list
+	muListKeyType.Unlock()
 }
 
 // KeyTypes returns a list of all available values for KeyType
 func KeyTypes() []KeyType {
-	muKeyTypes.RLock()
-	defer muKeyTypes.RUnlock()
+	muListKeyType.RLock()
+	defer muListKeyType.RUnlock()
 	return listKeyType
 }
 
-// Accept is used when conversion from values given by
-// outside sources (such as JSON payloads) is required
-func (v *KeyType) Accept(value interface{}) error {
-	var tmp KeyType
-	if x, ok := value.(KeyType); ok {
-		tmp = x
-	} else {
-		var s string
-		switch x := value.(type) {
-		case fmt.Stringer:
-			s = x.String()
-		case string:
-			s = x
-		default:
-			return fmt.Errorf(`invalid type for jwa.KeyType: %T`, value)
-		}
-		tmp = KeyType(s)
-	}
-	if _, ok := allKeyTypes[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.KeyType value`)
-	}
-
-	*v = tmp
-	return nil
+// MarshalJSON serializes the KeyType object to a JSON string
+func (s KeyType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
-// String returns the string representation of a KeyType
-func (v KeyType) String() string {
-	return string(v)
+// UnmarshalJSON deserializes the JSON string to a KeyType object
+func (s *KeyType) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return fmt.Errorf(`failed to unmarshal KeyType: %w`, err)
+	}
+	v, ok := LookupKeyType(name)
+	if !ok {
+		return fmt.Errorf(`unknown KeyType: %s`, name)
+	}
+	*s = v
+	return nil
 }

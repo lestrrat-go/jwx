@@ -52,15 +52,22 @@ type keyDef struct {
 var commonDef map[string]keyDef
 
 func init() {
+	jwa.RegisterSignatureAlgorithm(jwa.NewSignatureAlgorithm("ECMR"))
+
 	certChain = &cert.Chain{}
 	for _, src := range certChainSrc {
 		_ = certChain.AddString(src)
 	}
 
+	alg, ok := jwa.LookupSignatureAlgorithm("RS256")
+	if !ok {
+		panic("failed to find RS256 algorithm")
+	}
+
 	commonDef = map[string]keyDef{
 		jwk.AlgorithmKey: {
 			Method: "Algorithm",
-			Value:  jwa.KeyAlgorithmFrom("random-algorithm"),
+			Value:  alg,
 		},
 		jwk.KeyIDKey: {
 			Method: "KeyID",
@@ -149,21 +156,21 @@ func expectedRawKeyType(key jwk.Key) interface{} {
 		return []byte(nil)
 	case jwk.OKPPrivateKey:
 		switch key.Crv() {
-		case jwa.Ed25519:
+		case jwa.Ed25519():
 			return ed25519.PrivateKey(nil)
-		case jwa.X25519:
+		case jwa.X25519():
 			return &ecdh.PrivateKey{}
 		default:
-			panic("unknown curve type for OKPPrivateKey:" + key.Crv())
+			panic("unknown curve type for OKPPrivateKey:" + key.Crv().String())
 		}
 	case jwk.OKPPublicKey:
 		switch key.Crv() {
-		case jwa.Ed25519:
+		case jwa.Ed25519():
 			return ed25519.PublicKey(nil)
-		case jwa.X25519:
+		case jwa.X25519():
 			return &ecdh.PublicKey{}
 		default:
-			panic("unknown curve type for OKPPublicKey:" + key.Crv())
+			panic("unknown curve type for OKPPublicKey:" + key.Crv().String())
 		}
 	default:
 		panic("unknown key type:" + reflect.TypeOf(key).String())
@@ -203,7 +210,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Roundtrip", func(t *testing.T) {
 		var supportsPEM bool
 		switch key.KeyType() {
-		case jwa.OKP, jwa.OctetSeq:
+		case jwa.OKP(), jwa.OctetSeq():
 		default:
 			supportsPEM = true
 		}
@@ -356,11 +363,11 @@ func TestParse(t *testing.T) {
 				case jwk.OKPPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`)
 					switch k.Crv() {
-					case jwa.Ed25519:
+					case jwa.Ed25519():
 						var rawkey ed25519.PrivateKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`)
 						crawkey = rawkey
-					case jwa.X25519:
+					case jwa.X25519():
 						var rawkey ecdh.PrivateKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`)
 						crawkey = &rawkey
@@ -373,11 +380,11 @@ func TestParse(t *testing.T) {
 				case jwk.OKPPublicKey:
 					require.False(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PublicKey) should be false`)
 					switch k.Crv() {
-					case jwa.Ed25519:
+					case jwa.Ed25519():
 						var rawkey ed25519.PublicKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`)
 						crawkey = rawkey
-					case jwa.X25519:
+					case jwa.X25519():
 						var rawkey ecdh.PublicKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`)
 						crawkey = &rawkey
@@ -723,7 +730,7 @@ func TestPublicKeyOf(t *testing.T) {
 	rsakey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `generating raw RSA key should succeed`)
 
-	ecdsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	ecdsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, `generating raw ECDSA key should succeed`)
 
 	octets := jwxtest.GenerateSymmetricKey()
@@ -911,7 +918,7 @@ func TestRSA(t *testing.T) {
 			}),
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.RSA,
+				Value:  jwa.RSA(),
 			},
 			jwk.RSANKey: expectBase64(keyDef{
 				Method: "N",
@@ -932,7 +939,7 @@ func TestRSA(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.RSA,
+				Value:  jwa.RSA(),
 			},
 			jwk.RSANKey: expectBase64(keyDef{
 				Method: "N",
@@ -1039,11 +1046,11 @@ func TestECDSA(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.EC,
+				Value:  jwa.EC(),
 			},
 			jwk.ECDSACrvKey: {
 				Method: "Crv",
-				Value:  jwa.P256,
+				Value:  jwa.P256(),
 			},
 			jwk.ECDSAXKey: expectBase64(keyDef{
 				Method: "X",
@@ -1077,11 +1084,11 @@ func TestECDSA(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.EC,
+				Value:  jwa.EC(),
 			},
 			jwk.ECDSACrvKey: {
 				Method: "Crv",
-				Value:  jwa.P256,
+				Value:  jwa.P256(),
 			},
 			jwk.ECDSAXKey: expectBase64(keyDef{
 				Method: "X",
@@ -1123,7 +1130,7 @@ func TestSymmetric(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
 				Method: "KeyType",
-				Value:  jwa.OctetSeq,
+				Value:  jwa.OctetSeq(),
 			},
 			jwk.SymmetricOctetsKey: expectBase64(keyDef{
 				Method: "Octets",
@@ -1157,7 +1164,7 @@ func TestOKP(t *testing.T) {
 				Data: map[string]keyDef{
 					jwk.KeyTypeKey: {
 						Method: "KeyType",
-						Value:  jwa.OKP,
+						Value:  jwa.OKP(),
 					},
 					jwk.OKPDKey: expectBase64(keyDef{
 						Method: "D",
@@ -1169,7 +1176,7 @@ func TestOKP(t *testing.T) {
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
-						Value:  jwa.Ed25519,
+						Value:  jwa.Ed25519(),
 					},
 				},
 			},
@@ -1178,7 +1185,7 @@ func TestOKP(t *testing.T) {
 				Data: map[string]keyDef{
 					jwk.KeyTypeKey: {
 						Method: "KeyType",
-						Value:  jwa.OKP,
+						Value:  jwa.OKP(),
 					},
 					jwk.OKPXKey: expectBase64(keyDef{
 						Method: "X",
@@ -1186,7 +1193,7 @@ func TestOKP(t *testing.T) {
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
-						Value:  jwa.Ed25519,
+						Value:  jwa.Ed25519(),
 					},
 				},
 			},
@@ -1197,7 +1204,7 @@ func TestOKP(t *testing.T) {
 				Data: map[string]keyDef{
 					jwk.KeyTypeKey: {
 						Method: "KeyType",
-						Value:  jwa.OKP,
+						Value:  jwa.OKP(),
 					},
 					jwk.OKPDKey: expectBase64(keyDef{
 						Method: "D",
@@ -1209,7 +1216,7 @@ func TestOKP(t *testing.T) {
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
-						Value:  jwa.X25519,
+						Value:  jwa.X25519(),
 					},
 				},
 			},
@@ -1218,7 +1225,7 @@ func TestOKP(t *testing.T) {
 				Data: map[string]keyDef{
 					jwk.KeyTypeKey: {
 						Method: "KeyType",
-						Value:  jwa.OKP,
+						Value:  jwa.OKP(),
 					},
 					jwk.OKPXKey: expectBase64(keyDef{
 						Method: "X",
@@ -1226,7 +1233,7 @@ func TestOKP(t *testing.T) {
 					}),
 					jwk.OKPCrvKey: {
 						Method: "Crv",
-						Value:  jwa.X25519,
+						Value:  jwa.X25519(),
 					},
 				},
 			},
@@ -1320,7 +1327,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
-	require.Equal(t, jwa.RSA, key.KeyType(), `key type should be RSA`)
+	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
 	var pubkey rsa.PublicKey
 	require.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`)
@@ -1832,10 +1839,10 @@ func TestGH664(t *testing.T) {
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			payload := []byte(`hello , world!`)
-			signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, parsed))
+			signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), parsed))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
-			verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256, privkey.PublicKey))
+			verified, err := jws.Verify(signed, jws.WithKey(jwa.RS256(), privkey.PublicKey))
 			require.NoError(t, err, `jws.Verify should succeed`)
 			require.Equal(t, payload, verified, `verified content should match`)
 		})

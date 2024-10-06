@@ -61,22 +61,22 @@ func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (
 	}
 	// We ignore errors from this field, as it's optional
 	_ = probe.Get("D", &d)
-	switch jwa.KeyType(kty) {
-	case jwa.RSA:
+	switch v, _ := jwa.LookupKeyType(kty); v {
+	case jwa.RSA():
 		if d != nil {
 			key = newRSAPrivateKey()
 		} else {
 			key = newRSAPublicKey()
 		}
-	case jwa.EC:
+	case jwa.EC():
 		if d != nil {
 			key = newECDSAPrivateKey()
 		} else {
 			key = newECDSAPublicKey()
 		}
-	case jwa.OctetSeq:
+	case jwa.OctetSeq():
 		key = newSymmetricKey()
-	case jwa.OKP:
+	case jwa.OKP():
 		if d != nil {
 			key = newOKPPrivateKey()
 		} else {

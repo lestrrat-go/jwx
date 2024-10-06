@@ -9,5 +9,5 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
-	require.Equal(t, "WithSymmetricAlgorithm", identSymmetricAlgorithm{}.String())
+	require.Equal(t, "WithIsSymmetric", identIsSymmetric{}.String())
 }

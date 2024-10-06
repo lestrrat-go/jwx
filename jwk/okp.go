@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(jwa.OKP, KeyExportFunc(okpJWKToRaw))
+	RegisterKeyExporter(jwa.OKP(), KeyExportFunc(okpJWKToRaw))
 }
 
 // Mental note:
@@ -40,11 +40,11 @@ func (k *okpPublicKey) Import(rawKeyIf interface{}) error {
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PublicKey:
 		k.x = rawKey
-		crv = jwa.Ed25519
+		crv = jwa.Ed25519()
 		k.crv = &crv
 	case *ecdh.PublicKey:
 		k.x = rawKey.Bytes()
-		crv = jwa.X25519
+		crv = jwa.X25519()
 		k.crv = &crv
 	default:
 		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
@@ -62,13 +62,13 @@ func (k *okpPrivateKey) Import(rawKeyIf interface{}) error {
 	case ed25519.PrivateKey:
 		k.d = rawKey.Seed()
 		k.x = rawKey.Public().(ed25519.PublicKey) //nolint:forcetypeassert
-		crv = jwa.Ed25519
+		crv = jwa.Ed25519()
 		k.crv = &crv
 	case *ecdh.PrivateKey:
 		// k.d = rawKey.Seed()
 		k.d = rawKey.Bytes()
 		k.x = rawKey.PublicKey().Bytes()
-		crv = jwa.X25519
+		crv = jwa.X25519()
 		k.crv = &crv
 	default:
 		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
@@ -79,9 +79,9 @@ func (k *okpPrivateKey) Import(rawKeyIf interface{}) error {
 
 func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (interface{}, error) {
 	switch alg {
-	case jwa.Ed25519:
+	case jwa.Ed25519():
 		return ed25519.PublicKey(xbuf), nil
-	case jwa.X25519:
+	case jwa.X25519():
 		ret, err := ecdh.X25519().NewPublicKey(xbuf)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to parse x25519 public key %x (size %d): %w`, xbuf, len(xbuf), err)
@@ -113,7 +113,7 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 		return nil, fmt.Errorf(`cannot use empty seed`)
 	}
 	switch alg {
-	case jwa.Ed25519:
+	case jwa.Ed25519():
 		if len(dbuf) != ed25519.SeedSize {
 			return nil, fmt.Errorf(`ed25519: wrong private key size`)
 		}
@@ -123,7 +123,7 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 			return nil, fmt.Errorf(`ed25519: invalid x value given d value`)
 		}
 		return ret, nil
-	case jwa.X25519:
+	case jwa.X25519():
 		ret, err := ecdh.X25519().NewPrivateKey(dbuf)
 		if err != nil {
 			return nil, fmt.Errorf(`x25519: unable to construct x25519 private key from seed: %w`, err)
@@ -231,7 +231,7 @@ func validateOKPKey(key interface {
 	Crv() jwa.EllipticCurveAlgorithm
 	X() []byte
 }) error {
-	if key.Crv() == jwa.InvalidEllipticCurve {
+	if key.Crv() == jwa.InvalidEllipticCurve() {
 		return fmt.Errorf(`invalid curve algorithm`)
 	}
 

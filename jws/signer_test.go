@@ -14,24 +14,24 @@ func TestSign(t *testing.T) {
 	t.Parallel()
 	t.Run("Bad algorithm", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Sign([]byte(nil), jws.WithKey(jwa.SignatureAlgorithm("FooBar"), nil))
+		_, err := jws.Sign([]byte(nil), jws.WithKey(jwa.NewSignatureAlgorithm("FooBar"), nil))
 		require.Error(t, err, "Unknown algorithm should return error")
 	})
 	t.Run("No private key", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jws.WithKey(jwa.RS256, nil))
+		_, err := jws.Sign([]byte{'a', 'b', 'c'}, jws.WithKey(jwa.RS256(), nil))
 		require.Error(t, err, "Sign with no private key should return error")
 	})
 	t.Run("RSA verify with no public key", func(t *testing.T) {
 		t.Parallel()
-		_, err := jws.Verify([]byte(nil), jws.WithKey(jwa.RS256, nil))
+		_, err := jws.Verify([]byte(nil), jws.WithKey(jwa.RS256(), nil))
 		require.Error(t, err, "Verify with no private key should return error")
 	})
 	t.Run("RSA roundtrip", func(t *testing.T) {
 		t.Parallel()
 		rsakey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, "RSA key generated")
-		signer, err := jws.NewSigner(jwa.RS256)
+		signer, err := jws.NewSigner(jwa.RS256())
 		require.NoError(t, err, `creating a signer should succeed`)
 
 		payload := []byte("Hello, world")
@@ -39,7 +39,7 @@ func TestSign(t *testing.T) {
 		signed, err := signer.Sign(payload, rsakey)
 		require.NoError(t, err, "Payload signed")
 
-		verifier, err := jws.NewVerifier(jwa.RS256)
+		verifier, err := jws.NewVerifier(jwa.RS256())
 		require.NoError(t, err, "creating a verifier should succeed")
 		require.NoError(t, verifier.Verify(payload, signed, &rsakey.PublicKey), "Payload verified")
 	})
@@ -48,7 +48,7 @@ func TestSign(t *testing.T) {
 func TestSignMulti(t *testing.T) {
 	rsakey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "RSA key generated")
-	dsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	dsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, "ECDSA key generated")
 
 	s1hdr := jws.NewHeaders()
@@ -60,8 +60,8 @@ func TestSignMulti(t *testing.T) {
 	v := strings.Join([]string{`{"iss":"joe",`, ` "exp":1300819380,`, ` "http://example.com/is_root":true}`}, "\r\n")
 	m, err := jws.Sign([]byte(v),
 		jws.WithJSON(),
-		jws.WithKey(jwa.RS256, rsakey, jws.WithPublicHeaders(s1hdr)),
-		jws.WithKey(jwa.ES256, dsakey, jws.WithPublicHeaders(s2hdr)),
+		jws.WithKey(jwa.RS256(), rsakey, jws.WithPublicHeaders(s1hdr)),
+		jws.WithKey(jwa.ES256(), dsakey, jws.WithPublicHeaders(s2hdr)),
 	)
 	require.NoError(t, err, "jws.SignMulti should succeed")
 

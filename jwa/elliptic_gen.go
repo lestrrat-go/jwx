@@ -3,110 +3,169 @@
 package jwa
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"sync"
 )
 
-// EllipticCurveAlgorithm represents the algorithms used for EC keys
-type EllipticCurveAlgorithm string
-
-// Supported values for EllipticCurveAlgorithm
-const (
-	Ed25519              EllipticCurveAlgorithm = "Ed25519"
-	Ed448                EllipticCurveAlgorithm = "Ed448"
-	InvalidEllipticCurve EllipticCurveAlgorithm = "P-invalid"
-	P256                 EllipticCurveAlgorithm = "P-256"
-	P384                 EllipticCurveAlgorithm = "P-384"
-	P521                 EllipticCurveAlgorithm = "P-521"
-	X25519               EllipticCurveAlgorithm = "X25519"
-	X448                 EllipticCurveAlgorithm = "X448"
-)
-
-var muEllipticCurveAlgorithms sync.RWMutex
-var allEllipticCurveAlgorithms map[EllipticCurveAlgorithm]struct{}
+var muAllEllipticCurveAlgorithm sync.RWMutex
+var allEllipticCurveAlgorithm = map[string]EllipticCurveAlgorithm{}
+var muListEllipticCurveAlgorithm sync.RWMutex
 var listEllipticCurveAlgorithm []EllipticCurveAlgorithm
+var builtinEllipticCurveAlgorithm = map[string]struct{}{}
 
 func init() {
-	muEllipticCurveAlgorithms.Lock()
-	defer muEllipticCurveAlgorithms.Unlock()
-	allEllipticCurveAlgorithms = make(map[EllipticCurveAlgorithm]struct{})
-	allEllipticCurveAlgorithms[Ed25519] = struct{}{}
-	allEllipticCurveAlgorithms[Ed448] = struct{}{}
-	allEllipticCurveAlgorithms[P256] = struct{}{}
-	allEllipticCurveAlgorithms[P384] = struct{}{}
-	allEllipticCurveAlgorithms[P521] = struct{}{}
-	allEllipticCurveAlgorithms[X25519] = struct{}{}
-	allEllipticCurveAlgorithms[X448] = struct{}{}
+	// builtin values for EllipticCurveAlgorithm
+	algorithms := make([]EllipticCurveAlgorithm, 0, 8)
+
+	for _, alg := range []string{"Ed25519", "Ed448", "P-256", "P-384", "P-521", "X25519", "X448"} {
+		algorithms = append(algorithms, NewEllipticCurveAlgorithm(alg))
+	}
+
+	RegisterEllipticCurveAlgorithm(algorithms...)
+}
+
+// Ed25519 returns the Ed25519 algorithm object.
+func Ed25519() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("Ed25519")
+}
+
+// Ed448 returns the Ed448 algorithm object.
+func Ed448() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("Ed448")
+}
+
+var invalidEllipticCurve = NewEllipticCurveAlgorithm("P-invalid")
+
+// InvalidEllipticCurve returns the InvalidEllipticCurve algorithm object.
+func InvalidEllipticCurve() EllipticCurveAlgorithm {
+	return invalidEllipticCurve
+}
+
+// P256 returns the P256 algorithm object.
+func P256() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("P-256")
+}
+
+// P384 returns the P384 algorithm object.
+func P384() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("P-384")
+}
+
+// P521 returns the P521 algorithm object.
+func P521() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("P-521")
+}
+
+// X25519 returns the X25519 algorithm object.
+func X25519() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("X25519")
+}
+
+// X448 returns the X448 algorithm object.
+func X448() EllipticCurveAlgorithm {
+	return lookupBuiltinEllipticCurveAlgorithm("X448")
+}
+
+func lookupBuiltinEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
+	muAllEllipticCurveAlgorithm.RLock()
+	v, ok := allEllipticCurveAlgorithm[name]
+	muAllEllipticCurveAlgorithm.RUnlock()
+	if !ok {
+		panic(fmt.Sprintf(`jwa: EllipticCurveAlgorithm %q not registered`, name))
+	}
+	return v
+}
+
+type EllipticCurveAlgorithm struct {
+	name string
+}
+
+func (s EllipticCurveAlgorithm) String() string {
+	return s.name
+}
+
+// EmptyEllipticCurveAlgorithm returns an empty EllipticCurveAlgorithm object, used as a zero value
+func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
+	return EllipticCurveAlgorithm{}
+}
+
+// NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object
+func NewEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
+	return EllipticCurveAlgorithm{name: name}
+}
+
+// LookupEllipticCurveAlgorithm returns the EllipticCurveAlgorithm object for the given name
+func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
+	muAllEllipticCurveAlgorithm.RLock()
+	v, ok := allEllipticCurveAlgorithm[name]
+	muAllEllipticCurveAlgorithm.RUnlock()
+	return v, ok
+}
+
+// RegisterEllipticCurveAlgorithm registers a new EllipticCurveAlgorithm. The signature value must be immutable
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
+	muAllEllipticCurveAlgorithm.Lock()
+	for _, alg := range algorithms {
+		allEllipticCurveAlgorithm[alg.String()] = alg
+	}
+	muAllEllipticCurveAlgorithm.Unlock()
 	rebuildEllipticCurveAlgorithm()
 }
 
-// RegisterEllipticCurveAlgorithm registers a new EllipticCurveAlgorithm so that the jwx can properly handle the new value.
-// Duplicates will silently be ignored
-func RegisterEllipticCurveAlgorithm(v EllipticCurveAlgorithm) {
-	muEllipticCurveAlgorithms.Lock()
-	defer muEllipticCurveAlgorithms.Unlock()
-	if _, ok := allEllipticCurveAlgorithms[v]; !ok {
-		allEllipticCurveAlgorithms[v] = struct{}{}
-		rebuildEllipticCurveAlgorithm()
-	}
-}
-
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.
-// Non-existent entries will silently be ignored
-func UnregisterEllipticCurveAlgorithm(v EllipticCurveAlgorithm) {
-	muEllipticCurveAlgorithms.Lock()
-	defer muEllipticCurveAlgorithms.Unlock()
-	if _, ok := allEllipticCurveAlgorithms[v]; ok {
-		delete(allEllipticCurveAlgorithms, v)
-		rebuildEllipticCurveAlgorithm()
+// Non-existent entries, as well as built-in algorithms will silently be ignored
+func UnregisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
+	muAllEllipticCurveAlgorithm.Lock()
+	for _, alg := range algorithms {
+		if _, ok := builtinEllipticCurveAlgorithm[alg.String()]; ok {
+			continue
+		}
+		delete(allEllipticCurveAlgorithm, alg.String())
 	}
+	muAllEllipticCurveAlgorithm.Unlock()
+	rebuildEllipticCurveAlgorithm()
 }
 
 func rebuildEllipticCurveAlgorithm() {
-	listEllipticCurveAlgorithm = make([]EllipticCurveAlgorithm, 0, len(allEllipticCurveAlgorithms))
-	for v := range allEllipticCurveAlgorithms {
-		listEllipticCurveAlgorithm = append(listEllipticCurveAlgorithm, v)
+	list := make([]EllipticCurveAlgorithm, 0, len(allEllipticCurveAlgorithm))
+	muAllEllipticCurveAlgorithm.RLock()
+	for _, v := range allEllipticCurveAlgorithm {
+		list = append(list, v)
 	}
-	sort.Slice(listEllipticCurveAlgorithm, func(i, j int) bool {
-		return string(listEllipticCurveAlgorithm[i]) < string(listEllipticCurveAlgorithm[j])
+	muAllEllipticCurveAlgorithm.RUnlock()
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].String() < list[j].String()
 	})
+	muListEllipticCurveAlgorithm.Lock()
+	listEllipticCurveAlgorithm = list
+	muListEllipticCurveAlgorithm.Unlock()
 }
 
 // EllipticCurveAlgorithms returns a list of all available values for EllipticCurveAlgorithm
 func EllipticCurveAlgorithms() []EllipticCurveAlgorithm {
-	muEllipticCurveAlgorithms.RLock()
-	defer muEllipticCurveAlgorithms.RUnlock()
+	muListEllipticCurveAlgorithm.RLock()
+	defer muListEllipticCurveAlgorithm.RUnlock()
 	return listEllipticCurveAlgorithm
 }
 
-// Accept is used when conversion from values given by
-// outside sources (such as JSON payloads) is required
-func (v *EllipticCurveAlgorithm) Accept(value interface{}) error {
-	var tmp EllipticCurveAlgorithm
-	if x, ok := value.(EllipticCurveAlgorithm); ok {
-		tmp = x
-	} else {
-		var s string
-		switch x := value.(type) {
-		case fmt.Stringer:
-			s = x.String()
-		case string:
-			s = x
-		default:
-			return fmt.Errorf(`invalid type for jwa.EllipticCurveAlgorithm: %T`, value)
-		}
-		tmp = EllipticCurveAlgorithm(s)
-	}
-	if _, ok := allEllipticCurveAlgorithms[tmp]; !ok {
-		return fmt.Errorf(`invalid jwa.EllipticCurveAlgorithm value`)
-	}
-
-	*v = tmp
-	return nil
+// MarshalJSON serializes the EllipticCurveAlgorithm object to a JSON string
+func (s EllipticCurveAlgorithm) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
-// String returns the string representation of a EllipticCurveAlgorithm
-func (v EllipticCurveAlgorithm) String() string {
-	return string(v)
+// UnmarshalJSON deserializes the JSON string to a EllipticCurveAlgorithm object
+func (s *EllipticCurveAlgorithm) UnmarshalJSON(data []byte) error {
+	var name string
+	if err := json.Unmarshal(data, &name); err != nil {
+		return fmt.Errorf(`failed to unmarshal EllipticCurveAlgorithm: %w`, err)
+	}
+	v, ok := LookupEllipticCurveAlgorithm(name)
+	if !ok {
+		return fmt.Errorf(`unknown EllipticCurveAlgorithm: %s`, name)
+	}
+	*s = v
+	return nil
 }

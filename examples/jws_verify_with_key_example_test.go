@@ -17,7 +17,7 @@ func ExampleJWS_VerifyWithKey() {
 		return
 	}
 
-	buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
+	buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to verify payload: %s\n", err)
 		return

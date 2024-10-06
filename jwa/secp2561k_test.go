@@ -4,6 +4,8 @@
 package jwa_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -15,23 +17,11 @@ func TestSecp256k1(t *testing.T) {
 	t.Run(`accept jwa constant Secp256k1`, func(t *testing.T) {
 		t.Parallel()
 		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, dst.Accept(jwa.Secp256k1), `accept is successful`)
-		require.Equal(t, jwa.Secp256k1, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept the string secp256k1`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, dst.Accept("secp256k1"), `accept is successful`)
-		require.Equal(t, jwa.Secp256k1, dst, `accepted value should be equal to constant`)
-	})
-	t.Run(`accept fmt.Stringer for secp256k1`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, dst.Accept(stringer{src: "secp256k1"}), `accept is successful`)
-		require.Equal(t, jwa.Secp256k1, dst, `accepted value should be equal to constant`)
+		require.NoError(t, json.Unmarshal([]byte(fmt.Sprintf("%q", jwa.Secp256k1().String())), &dst), `Unmarshal is successful`)
+		require.Equal(t, jwa.Secp256k1(), dst, `accepted value should be equal to constant`)
 	})
 	t.Run(`stringification for secp256k1`, func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, "secp256k1", jwa.Secp256k1.String(), `stringified value matches`)
+		require.Equal(t, "secp256k1", jwa.Secp256k1().String(), `stringified value matches`)
 	})
 }

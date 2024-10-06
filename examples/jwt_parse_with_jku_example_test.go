@@ -61,7 +61,7 @@ func ExampleJWT_ParseWithJKU() {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(jws.JWKSetURLKey, srv.URL)
 
-	serialized, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, signingKey, jws.WithProtectedHeaders(hdrs)))
+	serialized, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), signingKey, jws.WithProtectedHeaders(hdrs)))
 	if err != nil {
 		fmt.Printf("failed to seign token: %s\n", err)
 		return

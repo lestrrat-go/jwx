@@ -8,5 +8,5 @@ import (
 )
 
 func init() {
-	addAlgorithmForKeyType(jwa.EC, jwa.ES256K)
+	addAlgorithmForKeyType(jwa.EC(), jwa.ES256K())
 }

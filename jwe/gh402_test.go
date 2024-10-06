@@ -64,10 +64,10 @@ func TestGH402(t *testing.T) {
 		plain, err := jwe.Decrypt([]byte(data),
 			// This is a really cheesy way of creating a jwa.KeyEncryptionAlgorithm
 			// but a bogus one.
-			jwe.WithKey(jwa.KeyEncryptionAlgorithm("invalid algorithm"), nil),
+			jwe.WithKey(jwa.NewKeyEncryptionAlgorithm("invalid algorithm"), nil),
 			jwe.WithMessage(m),
 			jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
-				sink.Key(jwa.DIRECT, key)
+				sink.Key(jwa.DIRECT(), key)
 				return nil
 			})),
 		)

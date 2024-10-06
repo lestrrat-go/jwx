@@ -39,17 +39,17 @@ const (
 //
 // In most cases, you likely want to use the protected headers, as this is part of the signed content.
 type Headers interface {
-	Algorithm() jwa.SignatureAlgorithm
-	ContentType() string
-	Critical() []string
-	JWK() jwk.Key
-	JWKSetURL() string
-	KeyID() string
-	Type() string
-	X509CertChain() *cert.Chain
-	X509CertThumbprint() string
-	X509CertThumbprintS256() string
-	X509URL() string
+	Algorithm() (jwa.SignatureAlgorithm, bool)
+	ContentType() (string, bool)
+	Critical() ([]string, bool)
+	JWK() (jwk.Key, bool)
+	JWKSetURL() (string, bool)
+	KeyID() (string, bool)
+	Type() (string, bool)
+	X509CertChain() (*cert.Chain, bool)
+	X509CertThumbprint() (string, bool)
+	X509CertThumbprintS256() (string, bool)
+	X509URL() (string, bool)
 	Copy(Headers) error
 	Merge(Headers) (Headers, error)
 	// Get is used to extract the value of any field, including non-standard fields, out of the header.
@@ -93,94 +93,94 @@ func NewHeaders() Headers {
 	}
 }
 
-func (h *stdHeaders) Algorithm() jwa.SignatureAlgorithm {
+func (h *stdHeaders) Algorithm() (jwa.SignatureAlgorithm, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.algorithm == nil {
-		return ""
+		return jwa.EmptySignatureAlgorithm(), false
 	}
-	return *(h.algorithm)
+	return *(h.algorithm), true
 }
 
-func (h *stdHeaders) ContentType() string {
+func (h *stdHeaders) ContentType() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.contentType == nil {
-		return ""
+		return "", false
 	}
-	return *(h.contentType)
+	return *(h.contentType), true
 }
 
-func (h *stdHeaders) Critical() []string {
+func (h *stdHeaders) Critical() ([]string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.critical
+	return h.critical, true
 }
 
-func (h *stdHeaders) JWK() jwk.Key {
+func (h *stdHeaders) JWK() (jwk.Key, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.jwk
+	return h.jwk, true
 }
 
-func (h *stdHeaders) JWKSetURL() string {
+func (h *stdHeaders) JWKSetURL() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.jwkSetURL == nil {
-		return ""
+		return "", false
 	}
-	return *(h.jwkSetURL)
+	return *(h.jwkSetURL), true
 }
 
-func (h *stdHeaders) KeyID() string {
+func (h *stdHeaders) KeyID() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.keyID == nil {
-		return ""
+		return "", false
 	}
-	return *(h.keyID)
+	return *(h.keyID), true
 }
 
-func (h *stdHeaders) Type() string {
+func (h *stdHeaders) Type() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.typ == nil {
-		return ""
+		return "", false
 	}
-	return *(h.typ)
+	return *(h.typ), true
 }
 
-func (h *stdHeaders) X509CertChain() *cert.Chain {
+func (h *stdHeaders) X509CertChain() (*cert.Chain, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.x509CertChain
+	return h.x509CertChain, true
 }
 
-func (h *stdHeaders) X509CertThumbprint() string {
+func (h *stdHeaders) X509CertThumbprint() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.x509CertThumbprint == nil {
-		return ""
+		return "", false
 	}
-	return *(h.x509CertThumbprint)
+	return *(h.x509CertThumbprint), true
 }
 
-func (h *stdHeaders) X509CertThumbprintS256() string {
+func (h *stdHeaders) X509CertThumbprintS256() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 == nil {
-		return ""
+		return "", false
 	}
-	return *(h.x509CertThumbprintS256)
+	return *(h.x509CertThumbprintS256), true
 }
 
-func (h *stdHeaders) X509URL() string {
+func (h *stdHeaders) X509URL() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if h.x509URL == nil {
-		return ""
+		return "", false
 	}
-	return *(h.x509URL)
+	return *(h.x509URL), true
 }
 
 func (h *stdHeaders) clear() {
@@ -369,12 +369,15 @@ func (h *stdHeaders) Set(name string, value interface{}) error {
 func (h *stdHeaders) setNoLock(name string, value interface{}) error {
 	switch name {
 	case AlgorithmKey:
-		var acceptor jwa.SignatureAlgorithm
-		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, AlgorithmKey, err)
+		alg, err := jwa.KeyAlgorithmFrom(value)
+		if err != nil {
+			return fmt.Errorf("invalid value for %s key: %w", AlgorithmKey, err)
 		}
-		h.algorithm = &acceptor
-		return nil
+		if salg, ok := alg.(jwa.SignatureAlgorithm); ok {
+			h.algorithm = &salg
+			return nil
+		}
+		return fmt.Errorf("expecte jwa.SignatureAlgorithm, received %T", alg)
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
 			h.contentType = &v

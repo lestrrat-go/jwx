@@ -190,7 +190,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			}
 
 			// No, we don't accept "none" here.
-			if alg == jwa.NoSignature {
+			if alg == jwa.NoSignature() {
 				return nil, fmt.Errorf(`jws.Sign: "none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
@@ -821,22 +821,22 @@ var rawKeyToKeyType = make(map[reflect.Type]jwa.KeyType)
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
 
 func init() {
-	rawKeyToKeyType[reflect.TypeOf([]byte(nil))] = jwa.OctetSeq
-	rawKeyToKeyType[reflect.TypeOf(ed25519.PublicKey(nil))] = jwa.OKP
-	rawKeyToKeyType[reflect.TypeOf(rsa.PublicKey{})] = jwa.RSA
-	rawKeyToKeyType[reflect.TypeOf((*rsa.PublicKey)(nil))] = jwa.RSA
-	rawKeyToKeyType[reflect.TypeOf(ecdsa.PublicKey{})] = jwa.EC
-	rawKeyToKeyType[reflect.TypeOf((*ecdsa.PublicKey)(nil))] = jwa.EC
+	rawKeyToKeyType[reflect.TypeOf([]byte(nil))] = jwa.OctetSeq()
+	rawKeyToKeyType[reflect.TypeOf(ed25519.PublicKey(nil))] = jwa.OKP()
+	rawKeyToKeyType[reflect.TypeOf(rsa.PublicKey{})] = jwa.RSA()
+	rawKeyToKeyType[reflect.TypeOf((*rsa.PublicKey)(nil))] = jwa.RSA()
+	rawKeyToKeyType[reflect.TypeOf(ecdsa.PublicKey{})] = jwa.EC()
+	rawKeyToKeyType[reflect.TypeOf((*ecdsa.PublicKey)(nil))] = jwa.EC()
 
-	addAlgorithmForKeyType(jwa.OKP, jwa.EdDSA)
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256, jwa.HS384, jwa.HS512} {
-		addAlgorithmForKeyType(jwa.OctetSeq, alg)
+	addAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
+		addAlgorithmForKeyType(jwa.OctetSeq(), alg)
 	}
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS384, jwa.RS512, jwa.PS256, jwa.PS384, jwa.PS512} {
-		addAlgorithmForKeyType(jwa.RSA, alg)
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
+		addAlgorithmForKeyType(jwa.RSA(), alg)
 	}
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256, jwa.ES384, jwa.ES512} {
-		addAlgorithmForKeyType(jwa.EC, alg)
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
+		addAlgorithmForKeyType(jwa.EC(), alg)
 	}
 }
 
@@ -854,13 +854,13 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 	case jwk.Key:
 		kty = key.KeyType()
 	case rsa.PublicKey, *rsa.PublicKey, rsa.PrivateKey, *rsa.PrivateKey:
-		kty = jwa.RSA
+		kty = jwa.RSA()
 	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
-		kty = jwa.EC
+		kty = jwa.EC()
 	case ed25519.PublicKey, ed25519.PrivateKey, *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
-		kty = jwa.OKP
+		kty = jwa.OKP()
 	case []byte:
-		kty = jwa.OctetSeq
+		kty = jwa.OctetSeq()
 	default:
 		return nil, fmt.Errorf(`invalid key %T`, key)
 	}

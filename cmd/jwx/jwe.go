@@ -77,18 +77,26 @@ func makeJweEncryptCmd() *cli.Command {
 		}
 
 		var keyenc jwa.KeyEncryptionAlgorithm
-		if err := keyenc.Accept(c.String("key-encryption")); err != nil {
-			return fmt.Errorf(`invalid key encryption algorithm: %w`, err)
+		{
+			v, ok := jwa.LookupKeyEncryptionAlgorithm(c.String("key-encryption"))
+			if !ok {
+				return fmt.Errorf(`invalid key encryption algorithm %q`, c.String("key-encryption"))
+			}
+			keyenc = v
 		}
 
 		var cntenc jwa.ContentEncryptionAlgorithm
-		if err := cntenc.Accept(c.String("content-encryption")); err != nil {
-			return fmt.Errorf(`invalid content encryption algorithm: %w`, err)
+		{
+			v, ok := jwa.LookupContentEncryptionAlgorithm(c.String("content-encryption"))
+			if !ok {
+				return fmt.Errorf(`invalid content encryption algorithm %q`, c.String("content-encryption"))
+			}
+			cntenc = v
 		}
 
-		compress := jwa.NoCompress
+		compress := jwa.NoCompress()
 		if c.Bool("compress") {
-			compress = jwa.Deflate
+			compress = jwa.Deflate()
 		}
 
 		keyset, err := getKeyFile(c.String("key"), c.String("key-format"))
@@ -157,8 +165,13 @@ func makeJweDecryptCmd() *cli.Command {
 
 		if keyencalg := c.String("key-encryption"); keyencalg != "" {
 			var keyenc jwa.KeyEncryptionAlgorithm
-			if err := keyenc.Accept(c.String("key-encryption")); err != nil {
-				return fmt.Errorf(`invalid key encryption algorithm: %w`, err)
+			{
+				v, ok := jwa.LookupKeyEncryptionAlgorithm(keyencalg)
+				if !ok {
+					return fmt.Errorf(`invalid key encryption algorithm %q`, keyencalg)
+				}
+				keyenc = v
+
 			}
 
 			// if we have an explicit key encryption algorithm, we don't have to
@@ -170,7 +183,11 @@ func makeJweDecryptCmd() *cli.Command {
 			decrypted = v
 		} else {
 			v, err := jwe.Decrypt(buf, jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
-				sink.Key(r.Headers().Algorithm(), key)
+				alg, ok := r.Headers().Algorithm()
+				if !ok {
+					return fmt.Errorf(`failed to determine key encryption algorithm`)
+				}
+				sink.Key(alg, key)
 				return nil
 			})))
 			if err != nil {

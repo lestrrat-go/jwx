@@ -54,14 +54,14 @@ func TestMessage(t *testing.T) {
 		require.NoError(t, err, `base64.DecodeString should succeed (sig2)`)
 
 		public1 := jws.NewHeaders()
-		_ = public1.Set(jws.AlgorithmKey, jwa.RS256)
+		require.NoError(t, public1.Set(jws.AlgorithmKey, jwa.RS256()), `public1.Set should succeed`)
 		protected1 := jws.NewHeaders()
-		_ = protected1.Set(jws.KeyIDKey, "2010-12-29")
+		require.NoError(t, protected1.Set(jws.KeyIDKey, "2010-12-29"), `protected1.Set should succeed`)
 
 		public2 := jws.NewHeaders()
-		_ = public2.Set(jws.AlgorithmKey, jwa.ES256)
+		require.NoError(t, public2.Set(jws.AlgorithmKey, jwa.ES256()), `public2.Set should succeed`)
 		protected2 := jws.NewHeaders()
-		_ = protected2.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d")
+		require.NoError(t, protected2.Set(jws.KeyIDKey, "e9bc097a-ce51-4036-9562-d2ade882db0d"), `protected2.Set should succeed`)
 
 		m := jws.NewMessage().
 			SetPayload(decodedPayload).
@@ -97,7 +97,6 @@ func TestMessage(t *testing.T) {
     }
   ]
 }`
-
 		buf, err := json.MarshalIndent(m, "", "  ")
 		require.NoError(t, err, `json.MarshalIndent should succeed`)
 		require.Equal(t, expected, string(buf), `output should match`)

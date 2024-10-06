@@ -415,7 +415,7 @@ func TestOpenIDClaims(t *testing.T) {
 
 		var token3 openid.Token
 		{
-			alg := jwa.RS256
+			alg := jwa.RS256()
 			key, err := jwxtest.GenerateRsaKey()
 			require.NoError(t, err, `rsa.GeneraKey should succeed`)
 			signed, err := jwt.Sign(token, jwt.WithKey(alg, key))

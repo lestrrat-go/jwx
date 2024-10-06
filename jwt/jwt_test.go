@@ -49,7 +49,7 @@ func TestOption(t *testing.T) {
 func TestJWTParse(t *testing.T) {
 	t.Parallel()
 
-	alg := jwa.RS256
+	alg := jwa.RS256()
 
 	key, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
@@ -84,7 +84,7 @@ func TestJWTParse(t *testing.T) {
 	})
 	t.Run("parse (wrong signature algorithm)", func(t *testing.T) {
 		t.Parallel()
-		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512, &key.PublicKey))
+		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512(), &key.PublicKey))
 		require.Error(t, err, `jwt.Parse should fail`)
 	})
 	t.Run("parse (wrong signature key)", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestJWTParseVerify(t *testing.T) {
 	require.NoError(t, err, "RSA key generated")
 	keys = append(keys, rsaPrivKey)
 
-	for _, alg := range []jwa.EllipticCurveAlgorithm{jwa.P256, jwa.P384, jwa.P521} {
+	for _, alg := range []jwa.EllipticCurveAlgorithm{jwa.P256(), jwa.P384(), jwa.P521()} {
 		ecdsaPrivKey, err := jwxtest.GenerateEcdsaKey(alg)
 		require.NoError(t, err, "jwxtest.GenerateEcdsaKey should succeed for %s", alg)
 		keys = append(keys, ecdsaPrivKey)
@@ -282,7 +282,7 @@ func TestJWTParseVerify(t *testing.T) {
 	t.Run("Miscellaneous", func(t *testing.T) {
 		key, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, "RSA key generated")
-		const alg = jwa.RS256
+		var alg = jwa.RS256()
 		const kid = "my-very-special-key"
 		hdrs := jws.NewHeaders()
 		hdrs.Set(jws.KeyIDKey, kid)
@@ -295,8 +295,8 @@ func TestJWTParseVerify(t *testing.T) {
 			pubkey, err := jwk.PublicKeyOf(key)
 			require.NoError(t, err)
 
-			pubkey.Set(jwk.AlgorithmKey, jwa.HS256)
-			pubkey.Set(jwk.KeyIDKey, kid)
+			require.NoError(t, pubkey.Set(jwk.AlgorithmKey, jwa.HS256()), `pubkey.Set should succeed`)
+			require.NoError(t, pubkey.Set(jwk.KeyIDKey, kid), `pubkey.Set should succeed`)
 			set := jwk.NewSet()
 			set.AddKey(pubkey)
 
@@ -488,7 +488,7 @@ func TestGH52(t *testing.T) {
 	}
 
 	t.Parallel()
-	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err)
 
 	pub := &priv.PublicKey
@@ -502,9 +502,9 @@ func TestGH52(t *testing.T) {
 			defer wg.Done()
 			tok := jwt.New()
 
-			s, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, priv))
+			s, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), priv))
 			require.NoError(t, err)
-			_, err = jws.Verify(s, jws.WithKey(jwa.ES256, pub))
+			_, err = jws.Verify(s, jws.WithKey(jwa.ES256(), pub))
 			require.NoError(t, err, `test should pass (run %d)`, i)
 		}(t, priv, i)
 	}
@@ -527,16 +527,16 @@ func TestUnmarshalJSON(t *testing.T) {
 
 func TestSignErrors(t *testing.T) {
 	t.Parallel()
-	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 
 	tok := jwt.New()
-	_, err = jwt.Sign(tok, jwt.WithKey(jwa.SignatureAlgorithm("BOGUS"), priv))
+	_, err = jwt.Sign(tok, jwt.WithKey(jwa.NewSignatureAlgorithm("BOGUS"), priv))
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), `unsupported signature algorithm "BOGUS"`)
 
-	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256, nil))
+	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256(), nil))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "missing private key")
 }
@@ -549,8 +549,8 @@ func TestSignJWK(t *testing.T) {
 	key, err := jwk.Import(priv)
 	require.Nil(t, err)
 
-	key.Set(jwk.KeyIDKey, "test")
-	key.Set(jwk.AlgorithmKey, jwa.RS256)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "test"), `key.Set should succeed`)
+	require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.RS256()), `key.Set should succeed`)
 
 	tok := jwt.New()
 	signed, err := jwt.Sign(tok, jwt.WithKey(key.Algorithm(), key))
@@ -579,11 +579,13 @@ func TestSignTyp(t *testing.T) {
 	t.Run(`"typ" header parameter should be set to JWT by default`, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
-		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key))
+		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256(), key))
 		require.NoError(t, err)
 		got, err := getJWTHeaders(signed)
 		require.NoError(t, err)
-		require.Equal(t, `JWT`, got.Type(), `"typ" header parameter should be set to JWT`)
+		v, ok := got.Type()
+		require.True(t, ok, `"typ" header parameter should be set`)
+		require.Equal(t, `JWT`, v, `"typ" header parameter should be set to JWT`)
 	})
 
 	t.Run(`"typ" header parameter should be customizable by WithHeaders`, func(t *testing.T) {
@@ -591,11 +593,13 @@ func TestSignTyp(t *testing.T) {
 		t1 := jwt.New()
 		hdrs := jws.NewHeaders()
 		hdrs.Set(`typ`, `custom-typ`)
-		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdrs)))
+		signed, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdrs)))
 		require.NoError(t, err)
 		got, err := getJWTHeaders(signed)
 		require.NoError(t, err)
-		require.Equal(t, `custom-typ`, got.Type(), `"typ" header parameter should be set to the custom value`)
+		v, ok := got.Type()
+		require.True(t, ok, `"typ" header parameter should be set`)
+		require.Equal(t, `custom-typ`, v, `"typ" header parameter should be set to the custom value`)
 	})
 }
 
@@ -672,16 +676,17 @@ func TestParseRequest(t *testing.T) {
 	const xauth = "X-Authorization"
 
 	privkey, _ := jwxtest.GenerateEcdsaJwk()
-	privkey.Set(jwk.AlgorithmKey, jwa.ES256)
-	privkey.Set(jwk.KeyIDKey, `my-awesome-key`)
-	pubkey, _ := jwk.PublicKeyOf(privkey)
-	pubkey.Set(jwk.AlgorithmKey, jwa.ES256)
+	require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()), `privkey.Set should succeed`)
+	require.NoError(t, privkey.Set(jwk.KeyIDKey, `my-awesome-key`), `privkey.Set should succeed`)
+	pubkey, err := jwk.PublicKeyOf(privkey)
+	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
+	require.NoError(t, pubkey.Set(jwk.AlgorithmKey, jwa.ES256()), `pubkey.Set should succeed`)
 
 	tok := jwt.New()
 	tok.Set(jwt.IssuerKey, u)
 	tok.Set(jwt.IssuedAtKey, time.Now().Round(0))
 
-	signed, _ := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
+	signed, _ := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), privkey))
 
 	testcases := []struct {
 		Request func() *http.Request
@@ -701,7 +706,7 @@ func TestParseRequest(t *testing.T) {
 					jwt.WithFormKey("access_token"),
 					jwt.WithFormKey("token"),
 					jwt.WithCookieKey("cookie"),
-					jwt.WithKey(jwa.ES256, pubkey))
+					jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -711,7 +716,7 @@ func TestParseRequest(t *testing.T) {
 				return httptest.NewRequest(http.MethodGet, u, nil)
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -723,7 +728,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
 			},
 		},
 		{
@@ -735,7 +740,7 @@ func TestParseRequest(t *testing.T) {
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				set := jwk.NewSet()
-				set.AddKey(pubkey)
+				require.NoError(t, set.AddKey(pubkey), `set.AddKey should succeed`)
 				return jwt.ParseRequest(req, jwt.WithKeySet(set))
 			},
 		},
@@ -747,7 +752,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -759,7 +764,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 		},
 		{
@@ -770,7 +775,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithHeaderKey(xauth), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -785,7 +790,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithFormKey("access_token"), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 		},
 		{
@@ -796,7 +801,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 		},
 		{
@@ -807,7 +812,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -822,7 +827,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
 			},
 			Error: true,
 		},
@@ -837,7 +842,7 @@ func TestParseRequest(t *testing.T) {
 				return req
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
-				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256, pubkey), jwt.WithFormKey("access_token"))
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey), jwt.WithFormKey("access_token"))
 			},
 			Error: true,
 		},
@@ -863,7 +868,7 @@ func TestParseRequest(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, u, nil)
 		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
 		var dst *http.Cookie
-		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256, pubkey))
+		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256(), pubkey))
 		require.NoError(t, err, `jwt.ParseRequest should succeed`)
 		require.NotNil(t, dst, `cookie should be extracted`)
 	})
@@ -967,7 +972,7 @@ func TestGH375(t *testing.T) {
 		Build()
 	require.NoError(t, err, `jwt.Builder should succeed`)
 
-	signAlg := jwa.RS512
+	signAlg := jwa.RS512()
 	signed, err := jwt.Sign(token, jwt.WithKey(signAlg, key))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
@@ -1035,7 +1040,7 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 	{
 		token := jwt.New()
 		require.NoError(t, token.Set("typed-claim", expected), `expected.Set should succeed`)
-		v, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, key))
+		v, err := jwt.Sign(token, jwt.WithKey(jwa.RS256(), key))
 		require.NoError(t, err, `jwt.Sign should succeed`)
 		signed = v
 	}
@@ -1140,10 +1145,10 @@ func TestGH430(t *testing.T) {
 	require.NoError(t, err, `t1.Set should succeed`)
 
 	key := []byte("secret")
-	signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256, key))
+	signed, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256(), key))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
-	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256, key))
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
 	require.NoError(t, err, `jwt.Parse should succeed`)
 }
 
@@ -1194,7 +1199,7 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 				tc,
 				jwt.WithValidate(true),
 				jwt.WithPedantic(pedantic),
-				jwt.WithKey(jwa.RS256, &key.PublicKey),
+				jwt.WithKey(jwa.RS256(), &key.PublicKey),
 			)
 			t.Logf("%s", err)
 			require.Error(t, err, `jwt.Parse should fail`)
@@ -1240,7 +1245,7 @@ func TestVerifyAuto(t *testing.T) {
 	hdrs := jws.NewHeaders()
 	hdrs.Set(jws.JWKSetURLKey, srv.URL)
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdrs)))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdrs)))
 	require.NoError(t, err, `jwt.Sign() should succeed`)
 
 	wl := jwk.NewMapWhitelist().
@@ -1283,25 +1288,25 @@ func TestVerifyAuto(t *testing.T) {
 func TestSerializer(t *testing.T) {
 	t.Run(`Invalid sign suboption`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Sign(jwt.WithKey(jwa.HS256, []byte("abracadabra"), jwe.WithCompress(jwa.Deflate))).
+			Sign(jwt.WithKey(jwa.HS256(), []byte("abracadabra"), jwe.WithCompress(jwa.Deflate()))).
 			Serialize(jwt.New())
 		require.Error(t, err, `Serialize() should fail`)
 	})
 	t.Run(`Invalid SignatureAglrotihm`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadabra"))).
+			Encrypt(jwt.WithKey(jwa.A256KW(), []byte("abracadabra"))).
 			Serialize(jwt.New())
 		require.Error(t, err, `Serialize() should succeedl`)
 	})
 	t.Run(`Invalid encrypt suboption`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.A256KW, []byte("abracadabra"), jws.WithPretty(true))).
+			Encrypt(jwt.WithKey(jwa.A256KW(), []byte("abracadabra"), jws.WithPretty(true))).
 			Serialize(jwt.New())
 		require.Error(t, err, `Serialize() should fail`)
 	})
 	t.Run(`Invalid KeyEncryptionAglrotihm`, func(t *testing.T) {
 		_, err := jwt.NewSerializer().
-			Encrypt(jwt.WithKey(jwa.HS256, []byte("abracadabra"))).
+			Encrypt(jwt.WithKey(jwa.HS256(), []byte("abracadabra"))).
 			Serialize(jwt.New())
 		require.Error(t, err, `Serialize() should succeedl`)
 	})
@@ -1452,7 +1457,7 @@ func TestGH888(t *testing.T) {
 
 	// 1) "none" must be triggered by its own option. Can't use jwt.WithKey(jwa.NoSignature, ...)
 	t.Run("jwt.Sign(token, jwt.WithKey(jwa.NoSignature)) should fail", func(t *testing.T) {
-		_, err := jwt.Sign(token, jwt.WithKey(jwa.NoSignature, nil))
+		_, err := jwt.Sign(token, jwt.WithKey(jwa.NoSignature(), nil))
 		require.Error(t, err, `jwt.Sign with jwt.WithKey should fail`)
 	})
 	t.Run("jwt.Sign(token, jwt.WithInsecureNoSignature())", func(t *testing.T) {
@@ -1485,19 +1490,19 @@ func TestGH951(t *testing.T) {
 	// options to see if there is a difference in the length of the
 	// cipher text, which is the second from last component in the message
 	serialized, err := jwt.NewSerializer().
-		Sign(jwt.WithKey(jwa.RS256, signKey)).
+		Sign(jwt.WithKey(jwa.RS256(), signKey)).
 		Encrypt(
-			jwt.WithKey(jwa.A128KW, sharedKey),
-			jwt.WithEncryptOption(jwe.WithContentEncryption(jwa.A128GCM)),
-			jwt.WithEncryptOption(jwe.WithCompress(jwa.Deflate)),
+			jwt.WithKey(jwa.A128KW(), sharedKey),
+			jwt.WithEncryptOption(jwe.WithContentEncryption(jwa.A128GCM())),
+			jwt.WithEncryptOption(jwe.WithCompress(jwa.Deflate())),
 		).
 		Serialize(token)
 	require.NoError(t, err, `jwt.NewSerializer()....Serizlie() should succeed`)
 
 	serialized2, err := jwt.NewSerializer().
-		Sign(jwt.WithKey(jwa.RS256, signKey)).
+		Sign(jwt.WithKey(jwa.RS256(), signKey)).
 		Encrypt(
-			jwt.WithKey(jwa.A128KW, sharedKey),
+			jwt.WithKey(jwa.A128KW(), sharedKey),
 		).
 		Serialize(token)
 	require.NoError(t, err, `jwt.NewSerializer()....Serizlie() should succeed`)
@@ -1507,10 +1512,10 @@ func TestGH951(t *testing.T) {
 		len(bytes.Split(serialized2, []byte{'.'})[3]),
 	)
 
-	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW, sharedKey))
+	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW(), sharedKey))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 
-	verified, err := jwt.Parse(decrypted, jwt.WithKey(jwa.RS256, signKey.PublicKey))
+	verified, err := jwt.Parse(decrypted, jwt.WithKey(jwa.RS256(), signKey.PublicKey))
 	require.NoError(t, err, `jwt.Parse should succeed`)
 
 	require.True(t, jwt.Equal(verified, token), `tokens should be equal`)
@@ -1528,7 +1533,7 @@ func TestGH1007(t *testing.T) {
 		Build()
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256, key))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
 	// This was the intended usage (no WithKey). This worked from the beginning
@@ -1542,7 +1547,7 @@ func TestGH1007(t *testing.T) {
 	require.NoError(t, err, `jwxtest.GenerateRsaPublicJwk should succeed`)
 	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 
-	_, err = jwt.ParseInsecure(signed, jwt.WithKey(jwa.RS256, wrongPubKey))
+	_, err = jwt.ParseInsecure(signed, jwt.WithKey(jwa.RS256(), wrongPubKey))
 	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKey() should succeed`)
 }
 
@@ -1551,15 +1556,15 @@ func TestParseJSON(t *testing.T) {
 	privKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	signedJSON, err := jws.Sign([]byte(`{}`), jws.WithKey(jwa.RS256, privKey), jws.WithValidateKey(true), jws.WithJSON())
+	signedJSON, err := jws.Sign([]byte(`{}`), jws.WithKey(jwa.RS256(), privKey), jws.WithValidateKey(true), jws.WithJSON())
 	require.NoError(t, err, `jws.Sign should succeed`)
 
 	// jws.Verify should succeed
-	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256, privKey))
+	_, err = jws.Verify(signedJSON, jws.WithKey(jwa.RS256(), privKey))
 	require.NoError(t, err, `jws.Verify should succeed`)
 
 	// jwt.Parse should fail
-	_, err = jwt.Parse(signedJSON, jwt.WithKey(jwa.RS256, privKey))
+	_, err = jwt.Parse(signedJSON, jwt.WithKey(jwa.RS256(), privKey))
 	require.Error(t, err, `jwt.Parse should fail`)
 }
 
@@ -1569,13 +1574,13 @@ func TestGH1175(t *testing.T) {
 		Build()
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 	secret := []byte("secret")
-	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256, secret))
+	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), secret))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
 	req := httptest.NewRequest(http.MethodGet, `http://example.com`, nil)
 	req.Header.Set("Authorization", "Bearer "+string(signed))
 
-	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256, secret))
+	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256(), secret))
 	require.Error(t, err, `jwt.ParseRequest should fail`)
 	require.ErrorIs(t, err, jwt.ErrTokenExpired(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
 }

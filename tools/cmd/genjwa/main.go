@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/lestrrat-go/codegen"
 )
@@ -403,168 +404,194 @@ func (t typ) Generate() error {
 	}
 	o.L(")")
 
-	o.LL("// %s", t.comment)
-	o.L("type %s string", t.name)
-
-	o.LL("// Supported values for %s", t.name)
-	o.L("const (")
-	for _, e := range t.elements {
-		o.L("%s %s = %s", e.name, t.name, strconv.Quote(e.value))
-		if len(e.comment) > 0 {
-			o.R(" // %s", e.comment)
-		}
-	}
-	o.L(")") // end const
-
-	// Register and related tools are provided so users can register their own types.
-	// This triggers some re-building of data structures that are otherwise
-	// reused for efficiency
-	o.LL("var mu%[1]ss sync.RWMutex", t.name)
-	o.L("var all%[1]ss map[%[1]s]struct{}", t.name)
-	o.L("var list%[1]s []%[1]s", t.name)
-	if t.symmetric {
-		o.L("var symmetric%[1]ss map[%[1]s]struct{}", t.name)
-	}
+	o.LL("var muAll%s sync.RWMutex", t.name)
+	o.L("var all%[1]s = map[string]%[1]s{}", t.name)
+	o.L("var muList%s sync.RWMutex", t.name)
+	o.L("var list%s []%s", t.name, t.name)
+	o.L("var builtin%s = map[string]struct{}{}", t.name)
 
 	o.LL("func init() {")
-	o.L("mu%[1]ss.Lock()", t.name)
-	o.L("defer mu%[1]ss.Unlock()", t.name)
-	o.L("all%[1]ss = make(map[%[1]s]struct{})", t.name)
-	for _, e := range t.elements {
-		if !e.invalid {
-			o.L("all%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
-		}
-	}
+	o.L("// builtin values for %s", t.name)
+	o.L("algorithms := make([]%s, 0, %d)", t.name, len(t.elements))
 	if t.symmetric {
-		o.L("symmetric%[1]ss = make(map[%[1]s]struct{})", t.name)
+		o.L("for _, alg := range []string{")
+		ecount := 0
 		for _, e := range t.elements {
-			if !e.invalid && e.sym {
-				o.L("symmetric%[1]ss[%[2]s] = struct{}{}", t.name, e.name)
+			if !e.sym {
+				continue
 			}
+			if ecount > 0 {
+				o.R(", ")
+			}
+			ecount++
+			o.R("%q", e.value)
 		}
+		o.R("} {")
+		o.L("algorithms = append(algorithms, New%s(alg, WithIsSymmetric(true)))", t.name)
+		o.L("}")
 	}
-	o.L("rebuild%[1]s()", t.name)
+
+	o.LL("for _, alg := range []string{")
+	ecount := 0
+	for _, e := range t.elements {
+		if e.sym {
+			continue
+		}
+		if e.invalid {
+			continue
+		}
+		if ecount > 0 {
+			o.R(", ")
+		}
+		ecount++
+		o.R("%q", e.value)
+	}
+	o.R("} {")
+	o.L("algorithms = append(algorithms, New%s(alg))", t.name)
 	o.L("}")
 
-	if !t.symmetric {
-		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
-		o.L("// Duplicates will silently be ignored")
-		o.L("func Register%[1]s(v %[1]s) {", t.name)
-		o.L("mu%[1]ss.Lock()", t.name)
-		o.L("defer mu%[1]ss.Unlock()", t.name)
-		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
-		o.L("all%[1]ss[v] = struct{}{}", t.name)
-		o.L("rebuild%[1]s()", t.name)
-		o.L("}")
-		o.L("}")
-	} else {
-		o.LL("// Register%[1]s registers a new %[1]s so that the jwx can properly handle the new value.", t.name)
-		o.L("// Duplicates will silently be ignored")
-		o.L("func Register%[1]s(v %[1]s) {", t.name)
-		o.L("Register%[1]sWithOptions(v)", t.name)
-		o.L("}")
+	o.LL("Register%s(algorithms...)", t.name)
+	o.L("}") // end init
 
-		o.LL("// Register%[1]sWithOptions is the same as Register%[1]s when used without options,", t.name)
-		o.L("// but allows its behavior to change based on the provided options.")
-		o.L("// This is an experimental AND stopgap function which will most likely be merged in Register%[1]s, and subsequently removed in the future. As such it should not be considered part of the stable API -- it is still subject to change.", t.name)
-		o.L("//")
-		o.L("// You can pass `WithSymmetricAlgorithm(true)` to let the library know that it's a symmetric algorithm. This library makes no attempt to verify if the algorithm is indeed symmetric or not.")
-		o.L("func Register%[1]sWithOptions(v %[1]s, options ...RegisterAlgorithmOption) {", t.name)
-		o.L("var symmetric bool")
+	// Accessors for builtin algorithms
+	for _, e := range t.elements {
+		if e.invalid {
+			o.L("var %s = New%s(%q)", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]), t.name, e.value)
+		}
+		o.LL("// %s returns the %s algorithm object.", e.name, e.name)
+		o.L("func %s() %s {", e.name, t.name)
+		if e.invalid {
+			o.L("return %s", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]))
+		} else {
+			o.L("return lookupBuiltin%s(%q)", t.name, e.value)
+		}
+		o.L("}")
+	}
+
+	o.LL("func lookupBuiltin%s(name string) %s {", t.name, t.name)
+	o.L("muAll%s.RLock()", t.name)
+	o.L("v, ok := all%s[name]", t.name)
+	o.L("muAll%s.RUnlock()", t.name)
+	o.L("if !ok {")
+	o.L("panic(fmt.Sprintf(`jwa: %s %%q not registered`, name))", t.name)
+	o.L("}")
+	o.L("return v")
+	o.L("}")
+
+	o.LL("type %s struct {", t.name)
+	o.L("name string")
+	if t.symmetric {
+		o.L("isSymmetric bool")
+	}
+	o.L("}")
+
+	o.LL("func (s %s) String() string {", t.name)
+	o.L("return s.name")
+	o.L("}")
+
+	if t.symmetric {
+		o.LL("func (s %s) IsSymmetric() bool {", t.name)
+		o.L("return s.isSymmetric")
+		o.L("}")
+	}
+
+	o.LL("// Empty%[1]s returns an empty %[1]s object, used as a zero value", t.name)
+	o.L("func Empty%s() %s {", t.name, t.name)
+	o.L("return %s{}", t.name)
+	o.L("}")
+
+	o.LL("// New%[1]s creates a new %[1]s object", t.name)
+	o.L("func New%[1]s(name string", t.name)
+	if !t.symmetric {
+		o.R(") %s {", t.name)
+		o.L("return %s{name: name}", t.name)
+	} else {
+		o.R(", options ...New%[1]sOption) %[1]s {", t.name)
+		o.L("var isSymmetric bool")
 		o.L("//nolint:forcetypeassert")
 		o.L("for _, option := range options {")
 		o.L("switch option.Ident() {")
-		o.L("case identSymmetricAlgorithm{}:")
-		o.L("symmetric = option.Value().(bool)")
+		o.L("case identIsSymmetric{}:")
+		o.L("isSymmetric = option.Value().(bool)")
 		o.L("}")
 		o.L("}")
-		o.L("mu%[1]ss.Lock()", t.name)
-		o.L("defer mu%[1]ss.Unlock()", t.name)
-		o.L("if _, ok := all%[1]ss[v]; !ok {", t.name)
-		o.L("all%[1]ss[v] = struct{}{}", t.name)
-		o.L("if symmetric {")
-		o.L("symmetric%[1]ss[v] = struct{}{}", t.name)
-		o.L("}")
-		o.L("rebuild%[1]s()", t.name)
-		o.L("}")
-		o.L("}")
+		o.L("return %s{name: name, isSymmetric: isSymmetric}", t.name)
 	}
+	o.L("}")
 
-	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
-	o.L("// Non-existent entries will silently be ignored")
-	o.L("func Unregister%[1]s(v %[1]s) {", t.name)
-	o.L("mu%[1]ss.Lock()", t.name)
-	o.L("defer mu%[1]ss.Unlock()", t.name)
-	o.L("if _, ok := all%[1]ss[v]; ok {", t.name)
-	o.L("delete(all%[1]ss, v)", t.name)
-	if t.symmetric {
-		o.L("if _, ok := symmetric%[1]ss[v]; ok {", t.name)
-		o.L("delete(symmetric%[1]ss, v)", t.name)
-		o.L("}")
-	}
+	o.LL("// Lookup%[1]s returns the %[1]s object for the given name", t.name)
+	o.L("func Lookup%[1]s(name string) (%[1]s, bool) {", t.name)
+	o.L("muAll%[1]s.RLock()", t.name)
+	o.L("v, ok := all%[1]s[name]", t.name)
+	o.L("muAll%[1]s.RUnlock()", t.name)
+	o.L("return v, ok")
+	o.L("}")
+
+	o.LL("// Register%[1]s registers a new %[1]s. The signature value must be immutable", t.name)
+	o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library")
+	o.L("func Register%[1]s(algorithms ...%[1]s) {", t.name)
+	o.L("muAll%[1]s.Lock()", t.name)
+	o.L("for _, alg := range algorithms {")
+	o.L("all%[1]s[alg.String()] = alg", t.name)
+	o.L("}")
+	o.L("muAll%[1]s.Unlock()", t.name)
 	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
+
+	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.name)
+	o.L("// Non-existent entries, as well as built-in algorithms will silently be ignored")
+	o.L("func Unregister%[1]s(algorithms ...%[1]s) {", t.name)
+	o.L("muAll%[1]s.Lock()", t.name)
+	o.L("for _, alg := range algorithms {")
+	o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.name)
+	o.L("continue")
+	o.L("}")
+	o.L("delete(all%[1]s, alg.String())", t.name)
+	o.L("}")
+	o.L("muAll%[1]s.Unlock()", t.name)
+	o.L("rebuild%[1]s()", t.name)
 	o.L("}")
 
 	o.LL("func rebuild%[1]s() {", t.name)
-	o.L("list%[1]s = make([]%[1]s, 0, len(all%[1]ss))", t.name)
-	o.L("for v := range all%ss {", t.name)
-	o.L("list%[1]s = append(list%[1]s, v)", t.name)
+	o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.name)
+	o.L("muAll%[1]s.RLock()", t.name)
+	o.L("for _, v := range all%[1]s {", t.name)
+	o.L("list = append(list, v)")
 	o.L("}")
-	o.L("sort.Slice(list%s, func(i, j int) bool {", t.name)
-	o.L("return string(list%[1]s[i]) < string(list%[1]s[j])", t.name)
+	o.L("muAll%[1]s.RUnlock()", t.name)
+	o.L("sort.Slice(list, func(i, j int) bool {")
+	o.L("return list[i].String() < list[j].String()")
 	o.L("})")
+	o.L("muList%[1]s.Lock()", t.name)
+	o.L("list%[1]s = list", t.name)
+	o.L("muList%[1]s.Unlock()", t.name)
 	o.L("}")
 
 	o.LL("// %[1]ss returns a list of all available values for %[1]s", t.name)
 	o.L("func %[1]ss() []%[1]s {", t.name)
-	o.L("mu%[1]ss.RLock()", t.name)
-	o.L("defer mu%[1]ss.RUnlock()", t.name)
-	o.L("return list%s", t.name)
+	o.L("muList%[1]s.RLock()", t.name)
+	o.L("defer muList%[1]s.RUnlock()", t.name)
+	o.L("return list%[1]s", t.name)
 	o.L("}")
 
-	o.LL("// Accept is used when conversion from values given by")
-	o.L("// outside sources (such as JSON payloads) is required")
-	o.L("func (v *%s) Accept(value interface{}) error {", t.name)
-	o.L("var tmp %s", t.name)
-	o.L("if x, ok := value.(%s); ok {", t.name)
-	o.L("tmp = x")
-	o.L("} else {")
-	o.L("var s string")
-	o.L("switch x := value.(type) {")
-	o.L("case fmt.Stringer:")
-	o.L("s = x.String()")
-	o.L("case string:")
-	o.L("s = x")
-	o.L("default:")
-	o.L("return fmt.Errorf(`invalid type for jwa.%s: %%T`, value)", t.name)
-	o.L("}")
-	o.L("tmp = %s(s)", t.name)
+	o.LL("// MarshalJSON serializes the %[1]s object to a JSON string", t.name)
+	o.L("func (s %[1]s) MarshalJSON() ([]byte, error) {", t.name)
+	o.L("return json.Marshal(s.String())")
 	o.L("}")
 
-	o.L("if _, ok := all%ss[tmp]; !ok {", t.name)
-	o.L("return fmt.Errorf(`invalid jwa.%s value`)", t.name)
+	o.LL("// UnmarshalJSON deserializes the JSON string to a %[1]s object", t.name)
+	o.L("func (s *%[1]s) UnmarshalJSON(data []byte) error {", t.name)
+	o.L("var name string")
+	o.L("if err := json.Unmarshal(data, &name); err != nil {")
+	o.L("return fmt.Errorf(`failed to unmarshal %[1]s: %%w`, err)", t.name)
 	o.L("}")
-
-	o.LL("*v = tmp")
+	o.L("v, ok := Lookup%[1]s(name)", t.name)
+	o.L("if !ok {")
+	o.L("return fmt.Errorf(`unknown %[1]s: %%s`, name)", t.name)
+	o.L("}")
+	o.L("*s = v")
 	o.L("return nil")
-	o.L("}") // func (v *%s) Accept(v interface{})
-
-	o.LL("// String returns the string representation of a %s", t.name)
-	o.L("func (v %s) String() string {", t.name)
-	o.L("return string(v)")
 	o.L("}")
-
-	if t.symmetric {
-		o.LL("// IsSymmetric returns true if the algorithm is a symmetric type.")
-		if t.name == "SignatureAlgorithm" {
-			o.L("// Keep in mind that the NoSignature algorithm is neither a symmetric nor an asymmetric algorithm.")
-		}
-		o.L("func (v %s) IsSymmetric() bool {", t.name)
-		o.L("_, ok := symmetric%[1]ss[v]", t.name)
-		o.L("return ok")
-		o.L("}")
-	}
 
 	if err := o.WriteFile(t.filename, codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
@@ -594,6 +621,7 @@ func (t typ) GenerateTest() error {
 
 	o.L("import (")
 	pkgs := []string{
+		"strconv",
 		"testing",
 		"github.com/lestrrat-go/jwx/v3/jwa",
 		"github.com/stretchr/testify/require",
@@ -606,51 +634,30 @@ func (t typ) GenerateTest() error {
 	o.LL("func Test%s(t *testing.T) {", t.name)
 	o.L("t.Parallel()")
 	for _, e := range valids {
-		o.L("t.Run(`accept jwa constant %s`, func(t *testing.T) {", e.name)
+		o.L("t.Run(`Lookup the object`, func(t *testing.T) {")
 		o.L("t.Parallel()")
-		o.L("var dst jwa.%s", t.name)
-		o.L("require.NoError(t, dst.Accept(jwa.%s), `accept is successful`)", e.name)
-		o.L("require.Equal(t, jwa.%s, dst, `accepted value should be equal to constant`)", e.name)
+		o.L("v, ok := jwa.Lookup%s(%q)", t.name, e.value)
+		o.L("require.True(t, ok, `Lookup should succeed`)")
+		o.L("require.Equal(t, jwa.%s(), v, `Lookup value should be equal to constant`)", e.name)
 		o.L("})")
 
-		o.L("t.Run(`accept the string %s`, func(t *testing.T) {", e.value)
+		o.L("t.Run(`Unmarshal the string %s`, func(t *testing.T) {", e.value)
 		o.L("t.Parallel()")
 		o.L("var dst jwa.%s", t.name)
-		o.L("require.NoError(t, dst.Accept(%#v), `accept is successful`)", e.value)
-		o.L("require.Equal(t, jwa.%s, dst, `accepted value should be equal to constant`)", e.name)
-		o.L("})")
-
-		o.L("t.Run(`accept fmt.Stringer for %s`, func(t *testing.T) {", e.value)
-		o.L("t.Parallel()")
-		o.L("var dst jwa.%s", t.name)
-		o.L("require.NoError(t, dst.Accept(stringer{ src: %#v }), `accept is successful`)", e.value)
-		o.L("require.Equal(t, jwa.%s, dst, `accepted value should be equal to constant`)", e.name)
+		o.L("require.NoError(t, json.Unmarshal([]byte(strconv.Quote(%q)), &dst), `UnmarshalJSON is successful`)", e.value)
+		o.L("require.Equal(t, jwa.%s(), dst, `unmarshaled value should be equal to constant`)", e.name)
 		o.L("})")
 
 		o.L("t.Run(`stringification for %s`, func(t *testing.T) {", e.value)
 		o.L("t.Parallel()")
-		o.L("require.Equal(t, %#v, jwa.%s.String(), `stringified value matches`)", e.value, e.name)
+		o.L("require.Equal(t, %#v, jwa.%s().String(), `stringified value matches`)", e.value, e.name)
 		o.L("})")
 	}
 
-	for _, e := range invalids {
-		o.L("t.Run(`do not accept invalid constant %s`, func(t *testing.T) {", e.name)
-		o.L("t.Parallel()")
-		o.L("var dst jwa.%s", t.name)
-		o.L("require.Error(t, dst.Accept(jwa.%s), `accept should fail`)", e.name)
-		o.L("})")
-	}
-
-	o.L("t.Run(`bail out on random integer value`, func(t *testing.T) {")
+	o.L("t.Run(`Unmarshal should fail for invalid value (totally made up) string value`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%s", t.name)
-	o.L("require.Error(t, dst.Accept(1), `accept should fail`)")
-	o.L("})")
-
-	o.L("t.Run(`do not accept invalid (totally made up) string value`, func(t *testing.T) {")
-	o.L("t.Parallel()")
-	o.L("var dst jwa.%s", t.name)
-	o.L("require.Error(t, dst.Accept(`totallyInvalidValue`), `accept should fail`)")
+	o.L("require.Error(t, json.Unmarshal([]byte(`totallyInvalidValue`), &dst), `Unmarshal should fail`)")
 	o.L("})")
 
 	if t.symmetric {
@@ -659,10 +666,11 @@ func (t typ) GenerateTest() error {
 		for _, e := range t.elements {
 			o.L("t.Run(`%s`, func(t *testing.T) {", e.name)
 			if e.sym {
-				o.L("require.True(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should be symmetric`)", e.name)
+				o.L("require.True")
 			} else {
-				o.L("require.False(t, jwa.%[1]s.IsSymmetric(), `jwa.%[1]s should NOT be symmetric`)", e.name)
+				o.L("require.False")
 			}
+			o.R("(t, jwa.%[1]s().IsSymmetric(), `jwa.%[1]s returns expected value`)", e.name)
 			o.L("})")
 		}
 		o.L("})")
@@ -673,7 +681,7 @@ func (t typ) GenerateTest() error {
 	o.L("var expected = map[jwa.%s]struct{} {", t.name)
 	for _, e := range t.elements {
 		if !e.invalid {
-			o.L("jwa.%s: {},", e.name)
+			o.L("jwa.%s(): {},", e.name)
 		}
 	}
 	o.L("}")
@@ -696,117 +704,56 @@ func (t typ) GenerateTest() error {
 	o.LL("// Note: this test can NOT be run in parallel as it uses options with global effect.")
 	o.L("func Test%sCustomAlgorithm(t *testing.T) {", t.name)
 	o.L("// These subtests can NOT be run in parallel as options with global effect change.")
-	o.L(`customAlgorithm := jwa.%[1]s("custom-algorithm")`, t.name)
+	o.L("const customAlgorithmValue = `custom-algorithm`")
+	if t.symmetric {
+		o.L("for _, symmetric := range []bool{true, false} {")
+	}
+	o.L(`customAlgorithm := jwa.New%[1]s(customAlgorithmValue`, t.name)
+	if t.symmetric {
+		o.R(`, jwa.WithIsSymmetric(symmetric))`)
+	} else {
+		o.R(`)`)
+	}
 	o.L("// Unregister the custom algorithm, in case tests fail.")
 	o.L("t.Cleanup(func() {")
 	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
 	o.L("})")
 	o.L("t.Run(`with custom algorithm registered`, func(t *testing.T) {")
 	o.L("jwa.Register%[1]s(customAlgorithm)", t.name)
-	o.L("t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {")
+	o.L("t.Run(`Lookup the object`, func(t *testing.T) {")
 	o.L("t.Parallel()")
-	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)")
-	o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
+	o.L("v, ok := jwa.Lookup%[1]s(customAlgorithmValue)", t.name)
+	o.L("require.True(t, ok, `Lookup should succeed`)")
+	o.L("require.Equal(t, customAlgorithm, v, `Lookup value should be equal to constant`)")
 	o.L("})")
-	o.L("t.Run(`accept the string custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)")
-	o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
-	o.L("})")
-	o.L("t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
-	o.L("t.Parallel()")
-	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)")
+	o.L("require.NoError(t, json.Unmarshal([]byte(strconv.Quote(customAlgorithmValue)), &dst), `Unmarshal is successful`)")
 	o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
 	o.L("})")
 	if t.symmetric {
 		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
 		o.L("t.Parallel()")
-		o.L("require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
+		o.L("require.Equal(t, symmetric, customAlgorithm.IsSymmetric(), `custom algorithm's symmetric attribute should match`)")
 		o.L("})")
 	}
 	o.L("})")
 	o.L("t.Run(`with custom algorithm deregistered`, func(t *testing.T) {")
 	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
-	o.L("t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {")
+	o.L("t.Run(`Lookup the object`, func(t *testing.T) {")
 	o.L("t.Parallel()")
-	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.Error(t, dst.Accept(customAlgorithm), `accept failed`)")
+	o.L("_, ok := jwa.Lookup%[1]s(customAlgorithmValue)", t.name)
+	o.L("require.False(t, ok, `Lookup should fail`)")
 	o.L("})")
-	o.L("t.Run(`reject the string custom-algorithm`, func(t *testing.T) {")
+	o.L("t.Run(`Unmarshal custom algorithm`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)")
+	o.L("require.Error(t, json.Unmarshal([]byte(customAlgorithmValue), &dst), `Unmarshal should fail`)")
 	o.L("})")
-	o.L("t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
-	o.L("t.Parallel()")
-	o.L("var dst jwa.%[1]s", t.name)
-	o.L("require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)")
 	o.L("})")
 	if t.symmetric {
-		o.L("t.Run(`check symmetric`, func(t *testing.T) {")
-		o.L("t.Parallel()")
-		o.L("require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
-		o.L("})")
-	}
-	o.L("})")
-
-	if t.symmetric {
-		for _, value := range []bool{false, true} {
-			o.LL("t.Run(`with custom algorithm registered with WithSymmetricAlgorithm(%t)`, func(t *testing.T) {", value)
-			o.L("jwa.Register%[1]sWithOptions(customAlgorithm, jwa.WithSymmetricAlgorithm(%[2]t))", t.name, value)
-			o.L("t.Run(`accept variable used to register custom algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.NoError(t, dst.Accept(customAlgorithm), `accept is successful`)")
-			o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
-			o.L("})")
-			o.L("t.Run(`accept the string custom-algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.NoError(t, dst.Accept(`custom-algorithm`), `accept is successful`)")
-			o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
-			o.L("})")
-			o.L("t.Run(`accept fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.NoError(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept is successful`)")
-			o.L("require.Equal(t, customAlgorithm, dst, `accepted value should be equal to variable`)")
-			o.L("})")
-			o.L("t.Run(`check symmetric`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			if value {
-				o.L("require.True(t, customAlgorithm.IsSymmetric(), `custom algorithm should be symmetric`)")
-			} else {
-				o.L("require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
-			}
-			o.L("})")
-			o.L("})")
-			o.L("t.Run(`with custom algorithm deregistered (was WithSymmetricAlgorithm(%t))`, func(t *testing.T) {", value)
-			o.L("jwa.Unregister%[1]s(customAlgorithm)", t.name)
-			o.L("t.Run(`reject variable used to register custom algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.Error(t, dst.Accept(customAlgorithm), `accept failed`)")
-			o.L("})")
-			o.L("t.Run(`reject the string custom-algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.Error(t, dst.Accept(`custom-algorithm`), `accept failed`)")
-			o.L("})")
-			o.L("t.Run(`reject fmt.Stringer for custom-algorithm`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("var dst jwa.%[1]s", t.name)
-			o.L("require.Error(t, dst.Accept(stringer{src: `custom-algorithm`}), `accept failed`)")
-			o.L("})")
-			o.L("t.Run(`check symmetric`, func(t *testing.T) {")
-			o.L("t.Parallel()")
-			o.L("require.False(t, customAlgorithm.IsSymmetric(), `custom algorithm should NOT be symmetric`)")
-			o.L("})")
-			o.L("})")
-		}
+		o.L("}") // ending the for _, symmetric := range loop
 	}
 	o.L("}")
 

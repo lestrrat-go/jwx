@@ -111,7 +111,7 @@ func TestKeyconv(t *testing.T) {
 		})
 	})
 	t.Run("ECDSA", func(t *testing.T) {
-		key, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 		require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
 
 		t.Run("PrivateKey", func(t *testing.T) {

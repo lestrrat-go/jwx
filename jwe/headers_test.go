@@ -25,7 +25,7 @@ func TestHeaders(t *testing.T) {
 		_ = certs.AddString(src)
 	}
 
-	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521)
+	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 	privKey, err := jwk.Import(rawKey)
 	require.NoError(t, err, `jwk.Import should succeed`)
@@ -45,8 +45,8 @@ func TestHeaders(t *testing.T) {
 			Method: "AgreementPartyUInfo",
 		},
 		{Key: jwe.AgreementPartyVInfoKey, Value: []byte("apv foobarbaz")},
-		{Key: jwe.CompressionKey, Value: jwa.Deflate},
-		{Key: jwe.ContentEncryptionKey, Value: jwa.A128GCM},
+		{Key: jwe.CompressionKey, Value: jwa.Deflate()},
+		{Key: jwe.ContentEncryptionKey, Value: jwa.A128GCM()},
 		{
 			Key:    jwe.ContentTypeKey,
 			Value:  "application/json",
@@ -132,7 +132,7 @@ func TestHeaders(t *testing.T) {
 				require.NotEqual(t, m, zeroval, "method %s should be available", method)
 
 				ret := m.Call(nil)
-				require.Len(t, ret, 1, `should get exactly 1 value as return value`)
+				require.Len(t, ret, 2, `should get exactly 1 value as return value`)
 				values = append(values, ret[0].Interface())
 			}
 

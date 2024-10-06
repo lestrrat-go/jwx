@@ -15,7 +15,7 @@ func ExampleJWS_Sign() {
 		return
 	}
 
-	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key))
+	buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
 		return
