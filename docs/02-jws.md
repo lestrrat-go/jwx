@@ -144,7 +144,7 @@ func ExampleJWS_UseJWSHeader() {
     return
   }
 
-  signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
+  signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
   if err != nil {
     fmt.Printf(`failed to sign token: %s`, err)
     return
@@ -159,7 +159,12 @@ func ExampleJWS_UseJWSHeader() {
   // While JWT enveloped with JWS in compact format only has 1 signature,
   // a generic JWS message may have multiple signatures. Therefore, we
   // need to access the first element
-  fmt.Printf("%q\n", msg.Signatures()[0].ProtectedHeaders().KeyID())
+  kid, ok := msg.Signatures()[0].ProtectedHeaders().KeyID()
+  if !ok {
+    fmt.Printf("failed to get key ID from protected headers")
+    return
+  }
+  fmt.Printf("%q\n", kid)
   // OUTPUT:
   // "secret-key"
 }
@@ -195,7 +200,7 @@ func ExampleJWS_Sign() {
     return
   }
 
-  buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key))
+  buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256(), key))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -240,7 +245,7 @@ func ExampleJWS_SignJSON() {
 
   options := []jws.SignOption{jws.WithJSON()}
   for _, key := range keys {
-    options = append(options, jws.WithKey(jwa.HS256, key))
+    options = append(options, jws.WithKey(jwa.HS256(), key))
   }
 
   buf, err := jws.Sign([]byte("Lorem ipsum"), options...)
@@ -282,7 +287,7 @@ func ExampleJWS_SignDetachedPayload() {
     return
   }
 
-  serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+  serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload([]byte(payload)))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -325,7 +330,7 @@ func ExampleJWS_SignWithHeaders() {
 
   hdrs := jws.NewHeaders()
   hdrs.Set(`x-example`, true)
-  buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256, key, jws.WithProtectedHeaders(hdrs)))
+  buf, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -375,7 +380,7 @@ func ExampleJWS_VerifyWithKey() {
     return
   }
 
-  buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256, key))
+  buf, err := jws.Verify([]byte(src), jws.WithKey(jwa.HS256(), key))
   if err != nil {
     fmt.Printf("failed to verify payload: %s\n", err)
     return
@@ -420,7 +425,7 @@ func ExampleJWS_VerifyWithJWKSet() {
     return
   }
   const payload = "Lorem ipsum"
-  signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256, privkey))
+  signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.RS256(), privkey))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -436,7 +441,7 @@ func ExampleJWS_VerifyWithJWKSet() {
   // AddKey the real thing
   pubkey, _ := jwk.PublicRawKeyOf(privkey)
   k3, _ := jwk.Import(pubkey)
-  k3.Set(jwk.AlgorithmKey, jwa.RS256)
+  k3.Set(jwk.AlgorithmKey, jwa.RS256())
   set.AddKey(k3)
 
   // Up to this point, you probably will replace with a simple jwk.Fetch()
@@ -478,7 +483,7 @@ func ExampleJWS_VerifyDetachedPayload() {
     return
   }
 
-  verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256, key), jws.WithDetachedPayload([]byte(payload)))
+  verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload([]byte(payload)))
   if err != nil {
     fmt.Printf("failed to verify payload: %s\n", err)
     return
@@ -564,7 +569,7 @@ func NewCirclEdDSAVerifier() (jws.Verifier, error) {
 }
 
 func (s CirclEdDSASignerVerifier) Algorithm() jwa.SignatureAlgorithm {
-  return jwa.EdDSA
+  return jwa.EdDSA()
 }
 
 func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byte, error) {
@@ -591,8 +596,8 @@ func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif
 func ExampleJWS_CustomSignerVerifier() {
   // This example shows how to register external jws.Signer / jws.Verifier for
   // a given algorithm.
-  jws.RegisterSigner(jwa.EdDSA, jws.SignerFactoryFn(NewCirclEdDSASigner))
-  jws.RegisterVerifier(jwa.EdDSA, jws.VerifierFactoryFn(NewCirclEdDSAVerifier))
+  jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(NewCirclEdDSASigner))
+  jws.RegisterVerifier(jwa.EdDSA(), jws.VerifierFactoryFn(NewCirclEdDSAVerifier))
 
   pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
   if err != nil {
@@ -601,13 +606,13 @@ func ExampleJWS_CustomSignerVerifier() {
   }
 
   const payload = "Lorem Ipsum"
-  signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA, privkey))
+  signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA(), privkey))
   if err != nil {
     fmt.Printf(`failed to generate signed message: %s`, err)
     return
   }
 
-  verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA, pubkey))
+  verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), pubkey))
   if err != nil {
     fmt.Printf(`failed to verify signed message: %s`, err)
     return
