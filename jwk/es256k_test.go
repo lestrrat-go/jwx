@@ -18,7 +18,7 @@ import (
 )
 
 func TestES256K(t *testing.T) {
-	require.True(t, ourecdsa.IsCurveAvailable(jwa.Secp256k1), `jwa.Secp256k1 should be available`)
+	require.True(t, ourecdsa.IsCurveAvailable(jwa.Secp256k1()), `jwa.Secp256k1 should be available`)
 }
 
 func BenchmarkKeyInstantiation(b *testing.B) {
