@@ -38,6 +38,10 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## JWK
 
+* `jwk.KeyUsageType` can now be configured so that it's possible to assign values
+  other than "sig" and "enc" via `jwk.RegisterKeyUsage()`. Furthermore, strict
+  checks can be turned on/off against these registered values
+
 * `jwk.Cache` has been completely re-worked based on github.com/lestrrat-go/httprc/v3.
   In particular, the default whitelist mode has changed from "block everything" to
   "allow everything".
