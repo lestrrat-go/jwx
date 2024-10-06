@@ -133,12 +133,12 @@ func EmptySignatureAlgorithm() SignatureAlgorithm {
 }
 
 // NewSignatureAlgorithm creates a new SignatureAlgorithm object
-func NewSignatureAlgorithm(name string, options ...NewKeyAlgorithmOption) SignatureAlgorithm {
+func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) SignatureAlgorithm {
 	var isSymmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
-		case identSymmetricAlgorithm{}:
+		case identIsSymmetric{}:
 			isSymmetric = option.Value().(bool)
 		}
 	}

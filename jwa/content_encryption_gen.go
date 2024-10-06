@@ -80,7 +80,7 @@ func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
 }
 
 // NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object
-func NewContentEncryptionAlgorithm(name string, options ...NewKeyAlgorithmOption) ContentEncryptionAlgorithm {
+func NewContentEncryptionAlgorithm(name string) ContentEncryptionAlgorithm {
 	return ContentEncryptionAlgorithm{name: name}
 }
 

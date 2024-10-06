@@ -77,7 +77,7 @@ func EmptyKeyType() KeyType {
 }
 
 // NewKeyType creates a new KeyType object
-func NewKeyType(name string, options ...NewKeyAlgorithmOption) KeyType {
+func NewKeyType(name string) KeyType {
 	return KeyType{name: name}
 }
 

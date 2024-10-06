@@ -16,7 +16,7 @@ popd > /dev/null
 
 EXE="$DIR/.genoptions"
 
-for dir in jwe jwk jws jwt; do
+for dir in jwa jwe jwk jws jwt; do
   echo "  ⌛ Processing $dir/options.yaml"
   "$EXE" -objects="$dir/options.yaml"
 done

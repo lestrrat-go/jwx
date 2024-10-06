@@ -501,15 +501,17 @@ func (t typ) Generate() error {
 	o.L("}")
 
 	o.LL("// New%[1]s creates a new %[1]s object", t.name)
-	o.L("func New%[1]s(name string, options ...NewKeyAlgorithmOption) %[1]s {", t.name)
+	o.L("func New%[1]s(name string", t.name)
 	if !t.symmetric {
+		o.R(") %s {", t.name)
 		o.L("return %s{name: name}", t.name)
 	} else {
+		o.R(", options ...New%[1]sOption) %[1]s {", t.name)
 		o.L("var isSymmetric bool")
 		o.L("//nolint:forcetypeassert")
 		o.L("for _, option := range options {")
 		o.L("switch option.Ident() {")
-		o.L("case identSymmetricAlgorithm{}:")
+		o.L("case identIsSymmetric{}:")
 		o.L("isSymmetric = option.Value().(bool)")
 		o.L("}")
 		o.L("}")

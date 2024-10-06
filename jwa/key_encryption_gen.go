@@ -153,12 +153,12 @@ func EmptyKeyEncryptionAlgorithm() KeyEncryptionAlgorithm {
 }
 
 // NewKeyEncryptionAlgorithm creates a new KeyEncryptionAlgorithm object
-func NewKeyEncryptionAlgorithm(name string, options ...NewKeyAlgorithmOption) KeyEncryptionAlgorithm {
+func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithmOption) KeyEncryptionAlgorithm {
 	var isSymmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
-		case identSymmetricAlgorithm{}:
+		case identIsSymmetric{}:
 			isSymmetric = option.Value().(bool)
 		}
 	}

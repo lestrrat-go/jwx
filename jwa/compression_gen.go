@@ -60,7 +60,7 @@ func EmptyCompressionAlgorithm() CompressionAlgorithm {
 }
 
 // NewCompressionAlgorithm creates a new CompressionAlgorithm object
-func NewCompressionAlgorithm(name string, options ...NewKeyAlgorithmOption) CompressionAlgorithm {
+func NewCompressionAlgorithm(name string) CompressionAlgorithm {
 	return CompressionAlgorithm{name: name}
 }
 

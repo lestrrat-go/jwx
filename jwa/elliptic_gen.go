@@ -92,7 +92,7 @@ func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
 }
 
 // NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object
-func NewEllipticCurveAlgorithm(name string, options ...NewKeyAlgorithmOption) EllipticCurveAlgorithm {
+func NewEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
 	return EllipticCurveAlgorithm{name: name}
 }
 
