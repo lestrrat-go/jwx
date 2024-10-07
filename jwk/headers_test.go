@@ -70,16 +70,22 @@ func TestHeader(t *testing.T) {
 			}
 		}
 		require.NoError(t, h.Set("Default", dummy), `Setting "Default" should succeed`)
-		require.Nil(t, h.Algorithm(), "Algorithm should be nil")
-		if h.KeyID() != "" {
-			t.Fatalf("KeyID should be empty string")
-		}
-		if h.KeyUsage() != "" {
-			t.Fatalf("KeyUsage should be empty string")
-		}
-		if h.KeyOps() != nil {
-			t.Fatalf("KeyOps should be empty string")
-		}
+
+		alg, ok := h.Algorithm()
+		require.True(t, !ok, `Algorithm should not be set`)
+		require.Nil(t, alg, "Algorithm should be nil")
+
+		kid, ok := h.KeyID()
+		require.False(t, ok, `KeyID should not be set`)
+		require.Empty(t, kid, "KeyID should be empty")
+
+		use, ok := h.KeyUsage()
+		require.False(t, ok, `KeyUsage should not be set`)
+		require.Empty(t, use, "KeyUsage should be empty")
+
+		ops, ok := h.KeyOps()
+		require.False(t, ok, `KeyOps should not be set`)
+		require.Nil(t, ops, "KeyOps should be nil")
 	})
 
 	t.Run("Algorithm", func(t *testing.T) {

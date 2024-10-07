@@ -636,3 +636,10 @@ func Configure(options ...GlobalOption) {
 		strictKeyUsage.Store(*strictKeyUsagePtr)
 	}
 }
+
+// These are used when validating keys.
+type keyWithD interface {
+	D() ([]byte, bool)
+}
+
+var _ keyWithD = &okpPrivateKey{}

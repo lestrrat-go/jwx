@@ -110,14 +110,17 @@ type keySetProvider struct {
 }
 
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) error {
-	if usage := key.KeyUsage(); usage != "" && usage != jwk.ForSignature.String() {
-		return nil
+	if usage, ok := key.KeyUsage(); ok {
+		// it's okay if use: "". we'll assume it's "sig"
+		if usage != "" && usage != jwk.ForSignature.String() {
+			return nil
+		}
 	}
 
-	if v := key.Algorithm(); v != nil {
+	if v, ok := key.Algorithm(); ok {
 		salg, ok := jwa.LookupSignatureAlgorithm(v.String())
 		if !ok {
-			return fmt.Errorf(`invalid signature algorithm %q`, key.Algorithm())
+			return fmt.Errorf(`invalid signature algorithm %q`, v)
 		}
 
 		sink.Key(salg, key)
@@ -187,7 +190,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		ok = false
 		for i := range kp.set.Len() {
 			key, _ := kp.set.Key(i)
-			if key.KeyID() != wantedKid {
+			if kid, ok := key.KeyID(); !ok || kid != wantedKid {
 				continue
 			}
 

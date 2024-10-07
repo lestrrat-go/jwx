@@ -113,7 +113,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	// If the key is a jwk.Key instance, obtain the raw key
 	if jwkKey, ok := key.(jwk.Key); ok {
 		// If we have a key ID specified by this jwk.Key, use that in the header
-		if kid := jwkKey.KeyID(); kid != "" {
+		if kid, ok := jwkKey.KeyID(); ok && kid != "" {
 			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
 				return nil, nil, fmt.Errorf(`set key ID from jwk.Key: %w`, err)
 			}

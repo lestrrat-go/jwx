@@ -113,7 +113,12 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 
 		k.mu.RLock()
 		defer k.mu.RUnlock()
-		return buildECDSAPublicKey(k.Crv(), k.x, k.y)
+
+		crv, ok := k.Crv()
+		if !ok {
+			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+		return buildECDSAPublicKey(crv, k.x, k.y)
 	case *ecdsaPrivateKey:
 		switch hint.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey, interface{}:
@@ -123,7 +128,12 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 
 		k.mu.RLock()
 		defer k.mu.RUnlock()
-		pubk, err := buildECDSAPublicKey(k.Crv(), k.x, k.y)
+
+		crv, ok := k.Crv()
+		if !ok {
+			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+		pubk, err := buildECDSAPublicKey(crv, k.x, k.y)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to build public key: %w`, err)
 		}
@@ -232,28 +242,33 @@ func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func ecdsaValidateKey(k interface {
-	Crv() jwa.EllipticCurveAlgorithm
-	X() []byte
-	Y() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	X() ([]byte, bool)
+	Y() ([]byte, bool)
 }, checkPrivate bool) error {
-	crv, err := ourecdsa.CurveFromAlgorithm(k.Crv())
+	crvtyp, ok := k.Crv()
+	if !ok {
+		return fmt.Errorf(`missing "crv" field`)
+	}
+
+	crv, err := ourecdsa.CurveFromAlgorithm(crvtyp)
 	if err != nil {
-		return fmt.Errorf(`invalid curve algorithm %q: %w`, k.Crv(), err)
+		return fmt.Errorf(`invalid curve algorithm %q: %w`, crvtyp, err)
 	}
 
 	keySize := ecutil.CalculateKeySize(crv)
-	if x := k.X(); len(x) != keySize {
+	if x, ok := k.X(); !ok || len(x) != keySize {
 		return fmt.Errorf(`invalid "x" length (%d) for curve %q`, len(x), crv.Params().Name)
 	}
 
-	if y := k.Y(); len(y) != keySize {
+	if y, ok := k.Y(); !ok || len(y) != keySize {
 		return fmt.Errorf(`invalid "y" length (%d) for curve %q`, len(y), crv.Params().Name)
 	}
 
 	if checkPrivate {
-		if priv, ok := k.(interface{ D() []byte }); ok {
-			if len(priv.D()) != keySize {
-				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(priv.D()), crv.Params().Name)
+		if priv, ok := k.(keyWithD); ok {
+			if d, ok := priv.D(); !ok || len(d) != keySize {
+				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(d), crv.Params().Name)
 			}
 		} else {
 			return fmt.Errorf(`missing "d" value`)

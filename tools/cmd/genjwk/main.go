@@ -180,7 +180,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		if f.Bool(`is_std`) {
 			continue
 		}
-		o.L("%s() %s", f.GetterMethod(true), f.Type())
+		o.L("%s() (%s, bool)", f.GetterMethod(true), f.Type())
 	}
 	o.L("}")
 
@@ -217,7 +217,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	}
 
 	for _, f := range obj.Fields() {
-		o.LL("func (h *%s) %s() ", structName, f.GetterMethod(true))
+		o.LL("func (h *%s) %s() (", structName, f.GetterMethod(true))
 		if v := f.String(`getter_return_value`); v != "" {
 			o.R("%s", v)
 		} else if IsPointer(f) && f.Bool(`noDeref`) {
@@ -225,24 +225,29 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		} else {
 			o.R("%s", PointerElem(f))
 		}
-		o.R(" {")
+		o.R(", bool) {")
 
 		if f.Bool(`hasGet`) {
 			o.L("if h.%s != nil {", f.Name(false))
-			o.L("return h.%s.Get()", f.Name(false))
+			o.L("return h.%s.Get(), true", f.Name(false))
 			o.L("}")
-			o.L("return %s", codegen.ZeroVal(PointerElem(f)))
+			o.L("return %s, false", codegen.ZeroVal(PointerElem(f)))
 		} else if !IsPointer(f) {
 			if fieldStorageTypeIsIndirect(f.Type()) {
 				o.L("if h.%s != nil {", f.Name(false))
-				o.L("return *(h.%s)", f.Name(false))
+				o.L("return *(h.%s), true", f.Name(false))
 				o.L("}")
-				o.L("return %s", codegen.ZeroVal(PointerElem(f)))
+				o.L("return %s, false", codegen.ZeroVal(PointerElem(f)))
+			} else if strings.HasPrefix(f.Type(), `[]`) {
+				o.L("if h.%s != nil {", f.Name(false))
+				o.L("return h.%s, true", f.Name(false))
+				o.L("}")
+				o.L("return nil, false")
 			} else {
-				o.L("return h.%s", f.Name(false))
+				o.L("return h.%s, true", f.Name(false))
 			}
 		} else {
-			o.L(`return h.%s`, f.Name(false))
+			o.L(`return h.%s, true`, f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
@@ -706,10 +711,10 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 		if f.Name(false) == "algorithm" {
 			o.LL("// Algorithm returns the value of the `alg` field.")
 			o.L("//")
-			o.L("// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.")
+			o.L("// This field may contain either `jwk.SignatureAlgorithm`, `jwk.KeyEncryptionAlgorithm`, or `jwk.ContentEncryptionAlgorithm`.")
 			o.L("// This is why there exists a `jwa.KeyAlgorithm` type that encompasses both types.")
 		}
-		o.L("%s() ", f.GetterMethod(true))
+		o.L("%s() (", f.GetterMethod(true))
 		if v := f.String(`getter_return_value`); v != "" {
 			o.R("%s", v)
 		} else if IsPointer(f) && f.Bool(`noDeref`) {
@@ -717,6 +722,7 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 		} else {
 			o.R("%s", PointerElem(f))
 		}
+		o.R(", bool)")
 	}
 	o.L("}")
 

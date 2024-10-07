@@ -86,24 +86,24 @@ type Key interface {
 	// KeyType returns the `kty` of a JWK
 	KeyType() jwa.KeyType
 	// KeyUsage returns `use` of a JWK
-	KeyUsage() string
+	KeyUsage() (string, bool)
 	// KeyOps returns `key_ops` of a JWK
-	KeyOps() KeyOperationList
+	KeyOps() (KeyOperationList, bool)
 	// Algorithm returns `alg` of a JWK
 
 	// Algorithm returns the value of the `alg` field.
 	//
-	// This field may contain either `jwk.SignatureAlgorithm` or `jwk.KeyEncryptionAlgorithm`.
+	// This field may contain either `jwk.SignatureAlgorithm`, `jwk.KeyEncryptionAlgorithm`, or `jwk.ContentEncryptionAlgorithm`.
 	// This is why there exists a `jwa.KeyAlgorithm` type that encompasses both types.
-	Algorithm() jwa.KeyAlgorithm
+	Algorithm() (jwa.KeyAlgorithm, bool)
 	// KeyID returns `kid` of a JWK
-	KeyID() string
+	KeyID() (string, bool)
 	// X509URL returns `x5u` of a JWK
-	X509URL() string
+	X509URL() (string, bool)
 	// X509CertChain returns `x5c` of a JWK
-	X509CertChain() *cert.Chain
+	X509CertChain() (*cert.Chain, bool)
 	// X509CertThumbprint returns `x5t` of a JWK
-	X509CertThumbprint() string
+	X509CertThumbprint() (string, bool)
 	// X509CertThumbprintS256 returns `x5t#S256` of a JWK
-	X509CertThumbprintS256() string
+	X509CertThumbprintS256() (string, bool)
 }

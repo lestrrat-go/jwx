@@ -97,7 +97,12 @@ func (k *okpPublicKey) Raw(v interface{}) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	pubk, err := buildOKPPublicKey(k.Crv(), k.x)
+	crv, ok := k.Crv()
+	if !ok {
+		return fmt.Errorf(`missing "crv" field`)
+	}
+
+	pubk, err := buildOKPPublicKey(crv, k.x)
 	if err != nil {
 		return fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
 	}
@@ -141,7 +146,12 @@ func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half b
 		key.mu.RLock()
 		defer key.mu.RUnlock()
 
-		privk, err := buildOKPPrivateKey(key.Crv(), key.x, key.d)
+		crv, ok := key.Crv()
+		if !ok {
+			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+
+		privk, err := buildOKPPrivateKey(crv, key.x, key.d)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.OKPPrivateKey: failed to build private key: %w`, err)
 		}
@@ -150,7 +160,11 @@ func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half b
 		key.mu.RLock()
 		defer key.mu.RUnlock()
 
-		pubk, err := buildOKPPublicKey(key.Crv(), key.x)
+		crv, ok := key.Crv()
+		if !ok {
+			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+		pubk, err := buildOKPPublicKey(crv, key.x)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
 		}
@@ -207,9 +221,13 @@ func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
+	crv, ok := k.Crv()
+	if !ok {
+		return nil, fmt.Errorf(`missing "crv" field`)
+	}
 	return okpThumbprint(
 		hash,
-		k.Crv().String(),
+		crv.String(),
 		base64.EncodeToString(k.x),
 	), nil
 }
@@ -220,27 +238,32 @@ func (k okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
+	crv, ok := k.Crv()
+	if !ok {
+		return nil, fmt.Errorf(`missing "crv" field`)
+	}
+
 	return okpThumbprint(
 		hash,
-		k.Crv().String(),
+		crv.String(),
 		base64.EncodeToString(k.x),
 	), nil
 }
 
 func validateOKPKey(key interface {
-	Crv() jwa.EllipticCurveAlgorithm
-	X() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	X() ([]byte, bool)
 }) error {
-	if key.Crv() == jwa.InvalidEllipticCurve() {
+	if v, ok := key.Crv(); !ok || v == jwa.InvalidEllipticCurve() {
 		return fmt.Errorf(`invalid curve algorithm`)
 	}
 
-	if len(key.X()) == 0 {
+	if v, ok := key.X(); !ok || len(v) == 0 {
 		return fmt.Errorf(`missing "x" field`)
 	}
 
-	if priv, ok := key.(interface{ D() []byte }); ok {
-		if len(priv.D()) == 0 {
+	if priv, ok := key.(keyWithD); ok {
+		if d, ok := priv.D(); !ok || len(d) == 0 {
 			return fmt.Errorf(`missing "d" field`)
 		}
 	}

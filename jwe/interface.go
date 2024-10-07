@@ -28,7 +28,7 @@ type KeyEncrypter interface {
 // As of this writing, this is solely used to identify KeyEncrypter
 // objects that also carry a key ID on its own.
 type KeyIDer interface {
-	KeyID() string
+	KeyID() (string, bool)
 }
 
 // KeyDecrypter is an interface for objects that can decrypt a content

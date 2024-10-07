@@ -24,8 +24,8 @@ const (
 
 type OKPPublicKey interface {
 	Key
-	Crv() jwa.EllipticCurveAlgorithm
-	X() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	X() ([]byte, bool)
 }
 
 type okpPublicKey struct {
@@ -62,68 +62,71 @@ func (h okpPublicKey) IsPrivate() bool {
 	return false
 }
 
-func (h *okpPublicKey) Algorithm() jwa.KeyAlgorithm {
+func (h *okpPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *okpPublicKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *okpPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 	if h.crv != nil {
-		return *(h.crv)
+		return *(h.crv), true
 	}
-	return jwa.InvalidEllipticCurve()
+	return jwa.InvalidEllipticCurve(), false
 }
 
-func (h *okpPublicKey) KeyID() string {
+func (h *okpPublicKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPublicKey) KeyOps() KeyOperationList {
+func (h *okpPublicKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *okpPublicKey) KeyUsage() string {
+func (h *okpPublicKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPublicKey) X() []byte {
-	return h.x
+func (h *okpPublicKey) X() ([]byte, bool) {
+	if h.x != nil {
+		return h.x, true
+	}
+	return nil, false
 }
 
-func (h *okpPublicKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *okpPublicKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *okpPublicKey) X509CertThumbprint() string {
+func (h *okpPublicKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPublicKey) X509CertThumbprintS256() string {
+func (h *okpPublicKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPublicKey) X509URL() string {
+func (h *okpPublicKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
 func (h *okpPublicKey) Has(name string) bool {
@@ -646,9 +649,9 @@ func (h *okpPublicKey) Keys() []string {
 
 type OKPPrivateKey interface {
 	Key
-	Crv() jwa.EllipticCurveAlgorithm
-	D() []byte
-	X() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	D() ([]byte, bool)
+	X() ([]byte, bool)
 }
 
 type okpPrivateKey struct {
@@ -686,72 +689,78 @@ func (h okpPrivateKey) IsPrivate() bool {
 	return true
 }
 
-func (h *okpPrivateKey) Algorithm() jwa.KeyAlgorithm {
+func (h *okpPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *okpPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *okpPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 	if h.crv != nil {
-		return *(h.crv)
+		return *(h.crv), true
 	}
-	return jwa.InvalidEllipticCurve()
+	return jwa.InvalidEllipticCurve(), false
 }
 
-func (h *okpPrivateKey) D() []byte {
-	return h.d
+func (h *okpPrivateKey) D() ([]byte, bool) {
+	if h.d != nil {
+		return h.d, true
+	}
+	return nil, false
 }
 
-func (h *okpPrivateKey) KeyID() string {
+func (h *okpPrivateKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPrivateKey) KeyOps() KeyOperationList {
+func (h *okpPrivateKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *okpPrivateKey) KeyUsage() string {
+func (h *okpPrivateKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPrivateKey) X() []byte {
-	return h.x
+func (h *okpPrivateKey) X() ([]byte, bool) {
+	if h.x != nil {
+		return h.x, true
+	}
+	return nil, false
 }
 
-func (h *okpPrivateKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *okpPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *okpPrivateKey) X509CertThumbprint() string {
+func (h *okpPrivateKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPrivateKey) X509CertThumbprintS256() string {
+func (h *okpPrivateKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *okpPrivateKey) X509URL() string {
+func (h *okpPrivateKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
 func (h *okpPrivateKey) Has(name string) bool {

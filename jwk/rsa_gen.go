@@ -29,8 +29,8 @@ const (
 
 type RSAPublicKey interface {
 	Key
-	E() []byte
-	N() []byte
+	E() ([]byte, bool)
+	N() ([]byte, bool)
 }
 
 type rsaPublicKey struct {
@@ -67,65 +67,71 @@ func (h rsaPublicKey) IsPrivate() bool {
 	return false
 }
 
-func (h *rsaPublicKey) Algorithm() jwa.KeyAlgorithm {
+func (h *rsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *rsaPublicKey) E() []byte {
-	return h.e
+func (h *rsaPublicKey) E() ([]byte, bool) {
+	if h.e != nil {
+		return h.e, true
+	}
+	return nil, false
 }
 
-func (h *rsaPublicKey) KeyID() string {
+func (h *rsaPublicKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPublicKey) KeyOps() KeyOperationList {
+func (h *rsaPublicKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *rsaPublicKey) KeyUsage() string {
+func (h *rsaPublicKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPublicKey) N() []byte {
-	return h.n
+func (h *rsaPublicKey) N() ([]byte, bool) {
+	if h.n != nil {
+		return h.n, true
+	}
+	return nil, false
 }
 
-func (h *rsaPublicKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *rsaPublicKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *rsaPublicKey) X509CertThumbprint() string {
+func (h *rsaPublicKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPublicKey) X509CertThumbprintS256() string {
+func (h *rsaPublicKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPublicKey) X509URL() string {
+func (h *rsaPublicKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
 func (h *rsaPublicKey) Has(name string) bool {
@@ -646,14 +652,14 @@ func (h *rsaPublicKey) Keys() []string {
 
 type RSAPrivateKey interface {
 	Key
-	D() []byte
-	DP() []byte
-	DQ() []byte
-	E() []byte
-	N() []byte
-	P() []byte
-	Q() []byte
-	QI() []byte
+	D() ([]byte, bool)
+	DP() ([]byte, bool)
+	DQ() ([]byte, bool)
+	E() ([]byte, bool)
+	N() ([]byte, bool)
+	P() ([]byte, bool)
+	Q() ([]byte, bool)
+	QI() ([]byte, bool)
 }
 
 type rsaPrivateKey struct {
@@ -696,89 +702,113 @@ func (h rsaPrivateKey) IsPrivate() bool {
 	return true
 }
 
-func (h *rsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
+func (h *rsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *rsaPrivateKey) D() []byte {
-	return h.d
+func (h *rsaPrivateKey) D() ([]byte, bool) {
+	if h.d != nil {
+		return h.d, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) DP() []byte {
-	return h.dp
+func (h *rsaPrivateKey) DP() ([]byte, bool) {
+	if h.dp != nil {
+		return h.dp, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) DQ() []byte {
-	return h.dq
+func (h *rsaPrivateKey) DQ() ([]byte, bool) {
+	if h.dq != nil {
+		return h.dq, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) E() []byte {
-	return h.e
+func (h *rsaPrivateKey) E() ([]byte, bool) {
+	if h.e != nil {
+		return h.e, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) KeyID() string {
+func (h *rsaPrivateKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPrivateKey) KeyOps() KeyOperationList {
+func (h *rsaPrivateKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *rsaPrivateKey) KeyUsage() string {
+func (h *rsaPrivateKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPrivateKey) N() []byte {
-	return h.n
+func (h *rsaPrivateKey) N() ([]byte, bool) {
+	if h.n != nil {
+		return h.n, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) P() []byte {
-	return h.p
+func (h *rsaPrivateKey) P() ([]byte, bool) {
+	if h.p != nil {
+		return h.p, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) Q() []byte {
-	return h.q
+func (h *rsaPrivateKey) Q() ([]byte, bool) {
+	if h.q != nil {
+		return h.q, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) QI() []byte {
-	return h.qi
+func (h *rsaPrivateKey) QI() ([]byte, bool) {
+	if h.qi != nil {
+		return h.qi, true
+	}
+	return nil, false
 }
 
-func (h *rsaPrivateKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *rsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *rsaPrivateKey) X509CertThumbprint() string {
+func (h *rsaPrivateKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPrivateKey) X509CertThumbprintS256() string {
+func (h *rsaPrivateKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *rsaPrivateKey) X509URL() string {
+func (h *rsaPrivateKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
 func (h *rsaPrivateKey) Has(name string) bool {

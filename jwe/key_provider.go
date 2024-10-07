@@ -107,14 +107,16 @@ type keySetProvider struct {
 }
 
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, _ Recipient, _ *Message) error {
-	if usage := key.KeyUsage(); usage != "" && usage != jwk.ForEncryption.String() {
-		return nil
+	if usage, ok := key.KeyUsage(); ok {
+		if usage != "" && usage != jwk.ForEncryption.String() {
+			return nil
+		}
 	}
 
-	if v := key.Algorithm(); v != nil {
+	if v, ok := key.Algorithm(); ok {
 		kalg, ok := jwa.LookupKeyEncryptionAlgorithm(v.String())
 		if !ok {
-			return fmt.Errorf(`invalid key encryption algorithm %s`, key.Algorithm())
+			return fmt.Errorf(`invalid key encryption algorithm %s`, v)
 		}
 
 		sink.Key(kalg, key)

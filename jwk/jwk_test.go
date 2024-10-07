@@ -155,25 +155,33 @@ func expectedRawKeyType(key jwk.Key) interface{} {
 	case jwk.SymmetricKey:
 		return []byte(nil)
 	case jwk.OKPPrivateKey:
-		switch key.Crv() {
+		crv, ok := key.Crv()
+		if !ok {
+			panic("missing crv")
+		}
+		switch crv {
 		case jwa.Ed25519():
 			return ed25519.PrivateKey(nil)
 		case jwa.X25519():
 			return &ecdh.PrivateKey{}
 		default:
-			panic("unknown curve type for OKPPrivateKey:" + key.Crv().String())
+			panic("unknown curve type for OKPPrivateKey:" + crv.String())
 		}
 	case jwk.OKPPublicKey:
-		switch key.Crv() {
+		crv, ok := key.Crv()
+		if !ok {
+			panic("missing crv")
+		}
+		switch crv {
 		case jwa.Ed25519():
 			return ed25519.PublicKey(nil)
 		case jwa.X25519():
 			return &ecdh.PublicKey{}
 		default:
-			panic("unknown curve type for OKPPublicKey:" + key.Crv().String())
+			panic("unknown curve type for OKPPublicKey:" + crv.String())
 		}
 	default:
-		panic("unknown key type:" + reflect.TypeOf(key).String())
+		panic(fmt.Sprintf("unknown key type: %T", key))
 	}
 }
 
@@ -201,7 +209,11 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					require.NotEqual(t, zeroval, method, `method should not be a zero value`)
 					retvals := method.Call(nil)
 
-					require.Len(t, retvals, 1, `there should be 1 return value`)
+					expectedReturnValues := 2
+					if mname == "KeyType" {
+						expectedReturnValues = 1
+					}
+					require.Len(t, retvals, expectedReturnValues, `there should be 1 return value`)
 					require.Equal(t, expected, retvals[0].Interface())
 				}
 			})
@@ -362,7 +374,9 @@ func TestParse(t *testing.T) {
 					crawkey = &rawkey
 				case jwk.OKPPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`)
-					switch k.Crv() {
+					crv, ok := k.Crv()
+					require.True(t, ok, `k.Crv() should succeed`)
+					switch crv {
 					case jwa.Ed25519():
 						var rawkey ed25519.PrivateKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`)
@@ -372,14 +386,16 @@ func TestParse(t *testing.T) {
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`)
 						crawkey = &rawkey
 					default:
-						t.Errorf(`invalid curve %s`, k.Crv())
+						t.Errorf(`invalid curve %s`, crv)
 					}
 				// NOTE: Has to come after private
 				// key, since it's a subset of the
 				// private key variant.
 				case jwk.OKPPublicKey:
 					require.False(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PublicKey) should be false`)
-					switch k.Crv() {
+					crv, ok := k.Crv()
+					require.True(t, ok, `k.Crv() should succeed`)
+					switch crv {
 					case jwa.Ed25519():
 						var rawkey ed25519.PublicKey
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`)
@@ -389,7 +405,7 @@ func TestParse(t *testing.T) {
 						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`)
 						crawkey = &rawkey
 					default:
-						t.Errorf(`invalid curve %s`, k.Crv())
+						t.Errorf(`invalid curve %s`, crv)
 					}
 				default:
 					t.Errorf(`invalid key type %T`, key)
@@ -718,9 +734,13 @@ func TestAssignKeyID(t *testing.T) {
 	for _, generator := range generators {
 		k, err := generator()
 		require.NoError(t, err, `jwk generation should be successful`)
-		require.Empty(t, k.KeyID(), `k.KeyID should be non-empty`)
+		kid, ok := k.KeyID()
+		require.False(t, ok, `k.KeyID should be empty`)
+		require.Empty(t, kid, `k.KeyID should be non-empty`)
 		require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
-		require.NotEmpty(t, k.KeyID(), `k.KeyID should be non-empty`)
+		kid, ok = k.KeyID()
+		require.True(t, ok, `k.KeyID should be non-empty`)
+		require.NotEmpty(t, kid, `k.KeyID should be non-empty`)
 	}
 }
 
@@ -852,7 +872,9 @@ func TestPublicKeyOf(t *testing.T) {
 		for i, key := range setKeys {
 			setKey, ok := newSet.Key(i)
 			require.True(t, ok, `element %d should be present`, i)
-			require.Equal(t, fmt.Sprintf("key%d", i), setKey.KeyID(), `KeyID() should match for %T`, setKey)
+			kid, ok := setKey.KeyID()
+			require.True(t, ok, `KeyID() should be present`)
+			require.Equal(t, fmt.Sprintf("key%d", i), kid, `KeyID() should match for %T`, setKey)
 
 			// Get the raw key to compare
 			var rawKey interface{}
@@ -1473,7 +1495,9 @@ func TestGH412(t *testing.T) {
 			k, ok := set.Key(idx)
 			require.True(t, ok, `set.Get should succeed`)
 			require.NoError(t, set.RemoveKey(k), `set.Remove should succeed`)
-			t.Logf("deleted key %s", k.KeyID())
+			kid, ok := k.KeyID()
+			require.True(t, ok, `k.KeyID should succeed`)
+			t.Logf("deleted key %s", kid)
 
 			require.Equal(t, iterations-1, set.Len(), `set.Len should be %d`, iterations-1)
 
@@ -1488,8 +1512,10 @@ func TestGH412(t *testing.T) {
 			for i := range set.Len() {
 				key, ok := set.Key(i)
 				require.True(t, ok, `set.Key() should succeed`)
-				require.NotEqual(t, k.KeyID(), key.KeyID(), `key id should not match`)
-				delete(expected, key.KeyID())
+				gotkid, ok := key.KeyID()
+				require.True(t, ok, `key.KeyID should succeed`)
+				require.NotEqual(t, kid, gotkid, `key id should not match`)
+				delete(expected, gotkid)
 			}
 
 			require.Len(t, expected, 0, `expected map should be empty`)
@@ -1504,7 +1530,8 @@ func TestGH491(t *testing.T) {
 
 	// there should be 2 keys , get the first key
 	k, _ := keys.Key(0)
-	ops := k.KeyOps()
+	ops, ok := k.KeyOps()
+	require.True(t, ok, `k.KeyOps should succeed`)
 	require.Equal(t, jwk.KeyOperationList{jwk.KeyOpDeriveKey}, ops, `k.KeyOps should match`)
 }
 
@@ -1904,7 +1931,8 @@ func TestValidation(t *testing.T) {
 		require.NoError(t, err, `jwx.GenerateEcdsaJwk should succeed`)
 		require.NoError(t, key.Validate(), `key.Validate should succeed`)
 
-		x := key.(jwk.ECDSAPrivateKey).X()
+		x, ok := key.(jwk.ECDSAPrivateKey).X()
+		require.True(t, ok, `key.(jwk.ECDSAPrivateKey).X should succeed`)
 		require.NoError(t, key.Set(jwk.ECDSAXKey, x[:len(x)/2]), `key.Set should succeed`)
 		require.Error(t, key.Validate(), `key.Validate should fail`)
 
@@ -1919,7 +1947,8 @@ func TestValidation(t *testing.T) {
 		key, err := jwxtest.GenerateEd25519Jwk()
 		require.NoError(t, err, `jwx.GenerateEd25519Jwk should succeed`)
 		require.NoError(t, key.Validate(), `key.Validate should succeed`)
-		x := key.(jwk.OKPPrivateKey).X()
+		x, ok := key.(jwk.OKPPrivateKey).X()
+		require.True(t, ok, `key.(jwk.OKPPrivateKey).X should succeed`)
 		require.NoError(t, key.Set(jwk.OKPXKey, []byte(nil)), `key.Set should succeed`)
 		require.Error(t, key.Validate(), `key.Validate should fail`)
 
