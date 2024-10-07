@@ -553,7 +553,9 @@ func TestSignJWK(t *testing.T) {
 	require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.RS256()), `key.Set should succeed`)
 
 	tok := jwt.New()
-	signed, err := jwt.Sign(tok, jwt.WithKey(key.Algorithm(), key))
+	alg, ok := key.Algorithm()
+	require.True(t, ok, `key.Algorithm should succeed`)
+	signed, err := jwt.Sign(tok, jwt.WithKey(alg, key))
 	require.Nil(t, err)
 
 	header, err := jws.ParseString(string(signed))

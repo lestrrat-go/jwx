@@ -38,6 +38,9 @@ These are changes that are incompatible with the v2.x.x version.
 
 ## JWK
 
+* All convenience accssors (e.g. `Algorithm`, `Crv`) now return `(T, bool)` instead
+  of just `T`, except `KeyType`, which _always_ returns a valid value.
+
 * `jwk.KeyUsageType` can now be configured so that it's possible to assign values
   other than "sig" and "enc" via `jwk.RegisterKeyUsage()`. Furthermore, strict
   checks can be turned on/off against these registered values

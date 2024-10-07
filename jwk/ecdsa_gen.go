@@ -25,9 +25,9 @@ const (
 
 type ECDSAPublicKey interface {
 	Key
-	Crv() jwa.EllipticCurveAlgorithm
-	X() []byte
-	Y() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	X() ([]byte, bool)
+	Y() ([]byte, bool)
 }
 
 type ecdsaPublicKey struct {
@@ -65,72 +65,78 @@ func (h ecdsaPublicKey) IsPrivate() bool {
 	return false
 }
 
-func (h *ecdsaPublicKey) Algorithm() jwa.KeyAlgorithm {
+func (h *ecdsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *ecdsaPublicKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *ecdsaPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 	if h.crv != nil {
-		return *(h.crv)
+		return *(h.crv), true
 	}
-	return jwa.InvalidEllipticCurve()
+	return jwa.InvalidEllipticCurve(), false
 }
 
-func (h *ecdsaPublicKey) KeyID() string {
+func (h *ecdsaPublicKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPublicKey) KeyOps() KeyOperationList {
+func (h *ecdsaPublicKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *ecdsaPublicKey) KeyUsage() string {
+func (h *ecdsaPublicKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPublicKey) X() []byte {
-	return h.x
+func (h *ecdsaPublicKey) X() ([]byte, bool) {
+	if h.x != nil {
+		return h.x, true
+	}
+	return nil, false
 }
 
-func (h *ecdsaPublicKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *ecdsaPublicKey) X509CertThumbprint() string {
+func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPublicKey) X509CertThumbprintS256() string {
+func (h *ecdsaPublicKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPublicKey) X509URL() string {
+func (h *ecdsaPublicKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPublicKey) Y() []byte {
-	return h.y
+func (h *ecdsaPublicKey) Y() ([]byte, bool) {
+	if h.y != nil {
+		return h.y, true
+	}
+	return nil, false
 }
 
 func (h *ecdsaPublicKey) Has(name string) bool {
@@ -686,10 +692,10 @@ func (h *ecdsaPublicKey) Keys() []string {
 
 type ECDSAPrivateKey interface {
 	Key
-	Crv() jwa.EllipticCurveAlgorithm
-	D() []byte
-	X() []byte
-	Y() []byte
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+	D() ([]byte, bool)
+	X() ([]byte, bool)
+	Y() ([]byte, bool)
 }
 
 type ecdsaPrivateKey struct {
@@ -728,76 +734,85 @@ func (h ecdsaPrivateKey) IsPrivate() bool {
 	return true
 }
 
-func (h *ecdsaPrivateKey) Algorithm() jwa.KeyAlgorithm {
+func (h *ecdsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *ecdsaPrivateKey) Crv() jwa.EllipticCurveAlgorithm {
+func (h *ecdsaPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 	if h.crv != nil {
-		return *(h.crv)
+		return *(h.crv), true
 	}
-	return jwa.InvalidEllipticCurve()
+	return jwa.InvalidEllipticCurve(), false
 }
 
-func (h *ecdsaPrivateKey) D() []byte {
-	return h.d
+func (h *ecdsaPrivateKey) D() ([]byte, bool) {
+	if h.d != nil {
+		return h.d, true
+	}
+	return nil, false
 }
 
-func (h *ecdsaPrivateKey) KeyID() string {
+func (h *ecdsaPrivateKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPrivateKey) KeyOps() KeyOperationList {
+func (h *ecdsaPrivateKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *ecdsaPrivateKey) KeyUsage() string {
+func (h *ecdsaPrivateKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPrivateKey) X() []byte {
-	return h.x
+func (h *ecdsaPrivateKey) X() ([]byte, bool) {
+	if h.x != nil {
+		return h.x, true
+	}
+	return nil, false
 }
 
-func (h *ecdsaPrivateKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *ecdsaPrivateKey) X509CertThumbprint() string {
+func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPrivateKey) X509CertThumbprintS256() string {
+func (h *ecdsaPrivateKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPrivateKey) X509URL() string {
+func (h *ecdsaPrivateKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *ecdsaPrivateKey) Y() []byte {
-	return h.y
+func (h *ecdsaPrivateKey) Y() ([]byte, bool) {
+	if h.y != nil {
+		return h.y, true
+	}
+	return nil, false
 }
 
 func (h *ecdsaPrivateKey) Has(name string) bool {

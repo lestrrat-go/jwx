@@ -22,7 +22,7 @@ const (
 
 type SymmetricKey interface {
 	Key
-	Octets() []byte
+	Octets() ([]byte, bool)
 }
 
 type symmetricKey struct {
@@ -54,61 +54,64 @@ func (h symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq()
 }
 
-func (h *symmetricKey) Algorithm() jwa.KeyAlgorithm {
+func (h *symmetricKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
-		return *(h.algorithm)
+		return *(h.algorithm), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *symmetricKey) KeyID() string {
+func (h *symmetricKey) KeyID() (string, bool) {
 	if h.keyID != nil {
-		return *(h.keyID)
+		return *(h.keyID), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *symmetricKey) KeyOps() KeyOperationList {
+func (h *symmetricKey) KeyOps() (KeyOperationList, bool) {
 	if h.keyOps != nil {
-		return *(h.keyOps)
+		return *(h.keyOps), true
 	}
-	return nil
+	return nil, false
 }
 
-func (h *symmetricKey) KeyUsage() string {
+func (h *symmetricKey) KeyUsage() (string, bool) {
 	if h.keyUsage != nil {
-		return *(h.keyUsage)
+		return *(h.keyUsage), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *symmetricKey) Octets() []byte {
-	return h.octets
+func (h *symmetricKey) Octets() ([]byte, bool) {
+	if h.octets != nil {
+		return h.octets, true
+	}
+	return nil, false
 }
 
-func (h *symmetricKey) X509CertChain() *cert.Chain {
-	return h.x509CertChain
+func (h *symmetricKey) X509CertChain() (*cert.Chain, bool) {
+	return h.x509CertChain, true
 }
 
-func (h *symmetricKey) X509CertThumbprint() string {
+func (h *symmetricKey) X509CertThumbprint() (string, bool) {
 	if h.x509CertThumbprint != nil {
-		return *(h.x509CertThumbprint)
+		return *(h.x509CertThumbprint), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *symmetricKey) X509CertThumbprintS256() string {
+func (h *symmetricKey) X509CertThumbprintS256() (string, bool) {
 	if h.x509CertThumbprintS256 != nil {
-		return *(h.x509CertThumbprintS256)
+		return *(h.x509CertThumbprintS256), true
 	}
-	return ""
+	return "", false
 }
 
-func (h *symmetricKey) X509URL() string {
+func (h *symmetricKey) X509URL() (string, bool) {
 	if h.x509URL != nil {
-		return *(h.x509URL)
+		return *(h.x509URL), true
 	}
-	return ""
+	return "", false
 }
 
 func (h *symmetricKey) Has(name string) bool {

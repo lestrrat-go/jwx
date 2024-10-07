@@ -31,14 +31,14 @@ func ExampleJWK_KeySpecificMethods() {
 	// generated the contents will be different, and thus our
 	// tests would fail. But here you can see that once you
 	// convert the type you can access the RSA-specific methods
-	_ = rsakey.D()
-	_ = rsakey.DP()
-	_ = rsakey.DQ()
-	_ = rsakey.E()
-	_ = rsakey.N()
-	_ = rsakey.P()
-	_ = rsakey.Q()
-	_ = rsakey.QI()
+	_, _ = rsakey.D()
+	_, _ = rsakey.DP()
+	_, _ = rsakey.DQ()
+	_, _ = rsakey.E()
+	_, _ = rsakey.N()
+	_, _ = rsakey.P()
+	_, _ = rsakey.Q()
+	_, _ = rsakey.QI()
 	// OUTPUT:
 	//
 }

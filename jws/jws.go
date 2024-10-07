@@ -249,7 +249,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 
 		if key, ok := signer.key.(jwk.Key); ok {
-			if kid := key.KeyID(); kid != "" {
+			if kid, ok := key.KeyID(); ok && kid != "" {
 				if err := protected.Set(KeyIDKey, kid); err != nil {
 					return nil, fmt.Errorf(`failed to set "kid" header: %w`, err)
 				}

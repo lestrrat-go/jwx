@@ -1420,7 +1420,14 @@ func TestJKU(t *testing.T) {
 		for _, key := range []jwk.Key{unusedKeys[0], keys[1], unusedKeys[1]} {
 			pubkey, err := jwk.PublicKeyOf(key)
 			require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
-			require.Equal(t, pubkey.KeyID(), key.KeyID(), `key ID should be populated`)
+
+			kid, ok := key.KeyID()
+			require.True(t, ok, `key ID should be populated`)
+
+			pubkid, ok := pubkey.KeyID()
+			require.True(t, ok, `key ID should be populated`)
+
+			require.Equal(t, kid, pubkid, `key ID should be populated`)
 			set.AddKey(pubkey)
 		}
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -1844,7 +1851,8 @@ func TestValidateKey(t *testing.T) {
 	pubKey, err := jwk.PublicKeyOf(privKey)
 	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 
-	n := pubKey.(jwk.RSAPublicKey).N()
+	n, ok := pubKey.(jwk.RSAPublicKey).N()
+	require.True(t, ok, `N should be present`)
 
 	// Set N to an empty value
 	require.NoError(t, pubKey.Set(jwk.RSANKey, []byte(nil)), `jwk.Set should succeed`)

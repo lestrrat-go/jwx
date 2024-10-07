@@ -55,8 +55,8 @@ func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) 
 	if !ok {
 		return nil, fmt.Errorf(`invalid key type %T: %w`, key, jwk.ContinueError())
 	}
-	if ecdsaKey.Crv() != SM2 {
-		return nil, fmt.Errorf(`cannot convert curve of type %s to ShangMi key: %w`, ecdsaKey.Crv(), jwk.ContinueError())
+	if v, ok := ecdsaKey.Crv(); !ok || v != SM2 {
+		return nil, fmt.Errorf(`cannote convert curve of type %s to ShangMi key: %w`, v, jwk.ContinueError())
 	}
 
 	switch hint.(type) {
@@ -67,9 +67,23 @@ func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) 
 
 	var ret sm2.PrivateKey
 	ret.PublicKey.Curve = sm2.P256()
-	ret.D = (&big.Int{}).SetBytes(ecdsaKey.D())
-	ret.PublicKey.X = (&big.Int{}).SetBytes(ecdsaKey.X())
-	ret.PublicKey.Y = (&big.Int{}).SetBytes(ecdsaKey.Y())
+	d, ok := ecdsaKey.D()
+	if !ok {
+		return nil, fmt.Errorf(`missing D field in ECDSA private key: %w`, jwk.ContinueError())
+	}
+	ret.D = (&big.Int{}).SetBytes(d)
+
+	x, ok := ecdsaKey.X()
+	if !ok {
+		return nil, fmt.Errorf(`missing X field in ECDSA private key: %w`, jwk.ContinueError())
+	}
+	ret.PublicKey.X = (&big.Int{}).SetBytes(x)
+
+	y, ok := ecdsaKey.Y()
+	if !ok {
+		return nil, fmt.Errorf(`missing Y field in ECDSA private key: %w`, jwk.ContinueError())
+	}
+	ret.PublicKey.Y = (&big.Int{}).SetBytes(y)
 	return &ret, nil
 }
 

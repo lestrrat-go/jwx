@@ -94,11 +94,15 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 	if ke, ok := b.key.(KeyEncrypter); ok {
 		enc = &keyEncrypterWrapper{encrypter: ke}
 		if kider, ok := enc.(KeyIDer); ok {
-			keyID = kider.KeyID()
+			if v, ok := kider.KeyID(); ok {
+				keyID = v
+			}
 		}
 	} else if jwkKey, ok := b.key.(jwk.Key); ok {
 		// Meanwhile, grab the kid as well
-		keyID = jwkKey.KeyID()
+		if v, ok := jwkKey.KeyID(); ok {
+			keyID = v
+		}
 
 		var raw interface{}
 		if err := jwk.Export(jwkKey, &raw); err != nil {
