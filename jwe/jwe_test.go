@@ -614,7 +614,9 @@ func TestGH554(t *testing.T) {
 
 	pubkey, err := jwk.PublicKeyOf(privkey)
 	require.NoError(t, err, `jwk.PublicKeyOf() should succeed`)
-	require.Equal(t, keyID, pubkey.KeyID(), `key ID should match`)
+	kid, ok := pubkey.KeyID()
+	require.True(t, ok, `key ID should be present`)
+	require.Equal(t, keyID, kid, `key ID should match`)
 
 	encrypted, err := jwe.Encrypt([]byte(plaintext), jwe.WithKey(jwa.ECDH_ES(), pubkey))
 	require.NoError(t, err, `jwk.Encrypt() should succeed`)
@@ -625,9 +627,9 @@ func TestGH554(t *testing.T) {
 	recipients := msg.Recipients()
 
 	// The epk must have the same key ID as the original
-	kid, ok := recipients[0].Headers().KeyID()
+	epkKid, ok := recipients[0].Headers().KeyID()
 	require.True(t, ok, `key ID should be present`)
-	require.Equal(t, keyID, kid, `key ID in epk should match`)
+	require.Equal(t, keyID, epkKid, `key ID in epk should match`)
 }
 
 func TestGH803(t *testing.T) {
