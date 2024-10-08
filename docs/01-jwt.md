@@ -517,8 +517,9 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
   // load different keys.
 
   // Setup
+  origIssuer := "me"
   tok, err := jwt.NewBuilder().
-    Issuer("me").
+    Issuer(origIssuer).
     Build()
   if err != nil {
     fmt.Printf("failed to build token: %s\n", err)
@@ -557,12 +558,16 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
     }
 
     _, err = jws.Verify(signed, jws.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
-      switch parsed.Issuer() {
+      iss, ok := parsed.Issuer()
+      if !ok {
+        return fmt.Errorf("no issuer found")
+      }
+      switch iss {
       case "me":
         sink.Key(alg, symmetricKey)
         return nil
       default:
-        return fmt.Errorf("unknown issuer %q", parsed.Issuer())
+        return fmt.Errorf("unknown issuer %q", iss)
       }
     })))
 
@@ -571,7 +576,7 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
       return
     }
 
-    if parsed.Issuer() != tok.Issuer() {
+    if iss, ok := parsed.Issuer(); !ok || iss != origIssuer {
       fmt.Printf("issuers do not match\n")
       return
     }
@@ -858,7 +863,11 @@ import (
 
 func ExampleJWT_ValidateValidator() {
   validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
-    if t.IssuedAt().Month() != 8 {
+    iat, ok := t.IssuedAt()
+    if !ok {
+      return jwt.NewValidationError(errors.New(`token does not have "iat" claim`))
+    }
+    if iat.Month() != 8 {
       return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
     }
     return nil
