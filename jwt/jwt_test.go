@@ -1416,7 +1416,9 @@ func TestFractional(t *testing.T) {
 					jwt.WithValidate(false),
 				)
 				require.NoError(t, err, `jwt.Parse should succeed`)
-				require.Equal(t, tc.Expected, tok.IssuedAt(), `iat should match`)
+				v, ok := tok.IssuedAt()
+				require.True(t, ok, `iat should be present`)
+				require.Equal(t, tc.Expected, v, `iat should match`)
 			})
 		}
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))

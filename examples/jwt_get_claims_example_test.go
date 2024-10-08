@@ -24,9 +24,13 @@ func ExampleJWT_GetClaims() {
 	}
 
 	// Pre-defined fields have typed accessors.
-	var _ time.Time = tok.IssuedAt()
-	var _ string = tok.Issuer()
-	var _ string = tok.Subject()
+	iat, _ := tok.IssuedAt()
+	iss, _ := tok.Issuer()
+	sub, _ := tok.Subject()
+
+	var _ time.Time = iat
+	var _ string = iss
+	var _ string = sub
 
 	// But you can also get them via the generic `.Get()` method.
 	// However, you would need to decide for yourself what the
@@ -35,7 +39,6 @@ func ExampleJWT_GetClaims() {
 	// type
 	//
 	// For the key name you could also use jwt.IssuedAtKey constant
-	var iat time.Time
 	_ = tok.Get(`iat`, &iat)
 
 	// var iat interface{} would also work, but you would need to

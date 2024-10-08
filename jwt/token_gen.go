@@ -38,27 +38,26 @@ const (
 // jwt.Token needs to handle private claims, and this really does not
 // work well when it is embedded in other structure
 type Token interface {
-
 	// Audience returns the value for "aud" field of the token
-	Audience() []string
+	Audience() ([]string, bool)
 
 	// Expiration returns the value for "exp" field of the token
-	Expiration() time.Time
+	Expiration() (time.Time, bool)
 
 	// IssuedAt returns the value for "iat" field of the token
-	IssuedAt() time.Time
+	IssuedAt() (time.Time, bool)
 
 	// Issuer returns the value for "iss" field of the token
-	Issuer() string
+	Issuer() (string, bool)
 
 	// JwtID returns the value for "jti" field of the token
-	JwtID() string
+	JwtID() (string, bool)
 
 	// NotBefore returns the value for "nbf" field of the token
-	NotBefore() time.Time
+	NotBefore() (time.Time, bool)
 
 	// Subject returns the value for "sub" field of the token
-	Subject() string
+	Subject() (string, bool)
 
 	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
@@ -320,67 +319,67 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 	return nil
 }
 
-func (t *stdToken) Audience() []string {
+func (t *stdToken) Audience() ([]string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.audience != nil {
-		return t.audience.Get()
+		return t.audience.Get(), true
 	}
-	return nil
+	return nil, false
 }
 
-func (t *stdToken) Expiration() time.Time {
+func (t *stdToken) Expiration() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.expiration != nil {
-		return t.expiration.Get()
+		return t.expiration.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) IssuedAt() time.Time {
+func (t *stdToken) IssuedAt() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.issuedAt != nil {
-		return t.issuedAt.Get()
+		return t.issuedAt.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) Issuer() string {
+func (t *stdToken) Issuer() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.issuer != nil {
-		return *(t.issuer)
+		return *(t.issuer), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) JwtID() string {
+func (t *stdToken) JwtID() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.jwtID != nil {
-		return *(t.jwtID)
+		return *(t.jwtID), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) NotBefore() time.Time {
+func (t *stdToken) NotBefore() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.notBefore != nil {
-		return t.notBefore.Get()
+		return t.notBefore.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) Subject() string {
+func (t *stdToken) Subject() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.subject != nil {
-		return *(t.subject)
+		return *(t.subject), true
 	}
-	return ""
+	return "", false
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {

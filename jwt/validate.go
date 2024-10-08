@@ -25,13 +25,18 @@ func isSupportedTimeClaim(c string) error {
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
+	// We don't check if the claims already exist. It should have been done
+	// by piggybacking on `required` check.
 	switch c {
 	case ExpirationKey:
-		return t.Expiration()
+		tv, _ := t.Expiration()
+		return tv
 	case IssuedAtKey:
-		return t.IssuedAt()
+		tv, _ := t.IssuedAt()
+		return tv
 	case NotBeforeKey:
-		return t.NotBefore()
+		tv, _ := t.NotBefore()
+		return tv
 	case "":
 		return clock.Now()
 	}
@@ -364,8 +369,8 @@ func IsExpirationValid() Validator {
 }
 
 func isExpirationValid(ctx context.Context, t Token) ValidationError {
-	tv := t.Expiration()
-	if tv.IsZero() || tv.Unix() == 0 {
+	tv, ok := t.Expiration()
+	if !ok {
 		return nil
 	}
 
@@ -395,8 +400,8 @@ func IsIssuedAtValid() Validator {
 }
 
 func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
-	tv := t.IssuedAt()
-	if tv.IsZero() || tv.Unix() == 0 {
+	tv, ok := t.IssuedAt()
+	if !ok {
 		return nil
 	}
 
@@ -425,8 +430,8 @@ func IsNbfValid() Validator {
 }
 
 func isNbfValid(ctx context.Context, t Token) ValidationError {
-	tv := t.NotBefore()
-	if tv.IsZero() || tv.Unix() == 0 {
+	tv, ok := t.NotBefore()
+	if !ok {
 		return nil
 	}
 

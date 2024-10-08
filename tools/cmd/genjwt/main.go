@@ -127,14 +127,16 @@ func generateToken(obj *codegen.Object) error {
 	}
 
 	o.L("type %s interface {", obj.String(`interface`))
-	for _, field := range fields {
-		o.LL("// %s returns the value for %q field of the token", field.GetterMethod(true), field.JSON())
-
+	for i, field := range fields {
+		if i > 0 {
+			o.L("")
+		}
+		o.L("// %s returns the value for %q field of the token", field.GetterMethod(true), field.JSON())
 		rv := field.String(`getter_return_value`)
 		if rv == "" {
 			rv = field.Type()
 		}
-		o.L("%s() %s", field.GetterMethod(true), rv)
+		o.L("%s() (%s, bool)", field.GetterMethod(true), rv)
 	}
 	o.LL("// Get is used to extract the value of any claim, including non-standard claims, out of the token.")
 	o.L("//")
@@ -358,7 +360,7 @@ func generateToken(obj *codegen.Object) error {
 		if rv == "" {
 			rv = f.Type()
 		}
-		o.LL("func (t *%s) %s() ", obj.Name(false), f.GetterMethod(true))
+		o.LL("func (t *%s) %s() (", obj.Name(false), f.GetterMethod(true))
 		if rv != "" {
 			o.R("%s", rv)
 		} else if IsPointer(f) && f.Bool(`noDeref`) {
@@ -366,26 +368,29 @@ func generateToken(obj *codegen.Object) error {
 		} else {
 			o.R("%s", PointerElem(f))
 		}
-		o.R(" {")
+		o.R(", bool) {")
 		o.L("t.mu.RLock()")
 		o.L("defer t.mu.RUnlock()")
 
 		if f.Bool(`hasGet`) {
 			o.L("if t.%s != nil {", f.Name(false))
-			o.L("return t.%s.Get()", f.Name(false))
+			o.L("return t.%s.Get(), true", f.Name(false))
 			o.L("}")
-			o.L("return %s", codegen.ZeroVal(rv))
+			o.L("return %s, false", codegen.ZeroVal(rv))
 		} else if !IsPointer(f) {
 			if fieldStorageTypeIsIndirect(f.Type()) {
 				o.L("if t.%s != nil {", f.Name(false))
-				o.L("return *(t.%s)", f.Name(false))
+				o.L("return *(t.%s), true", f.Name(false))
 				o.L("}")
-				o.L("return %s", codegen.ZeroVal(rv))
+				o.L("return %s, false", codegen.ZeroVal(rv))
 			} else {
-				o.L("return t.%s", f.Name(false))
+				o.L("return t.%s, true", f.Name(false))
 			}
 		} else {
-			o.L("return t.%s", f.Name(false))
+			o.L("if t.%s != nil {", f.Name(false))
+			o.L("return t.%s, true", f.Name(false))
+			o.L("}")
+			o.L("return nil, false")
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}

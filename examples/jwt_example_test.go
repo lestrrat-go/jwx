@@ -206,15 +206,33 @@ func ExampleJWT_Token() {
 	}
 
 	fmt.Printf("%s\n", buf)
-	fmt.Printf("aud -> '%s'\n", t.Audience())
-	fmt.Printf("iat -> '%s'\n", t.IssuedAt().Format(time.RFC3339))
+	aud, ok := t.Audience()
+	if !ok {
+		fmt.Printf("failed to fetch audience\n")
+		return
+	}
+	fmt.Printf("aud -> '%s'\n", aud)
+
+	iat, ok := t.IssuedAt()
+	if !ok {
+		fmt.Printf("failed to fetch issued at\n")
+		return
+	}
+	fmt.Printf("iat -> '%s'\n", iat.Format(time.RFC3339))
+
 	var pc string
 	if err := t.Get(`privateClaimKey`, &pc); err != nil {
 		fmt.Printf("failed to fetch private claim\n")
 		return
 	}
 	fmt.Printf("privateClaimKey -> '%s'\n", pc)
-	fmt.Printf("sub -> '%s'\n", t.Subject())
+
+	sub, ok := t.Subject()
+	if !ok {
+		fmt.Printf("failed to fetch subject\n")
+		return
+	}
+	fmt.Printf("sub -> '%s'\n", sub)
 
 	// OUTPUT:
 	// {
