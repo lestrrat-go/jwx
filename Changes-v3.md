@@ -24,11 +24,22 @@ These are changes that are incompatible with the v2.x.x version.
 * Previously, unmarshaling unquoted strings used to work (e.g. `var s = "RS256"`),
   but now they must conform to the JSON standard and be quoted (e.g. `var s = strconv.Quote("RS256")`)
 
+## JWT
+
+* All convenience accessors (e.g. `Subject`) now return `(T, bool)` instead of
+  just `T`. If you want a single return value accessor, use `Get(dst) error` instead.
+
+* Validation used to work for `iat`, `nbf`, `exp` fields where these fields were
+  set to the explicit time.Time{} zero value, but now the _presence_ of these fields matter.
+
 ## JWS
 
 * Iterators have been completely removed.
 * As a side effect of removing iterators, some methods such as `Copy()` lost the
   `context.Context` argument
+
+* All convenience accessors (e.g. `Algorithm`) now return `(T, bool)` instead of
+  just `T`. If you want a single return value accessor, use `Get(dst) error` instead.
 
 ## JWE
 
@@ -36,10 +47,14 @@ These are changes that are incompatible with the v2.x.x version.
 * As a side effect of removing iterators, some methods such as `Copy()` lost the
   `context.Context` argument
 
+* All convenience accessors (e.g. `Algorithm`) now return `(T, bool)` instead of
+  just `T`. If you want a single return value accessor, use `Get(dst) error` instead.
+
 ## JWK
 
-* All convenience accssors (e.g. `Algorithm`, `Crv`) now return `(T, bool)` instead
-  of just `T`, except `KeyType`, which _always_ returns a valid value.
+* All convenience accessors (e.g. `Algorithm`, `Crv`) now return `(T, bool)` instead
+  of just `T`, except `KeyType`, which _always_ returns a valid value. If you want a
+  single return value accessor, use `Get(dst) error` instead.
 
 * `jwk.KeyUsageType` can now be configured so that it's possible to assign values
   other than "sig" and "enc" via `jwk.RegisterKeyUsage()`. Furthermore, strict
