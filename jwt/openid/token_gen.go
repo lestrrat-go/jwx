@@ -46,84 +46,83 @@ const (
 )
 
 type Token interface {
-
 	// Address returns the value for "address" field of the token
-	Address() *AddressClaim
+	Address() (*AddressClaim, bool)
 
 	// Audience returns the value for "aud" field of the token
-	Audience() []string
+	Audience() ([]string, bool)
 
 	// Birthdate returns the value for "birthdate" field of the token
-	Birthdate() *BirthdateClaim
+	Birthdate() (*BirthdateClaim, bool)
 
 	// Email returns the value for "email" field of the token
-	Email() string
+	Email() (string, bool)
 
 	// EmailVerified returns the value for "email_verified" field of the token
-	EmailVerified() bool
+	EmailVerified() (bool, bool)
 
 	// Expiration returns the value for "exp" field of the token
-	Expiration() time.Time
+	Expiration() (time.Time, bool)
 
 	// FamilyName returns the value for "family_name" field of the token
-	FamilyName() string
+	FamilyName() (string, bool)
 
 	// Gender returns the value for "gender" field of the token
-	Gender() string
+	Gender() (string, bool)
 
 	// GivenName returns the value for "given_name" field of the token
-	GivenName() string
+	GivenName() (string, bool)
 
 	// IssuedAt returns the value for "iat" field of the token
-	IssuedAt() time.Time
+	IssuedAt() (time.Time, bool)
 
 	// Issuer returns the value for "iss" field of the token
-	Issuer() string
+	Issuer() (string, bool)
 
 	// JwtID returns the value for "jti" field of the token
-	JwtID() string
+	JwtID() (string, bool)
 
 	// Locale returns the value for "locale" field of the token
-	Locale() string
+	Locale() (string, bool)
 
 	// MiddleName returns the value for "middle_name" field of the token
-	MiddleName() string
+	MiddleName() (string, bool)
 
 	// Name returns the value for "name" field of the token
-	Name() string
+	Name() (string, bool)
 
 	// Nickname returns the value for "nickname" field of the token
-	Nickname() string
+	Nickname() (string, bool)
 
 	// NotBefore returns the value for "nbf" field of the token
-	NotBefore() time.Time
+	NotBefore() (time.Time, bool)
 
 	// PhoneNumber returns the value for "phone_number" field of the token
-	PhoneNumber() string
+	PhoneNumber() (string, bool)
 
 	// PhoneNumberVerified returns the value for "phone_number_verified" field of the token
-	PhoneNumberVerified() bool
+	PhoneNumberVerified() (bool, bool)
 
 	// Picture returns the value for "picture" field of the token
-	Picture() string
+	Picture() (string, bool)
 
 	// PreferredUsername returns the value for "preferred_username" field of the token
-	PreferredUsername() string
+	PreferredUsername() (string, bool)
 
 	// Profile returns the value for "profile" field of the token
-	Profile() string
+	Profile() (string, bool)
 
 	// Subject returns the value for "sub" field of the token
-	Subject() string
+	Subject() (string, bool)
 
 	// UpdatedAt returns the value for "updated_at" field of the token
-	UpdatedAt() time.Time
+	UpdatedAt() (time.Time, bool)
 
 	// Website returns the value for "website" field of the token
-	Website() string
+	Website() (string, bool)
 
 	// Zoneinfo returns the value for "zoneinfo" field of the token
-	Zoneinfo() string
+	Zoneinfo() (string, bool)
 
 	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
 	//
@@ -749,232 +748,238 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 	return nil
 }
 
-func (t *stdToken) Address() *AddressClaim {
+func (t *stdToken) Address() (*AddressClaim, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.address
+	if t.address != nil {
+		return t.address, true
+	}
+	return nil, false
 }
 
-func (t *stdToken) Audience() []string {
+func (t *stdToken) Audience() ([]string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.audience != nil {
-		return t.audience.Get()
+		return t.audience.Get(), true
 	}
-	return nil
+	return nil, false
 }
 
-func (t *stdToken) Birthdate() *BirthdateClaim {
+func (t *stdToken) Birthdate() (*BirthdateClaim, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.birthdate
+	if t.birthdate != nil {
+		return t.birthdate, true
+	}
+	return nil, false
 }
 
-func (t *stdToken) Email() string {
+func (t *stdToken) Email() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.email != nil {
-		return *(t.email)
+		return *(t.email), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) EmailVerified() bool {
+func (t *stdToken) EmailVerified() (bool, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.emailVerified != nil {
-		return *(t.emailVerified)
+		return *(t.emailVerified), true
 	}
-	return false
+	return false, false
 }
 
-func (t *stdToken) Expiration() time.Time {
+func (t *stdToken) Expiration() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.expiration != nil {
-		return t.expiration.Get()
+		return t.expiration.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) FamilyName() string {
+func (t *stdToken) FamilyName() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.familyName != nil {
-		return *(t.familyName)
+		return *(t.familyName), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Gender() string {
+func (t *stdToken) Gender() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.gender != nil {
-		return *(t.gender)
+		return *(t.gender), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) GivenName() string {
+func (t *stdToken) GivenName() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.givenName != nil {
-		return *(t.givenName)
+		return *(t.givenName), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) IssuedAt() time.Time {
+func (t *stdToken) IssuedAt() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.issuedAt != nil {
-		return t.issuedAt.Get()
+		return t.issuedAt.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) Issuer() string {
+func (t *stdToken) Issuer() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.issuer != nil {
-		return *(t.issuer)
+		return *(t.issuer), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) JwtID() string {
+func (t *stdToken) JwtID() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.jwtID != nil {
-		return *(t.jwtID)
+		return *(t.jwtID), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Locale() string {
+func (t *stdToken) Locale() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.locale != nil {
-		return *(t.locale)
+		return *(t.locale), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) MiddleName() string {
+func (t *stdToken) MiddleName() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.middleName != nil {
-		return *(t.middleName)
+		return *(t.middleName), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Name() string {
+func (t *stdToken) Name() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.name != nil {
-		return *(t.name)
+		return *(t.name), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Nickname() string {
+func (t *stdToken) Nickname() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.nickname != nil {
-		return *(t.nickname)
+		return *(t.nickname), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) NotBefore() time.Time {
+func (t *stdToken) NotBefore() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.notBefore != nil {
-		return t.notBefore.Get()
+		return t.notBefore.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) PhoneNumber() string {
+func (t *stdToken) PhoneNumber() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.phoneNumber != nil {
-		return *(t.phoneNumber)
+		return *(t.phoneNumber), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) PhoneNumberVerified() bool {
+func (t *stdToken) PhoneNumberVerified() (bool, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.phoneNumberVerified != nil {
-		return *(t.phoneNumberVerified)
+		return *(t.phoneNumberVerified), true
 	}
-	return false
+	return false, false
 }
 
-func (t *stdToken) Picture() string {
+func (t *stdToken) Picture() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.picture != nil {
-		return *(t.picture)
+		return *(t.picture), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) PreferredUsername() string {
+func (t *stdToken) PreferredUsername() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.preferredUsername != nil {
-		return *(t.preferredUsername)
+		return *(t.preferredUsername), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Profile() string {
+func (t *stdToken) Profile() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.profile != nil {
-		return *(t.profile)
+		return *(t.profile), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Subject() string {
+func (t *stdToken) Subject() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.subject != nil {
-		return *(t.subject)
+		return *(t.subject), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) UpdatedAt() time.Time {
+func (t *stdToken) UpdatedAt() (time.Time, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.updatedAt != nil {
-		return t.updatedAt.Get()
+		return t.updatedAt.Get(), true
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
 
-func (t *stdToken) Website() string {
+func (t *stdToken) Website() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.website != nil {
-		return *(t.website)
+		return *(t.website), true
 	}
-	return ""
+	return "", false
 }
 
-func (t *stdToken) Zoneinfo() string {
+func (t *stdToken) Zoneinfo() (string, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.zoneinfo != nil {
-		return *(t.zoneinfo)
+		return *(t.zoneinfo), true
 	}
-	return ""
+	return "", false
 }
 
 func (t *stdToken) PrivateClaims() map[string]interface{} {

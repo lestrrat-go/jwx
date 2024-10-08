@@ -122,7 +122,9 @@ func TestOpenIDClaims(t *testing.T) {
 			Key:   openid.AudienceKey,
 			Value: []string{"developers", "secops", "tac"},
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Audience(), []string{"developers", "secops", "tac"})
+				v, ok := token.Audience()
+				require.True(t, ok, `token.Audience should succeed`)
+				require.Equal(t, v, []string{"developers", "secops", "tac"})
 			},
 		},
 		{
@@ -136,7 +138,9 @@ func TestOpenIDClaims(t *testing.T) {
 				return n.Get()
 			},
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Expiration(), expectedTokenTime)
+				v, ok := token.Expiration()
+				require.True(t, ok, `token.Expiration should succeed`)
+				require.Equal(t, v, expectedTokenTime)
 			},
 		},
 		{
@@ -150,21 +154,27 @@ func TestOpenIDClaims(t *testing.T) {
 				return n.Get()
 			},
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Expiration(), expectedTokenTime)
+				v, ok := token.Expiration()
+				require.True(t, ok, `token.Expiration should succeed`)
+				require.Equal(t, v, expectedTokenTime)
 			},
 		},
 		{
 			Key:   openid.IssuerKey,
 			Value: "http://www.example.com",
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Issuer(), "http://www.example.com")
+				v, ok := token.Issuer()
+				require.True(t, ok, `token.Issuer should succeed`)
+				require.Equal(t, v, "http://www.example.com")
 			},
 		},
 		{
 			Key:   openid.JwtIDKey,
 			Value: "e9bc097a-ce51-4036-9562-d2ade882db0d",
 			Check: func(token openid.Token) {
-				require.Equal(t, token.JwtID(), "e9bc097a-ce51-4036-9562-d2ade882db0d")
+				v, ok := token.JwtID()
+				require.True(t, ok, `token.JwtID should succeed`)
+				require.Equal(t, v, "e9bc097a-ce51-4036-9562-d2ade882db0d")
 			},
 		},
 		{
@@ -178,98 +188,126 @@ func TestOpenIDClaims(t *testing.T) {
 				return n.Get()
 			},
 			Check: func(token openid.Token) {
-				require.Equal(t, token.NotBefore(), expectedTokenTime)
+				v, ok := token.NotBefore()
+				require.True(t, ok, `token.NotBefore should succeed`)
+				require.Equal(t, v, expectedTokenTime)
 			},
 		},
 		{
 			Key:   openid.SubjectKey,
 			Value: "unit test",
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Subject(), "unit test")
+				v, ok := token.Subject()
+				require.True(t, ok, `token.Subject should succeed`)
+				require.Equal(t, v, "unit test")
 			},
 		},
 		{
 			Value: "jwx",
 			Key:   openid.NameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Name(), "jwx")
+				v, ok := token.Name()
+				require.True(t, ok, `token.Name should succeed`)
+				require.Equal(t, v, "jwx")
 			},
 		},
 		{
 			Value: "jay",
 			Key:   openid.GivenNameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.GivenName(), "jay")
+				v, ok := token.GivenName()
+				require.True(t, ok, `token.GivenName should succeed`)
+				require.Equal(t, v, "jay")
 			},
 		},
 		{
 			Value: "weee",
 			Key:   openid.MiddleNameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.MiddleName(), "weee")
+				v, ok := token.MiddleName()
+				require.True(t, ok, `token.MiddleName should succeed`)
+				require.Equal(t, v, "weee")
 			},
 		},
 		{
 			Value: "xi",
 			Key:   openid.FamilyNameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.FamilyName(), "xi")
+				v, ok := token.FamilyName()
+				require.True(t, ok, `token.FamilyName should succeed`)
+				require.Equal(t, v, "xi")
 			},
 		},
 		{
 			Value: "jayweexi",
 			Key:   openid.NicknameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Nickname(), "jayweexi")
+				v, ok := token.Nickname()
+				require.True(t, ok, `token.Nickname should succeed`)
+				require.Equal(t, v, "jayweexi")
 			},
 		},
 		{
 			Value: "jwx",
 			Key:   openid.PreferredUsernameKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.PreferredUsername(), "jwx")
+				v, ok := token.PreferredUsername()
+				require.True(t, ok, `token.PreferredUsername should succeed`)
+				require.Equal(t, v, "jwx")
 			},
 		},
 		{
 			Value: "https://github.com/lestrrat-go/jwx/v3",
 			Key:   openid.ProfileKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Profile(), "https://github.com/lestrrat-go/jwx/v3")
+				v, ok := token.Profile()
+				require.True(t, ok, `token.Profile should succeed`)
+				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v3")
 			},
 		},
 		{
 			Value: "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4",
 			Key:   openid.PictureKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Picture(), "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
+				v, ok := token.Picture()
+				require.True(t, ok, `token.Picture should succeed`)
+				require.Equal(t, v, "https://avatars1.githubusercontent.com/u/36653903?s=400&amp;v=4")
 			},
 		},
 		{
 			Value: "https://github.com/lestrrat-go/jwx/v3",
 			Key:   openid.WebsiteKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Website(), "https://github.com/lestrrat-go/jwx/v3")
+				v, ok := token.Website()
+				require.True(t, ok, `token.Website should succeed`)
+				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v3")
 			},
 		},
 		{
 			Value: "lestrrat+github@gmail.com",
 			Key:   openid.EmailKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Email(), "lestrrat+github@gmail.com")
+				v, ok := token.Email()
+				require.True(t, ok, `token.Email should succeed`)
+				require.Equal(t, v, "lestrrat+github@gmail.com")
 			},
 		},
 		{
 			Value: true,
 			Key:   openid.EmailVerifiedKey,
 			Check: func(token openid.Token) {
-				require.True(t, token.EmailVerified())
+				v, ok := token.EmailVerified()
+				require.True(t, ok, `token.EmailVerified should succeed`)
+				require.True(t, v, `values should match`)
 			},
 		},
 		{
 			Value: "n/a",
 			Key:   openid.GenderKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Gender(), "n/a")
+				v, ok := token.Gender()
+				require.True(t, ok, `token.Gender should succeed`)
+				require.Equal(t, v, "n/a", `values should match`)
 			},
 		},
 		{
@@ -285,35 +323,45 @@ func TestOpenIDClaims(t *testing.T) {
 			Check: func(token openid.Token) {
 				var b openid.BirthdateClaim
 				b.Accept("2015-11-04")
-				require.Equal(t, token.Birthdate(), &b)
+				v, ok := token.Birthdate()
+				require.True(t, ok, `token.Birthdate should succeed`)
+				require.Equal(t, v, &b)
 			},
 		},
 		{
 			Value: "Asia/Tokyo",
 			Key:   openid.ZoneinfoKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Zoneinfo(), "Asia/Tokyo")
+				v, ok := token.Zoneinfo()
+				require.True(t, ok, `token.Zoneinfo should succeed`)
+				require.Equal(t, v, "Asia/Tokyo")
 			},
 		},
 		{
 			Value: "ja_JP",
 			Key:   openid.LocaleKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.Locale(), "ja_JP")
+				v, ok := token.Locale()
+				require.True(t, ok, `token.Locale should succeed`)
+				require.Equal(t, v, "ja_JP")
 			},
 		},
 		{
 			Value: "819012345678",
 			Key:   openid.PhoneNumberKey,
 			Check: func(token openid.Token) {
-				require.Equal(t, token.PhoneNumber(), "819012345678")
+				v, ok := token.PhoneNumber()
+				require.True(t, ok, `token.PhoneNumber should succeed`)
+				require.Equal(t, v, "819012345678")
 			},
 		},
 		{
 			Value: true,
 			Key:   openid.PhoneNumberVerifiedKey,
 			Check: func(token openid.Token) {
-				require.True(t, token.PhoneNumberVerified())
+				v, ok := token.PhoneNumberVerified()
+				require.True(t, ok, `token.PhoneNumberVerified should succeed`)
+				require.True(t, v)
 			},
 		},
 		{
@@ -338,7 +386,9 @@ func TestOpenIDClaims(t *testing.T) {
 				return address
 			},
 			Check: func(token openid.Token) {
-				testStockAddressClaim(t, token.Address())
+				v, ok := token.Address()
+				require.True(t, ok, `token.Address should succeed`)
+				testStockAddressClaim(t, v)
 			},
 		},
 		{
@@ -352,7 +402,9 @@ func TestOpenIDClaims(t *testing.T) {
 				return n.Get()
 			},
 			Check: func(token openid.Token) {
-				require.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), token.UpdatedAt())
+				v, ok := token.UpdatedAt()
+				require.True(t, ok, `token.UpdatedAt should succeed`)
+				require.Equal(t, time.Unix(aLongLongTimeAgo, 0).UTC(), v)
 			},
 		},
 		{
@@ -602,7 +654,9 @@ func TestGH734(t *testing.T) {
 				require.Error(t, err, `jwt.Parse should fail for pedantic parser`)
 			} else {
 				require.NoError(t, err, `jwt.Parse should succeed`)
-				require.Equal(t, expected, tok.UpdatedAt(), `updated_at should match`)
+				v, ok := tok.UpdatedAt()
+				require.True(t, ok, `updated_at should be set`)
+				require.Equal(t, expected, v, `updated_at should match`)
 			}
 		})
 	}

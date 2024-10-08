@@ -70,7 +70,9 @@ func TestGHIssue10(t *testing.T) {
 		require.NoError(t, jwt.Validate(t1), "jwt.Validate should succeed")
 
 		// This should succeed, because WithIssuer is provided with same value
-		require.NoError(t, jwt.Validate(t1, jwt.WithIssuer(t1.Issuer())), "jwt.Validate should succeed")
+		iss, ok := t1.Issuer()
+		require.True(t, ok, `t1.Issuer should succeed`)
+		require.NoError(t, jwt.Validate(t1, jwt.WithIssuer(iss)), "jwt.Validate should succeed")
 
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
 		require.Error(t, err, "jwt.Validate should fail")
@@ -170,7 +172,9 @@ func TestGHIssue10(t *testing.T) {
 		require.NoError(t, jwt.Validate(t1), "token.Validate should succeed")
 
 		// This should succeed, because WithSubject is provided with same value
-		require.NoError(t, jwt.Validate(t1, jwt.WithSubject(t1.Subject())), "token.Validate should succeed")
+		sub, ok := t1.Subject()
+		require.True(t, ok, `t1.Subject should succeed`)
+		require.NoError(t, jwt.Validate(t1, jwt.WithSubject(sub)), "token.Validate should succeed")
 		require.Error(t, jwt.Validate(t1, jwt.WithSubject("poop")), "token.Validate should fail")
 	})
 	t.Run(jwt.NotBeforeKey, func(t *testing.T) {
@@ -325,12 +329,13 @@ func TestGHIssue10(t *testing.T) {
 		}
 	})
 	t.Run("Unix zero times", func(t *testing.T) {
+		// See comments at ref: handling iat, nbf, and exp in v3
 		t.Parallel()
-		tm := time.Unix(0, 0)
+		// tm := time.Unix(0, 0)
 		t1, err := jwt.NewBuilder().
-			Claim(jwt.NotBeforeKey, tm).
-			Claim(jwt.IssuedAtKey, tm).
-			Claim(jwt.ExpirationKey, tm).
+			//Claim(jwt.NotBeforeKey, tm).
+			//Claim(jwt.IssuedAtKey, tm).
+			//Claim(jwt.ExpirationKey, tm).
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
@@ -338,12 +343,19 @@ func TestGHIssue10(t *testing.T) {
 		require.NoError(t, jwt.Validate(t1), "token.Validate should pass")
 	})
 	t.Run("Go zero times", func(t *testing.T) {
+		// ref: handling iat, nbf, and exp in v3
+		// Previously (v2) we used to treat the zero value as the same as
+		// the field not existing, but this is no longer true.
+		//
+		// This test/ used to pass in v2 even when we set exp to time.Time{},
+		// but it is no longer the case in v3. To emulate the previous
+		// behavior, we need to _NOT_ set the exp field at all
 		t.Parallel()
 		tm := time.Time{}
 		t1, err := jwt.NewBuilder().
 			Claim(jwt.NotBeforeKey, tm).
 			Claim(jwt.IssuedAtKey, tm).
-			Claim(jwt.ExpirationKey, tm).
+			// Claim(jwt.ExpirationKey, tm). // Omit this
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 

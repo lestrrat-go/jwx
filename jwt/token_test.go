@@ -82,14 +82,12 @@ func TestHeader(t *testing.T) {
 	t.Run("GetError", func(t *testing.T) {
 		t.Parallel()
 		h := jwt.New()
-		issuer := h.Issuer()
-		if issuer != "" {
-			t.Fatalf("Get Issuer should return empty string")
-		}
-		jwtID := h.JwtID()
-		if jwtID != "" {
-			t.Fatalf("Get JWT Id should return empty string")
-		}
+		issuer, ok := h.Issuer()
+		require.False(t, ok, `Issuer should not be set`)
+		require.Empty(t, issuer, `Issuer should be empty`)
+		jwtID, ok := h.JwtID()
+		require.False(t, ok, `JwtID should not be set`)
+		require.Empty(t, jwtID, `JwtID should be empty`)
 	})
 }
 
@@ -196,7 +194,7 @@ func TestToken(t *testing.T) {
 				method := rv.MethodByName(mname)
 				require.NotEqual(t, zeroval, method, `method %s should not be zero value`, mname)
 				retvals := method.Call(nil)
-				require.Len(t, retvals, 1, `should have exactly one return value`)
+				require.Len(t, retvals, 2, `should have exactly one return value`)
 				require.Equal(t, getval, retvals[0].Interface(), `values should match`)
 			}
 		}
