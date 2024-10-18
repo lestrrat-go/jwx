@@ -234,14 +234,14 @@ func (identVerify) String() string {
 	return "WithVerify"
 }
 
-// WithAcceptableSkew specifies the duration in which exp and nbf
+// WithAcceptableSkew specifies the duration in which exp, iat and nbf
 // claims may differ by. This value should be positive
 func WithAcceptableSkew(v time.Duration) ValidateOption {
 	return &validateOption{option.New(identAcceptableSkew{}, v)}
 }
 
 // WithClock specifies the `Clock` to be used when verifying
-// exp and nbf claims.
+// exp, iat and nbf claims.
 func WithClock(v Clock) ValidateOption {
 	return &validateOption{option.New(identClock{}, v)}
 }
