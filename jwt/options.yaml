@@ -45,7 +45,7 @@ options:
     interface: ValidateOption
     argument_type: time.Duration
     comment: |
-      WithAcceptableSkew specifies the duration in which exp and nbf
+      WithAcceptableSkew specifies the duration in which exp, iat and nbf
       claims may differ by. This value should be positive
   - ident: Truncation
     interface: ValidateOption
@@ -61,7 +61,7 @@ options:
     argument_type: Clock
     comment: |
       WithClock specifies the `Clock` to be used when verifying
-      exp and nbf claims.
+      exp, iat and nbf claims.
   - ident: Context
     interface: ValidateOption
     argument_type: context.Context
