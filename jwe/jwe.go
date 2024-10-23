@@ -43,7 +43,7 @@ func Settings(options ...GlobalOption) {
 			maxPBES2Count = option.Value().(int)
 		case identMaxDecompressBufferSize{}:
 			maxDecompressBufferSize = option.Value().(int64)
-		case identMaxBufferSize{}:
+		case identCBCBufferSize{}:
 			aescbc.SetMaxBufferSize(option.Value().(int64))
 		}
 	}
