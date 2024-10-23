@@ -137,6 +137,7 @@ type withKeySetSuboption struct {
 
 func (*withKeySetSuboption) withKeySetSuboption() {}
 
+type identCBCBufferSize struct{}
 type identCEK struct{}
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
@@ -144,7 +145,6 @@ type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
-type identMaxBufferSize struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
@@ -154,6 +154,10 @@ type identPretty struct{}
 type identProtectedHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
+
+func (identCBCBufferSize) String() string {
+	return "WithCBCBufferSize"
+}
 
 func (identCEK) String() string {
 	return "WithCEK"
@@ -181,10 +185,6 @@ func (identKeyProvider) String() string {
 
 func (identKeyUsed) String() string {
 	return "WithKeyUsed"
-}
-
-func (identMaxBufferSize) String() string {
-	return "WithMaxBufferSize"
 }
 
 func (identMaxDecompressBufferSize) String() string {
@@ -221,6 +221,16 @@ func (identRequireKid) String() string {
 
 func (identSerialization) String() string {
 	return "WithSerialization"
+}
+
+// WithCBCBufferSize specifies the maximum buffer size for internal
+// calculations, such as when AES-CBC is performed. The default value is 256MB.
+// If set to an invalid value, the default value is used.
+// In v2, this option was called MaxBufferSize.
+//
+// This option has a global effect.
+func WithCBCBufferSize(v int64) GlobalOption {
+	return &globalOption{option.New(identCBCBufferSize{}, v)}
 }
 
 // WithCEK allows users to specify a variable to store the CEK used in the
@@ -268,18 +278,6 @@ func WithKeyProvider(v KeyProvider) DecryptOption {
 // jwx API allows users to specify a raw key such as *rsa.PublicKey)
 func WithKeyUsed(v interface{}) DecryptOption {
 	return &decryptOption{option.New(identKeyUsed{}, v)}
-}
-
-// WithMaxBufferSize specifies the maximum buffer size for internal
-// calculations, such as when AES-CBC is performed. The default value is 256MB.
-// If set to an invalid value, the default value is used.
-//
-// This option has a global effect.
-//
-// Due to historical reasons this option has a vague name, but in future versions
-// it will be appropriately renamed.
-func WithMaxBufferSize(v int64) GlobalOption {
-	return &globalOption{option.New(identMaxBufferSize{}, v)}
 }
 
 // WithMaxDecompressBufferSize specifies the maximum buffer size for used when
