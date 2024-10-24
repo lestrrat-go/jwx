@@ -6,7 +6,6 @@ package jwt
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
@@ -16,15 +15,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
-
-var errInvalidJWT = errors.New(`invalid JWT`)
-
-// ErrInvalidJWT returns the opaque error value that is returned when
-// `jwt.Parse` fails due to not being able to deduce the format of
-// the incoming buffer
-func ErrInvalidJWT() error {
-	return errInvalidJWT
-}
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
@@ -295,7 +285,7 @@ OUTER:
 
 			break OUTER
 		case jwx.InvalidFormat:
-			return nil, ErrInvalidJWT()
+			return nil, UnknownPayloadTypeError()
 		case jwx.UnknownFormat:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these

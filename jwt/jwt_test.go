@@ -1452,7 +1452,7 @@ func TestGH850(t *testing.T) {
 	var testToken = `eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNjY2MDkxMzczLCJmb28iOiJiYXIifQ.3GWevx1z2_uCBB9Vj-D0rsT_CMsMeP9GP2rEqGDWpesoG8nHEjAXJOEQV1jOVkkCtTnS18JhcQdb7dW4i-zmqg.trailing-rubbish`
 
 	_, err := jwt.Parse([]byte(testToken), jwt.WithVerify(false))
-	require.True(t, errors.Is(err, jwt.ErrInvalidJWT()))
+	require.True(t, errors.Is(err, jwt.UnknownPayloadTypeError()))
 }
 
 func TestGH888(t *testing.T) {

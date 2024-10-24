@@ -32,6 +32,9 @@ These are changes that are incompatible with the v2.x.x version.
 * Validation used to work for `iat`, `nbf`, `exp` fields where these fields were
   set to the explicit time.Time{} zero value, but now the _presence_ of these fields matter.
 
+* `jwt.ErrInvalidJWT` has been renamed to `jwt.UnknownPayloadTypeError` to better reflect
+  what the error means
+
 ## JWS
 
 * Iterators have been completely removed.
