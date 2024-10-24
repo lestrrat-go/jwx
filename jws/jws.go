@@ -619,7 +619,7 @@ func parseJSON(data []byte) (result *Message, err error) {
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	parts := bytes.Split(src, []byte("."))
 	if len(parts) < 3 {
-		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
+		return nil, nil, nil, parseerr(`invalid number of segments`)
 	}
 	return parts[0], parts[1], parts[2], nil
 }
@@ -629,7 +629,7 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 	parts := strings.Split(src, ".")
 	if len(parts) < 3 {
-		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
+		return nil, nil, nil, parseerr(`invalid number of segments`)
 	}
 	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
 }
@@ -655,7 +655,7 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		n, err := rdr.Read(buf)
 		// return on unexpected read error
 		if err != nil && err != io.EOF {
-			return nil, nil, nil, fmt.Errorf(`unexpected end of input: %w`, err)
+			return nil, nil, nil, parseerr(`unexpected end of input: %w`, err)
 		}
 
 		// append to current buffer
@@ -698,7 +698,7 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		}
 	}
 	if periods != 2 {
-		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
+		return nil, nil, nil, parseerr(`invalid number of segments`)
 	}
 
 	return protected, payload, signature, nil
