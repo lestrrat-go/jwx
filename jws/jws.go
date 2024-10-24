@@ -498,6 +498,8 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 // explicitly which format to use. If neither or both is specified, the function
 // will attempt to autodetect the format. If one or the other is specified,
 // only the specified format will be attempted.
+//
+// On error, returns a jws.ParseError.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	var formats int
 	for _, option := range options {
@@ -551,6 +553,8 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 
 // ParseString parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
+//
+// On error, returns a jws.ParseError.
 func ParseString(src string) (*Message, error) {
 	msg, err := Parse([]byte(src))
 	if err != nil {
@@ -561,6 +565,8 @@ func ParseString(src string) (*Message, error) {
 
 // ParseReader parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
+//
+// On error, returns a jws.ParseError.
 func ParseReader(src io.Reader) (*Message, error) {
 	if data, ok := readAll(src); ok {
 		return Parse(data)
@@ -616,6 +622,8 @@ func parseJSON(data []byte) (result *Message, err error) {
 
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
+//
+// On error, returns a jws.ParseError.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	parts := bytes.Split(src, []byte("."))
 	if len(parts) < 3 {
@@ -626,6 +634,8 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 
 // SplitCompactString splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
+//
+// On error, returns a jws.ParseError.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 	parts := strings.Split(src, ".")
 	if len(parts) < 3 {
@@ -636,6 +646,8 @@ func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 
 // SplitCompactReader splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
+//
+// On error, returns a jws.ParseError.
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	if data, ok := readAll(rdr); ok {
 		return SplitCompact(data)
@@ -848,12 +860,12 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
-		return nil, fmt.Errorf(`invalid key %T`, key)
+		return nil, fmt.Errorf(`unknown key type %T`, key)
 	}
 
 	algs, ok := keyTypeToAlgorithms[kty]
 	if !ok {
-		return nil, fmt.Errorf(`invalid key type %q`, kty)
+		return nil, fmt.Errorf(`unregistered key type %q`, kty)
 	}
 	return algs, nil
 }
