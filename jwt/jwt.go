@@ -95,7 +95,11 @@ var registry = json.NewRegistry()
 
 // ParseString calls Parse against a string
 func ParseString(s string, options ...ParseOption) (Token, error) {
-	return parseBytes([]byte(s), options...)
+	tok, err := parseBytes([]byte(s), options...)
+	if err != nil {
+		return nil, parseerr(`jwt.ParseString`, `failed to parse string: %w`, err)
+	}
+	return tok, nil
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
@@ -124,7 +128,11 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // ParseOptions control the parsing behavior, and ValidateOptions are
 // passed to `Validate()` when `jwt.WithValidate` is specified.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
-	return parseBytes(s, options...)
+	tok, err := parseBytes(s, options...)
+	if err != nil {
+		return nil, parseerr(`jwt.Parse`, `failed to parse token: %w`, err)
+	}
+	return tok, nil
 }
 
 // ParseInsecure is exactly the same as Parse(), but it disables
@@ -137,12 +145,16 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
-			return nil, fmt.Errorf(`jwt.ParseInsecure: jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+			return nil, parseerr(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		}
 	}
 
 	options = append(options, WithVerify(false), WithValidate(false))
-	return Parse(s, options...)
+	tok, err := Parse(s, options...)
+	if err != nil {
+		return nil, parseerr(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
+	}
+	return tok, nil
 }
 
 // ParseReader calls Parse against an io.Reader
@@ -150,9 +162,13 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := io.ReadAll(src)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to read from token data source: %w`, err)
+		return nil, parseerr(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
 	}
-	return parseBytes(data, options...)
+	tok, err := parseBytes(data, options...)
+	if err != nil {
+		return nil, parseerr(`jwt.ParseReader`, `failed to parse token: %w`, err)
+	}
+	return tok, nil
 }
 
 type parseCtx struct {

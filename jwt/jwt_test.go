@@ -46,7 +46,7 @@ func TestOption(t *testing.T) {
 }
 */
 
-func TestJWTParse(t *testing.T) {
+func TestToken_Parse(t *testing.T) {
 	t.Parallel()
 
 	alg := jwa.RS256()
@@ -86,6 +86,9 @@ func TestJWTParse(t *testing.T) {
 		t.Parallel()
 		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512(), &key.PublicKey))
 		require.Error(t, err, `jwt.Parse should fail`)
+		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
 	t.Run("parse (wrong signature key)", func(t *testing.T) {
 		t.Parallel()
@@ -93,6 +96,9 @@ func TestJWTParse(t *testing.T) {
 		pubkey.E = 0 // bogus value
 		_, err := jwt.Parse(signed, jwt.WithKey(alg, &pubkey))
 		require.Error(t, err, `jwt.Parse should fail`)
+		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
 }
 
