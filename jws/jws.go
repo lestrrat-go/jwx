@@ -442,7 +442,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				}
 
 				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
-					errs = append(errs, errVerification{err})
+					errs = append(errs, verificationError{err})
 					continue
 				}
 
