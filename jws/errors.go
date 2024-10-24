@@ -74,3 +74,39 @@ func (errVerification) Is(err error) bool {
 	_, ok := err.(errVerification)
 	return ok
 }
+
+type errParse struct {
+	error
+}
+
+var emptyParseErr = errParse{fmt.Errorf(`jws.Parse: unknown error`)}
+
+// ParseError returns an error that can be passed to `errors.Is` to check if the error is a parse error.
+func ParseError() error {
+	return emptyParseErr
+}
+
+func (e errParse) Unwrap() error {
+	return e.error
+}
+
+func (errParse) Is(err error) bool {
+	_, ok := err.(errParse)
+	return ok
+}
+
+func bparseerr(prefix string, f string, args ...any) error {
+	return errParse{fmt.Errorf(prefix+": "+f, args...)}
+}
+
+func parseerr(f string, args ...any) error {
+	return bparseerr(`jws.Parse`, f, args...)
+}
+
+func sparseerr(f string, args ...any) error {
+	return bparseerr(`jws.ParseString`, f, args...)
+}
+
+func rparseerr(f string, args ...any) error {
+	return bparseerr(`jws.ParseReader`, f, args...)
+}

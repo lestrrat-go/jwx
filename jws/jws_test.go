@@ -84,13 +84,14 @@ func TestSanity(t *testing.T) {
 			)
 			require.Error(t, err, `jws.Verify should fail`)
 
-			require.Error(t, err, `jws.Verify should fail`)
-
 			// this should return true because it's an error returned from jws.Verify
 			require.True(t, errors.Is(err, jws.VerifyError()), `errors.Is(jws.VerifyError()) should return true`)
 
 			// this should return false because it's a parse error, not something from the verification process
 			require.False(t, errors.Is(err, jws.VerificationError()), `errors.Is(jws.VerificationError()) should return false`)
+
+			// this actually should be a parse error
+			require.True(t, errors.Is(err, jws.ParseError()), `errors.Is(jws.ParseError()) should return true`)
 		})
 
 		t.Run("error type when verification fails", func(t *testing.T) {

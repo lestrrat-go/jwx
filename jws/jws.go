@@ -515,6 +515,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 
 	// if format is 0 or both JSON/Compact, auto detect
 	if v := formats & (fmtJSON | fmtCompact); v == 0 || v == fmtJSON|fmtCompact {
+	CHECKLOOP:
 		for i := range src {
 			r := rune(src[i])
 			if r >= utf8.RuneSelf {
@@ -522,27 +523,43 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 			}
 			if !unicode.IsSpace(r) {
 				if r == '{' {
-					return parseJSON(src)
+					formats = fmtJSON
+				} else {
+					formats = fmtCompact
 				}
-				return parseCompact(src)
+				break CHECKLOOP
 			}
 		}
-	} else if formats&fmtCompact == fmtCompact {
-		return parseCompact(src)
-	} else if formats&fmtJSON == fmtJSON {
-		return parseJSON(src)
 	}
 
-	return nil, fmt.Errorf(`invalid byte sequence`)
+	if formats&fmtCompact == fmtCompact {
+		msg, err := parseCompact(src)
+		if err != nil {
+			return nil, parseerr(`failed to parse compact format: %w`, err)
+		}
+		return msg, nil
+	} else if formats&fmtJSON == fmtJSON {
+		msg, err := parseJSON(src)
+		if err != nil {
+			return nil, parseerr(`failed to parse JSON format: %w`, err)
+		}
+		return msg, nil
+	}
+
+	return nil, parseerr(`invalid byte sequence`)
 }
 
-// Parse parses contents from the given source and creates a jws.Message
+// ParseString parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 func ParseString(src string) (*Message, error) {
-	return Parse([]byte(src))
+	msg, err := Parse([]byte(src))
+	if err != nil {
+		return nil, sparseerr(`failed to parse string: %w`, err)
+	}
+	return msg, nil
 }
 
-// Parse parses contents from the given source and creates a jws.Message
+// ParseReader parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 func ParseReader(src io.Reader) (*Message, error) {
 	if data, ok := readAll(src); ok {
@@ -554,12 +571,12 @@ func ParseReader(src io.Reader) (*Message, error) {
 	for {
 		r, _, err := rdr.ReadRune()
 		if err != nil {
-			return nil, fmt.Errorf(`failed to read rune: %w`, err)
+			return nil, rparseerr(`failed to read rune: %w`, err)
 		}
 		if !unicode.IsSpace(r) {
 			first = r
 			if err := rdr.UnreadRune(); err != nil {
-				return nil, fmt.Errorf(`failed to unread rune: %w`, err)
+				return nil, rparseerr(`failed to unread rune: %w`, err)
 			}
 
 			break
@@ -575,7 +592,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 
 	m, err := parser(rdr)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to parse jws message: %w`, err)
+		return nil, rparseerr(`failed to parse reader: %w`, err)
 	}
 
 	return m, nil
