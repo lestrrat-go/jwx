@@ -52,6 +52,76 @@ func TestSanity(t *testing.T) {
 		require.NoError(t, err, `jws.Verify should succeed`)
 		require.Equal(t, []byte(examplePayload), payload, `payloads should match`)
 	})
+	t.Run("sanity: Verification failure", func(t *testing.T) {
+		key1, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+		require.NoError(t, key1.Set(jwk.KeyIDKey, "key1"), `key1.Set should succeed`)
+		key2, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+		require.NoError(t, key2.Set(jwk.KeyIDKey, "key2"), `key2.Set should succeed`)
+		key3, err := jwxtest.GenerateEcdsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
+		require.NoError(t, key3.Set(jwk.KeyIDKey, "key3"), `key3.Set should succeed`)
+
+		payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
+
+		signed, err := jws.Sign(
+			payload,
+			jws.WithJSON(),
+			jws.WithKey(jwa.HS256(), key1),
+			jws.WithKey(jwa.RS256(), key2),
+			jws.WithKey(jwa.ES256(), key3),
+		)
+		require.NoError(t, err, `jws.Sign should succeed`)
+
+		t.Run("error type when parse fails", func(t *testing.T) {
+			// try to verify a malformed jws message
+			_, err = jws.Verify(
+				[]byte(`this.is.not.a.ws.message`),
+				jws.WithKey(jwa.HS256(), key1),
+				jws.WithKey(jwa.RS256(), key2),
+				jws.WithKey(jwa.ES256(), key3),
+			)
+			require.Error(t, err, `jws.Verify should fail`)
+
+			require.Error(t, err, `jws.Verify should fail`)
+
+			// this should return true because it's an error returned from jws.Verify
+			require.True(t, errors.Is(err, jws.VerifyError()), `errors.Is(jws.VerifyError()) should return true`)
+
+			// this should return false because it's a parse error, not something from the verification process
+			require.False(t, errors.Is(err, jws.VerificationError()), `errors.Is(jws.VerificationError()) should return false`)
+		})
+
+		t.Run("error type when verification fails", func(t *testing.T) {
+			// Create new keys so that verification fails
+			key1, err := jwxtest.GenerateSymmetricJwk()
+			require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+			require.NoError(t, key1.Set(jwk.KeyIDKey, "key1"), `key1.Set should succeed`)
+			key2, err := jwxtest.GenerateRsaJwk()
+			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+			require.NoError(t, key2.Set(jwk.KeyIDKey, "key2"), `key2.Set should succeed`)
+			key3, err := jwxtest.GenerateEcdsaJwk()
+			require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
+			require.NoError(t, key3.Set(jwk.KeyIDKey, "key3"), `key3.Set should succeed`)
+
+			verified, err := jws.Verify(
+				signed,
+				jws.WithKey(jwa.HS256(), key1),
+				jws.WithKey(jwa.RS256(), key2),
+				jws.WithKey(jwa.ES256(), key3),
+			)
+
+			require.Error(t, err, `jws.Verify should fail`)
+			require.Nil(t, verified, `verified should be nil`)
+
+			// this should return true because it's an error returned from jws.Verify
+			require.True(t, errors.Is(err, jws.VerifyError()), `errors.Is(jws.VerifyError()) should return true`)
+
+			// this should also return true because it's an error returned from the verification process
+			require.True(t, errors.Is(err, jws.VerificationError()), `errors.Is(jws.VerificationError()) should return true`)
+		})
+	})
 }
 
 func TestParseReader(t *testing.T) {
@@ -1266,7 +1336,8 @@ func TestRFC7797(t *testing.T) {
 				payload, err := jws.Verify(tc.Input, options...)
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
-					require.False(t, jws.IsVerificationError(err), `jws.IsVerifyError should return false`)
+					require.True(t, errors.Is(err, jws.VerifyError()), `jws.IsVerifyError should return true`)
+					require.False(t, errors.Is(err, jws.VerificationError()), `jws.IsVerifyError should return false`)
 				} else {
 					require.NoError(t, err, `jws.Verify should succeed`)
 					require.Equal(t, detached, payload, `payload should match`)
