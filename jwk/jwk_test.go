@@ -1970,6 +1970,7 @@ func TestValidation(t *testing.T) {
 }
 
 func TestParse_fail(t *testing.T) {
+	t.Parallel()
 	t.Run(`malformed json`, func(t *testing.T) {
 		t.Parallel()
 		const src = `{blah}`
