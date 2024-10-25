@@ -74,8 +74,9 @@ func TestGH010(t *testing.T) {
 		require.NoError(t, jwt.Validate(t1, jwt.WithIssuer(iss)), "jwt.Validate should succeed")
 
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
+
 		require.Error(t, err, "jwt.Validate should fail")
-		require.ErrorIs(t, err, jwt.InvalidIssuerError(), "error should be jwt.ErrInvalidIssuer")
+		require.ErrorIs(t, err, jwt.InvalidIssuerError(), "error should be jwt.InvalidIssuerError")
 		require.ErrorIs(t, err, jwt.ValidateError(), "error should be a validation error")
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {

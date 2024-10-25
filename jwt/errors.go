@@ -65,17 +65,27 @@ type invalidIssuerError struct {
 	error
 }
 
-func (err *invalidIssuerError) Is(target error) bool {
-	_, ok := target.(*invalidIssuerError)
+func (err invalidIssuerError) Is(target error) bool {
+	_, ok := target.(invalidIssuerError)
 	return ok
 }
 
-func (err *invalidIssuerError) Unwrap() error {
+func (err invalidIssuerError) Unwrap() error {
 	return err.error
 }
 
 func issuererr(f string, args ...any) error {
-	return &invalidIssuerError{fmt.Errorf(`"iss" not satisfied: `+f, args...)}
+	return invalidIssuerError{fmt.Errorf(`"iss" not satisfied: `+f, args...)}
+}
+
+var errDefaultInvalidIssuer = invalidIssuerError{errors.New(`"iss" not satisfied`)}
+
+// InvalidIssuerError returns the immutable error used when `iss` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
+func InvalidIssuerError() error {
+	return errDefaultInvalidIssuer
 }
 
 type tokenExpiredError struct {
@@ -147,10 +157,6 @@ func TokenNotYetValidError() error {
 	return errDefaultTokenNotYetValid
 }
 
-var errInvalidAudience = claimverr(`"aud" not satisfied`)
-var errInvalidIssuer = claimverr(`"iss" not satisfied`)
-var errRequiredClaim = &missingRequiredClaimError{}
-
 type invalidAudienceError struct {
 	error
 }
@@ -176,14 +182,6 @@ var errDefaultInvalidAudience = invalidAudienceError{errors.New(`"aud" not satis
 // The return value should only be used for comparison using `errors.Is()`
 func InvalidAudienceError() error {
 	return errDefaultInvalidAudience
-}
-
-// InvalidIssuerError returns the immutable error used when `iss` claim
-// is not satisfied
-//
-// The return value should only be used for comparison using `errors.Is()`
-func InvalidIssuerError() error {
-	return errInvalidIssuer
 }
 
 type missingRequiredClaimError struct {

@@ -383,10 +383,10 @@ func claimverr(f string, args ...interface{}) error {
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	var v interface{}
 	if err := t.Get(cv.name, &v); err != nil {
-		return claimverr(`%[1]q not satisfied: claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
+		return cv.makeErr(`%[1]q not satisfied: claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
 	}
 	if v != cv.value {
-		return claimverr(`%q not satisfied: values do not match`, cv.name)
+		return cv.makeErr(`%q not satisfied: values do not match`, cv.name)
 	}
 	return nil
 }
