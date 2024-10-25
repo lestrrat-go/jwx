@@ -14,13 +14,22 @@ These are changes that are incompatible with the v2.x.x version.
   `Get(string, interface{}) error`, where the second argument should be a pointer
   to the storage destination of the field.
 
+* All convenience accessors (e.g. `(jwt.Token).Subject`) now return `(T, bool)` instead of
+  `T`. If you want an accessor that returns a single value, consider using `Get()`
+
+* Most major errors can now be differentiated using `errors.Is`
+
+
 ## JWA
 
 * All string constants have been renamed to equivalent functions that return a struct.
+  You should rewrite `jwa.RS256` as `jwa.RS256()`
+
 * By default, only known algorithm names are accepted. For example, in our JWK tests,
   there are tests that deal with "ECMR" algorithm, but this will now fail by default.
   If you want this algorithm to succeed parsing, you need to call `jwa.RegisterXXXX`
-  functions before using them
+  functions before using them.
+
 * Previously, unmarshaling unquoted strings used to work (e.g. `var s = "RS256"`),
   but now they must conform to the JSON standard and be quoted (e.g. `var s = strconv.Quote("RS256")`)
 
@@ -51,6 +60,10 @@ These are changes that are incompatible with the v2.x.x version.
 * All convenience accessors (e.g. `Algorithm`) now return `(T, bool)` instead of
   just `T`. If you want a single return value accessor, use `Get(dst) error` instead.
 
+* Errors from `jws.Sign` and `jws.Verify`, as well as `jws.Parse` (and friends)
+  can now be differentiated by using `errors.Is`. All `jws.IsXXXXError` functions
+  have been removed.
+
 ## JWE
 
 * Iterators have been completely removed.
@@ -59,6 +72,10 @@ These are changes that are incompatible with the v2.x.x version.
 
 * All convenience accessors (e.g. `Algorithm`) now return `(T, bool)` instead of
   just `T`. If you want a single return value accessor, use `Get(dst) error` instead.
+
+* Errors from `jwe.Decrypt` and `jwe.Encrypt`, as well as `jwe.Parse` (and friends)
+  can now be differentiated by using `errors.Is`. All `jwe.IsXXXXrror` functions
+  have been removed.
 
 ## JWK
 
