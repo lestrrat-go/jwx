@@ -252,7 +252,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 			return key, nil
 		}
 
-		if IsContinueError(err) {
+		if errors.Is(err, ContinueError()) {
 			continue
 		}
 

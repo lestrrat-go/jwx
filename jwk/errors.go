@@ -20,11 +20,6 @@ func (e *continueError) Error() string {
 	return "continue parsing"
 }
 
-// IsContinueError returns true if the given error is a ContinueError.
-func IsContinueError(err error) bool {
-	return errors.Is(err, &continueError{})
-}
-
 type importError struct {
 	error
 }
