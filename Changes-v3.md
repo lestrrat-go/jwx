@@ -40,6 +40,8 @@ These are changes that are incompatible with the v2.x.x version.
   it can also be matched against more specific error types such as `TokenExpierdError()`
   using `errors.Is`
 
+* `jwt.ErrMissingRequiredClaim` has been removed
+
 ## JWS
 
 * Iterators have been completely removed.
