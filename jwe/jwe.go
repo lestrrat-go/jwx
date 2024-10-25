@@ -542,6 +542,7 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var cek *[]byte
 	var dst *Message
 	perCallMaxDecompressBufferSize := maxDecompressBufferSize
+	ctx := context.Background()
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
@@ -565,6 +566,8 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 			cek = option.Value().(*[]byte)
 		case identMaxDecompressBufferSize{}:
 			perCallMaxDecompressBufferSize = option.Value().(int64)
+		case identContext{}:
+			ctx = option.Value().(context.Context)
 		}
 	}
 
@@ -624,8 +627,6 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.protectedHeaders = h
 	dctx.cek = cek
 	dctx.maxDecompressBufferSize = perCallMaxDecompressBufferSize
-
-	ctx := context.TODO()
 
 	errs := make([]error, 0, len(recipients))
 	for _, recipient := range recipients {

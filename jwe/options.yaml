@@ -52,6 +52,12 @@ options:
   - ident: KeyProvider
     interface: DecryptOption
     argument_type: KeyProvider
+  - ident: Context
+    interface: DecryptOption
+    argument_type: context.Context
+    comment: |
+      WithContext specifies the context.Context object to use when decrypting a JWE message.
+      If not provided, context.Background() will be used.
   - ident: Serialization
     option_name: WithCompact
     interface: EncryptOption
