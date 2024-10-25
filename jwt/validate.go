@@ -65,6 +65,7 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identTruncation{}:
 			trunc = o.Value().(time.Duration)
 		case identContext{}:
+			//nolint:fatcontext
 			ctx = o.Value().(context.Context)
 		case identResetValidators{}:
 			resetValidators = o.Value().(bool)

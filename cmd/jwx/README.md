@@ -165,17 +165,15 @@ Given a PEM encoded ASN.1 DER format key in a file `ec.pem`:
 
 ```
 -----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDMYfnvWtC8Id5bPKae5yXSxQTt
-+Zpul6AnnZWfI2TtIarvjHBFUtXRo96y7hoL4VWOPKGCsRqMFDkrbeUjRrx8iL91
-4/srnyf6sh9c8Zk04xEOpK1ypvBz+Ks4uZObtjnnitf0NBGdjMKxveTq+VE7BWUI
-yQjtQ8mbDOsiLLvh7wIDAQAB
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESVqB4JcUD6lsfvqMr+OKUNUphdNn
+64Eay60978ZlL76V/S7SkyPiUYDNmLHm7gKbkIxAiAw2mTDLXrfC0phUog==
 -----END PUBLIC KEY-----
 ```
 
 You can get the JSON representation by:
 
 ```shell
-% jwx jwk parse --input-format pem ec.pem
+% jwx jwk format --input-format pem --output-format json ec.pem
 {
   "crv": "P-256",
   "d": "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk",

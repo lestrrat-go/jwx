@@ -887,35 +887,35 @@ func TestPublicKeyOf(t *testing.T) {
 	}{
 		{
 			Key:           rsakey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
 		},
 		{
 			Key:           *rsakey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
 		},
 		{
 			Key:           rsakey.PublicKey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
 		},
 		{
 			Key:           &rsakey.PublicKey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
 		},
 		{
 			Key:           ecdsakey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
 		},
 		{
 			Key:           *ecdsakey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
 		},
 		{
 			Key:           ecdsakey.PublicKey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
 		},
 		{
 			Key:           &ecdsakey.PublicKey,
-			PublicKeyType: reflect.PtrTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
 		},
 		{
 			Key:           octets,
@@ -1636,9 +1636,9 @@ func TestTypedFields(t *testing.T) {
 func TestGH412(t *testing.T) {
 	base := jwk.NewSet()
 
-	const max = 5
+	const iterations = 5
 	kids := make(map[string]struct{})
-	for i := 0; i < max; i++ {
+	for i := 0; i < iterations; i++ {
 		k, err := jwxtest.GenerateRsaJwk()
 		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
 			return
@@ -1650,7 +1650,7 @@ func TestGH412(t *testing.T) {
 		kids[kid] = struct{}{}
 	}
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < iterations; i++ {
 		idx := i
 		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
@@ -1659,7 +1659,7 @@ func TestGH412(t *testing.T) {
 				return
 			}
 
-			if !assert.Equal(t, max, set.Len(), `set.Len should be %d`, max) {
+			if !assert.Equal(t, iterations, set.Len(), `set.Len should be %d`, iterations) {
 				return
 			}
 
@@ -1673,7 +1673,7 @@ func TestGH412(t *testing.T) {
 			}
 			t.Logf("deleted key %s", k.KeyID())
 
-			if !assert.Equal(t, max-1, set.Len(), `set.Len should be %d`, max-1) {
+			if !assert.Equal(t, iterations-1, set.Len(), `set.Len should be %d`, iterations-1) {
 				return
 			}
 
