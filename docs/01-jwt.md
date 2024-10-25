@@ -799,8 +799,8 @@ func ExampleJWT_Validate() {
     fmt.Printf("%s\n", err)
   }
   // OUTPUT:
-  // "exp" not satisfied
-  // "exp" not satisfied
+  // jwt.Validate: validation failed: "exp" not satisfied: token is expired
+  // jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }
 ```
 source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_example_test.go)
@@ -838,7 +838,7 @@ func ExampleJWT_ValidateIssuer() {
   }
   fmt.Printf("%s\n", err)
   // OUTPUT:
-  // "iss" not satisfied: values do not match
+  // jwt.Validate: validation failed: "iss" not satisfied: values do not match
 }
 ```
 source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_issuer_example_test.go)
@@ -862,13 +862,13 @@ import (
 )
 
 func ExampleJWT_ValidateValidator() {
-  validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
+  validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
     iat, ok := t.IssuedAt()
     if !ok {
-      return jwt.NewValidationError(errors.New(`token does not have "iat" claim`))
+      return errors.New(`token does not have "iat" claim`)
     }
     if iat.Month() != 8 {
-      return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
+      return errors.New(`tokens are only valid if issued during August!`)
     }
     return nil
   })
@@ -889,7 +889,7 @@ func ExampleJWT_ValidateValidator() {
   }
   fmt.Printf("%s\n", err)
   // OUTPUT:
-  // tokens are only valid if issued during August!
+  // jwt.Validate: validation failed: tokens are only valid if issued during August!
 }
 ```
 source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_validator_example_test.go)
@@ -938,7 +938,7 @@ func ExampleJWT_ValidateDetectErrorType() {
       return
     }
 
-    if jwt.IsValidationError(err) {
+    if errors.Is(err, jwt.ValidateError()) {
       fmt.Printf("error should NOT be validation error\n")
       return
     }
@@ -954,19 +954,19 @@ func ExampleJWT_ValidateDetectErrorType() {
       return
     }
 
-    if !jwt.IsValidationError(err) {
+    if !errors.Is(err, jwt.ValidateError()) {
       fmt.Printf("error should be validation error\n")
       return
     }
 
-    if !errors.Is(err, jwt.ErrTokenExpired()) {
+    if !errors.Is(err, jwt.TokenExpiredError()) {
       fmt.Printf("error should be of token expired type\n")
       return
     }
     fmt.Printf("%s\n", err)
   }
   // OUTPUT:
-  // "exp" not satisfied
+  // jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }
 ```
 source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_detect_error_type_example_test.go)
