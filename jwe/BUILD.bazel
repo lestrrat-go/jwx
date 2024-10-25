@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "compress.go",
         "decrypt.go",
+        "errors.go",
         "headers.go",
         "headers_gen.go",
         "interface.go",

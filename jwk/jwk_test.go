@@ -1968,3 +1968,32 @@ func TestValidation(t *testing.T) {
 		require.Error(t, key.Validate(), `key.Validate should fail`)
 	}
 }
+
+func TestParse_fail(t *testing.T) {
+	t.Parallel()
+	t.Run(`malformed json`, func(t *testing.T) {
+		t.Parallel()
+		const src = `{blah}`
+		t.Run("string", func(t *testing.T) {
+			t.Parallel()
+			_, err := jwk.ParseString(src)
+			require.Error(t, err, `jwk.ParseString should fail`)
+			require.ErrorIs(t, err, jwk.ParseError(), `error should be ParseError`)
+			require.True(t, strings.HasPrefix(err.Error(), `jwk.ParseString: `))
+		})
+		t.Run("[]byte", func(t *testing.T) {
+			t.Parallel()
+			_, err := jwk.Parse([]byte(src))
+			require.Error(t, err, `jwk.Parse should fail`)
+			require.ErrorIs(t, err, jwk.ParseError(), `error should be ParseError`)
+			require.True(t, strings.HasPrefix(err.Error(), `jwk.Parse: `))
+		})
+		t.Run("io.Reader", func(t *testing.T) {
+			t.Parallel()
+			_, err := jwk.ParseReader(strings.NewReader(src))
+			require.Error(t, err, `jwk.ParseReader should fail`)
+			require.ErrorIs(t, err, jwk.ParseError(), `error should be ParseError`)
+			require.True(t, strings.HasPrefix(err.Error(), `jwk.ParseReader: `))
+		})
+	})
+}

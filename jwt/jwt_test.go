@@ -46,7 +46,7 @@ func TestOption(t *testing.T) {
 }
 */
 
-func TestJWTParse(t *testing.T) {
+func TestToken_Parse(t *testing.T) {
 	t.Parallel()
 
 	alg := jwa.RS256()
@@ -86,6 +86,9 @@ func TestJWTParse(t *testing.T) {
 		t.Parallel()
 		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512(), &key.PublicKey))
 		require.Error(t, err, `jwt.Parse should fail`)
+		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
 	t.Run("parse (wrong signature key)", func(t *testing.T) {
 		t.Parallel()
@@ -93,6 +96,9 @@ func TestJWTParse(t *testing.T) {
 		pubkey.E = 0 // bogus value
 		_, err := jwt.Parse(signed, jwt.WithKey(alg, &pubkey))
 		require.Error(t, err, `jwt.Parse should fail`)
+		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
 }
 
@@ -1156,8 +1162,8 @@ func TestGH430(t *testing.T) {
 
 func TestGH706(t *testing.T) {
 	err := jwt.Validate(jwt.New(), jwt.WithRequiredClaim("foo"))
-	require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
-	require.ErrorIs(t, err, jwt.ErrRequiredClaim(), `jwt.Validate should fail`)
+	require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+	require.ErrorIs(t, err, jwt.MissingRequiredClaimError(), `err should be jwt.ErrRequiredClaim`)
 }
 
 func TestBenHigginsByPassRegression(t *testing.T) {
@@ -1446,7 +1452,7 @@ func TestGH850(t *testing.T) {
 	var testToken = `eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ0ZXN0IiwiaWF0IjoxNjY2MDkxMzczLCJmb28iOiJiYXIifQ.3GWevx1z2_uCBB9Vj-D0rsT_CMsMeP9GP2rEqGDWpesoG8nHEjAXJOEQV1jOVkkCtTnS18JhcQdb7dW4i-zmqg.trailing-rubbish`
 
 	_, err := jwt.Parse([]byte(testToken), jwt.WithVerify(false))
-	require.True(t, errors.Is(err, jwt.ErrInvalidJWT()))
+	require.True(t, errors.Is(err, jwt.UnknownPayloadTypeError()))
 }
 
 func TestGH888(t *testing.T) {
@@ -1586,5 +1592,5 @@ func TestGH1175(t *testing.T) {
 
 	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256(), secret))
 	require.Error(t, err, `jwt.ParseRequest should fail`)
-	require.ErrorIs(t, err, jwt.ErrTokenExpired(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
+	require.ErrorIs(t, err, jwt.TokenExpiredError(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
 }

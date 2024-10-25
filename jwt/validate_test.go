@@ -3,7 +3,6 @@ package jwt_test
 import (
 	"context"
 	"errors"
-	"log"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGHIssue10(t *testing.T) {
+func TestGH010(t *testing.T) {
 	t.Parallel()
 
 	// Simple string claims
@@ -75,9 +74,10 @@ func TestGHIssue10(t *testing.T) {
 		require.NoError(t, jwt.Validate(t1, jwt.WithIssuer(iss)), "jwt.Validate should succeed")
 
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
+
 		require.Error(t, err, "jwt.Validate should fail")
-		require.ErrorIs(t, err, jwt.ErrInvalidIssuer(), "error should be jwt.ErrInvalidIssuer")
-		require.True(t, jwt.IsValidationError(err), "error should be a validation error")
+		require.ErrorIs(t, err, jwt.InvalidIssuerError(), "error should be jwt.InvalidIssuerError")
+		require.ErrorIs(t, err, jwt.ValidateError(), "error should be a validation error")
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
@@ -117,7 +117,6 @@ func TestGHIssue10(t *testing.T) {
 
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
-				log.Printf("%s", tc.Name)
 				err := jwt.Validate(t1, tc.Options...)
 				if !tc.Error {
 					require.NoError(t, err, `jwt.Validate should succeed`)
@@ -125,9 +124,9 @@ func TestGHIssue10(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.True(t, errors.Is(err, jwt.ErrInvalidIssuedAt()), `error should be jwt.ErrInvalidIssuedAt`)
-				require.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be not ErrNotYetValid`)
-				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.InvalidIssuedAtError(), `error should be jwt.ErrInvalidIssuedAt`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be not ErrNotYetValid`)
+				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
 			})
 		}
 	})
@@ -156,8 +155,8 @@ func TestGHIssue10(t *testing.T) {
 			t.Parallel()
 			err := jwt.Validate(t1, jwt.WithAudience("poop"))
 			require.Error(t, err, "token.Validate should fail")
-			require.ErrorIs(t, err, jwt.ErrInvalidAudience(), `error should be ErrInvalidAudience`)
-			require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
+			require.ErrorIs(t, err, jwt.InvalidAudienceError(), `error should be ErrInvalidAudience`)
+			require.True(t, errors.Is(err, jwt.ValidateError()), `error should be a validation error`)
 		})
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
@@ -248,9 +247,9 @@ func TestGHIssue10(t *testing.T) {
 				}
 
 				require.Error(t, err, "token.Validate should fail")
-				require.True(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should be ErrTokenNotYetValid`)
-				require.False(t, errors.Is(err, jwt.ErrTokenExpired()), `error should not be ErrTokenExpired`)
-				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be ErrTokenNotYetValid`)
+				require.NotErrorIs(t, err, jwt.TokenExpiredError(), `error should not be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
 			})
 		}
 	})
@@ -322,9 +321,9 @@ func TestGHIssue10(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.False(t, errors.Is(err, jwt.ErrTokenNotYetValid()), `error should not be ErrTokenNotYetValid`)
-				require.True(t, errors.Is(err, jwt.ErrTokenExpired()), `error should be ErrTokenExpired`)
-				require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should not be ErrTokenNotYetValid`)
+				require.ErrorIs(t, err, jwt.TokenExpiredError(), `error should be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
 			})
 		}
 	})
@@ -416,9 +415,9 @@ func TestClaimValidator(t *testing.T) {
 	t.Parallel()
 	const myClaim = "my-claim"
 	err0 := errors.New(myClaim + " does not exist")
-	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) jwt.ValidationError {
+	v := jwt.ValidatorFunc(func(_ context.Context, tok jwt.Token) error {
 		if !tok.Has(myClaim) {
-			return jwt.NewValidationError(err0)
+			return err0
 		}
 		return nil
 	})

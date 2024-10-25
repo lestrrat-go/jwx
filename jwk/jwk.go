@@ -44,26 +44,6 @@ func init() {
 	}
 }
 
-var cpe = &continueError{}
-
-// ContinueError returns an opaque error that can be returned
-// when a `KeyParser`, `KeyImporter`, or `KeyExporter` cannot handle the given payload,
-// but would like the process to continue with the next handler.
-func ContinueError() error {
-	return cpe
-}
-
-type continueError struct{}
-
-func (e *continueError) Error() string {
-	return "continue parsing"
-}
-
-// IsContinueError returns true if the given error is a ContinueError.
-func IsContinueError(err error) bool {
-	return errors.Is(err, &continueError{})
-}
-
 // Import creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
@@ -76,14 +56,14 @@ func IsContinueError(err error) bool {
 //   - []byte creates a symmetric key
 func Import(raw interface{}) (Key, error) {
 	if raw == nil {
-		return nil, fmt.Errorf(`jwk.Import requires a non-nil key`)
+		return nil, importerr(`a non-nil key is required`)
 	}
 
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf(`jwk.Import: failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
 	return conv.Import(raw)
@@ -272,7 +252,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 			return key, nil
 		}
 
-		if IsContinueError(err) {
+		if errors.Is(err, ContinueError()) {
 			continue
 		}
 
@@ -328,14 +308,14 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		for len(src) > 0 {
 			raw, rest, err := pemDecoder.Decode(src)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
+				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
 			key, err := Import(raw)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to create jwk.Key from %T: %w`, raw, err)
+				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
 			if err := s.AddKey(key); err != nil {
-				return nil, fmt.Errorf(`failed to add jwk.Key to set: %w`, err)
+				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
 			}
 			src = bytes.TrimSpace(rest)
 		}
@@ -345,7 +325,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	if localReg != nil || ignoreParseError {
 		dcKs, ok := s.(KeyWithDecodeCtx)
 		if !ok {
-			return nil, fmt.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
+			return nil, parseerr(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
 		dc := &setDecodeCtx{
 			DecodeCtx:        json.NewDecodeCtx(localReg),
@@ -356,7 +336,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
-		return nil, fmt.Errorf(`failed to unmarshal JWK set: %w`, err)
+		return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
 	}
 
 	return s, nil
@@ -368,15 +348,23 @@ func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 	// JWKs except when we encounter an EOF, so just... ReadAll
 	buf, err := io.ReadAll(src)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
+		return nil, rparseerr(`failed to read from io.Reader: %w`, err)
 	}
 
-	return Parse(buf, options...)
+	set, err := Parse(buf, options...)
+	if err != nil {
+		return nil, rparseerr(`failed to parse reader: %w`, err)
+	}
+	return set, nil
 }
 
 // ParseString parses a JWK set from the incoming string.
 func ParseString(s string, options ...ParseOption) (Set, error) {
-	return Parse([]byte(s), options...)
+	set, err := Parse([]byte(s), options...)
+	if err != nil {
+		return nil, sparseerr(`failed to parse string: %w`, err)
+	}
+	return set, nil
 }
 
 // AssignKeyID is a convenience function to automatically assign the "kid"

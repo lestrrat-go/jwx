@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -280,7 +281,7 @@ func Export(key Key, dst interface{}) error {
 		for _, conv := range exporters {
 			v, err := conv.Export(key, dst)
 			if err != nil {
-				if IsContinueError(err) {
+				if errors.Is(err, ContinueError()) {
 					continue
 				}
 				return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)

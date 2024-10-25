@@ -903,3 +903,46 @@ func TestMaxDecompressBufferSize(t *testing.T) {
 		})
 	}
 }
+
+func TestEncrypt_fail(t *testing.T) {
+	_, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), nil))
+	require.Error(t, err, `jwe.Encrypt should fail`)
+	require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+}
+
+func TestDecrypt_fail(t *testing.T) {
+	t.Run("no key", func(t *testing.T) {
+		_, err := jwe.Decrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), nil))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
+		require.NotErrorIs(t, err, jwe.RecipientError(), `error should NOT be of type jwe.RecipientError`)
+	})
+	t.Run("wrong key", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		wrongPrivkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), wrongPrivkey))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.RecipientError(), `error should be of type jwe.RecipientError`)
+	})
+	t.Run("malformed JSON", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		encrypted = encrypted[1:]
+		_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.ParseError(), `error should be of type jwe.ParseError`)
+	})
+}

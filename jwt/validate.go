@@ -21,7 +21,7 @@ func isSupportedTimeClaim(c string) error {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
 		return nil
 	}
-	return NewValidationError(fmt.Errorf(`unsupported time claim %s`, strconv.Quote(c)))
+	return fmt.Errorf(`unsupported time claim %s`, strconv.Quote(c))
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
@@ -104,14 +104,14 @@ func Validate(t Token, options ...ValidateOption) error {
 		validators = append(baseValidators, extraValidators...)
 	} else {
 		if len(extraValidators) == 0 {
-			return fmt.Errorf(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
+			return validateerr(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
 		}
 		validators = extraValidators
 	}
 
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
-			return err
+			return validateerr(`validation failed: %w`, err)
 		}
 	}
 
@@ -145,7 +145,7 @@ func MinDeltaIs(c1, c2 string, dur time.Duration) Validator {
 	}
 }
 
-func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) ValidationError {
+func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	clock := ValidationCtxClock(ctx) // MUST be populated
 	skew := ValidationCtxSkew(ctx)   // MUST be populated
 	// We don't check if the claims already exist, because we already did that
@@ -155,171 +155,27 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) ValidationErro
 	if iitr.less { // t1 - t2 <= iitr.dur
 		// t1 - t2 < iitr.dur + skew
 		if t1.Sub(t2) > iitr.dur+skew {
-			return NewValidationError(fmt.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
+			return fmt.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 		}
 	} else {
 		if t1.Sub(t2) < iitr.dur-skew {
-			return NewValidationError(fmt.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew))
+			return fmt.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 		}
 	}
 	return nil
 }
 
-type ValidationError interface {
-	error
-	isValidationError()
-	Unwrap() error
-}
-
-func NewValidationError(err error) ValidationError {
-	return &validationError{error: err}
-}
-
-// This is a generic validation error.
-type validationError struct {
-	error
-}
-
-func (validationError) isValidationError() {}
-func (err *validationError) Unwrap() error {
-	return err.error
-}
-
-type missingRequiredClaimError struct {
-	claim string
-}
-
-func (err *missingRequiredClaimError) Error() string {
-	return fmt.Sprintf("%q not satisfied: required claim not found", err.claim)
-}
-
-func (err *missingRequiredClaimError) Is(target error) bool {
-	_, ok := target.(*missingRequiredClaimError)
-	return ok
-}
-
-func (err *missingRequiredClaimError) isValidationError() {}
-func (*missingRequiredClaimError) Unwrap() error          { return nil }
-
-type invalidAudienceError struct {
-	error
-}
-
-func (err *invalidAudienceError) Is(target error) bool {
-	_, ok := target.(*invalidAudienceError)
-	return ok
-}
-
-func (err *invalidAudienceError) isValidationError() {}
-func (err *invalidAudienceError) Unwrap() error {
-	return err.error
-}
-
-func (err *invalidAudienceError) Error() string {
-	if err.error == nil {
-		return `"aud" not satisfied`
-	}
-	return err.error.Error()
-}
-
-type invalidIssuerError struct {
-	error
-}
-
-func (err *invalidIssuerError) Is(target error) bool {
-	_, ok := target.(*invalidIssuerError)
-	return ok
-}
-
-func (err *invalidIssuerError) isValidationError() {}
-func (err *invalidIssuerError) Unwrap() error {
-	return err.error
-}
-
-func (err *invalidIssuerError) Error() string {
-	if err.error == nil {
-		return `"iss" not satisfied`
-	}
-	return err.error.Error()
-}
-
-var errTokenExpired = NewValidationError(fmt.Errorf(`"exp" not satisfied`))
-var errInvalidIssuedAt = NewValidationError(fmt.Errorf(`"iat" not satisfied`))
-var errTokenNotYetValid = NewValidationError(fmt.Errorf(`"nbf" not satisfied`))
-var errInvalidAudience = &invalidAudienceError{}
-var errInvalidIssuer = &invalidIssuerError{}
-var errRequiredClaim = &missingRequiredClaimError{}
-
-// ErrTokenExpired returns the immutable error used when `exp` claim
-// is not satisfied.
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrTokenExpired() ValidationError {
-	return errTokenExpired
-}
-
-// ErrInvalidIssuedAt returns the immutable error used when `iat` claim
-// is not satisfied
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrInvalidIssuedAt() ValidationError {
-	return errInvalidIssuedAt
-}
-
-// ErrTokenNotYetValid returns the immutable error used when `nbf` claim
-// is not satisfied
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrTokenNotYetValid() ValidationError {
-	return errTokenNotYetValid
-}
-
-// ErrInvalidAudience returns the immutable error used when `aud` claim
-// is not satisfied
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrInvalidAudience() ValidationError {
-	return errInvalidAudience
-}
-
-// ErrInvalidIssuer returns the immutable error used when `iss` claim
-// is not satisfied
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrInvalidIssuer() ValidationError {
-	return errInvalidIssuer
-}
-
-// ErrMissingRequiredClaim should not have been exported, and will be
-// removed in a future release. Use `ErrRequiredClaim()` instead to get
-// an error to be used in `errors.Is()`
-//
-// This function should not have been implemented as a constructor.
-// but rather a means to retrieve an opaque and immutable error value
-// that could be passed to `errors.Is()`.
-func ErrMissingRequiredClaim(name string) ValidationError {
-	return &missingRequiredClaimError{claim: name}
-}
-
-// ErrRequiredClaim returns the immutable error used when the claim
-// specified by `jwt.IsRequired()` is not present.
-//
-// The return value should only be used for comparison using `errors.Is()`
-func ErrRequiredClaim() ValidationError {
-	return errRequiredClaim
-}
-
 // Validator describes interface to validate a Token.
 type Validator interface {
 	// Validate should return an error if a required conditions is not met.
-	Validate(context.Context, Token) ValidationError
+	Validate(context.Context, Token) error
 }
 
 // ValidatorFunc is a type of Validator that does not have any
 // state, that is implemented as a function
-type ValidatorFunc func(context.Context, Token) ValidationError
+type ValidatorFunc func(context.Context, Token) error
 
-func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) ValidationError {
+func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) error {
 	return vf(ctx, tok)
 }
 
@@ -368,7 +224,7 @@ func IsExpirationValid() Validator {
 	return ValidatorFunc(isExpirationValid)
 }
 
-func isExpirationValid(ctx context.Context, t Token) ValidationError {
+func isExpirationValid(ctx context.Context, t Token) error {
 	tv, ok := t.Expiration()
 	if !ok {
 		return nil
@@ -383,7 +239,7 @@ func isExpirationValid(ctx context.Context, t Token) ValidationError {
 
 	// expiration date must be after NOW
 	if !now.Before(ttv.Add(skew)) {
-		return ErrTokenExpired()
+		return TokenExpiredError()
 	}
 	return nil
 }
@@ -399,7 +255,7 @@ func IsIssuedAtValid() Validator {
 	return ValidatorFunc(isIssuedAtValid)
 }
 
-func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
+func isIssuedAtValid(ctx context.Context, t Token) error {
 	tv, ok := t.IssuedAt()
 	if !ok {
 		return nil
@@ -413,7 +269,7 @@ func isIssuedAtValid(ctx context.Context, t Token) ValidationError {
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
-		return ErrInvalidIssuedAt()
+		return InvalidIssuedAtError()
 	}
 	return nil
 }
@@ -429,7 +285,7 @@ func IsNbfValid() Validator {
 	return ValidatorFunc(isNbfValid)
 }
 
-func isNbfValid(ctx context.Context, t Token) ValidationError {
+func isNbfValid(ctx context.Context, t Token) error {
 	tv, ok := t.NotBefore()
 	if !ok {
 		return nil
@@ -447,7 +303,7 @@ func isNbfValid(ctx context.Context, t Token) ValidationError {
 	// "now" cannot be before t - skew, so we check for now > t - skew
 	ttv = ttv.Add(-1 * skew)
 	if now.Before(ttv) {
-		return ErrTokenNotYetValid()
+		return TokenNotYetValidError()
 	}
 	return nil
 }
@@ -455,7 +311,7 @@ func isNbfValid(ctx context.Context, t Token) ValidationError {
 type claimContainsString struct {
 	name    string
 	value   string
-	makeErr func(error) ValidationError
+	makeErr func(string, ...any) error
 }
 
 // ClaimContainsString can be used to check if the claim called `name`, which is
@@ -465,29 +321,14 @@ func ClaimContainsString(name, value string) Validator {
 	return claimContainsString{
 		name:    name,
 		value:   value,
-		makeErr: NewValidationError,
+		makeErr: fmt.Errorf,
 	}
 }
 
-// IsValidationError returns true if the error is a validation error
-func IsValidationError(err error) bool {
-	switch err {
-	case errTokenExpired, errTokenNotYetValid, errInvalidIssuedAt:
-		return true
-	default:
-		switch err.(type) {
-		case *validationError, *invalidAudienceError, *invalidIssuerError, *missingRequiredClaimError:
-			return true
-		default:
-			return false
-		}
-	}
-}
-
-func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationError {
+func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 	var list []string
 	if err := t.Get(ccs.name, &list); err != nil {
-		return ccs.makeErr(fmt.Errorf(`claim %q does not exist or is not a []string: %w`, ccs.name, err))
+		return ccs.makeErr(`claim %q does not exist or is not a []string: %w`, ccs.name, err)
 	}
 
 	for _, v := range list {
@@ -495,11 +336,7 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) ValidationEr
 			return nil
 		}
 	}
-	return ccs.makeErr(fmt.Errorf(`%q not satisfied`, ccs.name))
-}
-
-func makeInvalidAudienceError(err error) ValidationError {
-	return &invalidAudienceError{error: err}
+	return ccs.makeErr(`%q not satisfied`, ccs.name)
 }
 
 // audienceClaimContainsString can be used to check if the audience claim, which is
@@ -508,14 +345,14 @@ func audienceClaimContainsString(value string) Validator {
 	return claimContainsString{
 		name:    AudienceKey,
 		value:   value,
-		makeErr: makeInvalidAudienceError,
+		makeErr: auderr,
 	}
 }
 
 type claimValueIs struct {
 	name    string
 	value   interface{}
-	makeErr func(error) ValidationError
+	makeErr func(string, ...any) error
 }
 
 // ClaimValueIs creates a Validator that checks if the value of claim `name`
@@ -526,23 +363,19 @@ func ClaimValueIs(name string, value interface{}) Validator {
 	return &claimValueIs{
 		name:    name,
 		value:   value,
-		makeErr: NewValidationError,
+		makeErr: fmt.Errorf,
 	}
 }
 
-func (cv *claimValueIs) Validate(_ context.Context, t Token) ValidationError {
+func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	var v interface{}
 	if err := t.Get(cv.name, &v); err != nil {
-		return cv.makeErr(fmt.Errorf(`%[1]q not satisfied: claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err))
+		return cv.makeErr(`claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
 	}
 	if v != cv.value {
-		return cv.makeErr(fmt.Errorf(`%q not satisfied: values do not match`, cv.name))
+		return cv.makeErr(`values do not match`)
 	}
 	return nil
-}
-
-func makeIssuerClaimError(err error) ValidationError {
-	return &invalidIssuerError{error: err}
 }
 
 // issuerClaimValueIs creates a Validator that checks if the issuer claim
@@ -551,7 +384,7 @@ func issuerClaimValueIs(value string) Validator {
 	return &claimValueIs{
 		name:    IssuerKey,
 		value:   value,
-		makeErr: makeIssuerClaimError,
+		makeErr: issuererr,
 	}
 }
 
@@ -563,10 +396,10 @@ func IsRequired(name string) Validator {
 
 type isRequired string
 
-func (ir isRequired) Validate(_ context.Context, t Token) ValidationError {
+func (ir isRequired) Validate(_ context.Context, t Token) error {
 	name := string(ir)
 	if !t.Has(name) {
-		return &missingRequiredClaimError{claim: name}
+		return errMissingRequiredClaim(name)
 	}
 	return nil
 }

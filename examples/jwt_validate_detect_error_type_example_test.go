@@ -35,7 +35,7 @@ func ExampleJWT_ValidateDetectErrorType() {
 			return
 		}
 
-		if jwt.IsValidationError(err) {
+		if errors.Is(err, jwt.ValidateError()) {
 			fmt.Printf("error should NOT be validation error\n")
 			return
 		}
@@ -51,17 +51,17 @@ func ExampleJWT_ValidateDetectErrorType() {
 			return
 		}
 
-		if !jwt.IsValidationError(err) {
+		if !errors.Is(err, jwt.ValidateError()) {
 			fmt.Printf("error should be validation error\n")
 			return
 		}
 
-		if !errors.Is(err, jwt.ErrTokenExpired()) {
+		if !errors.Is(err, jwt.TokenExpiredError()) {
 			fmt.Printf("error should be of token expired type\n")
 			return
 		}
 		fmt.Printf("%s\n", err)
 	}
 	// OUTPUT:
-	// "exp" not satisfied
+	// jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "ecdsa.go",
         "eddsa.go",
+        "errors.go",
         "headers.go",
         "headers_gen.go",
         "hmac.go",
