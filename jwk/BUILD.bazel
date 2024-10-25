@@ -7,6 +7,7 @@ go_library(
         "convert.go",
         "ecdsa.go",
         "ecdsa_gen.go",
+        "errors.go",
         "fetch.go",
         "interface.go",
         "interface_gen.go",
