@@ -24,5 +24,5 @@ func ExampleJWT_ValidateIssuer() {
 	}
 	fmt.Printf("%s\n", err)
 	// OUTPUT:
-	// "iss" not satisfied: values do not match
+	// jwt.Validate: validation failed: "iss" not satisfied: values do not match
 }

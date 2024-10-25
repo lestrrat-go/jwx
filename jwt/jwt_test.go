@@ -1162,8 +1162,8 @@ func TestGH430(t *testing.T) {
 
 func TestGH706(t *testing.T) {
 	err := jwt.Validate(jwt.New(), jwt.WithRequiredClaim("foo"))
-	require.True(t, jwt.IsValidationError(err), `error should be a validation error`)
-	require.ErrorIs(t, err, jwt.ErrRequiredClaim(), `jwt.Validate should fail`)
+	require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+	require.ErrorIs(t, err, jwt.MissingRequiredClaimError(), `err should be jwt.ErrRequiredClaim`)
 }
 
 func TestBenHigginsByPassRegression(t *testing.T) {
@@ -1592,5 +1592,5 @@ func TestGH1175(t *testing.T) {
 
 	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256(), secret))
 	require.Error(t, err, `jwt.ParseRequest should fail`)
-	require.ErrorIs(t, err, jwt.ErrTokenExpired(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
+	require.ErrorIs(t, err, jwt.TokenExpiredError(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
 }

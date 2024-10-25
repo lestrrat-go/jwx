@@ -37,3 +37,178 @@ func (parseError) Is(err error) bool {
 func parseerr(prefix string, f string, args ...any) error {
 	return parseError{fmt.Errorf(prefix+": "+f, args...)}
 }
+
+type validationError struct {
+	error
+}
+
+var errDefaultValidateError = validateerr(`unknown error`)
+
+func ValidateError() error {
+	return errDefaultValidateError
+}
+
+func (validationError) Is(err error) bool {
+	_, ok := err.(validationError)
+	return ok
+}
+
+func (err validationError) Unwrap() error {
+	return err.error
+}
+
+func validateerr(f string, args ...any) error {
+	return validationError{fmt.Errorf(`jwt.Validate: `+f, args...)}
+}
+
+type invalidIssuerError struct {
+	error
+}
+
+func (err *invalidIssuerError) Is(target error) bool {
+	_, ok := target.(*invalidIssuerError)
+	return ok
+}
+
+func (err *invalidIssuerError) Unwrap() error {
+	return err.error
+}
+
+func issuererr(f string, args ...any) error {
+	return &invalidIssuerError{fmt.Errorf(`"iss" not satisfied: `+f, args...)}
+}
+
+type tokenExpiredError struct {
+	error
+}
+
+func (err tokenExpiredError) Is(target error) bool {
+	_, ok := target.(tokenExpiredError)
+	return ok
+}
+
+func (err tokenExpiredError) Unwrap() error {
+	return err.error
+}
+
+var errDefaultTokenExpired = tokenExpiredError{errors.New(`"exp" not satisfied: token is expired`)}
+
+// TokenExpiredError returns the immutable error used when `exp` claim
+// is not satisfied.
+//
+// The return value should only be used for comparison using `errors.Is()`
+func TokenExpiredError() error {
+	return errDefaultTokenExpired
+}
+
+type invalidIssuedAt struct {
+	error
+}
+
+func (err invalidIssuedAt) Is(target error) bool {
+	_, ok := target.(invalidIssuedAt)
+	return ok
+}
+
+func (err invalidIssuedAt) Unwrap() error {
+	return err.error
+}
+
+var errDefaultInvalidIssuedAt = invalidIssuedAt{errors.New(`"iat" not satisfied`)}
+
+// InvalidIssuedAtError returns the immutable error used when `iat` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
+func InvalidIssuedAtError() error {
+	return errDefaultInvalidIssuedAt
+}
+
+type tokenNotYetValidError struct {
+	error
+}
+
+func (err tokenNotYetValidError) Is(target error) bool {
+	_, ok := target.(tokenNotYetValidError)
+	return ok
+}
+
+func (err tokenNotYetValidError) Unwrap() error {
+	return err.error
+}
+
+var errDefaultTokenNotYetValid = tokenNotYetValidError{errors.New(`"nbf" not satisfied: token is not yet valid`)}
+
+// TokenNotYetValidError returns the immutable error used when `nbf` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
+func TokenNotYetValidError() error {
+	return errDefaultTokenNotYetValid
+}
+
+var errInvalidAudience = claimverr(`"aud" not satisfied`)
+var errInvalidIssuer = claimverr(`"iss" not satisfied`)
+var errRequiredClaim = &missingRequiredClaimError{}
+
+type invalidAudienceError struct {
+	error
+}
+
+func (err invalidAudienceError) Is(target error) bool {
+	_, ok := target.(invalidAudienceError)
+	return ok
+}
+
+func (err invalidAudienceError) Unwrap() error {
+	return err.error
+}
+
+func auderr(f string, args ...any) error {
+	return invalidAudienceError{fmt.Errorf(`"aud" not satisfied: `+f, args...)}
+}
+
+var errDefaultInvalidAudience = invalidAudienceError{errors.New(`"aud" not satisfied`)}
+
+// InvalidAudienceError returns the immutable error used when `aud` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
+func InvalidAudienceError() error {
+	return errDefaultInvalidAudience
+}
+
+// InvalidIssuerError returns the immutable error used when `iss` claim
+// is not satisfied
+//
+// The return value should only be used for comparison using `errors.Is()`
+func InvalidIssuerError() error {
+	return errInvalidIssuer
+}
+
+type missingRequiredClaimError struct {
+	error
+	claim string
+}
+
+func (err *missingRequiredClaimError) Is(target error) bool {
+	err1, ok := target.(*missingRequiredClaimError)
+	if !ok {
+		return false
+	}
+	return err1 == errDefaultMissingRequiredClaim || err1.claim == err.claim
+}
+
+var errDefaultMissingRequiredClaim = &missingRequiredClaimError{error: errors.New(`required claim is missing`)}
+
+func errMissingRequiredClaim(name string) error {
+	return &missingRequiredClaimError{claim: name, error: fmt.Errorf(`required claim "%s" is missing`, name)}
+}
+
+// MissingRequiredClaimError returns the immutable error used when the claim
+// specified by `jwt.IsRequired()` is not present.
+//
+// The return value should only be used for comparison using `errors.Is()`
+func MissingRequiredClaimError() error {
+	return errDefaultMissingRequiredClaim
+}

@@ -46,6 +46,6 @@ func ExampleJWT_Validate() {
 		fmt.Printf("%s\n", err)
 	}
 	// OUTPUT:
-	// "exp" not satisfied
-	// "exp" not satisfied
+	// jwt.Validate: validation failed: "exp" not satisfied: token is expired
+	// jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }

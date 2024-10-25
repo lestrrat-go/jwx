@@ -10,13 +10,13 @@ import (
 )
 
 func ExampleJWT_ValidateValidator() {
-	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
+	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
 		iat, ok := t.IssuedAt()
 		if !ok {
-			return jwt.NewValidationError(errors.New(`token does not have "iat" claim`))
+			return errors.New(`token does not have "iat" claim`)
 		}
 		if iat.Month() != 8 {
-			return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
+			return errors.New(`tokens are only valid if issued during August!`)
 		}
 		return nil
 	})
@@ -37,5 +37,5 @@ func ExampleJWT_ValidateValidator() {
 	}
 	fmt.Printf("%s\n", err)
 	// OUTPUT:
-	// tokens are only valid if issued during August!
+	// jwt.Validate: validation failed: tokens are only valid if issued during August!
 }
