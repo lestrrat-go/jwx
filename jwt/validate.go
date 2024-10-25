@@ -367,19 +367,6 @@ func ClaimValueIs(name string, value interface{}) Validator {
 	}
 }
 
-type claimValueError struct {
-	error
-}
-
-func (claimValueError) Is(err error) bool {
-	_, ok := err.(claimValueError)
-	return ok
-}
-
-func claimverr(f string, args ...interface{}) error {
-	return claimValueError{fmt.Errorf(f, args...)}
-}
-
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	var v interface{}
 	if err := t.Get(cv.name, &v); err != nil {
