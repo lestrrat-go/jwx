@@ -10,6 +10,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -285,7 +286,11 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
-	return encrypt(payload, nil, options...)
+	ret, err := encrypt(payload, nil, options...)
+	if err != nil {
+		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: %w`, err)}
+	}
+	return ret, nil
 }
 
 // EncryptStatic is exactly like Encrypt, except it accepts a static
@@ -300,9 +305,13 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // future changes across minor/micro versions.
 func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	if len(cek) <= 0 {
-		return nil, fmt.Errorf(`jwe.EncryptStatic: empty CEK`)
+		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: empty CEK`)}
 	}
-	return encrypt(payload, cek, options...)
+	ret, err := encrypt(payload, cek, options...)
+	if err != nil {
+		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: %w`, err)}
+	}
+	return ret, nil
 }
 
 // encrypt is separate, so it can receive cek from outside.
@@ -330,7 +339,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 			data := option.Value().(*withKey)
 			v, ok := data.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf(`jwe.Encrypt: expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, data.alg)
+				return nil, fmt.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, data.alg)
 			}
 
 			switch v {
@@ -356,7 +365,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 			} else {
 				merged, err := protected.Merge(v)
 				if err != nil {
-					return nil, fmt.Errorf(`jwe.Encrypt: failed to merge headers: %w`, err)
+					return nil, fmt.Errorf(`failed to merge headers: %w`, err)
 				}
 				protected = merged
 			}
@@ -368,30 +377,30 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	// We need to have at least one builder
 	switch l := len(builders); {
 	case l == 0:
-		return nil, fmt.Errorf(`jwe.Encrypt: missing key encryption builders: use jwe.WithKey() to specify one`)
+		return nil, fmt.Errorf(`missing key encryption builders: use jwe.WithKey() to specify one`)
 	case l > 1:
 		if format == fmtCompact {
-			return nil, fmt.Errorf(`jwe.Encrypt: cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
+			return nil, fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
 		}
 	}
 
 	if useRawCEK {
 		if len(builders) != 1 {
-			return nil, fmt.Errorf(`jwe.Encrypt: multiple recipients for ECDH-ES/DIRECT mode supported`)
+			return nil, fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode supported`)
 		}
 	}
 
 	// There is exactly one content encrypter.
 	contentcrypt, err := content_crypt.NewGeneric(calg)
 	if err != nil {
-		return nil, fmt.Errorf(`jwe.Encrypt: failed to create AES encrypter: %w`, err)
+		return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
 	}
 
 	if len(cek) <= 0 {
 		generator := keygen.NewRandom(contentcrypt.KeySize())
 		bk, err := generator.Generate()
 		if err != nil {
-			return nil, fmt.Errorf(`jwe.Encrypt: failed to generate key: %w`, err)
+			return nil, fmt.Errorf(`failed to generate key: %w`, err)
 		}
 		cek = bk.Bytes()
 	}
@@ -401,7 +410,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 		// some builders require hint from the contentcrypt object
 		r, rawCEK, err := builder.Build(cek, calg, contentcrypt)
 		if err != nil {
-			return nil, fmt.Errorf(`jwe.Encrypt: failed to create recipient #%d: %w`, i, err)
+			return nil, fmt.Errorf(`failed to create recipient #%d: %w`, i, err)
 		}
 		recipients[i] = r
 
@@ -417,16 +426,16 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	}
 
 	if err := protected.Set(ContentEncryptionKey, calg); err != nil {
-		return nil, fmt.Errorf(`jwe.Encrypt: failed to set "enc" in protected header: %w`, err)
+		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
 	}
 
 	if compression != jwa.NoCompress() {
 		payload, err = compress(payload)
 		if err != nil {
-			return nil, fmt.Errorf(`jwe.Encrypt: failed to compress payload before encryption: %w`, err)
+			return nil, fmt.Errorf(`failed to compress payload before encryption: %w`, err)
 		}
 		if err := protected.Set(CompressionKey, compression); err != nil {
-			return nil, fmt.Errorf(`jwe.Encrypt: failed to set "zip" in protected header: %w`, err)
+			return nil, fmt.Errorf(`failed to set "zip" in protected header: %w`, err)
 		}
 	}
 
@@ -435,7 +444,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	if len(recipients) == 1 {
 		h, err := protected.Merge(recipients[0].Headers())
 		if err != nil {
-			return nil, fmt.Errorf(`jwe.Encrypt: failed to merge protected headers: %w`, err)
+			return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
 		}
 		protected = h
 	}
@@ -476,7 +485,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	case fmtJSONPretty:
 		return json.MarshalIndent(msg, "", "  ")
 	default:
-		return nil, fmt.Errorf(`jwe.Encrypt: invalid serialization`)
+		return nil, fmt.Errorf(`invalid serialization`)
 	}
 }
 
@@ -520,6 +529,14 @@ type decryptCtx struct {
 //	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
 //	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
+	ret, err := decrypt(buf, options...)
+	if err != nil {
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, err)}
+	}
+	return ret, nil
+}
+
+func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
 	var cek *[]byte
@@ -608,12 +625,13 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dctx.cek = cek
 	dctx.maxDecompressBufferSize = perCallMaxDecompressBufferSize
 
-	var lastError error
 	ctx := context.TODO()
+
+	errs := make([]error, 0, len(recipients))
 	for _, recipient := range recipients {
 		decrypted, err := dctx.try(ctx, recipient, keyUsed)
 		if err != nil {
-			lastError = err
+			errs = append(errs, recipientError{err})
 			continue
 		}
 		if dst != nil {
@@ -623,7 +641,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 		}
 		return decrypted, nil
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients (last error = %w)`, lastError)
+	return nil, fmt.Errorf(`failed to decrypt any of the recipients: %w`, errors.Join(errs...))
 }
 
 func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed interface{}) ([]byte, error) {
@@ -812,30 +830,48 @@ func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 	return parseJSONOrCompact(buf, false)
 }
 
+// errors are wrapped within this function, because we call it directly
+// from Decrypt as well.
 func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
-		return nil, fmt.Errorf(`empty buffer`)
+		return nil, parseError{fmt.Errorf(`jwe.Parse: empty buffer`)}
 	}
 
+	var msg *Message
+	var err error
 	if buf[0] == '{' {
-		return parseJSON(buf, storeProtectedHeaders)
+		msg, err = parseJSON(buf, storeProtectedHeaders)
+	} else {
+		msg, err = parseCompact(buf, storeProtectedHeaders)
 	}
-	return parseCompact(buf, storeProtectedHeaders)
+
+	if err != nil {
+		return nil, parseError{fmt.Errorf(`jwe.Parse: %w`, err)}
+	}
+	return msg, nil
 }
 
 // ParseString is the same as Parse, but takes a string.
 func ParseString(s string) (*Message, error) {
-	return Parse([]byte(s))
+	msg, err := Parse([]byte(s))
+	if err != nil {
+		return nil, parseError{fmt.Errorf(`jwe.ParseString: %w`, err)}
+	}
+	return msg, nil
 }
 
 // ParseReader is the same as Parse, but takes an io.Reader.
 func ParseReader(src io.Reader) (*Message, error) {
 	buf, err := io.ReadAll(src)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to read from io.Reader: %w`, err)
+		return nil, parseError{fmt.Errorf(`jwe.ParseReader: failed to read from io.Reader: %w`, err)}
 	}
-	return Parse(buf)
+	msg, err := Parse(buf)
+	if err != nil {
+		return nil, parseError{fmt.Errorf(`jwe.ParseReader: %w`, err)}
+	}
+	return msg, nil
 }
 
 func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
