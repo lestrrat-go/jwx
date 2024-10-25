@@ -567,6 +567,7 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 		case identMaxDecompressBufferSize{}:
 			perCallMaxDecompressBufferSize = option.Value().(int64)
 		case identContext{}:
+			//nolint:fatcontext
 			ctx = option.Value().(context.Context)
 		}
 	}
