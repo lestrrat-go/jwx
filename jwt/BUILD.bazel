@@ -4,6 +4,7 @@ go_library(
     name = "jwt",
     srcs = [
         "builder_gen.go",
+        "errors.go",
         "http.go",
         "interface.go",
         "io.go",
