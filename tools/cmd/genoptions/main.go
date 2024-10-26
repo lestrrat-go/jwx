@@ -119,7 +119,7 @@ func _main() error {
 	})
 
 	if err := genOptions(&objects); err != nil {
-		return fmt.Errorf(`failed to generate %q`, objects.Output)
+		return fmt.Errorf(`failed to generate %q: %w`, objects.Output, err)
 	}
 
 	if err := genOptionTests(&objects); err != nil {

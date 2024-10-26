@@ -3,6 +3,7 @@
 package jwe
 
 import (
+	"context"
 	"io/fs"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -141,6 +142,7 @@ type identCBCBufferSize struct{}
 type identCEK struct{}
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
+type identContext struct{}
 type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
@@ -169,6 +171,10 @@ func (identCompress) String() string {
 
 func (identContentEncryptionAlgorithm) String() string {
 	return "WithContentEncryption"
+}
+
+func (identContext) String() string {
+	return "WithContext"
 }
 
 func (identFS) String() string {
@@ -255,6 +261,12 @@ func WithCompress(v jwa.CompressionAlgorithm) EncryptOption {
 // JWE message content with. If not provided, `jwa.A256GCM` is used.
 func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 	return &encryptOption{option.New(identContentEncryptionAlgorithm{}, v)}
+}
+
+// WithContext specifies the context.Context object to use when decrypting a JWE message.
+// If not provided, context.Background() will be used.
+func WithContext(v context.Context) DecryptOption {
+	return &decryptOption{option.New(identContext{}, v)}
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.
