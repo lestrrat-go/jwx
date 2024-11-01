@@ -250,3 +250,14 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v3/discussions)
 * Lots of code, especially JWE was initially taken from go-jose library (https://github.com/square/go-jose)
 * Lots of individual contributors have helped this project over the years. Thank each and everyone of you very much.
 
+# Quid pro quo
+
+If you use this software to build products in a for-profit organization, we ask you to _consider_
+contributing back to FOSS in the following manner:
+
+* For every 100 employees (direct hires) of your organization, please consider contributing minimum of $1 every year to either this project, **or** another FOSS projects that this project uses. For example, for 100 employees, we ask you contribute $100 yearly; for 10,000 employees, we ask you contribute $10,000 yearly.
+* If possible, please make this information public. You do not need to disclose the amount you are contributing, but please make the information that you are contributing to particular FOSS projects public. For this project, please consider writing your name on the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)
+
+This is _NOT_ a licensing term: you are still free to use this software according to the license it
+comes with. This clause is only a plea for people to acknowledge the work from FOSS developers whose
+work you rely on each and everyday.
