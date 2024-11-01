@@ -255,7 +255,7 @@ Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v3/discussions)
 If you use this software to build products in a for-profit organization, we ask you to _consider_
 contributing back to FOSS in the following manner:
 
-* For every 100 employees (direct hires) of your organization, please consider contributing minimum of $5 every year to either this project, **or** another FOSS projects that this project uses. For example, for 100 employees, we ask you contribute $500 yearly; for 10,000 employees, we ask you contribute $50000 yearly.
+* For every 100 employees (direct hires) of your organization, please consider contributing minimum of $1 every year to either this project, **or** another FOSS projects that this project uses. For example, for 100 employees, we ask you contribute $100 yearly; for 10,000 employees, we ask you contribute $10,000 yearly.
 * If possible, please make this information public. You do not need to disclose the amount you are contributing, but please make the information that you are contributing to particular FOSS projects public. For this project, please consider writing your name on the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)
 
 This is _NOT_ a licensing term: you are still free to use this software according to the license it
