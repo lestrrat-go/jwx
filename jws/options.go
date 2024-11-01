@@ -6,16 +6,7 @@ import (
 	"github.com/lestrrat-go/option"
 )
 
-type identHeaders struct{}
 type identInsecureNoSignature struct{}
-
-// WithHeaders is deprecated. See WithProtectedHeaders to specify
-// headers to include in the jws signature.
-//
-// Using this option has NO EFFECT.
-func WithHeaders(h Headers) SignOption {
-	return &signOption{option.New(identHeaders{}, h)}
-}
 
 // WithJSON specifies that the result of `jws.Sign()` is serialized in
 // JSON format.
