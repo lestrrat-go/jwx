@@ -361,7 +361,6 @@ func WithCompact() SignVerifyParseOption {
 
 // WithUseDefault specifies that if and only if a jwk.Key contains
 // exactly one jwk.Key, that key should be used.
-// (I think this should be removed)
 func WithUseDefault(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
 }

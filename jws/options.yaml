@@ -148,7 +148,6 @@ options:
     comment: |
       WithUseDefault specifies that if and only if a jwk.Key contains
       exactly one jwk.Key, that key should be used.
-      (I think this should be removed)
   - ident: RequireKid
     interface: WithKeySetSuboption
     argument_type: bool
