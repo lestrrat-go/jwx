@@ -53,7 +53,7 @@ func (e errStep) Serialize(_ SerializeCtx, _ interface{}) (interface{}, error) {
 //
 //	serialized, err := jwt.NewSerializer().
 //	   Sign(jwa.RS256, key).
-//	   Encrypt(jwa.RSA_OAEP, key.PublicKey).
+//	   Encrypt(jwe.WithEncryptOption(jwe.WithKey(jwa.RSA_OAEP(), publicKey))).
 //	   Serialize(token)
 //
 // The `jwt.Sign()` function is equivalent to
