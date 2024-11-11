@@ -41,6 +41,7 @@ linters:
     - nonamedreturns # visit this back later
     - paralleltest
     - perfsprint
+    - recvcheck
     - tagliatelle
     - testifylint # TODO: revisit when we have the chance
     - testpackage
