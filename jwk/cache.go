@@ -229,6 +229,7 @@ func (c *Cache) Unregister(ctx context.Context, u string) error {
 // Make sure that you read the documentation for `jwk.Cache` as well.
 type CachedSet interface {
 	Set
+	cached() (Set, error) // used as a marker
 }
 
 type cachedSet struct {
