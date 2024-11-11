@@ -111,20 +111,20 @@ func TokenExpiredError() error {
 	return errDefaultTokenExpired
 }
 
-type invalidIssuedAt struct {
+type invalidIssuedAtError struct {
 	error
 }
 
-func (err invalidIssuedAt) Is(target error) bool {
-	_, ok := target.(invalidIssuedAt)
+func (err invalidIssuedAtError) Is(target error) bool {
+	_, ok := target.(invalidIssuedAtError)
 	return ok
 }
 
-func (err invalidIssuedAt) Unwrap() error {
+func (err invalidIssuedAtError) Unwrap() error {
 	return err.error
 }
 
-var errDefaultInvalidIssuedAt = invalidIssuedAt{errors.New(`"iat" not satisfied`)}
+var errDefaultInvalidIssuedAt = invalidIssuedAtError{errors.New(`"iat" not satisfied`)}
 
 // InvalidIssuedAtError returns the immutable error used when `iat` claim
 // is not satisfied
