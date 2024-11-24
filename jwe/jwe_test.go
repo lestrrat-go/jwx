@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -784,7 +785,7 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 
 	// NOTE: HAS GLOBAL EFFECT
 	// Should allow for timeout to occur
-	jwe.Settings(jwe.WithMaxPBES2Count(100000000000000000))
+	jwe.Settings(jwe.WithMaxPBES2Count(math.MaxInt32))
 
 	// put it back to normal after the test
 	defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
