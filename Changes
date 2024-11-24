@@ -4,6 +4,9 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.1.3 24 Nov 2024
+  * [jwe] Test has been fixed to work under 32-bit systems.
+
 v2.1.2 25 Oct 2024
   * [jwt] `jwt.ParseRequest` now uses %w to embed errors returned from
     `jwt.ParseHeader`, `jwt.ParseCookie`, and `jwt.ParseForm`, allowing
