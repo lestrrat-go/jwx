@@ -313,11 +313,6 @@ func WithMergeProtectedHeaders(v bool) EncryptOption {
 // WithMessage provides a message object to be populated by `jwe.Decrypt`
 // Using this option allows you to decrypt AND obtain the `jwe.Message`
 // in one go.
-//
-// Note that you should NOT be using the message object for anything other
-// than inspecting its contents. Particularly, do not expect the message
-// reliable when you call `Decrypt` on it. `(jwe.Message).Decrypt` is
-// slated to be deprecated in the next major version.
 func WithMessage(v *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, v)}
 }
