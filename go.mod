@@ -9,7 +9,7 @@ require (
 	github.com/lestrrat-go/httprc/v3 v3.0.0-beta1
 	github.com/lestrrat-go/option v1.0.1
 	github.com/segmentio/asm v1.2.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.29.0
 )
 
