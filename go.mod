@@ -4,7 +4,7 @@ go 1.22.6
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
-	github.com/goccy/go-json v0.10.3
+	github.com/goccy/go-json v0.10.4
 	github.com/lestrrat-go/blackmagic v1.0.2
 	github.com/lestrrat-go/httprc/v3 v3.0.0-beta1
 	github.com/lestrrat-go/option v1.0.1
