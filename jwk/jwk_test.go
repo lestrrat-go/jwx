@@ -7,6 +7,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -2002,5 +2003,39 @@ func TestParse_fail(t *testing.T) {
 			require.ErrorIs(t, err, jwk.ParseError(), `error should be ParseError`)
 			require.True(t, strings.HasPrefix(err.Error(), `jwk.ParseReader: `))
 		})
+	})
+}
+
+func TestGH1262(t *testing.T) {
+	t.Run("x25519", func(t *testing.T) {
+		key, err := jwxtest.GenerateX25519Key()
+		require.NoError(t, err, `jwx.GenerateX25519Key should succeed`)
+
+		imported, err := jwk.Import(key)
+		require.NoError(t, err, `jwk.Import should succeed`)
+		require.Equal(t, imported.KeyType(), jwa.OKP(), `key type should be OKP`)
+	})
+	t.Run("elliptic", func(t *testing.T) {
+		for _, curve := range []elliptic.Curve{elliptic.P256(), elliptic.P384(), elliptic.P521()} {
+			expectedAlg, err := ourecdsa.AlgorithmFromCurve(curve)
+			require.NoError(t, err, `ourecdsa.AlgorithmFromCurve should succeed`)
+
+			var alg jwa.EllipticCurveAlgorithm
+			key1, err := ecdsa.GenerateKey(curve, rand.Reader)
+			require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
+			pub1 := &key1.PublicKey
+			key2, err := key1.ECDH()
+			require.NoError(t, err, `key1.ECDH should succeed`)
+			pub2, err := pub1.ECDH()
+			require.NoError(t, err, `pub1.ECDH should succeed`)
+
+			for _, key := range []any{key1, pub1, key2, pub2} {
+				imported, err := jwk.Import(key)
+				require.NoError(t, err, `jwk.Import should succeed`)
+				require.Equal(t, imported.KeyType(), jwa.EC(), `key type should be EC`)
+				require.NoError(t, imported.Get(jwk.ECDSACrvKey, &alg), `calling Get should succeed`)
+				require.Equal(t, alg, expectedAlg, `alg should be P384`)
+			}
+		}
 	})
 }

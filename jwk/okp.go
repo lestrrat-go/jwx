@@ -68,6 +68,10 @@ func (k *okpPrivateKey) Import(rawKeyIf interface{}) error {
 		// k.d = rawKey.Seed()
 		k.d = rawKey.Bytes()
 		k.x = rawKey.PublicKey().Bytes()
+		if len(k.d) != 32 {
+			return fmt.Errorf(`invalid x25519 curve`)
+		}
+		//		fmt.Printf("\nrawkey.d length = %d\n", len(rawKey.Bytes()))
 		crv = jwa.X25519()
 		k.crv = &crv
 	default:
