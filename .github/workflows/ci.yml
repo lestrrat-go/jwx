@@ -42,7 +42,11 @@ jobs:
         run: make tidy
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
-      - uses: bazelbuild/setup-bazelisk@v3
+      - uses: bazel-contrib/setup-bazel@529dbc2648ea79358c64f2bfa5f3ec98f07859e4 # v0.12.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
       - run: bazel run //:gazelle-update-repos
       - name: Check difference between generation code and commit code
         run: make check_diffs
