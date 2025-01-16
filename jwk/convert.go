@@ -373,21 +373,21 @@ func Export(key Key, dst interface{}) error {
 	muKeyExporters.RLock()
 	exporters, ok := keyExporters[key.KeyType()]
 	muKeyExporters.RUnlock()
-	if ok {
-		for _, conv := range exporters {
-			v, err := conv.Export(key, dst)
-			if err != nil {
-				if errors.Is(err, ContinueError()) {
-					continue
-				}
-				return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
-			}
-
-			if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-				return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
-			}
-			return nil
-		}
+	if !ok {
+		return fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
 	}
-	return fmt.Errorf(`jwk.Export: failed to find exporter for key type '%T'`, key)
+	for _, conv := range exporters {
+		v, err := conv.Export(key, dst)
+		if err != nil {
+			if errors.Is(err, ContinueError()) {
+				continue
+			}
+			return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
+		}
+		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+			return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
+		}
+		return nil
+	}
+	return fmt.Errorf(`jwk.Export: no suitable exporter found for key type '%T'`, key)
 }
