@@ -614,7 +614,7 @@ func TestSignTyp(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := os.CreateTemp("", "test-read-file-*.jwt")
+	f, err := os.CreateTemp(t.TempDir(), "test-read-file-*.jwt")
 	require.NoError(t, err, `os.CreateTemp should succeed`)
 	defer f.Close()
 
