@@ -179,7 +179,7 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 			isECDH = true
 		default:
 			rv := reflect.ValueOf(hint)
-			//nolint:review
+			//nolint:revive
 			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
 				// pointer to an interface value, presumably they want us to dynamically
 				// create an object of the right type
