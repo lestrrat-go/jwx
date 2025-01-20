@@ -89,8 +89,6 @@ func TestDecoderSetting(t *testing.T) {
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
-	t.Parallel()
-
 	if testing.Short() {
 		t.Logf("Skipped during short tests")
 		return
@@ -101,8 +99,11 @@ func TestJoseCompatibility(t *testing.T) {
 		return
 	}
 
+	// latchset/jose uses a larger p2c count than we allow
+	jwe.Settings(jwe.WithMaxPBES2Count(32768))
+	t.Cleanup(func() { jwe.Settings(jwe.WithMaxPBES2Count(10000)) })
+
 	t.Run("jwk", func(t *testing.T) {
-		t.Parallel()
 		testcases := []struct {
 			Name      string
 			Raw       interface{}
@@ -140,8 +141,6 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				t.Parallel()
-
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -173,8 +172,6 @@ func TestJoseCompatibility(t *testing.T) {
 		// In order to avoid doing this in an ad-hoc way, we're just going to
 		// ask our jose package for the algorithms that it supports, and generate
 		// the list dynamically
-
-		t.Parallel()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		set, err := jose.Algorithms(ctx, t)
@@ -233,7 +230,6 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jws", func(t *testing.T) {
-		t.Parallel()
 		tests := []jwa.SignatureAlgorithm{
 			jwa.ES256,
 			//jwa.ES256K,
@@ -253,7 +249,6 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, test := range tests {
 			test := test
 			t.Run(test.String(), func(t *testing.T) {
-				t.Parallel()
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				joseJwsInteropTest(ctx, test, t)
@@ -329,7 +324,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 		}
 	})
 	t.Run("Encrypt with jwx, Decrypt with jose", func(t *testing.T) {
-		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress)
+		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, t.TempDir(), expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress)
 		if !assert.NoError(t, err, `jwxtest.EncryptJweFile should succeed`) {
 			return
 		}
@@ -383,7 +378,7 @@ func joseJwsInteropTest(ctx context.Context, alg jwa.SignatureAlgorithm, t *test
 		}
 	})
 	t.Run("Sign with jwx, Verify with jose", func(t *testing.T) {
-		jwxCryptFile, jwxCryptCleanup, err := jwxtest.SignJwsFile(ctx, expected, alg, joseJwkFile)
+		jwxCryptFile, jwxCryptCleanup, err := jwxtest.SignJwsFile(ctx, t.TempDir(), expected, alg, joseJwkFile)
 		if !assert.NoError(t, err, `jwxtest.SignJwsFile should succeed`) {
 			return
 		}
