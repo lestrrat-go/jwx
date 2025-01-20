@@ -104,7 +104,6 @@ func TestJoseCompatibility(t *testing.T) {
 	t.Cleanup(func() { jwe.Settings(jwe.WithMaxPBES2Count(10000)) })
 
 	t.Run("jwk", func(t *testing.T) {
-		t.Parallel()
 		testcases := []struct {
 			Name      string
 			Raw       interface{}
@@ -142,8 +141,6 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, tc := range testcases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
-				t.Parallel()
-
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -175,8 +172,6 @@ func TestJoseCompatibility(t *testing.T) {
 		// In order to avoid doing this in an ad-hoc way, we're just going to
 		// ask our jose package for the algorithms that it supports, and generate
 		// the list dynamically
-
-		t.Parallel()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		set, err := jose.Algorithms(ctx, t)
@@ -235,7 +230,6 @@ func TestJoseCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("jws", func(t *testing.T) {
-		t.Parallel()
 		tests := []jwa.SignatureAlgorithm{
 			jwa.ES256,
 			//jwa.ES256K,
@@ -255,7 +249,6 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, test := range tests {
 			test := test
 			t.Run(test.String(), func(t *testing.T) {
-				t.Parallel()
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				joseJwsInteropTest(ctx, test, t)
