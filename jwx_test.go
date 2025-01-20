@@ -101,7 +101,7 @@ func TestJoseCompatibility(t *testing.T) {
 
 	// latchset/jose uses a larger p2c count than we allow
 	jwe.Settings(jwe.WithMaxPBES2Count(32768))
-	defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+	t.Cleanup(func() { jwe.Settings(jwe.WithMaxPBES2Count(10000)) })
 
 	t.Run("jwk", func(t *testing.T) {
 		t.Parallel()
