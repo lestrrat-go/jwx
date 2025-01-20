@@ -923,7 +923,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := os.CreateTemp("", "test-read-file-*.jws")
+	f, err := os.CreateTemp(t.TempDir(), "test-read-file-*.jws")
 	require.NoError(t, err, `io.CreateTemp should succeed`)
 	defer f.Close()
 
