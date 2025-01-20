@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -88,6 +89,11 @@ func TestDecoderSetting(t *testing.T) {
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
+	if os.Getenv(`JWX_ENABLE_JOSE_COMPATIBLITY_TESTS`) == "" {
+		t.Logf("This test is skipped for v1 -- v1 does not have the ability to allow higher number of 'p2c', but new latchset/jose sets it to 32768")
+		return
+	}
+
 	t.Parallel()
 
 	if testing.Short() {
