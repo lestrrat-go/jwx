@@ -329,7 +329,7 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 		}
 	})
 	t.Run("Encrypt with jwx, Decrypt with jose", func(t *testing.T) {
-		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress)
+		jwxCryptFile, jwxCryptCleanup, err := jwxtest.EncryptJweFile(ctx, t.TempDir(), expected, spec.alg, joseJwkFile, spec.enc, jwa.NoCompress)
 		if !assert.NoError(t, err, `jwxtest.EncryptJweFile should succeed`) {
 			return
 		}
@@ -383,7 +383,7 @@ func joseJwsInteropTest(ctx context.Context, alg jwa.SignatureAlgorithm, t *test
 		}
 	})
 	t.Run("Sign with jwx, Verify with jose", func(t *testing.T) {
-		jwxCryptFile, jwxCryptCleanup, err := jwxtest.SignJwsFile(ctx, expected, alg, joseJwkFile)
+		jwxCryptFile, jwxCryptCleanup, err := jwxtest.SignJwsFile(ctx, t.TempDir(), expected, alg, joseJwkFile)
 		if !assert.NoError(t, err, `jwxtest.SignJwsFile should succeed`) {
 			return
 		}

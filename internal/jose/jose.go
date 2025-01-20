@@ -125,7 +125,7 @@ func Algorithms(ctx context.Context, t *testing.T) (*AlgorithmSet, error) {
 func GenerateJwk(ctx context.Context, t *testing.T, template string) (string, func(), error) {
 	t.Helper()
 
-	file, cleanup, err := jwxtest.CreateTempFile("jwx-jose-key-*.jwk")
+	file, cleanup, err := jwxtest.CreateTempFile(t.TempDir(), "jwx-jose-key-*.jwk")
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
@@ -158,7 +158,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 
 	var pfile string
 	if len(payload) > 0 {
-		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
+		fn, pcleanup, perr := jwxtest.WriteFile(t.TempDir(), "jwx-jose-payload-*", bytes.NewReader(payload))
 		if perr != nil {
 			return "", nil, fmt.Errorf(`failed to write payload to file: %w`, perr)
 		}
@@ -168,7 +168,7 @@ func EncryptJwe(ctx context.Context, t *testing.T, payload []byte, alg string, k
 		defer pcleanup()
 	}
 
-	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-key-*.jwe`)
+	ofile, ocleanup, oerr := jwxtest.CreateTempFile(t.TempDir(), `jwx-jose-key-*.jwe`)
 	if oerr != nil {
 		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, oerr)
 	}
@@ -205,7 +205,7 @@ func DecryptJwe(ctx context.Context, t *testing.T, cfile, kfile string) ([]byte,
 func FmtJwe(ctx context.Context, t *testing.T, data []byte) ([]byte, error) {
 	t.Helper()
 
-	fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-fmt-data-*", bytes.NewReader(data))
+	fn, pcleanup, perr := jwxtest.WriteFile(t.TempDir(), "jwx-jose-fmt-data-*", bytes.NewReader(data))
 	if perr != nil {
 		return nil, fmt.Errorf(`failed to write data to file: %w`, perr)
 	}
@@ -237,7 +237,7 @@ func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, 
 
 	var pfile string
 	if len(payload) > 0 {
-		fn, pcleanup, perr := jwxtest.WriteFile("jwx-jose-payload-*", bytes.NewReader(payload))
+		fn, pcleanup, perr := jwxtest.WriteFile(t.TempDir(), "jwx-jose-payload-*", bytes.NewReader(payload))
 		if perr != nil {
 			return "", nil, fmt.Errorf(`failed to write payload to file: %w`, perr)
 		}
@@ -247,7 +247,7 @@ func SignJws(ctx context.Context, t *testing.T, payload []byte, keyfile string, 
 		defer pcleanup()
 	}
 
-	ofile, ocleanup, oerr := jwxtest.CreateTempFile(`jwx-jose-sig-*.jws`)
+	ofile, ocleanup, oerr := jwxtest.CreateTempFile(t.TempDir(), `jwx-jose-sig-*.jws`)
 	if oerr != nil {
 		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, oerr)
 	}
