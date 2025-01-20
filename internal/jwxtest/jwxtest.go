@@ -135,8 +135,8 @@ func GenerateX25519Jwk() (jwk.Key, error) {
 	return k, nil
 }
 
-func WriteFile(template string, src io.Reader) (string, func(), error) {
-	file, cleanup, err := CreateTempFile(template)
+func WriteFile(dir, template string, src io.Reader) (string, func(), error) {
+	file, cleanup, err := CreateTempFile(dir, template)
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
@@ -153,14 +153,14 @@ func WriteFile(template string, src io.Reader) (string, func(), error) {
 	return file.Name(), cleanup, nil
 }
 
-func WriteJSONFile(template string, v interface{}) (string, func(), error) {
+func WriteJSONFile(dir, template string, v interface{}) (string, func(), error) {
 	var buf bytes.Buffer
 
 	enc := json.NewEncoder(&buf)
 	if err := enc.Encode(v); err != nil {
 		return "", nil, fmt.Errorf(`failed to encode object to JSON: %w`, err)
 	}
-	return WriteFile(template, &buf)
+	return WriteFile(dir, template, &buf)
 }
 
 func DumpFile(t *testing.T, file string) {
@@ -206,8 +206,8 @@ func DumpFile(t *testing.T, file string) {
 	t.Logf("=== END   %s (formatted JSON) ===", file)
 }
 
-func CreateTempFile(template string) (*os.File, func(), error) {
-	file, err := os.CreateTemp("", template)
+func CreateTempFile(dir, template string) (*os.File, func(), error) {
+	file, err := os.CreateTemp(dir, template)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to create temporary file: %w`, err)
 	}
@@ -268,7 +268,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 	return jwe.Decrypt(buf, jwe.WithKey(alg, rawkey))
 }
 
-func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptionAlgorithm, keyfile string, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) (string, func(), error) {
+func EncryptJweFile(ctx context.Context, dir string, payload []byte, keyalg jwa.KeyEncryptionAlgorithm, keyfile string, contentalg jwa.ContentEncryptionAlgorithm, compressalg jwa.CompressionAlgorithm) (string, func(), error) {
 	key, err := ParseJwkFile(ctx, keyfile)
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to parse keyfile %s: %w`, keyfile, err)
@@ -302,7 +302,7 @@ func EncryptJweFile(ctx context.Context, payload []byte, keyalg jwa.KeyEncryptio
 		return "", nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
-	return WriteFile("jwx-test-*.jwe", bytes.NewReader(buf))
+	return WriteFile(dir, "jwx-test-*.jwe", bytes.NewReader(buf))
 }
 
 func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm, jwkfile string) ([]byte, error) {
@@ -333,7 +333,7 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 	return jws.Verify(buf, jws.WithKey(alg, pubkey))
 }
 
-func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm, keyfile string) (string, func(), error) {
+func SignJwsFile(ctx context.Context, dir string, payload []byte, alg jwa.SignatureAlgorithm, keyfile string) (string, func(), error) {
 	key, err := ParseJwkFile(ctx, keyfile)
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to parse keyfile %s: %w`, keyfile, err)
@@ -344,5 +344,5 @@ func SignJwsFile(ctx context.Context, payload []byte, alg jwa.SignatureAlgorithm
 		return "", nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
 
-	return WriteFile("jwx-test-*.jws", bytes.NewReader(buf))
+	return WriteFile(dir, "jwx-test-*.jws", bytes.NewReader(buf))
 }
