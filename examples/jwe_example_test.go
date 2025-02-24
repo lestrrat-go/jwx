@@ -27,7 +27,7 @@ func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 	return privkey, encrypted, nil
 }
 
-func ExampleJWE_Decrypt() {
+func Example_jwe_decrypt() {
 	privkey, encrypted, err := exampleGenPayload()
 	if err != nil {
 		log.Printf("failed to generate encrypted payload: %s", err)
@@ -47,7 +47,7 @@ func ExampleJWE_Decrypt() {
 	// OUTPUT:
 }
 
-func ExampleJWE_ComplexDecrypt() {
+func Example_jwe_complex_decrypt() {
 	// WARNING: THIS USAGE IS NOT FOR A CASUAL USER. ONLY use it when you must.
 	// Only use it when you understand how JWE is supposed to work. Only use it
 	// when you understand the inner workings of this code.

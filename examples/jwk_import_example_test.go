@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_Import() {
+func Example_jwk_import() {
 	// First, THIS IS THE WRONG WAY TO USE jwk.Import().
 	//
 	// Assume that the file contains a JWK in JSON format

@@ -7,7 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
 
-func ExampleJWE_VerifyWithKey() {
+func Example_jwe_verify_with_key() {
 	const payload = "Lorem ipsum"
 	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPublicKey))
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWE_EncryptJSON() {
+func Example_jwe_encrypt_json() {
 	rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to create raw private key: %s\n", err)
@@ -45,7 +45,7 @@ func ExampleJWE_EncryptJSON() {
 	// Lorem ipsum
 }
 
-func ExampleJWE_EncryptJSONMulti() {
+func Example_jwe_encrypt_json_multi() {
 	var privkeys []jwk.Key
 	var pubkeys []jwk.Key
 

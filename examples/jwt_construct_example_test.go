@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_Construct() {
+func Example_jwt_construct() {
 	tok := jwt.New()
 	if err := tok.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`); err != nil {
 		fmt.Printf("failed to set claim: %s\n", err)

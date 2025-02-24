@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_ParseKey() {
+func Example_jwk_parse_key() {
 	const src = `{
 		"kty":"EC",
     "crv":"P-256",

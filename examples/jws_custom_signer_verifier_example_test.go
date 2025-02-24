@@ -44,7 +44,7 @@ func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif
 	}
 }
 
-func ExampleJWS_CustomSignerVerifier() {
+func Example_jws_custom_signer_verifier() {
 	// This example shows how to register external jws.Signer / jws.Verifier for
 	// a given algorithm.
 	jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(NewCirclEdDSASigner))

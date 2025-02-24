@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_Builder() {
+func Example_jwt_builder() {
 	tok, err := jwt.NewBuilder().
 		Claim(`claim1`, `value1`).
 		Claim(`claim2`, `value2`).

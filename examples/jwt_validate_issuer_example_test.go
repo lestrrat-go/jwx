@@ -7,7 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_ValidateIssuer() {
+func Example_jwt_validate_issuer() {
 	tok, err := jwt.NewBuilder().
 		Issuer(`github.com/lestrrat-go/jwx`).
 		Expiration(time.Now().Add(time.Hour)).

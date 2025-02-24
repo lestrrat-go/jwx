@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func ExampleJWS_Parse() {
+func Example_jws_parse() {
 	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
 
 	msg, err := jws.Parse([]byte(src))

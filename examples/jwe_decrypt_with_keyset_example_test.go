@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWE_VerifyWithJWKSet() {
+func Example_jwe_verify_with_jwk_set() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)
