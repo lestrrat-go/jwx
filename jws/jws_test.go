@@ -1621,11 +1621,12 @@ func TestGH840(t *testing.T) {
 	// Instead of checking the version, we'll just check if the operation fails,
 	// and if it does we won't run the check for jwt.Parse
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
-	if err == nil {
-		require.NoError(t, err, `jwt.Sign should succeed`)
-		_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
-		require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
+	if err != nil {
+		require.Error(t, err, `jwt.Sign should fail`)
 	}
+	require.NoError(t, err, `jwt.Sign should succeed`)
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
+	require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
 }
 
 func TestGH888(t *testing.T) {
