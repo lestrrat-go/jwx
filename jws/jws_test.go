@@ -1703,6 +1703,10 @@ func TestGH681(t *testing.T) {
 func TestGH840(t *testing.T) {
 	// Go 1.19+ panics if elliptic curve operations are called against
 	// a point that's _NOT_ on the curve
+	// As of go1.24.0, generating a signature with a private key that has
+	// X/Y that's not on the curve will fail, but all go < 1.24 will succeed.
+	// Instead of checking the version, we'll just check if the operation fails,
+	// and if it does we won't run the check for jwt.Parse
 	untrustedJWK := []byte(`{
 		"kty": "EC",
 		"crv": "P-256",
@@ -1725,6 +1729,9 @@ func TestGH840(t *testing.T) {
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), privkey))
+	if err != nil {
+		require.Error(t, err, `jwt.Sign should fail`)
+	}
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
 	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256(), pubkey))
