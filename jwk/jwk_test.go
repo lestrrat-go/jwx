@@ -31,7 +31,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1838,6 +1837,13 @@ func TestGH567(t *testing.T) {
 	})
 }
 
+// This test existed to test if we can handle it when the user nukes
+// the private keys' precomputed values. But as of go1.24 the values
+// are validated by the crypto/rsa package, so we just let crypto/rsa
+// Do The Right Thing, and not deal with it. This test is commented out
+// for the time being; we should remove it once we no longer support
+// any of the Go versions that _dont_ validate these values.
+/*
 func TestGH664(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`)
@@ -1875,6 +1881,7 @@ func TestGH664(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestGH730(t *testing.T) {
 	key, err := jwk.Import([]byte(`abracadabra`))

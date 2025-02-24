@@ -89,7 +89,7 @@ func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) 
 
 // End setup
 
-func ExampleShangMiSm2() {
+func Example_shang_mi_sm2() {
 	shangmi2pk, _ := sm2.GenerateKey(rand.Reader)
 
 	// Create a jwk.Key from ShangMi SM2 private key

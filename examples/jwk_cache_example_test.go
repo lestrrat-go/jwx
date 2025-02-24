@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_Cache() {
+func Example_jwk_cache() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`

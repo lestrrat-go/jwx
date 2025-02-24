@@ -68,6 +68,7 @@ func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (
 // jwk.Set objects asynchronously.
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var parseOptions []ParseOption
+	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
 	var client HTTPClient = http.DefaultClient
 	for _, option := range options {

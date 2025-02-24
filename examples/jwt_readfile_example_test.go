@@ -7,7 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_ReadFile() {
+func Example_jwt_readfile() {
 	f, err := os.CreateTemp(``, `jwt_readfile-*.jws`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)

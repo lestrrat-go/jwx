@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func ExampleJWS_VerifyDetachedPayload() {
+func Example_jws_verify_detached_payload() {
 	serialized := `eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk`
 	payload := `$.02`
 

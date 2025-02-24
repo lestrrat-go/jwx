@@ -11,7 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
 
-func ExampleJWE_SignWithHeaders() {
+func Example_jwe_sign_with_headers() {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)

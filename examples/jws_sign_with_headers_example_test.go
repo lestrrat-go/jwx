@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func ExampleJWS_SignWithHeaders() {
+func Example_jws_sign_with_headers() {
 	key, err := jwk.Import([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)

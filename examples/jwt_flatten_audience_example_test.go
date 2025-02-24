@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_FlattenAudience() {
+func Example_jwt_flatten_Audience() {
 	// Sometimes you need to "flatten" the "aud" claim because of
 	// parsers developed by people who apparently didn't read the RFC.
 	//

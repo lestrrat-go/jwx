@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWT_ValidateValidator() {
+func Example_jwt_validate_validator() {
 	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
 		iat, ok := t.IssuedAt()
 		if !ok {

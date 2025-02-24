@@ -13,7 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func ExampleJWX() {
+func Example() {
 	// Parse, serialize, slice and dice JWKs!
 	privkey, err := jwk.ParseKey(jsonRSAPrivateKey)
 	if err != nil {

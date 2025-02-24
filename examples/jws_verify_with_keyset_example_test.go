@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func ExampleJWS_VerifyWithJWKSet() {
+func Example_jws_verify_with_jwk_set() {
 	// Setup payload first...
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

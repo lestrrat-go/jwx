@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func ExampleJWS_VerifyWithKey() {
+func Example_jws_verify_with_key() {
 	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
 	key, err := jwk.Import([]byte(`abracadabra`))
