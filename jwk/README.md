@@ -41,7 +41,7 @@ import (
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_Cache() {
+func Example_jwk_cache() {
   ctx, cancel := context.WithCancel(context.Background())
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
@@ -112,7 +112,7 @@ import (
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func ExampleJWK_Usage() {
+func Example_jwk_usage() {
   // Use jwk.Cache if you intend to keep reuse the JWKS over and over
   set, err := jwk.Fetch(context.Background(), "https://www.googleapis.com/oauth2/v3/certs")
   if err != nil {
@@ -172,7 +172,7 @@ func ExampleJWK_Usage() {
 }
 
 //nolint:govet
-func ExampleJWK_MarshalJSON() {
+func Example_jwk_marshal_json() {
   // JWKs that inherently involve randomness such as RSA and EC keys are
   // not used in this example, because they may produce different results
   // depending on the environment.
