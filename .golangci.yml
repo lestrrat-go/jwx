@@ -92,7 +92,7 @@ issues:
         - forbidigo
     - path: /*_test.go
       text: "var-naming: "
-      litners:
+      linters:
         - revive
 
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
