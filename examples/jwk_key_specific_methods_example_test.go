@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_KeySpecificMethods() {
+func Example_jwk_key_specific_methods() {
 	raw, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate RSA private key: %s\n", err)

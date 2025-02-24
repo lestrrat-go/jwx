@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWTPlainStruct() {
+func Example_jwt_plain_struct() {
 	t1, err := jwt.NewBuilder().
 		Issuer("https://github.com/lestrrat-go/jwx/v2/examples").
 		Subject("raw_struct").

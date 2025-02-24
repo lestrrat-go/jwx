@@ -11,7 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_SerializeJWEJWS() {
+func Example_jwt_serialize_jwe_and_jws() {
 	tok, err := jwt.NewBuilder().
 		Issuer(`github.com/lestrrat-go/jwx`).
 		IssuedAt(time.Unix(aLongLongTimeAgo, 0)).

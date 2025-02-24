@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_ReadFile() {
+func Example_jws_readfile() {
 	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
 	f, err := os.CreateTemp(``, `jws_readfile-*.jws`)
 	if err != nil {

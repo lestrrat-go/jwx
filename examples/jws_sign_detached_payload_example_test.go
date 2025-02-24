@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_SignDetachedPayload() {
+func Example_jws_sign_detached_payload() {
 	payload := `$.02`
 
 	key, err := jwk.FromRaw([]byte(`abracadabra`))

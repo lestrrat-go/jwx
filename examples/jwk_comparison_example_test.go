@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_Comparison() {
+func Example_jwk_comparison() {
 	genKey := func() (jwk.Key, error) {
 		raw, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {

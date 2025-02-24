@@ -14,7 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithJKU() {
+func Example_jwt_parse_with_jku() {
 	set := jwk.NewSet()
 
 	var signingKey jwk.Key

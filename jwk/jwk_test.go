@@ -24,7 +24,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/internal/jose"
 	"github.com/lestrrat-go/jwx/v2/internal/json"
 	"github.com/lestrrat-go/jwx/v2/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v2/jws"
 
 	"github.com/lestrrat-go/jwx/v2/internal/base64"
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -2078,6 +2077,13 @@ func TestCurveForAlgorithm(_ *testing.T) {
 	_, _ = jwk.CurveForAlgorithm(jwa.P521)
 }
 
+// This test existed to test if we can handle it when the user nukes
+// the private keys' precomputed values. But as of go1.24 the values
+// are validated by the crypto/rsa package, so we just let crypto/rsa
+// Do The Right Thing, and not deal with it. This test is commented out
+// for the time being; we should remove it once we no longer support
+// any of the Go versions that _dont_ validate these values.
+/*
 func TestGH664(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
 	if !assert.NoError(t, err, `jwxtext.GenerateRsaKey() should succeed`) {
@@ -2131,6 +2137,7 @@ func TestGH664(t *testing.T) {
 		})
 	}
 }
+*/
 
 func TestGH730(t *testing.T) {
 	key, err := jwk.FromRaw([]byte(`abracadabra`))
