@@ -1623,6 +1623,7 @@ func TestGH840(t *testing.T) {
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
 	if err != nil {
 		require.Error(t, err, `jwt.Sign should fail`)
+		return
 	}
 	require.NoError(t, err, `jwt.Sign should succeed`)
 	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
