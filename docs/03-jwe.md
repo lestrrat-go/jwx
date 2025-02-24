@@ -35,7 +35,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwe"
 )
 
-func ExampleJWE_Parse() {
+func Example_jwe_parse() {
   const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
 
   msg, err := jwe.Parse([]byte(src))
@@ -68,7 +68,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwe"
 )
 
-func ExampleJWE_ReadFile() {
+func Example_jwe_readfile() {
   const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
 
   f, err := os.CreateTemp(``, `jwe_readfile_example-*.jwe`)
@@ -118,7 +118,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWE_Encrypt() {
+func Example_jwe_encrypt() {
   rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     fmt.Printf("failed to create raw private key: %s\n", err)
@@ -176,7 +176,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWE_EncryptJSON() {
+func Example_jwe_encrypt_json() {
   rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     fmt.Printf("failed to create raw private key: %s\n", err)
@@ -211,7 +211,7 @@ func ExampleJWE_EncryptJSON() {
   // Lorem ipsum
 }
 
-func ExampleJWE_EncryptJSONMulti() {
+func Example_jwe_encrypt_json_multi() {
   var privkeys []jwk.Key
   var pubkeys []jwk.Key
 
@@ -289,7 +289,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwe"
 )
 
-func ExampleJWE_SignWithHeaders() {
+func Example_jwe_sign_with_headers() {
   privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
@@ -350,7 +350,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwe"
 )
 
-func ExampleJWE_VerifyWithKey() {
+func Example_jwe_verify_with_key() {
   const payload = "Lorem ipsum"
   encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP, jwkRSAPublicKey))
   if err != nil {
@@ -396,7 +396,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWE_VerifyWithJWKSet() {
+func Example_jwe_verify_with_jwk_set() {
   privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)

@@ -75,7 +75,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ParseJWKS() {
+func Example_jwk_parse_jwks() {
   const src = `{
     "keys": [
       {"kty":"EC",
@@ -122,7 +122,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ParseKey() {
+func Example_jwk_parse_key() {
   const src = `{
     "kty":"EC",
     "crv":"P-256",
@@ -162,7 +162,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ParseWithPEM() {
+func Example_jwk_parse_with_pem() {
   const src = `-----BEGIN CERTIFICATE-----
 MIIEljCCAn4CCQCTQBoGDvUbQTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJK
 UDAeFw0yMTA0MDEwMDE4MjhaFw0yMjA0MDEwMDE4MjhaMA0xCzAJBgNVBAYTAkpQ
@@ -221,7 +221,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ReadFile() {
+func Example_jwk_readfile() {
   const src = `{
     "keys": [
       {"kty":"EC",
@@ -277,7 +277,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ReadFileWithPEM() {
+func Example_jwk_readfile_with_pem() {
   const src = `-----BEGIN CERTIFICATE-----
 MIIEljCCAn4CCQCTQBoGDvUbQTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJK
 UDAeFw0yMTA0MDEwMDE4MjhaFw0yMjA0MDEwMDE4MjhaMA0xCzAJBgNVBAYTAkpQ
@@ -372,7 +372,7 @@ type Proxy struct {
   Key json.RawMessage `json:"key"`
 }
 
-func ExampleJWK_StructField() {
+func Example_jwk_struct_field() {
   const src = `{
     "key": {
       "kty":"EC",
@@ -443,7 +443,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_FromRaw() {
+func Example_jwk_from_raw() {
   // First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
   //
   // Assume that the file contains a JWK in JSON format
@@ -549,7 +549,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_Fetch() {
+func Example_jwk_fetch() {
   srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     fmt.Fprintf(w, `{
@@ -612,8 +612,9 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_Cache() {
+func Example_jwk_cache() {
   ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
@@ -689,7 +690,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWK_CachedSet() {
+func Example_jwk_cached_set() {
   ctx, cancel := context.WithCancel(context.Background())
   defer cancel()
 
@@ -748,7 +749,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_Whitelist() {
+func Example_jwk_whitelist() {
   srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     fmt.Fprintf(w, `{
@@ -839,7 +840,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_KeySpecificMethods() {
+func Example_jwk_key_specific_methods() {
   raw, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
     fmt.Printf("failed to generate RSA private key: %s\n", err)

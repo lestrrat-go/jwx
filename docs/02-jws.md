@@ -47,7 +47,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_Parse() {
+func Example_jws_parse() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
 
   msg, err := jws.Parse([]byte(src))
@@ -80,7 +80,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_ReadFile() {
+func Example_jws_readfile() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
   f, err := os.CreateTemp(``, `jws_readfile-*.jws`)
   if err != nil {
@@ -128,7 +128,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWS_UseJWSHeader() {
+func Example_jws_use_header() {
   key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf(`failed to create new symmetric key: %s`, err)
@@ -188,7 +188,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_Sign() {
+func Example_jws_sign() {
   key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
@@ -226,7 +226,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_SignJSON() {
+func Example_jws_sign_json() {
   var keys []jwk.Key
 
   for i := 0; i < 3; i++ {
@@ -273,7 +273,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_SignDetachedPayload() {
+func Example_jws_sign_detached_payload() {
   payload := `$.02`
 
   key, err := jwk.FromRaw([]byte(`abracadabra`))
@@ -316,7 +316,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_SignWithHeaders() {
+func Example_jws_sign_with_headers() {
   key, err := jwk.FromRaw([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
@@ -366,7 +366,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_VerifyWithKey() {
+func Example_jws_verify_with_key() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
   key, err := jwk.FromRaw([]byte(`abracadabra`))
@@ -412,7 +412,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_VerifyWithJWKSet() {
+func Example_jws_verify_with_jwk_set() {
   // Setup payload first...
   privkey, err := rsa.GenerateKey(rand.Reader, 2048)
   if err != nil {
@@ -468,7 +468,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_VerifyDetachedPayload() {
+func Example_jws_verify_detached_payload() {
   serialized := `eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk`
   payload := `$.02`
 
@@ -588,7 +588,7 @@ func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif
   }
 }
 
-func ExampleJWS_CustomSignerVerifier() {
+func Example_jws_custom_signer_verifier() {
   // This example shows how to register external jws.Signer / jws.Verifier for
   // a given algorithm.
   jws.RegisterSigner(jwa.EdDSA, jws.SignerFactoryFn(NewCirclEdDSASigner))
