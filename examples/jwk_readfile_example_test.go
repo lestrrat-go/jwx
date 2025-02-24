@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_ReadFile() {
+func Example_jwk_readfile() {
 	const src = `{
 		"keys": [
       {"kty":"EC",

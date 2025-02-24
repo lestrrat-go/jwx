@@ -23,7 +23,7 @@ type Proxy struct {
 	Key json.RawMessage `json:"key"`
 }
 
-func ExampleJWK_StructField() {
+func Example_jwk_struct_field() {
 	const src = `{
     "key": {
       "kty":"EC",

@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWS_SignJSON() {
+func Example_jws_sign_json() {
 	var keys []jwk.Key
 
 	for i := 0; i < 3; i++ {

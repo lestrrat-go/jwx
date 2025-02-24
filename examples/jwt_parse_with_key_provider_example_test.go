@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithKeyProvider_UseToken() {
+func Example_jwt_parse_with_key_provider_use_token() {
 	// This example shows how one might use the information in the JWT to
 	// load different keys.
 
@@ -81,7 +81,7 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
 	//
 }
 
-func ExampleJWT_ParseWithKeyProvider() {
+func Example_jwt_parse_with_key_provider() {
 	// Pretend that this is a storage somewhere (maybe a database) that maps
 	// a signature algorithm to a key
 	store := make(map[jwa.KeyAlgorithm]interface{})

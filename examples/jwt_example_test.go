@@ -23,7 +23,7 @@ const exampleJWTSignedRSA = `eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOj
 const exampleJWTSignedECDSA = `eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSA`
 
 //nolint:govet
-func ExampleJWT_ParseWithJWKS() {
+func Example_jwt_parse_with_jwks() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)
@@ -97,7 +97,7 @@ func ExampleJWT_ParseWithJWKS() {
 }
 
 // This example return a signed jwt
-func ExampleJWT_Sign_WithImportJWK() {
+func Example_jwt_sign_with_import_jwk() {
 
 	// your JWK
 	jwkStr := `{
@@ -146,7 +146,7 @@ func ExampleJWT_Sign_WithImportJWK() {
 	// a signed jwt based on jwk
 }
 
-func ExampleJWT_Sign() {
+func Example_jwt_sign() {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate private key: %s\n", err)
@@ -189,7 +189,7 @@ func ExampleJWT_Sign() {
 	// }
 }
 
-func ExampleJWT_Token() {
+func Example_jwt_token() {
 	t := jwt.New()
 	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)
@@ -225,7 +225,7 @@ func ExampleJWT_Token() {
 	// sub -> 'https://github.com/lestrrat-go/jwx/v2/jwt'
 }
 
-func ExampleJWT_SignToken() {
+func Example_jwt_sign_token() {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Printf("failed to generate private key: %s", err)
@@ -263,7 +263,7 @@ func ExampleJWT_SignToken() {
 	// OUTPUT:
 }
 
-func ExampleJWT_OpenIDToken() {
+func Example_jwt_openid_token() {
 	t := openid.New()
 	t.Set(jwt.SubjectKey, `https://github.com/lestrrat-go/jwx/v2/jwt`)
 	t.Set(jwt.AudienceKey, `Golang Users`)

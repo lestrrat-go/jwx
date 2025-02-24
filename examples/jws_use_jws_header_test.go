@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWS_UseJWSHeader() {
+func Example_jws_use_header() {
 	key, err := jwk.FromRaw([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf(`failed to create new symmetric key: %s`, err)

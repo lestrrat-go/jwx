@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ValidateDetectErrorType() {
+func Example_jwt_validate_detect_error_type() {
 	tok, err := jwt.NewBuilder().
 		Issuer(`github.com/lestrrat-go/jwx`).
 		Expiration(time.Now().Add(-1 * time.Hour)).
