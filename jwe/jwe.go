@@ -886,10 +886,11 @@ func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 }
 
 func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
-	parts := bytes.Split(buf, []byte{'.'})
-	if len(parts) != 5 {
-		return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, len(parts))
+	// Five parts is four separators
+	if count := bytes.Count(buf, []byte{'.'}); count != 4 {
+		return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, count)
 	}
+	parts := bytes.SplitN(buf, []byte{'.'}, 5)
 
 	hdrbuf, err := base64.Decode(parts[0])
 	if err != nil {
