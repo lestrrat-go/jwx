@@ -7,7 +7,7 @@ toolchain go1.23.6
 require (
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 	github.com/urfave/cli/v2 v2.26.0
-	golang.org/x/crypto v0.34.0
+	golang.org/x/crypto v0.35.0
 )
 
 require (
