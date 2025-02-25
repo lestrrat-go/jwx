@@ -1,6 +1,8 @@
 module github.com/lestrrat-go/jwx/v3/examples
 
-go 1.22.6
+go 1.23.0
+
+toolchain go1.23.6
 
 require (
 	github.com/cloudflare/circl v1.3.7
@@ -19,8 +21,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/crypto v0.34.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
