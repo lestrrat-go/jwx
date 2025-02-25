@@ -12,15 +12,15 @@ def go_dependencies():
         name = "com_github_decred_dcrd_crypto_blake256",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/decred/dcrd/crypto/blake256",
-        sum = "h1:7PltbUIQB7u/FfZ39+DGa/ShuMyJ5ilcvdfma9wOH6Y=",
-        version = "v1.0.1",
+        sum = "h1:zPMNGQCm0g4QTY27fOCorQW7EryeQ/U0x++OzVrdms8=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_decred_dcrd_dcrec_secp256k1_v4",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/decred/dcrd/dcrec/secp256k1/v4",
-        sum = "h1:rpfIENRNNilwHwZeG5+P150SMrnNEcHYvcCuK6dPZSg=",
-        version = "v4.3.0",
+        sum = "h1:NMZiJj8QnKe1LgsbDayM4UoHwbvwDRwnI3hwNaAHRnc=",
+        version = "v4.4.0",
     )
     go_repository(
         name = "com_github_goccy_go_json",
