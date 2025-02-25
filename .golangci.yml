@@ -1,5 +1,3 @@
-run:
-
 linters-settings:
   govet:
     enable-all: true
