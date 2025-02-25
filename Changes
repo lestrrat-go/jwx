@@ -4,5 +4,11 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.0-alpha2 25 Feb 2025
+  * Update to work with go1.24
+  * Update tests to work with latest latchset/jose
+  * Fix build pipeline to work with latest golangci-lint
+  * Require go1.23
+
 v3.0.0-alpha1 01 Nov 2024
   * Initial release of v3 line.
