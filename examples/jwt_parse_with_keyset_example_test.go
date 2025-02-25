@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithKeySet() {
+func Example_jwt_parse_with_keyset() {
 	var serialized []byte
 	var signingKey jwk.Key
 	var keyset jwk.Set

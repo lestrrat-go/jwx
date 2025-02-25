@@ -7,7 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_Parse() {
+func Example_jwt_parse() {
 	tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
 	if err != nil {
 		fmt.Printf("%s\n", err)

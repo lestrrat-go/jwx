@@ -9,7 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jws"
 )
 
-func ExampleJWK_CachedSet() {
+func Example_jwk_cached_set() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

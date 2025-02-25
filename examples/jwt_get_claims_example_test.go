@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_GetClaims() {
+func Example_jwt_get_claims() {
 	tok, err := jwt.NewBuilder().
 		IssuedAt(time.Now()).
 		Issuer(`github.com/lestrrat-go/jwx`).

@@ -863,7 +863,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
-	f, err := os.CreateTemp("", "test-read-file-*.jws")
+	f, err := os.CreateTemp(t.TempDir(), "test-read-file-*.jws")
 	require.NoError(t, err, `io.CreateTemp should succeed`)
 	defer f.Close()
 
@@ -1616,9 +1616,16 @@ func TestGH840(t *testing.T) {
 		Build()
 	require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
+	// As of go1.24.0, generating a signature with a private key that has
+	// X/Y that's not on the curve will fail, but all go < 1.24 will succeed.
+	// Instead of checking the version, we'll just check if the operation fails,
+	// and if it does we won't run the check for jwt.Parse
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privkey))
+	if err != nil {
+		require.Error(t, err, `jwt.Sign should fail`)
+		return
+	}
 	require.NoError(t, err, `jwt.Sign should succeed`)
-
 	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256, pubkey))
 	require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
 }

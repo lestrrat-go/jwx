@@ -81,7 +81,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_Parse() {
+func Example_jwt_parse() {
   tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256, jwkSymmetricKey))
   if err != nil {
     fmt.Printf("%s\n", err)
@@ -112,7 +112,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ReadFile() {
+func Example_jwt_readfile() {
   f, err := os.CreateTemp(``, `jwt_readfile-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
@@ -154,7 +154,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseRequest_Authorization() {
+func Example_jwt_parse_request_authorization() {
   req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
   if err != nil {
     fmt.Printf("failed to create request: %s\n", err)
@@ -239,7 +239,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_Construct() {
+func Example_jwt_construct() {
   tok := jwt.New()
   if err := tok.Set(jwt.IssuerKey, `github.com/lestrrat-go/jwx`); err != nil {
     fmt.Printf("failed to set claim: %s\n", err)
@@ -284,7 +284,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_Builder() {
+func Example_jwt_builder() {
   tok, err := jwt.NewBuilder().
     Claim(`claim1`, `value1`).
     Claim(`claim2`, `value2`).
@@ -324,7 +324,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithKey() {
+func Example_jwt_parse_with_key() {
   const keysrc = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
 
   key, err := jwk.ParseKey([]byte(keysrc))
@@ -369,7 +369,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithKeySet() {
+func Example_jwt_parse_with_keyset() {
   var serialized []byte
   var signingKey jwk.Key
   var keyset jwk.Set
@@ -512,7 +512,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithKeyProvider_UseToken() {
+func Example_jwt_parse_with_key_provider_use_token() {
   // This example shows how one might use the information in the JWT to
   // load different keys.
 
@@ -581,7 +581,7 @@ func ExampleJWT_ParseWithKeyProvider_UseToken() {
   //
 }
 
-func ExampleJWT_ParseWithKeyProvider() {
+func Example_jwt_parse_with_key_provider() {
   // Pretend that this is a storage somewhere (maybe a database) that maps
   // a signature algorithm to a key
   store := make(map[jwa.KeyAlgorithm]interface{})
@@ -666,7 +666,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseWithJKU() {
+func Example_jwt_parse_with_jku() {
   set := jwk.NewSet()
 
   var signingKey jwk.Key
@@ -753,7 +753,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_Validate() {
+func Example_validate_jwt() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     Expiration(time.Now().Add(-1 * time.Hour)).
@@ -813,7 +813,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ValidateIssuer() {
+func Example_jwt_validate_issuer() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     Expiration(time.Now().Add(time.Hour)).
@@ -853,7 +853,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ValidateValidator() {
+func Example_jwt_validate_validator() {
   validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
     if t.IssuedAt().Month() != 8 {
       return jwt.NewValidationError(errors.New(`tokens are only valid if issued during August!`))
@@ -900,7 +900,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ValidateDetectErrorType() {
+func Example_jwt_validate_detect_error_type() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     Expiration(time.Now().Add(-1 * time.Hour)).
@@ -982,7 +982,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_SerializeJSON() {
+func Example_jwt_serialize_json() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
@@ -1019,7 +1019,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_SerializeJWS() {
+func Example_jwt_serialize_jws() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
@@ -1085,7 +1085,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_SerializeJWEJWS() {
+func Example_jwt_serialize_jwe_and_jws() {
   tok, err := jwt.NewBuilder().
     Issuer(`github.com/lestrrat-go/jwx`).
     IssuedAt(time.Unix(aLongLongTimeAgo, 0)).
@@ -1164,7 +1164,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_FlattenAudience() {
+func Example_jwt_flatten_audience() {
   // Sometimes you need to "flatten" the "aud" claim because of
   // parsers developed by people who apparently didn't read the RFC.
   //
@@ -1262,7 +1262,7 @@ import (
   "github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWTPlainStruct() {
+func Example_jwt_plain_struct() {
   t1, err := jwt.NewBuilder().
     Issuer("https://github.com/lestrrat-go/jwx/v2/examples").
     Subject("raw_struct").

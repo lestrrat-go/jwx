@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-func ExampleJWT_ParseRequest_Authorization() {
+func Example_jwt_parse_request_authorization() {
 	req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
 	if err != nil {
 		fmt.Printf("failed to create request: %s\n", err)

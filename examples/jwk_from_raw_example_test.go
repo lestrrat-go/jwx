@@ -10,7 +10,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func ExampleJWK_FromRaw() {
+func Example_jwk_from_raw() {
 	// First, THIS IS THE WRONG WAY TO USE jwk.FromRaw().
 	//
 	// Assume that the file contains a JWK in JSON format
