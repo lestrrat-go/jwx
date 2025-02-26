@@ -635,20 +635,22 @@ func parseJSON(data []byte) (result *Message, err error) {
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
-	parts := bytes.Split(src, []byte("."))
-	if len(parts) < 3 {
+	// Three parts is two separators
+	if bytes.Count(src, []byte(".")) != 2 {
 		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
+	parts := bytes.SplitN(src, []byte("."), 3)
 	return parts[0], parts[1], parts[2], nil
 }
 
 // SplitCompactString splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
-	parts := strings.Split(src, ".")
-	if len(parts) < 3 {
+	// Three parts is two separators
+	if strings.Count(src, ".") != 2 {
 		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
+	parts := strings.SplitN(src, ".", 3)
 	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
 }
 
