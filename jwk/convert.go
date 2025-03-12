@@ -155,7 +155,7 @@ func ecdhPrivateKeyToJWK(src interface{}) (Key, error) {
 	case ecdh.PrivateKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to OKP jwk.Key`, src)
+		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
 	}
 
 	switch raw.Curve() {
@@ -198,7 +198,7 @@ func ecdhPublicKeyToJWK(src interface{}) (Key, error) {
 	case ecdh.PublicKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to OKP jwk.Key`, src)
+		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
 	}
 
 	switch raw.Curve() {
