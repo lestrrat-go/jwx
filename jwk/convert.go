@@ -4,13 +4,16 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
+	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -119,18 +122,111 @@ func init() {
 	}
 	{
 		f := KeyImportFunc(okpPrivateKeyToJWK)
-		for _, k := range []interface{}{ed25519.PrivateKey(nil), ecdh.PrivateKey{}, &ecdh.PrivateKey{}} {
+		for _, k := range []interface{}{ed25519.PrivateKey(nil)} {
+			RegisterKeyImporter(k, f)
+		}
+	}
+	{
+		f := KeyImportFunc(ecdhPrivateKeyToJWK)
+		for _, k := range []interface{}{ecdh.PrivateKey{}, &ecdh.PrivateKey{}} {
 			RegisterKeyImporter(k, f)
 		}
 	}
 	{
 		f := KeyImportFunc(okpPublicKeyToJWK)
-		for _, k := range []interface{}{ed25519.PublicKey(nil), ecdh.PublicKey{}, &ecdh.PublicKey{}} {
+		for _, k := range []interface{}{ed25519.PublicKey(nil)} {
 			RegisterKeyImporter(k, f)
 		}
 	}
-
+	{
+		f := KeyImportFunc(ecdhPublicKeyToJWK)
+		for _, k := range []interface{}{ecdh.PublicKey{}, &ecdh.PublicKey{}} {
+			RegisterKeyImporter(k, f)
+		}
+	}
 	RegisterKeyImporter([]byte(nil), KeyImportFunc(bytesToKey))
+}
+
+func ecdhPrivateKeyToJWK(src interface{}) (Key, error) {
+	var raw *ecdh.PrivateKey
+	switch src := src.(type) {
+	case *ecdh.PrivateKey:
+		raw = src
+	case ecdh.PrivateKey:
+		raw = &src
+	default:
+		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
+	}
+
+	switch raw.Curve() {
+	case ecdh.X25519():
+		return okpPrivateKeyToJWK(raw)
+	case ecdh.P256():
+		return ecdhPrivateKeyToECJWK(raw, elliptic.P256())
+	case ecdh.P384():
+		return ecdhPrivateKeyToECJWK(raw, elliptic.P384())
+	case ecdh.P521():
+		return ecdhPrivateKeyToECJWK(raw, elliptic.P521())
+	default:
+		return nil, fmt.Errorf(`unsupported curve %s`, raw.Curve())
+	}
+}
+
+func ecdhPrivateKeyToECJWK(raw *ecdh.PrivateKey, crv elliptic.Curve) (Key, error) {
+	pub := raw.PublicKey()
+	rawpub := pub.Bytes()
+
+	size := ecutil.CalculateKeySize(crv)
+	var x, y, d big.Int
+	x.SetBytes(rawpub[1 : 1+size])
+	y.SetBytes(rawpub[1+size:])
+	d.SetBytes(raw.Bytes())
+
+	var ecdsaPriv ecdsa.PrivateKey
+	ecdsaPriv.Curve = crv
+	ecdsaPriv.D = &d
+	ecdsaPriv.X = &x
+	ecdsaPriv.Y = &y
+	return ecdsaPrivateKeyToJWK(&ecdsaPriv)
+}
+
+func ecdhPublicKeyToJWK(src interface{}) (Key, error) {
+	var raw *ecdh.PublicKey
+	switch src := src.(type) {
+	case *ecdh.PublicKey:
+		raw = src
+	case ecdh.PublicKey:
+		raw = &src
+	default:
+		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
+	}
+
+	switch raw.Curve() {
+	case ecdh.X25519():
+		return okpPublicKeyToJWK(raw)
+	case ecdh.P256():
+		return ecdhPublicKeyToECJWK(raw, elliptic.P256())
+	case ecdh.P384():
+		return ecdhPublicKeyToECJWK(raw, elliptic.P384())
+	case ecdh.P521():
+		return ecdhPublicKeyToECJWK(raw, elliptic.P521())
+	default:
+		return nil, fmt.Errorf(`unsupported curve %s`, raw.Curve())
+	}
+}
+
+func ecdhPublicKeyToECJWK(raw *ecdh.PublicKey, crv elliptic.Curve) (Key, error) {
+	rawbytes := raw.Bytes()
+	size := ecutil.CalculateKeySize(crv)
+	var x, y big.Int
+
+	x.SetBytes(rawbytes[1 : 1+size])
+	y.SetBytes(rawbytes[1+size:])
+	var ecdsaPriv ecdsa.PublicKey
+	ecdsaPriv.Curve = crv
+	ecdsaPriv.X = &x
+	ecdsaPriv.Y = &y
+	return ecdsaPublicKeyToJWK(&ecdsaPriv)
 }
 
 // These may seem a bit repetitive and redandunt, but the problem is that
@@ -277,21 +373,21 @@ func Export(key Key, dst interface{}) error {
 	muKeyExporters.RLock()
 	exporters, ok := keyExporters[key.KeyType()]
 	muKeyExporters.RUnlock()
-	if ok {
-		for _, conv := range exporters {
-			v, err := conv.Export(key, dst)
-			if err != nil {
-				if errors.Is(err, ContinueError()) {
-					continue
-				}
-				return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
-			}
-
-			if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-				return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
-			}
-			return nil
-		}
+	if !ok {
+		return fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
 	}
-	return fmt.Errorf(`jwk.Export: failed to find exporter for key type '%T'`, key)
+	for _, conv := range exporters {
+		v, err := conv.Export(key, dst)
+		if err != nil {
+			if errors.Is(err, ContinueError()) {
+				continue
+			}
+			return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
+		}
+		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
+			return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
+		}
+		return nil
+	}
+	return fmt.Errorf(`jwk.Export: no suitable exporter found for key type '%T'`, key)
 }

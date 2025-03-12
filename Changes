@@ -4,6 +4,11 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.0-alpha3
+  * [jwk] Importing/Exporting from jwk.Key to ecdh.PrivateKey/ecdh.PublicKey should now work. Previously these keys were not properly
+  recognized by the exporter/importer. Note that keys that use X25519 and
+  P256/P384/P521 behave differently: X25519 keys can only be exported to/imported from OKP keys, which P256/P384/P521 can be exported to either ecdsa or ecdh keys.
+
 v3.0.0-alpha2 25 Feb 2025
   * Update to work with go1.24
   * Update tests to work with latest latchset/jose

@@ -2,10 +2,12 @@ package jwk
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
@@ -102,13 +104,59 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	return &ecdsa.PublicKey{Curve: crv, X: &x, Y: &y}, nil
 }
 
+func buildECDHPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecdh.PublicKey, error) {
+	var ecdhcrv ecdh.Curve
+	switch alg {
+	case jwa.X25519():
+		ecdhcrv = ecdh.X25519()
+	case jwa.P256():
+		ecdhcrv = ecdh.P256()
+	case jwa.P384():
+		ecdhcrv = ecdh.P384()
+	case jwa.P521():
+		ecdhcrv = ecdh.P521()
+	default:
+		return nil, fmt.Errorf(`jwk: unsupported ECDH curve %s`, alg)
+	}
+
+	return ecdhcrv.NewPublicKey(append([]byte{0x04}, append(xbuf, ybuf...)...))
+}
+
+func buildECDHPrivateKey(alg jwa.EllipticCurveAlgorithm, dbuf []byte) (*ecdh.PrivateKey, error) {
+	var ecdhcrv ecdh.Curve
+	switch alg {
+	case jwa.X25519():
+		ecdhcrv = ecdh.X25519()
+	case jwa.P256():
+		ecdhcrv = ecdh.P256()
+	case jwa.P384():
+		ecdhcrv = ecdh.P384()
+	case jwa.P521():
+		ecdhcrv = ecdh.P521()
+	default:
+		return nil, fmt.Errorf(`jwk: unsupported ECDH curve %s`, alg)
+	}
+
+	return ecdhcrv.NewPrivateKey(dbuf)
+}
+
 func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
+	var isECDH bool
 	switch k := keyif.(type) {
 	case *ecdsaPublicKey:
 		switch hint.(type) {
-		case ecdsa.PublicKey, *ecdsa.PublicKey, interface{}:
+		case ecdsa.PublicKey, *ecdsa.PublicKey:
+		case ecdh.PublicKey, *ecdh.PublicKey:
+			isECDH = true
 		default:
-			return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+			rv := reflect.ValueOf(hint)
+			//nolint:revive
+			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
+				// pointer to an interface value, presumably they want us to dynamically
+				// create an object of the right type
+			} else {
+				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+			}
 		}
 
 		k.mu.RLock()
@@ -117,13 +165,26 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 		crv, ok := k.Crv()
 		if !ok {
 			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+
+		if isECDH {
+			return buildECDHPublicKey(crv, k.x, k.y)
 		}
 		return buildECDSAPublicKey(crv, k.x, k.y)
 	case *ecdsaPrivateKey:
 		switch hint.(type) {
-		case ecdsa.PrivateKey, *ecdsa.PrivateKey, interface{}:
+		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
+		case ecdh.PrivateKey, *ecdh.PrivateKey:
+			isECDH = true
 		default:
-			return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+			rv := reflect.ValueOf(hint)
+			//nolint:revive
+			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
+				// pointer to an interface value, presumably they want us to dynamically
+				// create an object of the right type
+			} else {
+				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+			}
 		}
 
 		k.mu.RLock()
@@ -132,6 +193,10 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 		crv, ok := k.Crv()
 		if !ok {
 			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+
+		if isECDH {
+			return buildECDHPrivateKey(crv, k.d)
 		}
 		pubk, err := buildECDSAPublicKey(crv, k.x, k.y)
 		if err != nil {

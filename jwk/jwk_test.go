@@ -2004,3 +2004,44 @@ func TestParse_fail(t *testing.T) {
 		})
 	})
 }
+
+func TestGH1262(t *testing.T) {
+	t.Run("Updated Example test", func(t *testing.T) {
+		keyCli, err := ecdh.P384().GenerateKey(rand.Reader)
+		require.NoError(t, err, `ecdh.P384().GenerateKey should succeed`)
+
+		jwkCliPriv, err := jwk.Import(keyCli)
+		require.NoError(t, err, `jwk.Import should succeed`)
+		_ = jwkCliPriv
+
+		var rawCliPriv ecdh.PrivateKey
+		require.NoError(t, jwk.Export(jwkCliPriv, &rawCliPriv), `jwk.Export should succeed`)
+
+		pubCli := keyCli.PublicKey() // server is able to retrieve the pub key part of client
+
+		keySrv, err := ecdh.P384().GenerateKey(rand.Reader)
+		require.NoError(t, err, `ecdh.P384().GenerateKey should succeed`)
+
+		jwkSrv, err := jwk.Import(keySrv.PublicKey())
+		require.NoError(t, err, `jwk.Import should succeed`)
+		jwkBuf, err := json.Marshal(jwkSrv)
+
+		require.NoError(t, err, `json.Marshal should succeed`)
+
+		secretSrv, err := keySrv.ECDH(pubCli)
+		require.NoError(t, err, `keySrv.ECDH should succeed`)
+
+		_ = secretSrv // doing some non-standard encryption & response with encrypted data
+
+		// client
+		pubSrv := &ecdh.PublicKey{}
+		jwkCli, err := jwk.ParseKey(jwkBuf) // extract jwkBuf
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+		require.NoError(t, jwk.Export(jwkCli, pubSrv), `jwk.Export should succeed`)
+		secretCli, err := keyCli.ECDH(pubSrv)
+		require.NoError(t, err, `keyCli.ECDH should succeed`)
+
+		_ = secretCli // doing some non-standard encryption
+	})
+}
