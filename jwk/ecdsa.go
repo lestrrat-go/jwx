@@ -169,9 +169,8 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 
 		if isECDH {
 			return buildECDHPublicKey(crv, k.x, k.y)
-		} else {
-			return buildECDSAPublicKey(crv, k.x, k.y)
 		}
+		return buildECDSAPublicKey(crv, k.x, k.y)
 	case *ecdsaPrivateKey:
 		switch hint.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
