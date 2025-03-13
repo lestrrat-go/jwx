@@ -12,6 +12,7 @@ import (
 )
 
 func TestTimeValidation(t *testing.T) {
+	t.Parallel()
 	// This test is _almost_ identical to TestGH010, but we are now
 	// testing with the default time truncation settings.
 
@@ -409,6 +410,8 @@ func TestTimeValidation(t *testing.T) {
 		require.Error(t, jwt.Validate(t1, jwt.WithClaimValue("xxxx", "")), "t1.Validate should fail")
 	})
 }
+
+//nolint:tparallel
 func TestGH010(t *testing.T) {
 	// This test relies on behavior that was present in v2, but is no longer
 	// present in v3. This requires setting a global value, so we cannot
