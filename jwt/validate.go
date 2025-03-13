@@ -49,7 +49,7 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
 	ctx := context.Background()
-	trunc := time.Second
+	trunc := getDefaultTruncation()
 
 	var clock Clock = ClockFunc(time.Now)
 	var skew time.Duration

@@ -39,6 +39,27 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalValidateOption describes an Option that can be passed to `jwt.Settings()` and `jwt.Validate()`
+type GlobalValidateOption interface {
+	Option
+	globalOption()
+	parseOption()
+	readFileOption()
+	validateOption()
+}
+
+type globalValidateOption struct {
+	Option
+}
+
+func (*globalValidateOption) globalOption() {}
+
+func (*globalValidateOption) parseOption() {}
+
+func (*globalValidateOption) readFileOption() {}
+
+func (*globalValidateOption) validateOption() {}
+
 // ParseOption describes an Option that can be passed to `jwt.Parse()`.
 // ParseOption also implements ReadFileOption, therefore it may be
 // safely pass them to `jwt.ReadFile()`
@@ -388,12 +409,17 @@ func WithToken(v Token) ParseOption {
 }
 
 // WithTruncation specifies the amount that should be used when
-// truncating time values used during time-based validation routines.
-// By default time values are truncated down to second accuracy.
-// If you want to use sub-second accuracy, you will need to set
-// this value to 0.
-func WithTruncation(v time.Duration) ValidateOption {
-	return &validateOption{option.New(identTruncation{}, v)}
+// truncating time values used during time-based validation routines,
+// and by default this is disabled.
+//
+// In v2 of this library, time values were truncated down to second accuracy, i.e.
+// 1.0000001 seconds is truncated to 1 second. To restore this behavior, set
+// this value to `time.Second`
+//
+// Since v3, this option can be passed to `jwt.Settings()` to set the truncation
+// value globally, as well as per invocation of `jwt.Validate()`
+func WithTruncation(v time.Duration) GlobalValidateOption {
+	return &globalValidateOption{option.New(identTruncation{}, v)}
 }
 
 // WithValidate is passed to `Parse()` method to denote that the

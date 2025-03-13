@@ -40,6 +40,14 @@ interfaces:
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
+  - name: GlobalValidateOption
+    methods:
+      - globalOption
+      - parseOption
+      - readFileOption
+      - validateOption
+    comment: |
+      GlobalValidateOption describes an Option that can be passed to `jwt.Settings()` and `jwt.Validate()`
 options:
   - ident: AcceptableSkew
     interface: ValidateOption
@@ -48,14 +56,19 @@ options:
       WithAcceptableSkew specifies the duration in which exp, iat and nbf
       claims may differ by. This value should be positive
   - ident: Truncation
-    interface: ValidateOption
+    interface: GlobalValidateOption
     argument_type: time.Duration
     comment: |
       WithTruncation specifies the amount that should be used when
-      truncating time values used during time-based validation routines.
-      By default time values are truncated down to second accuracy.
-      If you want to use sub-second accuracy, you will need to set
-      this value to 0.
+      truncating time values used during time-based validation routines,
+      and by default this is disabled.
+
+      In v2 of this library, time values were truncated down to second accuracy, i.e.
+      1.0000001 seconds is truncated to 1 second. To restore this behavior, set
+      this value to `time.Second`
+
+      Since v3, this option can be passed to `jwt.Settings()` to set the truncation
+      value globally, as well as per invocation of `jwt.Validate()`
   - ident: Clock
     interface: ValidateOption
     argument_type: Clock

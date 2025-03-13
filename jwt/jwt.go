@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"sync/atomic"
+	"time"
 
 	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -16,16 +17,20 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
+var defaultTruncation atomic.Int64
+
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
 	var flattenAudience bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
-
+	truncation := time.Duration(-1)
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
+		case identTruncation{}:
+			truncation = option.Value().(time.Duration)
 		case identFlattenAudience{}:
 			flattenAudience = option.Value().(bool)
 		case identNumericDateParsePedantic{}:
@@ -78,6 +83,10 @@ func Settings(options ...GlobalOption) {
 			defaultOptions.Disable(FlattenAudience)
 		}
 		defaultOptionsMu.Unlock()
+	}
+
+	if truncation >= 0 {
+		defaultTruncation.Store(int64(truncation))
 	}
 }
 
@@ -502,4 +511,8 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // MarshalJSON and UnmashalJSON.
 func RegisterCustomField(name string, object interface{}) {
 	registry.Register(name, object)
+}
+
+func getDefaultTruncation() time.Duration {
+	return time.Duration(defaultTruncation.Load())
 }
