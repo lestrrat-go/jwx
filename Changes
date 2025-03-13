@@ -4,6 +4,12 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.0-beta1
+  * [jwt] Token validation no longer truncates time based fields by default.
+    To restore old behavior, you can either change the global settings by
+    calling `jwt.Settings(jwt.WithTruncation(time.Second))`, or you can
+    change it by each invocation by using `jwt.Validate(..., jwt.WithTruncation(0))`
+
 v3.0.0-alpha3 13 Mar 2025
   * [jwk] Importing/Exporting from jwk.Key to ecdh.PrivateKey/ecdh.PublicKey should now work. Previously these keys were not properly
   recognized by the exporter/importer. Note that keys that use X25519 and
