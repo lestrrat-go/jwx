@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -49,4 +50,14 @@ func TestSet(t *testing.T) {
 	set.Clear()
 
 	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
+}
+
+func TestSetKeys(t *testing.T) {
+	set := jwk.NewSet()
+	require.NoError(t, set.Set("a", "foo"), `Set should succeed`)
+	require.NoError(t, set.Set("b", "bar"), `Set should succeed`)
+
+	keys := set.Keys()
+	sort.Strings(keys) // sorting is necessary because the order of keys obtained from a regular map is not guaranteed
+	require.EqualValues(t, []string{"a", "b"}, keys, `Keys should return "a" and "b"`)
 }

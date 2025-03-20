@@ -102,7 +102,10 @@ type Set interface {
 	// in set.
 	RemoveKey(Key) error
 
-	// Keys returns the list of keys present in the Set, except for `keys`
+	// Keys returns the list of keys present in the Set, except for `keys`.
+	// e.g. if you had `{"keys": ["a", "b"], "c": .., "d": ...}`, this method would
+	// return `["c", "d"]`. Note that the order of the keys is not guaranteed.
+	//
 	// TODO: name is confusing between this and Key()
 	Keys() []string
 
