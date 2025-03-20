@@ -142,6 +142,7 @@ func (s *set) Keys() []string {
 	var i int
 	for k := range s.privateParams {
 		ret[i] = k
+		i++
 	}
 	return ret
 }

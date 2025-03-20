@@ -50,3 +50,10 @@ func TestSet(t *testing.T) {
 
 	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
 }
+
+func TestSetKeys(t *testing.T) {
+	set := jwk.NewSet()
+	require.NoError(t, set.Set("a", "foo"), `Set should succeed`)
+	require.NoError(t, set.Set("b", "bar"), `Set should succeed`)
+	require.EqualValues(t, []string{"a", "b"}, set.Keys(), `Keys should return "a" and "b"`)
+}
