@@ -10,6 +10,7 @@ linters:
     - errorlint
     - exhaustive
     - exhaustruct
+    - fatcontext
     - funlen
     - gochecknoglobals
     - gochecknoinits
@@ -35,10 +36,14 @@ linters:
     - nonamedreturns
     - paralleltest
     - perfsprint
+    - predeclared
+    - recvcheck
+    - staticcheck # reconsider later
     - tagliatelle
     - testifylint
     - testpackage
     - thelper
+    - usetesting # remove when we use new go
     - varnamelen
     - wrapcheck
     - wsl
