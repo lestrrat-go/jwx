@@ -1,8 +1,16 @@
 package jws
 
 import (
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
+
+// Base64Encoder is an interface that can be used when encoding JWS messages
+// to base64. This is useful when you want to use a custom base64 encoder
+// when generating signatures for verification. For example, apparently AWS
+// ALB User Claims is provided in JWT format, but it uses a base64 encoding
+// with padding.
+type Base64Encoder = base64.Encoder
 
 type DecodeCtx interface {
 	CollectRaw() bool

@@ -100,7 +100,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The first return value is the raw signature in binary format.
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
-func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
+func (s *Signature) Sign(payload []byte, signer Signer, key interface{}, encoder Base64Encoder) ([]byte, []byte, error) {
 	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
@@ -127,13 +127,13 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
-	buf.WriteString(base64.EncodeToString(hdrbuf))
+	buf.WriteString(encoder.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
 
 	var plen int
 	b64 := getB64Value(hdrs)
 	if b64 {
-		encoded := base64.EncodeToString(payload)
+		encoded := encoder.EncodeToString(payload)
 		plen = len(encoded)
 		buf.WriteString(encoded)
 	} else {
@@ -158,7 +158,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	}
 
 	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(signature))
+	buf.WriteString(encoder.EncodeToString(signature))
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 
@@ -466,11 +466,14 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	}
 
 	var detached bool
+	var encoder Base64Encoder = base64.DefaultEncoder()
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identDetached{}:
 			detached = option.Value().(bool)
+		case identBase64Encoder{}:
+			encoder = option.Value().(Base64Encoder)
 		}
 	}
 
@@ -486,12 +489,12 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
-	buf.WriteString(base64.EncodeToString(hdrbuf))
+	buf.WriteString(encoder.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
 
 	if !detached {
 		if getB64Value(hdrs) {
-			encoded := base64.EncodeToString(msg.payload)
+			encoded := encoder.EncodeToString(msg.payload)
 			buf.WriteString(encoded)
 		} else {
 			if bytes.Contains(msg.payload, []byte{'.'}) {
@@ -502,7 +505,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	}
 
 	buf.WriteByte('.')
-	buf.WriteString(base64.EncodeToString(s.signature))
+	buf.WriteString(encoder.EncodeToString(s.signature))
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

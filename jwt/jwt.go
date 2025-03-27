@@ -201,7 +201,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 
 		//nolint:forcetypeassert
 		switch o.Ident() {
-		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}:
+		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
 			token, ok := o.Value().(Token)

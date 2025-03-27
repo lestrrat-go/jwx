@@ -59,6 +59,28 @@ type signOption struct {
 
 func (*signOption) signOption() {}
 
+// SignVerifyCompactOption describes options that can be passed to either `jws.Verify`,
+// `jws.Sign`, or `jws.Compact`
+type SignVerifyCompactOption interface {
+	Option
+	signOption()
+	verifyOption()
+	compactOption()
+	parseOption()
+}
+
+type signVerifyCompactOption struct {
+	Option
+}
+
+func (*signVerifyCompactOption) signOption() {}
+
+func (*signVerifyCompactOption) verifyOption() {}
+
+func (*signVerifyCompactOption) compactOption() {}
+
+func (*signVerifyCompactOption) parseOption() {}
+
 // SignVerifyOption describes options that can be passed to either `jws.Verify` or `jws.Sign`
 type SignVerifyOption interface {
 	Option
@@ -149,6 +171,7 @@ type withKeySuboption struct {
 
 func (*withKeySuboption) withKeySuboption() {}
 
+type identBase64Encoder struct{}
 type identContext struct{}
 type identDetached struct{}
 type identDetachedPayload struct{}
@@ -166,6 +189,10 @@ type identRequireKid struct{}
 type identSerialization struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
+
+func (identBase64Encoder) String() string {
+	return "WithBase64Encoder"
+}
 
 func (identContext) String() string {
 	return "WithContext"
@@ -233,6 +260,12 @@ func (identUseDefault) String() string {
 
 func (identValidateKey) String() string {
 	return "WithValidateKey"
+}
+
+// WithBase64Encoder specifies the base64 encoder to be used when decoding
+// the JWS message. By default, the raw URL base64 encoding (no padding) is used.
+func WithBase64Encoder(v Base64Encoder) SignVerifyCompactOption {
+	return &signVerifyCompactOption{option.New(identBase64Encoder{}, v)}
 }
 
 func WithContext(v context.Context) VerifyOption {

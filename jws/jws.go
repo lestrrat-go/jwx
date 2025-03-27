@@ -171,6 +171,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var detached bool
 	var noneSignature *payloadSigner
 	var validateKey bool
+	var encoder Base64Encoder = base64.DefaultEncoder()
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
@@ -209,6 +210,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			payload = option.Value().([]byte)
 		case identValidateKey{}:
 			validateKey = option.Value().(bool)
+		case identBase64Encoder{}:
+			encoder = option.Value().(Base64Encoder)
 		}
 	}
 
@@ -269,7 +272,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, signerr(`failed to validate key before signing: %w`, err)
 			}
 		}
-		_, _, err := sig.Sign(payload, signer.signer, signer.key)
+		_, _, err := sig.Sign(payload, signer.signer, signer.key, encoder)
 		if err != nil {
 			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
 		}
@@ -288,6 +291,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		var compactOpts []CompactOption
 		if detached {
 			compactOpts = append(compactOpts, WithDetached(detached))
+		}
+		//nolint:forcetypeassert
+		for _, option := range options {
+			if copt, ok := option.(CompactOption); ok {
+				compactOpts = append(compactOpts, copt)
+			}
 		}
 		return Compact(&result, compactOpts...)
 	default:
@@ -328,6 +337,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var keyProviders []KeyProvider
 	var keyUsed interface{}
 	var validateKey bool
+	var encoder Base64Encoder = base64.DefaultEncoder()
 
 	ctx := context.Background()
 
@@ -359,6 +369,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			validateKey = option.Value().(bool)
 		case identSerialization{}:
 			parseOptions = append(parseOptions, option.(ParseOption))
+		case identBase64Encoder{}:
+			encoder = option.Value().(Base64Encoder)
 		default:
 			return nil, verifyerr(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -385,7 +397,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	// Pre-compute the base64 encoded version of payload
 	var payload string
 	if msg.b64 {
-		payload = base64.EncodeToString(msg.payload)
+		payload = encoder.EncodeToString(msg.payload)
 	} else {
 		payload = string(msg.payload)
 	}
@@ -400,7 +412,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		var encodedProtectedHeader string
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
-				encodedProtectedHeader = base64.EncodeToString(raw)
+				encodedProtectedHeader = encoder.EncodeToString(raw)
 			}
 		}
 
@@ -410,7 +422,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				return nil, verifyerr(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
 
-			encodedProtectedHeader = base64.EncodeToString(protected)
+			encodedProtectedHeader = encoder.EncodeToString(protected)
 		}
 
 		verifyBuf.WriteString(encodedProtectedHeader)
