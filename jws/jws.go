@@ -292,7 +292,6 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		if detached {
 			compactOpts = append(compactOpts, WithDetached(detached))
 		}
-		//nolint:forcetypeassert
 		for _, option := range options {
 			if copt, ok := option.(CompactOption); ok {
 				compactOpts = append(compactOpts, copt)
