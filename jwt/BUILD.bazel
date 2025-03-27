@@ -29,7 +29,6 @@ go_library(
         "//jwk",
         "//jws",
         "//jwt/internal/types",
-        "//jwt/openid",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
         "@com_github_lestrrat_go_option//:option",
     ],

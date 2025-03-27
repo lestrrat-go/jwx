@@ -1,6 +1,11 @@
 package openid_test
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"testing"
@@ -661,4 +666,120 @@ func TestGH734(t *testing.T) {
 		})
 	}
 	jwt.Settings(jwt.WithNumericDateParsePedantic(false))
+}
+
+func TestWithBase64Encoder(t *testing.T) {
+	// see #1324
+	t.Run("Roundtrip", func(t *testing.T) {
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+		require.NoError(t, err)
+
+		tok, err := openid.NewBuilder().
+			Subject("subject").
+			Name("John Smith").
+			Locale("CA").
+			Email("john@example.org").
+			PreferredUsername("john@example.org").
+			GivenName("John").
+			FamilyName("Smith").
+			EmailVerified(false).
+			Issuer("https://example.org/oauth2/default").
+			Build()
+		require.NoError(t, err, `openid.NewBuilder should succeed`)
+
+		signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), key), jwt.WithBase64Encoder(base64.URLEncoding))
+		require.NoError(t, err, `jwt.Sign should succeed`)
+
+		parsed := openid.New()
+		_, err = jwt.Parse(signed, jwt.WithToken(parsed), jwt.WithKey(jwa.ES256(), key.PublicKey), jwt.WithBase64Encoder(base64.URLEncoding))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+		require.Equal(t, tok, parsed, `parsed token should match original`)
+	})
+	t.Run("Contributed Test Case", func(t *testing.T) {
+		key, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+		require.NoError(t, err)
+
+		// ALB JWTs usually expire very quickly, but this one isn't real and isn't
+		// signed by AWS so we'll make it an hour to be less tedious.
+		expiry := time.Now().Add(time.Hour).Unix()
+
+		// Generate header + payload
+		header := map[string]interface{}{
+			"typ":    "JWT",
+			"kid":    "2563ee81-616e-4a38-b2f8-48a2cccba80f", // Not a real AWS Key ID
+			"alg":    "ES256",
+			"iss":    "https://example.org/oauth2/default",
+			"client": "a-client-id",
+			"signer": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/an-alb-name/abcdef0123456789", // Not real
+			"exp":    expiry,
+		}
+
+		payload := map[string]interface{}{
+			"sub":                "some-subject-id",
+			"name":               "John Smith",
+			"locale":             "CA",
+			"email":              "john@example.org",
+			"preferred_username": "john@example.org",
+			"given_name":         "John",
+			"family_name":        "Smith",
+			"zone_info":          "America/Winnipeg",
+			"updated_at":         time.Date(2025, time.March, 0, 0, 0, 0, 0, time.UTC).Unix(),
+			"email_verified":     false,
+			"exp":                expiry,
+			"iss":                "https://example.org/oauth2/default",
+		}
+
+		// Marshal header+bytes
+		headerBytes, _ := json.Marshal(header)
+		payloadBytes, _ := json.Marshal(payload)
+
+		// Ok here's where it gets weird. AWS pads all base64-encoded components,
+		// including the header, payload, and signature (they do however use the URL
+		// encoding format). The following is _not_ specs compliant and should not be
+		// used as an example of how to create + sign JWT.
+		//
+		// We want some test cases involving these JWTs though, so we have to generate
+		// them the "wrong" way to be consistent with what we see from ALBs.
+		headerEncoded := base64.URLEncoding.EncodeToString(headerBytes)
+		payloadEncoded := base64.URLEncoding.EncodeToString(payloadBytes)
+
+		// Assemble `<header>.<payload>`
+		var buf bytes.Buffer
+		buf.WriteString(headerEncoded)
+		buf.WriteRune('.')
+		buf.WriteString(payloadEncoded)
+
+		// Sign
+		h := sha256.New()
+		_, _ = h.Write(buf.Bytes())
+
+		curveBits := key.Curve.Params().BitSize
+		r, s, err := ecdsa.Sign(rand.Reader, key, h.Sum(nil))
+		require.NoError(t, err, `ecdsa.Sign should succeed`)
+		keyBytes := curveBits / 8
+		// Curve bits do not need to be a multiple of 8.
+		if curveBits%8 > 0 {
+			keyBytes++
+		}
+
+		rBytes := r.Bytes()
+		rBytesPadded := make([]byte, keyBytes)
+		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+		sBytes := s.Bytes()
+		sBytesPadded := make([]byte, keyBytes)
+		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+		signature := append(rBytesPadded, sBytesPadded...)
+
+		// Encode the signature, also URL-encoded + padding
+		signatureEncoded := base64.URLEncoding.EncodeToString(signature)
+
+		// Tack on signature to get `<header>.<payload>.<signature>`
+		buf.WriteRune('.')
+		buf.WriteString(signatureEncoded)
+
+		_, err = jwt.Parse(buf.Bytes(), jwt.WithBase64Encoder(base64.URLEncoding), jwt.WithKey(jwa.ES256(), key))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+	})
 }
