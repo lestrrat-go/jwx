@@ -270,5 +270,5 @@ options:
     interface: SignParseOption
     argument_type: jws.Base64Encoder
     comment: |
-      WithBase64Encoder specifies the base64 encoder to use when encoding
-      the JWT token.
+      WithBase64Encoder specifies the base64 encoder to use for signing
+      tokens and verifying JWS signatures.

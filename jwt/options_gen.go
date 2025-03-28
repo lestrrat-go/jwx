@@ -285,8 +285,8 @@ func WithAcceptableSkew(v time.Duration) ValidateOption {
 	return &validateOption{option.New(identAcceptableSkew{}, v)}
 }
 
-// WithBase64Encoder specifies the base64 encoder to use when encoding
-// the JWT token.
+// WithBase64Encoder specifies the base64 encoder to use for signing
+// tokens and verifying JWS signatures.
 func WithBase64Encoder(v jws.Base64Encoder) SignParseOption {
 	return &signParseOption{option.New(identBase64Encoder{}, v)}
 }

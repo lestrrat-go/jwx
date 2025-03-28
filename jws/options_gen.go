@@ -262,8 +262,9 @@ func (identValidateKey) String() string {
 	return "WithValidateKey"
 }
 
-// WithBase64Encoder specifies the base64 encoder to be used when decoding
-// the JWS message. By default, the raw URL base64 encoding (no padding) is used.
+// WithBase64Encoder specifies the base64 encoder to be use while signing or
+// verifying the JWS message. By default, the raw URL base64 encoding (no padding)
+// is used.
 func WithBase64Encoder(v Base64Encoder) SignVerifyCompactOption {
 	return &signVerifyCompactOption{option.New(identBase64Encoder{}, v)}
 }
