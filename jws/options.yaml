@@ -20,6 +20,15 @@ interfaces:
       - parseOption
     comment: |
       SignVerifyOption describes options that can be passed to either `jws.Verify` or `jws.Sign`
+  - name: SignVerifyCompactOption
+    methods:
+      - signOption
+      - verifyOption
+      - compactOption
+      - parseOption
+    comment: |
+      SignVerifyCompactOption describes options that can be passed to either `jws.Verify`,
+      `jws.Sign`, or `jws.Compact`
   - name: WithJSONSuboption
     concrete_type: withJSONSuboption
     comment: |
@@ -78,6 +87,13 @@ options:
        must be set to `nil`.
        
        If you have to verify using this option, you should know exactly how and why this works.
+  - ident: Base64Encoder
+    interface: SignVerifyCompactOption
+    argument_type: Base64Encoder
+    comment: |
+      WithBase64Encoder specifies the base64 encoder to be used while signing or
+      verifying the JWS message. By default, the raw URL base64 encoding (no padding)
+      is used.
   - ident: Message
     interface: VerifyOption
     argument_type: '*Message'

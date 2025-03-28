@@ -39,6 +39,8 @@ func toSignOptions(options ...Option) ([]jws.SignOption, error) {
 		case identSignOption{}:
 			sigOpt := option.Value().(jws.SignOption) // this always succeeds
 			soptions = append(soptions, sigOpt)
+		case identBase64Encoder{}:
+			soptions = append(soptions, jws.WithBase64Encoder(option.Value().(jws.Base64Encoder)))
 		}
 	}
 	return soptions, nil
@@ -107,6 +109,8 @@ func toVerifyOptions(options ...Option) ([]jws.VerifyOption, error) {
 				return nil, fmt.Errorf(`expected jws.KeyProvider, got %T`, option.Value())
 			}
 			voptions = append(voptions, jws.WithKeyProvider(kp))
+		case identBase64Encoder{}:
+			voptions = append(voptions, jws.WithBase64Encoder(option.Value().(jws.Base64Encoder)))
 		}
 	}
 	return voptions, nil

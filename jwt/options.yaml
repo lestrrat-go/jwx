@@ -19,6 +19,14 @@ interfaces:
     comment: |
       SignOption describes an Option that can be passed to `jwt.Sign()` or
       (jwt.Serializer).Sign
+  - name: SignParseOption
+    methods:
+      - signOption
+      - parseOption
+      - readFileOption
+    comment: |
+      SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
+      `jwt.Parse()`
   - name: SignEncryptParseOption
     methods:
       - parseOption
@@ -258,3 +266,9 @@ options:
       
       However, when you set WithNumericDateParePedantic to `true`, the
       RFC3339 parser is not tried, and we expect a numeric value strictly 
+  - ident: Base64Encoder
+    interface: SignParseOption
+    argument_type: jws.Base64Encoder
+    comment: |
+      WithBase64Encoder specifies the base64 encoder to use for signing
+      tokens and verifying JWS signatures.

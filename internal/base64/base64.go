@@ -35,6 +35,10 @@ func getEncoder() Encoder {
 	return encoder
 }
 
+func DefaultEncoder() Encoder {
+	return getEncoder()
+}
+
 func SetDecoder(dec Decoder) {
 	muDecoder.Lock()
 	defer muDecoder.Unlock()

@@ -124,6 +124,25 @@ type signOption struct {
 
 func (*signOption) signOption() {}
 
+// SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
+// `jwt.Parse()`
+type SignParseOption interface {
+	Option
+	signOption()
+	parseOption()
+	readFileOption()
+}
+
+type signParseOption struct {
+	Option
+}
+
+func (*signParseOption) signOption() {}
+
+func (*signParseOption) parseOption() {}
+
+func (*signParseOption) readFileOption() {}
+
 // ValidateOption describes an Option that can be passed to Validate().
 // ValidateOption also implements ParseOption, therefore it may be
 // safely passed to `Parse()` (and thus `jwt.ReadFile()`)
@@ -145,6 +164,7 @@ func (*validateOption) readFileOption() {}
 func (*validateOption) validateOption() {}
 
 type identAcceptableSkew struct{}
+type identBase64Encoder struct{}
 type identClock struct{}
 type identContext struct{}
 type identCookie struct{}
@@ -169,6 +189,10 @@ type identVerify struct{}
 
 func (identAcceptableSkew) String() string {
 	return "WithAcceptableSkew"
+}
+
+func (identBase64Encoder) String() string {
+	return "WithBase64Encoder"
 }
 
 func (identClock) String() string {
@@ -259,6 +283,12 @@ func (identVerify) String() string {
 // claims may differ by. This value should be positive
 func WithAcceptableSkew(v time.Duration) ValidateOption {
 	return &validateOption{option.New(identAcceptableSkew{}, v)}
+}
+
+// WithBase64Encoder specifies the base64 encoder to use for signing
+// tokens and verifying JWS signatures.
+func WithBase64Encoder(v jws.Base64Encoder) SignParseOption {
+	return &signParseOption{option.New(identBase64Encoder{}, v)}
 }
 
 // WithClock specifies the `Clock` to be used when verifying
