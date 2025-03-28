@@ -91,7 +91,7 @@ options:
     interface: SignVerifyCompactOption
     argument_type: Base64Encoder
     comment: |
-      WithBase64Encoder specifies the base64 encoder to be use while signing or
+      WithBase64Encoder specifies the base64 encoder to be used while signing or
       verifying the JWS message. By default, the raw URL base64 encoding (no padding)
       is used.
   - ident: Message
