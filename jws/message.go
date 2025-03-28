@@ -100,7 +100,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The first return value is the raw signature in binary format.
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
-func (s *Signature) Sign(payload []byte, signer Signer, key interface{}, encoder Base64Encoder) ([]byte, []byte, error) {
+func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
 	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
@@ -127,6 +127,10 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}, encoder
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
+	encoder := s.encoder
+	if encoder == nil {
+		encoder = base64.DefaultEncoder()
+	}
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
 	buf.WriteByte('.')
 

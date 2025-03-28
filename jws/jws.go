@@ -263,6 +263,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		sig := &Signature{
 			headers:   signer.PublicHeader(),
 			protected: protected,
+			encoder:   encoder,
 			// cheat. FIXXXXXXMEEEEEE
 			detached: detached,
 		}
@@ -272,7 +273,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, signerr(`failed to validate key before signing: %w`, err)
 			}
 		}
-		_, _, err := sig.Sign(payload, signer.signer, signer.key, encoder)
+		_, _, err := sig.Sign(payload, signer.signer, signer.key)
 		if err != nil {
 			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
 		}
