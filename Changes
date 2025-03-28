@@ -4,6 +4,15 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.0-beta2 UNRELEASED
+  * [jwk] Fix a bug where `jwk.Set`'s `Keys()` method did not return the proper
+    non-standard fields. (#1322)
+  * [jws][jwt] Implement `WithBase64Encoder()` options to pass base64 encoders
+    to use during signing/verifying signatures. This useful when the token
+    provider generates JWTs that don't follow the specification and uses base64
+    encoding other than raw url encoding (no padding), such as, apparently,
+    AWS ALB. (#1324, #1328)
+
 v3.0.0-beta1 15 Mar 2025
   * [jwt] Token validation no longer truncates time based fields by default.
     To restore old behavior, you can either change the global settings by
