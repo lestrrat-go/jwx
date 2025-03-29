@@ -4,7 +4,7 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.0-beta2 UNRELEASED
+v3.0.0-beta2 30 Mar 2025
   * [jwk] Fix a bug where `jwk.Set`'s `Keys()` method did not return the proper
     non-standard fields. (#1322)
   * [jws][jwt] Implement `WithBase64Encoder()` options to pass base64 encoders
