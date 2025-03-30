@@ -19,6 +19,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
 * [Enabling ES256K](#enabling-es256k)
+* [Using a custom base64 encoder](#using-a-custom-base64-encoder)
 
 # Parsing
 
@@ -632,3 +633,15 @@ source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com
 # Enabling ES256K
 
 See [Enabling Optional Signature Methods](./20-global-settings.md#enabling-optional-signature-methods)
+
+# Using a custom base64 encoder
+
+Per specification JWS should be using URL base64 encoding with no padding when generating (and by nature of the process when verifying as well) signatures. However, some systems do not necessarily adhere to the standards ([there have been reports that AWS ALB is one such system, generating User Claims JWT with padding](https://github.com/lestrrat-go/jwx/discussions/1324))
+
+In these situations, you will need to specify the base64 encoder to your `jws.Sign` and `jws.Verify` calls.
+Please note that this feature is available on v3 onwards only.
+
+<!-- INCLUDE(examples/jws_sign_with_custom_base64_example_test.go) -->
+<!-- END INCLUDE -->
+
+You can use these option for `jwt.Sign` and `jwt.Parse` as well. See the [JWT docs for an example](./01-jwt.md#using-a-custom-base64-encoder).
