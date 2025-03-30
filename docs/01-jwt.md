@@ -29,6 +29,8 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   * [Performance](#performance)
   * [Access JWS headers](#access-jws-headers)
   * [Get/Set fields](#getset-fields)
+  * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
+
 
 ---
 
@@ -1355,3 +1357,15 @@ err := token.Set(name, value)
 ```
 
 For pre-defined fields, `Set()` will return an error when the value cannot be converted to a proper type that suits the specification. For example, fields for time data must be `time.Time` or number of seconds since epoch. See the `jwt.Token` interface and the getter methods for these fields to learn about the types for pre-defined fields.
+
+## Using a custom base64 encoder
+
+
+Per specification JWT should be using URL base64 encoding with no padding when generating (and by nature of the process when verifying as well) signatures. However, some systems do not necessarily adhere to the standards ([there have been reports that AWS ALB is one such system, generating User Claims JWT with padding](https://github.com/lestrrat-go/jwx/discussions/1324))
+
+In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls:
+
+<!-- INCLUDE(examples/jwt_sign_with_custom_base64_example_test.go) -->
+<!-- END INCLUDE -->
+
+You can use these option for `jws.Sign` and `jws.Verify` as well. See the [JWS docs for an example](./02-jwt.md#using-a-custom-base64-encoder).
