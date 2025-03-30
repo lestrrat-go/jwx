@@ -40,9 +40,10 @@ func TestKeyconv(t *testing.T) {
 
 					checker(t, keyconv.RSAPrivateKey(&dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
 					if !tc.Error {
-						// From Go 1.20 on, for purposes of our test, we need the
-						// precomputed values as well
-						dst.Precompute()
+						// Reset precomputed values; they will be computed as necessary,
+						// and their values are not necessarily stable across runs
+						key.Precomputed = rsa.PrecomputedValues{}
+						dst.Precomputed = rsa.PrecomputedValues{}
 						require.Equal(t, key, &dst, `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
@@ -57,9 +58,10 @@ func TestKeyconv(t *testing.T) {
 
 					checker(t, keyconv.RSAPrivateKey(dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
 					if !tc.Error {
-						// From Go 1.20 on, for purposes of our test, we need the
-						// precomputed values as well
-						dst.Precompute()
+						// Reset precomputed values; they will be computed as necessary,
+						// and their values are not necessarily stable across runs
+						key.Precomputed = rsa.PrecomputedValues{}
+						dst.Precomputed = rsa.PrecomputedValues{}
 						require.Equal(t, key, dst, `keyconv.RSAPrivateKey should produce same value`)
 					}
 				})
