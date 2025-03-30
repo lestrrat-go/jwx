@@ -1363,7 +1363,7 @@ For pre-defined fields, `Set()` will return an error when the value cannot be co
 
 Per specification JWT should be using URL base64 encoding with no padding when generating (and by nature of the process when verifying as well) signatures. However, some systems do not necessarily adhere to the standards ([there have been reports that AWS ALB is one such system, generating User Claims JWT with padding](https://github.com/lestrrat-go/jwx/discussions/1324))
 
-In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls:
+In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls. Please note that this feature is available on v3 onwards only.
 
 <!-- INCLUDE(examples/jwt_sign_with_custom_base64_example_test.go) -->
 <!-- END INCLUDE -->
