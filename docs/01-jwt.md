@@ -1371,11 +1371,11 @@ package examples_test
 
 import (
   "encoding/base64"
+  "encoding/json"
   "fmt"
   "os"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/internal/json"
   "github.com/lestrrat-go/jwx/v3/jwa"
   "github.com/lestrrat-go/jwx/v3/jwt"
 )
