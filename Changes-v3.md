@@ -2,13 +2,11 @@
 
 These are changes that are incompatible with the v2.x.x version.
 
-* [Detailed List of Changes](#detailed-list-of-changes) - A comprehensive list of changes from v2 to v3
-
 # Detailed list of changes
 
 ## Module
 
-* This module now requires Go 1.22
+* This module now requires Go 1.23
 
 * All `xxx.Get()` methods have been changed from `Get(string) (interface{}, error)` to
   `Get(string, interface{}) error`, where the second argument should be a pointer
@@ -19,11 +17,10 @@ These are changes that are incompatible with the v2.x.x version.
 
 * Most major errors can now be differentiated using `errors.Is`
 
-
 ## JWA
 
 * All string constants have been renamed to equivalent functions that return a struct.
-  You should rewrite `jwa.RS256` as `jwa.RS256()`
+  You should rewrite `jwa.RS256` as `jwa.RS256()` and so forth.
 
 * By default, only known algorithm names are accepted. For example, in our JWK tests,
   there are tests that deal with "ECMR" algorithm, but this will now fail by default.
@@ -40,6 +37,11 @@ These are changes that are incompatible with the v2.x.x version.
 
 * Validation used to work for `iat`, `nbf`, `exp` fields where these fields were
   set to the explicit time.Time{} zero value, but now the _presence_ of these fields matter.
+
+* Validation of fields related to time used to be truncated to one second accuracy,
+  but no longer does so. To restore old behavior, you can either change the global settings by
+  calling `jwt.Settings(jwt.WithTruncation(time.Second))`, or you can
+  change it by each invocation by using `jwt.Validate(..., jwt.WithTruncation(time.Second))`
 
 * Error names have been renamed. For example `jwt.ErrInvalidJWT` has been renamed to
   `jwt.UnknownPayloadTypeError` to better reflect what the error means. For other errors,
@@ -134,3 +136,5 @@ These are changes that are incompatible with the v2.x.x version.
 
 * `jwk.Fetcher` has been clearly marked as something that has limited
   usage for `jws.WithVerifyAuto`
+
+* `jwk.Key` with P256/P386/P521 curves can be exporrted to `ecdh.PrivateKey`/`ecdh.PublicKey`
