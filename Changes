@@ -4,6 +4,17 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.0 1 Apr 2025
+  * Release initial v3.0.0 series. Code is identical to v3.0.0-beta2, except
+    for minor documentation changes.
+
+    Please note that v1 will no longer be maintained.
+
+    Going forward v2 will receive security updates but will no longer receive
+    feature updates. Users are encouraged to migrate to v3. There is no hard-set
+    guarantee as to how long v2 will be supported, but if/when v4 comes out,
+    v2 support will be terminated then.
+
 v3.0.0-beta2 30 Mar 2025
   * [jwk] Fix a bug where `jwk.Set`'s `Keys()` method did not return the proper
     non-standard fields. (#1322)
@@ -17,12 +28,14 @@ v3.0.0-beta1 15 Mar 2025
   * [jwt] Token validation no longer truncates time based fields by default.
     To restore old behavior, you can either change the global settings by
     calling `jwt.Settings(jwt.WithTruncation(time.Second))`, or you can
-    change it by each invocation by using `jwt.Validate(..., jwt.WithTruncation(0))`
+    change it by each invocation by using `jwt.Validate(..., jwt.WithTruncation(time.Second))`
 
 v3.0.0-alpha3 13 Mar 2025
-  * [jwk] Importing/Exporting from jwk.Key to ecdh.PrivateKey/ecdh.PublicKey should now work. Previously these keys were not properly
-  recognized by the exporter/importer. Note that keys that use X25519 and
-  P256/P384/P521 behave differently: X25519 keys can only be exported to/imported from OKP keys, which P256/P384/P521 can be exported to either ecdsa or ecdh keys.
+  * [jwk] Importing/Exporting from jwk.Key with P256/P386/P521 curves to
+    ecdh.PrivateKey/ecdh.PublicKey should now work. Previously these keys were not properly
+    recognized by the exporter/importer. Note that keys that use X25519 and P256/P384/P521
+    behave differently: X25519 keys can only be exported to/imported from OKP keys,
+    while P256/P384/P521 can be exported to either ecdsa or ecdh keys.
 
 v3.0.0-alpha2 25 Feb 2025
   * Update to work with go1.24
