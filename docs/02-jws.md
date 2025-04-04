@@ -347,7 +347,7 @@ source: [examples/jws_sign_with_headers_example_test.go](https://github.com/lest
 ## Using cloud KMS services
 
 If you want to use cloud KMSes such as AWS KMS to sign and verify payloads, look for an object that implements
-`crypto.Signer`. There are some [implementations written for this module](https://github.com/jwx-go/crypto-signer).
+`crypto.Signer`. There are some [implementations written for this module](https://github.com/jwx-go/crypto-signer). NOTE: THESE WERE WRITTEN FOR OLDER RELEASES. PLEASE SEND PRs IF YOU WANT THEM UPDATED.
 
 Event if you cannot find an implementation that you are looking for in the above repository, any other implementation that implements `crypto.Signer` should work.
 
