@@ -2,6 +2,20 @@ load("@bazel_gazelle//:deps.bzl", "go_repository")
 
 def go_dependencies():
     go_repository(
+        name = "com_github_bwesterb_go_ristretto",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/bwesterb/go-ristretto",
+        sum = "h1:1w53tCkGhCQ5djbat3+MH0BAQ5Kfgbt56UZQ/JMzngw=",
+        version = "v1.2.3",
+    )
+    go_repository(
+        name = "com_github_cloudflare_circl",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/cloudflare/circl",
+        sum = "h1:cr5JKic4HI+LkINy2lg3W2jF8sHCVTBncJr5gIIq7qk=",
+        version = "v1.6.0",
+    )
+    go_repository(
         name = "com_github_davecgh_go_spew",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/davecgh/go-spew",
