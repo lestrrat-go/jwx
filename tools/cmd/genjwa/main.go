@@ -35,7 +35,7 @@ func _main() error {
 				{
 					name:    `Deflate`,
 					value:   `DEF`,
-					comment: `Defalte denotes that DEFLATE (RFC 1951) should be applied.`,
+					comment: `Deflate denotes that DEFLATE (RFC 1951) should be applied.`,
 				},
 			},
 		},
