@@ -26,7 +26,7 @@ func init() {
 	RegisterCompressionAlgorithm(algorithms...)
 }
 
-// Defalte denotes that DEFLATE (RFC 1951) should be applied.
+// Deflate denotes that DEFLATE (RFC 1951) should be applied.
 func Deflate() CompressionAlgorithm {
 	return lookupBuiltinCompressionAlgorithm("DEF")
 }
