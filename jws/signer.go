@@ -17,7 +17,7 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 }
 
 var muSignerDB sync.RWMutex
-var signerDB map[jwa.SignatureAlgorithm]SignerFactory
+var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 
 // RegisterSigner is used to register a factory object that creates
 // Signer objects based on the given algorithm. Previous object instantiated
@@ -59,8 +59,6 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
-
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {

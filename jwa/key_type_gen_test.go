@@ -31,6 +31,22 @@ func TestKeyType(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
+		v, ok := jwa.LookupKeyType("MLWE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.MLWE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string MLWE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("MLWE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.MLWE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for MLWE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "MLWE", jwa.MLWE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
 		v, ok := jwa.LookupKeyType("OKP")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.OKP(), v, `Lookup value should be equal to constant`)
@@ -86,6 +102,7 @@ func TestKeyType(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.KeyType]struct{}{
 			jwa.EC():       {},
+			jwa.MLWE():     {},
 			jwa.OKP():      {},
 			jwa.OctetSeq(): {},
 			jwa.RSA():      {},

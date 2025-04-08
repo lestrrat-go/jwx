@@ -17,38 +17,43 @@ var builtinKeyType = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyType
-	algorithms := make([]KeyType, 0, 5)
+	algorithms := make([]KeyType, 0, 6)
 
-	for _, alg := range []string{"EC", "OKP", "oct", "RSA"} {
+	for _, alg := range []string{"EC", "MLWE", "OKP", "oct", "RSA"} {
 		algorithms = append(algorithms, NewKeyType(alg))
 	}
 
 	RegisterKeyType(algorithms...)
 }
 
-// EC returns the EC algorithm object.
+// EC represents keys using Elliptic Curves
 func EC() KeyType {
 	return lookupBuiltinKeyType("EC")
 }
 
 var invalidKeyType = NewKeyType("")
 
-// InvalidKeyType returns the InvalidKeyType algorithm object.
+// InvalidKeyType is used to denote an invalid key type; it's also the zero value.
 func InvalidKeyType() KeyType {
 	return invalidKeyType
 }
 
-// OKP returns the OKP algorithm object.
+// MLWE represents the Module Learning With Errors (MLWE) key type
+func MLWE() KeyType {
+	return lookupBuiltinKeyType("MLWE")
+}
+
+// OKP represents the octet string key pairs key type
 func OKP() KeyType {
 	return lookupBuiltinKeyType("OKP")
 }
 
-// OctetSeq returns the OctetSeq algorithm object.
+// OctetSeq represents the octet sequence key type, used to represent symmetric keys
 func OctetSeq() KeyType {
 	return lookupBuiltinKeyType("oct")
 }
 
-// RSA returns the RSA algorithm object.
+// RSA represents the RSA key type
 func RSA() KeyType {
 	return lookupBuiltinKeyType("RSA")
 }

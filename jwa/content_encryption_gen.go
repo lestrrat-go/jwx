@@ -26,32 +26,32 @@ func init() {
 	RegisterContentEncryptionAlgorithm(algorithms...)
 }
 
-// A128CBC_HS256 returns the A128CBC_HS256 algorithm object.
+// AES-CBC + HMAC-SHA256 (128)
 func A128CBC_HS256() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A128CBC-HS256")
 }
 
-// A128GCM returns the A128GCM algorithm object.
+// AES-GCM (128)
 func A128GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A128GCM")
 }
 
-// A192CBC_HS384 returns the A192CBC_HS384 algorithm object.
+// AES-CBC + HMAC-SHA384 (192)
 func A192CBC_HS384() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A192CBC-HS384")
 }
 
-// A192GCM returns the A192GCM algorithm object.
+// AES-GCM (192)
 func A192GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A192GCM")
 }
 
-// A256CBC_HS512 returns the A256CBC_HS512 algorithm object.
+// AES-CBC + HMAC-SHA512 (256)
 func A256CBC_HS512() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A256CBC-HS512")
 }
 
-// A256GCM returns the A256GCM algorithm object.
+// AES-GCM (256)
 func A256GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A256GCM")
 }

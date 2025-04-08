@@ -7,6 +7,7 @@ toolchain go1.23.6
 require github.com/lestrrat-go/jwx/v3 v3.0.0
 
 require (
+	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect

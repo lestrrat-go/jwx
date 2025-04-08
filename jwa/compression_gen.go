@@ -26,12 +26,12 @@ func init() {
 	RegisterCompressionAlgorithm(algorithms...)
 }
 
-// Deflate returns the Deflate algorithm object.
+// Defalte denotes that DEFLATE (RFC 1951) should be applied.
 func Deflate() CompressionAlgorithm {
 	return lookupBuiltinCompressionAlgorithm("DEF")
 }
 
-// NoCompress returns the NoCompress algorithm object.
+// NoCompress denotes that no compression is to be applied.
 func NoCompress() CompressionAlgorithm {
 	return lookupBuiltinCompressionAlgorithm("")
 }

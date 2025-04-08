@@ -45,6 +45,28 @@ std_fields:
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.8
 
 key_types:
+  - filename: dilithium_gen.go
+    build_tags: jwx_dilithium
+    imports:
+      - "github.com/cloudflare/circl/sign/dilithium"
+    prefix: Dilithium
+    key_type: jwa.MLWE()
+    objects:
+      - name: publicKey
+        raw_key_type: "dilithium.PublicKey{}"
+        fields:
+          - name: x
+            type: "[]byte"
+            required: true
+      - name: privateKey
+        raw_key_type: "interface{}"
+        fields:
+          - name: x
+            type: "[]byte"
+            required: true
+          - name: d
+            type: "[]byte"
+            required: true
   - filename: rsa_gen.go
     prefix: RSA
     key_type: jwa.RSA()

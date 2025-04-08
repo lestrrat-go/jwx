@@ -29,97 +29,97 @@ func init() {
 	RegisterKeyEncryptionAlgorithm(algorithms...)
 }
 
-// A128GCMKW returns the A128GCMKW algorithm object.
+// AES-GCM key wrap (128)
 func A128GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A128GCMKW")
 }
 
-// A128KW returns the A128KW algorithm object.
+// AES key wrap (128)
 func A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A128KW")
 }
 
-// A192GCMKW returns the A192GCMKW algorithm object.
+// AES-GCM key wrap (192)
 func A192GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A192GCMKW")
 }
 
-// A192KW returns the A192KW algorithm object.
+// AES key wrap (192)
 func A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A192KW")
 }
 
-// A256GCMKW returns the A256GCMKW algorithm object.
+// AES-GCM key wrap (256)
 func A256GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A256GCMKW")
 }
 
-// A256KW returns the A256KW algorithm object.
+// AES key wrap (256)
 func A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A256KW")
 }
 
-// DIRECT returns the DIRECT algorithm object.
+// Direct encryption
 func DIRECT() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("dir")
 }
 
-// ECDH_ES returns the ECDH_ES algorithm object.
+// ECDH-ES
 func ECDH_ES() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES")
 }
 
-// ECDH_ES_A128KW returns the ECDH_ES_A128KW algorithm object.
+// ECDH-ES + AES key wrap (128)
 func ECDH_ES_A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A128KW")
 }
 
-// ECDH_ES_A192KW returns the ECDH_ES_A192KW algorithm object.
+// ECDH-ES + AES key wrap (192)
 func ECDH_ES_A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A192KW")
 }
 
-// ECDH_ES_A256KW returns the ECDH_ES_A256KW algorithm object.
+// ECDH-ES + AES key wrap (256)
 func ECDH_ES_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A256KW")
 }
 
-// PBES2_HS256_A128KW returns the PBES2_HS256_A128KW algorithm object.
+// PBES2 + HMAC-SHA256 + AES key wrap (128)
 func PBES2_HS256_A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS256+A128KW")
 }
 
-// PBES2_HS384_A192KW returns the PBES2_HS384_A192KW algorithm object.
+// PBES2 + HMAC-SHA384 + AES key wrap (192)
 func PBES2_HS384_A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS384+A192KW")
 }
 
-// PBES2_HS512_A256KW returns the PBES2_HS512_A256KW algorithm object.
+// PBES2 + HMAC-SHA512 + AES key wrap (256)
 func PBES2_HS512_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS512+A256KW")
 }
 
-// RSA1_5 returns the RSA1_5 algorithm object.
+// RSA-PKCS1v1.5
 func RSA1_5() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA1_5")
 }
 
-// RSA_OAEP returns the RSA_OAEP algorithm object.
+// RSA-OAEP-SHA1
 func RSA_OAEP() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP")
 }
 
-// RSA_OAEP_256 returns the RSA_OAEP_256 algorithm object.
+// RSA-OAEP-SHA256
 func RSA_OAEP_256() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-256")
 }
 
-// RSA_OAEP_384 returns the RSA_OAEP_384 algorithm object.
+// RSA-OAEP-SHA384
 func RSA_OAEP_384() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-384")
 }
 
-// RSA_OAEP_512 returns the RSA_OAEP_512 algorithm object.
+// RSA-OAEP-SHA512
 func RSA_OAEP_512() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-512")
 }

@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.6
 
 require (
+	github.com/cloudflare/circl v1.6.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/goccy/go-json v0.10.3
 	github.com/lestrrat-go/blackmagic v1.0.2

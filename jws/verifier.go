@@ -17,7 +17,7 @@ func (fn VerifierFactoryFn) Create() (Verifier, error) {
 }
 
 var muVerifierDB sync.RWMutex
-var verifierDB map[jwa.SignatureAlgorithm]VerifierFactory
+var verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 
 // RegisterVerifier is used to register a factory object that creates
 // Verifier objects based on the given algorithm.
@@ -52,8 +52,6 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
-
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {

@@ -106,6 +106,12 @@ type Verifier interface {
 	Verify(payload []byte, signature []byte, key interface{}) error
 }
 
+type VerifierFunc func([]byte, []byte, interface{}) error
+
+func (fn VerifierFunc) Verify(payload []byte, signature []byte, key interface{}) error {
+	return fn(payload, signature, key)
+}
+
 type HMACVerifier struct {
 	signer Signer
 }

@@ -29,42 +29,42 @@ func init() {
 	RegisterSignatureAlgorithm(algorithms...)
 }
 
-// ES256 returns the ES256 algorithm object.
+// ECDSA using P-256 and SHA-256
 func ES256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES256")
 }
 
-// ES256K returns the ES256K algorithm object.
+// ECDSA using secp256k1 and SHA-256
 func ES256K() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES256K")
 }
 
-// ES384 returns the ES384 algorithm object.
+// ECDSA using P-384 and SHA-384
 func ES384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES384")
 }
 
-// ES512 returns the ES512 algorithm object.
+// ECDSA using P-521 and SHA-512
 func ES512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES512")
 }
 
-// EdDSA returns the EdDSA algorithm object.
+// EdDSA signature algorithms
 func EdDSA() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("EdDSA")
 }
 
-// HS256 returns the HS256 algorithm object.
+// HMAC using SHA-256
 func HS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS256")
 }
 
-// HS384 returns the HS384 algorithm object.
+// HMAC using SHA-384
 func HS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS384")
 }
 
-// HS512 returns the HS512 algorithm object.
+// HMAC using SHA-512
 func HS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS512")
 }
@@ -74,32 +74,32 @@ func NoSignature() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("none")
 }
 
-// PS256 returns the PS256 algorithm object.
+// RSASSA-PSS using SHA256 and MGF1-SHA256
 func PS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS256")
 }
 
-// PS384 returns the PS384 algorithm object.
+// RSASSA-PSS using SHA384 and MGF1-SHA384
 func PS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS384")
 }
 
-// PS512 returns the PS512 algorithm object.
+// RSASSA-PSS using SHA512 and MGF1-SHA512
 func PS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS512")
 }
 
-// RS256 returns the RS256 algorithm object.
+// RSASSA-PKCS-v1.5 using SHA-256
 func RS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS256")
 }
 
-// RS384 returns the RS384 algorithm object.
+// RSASSA-PKCS-v1.5 using SHA-384
 func RS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS384")
 }
 
-// RS512 returns the RS512 algorithm object.
+// RSASSA-PKCS-v1.5 using SHA-512
 func RS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS512")
 }

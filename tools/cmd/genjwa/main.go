@@ -30,12 +30,12 @@ func _main() error {
 				{
 					name:    `NoCompress`,
 					value:   ``,
-					comment: `No compression`,
+					comment: `NoCompress denotes that no compression is to be applied.`,
 				},
 				{
 					name:    `Deflate`,
 					value:   `DEF`,
-					comment: `DEFLATE (RFC 1951)`,
+					comment: `Defalte denotes that DEFLATE (RFC 1951) should be applied.`,
 				},
 			},
 		},
@@ -84,28 +84,33 @@ func _main() error {
 				{
 					name:    `InvalidKeyType`,
 					value:   ``,
-					comment: `Invalid KeyType`,
+					comment: `InvalidKeyType is used to denote an invalid key type; it's also the zero value.`,
 					invalid: true,
 				},
 				{
 					name:    `EC`,
 					value:   `EC`,
-					comment: `Elliptic Curve`,
+					comment: `EC represents keys using Elliptic Curves`,
 				},
 				{
 					name:    `RSA`,
 					value:   `RSA`,
-					comment: `RSA`,
+					comment: `RSA represents the RSA key type`,
 				},
 				{
 					name:    `OctetSeq`,
 					value:   `oct`,
-					comment: `Octet sequence (used to represent symmetric keys)`,
+					comment: `OctetSeq represents the octet sequence key type, used to represent symmetric keys`,
 				},
 				{
 					name:    `OKP`,
 					value:   `OKP`,
-					comment: `Octet string key pairs`,
+					comment: `OKP represents the octet string key pairs key type`,
+				},
+				{
+					name:    `MLWE`,
+					value:   `MLWE`,
+					comment: `MLWE represents the Module Learning With Errors (MLWE) key type`,
 				},
 			},
 		},
@@ -458,7 +463,12 @@ func (t typ) Generate() error {
 		if e.invalid {
 			o.L("var %s = New%s(%q)", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]), t.name, e.value)
 		}
-		o.LL("// %s returns the %s algorithm object.", e.name, e.name)
+		if e.comment != "" {
+			o.L("// %s", e.comment)
+		} else {
+			o.LL("// %s returns the %s algorithm object.", e.name, e.name)
+		}
+
 		o.L("func %s() %s {", e.name, t.name)
 		if e.invalid {
 			o.L("return %s", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.name[0])), e.name[1:]))

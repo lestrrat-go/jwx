@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
