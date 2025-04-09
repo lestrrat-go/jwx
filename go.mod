@@ -1,9 +1,10 @@
+// Deprecated: This version of github.com/lestrrat-go/jwx is deprecated. Please use github.com/lestrrat-go/jwx/v3 or newer instead.
 module github.com/lestrrat-go/jwx
 
 go 1.20
 
 require (
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/goccy/go-json v0.10.3
 	github.com/lestrrat-go/backoff/v2 v2.0.8
 	github.com/lestrrat-go/blackmagic v1.0.2
@@ -11,8 +12,8 @@ require (
 	github.com/lestrrat-go/iter v1.0.2
 	github.com/lestrrat-go/option v1.0.1
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.25.0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/crypto v0.32.0
 )
 
 require (
