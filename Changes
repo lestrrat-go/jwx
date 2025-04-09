@@ -1,7 +1,9 @@
 Changes
 =======
 
-UNRELEASED
+v1.2.31 9 Apr 2025
+  * Mark this version of github.com/lestrrat-go/jwx deprecated. Please use github.com/lestrrat-go/jwx/v3 or newer
+  * Update tooling
   * Skip TestJoseCompatibility, because latchset/jose recently decided to set `p2c` to
     32768, but we do not have the ability to set this number in v1
 
