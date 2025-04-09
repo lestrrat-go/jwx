@@ -1,3 +1,4 @@
+// Deprecated: This version of github.com/lestrrat-go/jwx is deprecated. Please use github.com/lestrrat-go/jwx/v3 or newer instead.
 module github.com/lestrrat-go/jwx
 
 go 1.20
