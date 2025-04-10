@@ -373,7 +373,7 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 		return cv.makeErr(`claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
 	}
 	if v != cv.value {
-		return cv.makeErr(`values do not match`)
+		return cv.makeErr(`claim %[1]q does not have the expected value`, cv.name)
 	}
 	return nil
 }
