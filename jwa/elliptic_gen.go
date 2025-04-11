@@ -26,44 +26,44 @@ func init() {
 	RegisterEllipticCurveAlgorithm(algorithms...)
 }
 
-// Ed25519 returns the Ed25519 algorithm object.
+// Ed25519 returns an object representing Ed25519 algorithm for EdDSA operations.
 func Ed25519() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("Ed25519")
 }
 
-// Ed448 returns the Ed448 algorithm object.
+// Ed448 returns an object representing Ed448 algorithm for EdDSA operations.
 func Ed448() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("Ed448")
 }
 
 var invalidEllipticCurve = NewEllipticCurveAlgorithm("P-invalid")
 
-// InvalidEllipticCurve returns the InvalidEllipticCurve algorithm object.
+// InvalidEllipticCurve returns an object representing an invalid elliptic curve.
 func InvalidEllipticCurve() EllipticCurveAlgorithm {
 	return invalidEllipticCurve
 }
 
-// P256 returns the P256 algorithm object.
+// P256 returns an object representing P-256 algorithm for ECDSA operations.
 func P256() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("P-256")
 }
 
-// P384 returns the P384 algorithm object.
+// P384 returns an object representing P-384 algorithm for ECDSA operations.
 func P384() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("P-384")
 }
 
-// P521 returns the P521 algorithm object.
+// P521 returns an object representing P-521 algorithm for ECDSA operations.
 func P521() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("P-521")
 }
 
-// X25519 returns the X25519 algorithm object.
+// X25519 returns an object representing X25519 algorithm for ECDH operations.
 func X25519() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("X25519")
 }
 
-// X448 returns the X448 algorithm object.
+// X448 returns an object representing X448 algorithm for ECDH operations.
 func X448() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("X448")
 }
@@ -78,6 +78,7 @@ func lookupBuiltinEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
 	return v
 }
 
+// EllipticCurveAlgorithm represents the algorithms used for EC keys
 type EllipticCurveAlgorithm struct {
 	name string
 }
@@ -86,17 +87,17 @@ func (s EllipticCurveAlgorithm) String() string {
 	return s.name
 }
 
-// EmptyEllipticCurveAlgorithm returns an empty EllipticCurveAlgorithm object, used as a zero value
+// EmptyEllipticCurveAlgorithm returns an empty EllipticCurveAlgorithm object, used as a zero value.
 func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
 	return EllipticCurveAlgorithm{}
 }
 
-// NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object
+// NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object with the given name.
 func NewEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
 	return EllipticCurveAlgorithm{name: name}
 }
 
-// LookupEllipticCurveAlgorithm returns the EllipticCurveAlgorithm object for the given name
+// LookupEllipticCurveAlgorithm returns the EllipticCurveAlgorithm object for the given name.
 func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
 	muAllEllipticCurveAlgorithm.RLock()
 	v, ok := allEllipticCurveAlgorithm[name]
@@ -105,7 +106,7 @@ func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
 }
 
 // RegisterEllipticCurveAlgorithm registers a new EllipticCurveAlgorithm. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 	muAllEllipticCurveAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -116,7 +117,7 @@ func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 }
 
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 	muAllEllipticCurveAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -144,19 +145,19 @@ func rebuildEllipticCurveAlgorithm() {
 	muListEllipticCurveAlgorithm.Unlock()
 }
 
-// EllipticCurveAlgorithms returns a list of all available values for EllipticCurveAlgorithm
+// EllipticCurveAlgorithms returns a list of all available values for EllipticCurveAlgorithm.
 func EllipticCurveAlgorithms() []EllipticCurveAlgorithm {
 	muListEllipticCurveAlgorithm.RLock()
 	defer muListEllipticCurveAlgorithm.RUnlock()
 	return listEllipticCurveAlgorithm
 }
 
-// MarshalJSON serializes the EllipticCurveAlgorithm object to a JSON string
+// MarshalJSON serializes the EllipticCurveAlgorithm object to a JSON string.
 func (s EllipticCurveAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a EllipticCurveAlgorithm object
+// UnmarshalJSON deserializes the JSON string to a EllipticCurveAlgorithm object.
 func (s *EllipticCurveAlgorithm) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {

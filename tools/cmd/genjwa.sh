@@ -15,7 +15,7 @@ GOWORK=off go build -o .genjwa main.go
 popd > /dev/null
 
 EXE="${DIR}/.genjwa"
-"$EXE"
+"$EXE" "$DIR/objects.yml"
 echo "✔ done!"
 
 rm "$EXE"

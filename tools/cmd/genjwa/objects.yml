@@ -1,0 +1,220 @@
+# Algorithm type definitions for JWA (JSON Web Algorithms)
+# Each algorithm type has a name, comment, filename, and a list of elements
+# Some types are marked as symmetric, which means they can use the same key for encryption and decryption
+
+algorithms:
+  - name: CompressionAlgorithm
+    comment: CompressionAlgorithm represents the compression algorithms as described in https://tools.ietf.org/html/rfc7518#section-7.3
+    filename: compression_gen.go
+    elements:
+      - name: NoCompress
+        value: ""
+        returnval_comment: an empty compression algorithm value
+        comment: Using this value specifies that the content should not be compressed.
+      - name: Deflate
+        returnval_comment: the "DEF" content compression algorithm value
+        value: DEF
+        comment: Using this value specifies that the content should be compressed using DEFLATE (RFC 1951).
+
+  - name: ContentEncryptionAlgorithm
+    comment: ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
+    filename: content_encryption_gen.go
+    elements:
+      - name: A128CBC_HS256
+        value: A128CBC-HS256
+        comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).
+      - name: A192CBC_HS384
+        value: A192CBC-HS384
+        comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA384 (192).
+      - name: A256CBC_HS512
+        value: A256CBC-HS512
+        comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA512 (256).
+      - name: A128GCM
+        value: A128GCM
+        comment: Using this value specifies that the content should be encrypted using AES-GCM (128).
+      - name: A192GCM
+        value: A192GCM
+        comment: Using this value specifies that the content should be encrypted using AES-GCM (192).
+      - name: A256GCM
+        value: A256GCM
+        comment: Using this value specifies that the content should be encrypted using AES-GCM (256).
+
+  - name: KeyType
+    comment: KeyType represents the key type ("kty") that are supported
+    filename: key_type_gen.go
+    elements:
+      - name: InvalidKeyType
+        value: ""
+        returnval_comment: invalid key type
+        comment: Invalid KeyType
+        invalid: true
+      - name: EC
+        value: EC
+        comment: Elliptic Curve
+      - name: RSA
+        value: RSA
+        comment: RSA
+      - name: OctetSeq
+        value: oct
+        comment: Octet sequence (used to represent symmetric keys)
+      - name: OKP
+        value: OKP
+        comment: Octet string key pairs
+
+  - name: EllipticCurveAlgorithm
+    comment: EllipticCurveAlgorithm represents the algorithms used for EC keys
+    filename: elliptic_gen.go
+    elements:
+      - name: InvalidEllipticCurve
+        value: P-invalid
+        returnval_comment: an invalid elliptic curve
+        invalid: true
+      - name: P256
+        value: P-256
+        returnval_comment: P-256 algorithm for ECDSA operations
+      - name: P384
+        value: P-384
+        returnval_comment: P-384 algorithm for ECDSA operations
+      - name: P521
+        value: P-521
+        returnval_comment: P-521 algorithm for ECDSA operations
+      - name: Ed25519
+        value: Ed25519
+        returnval_comment: Ed25519 algorithm for EdDSA operations
+      - name: Ed448
+        value: Ed448
+        returnval_comment: Ed448 algorithm for EdDSA operations
+      - name: X25519
+        value: X25519
+        returnval_comment: X25519 algorithm for ECDH operations
+      - name: X448
+        value: X448
+        returnval_comment: X448 algorithm for ECDH operations
+
+  - name: SignatureAlgorithm
+    comment: SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1
+    filename: signature_gen.go
+    symmetric: true
+    elements:
+      - name: NoSignature
+        value: none
+        returnval_comment: the lack of a signature algorithm
+        comment: Using this value specifies that the content should not be signed, which you should avoid doing.
+      - name: HS256
+        value: HS256
+        returnval_comment: HMAC signature algorithm using SHA-256
+        sym: true
+      - name: HS384
+        value: HS384
+        returnval_comment: HMAC signature algorithm using SHA-384
+        sym: true
+      - name: HS512
+        value: HS512
+        returnval_comment: HMAC signature algorithm using SHA-512
+        sym: true
+      - name: RS256
+        value: RS256
+        returnval_comment: RSASSA-PKCS-v1.5 signature algorithm using SHA-256
+      - name: RS384
+        value: RS384
+        returnval_comment: RSASSA-PKCS-v1.5 signature algorithm using SHA-384
+      - name: RS512
+        value: RS512
+        returnval_comment: RSASSA-PKCS-v1.5 signature algorithm using SHA-512
+      - name: ES256
+        value: ES256
+        returnval_comment: ECDSA signature algorithm using P-256 curve and SHA-256
+      - name: ES384
+        value: ES384
+        returnval_comment: ECDSA signature algorithm using P-384 curve and SHA-384
+      - name: ES512
+        value: ES512
+        returnval_comment: ECDSA signature algorithm using P-521 curve and SHA-512
+      - name: ES256K
+        value: ES256K
+        returnval_comment: ECDSA signature algorithm using secp256k1 curve and SHA-256
+      - name: EdDSA
+        value: EdDSA
+        returnval_comment: EdDSA signature algorithms
+      - name: PS256
+        value: PS256
+        returnval_comment: RSASSA-PSS signature algorithm using SHA-256 and MGF1-SHA256
+      - name: PS384
+        value: PS384
+        returnval_comment: RSASSA-PSS signature algorithm using SHA-384 and MGF1-SHA384
+      - name: PS512
+        value: PS512
+        returnval_comment: RSASSA-PSS signature algorithm using SHA-512 and MGF1-SHA512
+
+  - name: KeyEncryptionAlgorithm
+    comment: KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
+    filename: key_encryption_gen.go
+    symmetric: true
+    elements:
+      - name: RSA1_5
+        value: RSA1_5
+        returnval_comment: RSA-PKCS1v1.5 key encryption algorithm
+      - name: RSA_OAEP
+        value: RSA-OAEP
+        returnval_comment: RSA-OAEP-SHA1 key encryption algorithm
+      - name: RSA_OAEP_256
+        value: RSA-OAEP-256
+        returnval_comment: RSA-OAEP-SHA256 key encryption algorithm
+      - name: RSA_OAEP_384
+        value: RSA-OAEP-384
+        returnval_comment: RSA-OAEP-SHA384 key encryption algorithm
+      - name: RSA_OAEP_512
+        value: RSA-OAEP-512
+        returnval_comment: RSA-OAEP-SHA512 key encryption algorithm
+      - name: A128KW
+        value: A128KW
+        returnval_comment: AES key wrap (128) key encryption algorithm
+        sym: true
+      - name: A192KW
+        value: A192KW
+        returnval_comment: AES key wrap (192) key encryption algorithm
+        sym: true
+      - name: A256KW
+        value: A256KW
+        returnval_comment: AES key wrap (256) key encryption algorithm
+        sym: true
+      - name: DIRECT
+        value: dir
+        returnval_comment: Direct key encryption algorithm
+        sym: true
+      - name: ECDH_ES
+        value: ECDH-ES
+        returnval_comment: ECDH-ES key encryption algorithm
+      - name: ECDH_ES_A128KW
+        value: ECDH-ES+A128KW
+        returnval_comment: ECDH-ES + AES key wrap (128) key encryption algorithm
+      - name: ECDH_ES_A192KW
+        value: ECDH-ES+A192KW
+        returnval_comment: ECDH-ES + AES key wrap (192) key encryption algorithm
+      - name: ECDH_ES_A256KW
+        value: ECDH-ES+A256KW
+        returnval_comment: ECDH-ES + AES key wrap (256) key encryption algorithm
+      - name: A128GCMKW
+        value: A128GCMKW
+        returnval_comment: AES-GCM key wrap (128) key encryption algorithm
+        sym: true
+      - name: A192GCMKW
+        value: A192GCMKW
+        returnval_comment: AES-GCM key wrap (192) key encryption algorithm
+        sym: true
+      - name: A256GCMKW
+        value: A256GCMKW
+        returnval_comment: AES-GCM key wrap (256) key encryption algorithm
+        sym: true
+      - name: PBES2_HS256_A128KW
+        value: PBES2-HS256+A128KW
+        returnval_comment: PBES2 + HMAC-SHA256 + AES key wrap (128) key encryption algorithm
+        sym: true
+      - name: PBES2_HS384_A192KW
+        value: PBES2-HS384+A192KW
+        returnval_comment: PBES2 + HMAC-SHA384 + AES key wrap (192) key encryption algorithm
+        sym: true
+      - name: PBES2_HS512_A256KW
+        value: PBES2-HS512+A256KW
+        returnval_comment: PBES2 + HMAC-SHA512 + AES key wrap (256) key encryption algorithm
+        sym: true

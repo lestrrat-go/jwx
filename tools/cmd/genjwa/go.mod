@@ -1,8 +1,13 @@
 module github.com/lestrrat-go/jwx/v3/tools/cmd/genalgs
 
-go 1.20
+go 1.21.0
 
-require github.com/lestrrat-go/codegen v1.0.4
+toolchain go1.24.2
+
+require (
+	github.com/goccy/go-yaml v1.17.1
+	github.com/lestrrat-go/codegen v1.0.4
+)
 
 require (
 	github.com/lestrrat-go/option v1.0.1 // indirect
