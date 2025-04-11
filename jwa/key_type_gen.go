@@ -26,29 +26,29 @@ func init() {
 	RegisterKeyType(algorithms...)
 }
 
-// EC returns the EC algorithm object.
+// EC returns an object representing EC. Elliptic Curve
 func EC() KeyType {
 	return lookupBuiltinKeyType("EC")
 }
 
 var invalidKeyType = NewKeyType("")
 
-// InvalidKeyType returns the InvalidKeyType algorithm object.
+// InvalidKeyType returns an object representing invalid key type. Invalid KeyType
 func InvalidKeyType() KeyType {
 	return invalidKeyType
 }
 
-// OKP returns the OKP algorithm object.
+// OKP returns an object representing OKP. Octet string key pairs
 func OKP() KeyType {
 	return lookupBuiltinKeyType("OKP")
 }
 
-// OctetSeq returns the OctetSeq algorithm object.
+// OctetSeq returns an object representing oct. Octet sequence (used to represent symmetric keys)
 func OctetSeq() KeyType {
 	return lookupBuiltinKeyType("oct")
 }
 
-// RSA returns the RSA algorithm object.
+// RSA returns an object representing RSA. RSA
 func RSA() KeyType {
 	return lookupBuiltinKeyType("RSA")
 }
@@ -63,6 +63,7 @@ func lookupBuiltinKeyType(name string) KeyType {
 	return v
 }
 
+// KeyType represents the key type ("kty") that are supported
 type KeyType struct {
 	name string
 }
@@ -71,17 +72,17 @@ func (s KeyType) String() string {
 	return s.name
 }
 
-// EmptyKeyType returns an empty KeyType object, used as a zero value
+// EmptyKeyType returns an empty KeyType object, used as a zero value.
 func EmptyKeyType() KeyType {
 	return KeyType{}
 }
 
-// NewKeyType creates a new KeyType object
+// NewKeyType creates a new KeyType object with the given name.
 func NewKeyType(name string) KeyType {
 	return KeyType{name: name}
 }
 
-// LookupKeyType returns the KeyType object for the given name
+// LookupKeyType returns the KeyType object for the given name.
 func LookupKeyType(name string) (KeyType, bool) {
 	muAllKeyType.RLock()
 	v, ok := allKeyType[name]
@@ -90,7 +91,7 @@ func LookupKeyType(name string) (KeyType, bool) {
 }
 
 // RegisterKeyType registers a new KeyType. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
 	for _, alg := range algorithms {
@@ -101,7 +102,7 @@ func RegisterKeyType(algorithms ...KeyType) {
 }
 
 // UnregisterKeyType unregisters a KeyType from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
 	for _, alg := range algorithms {
@@ -129,19 +130,19 @@ func rebuildKeyType() {
 	muListKeyType.Unlock()
 }
 
-// KeyTypes returns a list of all available values for KeyType
+// KeyTypes returns a list of all available values for KeyType.
 func KeyTypes() []KeyType {
 	muListKeyType.RLock()
 	defer muListKeyType.RUnlock()
 	return listKeyType
 }
 
-// MarshalJSON serializes the KeyType object to a JSON string
+// MarshalJSON serializes the KeyType object to a JSON string.
 func (s KeyType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a KeyType object
+// UnmarshalJSON deserializes the JSON string to a KeyType object.
 func (s *KeyType) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {

@@ -29,97 +29,97 @@ func init() {
 	RegisterKeyEncryptionAlgorithm(algorithms...)
 }
 
-// A128GCMKW returns the A128GCMKW algorithm object.
+// A128GCMKW returns an object representing AES-GCM key wrap (128) key encryption algorithm.
 func A128GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A128GCMKW")
 }
 
-// A128KW returns the A128KW algorithm object.
+// A128KW returns an object representing AES key wrap (128) key encryption algorithm.
 func A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A128KW")
 }
 
-// A192GCMKW returns the A192GCMKW algorithm object.
+// A192GCMKW returns an object representing AES-GCM key wrap (192) key encryption algorithm.
 func A192GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A192GCMKW")
 }
 
-// A192KW returns the A192KW algorithm object.
+// A192KW returns an object representing AES key wrap (192) key encryption algorithm.
 func A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A192KW")
 }
 
-// A256GCMKW returns the A256GCMKW algorithm object.
+// A256GCMKW returns an object representing AES-GCM key wrap (256) key encryption algorithm.
 func A256GCMKW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A256GCMKW")
 }
 
-// A256KW returns the A256KW algorithm object.
+// A256KW returns an object representing AES key wrap (256) key encryption algorithm.
 func A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("A256KW")
 }
 
-// DIRECT returns the DIRECT algorithm object.
+// DIRECT returns an object representing Direct key encryption algorithm.
 func DIRECT() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("dir")
 }
 
-// ECDH_ES returns the ECDH_ES algorithm object.
+// ECDH_ES returns an object representing ECDH-ES key encryption algorithm.
 func ECDH_ES() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES")
 }
 
-// ECDH_ES_A128KW returns the ECDH_ES_A128KW algorithm object.
+// ECDH_ES_A128KW returns an object representing ECDH-ES + AES key wrap (128) key encryption algorithm.
 func ECDH_ES_A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A128KW")
 }
 
-// ECDH_ES_A192KW returns the ECDH_ES_A192KW algorithm object.
+// ECDH_ES_A192KW returns an object representing ECDH-ES + AES key wrap (192) key encryption algorithm.
 func ECDH_ES_A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A192KW")
 }
 
-// ECDH_ES_A256KW returns the ECDH_ES_A256KW algorithm object.
+// ECDH_ES_A256KW returns an object representing ECDH-ES + AES key wrap (256) key encryption algorithm.
 func ECDH_ES_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("ECDH-ES+A256KW")
 }
 
-// PBES2_HS256_A128KW returns the PBES2_HS256_A128KW algorithm object.
+// PBES2_HS256_A128KW returns an object representing PBES2 + HMAC-SHA256 + AES key wrap (128) key encryption algorithm.
 func PBES2_HS256_A128KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS256+A128KW")
 }
 
-// PBES2_HS384_A192KW returns the PBES2_HS384_A192KW algorithm object.
+// PBES2_HS384_A192KW returns an object representing PBES2 + HMAC-SHA384 + AES key wrap (192) key encryption algorithm.
 func PBES2_HS384_A192KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS384+A192KW")
 }
 
-// PBES2_HS512_A256KW returns the PBES2_HS512_A256KW algorithm object.
+// PBES2_HS512_A256KW returns an object representing PBES2 + HMAC-SHA512 + AES key wrap (256) key encryption algorithm.
 func PBES2_HS512_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("PBES2-HS512+A256KW")
 }
 
-// RSA1_5 returns the RSA1_5 algorithm object.
+// RSA1_5 returns an object representing RSA-PKCS1v1.5 key encryption algorithm.
 func RSA1_5() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA1_5")
 }
 
-// RSA_OAEP returns the RSA_OAEP algorithm object.
+// RSA_OAEP returns an object representing RSA-OAEP-SHA1 key encryption algorithm.
 func RSA_OAEP() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP")
 }
 
-// RSA_OAEP_256 returns the RSA_OAEP_256 algorithm object.
+// RSA_OAEP_256 returns an object representing RSA-OAEP-SHA256 key encryption algorithm.
 func RSA_OAEP_256() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-256")
 }
 
-// RSA_OAEP_384 returns the RSA_OAEP_384 algorithm object.
+// RSA_OAEP_384 returns an object representing RSA-OAEP-SHA384 key encryption algorithm.
 func RSA_OAEP_384() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-384")
 }
 
-// RSA_OAEP_512 returns the RSA_OAEP_512 algorithm object.
+// RSA_OAEP_512 returns an object representing RSA-OAEP-SHA512 key encryption algorithm.
 func RSA_OAEP_512() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm("RSA-OAEP-512")
 }
@@ -134,6 +134,7 @@ func lookupBuiltinKeyEncryptionAlgorithm(name string) KeyEncryptionAlgorithm {
 	return v
 }
 
+// KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
 type KeyEncryptionAlgorithm struct {
 	name        string
 	isSymmetric bool
@@ -143,16 +144,17 @@ func (s KeyEncryptionAlgorithm) String() string {
 	return s.name
 }
 
+// IsSymmetric returns true if the KeyEncryptionAlgorithm object is symmetric. Symmetric algorithms use the same key for both encryption and decryption.
 func (s KeyEncryptionAlgorithm) IsSymmetric() bool {
 	return s.isSymmetric
 }
 
-// EmptyKeyEncryptionAlgorithm returns an empty KeyEncryptionAlgorithm object, used as a zero value
+// EmptyKeyEncryptionAlgorithm returns an empty KeyEncryptionAlgorithm object, used as a zero value.
 func EmptyKeyEncryptionAlgorithm() KeyEncryptionAlgorithm {
 	return KeyEncryptionAlgorithm{}
 }
 
-// NewKeyEncryptionAlgorithm creates a new KeyEncryptionAlgorithm object
+// NewKeyEncryptionAlgorithm creates a new KeyEncryptionAlgorithm object with the given name.
 func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithmOption) KeyEncryptionAlgorithm {
 	var isSymmetric bool
 	//nolint:forcetypeassert
@@ -165,7 +167,7 @@ func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithm
 	return KeyEncryptionAlgorithm{name: name, isSymmetric: isSymmetric}
 }
 
-// LookupKeyEncryptionAlgorithm returns the KeyEncryptionAlgorithm object for the given name
+// LookupKeyEncryptionAlgorithm returns the KeyEncryptionAlgorithm object for the given name.
 func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 	muAllKeyEncryptionAlgorithm.RLock()
 	v, ok := allKeyEncryptionAlgorithm[name]
@@ -174,7 +176,7 @@ func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 }
 
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 	muAllKeyEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -185,7 +187,7 @@ func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 	muAllKeyEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -213,19 +215,19 @@ func rebuildKeyEncryptionAlgorithm() {
 	muListKeyEncryptionAlgorithm.Unlock()
 }
 
-// KeyEncryptionAlgorithms returns a list of all available values for KeyEncryptionAlgorithm
+// KeyEncryptionAlgorithms returns a list of all available values for KeyEncryptionAlgorithm.
 func KeyEncryptionAlgorithms() []KeyEncryptionAlgorithm {
 	muListKeyEncryptionAlgorithm.RLock()
 	defer muListKeyEncryptionAlgorithm.RUnlock()
 	return listKeyEncryptionAlgorithm
 }
 
-// MarshalJSON serializes the KeyEncryptionAlgorithm object to a JSON string
+// MarshalJSON serializes the KeyEncryptionAlgorithm object to a JSON string.
 func (s KeyEncryptionAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a KeyEncryptionAlgorithm object
+// UnmarshalJSON deserializes the JSON string to a KeyEncryptionAlgorithm object.
 func (s *KeyEncryptionAlgorithm) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {

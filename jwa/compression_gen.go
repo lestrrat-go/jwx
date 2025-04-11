@@ -26,12 +26,12 @@ func init() {
 	RegisterCompressionAlgorithm(algorithms...)
 }
 
-// Deflate returns the Deflate algorithm object.
+// Deflate returns an object representing the "DEF" content compression algorithm value. Using this value specifies that the content should be compressed using DEFLATE (RFC 1951).
 func Deflate() CompressionAlgorithm {
 	return lookupBuiltinCompressionAlgorithm("DEF")
 }
 
-// NoCompress returns the NoCompress algorithm object.
+// NoCompress returns an object representing an empty compression algorithm value. Using this value specifies that the content should not be compressed.
 func NoCompress() CompressionAlgorithm {
 	return lookupBuiltinCompressionAlgorithm("")
 }
@@ -46,6 +46,7 @@ func lookupBuiltinCompressionAlgorithm(name string) CompressionAlgorithm {
 	return v
 }
 
+// CompressionAlgorithm represents the compression algorithms as described in https://tools.ietf.org/html/rfc7518#section-7.3
 type CompressionAlgorithm struct {
 	name string
 }
@@ -54,17 +55,17 @@ func (s CompressionAlgorithm) String() string {
 	return s.name
 }
 
-// EmptyCompressionAlgorithm returns an empty CompressionAlgorithm object, used as a zero value
+// EmptyCompressionAlgorithm returns an empty CompressionAlgorithm object, used as a zero value.
 func EmptyCompressionAlgorithm() CompressionAlgorithm {
 	return CompressionAlgorithm{}
 }
 
-// NewCompressionAlgorithm creates a new CompressionAlgorithm object
+// NewCompressionAlgorithm creates a new CompressionAlgorithm object with the given name.
 func NewCompressionAlgorithm(name string) CompressionAlgorithm {
 	return CompressionAlgorithm{name: name}
 }
 
-// LookupCompressionAlgorithm returns the CompressionAlgorithm object for the given name
+// LookupCompressionAlgorithm returns the CompressionAlgorithm object for the given name.
 func LookupCompressionAlgorithm(name string) (CompressionAlgorithm, bool) {
 	muAllCompressionAlgorithm.RLock()
 	v, ok := allCompressionAlgorithm[name]
@@ -73,7 +74,7 @@ func LookupCompressionAlgorithm(name string) (CompressionAlgorithm, bool) {
 }
 
 // RegisterCompressionAlgorithm registers a new CompressionAlgorithm. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 	muAllCompressionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -84,7 +85,7 @@ func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 }
 
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 	muAllCompressionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -112,19 +113,19 @@ func rebuildCompressionAlgorithm() {
 	muListCompressionAlgorithm.Unlock()
 }
 
-// CompressionAlgorithms returns a list of all available values for CompressionAlgorithm
+// CompressionAlgorithms returns a list of all available values for CompressionAlgorithm.
 func CompressionAlgorithms() []CompressionAlgorithm {
 	muListCompressionAlgorithm.RLock()
 	defer muListCompressionAlgorithm.RUnlock()
 	return listCompressionAlgorithm
 }
 
-// MarshalJSON serializes the CompressionAlgorithm object to a JSON string
+// MarshalJSON serializes the CompressionAlgorithm object to a JSON string.
 func (s CompressionAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a CompressionAlgorithm object
+// UnmarshalJSON deserializes the JSON string to a CompressionAlgorithm object.
 func (s *CompressionAlgorithm) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {

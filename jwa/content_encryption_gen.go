@@ -26,32 +26,32 @@ func init() {
 	RegisterContentEncryptionAlgorithm(algorithms...)
 }
 
-// A128CBC_HS256 returns the A128CBC_HS256 algorithm object.
+// A128CBC_HS256 returns an object representing A128CBC-HS256. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).
 func A128CBC_HS256() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A128CBC-HS256")
 }
 
-// A128GCM returns the A128GCM algorithm object.
+// A128GCM returns an object representing A128GCM. Using this value specifies that the content should be encrypted using AES-GCM (128).
 func A128GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A128GCM")
 }
 
-// A192CBC_HS384 returns the A192CBC_HS384 algorithm object.
+// A192CBC_HS384 returns an object representing A192CBC-HS384. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA384 (192).
 func A192CBC_HS384() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A192CBC-HS384")
 }
 
-// A192GCM returns the A192GCM algorithm object.
+// A192GCM returns an object representing A192GCM. Using this value specifies that the content should be encrypted using AES-GCM (192).
 func A192GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A192GCM")
 }
 
-// A256CBC_HS512 returns the A256CBC_HS512 algorithm object.
+// A256CBC_HS512 returns an object representing A256CBC-HS512. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA512 (256).
 func A256CBC_HS512() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A256CBC-HS512")
 }
 
-// A256GCM returns the A256GCM algorithm object.
+// A256GCM returns an object representing A256GCM. Using this value specifies that the content should be encrypted using AES-GCM (256).
 func A256GCM() ContentEncryptionAlgorithm {
 	return lookupBuiltinContentEncryptionAlgorithm("A256GCM")
 }
@@ -66,6 +66,7 @@ func lookupBuiltinContentEncryptionAlgorithm(name string) ContentEncryptionAlgor
 	return v
 }
 
+// ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm struct {
 	name string
 }
@@ -74,17 +75,17 @@ func (s ContentEncryptionAlgorithm) String() string {
 	return s.name
 }
 
-// EmptyContentEncryptionAlgorithm returns an empty ContentEncryptionAlgorithm object, used as a zero value
+// EmptyContentEncryptionAlgorithm returns an empty ContentEncryptionAlgorithm object, used as a zero value.
 func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
 	return ContentEncryptionAlgorithm{}
 }
 
-// NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object
+// NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object with the given name.
 func NewContentEncryptionAlgorithm(name string) ContentEncryptionAlgorithm {
 	return ContentEncryptionAlgorithm{name: name}
 }
 
-// LookupContentEncryptionAlgorithm returns the ContentEncryptionAlgorithm object for the given name
+// LookupContentEncryptionAlgorithm returns the ContentEncryptionAlgorithm object for the given name.
 func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, bool) {
 	muAllContentEncryptionAlgorithm.RLock()
 	v, ok := allContentEncryptionAlgorithm[name]
@@ -93,7 +94,7 @@ func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, 
 }
 
 // RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -104,7 +105,7 @@ func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -132,19 +133,19 @@ func rebuildContentEncryptionAlgorithm() {
 	muListContentEncryptionAlgorithm.Unlock()
 }
 
-// ContentEncryptionAlgorithms returns a list of all available values for ContentEncryptionAlgorithm
+// ContentEncryptionAlgorithms returns a list of all available values for ContentEncryptionAlgorithm.
 func ContentEncryptionAlgorithms() []ContentEncryptionAlgorithm {
 	muListContentEncryptionAlgorithm.RLock()
 	defer muListContentEncryptionAlgorithm.RUnlock()
 	return listContentEncryptionAlgorithm
 }
 
-// MarshalJSON serializes the ContentEncryptionAlgorithm object to a JSON string
+// MarshalJSON serializes the ContentEncryptionAlgorithm object to a JSON string.
 func (s ContentEncryptionAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a ContentEncryptionAlgorithm object
+// UnmarshalJSON deserializes the JSON string to a ContentEncryptionAlgorithm object.
 func (s *ContentEncryptionAlgorithm) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {

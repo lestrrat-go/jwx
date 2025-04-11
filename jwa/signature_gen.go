@@ -29,77 +29,77 @@ func init() {
 	RegisterSignatureAlgorithm(algorithms...)
 }
 
-// ES256 returns the ES256 algorithm object.
+// ES256 returns an object representing ECDSA signature algorithm using P-256 curve and SHA-256.
 func ES256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES256")
 }
 
-// ES256K returns the ES256K algorithm object.
+// ES256K returns an object representing ECDSA signature algorithm using secp256k1 curve and SHA-256.
 func ES256K() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES256K")
 }
 
-// ES384 returns the ES384 algorithm object.
+// ES384 returns an object representing ECDSA signature algorithm using P-384 curve and SHA-384.
 func ES384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES384")
 }
 
-// ES512 returns the ES512 algorithm object.
+// ES512 returns an object representing ECDSA signature algorithm using P-521 curve and SHA-512.
 func ES512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES512")
 }
 
-// EdDSA returns the EdDSA algorithm object.
+// EdDSA returns an object representing EdDSA signature algorithms.
 func EdDSA() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("EdDSA")
 }
 
-// HS256 returns the HS256 algorithm object.
+// HS256 returns an object representing HMAC signature algorithm using SHA-256.
 func HS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS256")
 }
 
-// HS384 returns the HS384 algorithm object.
+// HS384 returns an object representing HMAC signature algorithm using SHA-384.
 func HS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS384")
 }
 
-// HS512 returns the HS512 algorithm object.
+// HS512 returns an object representing HMAC signature algorithm using SHA-512.
 func HS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("HS512")
 }
 
-// NoSignature returns the NoSignature algorithm object.
+// NoSignature returns an object representing the lack of a signature algorithm. Using this value specifies that the content should not be signed, which you should avoid doing.
 func NoSignature() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("none")
 }
 
-// PS256 returns the PS256 algorithm object.
+// PS256 returns an object representing RSASSA-PSS signature algorithm using SHA-256 and MGF1-SHA256.
 func PS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS256")
 }
 
-// PS384 returns the PS384 algorithm object.
+// PS384 returns an object representing RSASSA-PSS signature algorithm using SHA-384 and MGF1-SHA384.
 func PS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS384")
 }
 
-// PS512 returns the PS512 algorithm object.
+// PS512 returns an object representing RSASSA-PSS signature algorithm using SHA-512 and MGF1-SHA512.
 func PS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("PS512")
 }
 
-// RS256 returns the RS256 algorithm object.
+// RS256 returns an object representing RSASSA-PKCS-v1.5 signature algorithm using SHA-256.
 func RS256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS256")
 }
 
-// RS384 returns the RS384 algorithm object.
+// RS384 returns an object representing RSASSA-PKCS-v1.5 signature algorithm using SHA-384.
 func RS384() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS384")
 }
 
-// RS512 returns the RS512 algorithm object.
+// RS512 returns an object representing RSASSA-PKCS-v1.5 signature algorithm using SHA-512.
 func RS512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("RS512")
 }
@@ -114,6 +114,7 @@ func lookupBuiltinSignatureAlgorithm(name string) SignatureAlgorithm {
 	return v
 }
 
+// SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm struct {
 	name        string
 	isSymmetric bool
@@ -123,16 +124,17 @@ func (s SignatureAlgorithm) String() string {
 	return s.name
 }
 
+// IsSymmetric returns true if the SignatureAlgorithm object is symmetric. Symmetric algorithms use the same key for both encryption and decryption.
 func (s SignatureAlgorithm) IsSymmetric() bool {
 	return s.isSymmetric
 }
 
-// EmptySignatureAlgorithm returns an empty SignatureAlgorithm object, used as a zero value
+// EmptySignatureAlgorithm returns an empty SignatureAlgorithm object, used as a zero value.
 func EmptySignatureAlgorithm() SignatureAlgorithm {
 	return SignatureAlgorithm{}
 }
 
-// NewSignatureAlgorithm creates a new SignatureAlgorithm object
+// NewSignatureAlgorithm creates a new SignatureAlgorithm object with the given name.
 func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) SignatureAlgorithm {
 	var isSymmetric bool
 	//nolint:forcetypeassert
@@ -145,7 +147,7 @@ func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) 
 	return SignatureAlgorithm{name: name, isSymmetric: isSymmetric}
 }
 
-// LookupSignatureAlgorithm returns the SignatureAlgorithm object for the given name
+// LookupSignatureAlgorithm returns the SignatureAlgorithm object for the given name.
 func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 	muAllSignatureAlgorithm.RLock()
 	v, ok := allSignatureAlgorithm[name]
@@ -154,7 +156,7 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 }
 
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm. The signature value must be immutable
-// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library
+// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -165,7 +167,7 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
-// Non-existent entries, as well as built-in algorithms will silently be ignored
+// Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
 	for _, alg := range algorithms {
@@ -193,19 +195,19 @@ func rebuildSignatureAlgorithm() {
 	muListSignatureAlgorithm.Unlock()
 }
 
-// SignatureAlgorithms returns a list of all available values for SignatureAlgorithm
+// SignatureAlgorithms returns a list of all available values for SignatureAlgorithm.
 func SignatureAlgorithms() []SignatureAlgorithm {
 	muListSignatureAlgorithm.RLock()
 	defer muListSignatureAlgorithm.RUnlock()
 	return listSignatureAlgorithm
 }
 
-// MarshalJSON serializes the SignatureAlgorithm object to a JSON string
+// MarshalJSON serializes the SignatureAlgorithm object to a JSON string.
 func (s SignatureAlgorithm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-// UnmarshalJSON deserializes the JSON string to a SignatureAlgorithm object
+// UnmarshalJSON deserializes the JSON string to a SignatureAlgorithm object.
 func (s *SignatureAlgorithm) UnmarshalJSON(data []byte) error {
 	var name string
 	if err := json.Unmarshal(data, &name); err != nil {
