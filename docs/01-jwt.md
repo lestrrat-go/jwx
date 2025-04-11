@@ -72,7 +72,6 @@ as well as validating the contents of the JWT object after it has been decoded.
 To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse)
 
 <!-- INCLUDE(examples/jwt_parse_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -93,9 +92,7 @@ func Example_jwt_parse() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_example_test.go)
-
 <!-- END INCLUDE -->
 
 Note that the above form performs only signature verification and no validation of the JWT token itself.
@@ -106,7 +103,6 @@ In order to perform validation, please use `Validate()`.
 To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse).
 
 <!-- INCLUDE(examples/jwt_readfile_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -140,9 +136,7 @@ func Example_jwt_readfile() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_readfile_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Parse a JWT from a \*http.Request
@@ -150,7 +144,6 @@ source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/j
 To parse a JWT stored within a \*http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
 
 <!-- INCLUDE(examples/jwt_parse_request_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -226,9 +219,7 @@ func Example_jwt_parse_request_authorization() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_request_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_request_example_test.go)
-
 <!-- END INCLUDE -->
 
 # Programmatically Creating a JWT
@@ -238,7 +229,6 @@ source: [examples/jwt_parse_request_example_test.go](https://github.com/lestrrat
 The most straight forward way is to use the constructor `jwt.New()` and use `(jwt.Token).Set()`:
 
 <!-- INCLUDE(examples/jwt_construct_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -269,9 +259,7 @@ func Example_jwt_construct() {
   // {"aud":["users"],"iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-
 source: [examples/jwt_construct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_construct_example_test.go)
-
 <!-- END INCLUDE -->
 
 If repeatedly checking for errors in `Set()` sounds like too much trouble, consider using the builder.
@@ -286,7 +274,6 @@ One caveat that you should be aware about is that all calls to set a claim in th
 operation. If you set the same claim multiple times, the last value is used.
 
 <!-- INCLUDE(examples/jwt_builder_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -317,9 +304,7 @@ func Example_jwt_builder() {
   // {"aud":["users"],"claim1":"value1","claim2":"value2","iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-
 source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_builder_example_test.go)
-
 <!-- END INCLUDE -->
 
 # JWT Verification
@@ -329,7 +314,6 @@ source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jw
 To parse a JWT _and_ verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse) function.
 
 <!-- INCLUDE(examples/jwt_parse_with_key_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -359,9 +343,7 @@ func Example_jwt_parse_with_key() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_with_key_example_test.go)
-
 <!-- END INCLUDE -->
 
 In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
@@ -375,7 +357,6 @@ The following code does a lot of preparation to mimic a real JWKS signed JWT, bu
 In real life, the location of JWKS files are specified by the service that provided you with the signed JWT. The URL for these JWKS files often (but are not always guaranteed to be) take the form `https://DOMAIN/.well-known/jwks.json` and the like. If you need to fetch these in your code, [refer to the documentation on `jwk` package](04-jwk.md#fetching-jwk-sets).
 
 <!-- INCLUDE(examples/jwt_parse_with_keyset_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -477,9 +458,7 @@ func Example_jwt_parse_with_key_set() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_with_keyset_example_test.go)
-
 <!-- END INCLUDE -->
 
 There are a couple of things to note.
@@ -519,7 +498,6 @@ If you must switch the key to use for verification dynamically, you can load you
 arbitrary location using `jwt.WithKeySetProvider()` option:
 
 <!-- INCLUDE(examples/jwt_parse_with_key_provider_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -670,9 +648,7 @@ func Example_jwt_parse_with_key_provider() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_with_key_provider_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_with_key_provider_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Parse and Verify a JWT (using key specified in `jku`)
@@ -682,7 +658,6 @@ use `jws.VerifyAuto()` instead of `jws.Verify()`. This would effectively allow a
 self-validating.
 
 <!-- INCLUDE(examples/jwt_parse_with_jku_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -765,9 +740,7 @@ func Example_jwt_parse_with_jku() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_parse_with_jku_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_with_jku_example_test.go)
-
 <!-- END INCLUDE -->
 
 This feature must be used with extreme caution. Please see the caveats and fine prints
@@ -778,7 +751,6 @@ in the documentation for `jws.VerifyAuto()`
 To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Validate) function.
 
 <!-- INCLUDE(examples/jwt_validate_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -832,9 +804,7 @@ func Example_jwt_validate() {
   // jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }
 ```
-
 source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Validate for specific claim values
@@ -842,7 +812,6 @@ source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/j
 By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ValidateOption) values, such as `jwt.WithClaimValue()`, `jwt.WithRequiredClaim()`, etc.
 
 <!-- INCLUDE(examples/jwt_validate_issuer_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -873,9 +842,7 @@ func Example_jwt_validate_issuer() {
   // jwt.Validate: validation failed: "iss" not satisfied: claim "iss" does not have the expected value
 }
 ```
-
 source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_issuer_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Use a custom validator
@@ -883,7 +850,6 @@ source: [examples/jwt_validate_issuer_example_test.go](https://github.com/lestrr
 You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
 
 <!-- INCLUDE(examples/jwt_validate_validator_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -927,9 +893,7 @@ func Example_jwt_validate_validator() {
   // jwt.Validate: validation failed: tokens are only valid if issued during August!
 }
 ```
-
 source: [examples/jwt_validate_validator_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_validator_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Detecting error types
@@ -937,7 +901,6 @@ source: [examples/jwt_validate_validator_example_test.go](https://github.com/les
 If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. To do this, you can use the function `jwt.IsValidationError()`. To further differentiate between specific errors, you can use `errors.Is()`:
 
 <!-- INCLUDE(examples/jwt_validate_detect_error_type_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1007,9 +970,7 @@ func Example_jwt_validate_detect_error_type() {
   // jwt.Parse: failed to parse token: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }
 ```
-
 source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_detect_error_type_example_test.go)
-
 <!-- END INCLUDE -->
 
 # JWT Serialization
@@ -1022,7 +983,6 @@ In this case it will be marshaled as a JSON object rather than in the compact fo
 Since it will be just the raw token, no signing or encryption will be performed.
 
 <!-- INCLUDE(examples/jwt_serialize_json_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1050,9 +1010,7 @@ func Example_jwt_serialize_json() {
   // {"iat":233431200,"iss":"github.com/lestrrat-go/jwx"}
 }
 ```
-
 source: [examples/jwt_serialize_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_serialize_json_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Serialize using JWS
@@ -1062,7 +1020,6 @@ The `jwt` package provides a convenience function `jwt.Sign()` to serialize a to
 If you need even further customization, consider using the `jws` package directly.
 
 <!-- INCLUDE(examples/jwt_serialize_jws_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1115,9 +1072,7 @@ func Example_jwt_serialize_jws() {
   // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjIzMzQzMTIwMCwiaXNzIjoiZ2l0aHViLmNvbS9sZXN0cnJhdC1nby9qd3gifQ.K1WVWaM6Dww9aNNFMjnyUfjaaHIs08-3Qb1b8eSEHOk
 }
 ```
-
 source: [examples/jwt_serialize_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_serialize_jws_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Serialize using JWE and JWS
@@ -1129,7 +1084,6 @@ If for whatever reason the built-in `(jwt.Serializer).Sign()` and `(jwt.Serializ
 The following example, encrypts a token using JWE, then uses JWS to sign the encrypted payload:
 
 <!-- INCLUDE(examples/jwt_serialize_jwe_jws_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1186,9 +1140,7 @@ func Example_jwt_serialize_jwe_jws() {
   // OUTPUT:
 }
 ```
-
 source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_serialize_jwe_jws_example_test.go)
-
 <!-- END INCLUDE -->
 
 ## Serialize the `aud` field as a single string
@@ -1214,7 +1166,6 @@ The examples below should both be valid, but apparently there are systems that d
 To work around these problematic parsers, you may use enable the option `jwt.FlattenAudience` on each token that you would like to see this behavior. If you do this for _all_ (or most) tokens, you may opt to change the global default value by settings `jwt.WithFlattenAudience(true)` option via `jwt.Settings()`.
 
 <!-- INCLUDE(examples/jwt_flatten_audience_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1301,9 +1252,7 @@ func Example_jwt_flatten_Audience() {
   // {"aud":"foo"}
 }
 ```
-
 source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_flatten_audience_example_test.go)
-
 <!-- END INCLUDE -->
 
 # Working with JWT
@@ -1313,7 +1262,6 @@ source: [examples/jwt_flatten_audience_example_test.go](https://github.com/lestr
 github.com/lestrrat-go/jwx is focused on usability / stable API. If you are worried about performance while processing JWTs, the best path is just to use a plain struct after handling JWS yourself:
 
 <!-- INCLUDE(examples/jwt_raw_struct_example_test.go) -->
-
 ```go
 package examples
 
@@ -1364,9 +1312,7 @@ func Example_jwt_plain_struct() {
   // foobar
 }
 ```
-
 source: [examples/jwt_raw_struct_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_raw_struct_example_test.go)
-
 <!-- END INCLUDE -->
 
 This makes sure that you do not go through any extra layers of abstraction that causes performance penalties, and you get exactly the type of field that you want.
@@ -1418,7 +1364,6 @@ Per specification JWT should be using URL base64 encoding with no padding when g
 In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls. Please note that this feature is available on v3 onwards only.
 
 <!-- INCLUDE(examples/jwt_sign_with_custom_base64_example_test.go) -->
-
 ```go
 package examples_test
 
@@ -1474,9 +1419,7 @@ func Example_jwt_sign_with_custom_base64_encoder() {
   // {"iat":233431200,"sub":"github.com/lestrrat-go/jwx"}
 }
 ```
-
 source: [examples/jwt_sign_with_custom_base64_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_sign_with_custom_base64_example_test.go)
-
 <!-- END INCLUDE -->
 
 You can use these option for `jws.Sign` and `jws.Verify` as well. See the [JWS docs for an example](./02-jwt.md#using-a-custom-base64-encoder).
