@@ -672,7 +672,7 @@ func Example_jwt_parse_with_jku() {
   var signingKey jwk.Key
 
   // for _, alg := range algorithms {
-  for i := 0; i < 3; i++ {
+  for i := range 3 {
     pk, err := rsa.GenerateKey(rand.Reader, 2048)
     if err != nil {
       fmt.Printf("failed to generate private key: %s\n", err)
