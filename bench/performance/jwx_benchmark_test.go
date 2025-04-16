@@ -26,7 +26,7 @@ func (c *Case) Run(b *testing.B) {
 		}
 
 		b.Helper()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			b.StopTimer()
 			if pretest := c.Pretest; pretest != nil {
 				if err := pretest(b); err != nil {

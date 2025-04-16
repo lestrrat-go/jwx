@@ -29,7 +29,6 @@ func TestX509CertChain(t *testing.T) {
 		newECDSAPublicKey(),
 		newSymmetricKey(),
 	} {
-		key := key
 		t.Run("Set X509CertChainKey", func(t *testing.T) {
 			if !assert.NoError(t, key.Set(X509CertChainKey, &c), "Set for x5c should succeed") {
 				return

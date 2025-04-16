@@ -49,7 +49,7 @@ func Example_jwe_encrypt_json_multi() {
 	var privkeys []jwk.Key
 	var pubkeys []jwk.Key
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rawprivkey, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			fmt.Printf("failed to create raw private key: %s\n", err)

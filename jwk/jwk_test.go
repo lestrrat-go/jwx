@@ -179,8 +179,6 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
-			k := k
-			kdef := kdef
 			t.Run(k, func(t *testing.T) {
 				getval, ok := key.Get(k)
 				if !assert.True(t, ok, `key.Get(%s) should succeed`, k) {
@@ -939,7 +937,6 @@ func TestPublicKeyOf(t *testing.T) {
 	}
 
 	for _, key := range keys {
-		key := key
 		t.Run(fmt.Sprintf("%T", key.Key), func(t *testing.T) {
 			t.Parallel()
 
@@ -1035,7 +1032,7 @@ func TestIssue207(t *testing.T) {
 
 	// Using a loop here because we're using sync.Pool
 	// just for sanity.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		k, err := jwk.ParseKey([]byte(src))
 		if !assert.NoError(t, err, `jwk.ParseKey should succeed`) {
 			return
@@ -1300,7 +1297,6 @@ func TestECDSA(t *testing.T) {
 	})
 	t.Run("Curve types", func(t *testing.T) {
 		for _, alg := range ecutil.AvailableAlgorithms() {
-			alg := alg
 			t.Run(alg.String(), func(t *testing.T) {
 				key, err := jwxtest.GenerateEcdsaKey(alg)
 				if !assert.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`) {
@@ -1557,7 +1553,6 @@ func TestTypedFields(t *testing.T) {
 	}
 
 	for _, key := range keys {
-		key := key
 		serialized, err := json.Marshal(key)
 		if !assert.NoError(t, err, `json.Marshal should succeed`) {
 			return
@@ -1565,7 +1560,6 @@ func TestTypedFields(t *testing.T) {
 
 		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
 			for _, tc := range testcases {
-				tc := tc
 				t.Run(tc.Name, func(t *testing.T) {
 					got, err := jwk.ParseKey(serialized, tc.Options...)
 					if !assert.NoError(t, err, `jwk.Parse should succeed`) {
@@ -1601,7 +1595,6 @@ func TestTypedFields(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
@@ -1637,7 +1630,7 @@ func TestGH412(t *testing.T) {
 
 	const iterations = 5
 	kids := make(map[string]struct{})
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		k, err := jwxtest.GenerateRsaJwk()
 		if !assert.NoError(t, err, `jwxttest.GenerateRsaJwk() should succeed`) {
 			return
@@ -1649,7 +1642,7 @@ func TestGH412(t *testing.T) {
 		kids[kid] = struct{}{}
 	}
 
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		idx := i
 		currentKid := "key-" + strconv.Itoa(i)
 		t.Run(fmt.Sprintf("Remove at position %d", i), func(t *testing.T) {
@@ -1935,7 +1928,6 @@ func TestFetch(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -2019,7 +2011,6 @@ func TestGH567(t *testing.T) {
 	defer srv.Close()
 
 	for _, ignoreParseError := range []bool{true, false} {
-		ignoreParseError := ignoreParseError
 		t.Run(fmt.Sprintf(`Parse with ignoreParseError=%t`, ignoreParseError), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -2100,7 +2091,7 @@ func TestGH664(t *testing.T) {
 	privkey.Primes = privkey.Primes[:2]
 
 	// nuke p and q, dp, dq, qi
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		i := i
 		t.Run(fmt.Sprintf("Check what happens when primes are reduced to %d", i), func(t *testing.T) {
 			privkey.Primes = privkey.Primes[:i]
