@@ -63,7 +63,7 @@ func TestVectorsAESCBC128(t *testing.T) {
 }
 
 func TestPad(t *testing.T) {
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		buf := make([]byte, i)
 		pb := pad(buf, 16)
 
