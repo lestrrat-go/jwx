@@ -229,7 +229,7 @@ import (
 func Example_jws_sign_json() {
   var keys []jwk.Key
 
-  for i := 0; i < 3; i++ {
+  for i := range 3 {
     key, err := jwk.FromRaw([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
     if err != nil {
       fmt.Printf("failed to create key: %s\n", err)

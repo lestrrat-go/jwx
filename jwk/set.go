@@ -274,7 +274,7 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 	defer s.mu.RUnlock()
 
 	n := s.Len()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		key, ok := s.Key(i)
 		if !ok {
 			return nil, false

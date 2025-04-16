@@ -277,7 +277,7 @@ func parse(ctx *parseCtx, data []byte) (Token, error) {
 	var expectNested bool
 
 OUTER:
-	for i := 0; i < maxDecodeLevels; i++ {
+	for i := range maxDecodeLevels {
 		switch kind := jwx.GuessFormat(payload); kind {
 		case jwx.JWT:
 			if ctx.pedantic {

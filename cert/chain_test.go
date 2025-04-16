@@ -45,7 +45,6 @@ func TestChain(t *testing.T) {
 
 	var chain cert.Chain
 	for _, tc := range testcases {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			if !assert.NoError(t, chain.Add(tc.Data), `chain.Add should succeed`) {
 				return
@@ -57,7 +56,7 @@ func TestChain(t *testing.T) {
 		return
 	}
 
-	for i := 0; i < chain.Len(); i++ {
+	for i := range chain.Len() {
 		der, ok := chain.Get(i)
 		if !assert.True(t, ok, `chain.Get(%d) should succeed`, i) {
 			return
