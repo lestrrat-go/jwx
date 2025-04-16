@@ -13,25 +13,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    target-branch: "develop/v3"
-    labels:
-      - "go"
-      - "dependencies"
-      - "dependabot"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "daily"
     target-branch: "develop/v2"
-    labels:
-      - "go"
-      - "dependencies"
-      - "dependabot"
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    target-branch: "develop/v1"
     labels:
       - "go"
       - "dependencies"
@@ -46,9 +28,4 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "develop/v2"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    target-branch: "develop/v1"
 
