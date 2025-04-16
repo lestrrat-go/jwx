@@ -8,6 +8,7 @@ linters:
     - err113
     - errorlint
     - exhaustive
+    - funcorder
     - funlen
     - gochecknoglobals
     - gochecknoinits
