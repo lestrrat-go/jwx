@@ -31,7 +31,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 	require.NoError(b, err, `DecodeBase64 should succeed`)
 
 	b.Run("Use json.Marshal/json.Unmarshal", func(b *testing.B) {
-		for i := range b.N {
+		for range b.N {
 			serialized, err := json.Marshal(map[string]interface{}{
 				"kty": "EC",
 				"crv": "secp256k1",
@@ -50,7 +50,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 		}
 	})
 	b.Run("Use jwk.FromRaw", func(b *testing.B) {
-		for i := range b.N {
+		for range b.N {
 			var raw ecdsa.PublicKey
 			raw.Curve = secp256k1.S256()
 			raw.X = &big.Int{}
