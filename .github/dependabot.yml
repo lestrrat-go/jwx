@@ -27,15 +27,6 @@ updates:
       - "go"
       - "dependencies"
       - "dependabot"
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    target-branch: "develop/v1"
-    labels:
-      - "go"
-      - "dependencies"
-      - "dependabot"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -46,9 +37,4 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "develop/v2"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    target-branch: "develop/v1"
 
