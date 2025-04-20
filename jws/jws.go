@@ -632,26 +632,30 @@ func parseJSON(data []byte) (result *Message, err error) {
 	return &m, nil
 }
 
+const tokenDelim = "."
+
 // SplitCompact splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
-	// Three parts is two separators
-	if bytes.Count(src, []byte(".")) != 2 {
+	protected, s, ok := bytes.Cut(src, []byte(tokenDelim))
+	if !ok { // no period found
 		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
 	}
-	parts := bytes.SplitN(src, []byte("."), 3)
-	return parts[0], parts[1], parts[2], nil
+	payload, s, ok := bytes.Cut(s, []byte(tokenDelim))
+	if !ok { // only one period found
+		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
+	}
+	signature, _, ok := bytes.Cut(s, []byte(tokenDelim))
+	if ok { // three periods found
+		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
+	}
+	return protected, payload, signature, nil
 }
 
 // SplitCompactString splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
-	// Three parts is two separators
-	if strings.Count(src, ".") != 2 {
-		return nil, nil, nil, fmt.Errorf(`invalid number of segments`)
-	}
-	parts := strings.SplitN(src, ".", 3)
-	return []byte(parts[0]), []byte(parts[1]), []byte(parts[2]), nil
+	return SplitCompact([]byte(src))
 }
 
 // SplitCompactReader splits a JWT and returns its three parts
