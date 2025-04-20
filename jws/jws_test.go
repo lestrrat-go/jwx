@@ -1183,7 +1183,7 @@ func TestRFC7797(t *testing.T) {
 				            "signature": "A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY"
 						},
 						{
-							"protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6dHJ1ZSwiY3JpdCI6WyJiNjQiXX0", 
+							"protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6dHJ1ZSwiY3JpdCI6WyJiNjQiXX0",
 							"signature": "6BjugbC8MfrT_yy5WxWVFZrEHVPDtpdsV9u-wbzQDV8"
 						}
 					],
@@ -1924,4 +1924,22 @@ func TestParseFormat(t *testing.T) {
 	require.NoError(t, err, `jws.Parse should succeed`)
 	_, err = jws.Parse(signedJSON, jws.WithJSON(), jws.WithCompact())
 	require.NoError(t, err, `jws.Parse should succeed`)
+}
+
+func BenchmarkSplitCompat(b *testing.B) {
+	for range b.N {
+		_, _, _, err := jws.SplitCompact([]byte(exampleCompactSerialization))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkSplitCompatString(b *testing.B) {
+	for range b.N {
+		_, _, _, err := jws.SplitCompactString(exampleCompactSerialization)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
