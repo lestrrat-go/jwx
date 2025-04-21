@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -846,11 +847,20 @@ func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 }
 
 func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
-	// Five parts is four separators
-	if count := bytes.Count(buf, []byte{'.'}); count != 4 {
-		return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, count)
+	var parts [5][]byte
+	var ok bool
+
+	for i := range 4 {
+		parts[i], buf, ok = bytes.Cut(buf, []byte{'.'})
+		if !ok {
+			return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, i+1)
+		}
 	}
-	parts := bytes.SplitN(buf, []byte{'.'}, 5)
+	// Validate that the last part does not contain more dots
+	if bytes.ContainsRune(buf, '.') {
+		return nil, errors.New(`compact JWE format must have five parts, not more`)
+	}
+	parts[4] = buf
 
 	hdrbuf, err := base64.Decode(parts[0])
 	if err != nil {
