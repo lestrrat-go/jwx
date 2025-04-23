@@ -7,7 +7,7 @@ toolchain go1.23.6
 require (
 	github.com/cloudflare/circl v1.6.0
 	github.com/emmansun/gmsm v0.21.5
-	github.com/lestrrat-go/httprc/v3 v3.0.0-beta1
+	github.com/lestrrat-go/httprc/v3 v3.0.0-beta2
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 )
 
