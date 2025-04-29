@@ -32,6 +32,9 @@ v3.0.1 29 Apr 2025
     However, in abandunce of caution, we recommend that you upgrade to v3.0.1 or later,
     or v2.1.6 or later if you are still on v2 series.
 
+  * [jws] Improve performance of jws.SplitCompact and jws.SplitCompactString
+  * [jwe] Improve performance of jwe.Parse
+
 v3.0.0 1 Apr 2025
   * Release initial v3.0.0 series. Code is identical to v3.0.0-beta2, except
     for minor documentation changes.
