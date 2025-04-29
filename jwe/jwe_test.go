@@ -421,32 +421,73 @@ func Test_GHIssue207(t *testing.T) {
 
 // tests direct key encryption by encrypting-decrypting a plaintext
 func TestEncode_Direct(t *testing.T) {
-	var testcases = []struct {
+	testcases := []*struct {
 		Algorithm jwa.ContentEncryptionAlgorithm
 		KeySize   int // in bytes
+		Error     bool
 	}{
-		{jwa.A128CBC_HS256(), 32},
-		{jwa.A128GCM(), 16},
-		{jwa.A192CBC_HS384(), 48},
-		{jwa.A192GCM(), 24},
-		{jwa.A256CBC_HS512(), 64},
-		{jwa.A256GCM(), 32},
+		{
+			Algorithm: jwa.A128CBC_HS256(),
+			KeySize:   32,
+		},
+		{
+			Algorithm: jwa.A128GCM(),
+			KeySize:   16,
+		},
+		{
+			Algorithm: jwa.A192CBC_HS384(),
+			KeySize:   48,
+		},
+		{
+			Algorithm: jwa.A192GCM(),
+			KeySize:   24,
+		},
+		{
+			Algorithm: jwa.A256CBC_HS512(),
+			KeySize:   64,
+		},
+		{
+			Algorithm: jwa.A256GCM(),
+			KeySize:   32,
+		},
+		// Test with wrong alg <-> key size combinations.
+
+		// Test for gh-1366
+		// Prior to v3.0.1, this did not error. It only passed because the original
+		// code was doing `actual_keysize/2` and passing 16 bytes out of the total
+		// 32 bytes, resulting in the aes.NewCipher function using AES-128 instead of AES-256.
+		//
+		// It wouldn't have worked for A192CBC_HS384, because if you
+		// provided 24 bytes instead of 48, the key size would be 12, and
+		// aes.NewCipher would barf.
+		{
+			Algorithm: jwa.A256CBC_HS512(),
+			KeySize:   32,
+			Error:     true,
+		},
+		// Sanity for HS384. This never went through, but just in case
+		{
+			Algorithm: jwa.A192CBC_HS384(),
+			KeySize:   24,
+			Error:     true,
+		},
 	}
 	plaintext := []byte("Lorem ipsum")
 
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			key := make([]byte, tc.KeySize)
-			/*
-				_, err := rand.Read(key)
-				require.NoError(t, err, "Key generation succeeds")
-			*/
 			for n := 0; n < len(key); {
 				w := copy(key[n:], []byte(`12345678`))
 				n += w
 			}
 
 			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(tc.Algorithm))
+			if tc.Error {
+				require.Error(t, err, `jwe.Encrypt should fail`)
+				// we can't continue
+				return
+			}
 			require.NoError(t, err, `jwe.Encrypt should succeed`)
 			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
