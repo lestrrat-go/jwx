@@ -123,6 +123,13 @@ func TestParse(t *testing.T) {
 				return
 			}
 		})
+		t.Run("Too many parts", func(t *testing.T) {
+			s2 := s + "."
+			_, err := jwe.Parse([]byte(s2))
+			if !assert.Error(t, err, `should fail to parse compact format with too many parts`) {
+				return
+			}
+		})
 	})
 	t.Run("JSON format", func(t *testing.T) {
 		msg, err := jwe.Parse([]byte(s))
@@ -521,42 +528,77 @@ func Test_GHIssue207(t *testing.T) {
 
 // tests direct key encryption by encrypting-decrypting a plaintext
 func TestEncode_Direct(t *testing.T) {
-	var testcases = []struct {
+	testcases := []struct {
 		Algorithm jwa.ContentEncryptionAlgorithm
 		KeySize   int // in bytes
+		Error     bool
 	}{
-		{jwa.A128CBC_HS256, 32},
-		{jwa.A128GCM, 16},
-		{jwa.A192CBC_HS384, 48},
-		{jwa.A192GCM, 24},
-		{jwa.A256CBC_HS512, 64},
-		{jwa.A256GCM, 32},
+		{
+			Algorithm: jwa.A128CBC_HS256,
+			KeySize:   32,
+		},
+		{
+			Algorithm: jwa.A128GCM,
+			KeySize:   16,
+		},
+		{
+			Algorithm: jwa.A192CBC_HS384,
+			KeySize:   48,
+		},
+		{
+			Algorithm: jwa.A192GCM,
+			KeySize:   24,
+		},
+		{
+			Algorithm: jwa.A256CBC_HS512,
+			KeySize:   64,
+		},
+		{
+			Algorithm: jwa.A256GCM,
+			KeySize:   32,
+		},
+		// Test with wrong alg <-> key size combinations.
+
+		// Test for gh-1366
+		// Prior to v2.1.6, this did not error. It only passed because the original
+		// code was doing `actual_keysize/2` and passing 16 bytes out of the total
+		// 32 bytes, resulting in the aes.NewCipher function using AES-128 instead of AES-256.
+		//
+		// It wouldn't have worked for A192CBC_HS384, because if you
+		// provided 24 bytes instead of 48, the key size would be 12, and
+		// aes.NewCipher would barf.
+		{
+			Algorithm: jwa.A256CBC_HS512,
+			KeySize:   32,
+			Error:     true,
+		},
+		// Sanity for HS384. This never went through, but just in case
+		{
+			Algorithm: jwa.A192CBC_HS384,
+			KeySize:   24,
+			Error:     true,
+		},
 	}
 	plaintext := []byte("Lorem ipsum")
 
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
 			key := make([]byte, tc.KeySize)
-			/*
-				_, err := rand.Read(key)
-				if !assert.NoError(t, err, "Key generation succeeds") {
-					return
-				}*/
 			for n := 0; n < len(key); {
 				w := copy(key[n:], []byte(`12345678`))
 				n += w
 			}
 
 			encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.DIRECT, key), jwe.WithContentEncryption(tc.Algorithm))
-			if !assert.NoError(t, err, `jwe.Encrypt should succeed`) {
+			if tc.Error {
+				require.Error(t, err, `jwe.Encrypt should fail`)
+				// we can't continue
 				return
 			}
+			require.NoError(t, err, `jwe.Encrypt should succeed`)
 			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT, key))
-			if !assert.NoError(t, err, `jwe.Decrypt should succeed`) {
-				return
-			}
-
-			assert.Equal(t, plaintext, decrypted, `jwe.Decrypt should match input plaintext`)
+			require.NoError(t, err, `jwe.Decrypt should succeed`)
+			require.Equal(t, plaintext, decrypted, `jwe.Decrypt should match input plaintext`)
 		})
 	}
 }
@@ -1049,5 +1091,16 @@ func TestMaxDecompressBufferSize(t *testing.T) {
 				require.NoError(t, err, `jwe.Decrypt should succeed`)
 			}
 		})
+	}
+}
+
+func BenchmarkParseCompat(b *testing.B) {
+	buf := []byte(`eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`)
+
+	for range b.N {
+		_, err := jwe.Parse(buf)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

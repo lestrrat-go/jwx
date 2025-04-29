@@ -19,7 +19,7 @@ type ContentCipher interface {
 }
 
 type Fetcher interface {
-	Fetch([]byte) (cipher.AEAD, error)
+	Fetch([]byte, int) (cipher.AEAD, error)
 }
 
 type gcmFetcher struct{}

@@ -4,6 +4,37 @@ Changes
 v2 has many incompatibilities with v1. To see the full list of differences between
 v1 and v2, please read the Changes-v2.md file (https://github.com/lestrrat-go/jwx/blob/develop/v2/Changes-v2.md)
 
+v2.1.6 29 Apr 2025
+  * [jwe] Fixed a long standing bug that could lead to degraded encryption or failure to
+    decrypt JWE messages when a very specific combination of inputs were used for
+    JWE operations.
+
+    This problem only manifested itself when the following conditions in content encryption or decryption
+    were met:
+      - Content encryption was specified to use DIRECT mode.
+      - Contentn encryption algorithm is specified as A256CBC_HS512
+      - The key was erronously constructed with a 32-byte content encryption key (CEK)
+
+    In this case, the user would be passing a mis-constructed key of 32-bytes instead
+    of the intended 64-bytes. In all other cases, this construction would cause
+    an error because `crypto/aes.NewCipher` would return an error when a key with length
+    not matching 16, 24, and 32 bytes is used. However, due to use using a the provided
+    32-bytes as half CEK and half the hash, the `crypto/aes.NewCipher` was passed
+    a 16-byte key, which is fine for AES-128. So internally `crypto/aes.NewCipher` would
+    choose to use AES-128 instead of AES-256, and happily continue. Note that no other
+    key lengths such as 48 and 128 would have worked. It had to be exactly 32.
+
+    This does indeed result in a downgraded encryption, but we believe it is unlikely that this would cause a problem in the real world,
+    as you would have to very specifically choose to use DIRECT mode, choose
+    the specific content encryption algorithm, AND also use the wrong key size of
+    exactly 32 bytes.
+
+    However, in abandunce of caution, we recommend that you upgrade to v3.0.1 or later,
+    or v2.1.6 or later if you are still on v2 series.
+
+  * [jws] Improve performance of jws.SplitCompact and jws.SplitCompactString
+  * [jwe] Improve performance of jwe.Parse
+
 v2.1.5 16 Apr 2025
   * Update minimum require go version to 1.23; this is an indirect consequence
     of updateing github.com/lestrrat-go/blackmagic
