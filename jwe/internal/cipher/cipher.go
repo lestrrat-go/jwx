@@ -13,7 +13,10 @@ import (
 var gcm = &gcmFetcher{}
 var cbc = &cbcFetcher{}
 
-func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
+func (f gcmFetcher) Fetch(key []byte, size int) (cipher.AEAD, error) {
+	if len(key) != size {
+		return nil, fmt.Errorf(`key size (%d) does not match expected key size (%d)`, len(key), size)
+	}
 	aescipher, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf(`cipher: failed to create AES cipher for GCM: %w`, err)
@@ -26,7 +29,10 @@ func (f gcmFetcher) Fetch(key []byte) (cipher.AEAD, error) {
 	return aead, nil
 }
 
-func (f cbcFetcher) Fetch(key []byte) (cipher.AEAD, error) {
+func (f cbcFetcher) Fetch(key []byte, size int) (cipher.AEAD, error) {
+	if len(key) != size {
+		return nil, fmt.Errorf(`key size (%d) does not match expected key size (%d)`, len(key), size)
+	}
 	aead, err := aescbc.New(key, aes.NewCipher)
 	if err != nil {
 		return nil, fmt.Errorf(`cipher: failed to create AES cipher for CBC: %w`, err)
@@ -84,7 +90,7 @@ func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
 
 func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, tag []byte, err error) {
 	var aead cipher.AEAD
-	aead, err = c.fetch.Fetch(cek)
+	aead, err = c.fetch.Fetch(cek, c.keysize)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf(`failed to fetch AEAD: %w`, err)
 	}
@@ -128,7 +134,7 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 }
 
 func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintext []byte, err error) {
-	aead, err := c.fetch.Fetch(cek)
+	aead, err := c.fetch.Fetch(cek, c.keysize)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to fetch AEAD data: %w`, err)
 	}
