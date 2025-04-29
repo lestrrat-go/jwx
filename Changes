@@ -12,7 +12,7 @@ v3.0.1 29 Apr 2025
     This problem only manifested itself when the following conditions in content encryption or decryption
     were met:
       - Content encryption was specified to use DIRECT mode.
-      - Algorithm is specified as A256CBC_HS512
+      - Contentn encryption algorithm is specified as A256CBC_HS512
       - The key was erronously constructed with a 32-byte content encryption key (CEK)
 
     In this case, the user would be passing a mis-constructed key of 32-bytes instead
