@@ -457,7 +457,7 @@ func TestEncode_Direct(t *testing.T) {
 		// code was doing `actual_keysize/2` and passing 16 bytes out of the total
 		// 32 bytes, resulting in the aes.NewCipher function using AES-128 instead of AES-256.
 		//
-		// It wouldn't have worked for for A192CBC_HS384, because if you
+		// It wouldn't have worked for A192CBC_HS384, because if you
 		// provided 24 bytes instead of 48, the key size would be 12, and
 		// aes.NewCipher would barf.
 		{
