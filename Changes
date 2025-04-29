@@ -4,6 +4,31 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.1 29 Apr 2025
+  * [jwe] Fixed a long standing that occurred when a pair of specific content encryption
+    algorithm and a specific wrong key was used.
+
+    This problem only manifested itself when alg=A256CBC_HS512 was specified and
+    the key was erronously constructed with a 32-byte content encryption key (CEK)
+    in DIRECT mode.
+
+    In this case, the user would be passing a mis-constructed key of 32-bytes instead
+    of the intended 64-bytes. In all other cases, this construction would cause
+    an error because `crypto/aes.NewCipher` would return an error when a key with length
+    not matching 16, 24, and 32 bytes is used. However, due to use using a the provided
+    32-bytes as half CEK and half the hash, the `crypto/aes.NewCipher` was passed
+    a 16-byte key, which is fine for AES-128. So internally `crypto/aes.NewCipher` would
+    choose to use AES-128 instead of AES-256, and happily continue. Note that no other
+    key lengths such as 48 and 128 would have worked. It had to be exactly 32.
+
+    This does indeed result in a downgraded encryption, but we believe it is unlikely that this would cause a problem in the real world,
+    as you would have to very specifically choose to use DIRECT mode, choose
+    the specific content encryption algorithm, AND also use the wrong key size of
+    exactly 32 bytes.
+
+    However, in abandunce of caution, we recommend that you upgrade to v3.0.1 or later,
+    or v2.1.6 or later if you are still on v2 series.
+
 v3.0.0 1 Apr 2025
   * Release initial v3.0.0 series. Code is identical to v3.0.0-beta2, except
     for minor documentation changes.
