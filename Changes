@@ -5,12 +5,15 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.1 29 Apr 2025
-  * [jwe] Fixed a long standing bug that occurred when a pair of specific content encryption
-    algorithm and a specific wrong key was used.
+  * [jwe] Fixed a long standing bug that could lead to degraded encryption or failure to
+    decrypt JWE messages when a very specific combination of inputs were used for
+    JWE operations.
 
-    This problem only manifested itself when alg=A256CBC_HS512 was specified and
-    the key was erronously constructed with a 32-byte content encryption key (CEK)
-    in DIRECT mode.
+    This problem only manifested itself when the following conditions in content encryption or decryption
+    were met:
+      - Content encryption was specified to use DIRECT mode.
+      - Algorithm is specified as A256CBC_HS512
+      - The key was erronously constructed with a 32-byte content encryption key (CEK)
 
     In this case, the user would be passing a mis-constructed key of 32-bytes instead
     of the intended 64-bytes. In all other cases, this construction would cause
