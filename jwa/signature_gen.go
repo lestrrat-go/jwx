@@ -17,14 +17,22 @@ var builtinSignatureAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for SignatureAlgorithm
-	algorithms := make([]SignatureAlgorithm, 0, 15)
-	for _, alg := range []string{"HS256", "HS384", "HS512"} {
-		algorithms = append(algorithms, NewSignatureAlgorithm(alg, WithIsSymmetric(true)))
-	}
-
-	for _, alg := range []string{"ES256", "ES256K", "ES384", "ES512", "EdDSA", "none", "PS256", "PS384", "PS512", "RS256", "RS384", "RS512"} {
-		algorithms = append(algorithms, NewSignatureAlgorithm(alg))
-	}
+	algorithms := make([]SignatureAlgorithm, 15)
+	algorithms[0] = NewSignatureAlgorithm("ES256")
+	algorithms[1] = NewSignatureAlgorithm("ES256K")
+	algorithms[2] = NewSignatureAlgorithm("ES384")
+	algorithms[3] = NewSignatureAlgorithm("ES512")
+	algorithms[4] = NewSignatureAlgorithm("EdDSA")
+	algorithms[5] = NewSignatureAlgorithm("HS256", WithIsSymmetric(true))
+	algorithms[6] = NewSignatureAlgorithm("HS384", WithIsSymmetric(true))
+	algorithms[7] = NewSignatureAlgorithm("HS512", WithIsSymmetric(true))
+	algorithms[8] = NewSignatureAlgorithm("none")
+	algorithms[9] = NewSignatureAlgorithm("PS256")
+	algorithms[10] = NewSignatureAlgorithm("PS384")
+	algorithms[11] = NewSignatureAlgorithm("PS512")
+	algorithms[12] = NewSignatureAlgorithm("RS256")
+	algorithms[13] = NewSignatureAlgorithm("RS384")
+	algorithms[14] = NewSignatureAlgorithm("RS512")
 
 	RegisterSignatureAlgorithm(algorithms...)
 }
@@ -117,11 +125,17 @@ func lookupBuiltinSignatureAlgorithm(name string) SignatureAlgorithm {
 // SignatureAlgorithm represents the various signature algorithms as described in https://tools.ietf.org/html/rfc7518#section-3.1
 type SignatureAlgorithm struct {
 	name        string
+	deprecated  bool
 	isSymmetric bool
 }
 
 func (s SignatureAlgorithm) String() string {
 	return s.name
+}
+
+// IsDeprecated returns true if the SignatureAlgorithm object is deprecated.
+func (s SignatureAlgorithm) IsDeprecated() bool {
+	return s.deprecated
 }
 
 // IsSymmetric returns true if the SignatureAlgorithm object is symmetric. Symmetric algorithms use the same key for both encryption and decryption.
@@ -136,15 +150,18 @@ func EmptySignatureAlgorithm() SignatureAlgorithm {
 
 // NewSignatureAlgorithm creates a new SignatureAlgorithm object with the given name.
 func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) SignatureAlgorithm {
+	var deprecated bool
 	var isSymmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identIsSymmetric{}:
 			isSymmetric = option.Value().(bool)
+		case identDeprecated{}:
+			deprecated = option.Value().(bool)
 		}
 	}
-	return SignatureAlgorithm{name: name, isSymmetric: isSymmetric}
+	return SignatureAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}
 }
 
 // LookupSignatureAlgorithm returns the SignatureAlgorithm object for the given name.

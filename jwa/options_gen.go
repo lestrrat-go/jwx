@@ -6,6 +6,24 @@ import "github.com/lestrrat-go/option"
 
 type Option = option.Interface
 
+// NewAlgorithmOption represents an option that can be passed to any of the constructor functions
+type NewAlgorithmOption interface {
+	Option
+	newSignatureAlgorithmOption()
+	newKeyEncryptionAlgorithmOption()
+	newSignatureKeyEncryptionAlgorithmOption()
+}
+
+type newAlgorithmOption struct {
+	Option
+}
+
+func (*newAlgorithmOption) newSignatureAlgorithmOption() {}
+
+func (*newAlgorithmOption) newKeyEncryptionAlgorithmOption() {}
+
+func (*newAlgorithmOption) newSignatureKeyEncryptionAlgorithmOption() {}
+
 // NewKeyEncryptionAlgorithmOption represents an option that can be passed to the NewKeyEncryptionAlgorithm
 type NewKeyEncryptionAlgorithmOption interface {
 	Option
@@ -46,10 +64,23 @@ func (*newSignatureKeyEncryptionAlgorithmOption) newSignatureAlgorithmOption() {
 
 func (*newSignatureKeyEncryptionAlgorithmOption) newKeyEncryptionAlgorithmOption() {}
 
+type identDeprecated struct{}
 type identIsSymmetric struct{}
+
+func (identDeprecated) String() string {
+	return "WithDeprecated"
+}
 
 func (identIsSymmetric) String() string {
 	return "WithIsSymmetric"
+}
+
+// WithDeprecated specifies that the algorithm is deprecated. In order to
+// un-deprecate an algorithm, you will have to create a new algorithm
+// with the same values but with the Deprecated option set to false, and
+// then call RegisterXXXXAlgorithm with the new algorithm.
+func WithDeprecated(v bool) NewAlgorithmOption {
+	return &newAlgorithmOption{option.New(identDeprecated{}, v)}
 }
 
 // IsSymmetric specifies that the algorithm is symmetric

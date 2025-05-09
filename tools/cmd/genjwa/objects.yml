@@ -153,6 +153,7 @@ algorithms:
     elements:
       - name: RSA1_5
         value: RSA1_5
+        deprecated: true
         returnval_comment: RSA-PKCS1v1.5 key encryption algorithm
       - name: RSA_OAEP
         value: RSA-OAEP

@@ -17,11 +17,14 @@ var builtinEllipticCurveAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for EllipticCurveAlgorithm
-	algorithms := make([]EllipticCurveAlgorithm, 0, 8)
-
-	for _, alg := range []string{"Ed25519", "Ed448", "P-256", "P-384", "P-521", "X25519", "X448"} {
-		algorithms = append(algorithms, NewEllipticCurveAlgorithm(alg))
-	}
+	algorithms := make([]EllipticCurveAlgorithm, 7)
+	algorithms[0] = NewEllipticCurveAlgorithm("Ed25519")
+	algorithms[1] = NewEllipticCurveAlgorithm("Ed448")
+	algorithms[2] = NewEllipticCurveAlgorithm("P-256")
+	algorithms[3] = NewEllipticCurveAlgorithm("P-384")
+	algorithms[4] = NewEllipticCurveAlgorithm("P-521")
+	algorithms[5] = NewEllipticCurveAlgorithm("X25519")
+	algorithms[6] = NewEllipticCurveAlgorithm("X448")
 
 	RegisterEllipticCurveAlgorithm(algorithms...)
 }
@@ -80,11 +83,17 @@ func lookupBuiltinEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
 
 // EllipticCurveAlgorithm represents the algorithms used for EC keys
 type EllipticCurveAlgorithm struct {
-	name string
+	name       string
+	deprecated bool
 }
 
 func (s EllipticCurveAlgorithm) String() string {
 	return s.name
+}
+
+// IsDeprecated returns true if the EllipticCurveAlgorithm object is deprecated.
+func (s EllipticCurveAlgorithm) IsDeprecated() bool {
+	return s.deprecated
 }
 
 // EmptyEllipticCurveAlgorithm returns an empty EllipticCurveAlgorithm object, used as a zero value.
@@ -93,8 +102,16 @@ func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
 }
 
 // NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object with the given name.
-func NewEllipticCurveAlgorithm(name string) EllipticCurveAlgorithm {
-	return EllipticCurveAlgorithm{name: name}
+func NewEllipticCurveAlgorithm(name string, options ...NewAlgorithmOption) EllipticCurveAlgorithm {
+	var deprecated bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identDeprecated{}:
+			deprecated = option.Value().(bool)
+		}
+	}
+	return EllipticCurveAlgorithm{name: name, deprecated: deprecated}
 }
 
 // LookupEllipticCurveAlgorithm returns the EllipticCurveAlgorithm object for the given name.

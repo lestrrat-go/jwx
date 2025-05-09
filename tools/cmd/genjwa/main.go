@@ -34,6 +34,7 @@ type Element struct {
 	Comment          string `yaml:"comment"`
 	Invalid          bool   `yaml:"invalid"`
 	Sym              bool   `yaml:"sym"`
+	Deprecated       bool   `yaml:"deprecated"`
 }
 
 func main() {
@@ -118,43 +119,31 @@ func Generate(t Algorithm) error {
 
 	o.LL("func init() {")
 	o.L("// builtin values for %s", t.Name)
-	o.L("algorithms := make([]%s, 0, %d)", t.Name, len(t.Elements))
-	if t.Symmetric {
-		o.L("for _, alg := range []string{")
-		ecount := 0
-		for _, e := range t.Elements {
-			if !e.Sym {
-				continue
-			}
-			if ecount > 0 {
-				o.R(", ")
-			}
-			ecount++
-			o.R("%q", e.Value)
+	// check if we have invalid elements, so we allocate just enough
+	// space for the builtin algorithms
+	invalids := 0
+	for _, e := range t.Elements {
+		if e.Invalid {
+			invalids++
 		}
-		o.R("} {")
-		o.L("algorithms = append(algorithms, New%s(alg, WithIsSymmetric(true)))", t.Name)
-		o.L("}")
 	}
-
-	o.LL("for _, alg := range []string{")
+	o.L("algorithms := make([]%s, %d)", t.Name, len(t.Elements)-invalids)
 	ecount := 0
 	for _, e := range t.Elements {
-		if e.Sym {
-			continue
-		}
 		if e.Invalid {
 			continue
 		}
-		if ecount > 0 {
-			o.R(", ")
-		}
+		o.L("algorithms[%d] = New%s(%q", ecount, t.Name, e.Value)
 		ecount++
-		o.R("%q", e.Value)
+
+		if e.Deprecated {
+			o.R(", WithDeprecated(true)")
+		}
+		if e.Sym {
+			o.R(", WithIsSymmetric(true)")
+		}
+		o.R(")")
 	}
-	o.R("} {")
-	o.L("algorithms = append(algorithms, New%s(alg))", t.Name)
-	o.L("}")
 
 	o.LL("Register%s(algorithms...)", t.Name)
 	o.L("}") // end init
@@ -198,6 +187,7 @@ func Generate(t Algorithm) error {
 	o.LL("// %s", t.Comment)
 	o.L("type %s struct {", t.Name)
 	o.L("name string")
+	o.L("deprecated bool")
 	if t.Symmetric {
 		o.L("isSymmetric bool")
 	}
@@ -205,6 +195,11 @@ func Generate(t Algorithm) error {
 
 	o.LL("func (s %s) String() string {", t.Name)
 	o.L("return s.name")
+	o.L("}")
+
+	o.LL("// IsDeprecated returns true if the %s object is deprecated.", t.Name)
+	o.L("func (s %s) IsDeprecated() bool {", t.Name)
+	o.L("return s.deprecated")
 	o.L("}")
 
 	if t.Symmetric {
@@ -220,22 +215,34 @@ func Generate(t Algorithm) error {
 	o.L("}")
 
 	o.LL("// New%[1]s creates a new %[1]s object with the given name.", t.Name)
+
 	o.L("func New%[1]s(name string", t.Name)
-	if !t.Symmetric {
-		o.R(") %s {", t.Name)
-		o.L("return %s{name: name}", t.Name)
+	if t.Symmetric {
+		o.R(", options ...New%[1]sOption", t.Name)
 	} else {
-		o.R(", options ...New%[1]sOption) %[1]s {", t.Name)
+		o.R(", options ...NewAlgorithmOption")
+	}
+	o.R(") %[1]s {", t.Name)
+	o.L("var deprecated bool")
+	if t.Symmetric {
 		o.L("var isSymmetric bool")
-		o.L("//nolint:forcetypeassert")
-		o.L("for _, option := range options {")
-		o.L("switch option.Ident() {")
+	}
+	o.L("//nolint:forcetypeassert")
+	o.L("for _, option := range options {")
+	o.L("switch option.Ident() {")
+	if t.Symmetric {
 		o.L("case identIsSymmetric{}:")
 		o.L("isSymmetric = option.Value().(bool)")
-		o.L("}")
-		o.L("}")
-		o.L("return %s{name: name, isSymmetric: isSymmetric}", t.Name)
 	}
+	o.L("case identDeprecated{}:")
+	o.L("deprecated = option.Value().(bool)")
+	o.L("}")
+	o.L("}")
+	o.L("return %s{name: name, deprecated: deprecated", t.Name)
+	if t.Symmetric {
+		o.R(", isSymmetric: isSymmetric")
+	}
+	o.R("}")
 	o.L("}")
 
 	o.LL("// Lookup%[1]s returns the %[1]s object for the given name.", t.Name)
@@ -413,7 +420,7 @@ func GenerateTest(t Algorithm) error {
 		o.L("}")
 	}
 	o.L("_, ok := expected[v]")
-	o.L("require.True(t, ok, `%%s should be in the expected list`, v)")
+	o.L("require.True(t, ok, `%%q should be in the list for %s`, v)", t.Name)
 	o.L("delete(expected, v)")
 	o.L("}")
 	o.L("require.Len(t, expected, 0)")
@@ -429,10 +436,9 @@ func GenerateTest(t Algorithm) error {
 	}
 	o.L(`customAlgorithm := jwa.New%[1]s(customAlgorithmValue`, t.Name)
 	if t.Symmetric {
-		o.R(`, jwa.WithIsSymmetric(symmetric))`)
-	} else {
-		o.R(`)`)
+		o.R(`, jwa.WithIsSymmetric(symmetric)`)
 	}
+	o.R(`)`)
 	o.L("// Unregister the custom algorithm, in case tests fail.")
 	o.L("t.Cleanup(func() {")
 	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.Name)
