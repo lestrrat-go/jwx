@@ -148,7 +148,7 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 				continue
 			}
 			_, ok := expected[v]
-			require.True(t, ok, `%s should be in the expected list`, v)
+			require.True(t, ok, `%q should be in the list for EllipticCurveAlgorithm`, v)
 			delete(expected, v)
 		}
 		require.Len(t, expected, 0)
