@@ -92,7 +92,7 @@ func TestKeyType(t *testing.T) {
 		}
 		for _, v := range jwa.KeyTypes() {
 			_, ok := expected[v]
-			require.True(t, ok, `%s should be in the expected list`, v)
+			require.True(t, ok, `%q should be in the list for KeyType`, v)
 			delete(expected, v)
 		}
 		require.Len(t, expected, 0)

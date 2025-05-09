@@ -17,14 +17,26 @@ var builtinKeyEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyEncryptionAlgorithm
-	algorithms := make([]KeyEncryptionAlgorithm, 0, 19)
-	for _, alg := range []string{"A128GCMKW", "A128KW", "A192GCMKW", "A192KW", "A256GCMKW", "A256KW", "dir", "PBES2-HS256+A128KW", "PBES2-HS384+A192KW", "PBES2-HS512+A256KW"} {
-		algorithms = append(algorithms, NewKeyEncryptionAlgorithm(alg, WithIsSymmetric(true)))
-	}
-
-	for _, alg := range []string{"ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW", "RSA1_5", "RSA-OAEP", "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512"} {
-		algorithms = append(algorithms, NewKeyEncryptionAlgorithm(alg))
-	}
+	algorithms := make([]KeyEncryptionAlgorithm, 19)
+	algorithms[0] = NewKeyEncryptionAlgorithm("A128GCMKW", WithIsSymmetric(true))
+	algorithms[1] = NewKeyEncryptionAlgorithm("A128KW", WithIsSymmetric(true))
+	algorithms[2] = NewKeyEncryptionAlgorithm("A192GCMKW", WithIsSymmetric(true))
+	algorithms[3] = NewKeyEncryptionAlgorithm("A192KW", WithIsSymmetric(true))
+	algorithms[4] = NewKeyEncryptionAlgorithm("A256GCMKW", WithIsSymmetric(true))
+	algorithms[5] = NewKeyEncryptionAlgorithm("A256KW", WithIsSymmetric(true))
+	algorithms[6] = NewKeyEncryptionAlgorithm("dir", WithIsSymmetric(true))
+	algorithms[7] = NewKeyEncryptionAlgorithm("ECDH-ES")
+	algorithms[8] = NewKeyEncryptionAlgorithm("ECDH-ES+A128KW")
+	algorithms[9] = NewKeyEncryptionAlgorithm("ECDH-ES+A192KW")
+	algorithms[10] = NewKeyEncryptionAlgorithm("ECDH-ES+A256KW")
+	algorithms[11] = NewKeyEncryptionAlgorithm("PBES2-HS256+A128KW", WithIsSymmetric(true))
+	algorithms[12] = NewKeyEncryptionAlgorithm("PBES2-HS384+A192KW", WithIsSymmetric(true))
+	algorithms[13] = NewKeyEncryptionAlgorithm("PBES2-HS512+A256KW", WithIsSymmetric(true))
+	algorithms[14] = NewKeyEncryptionAlgorithm("RSA1_5", WithDeprecated(true))
+	algorithms[15] = NewKeyEncryptionAlgorithm("RSA-OAEP")
+	algorithms[16] = NewKeyEncryptionAlgorithm("RSA-OAEP-256")
+	algorithms[17] = NewKeyEncryptionAlgorithm("RSA-OAEP-384")
+	algorithms[18] = NewKeyEncryptionAlgorithm("RSA-OAEP-512")
 
 	RegisterKeyEncryptionAlgorithm(algorithms...)
 }
@@ -137,11 +149,17 @@ func lookupBuiltinKeyEncryptionAlgorithm(name string) KeyEncryptionAlgorithm {
 // KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
 type KeyEncryptionAlgorithm struct {
 	name        string
+	deprecated  bool
 	isSymmetric bool
 }
 
 func (s KeyEncryptionAlgorithm) String() string {
 	return s.name
+}
+
+// IsDeprecated returns true if the KeyEncryptionAlgorithm object is deprecated.
+func (s KeyEncryptionAlgorithm) IsDeprecated() bool {
+	return s.deprecated
 }
 
 // IsSymmetric returns true if the KeyEncryptionAlgorithm object is symmetric. Symmetric algorithms use the same key for both encryption and decryption.
@@ -156,15 +174,18 @@ func EmptyKeyEncryptionAlgorithm() KeyEncryptionAlgorithm {
 
 // NewKeyEncryptionAlgorithm creates a new KeyEncryptionAlgorithm object with the given name.
 func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithmOption) KeyEncryptionAlgorithm {
+	var deprecated bool
 	var isSymmetric bool
 	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identIsSymmetric{}:
 			isSymmetric = option.Value().(bool)
+		case identDeprecated{}:
+			deprecated = option.Value().(bool)
 		}
 	}
-	return KeyEncryptionAlgorithm{name: name, isSymmetric: isSymmetric}
+	return KeyEncryptionAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}
 }
 
 // LookupKeyEncryptionAlgorithm returns the KeyEncryptionAlgorithm object for the given name.

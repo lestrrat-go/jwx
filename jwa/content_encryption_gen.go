@@ -17,11 +17,13 @@ var builtinContentEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for ContentEncryptionAlgorithm
-	algorithms := make([]ContentEncryptionAlgorithm, 0, 6)
-
-	for _, alg := range []string{"A128CBC-HS256", "A128GCM", "A192CBC-HS384", "A192GCM", "A256CBC-HS512", "A256GCM"} {
-		algorithms = append(algorithms, NewContentEncryptionAlgorithm(alg))
-	}
+	algorithms := make([]ContentEncryptionAlgorithm, 6)
+	algorithms[0] = NewContentEncryptionAlgorithm("A128CBC-HS256")
+	algorithms[1] = NewContentEncryptionAlgorithm("A128GCM")
+	algorithms[2] = NewContentEncryptionAlgorithm("A192CBC-HS384")
+	algorithms[3] = NewContentEncryptionAlgorithm("A192GCM")
+	algorithms[4] = NewContentEncryptionAlgorithm("A256CBC-HS512")
+	algorithms[5] = NewContentEncryptionAlgorithm("A256GCM")
 
 	RegisterContentEncryptionAlgorithm(algorithms...)
 }
@@ -68,11 +70,17 @@ func lookupBuiltinContentEncryptionAlgorithm(name string) ContentEncryptionAlgor
 
 // ContentEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-5
 type ContentEncryptionAlgorithm struct {
-	name string
+	name       string
+	deprecated bool
 }
 
 func (s ContentEncryptionAlgorithm) String() string {
 	return s.name
+}
+
+// IsDeprecated returns true if the ContentEncryptionAlgorithm object is deprecated.
+func (s ContentEncryptionAlgorithm) IsDeprecated() bool {
+	return s.deprecated
 }
 
 // EmptyContentEncryptionAlgorithm returns an empty ContentEncryptionAlgorithm object, used as a zero value.
@@ -81,8 +89,16 @@ func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
 }
 
 // NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object with the given name.
-func NewContentEncryptionAlgorithm(name string) ContentEncryptionAlgorithm {
-	return ContentEncryptionAlgorithm{name: name}
+func NewContentEncryptionAlgorithm(name string, options ...NewAlgorithmOption) ContentEncryptionAlgorithm {
+	var deprecated bool
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
+		case identDeprecated{}:
+			deprecated = option.Value().(bool)
+		}
+	}
+	return ContentEncryptionAlgorithm{name: name, deprecated: deprecated}
 }
 
 // LookupContentEncryptionAlgorithm returns the ContentEncryptionAlgorithm object for the given name.

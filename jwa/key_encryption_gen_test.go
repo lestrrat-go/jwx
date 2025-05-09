@@ -407,7 +407,7 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		}
 		for _, v := range jwa.KeyEncryptionAlgorithms() {
 			_, ok := expected[v]
-			require.True(t, ok, `%s should be in the expected list`, v)
+			require.True(t, ok, `%q should be in the list for KeyEncryptionAlgorithm`, v)
 			delete(expected, v)
 		}
 		require.Len(t, expected, 0)

@@ -58,7 +58,7 @@ func TestCompressionAlgorithm(t *testing.T) {
 		}
 		for _, v := range jwa.CompressionAlgorithms() {
 			_, ok := expected[v]
-			require.True(t, ok, `%s should be in the expected list`, v)
+			require.True(t, ok, `%q should be in the list for CompressionAlgorithm`, v)
 			delete(expected, v)
 		}
 		require.Len(t, expected, 0)

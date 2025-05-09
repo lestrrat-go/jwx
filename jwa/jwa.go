@@ -21,6 +21,7 @@ import (
 // jwk.Key directly
 type KeyAlgorithm interface {
 	String() string
+	IsDeprecated() bool
 }
 
 var errInvalidKeyAlgorithm = errors.New(`invalid key algorithm`)
