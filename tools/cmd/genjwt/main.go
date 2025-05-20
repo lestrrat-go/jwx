@@ -113,6 +113,16 @@ func generateToken(obj *codegen.Object) error {
 	}
 	o.L(")") // end const
 
+	// Create a stdClaimNamesFilter object
+	o.LL("var stdClaimsFilter = NewClaimNameFilter(")
+	for i, f := range fields {
+		if i > 0 {
+			o.R(", ")
+		}
+		o.R("%sKey", f.Name(true))
+	}
+	o.R(")")
+
 	if obj.String(`package`) == "jwt" && obj.Name(false) == "stdToken" {
 		o.LL("// Token represents a generic JWT token.")
 		o.L("// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")

@@ -25,6 +25,8 @@ const (
 	SubjectKey    = "sub"
 )
 
+var stdClaimsFilter = NewClaimNameFilter(AudienceKey, ExpirationKey, IssuedAtKey, IssuerKey, JwtIDKey, NotBeforeKey, SubjectKey)
+
 // Token represents a generic JWT token.
 // which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`
 // methods but their types are not taken into consideration at all. If you have non-standard
