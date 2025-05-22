@@ -176,7 +176,6 @@ func TestStandardClaimsFilter(t *testing.T) {
 			var issuer string
 			require.NoError(t, filtered.Get(jwt.IssuerKey, &issuer), "filtered.Get should succeed")
 			require.Equal(t, "issuer", issuer, "value for issuer claim should be preserved")
-
 		})
 		t.Run("Reject standard claims", func(t *testing.T) {
 			// Reject should return a token with only custom claims
