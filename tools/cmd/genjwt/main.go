@@ -113,8 +113,13 @@ func generateToken(obj *codegen.Object) error {
 	}
 	o.L(")") // end const
 
+	var pkgPrefix string
+	if obj.String(`package`) != `jwt` {
+		pkgPrefix = `jwt.`
+	}
+
 	// Create a stdClaimNamesFilter object
-	o.LL("var stdClaimsFilter = NewClaimNameFilter(")
+	o.LL("var stdClaimsFilter = %sNewClaimNameFilter(", pkgPrefix)
 	for i, f := range fields {
 		if i > 0 {
 			o.R(", ")
@@ -176,11 +181,6 @@ func generateToken(obj *codegen.Object) error {
 	o.L("Has(string) bool")
 
 	o.L("Remove(string) error")
-
-	var pkgPrefix string
-	if obj.String(`package`) != `jwt` {
-		pkgPrefix = `jwt.`
-	}
 
 	o.LL("// Options returns the per-token options associated with this token.")
 	o.L("// The options set value will be copied when the token is cloned via `Clone()`")
