@@ -185,26 +185,31 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 	}
 
-	ntmpl := len(templates)
-	testcases := make([]struct {
+	var testcases []struct {
 		Name     string
 		Options  []jwe.EncryptOption
 		Expected string
-	}, ntmpl*2)
+	}
 
-	for i, tmpl := range templates {
+	for _, tmpl := range templates {
 		options := make([]jwe.EncryptOption, len(tmpl.Options))
 		copy(options, tmpl.Options)
 
-		for j, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress(), jwa.Deflate()} {
+		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress(), jwa.Deflate()} {
 			compName := compression.String()
 			if compName == "" {
 				compName = "none"
 			}
-			tc := testcases[i+j]
-			tc.Name = tmpl.Name + " (compression=" + compName + ")"
-			tc.Expected = tmpl.Expected
-			tc.Options = append(options, jwe.WithCompress(compression))
+
+			testcases = append(testcases, struct {
+				Name     string
+				Options  []jwe.EncryptOption
+				Expected string
+			}{
+				Name:     tmpl.Name + " (compression=" + compName + ")",
+				Options:  append(options, jwe.WithCompress(compression)),
+				Expected: tmpl.Expected,
+			})
 		}
 	}
 
