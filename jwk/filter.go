@@ -62,7 +62,7 @@ func (fn *FieldNameFilter) Filter(key Key) (Key, error) {
 	copy(names, fn.names)
 	fn.mu.RUnlock()
 
-	result, err := filter.FilterWith[Key](key, names)
+	result, err := filter.Apply[Key](key, names)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (fn *FieldNameFilter) Reject(key Key) (Key, error) {
 	copy(names, fn.names)
 	fn.mu.RUnlock()
 
-	result, err := filter.RejectWith[Key](key, names)
+	result, err := filter.Reject[Key](key, names)
 	if err != nil {
 		return nil, err
 	}

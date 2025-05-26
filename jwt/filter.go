@@ -44,7 +44,7 @@ func (cn *ClaimNameFilter) Filter(token Token) (Token, error) {
 	copy(names, cn.names)
 	cn.mu.RUnlock()
 
-	result, err := filter.FilterWith[Token](token, names)
+	result, err := filter.Apply[Token](token, names)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (cn *ClaimNameFilter) Reject(token Token) (Token, error) {
 	copy(names, cn.names)
 	cn.mu.RUnlock()
 
-	result, err := filter.RejectWith[Token](token, names)
+	result, err := filter.Reject[Token](token, names)
 	if err != nil {
 		return nil, err
 	}

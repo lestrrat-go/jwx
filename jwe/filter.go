@@ -68,7 +68,7 @@ func (hn *HeaderNameFilter) Filter(header Headers) (Headers, error) {
 	copy(names, hn.names)
 	hn.mu.RUnlock()
 
-	result, err := filter.FilterWith[Headers](header, names)
+	result, err := filter.Apply[Headers](header, names)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (hn *HeaderNameFilter) Reject(header Headers) (Headers, error) {
 	copy(names, hn.names)
 	hn.mu.RUnlock()
 
-	result, err := filter.RejectWith[Headers](header, names)
+	result, err := filter.Reject[Headers](header, names)
 	if err != nil {
 		return nil, err
 	}

@@ -13,15 +13,15 @@ type Filterable[T any] interface {
 	Remove(string) error
 }
 
-// FilterWith is a standalone function that provides type-safe filtering based on field names.
+// Apply is a standalone function that provides type-safe filtering based on field names.
 // It returns a new object with only the fields that match the specified names.
-func FilterWith[T Filterable[T]](object T, names []string) (T, error) {
+func Apply[T Filterable[T]](object T, names []string) (T, error) {
 	return filterWith[T](object, names, true)
 }
 
-// RejectWith is a standalone function that provides type-safe filtering based on field names.
+// Reject is a standalone function that provides type-safe filtering based on field names.
 // It returns a new object with only the fields that DO NOT match the specified names.
-func RejectWith[T Filterable[T]](object T, names []string) (T, error) {
+func Reject[T Filterable[T]](object T, names []string) (T, error) {
 	return filterWith[T](object, names, false)
 }
 
