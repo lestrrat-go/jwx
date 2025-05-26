@@ -126,6 +126,16 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("Keys() []string")
 	o.L("}")
 
+	o.LL("// stdHeaderNames is a list of all standard header names defined in the JWS specification.")
+	o.L("var stdHeaderNames = []string{")
+	for i, f := range obj.Fields() {
+		if i > 0 {
+			o.R(",")
+		}
+		o.R("%sKey", f.Name(true))
+	}
+	o.R("}")
+
 	o.LL("type stdHeaders struct {")
 	for _, f := range obj.Fields() {
 		if c := f.Comment(); c != "" {

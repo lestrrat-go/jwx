@@ -70,6 +70,9 @@ type Headers interface {
 	Keys() []string
 }
 
+// stdHeaderNames is a list of all standard header names defined in the JWS specification.
+var stdHeaderNames = []string{AlgorithmKey, ContentTypeKey, CriticalKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
+
 type stdHeaders struct {
 	algorithm              *jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1
 	contentType            *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.10
