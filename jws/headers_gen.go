@@ -52,6 +52,7 @@ type Headers interface {
 	X509URL() (string, bool)
 	Copy(Headers) error
 	Merge(Headers) (Headers, error)
+	Clone() (Headers, error)
 	// Get is used to extract the value of any field, including non-standard fields, out of the header.
 	//
 	// The first argument is the name of the field. The second argument is a pointer

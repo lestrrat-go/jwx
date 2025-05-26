@@ -105,6 +105,7 @@ func generateHeaders(obj *codegen.Object) error {
 
 	o.L("Copy(Headers) error")
 	o.L("Merge(Headers) (Headers, error)")
+	o.L("Clone() (Headers, error)")
 
 	// These are used to access a single element by key name
 	o.L("// Get is used to extract the value of any field, including non-standard fields, out of the header.")

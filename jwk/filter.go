@@ -1,6 +1,10 @@
 package jwk
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/lestrrat-go/jwx/v3/internal/filter"
+)
 
 // KeyFilter is an interface that allows users to filter JWK key fields.
 // It provides two methods: Filter and Reject; Filter returns a new key with only
@@ -51,47 +55,32 @@ func NewFieldNameFilter(names ...string) *FieldNameFilter {
 	}
 }
 
-// filter is an internal function used by both Filter and Reject methods
-// to apply the filtering logic to a key. If include is true, only fields
-// matching the filter are included. If include is false, fields matching
-// the filter are excluded.
-func filter(fn *FieldNameFilter, key Key, include bool) (Key, error) {
+// Filter returns a new key with only the fields that match the filter.
+func (fn *FieldNameFilter) Filter(key Key) (Key, error) {
 	fn.mu.RLock()
-	fields := make(map[string]struct{}, len(fn.names))
-	for _, name := range fn.names {
-		fields[name] = struct{}{}
-	}
+	names := make([]string, len(fn.names))
+	copy(names, fn.names)
 	fn.mu.RUnlock()
 
-	result, err := key.Clone()
+	result, err := filter.FilterWith[Key](key, names)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, k := range result.Keys() {
-		if k == KeyTypeKey {
-			// "kty" is a required field and cannot be removed
-			continue
-		}
-
-		if _, ok := fields[k]; (include && ok) || (!include && !ok) {
-			continue
-		}
-
-		if err := result.Remove(k); err != nil {
-			return nil, err
-		}
 	}
 
 	return result, nil
 }
 
-// Filter returns a new key with only the fields that match the filter.
-func (fn *FieldNameFilter) Filter(key Key) (Key, error) {
-	return filter(fn, key, true)
-}
-
 // Reject returns a new key with only the fields that DO NOT match the filter.
 func (fn *FieldNameFilter) Reject(key Key) (Key, error) {
-	return filter(fn, key, false)
+	fn.mu.RLock()
+	names := make([]string, len(fn.names))
+	copy(names, fn.names)
+	fn.mu.RUnlock()
+
+	result, err := filter.RejectWith[Key](key, names)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

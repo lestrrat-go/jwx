@@ -1,6 +1,10 @@
 package jwt
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/lestrrat-go/jwx/v3/internal/filter"
+)
 
 // TokenFilter is an interface that allows users to filter JWT claims.
 // It provides two methods: Filter and Reject; Filter returns a new token with only
@@ -26,40 +30,39 @@ type ClaimNameFilter struct {
 	mu    sync.RWMutex
 }
 
+// NewClaimNameFilter creates a new ClaimNameFilter with the specified claim names.
 func NewClaimNameFilter(names ...string) *ClaimNameFilter {
 	return &ClaimNameFilter{
 		names: names,
 	}
 }
 
-func filter(cn *ClaimNameFilter, token Token, include bool) (Token, error) {
+// Filter returns a new token with only the claims that match the filter.
+func (cn *ClaimNameFilter) Filter(token Token) (Token, error) {
 	cn.mu.RLock()
-	claims := make(map[string]struct{}, len(cn.names))
-	for _, name := range cn.names {
-		claims[name] = struct{}{}
-	}
+	names := make([]string, len(cn.names))
+	copy(names, cn.names)
 	cn.mu.RUnlock()
 
-	result, err := token.Clone()
+	result, err := filter.FilterWith[Token](token, names)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, k := range result.Keys() {
-		if _, ok := claims[k]; (include && ok) || (!include && !ok) {
-			continue
-		}
-		if err := result.Remove(k); err != nil {
-			return nil, err
-		}
-	}
 	return result, nil
 }
 
-func (cn *ClaimNameFilter) Filter(token Token) (Token, error) {
-	return filter(cn, token, true)
-}
-
+// Reject returns a new token with only the claims that DO NOT match the filter.
 func (cn *ClaimNameFilter) Reject(token Token) (Token, error) {
-	return filter(cn, token, false)
+	cn.mu.RLock()
+	names := make([]string, len(cn.names))
+	copy(names, cn.names)
+	cn.mu.RUnlock()
+
+	result, err := filter.RejectWith[Token](token, names)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
