@@ -26,27 +26,7 @@ func StandardHeadersFilter() HeaderFilter {
 	return stdHeadersFilter
 }
 
-// These are the standard field names defined in the JWE specification
-var standardHeaderNames = []string{
-	AgreementPartyUInfoKey,
-	AgreementPartyVInfoKey,
-	AlgorithmKey,
-	CompressionKey,
-	ContentEncryptionKey,
-	ContentTypeKey,
-	CriticalKey,
-	EphemeralPublicKeyKey,
-	JWKKey,
-	JWKSetURLKey,
-	KeyIDKey,
-	TypeKey,
-	X509CertChainKey,
-	X509CertThumbprintKey,
-	X509CertThumbprintS256Key,
-	X509URLKey,
-}
-
-var stdHeadersFilter = NewHeaderNameFilter(standardHeaderNames...)
+var stdHeadersFilter = NewHeaderNameFilter(stdHeaderNames...)
 
 // HeaderNameFilter is an object that allows you to filter JWE header fields by field names.
 type HeaderNameFilter struct {

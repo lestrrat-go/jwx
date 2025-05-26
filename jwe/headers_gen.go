@@ -86,6 +86,9 @@ type Headers interface {
 	Keys() []string
 }
 
+// stdHeaderNames is a list of all standard header names defined in the JWE specification.
+var stdHeaderNames = []string{AgreementPartyUInfoKey, AgreementPartyVInfoKey, AlgorithmKey, CompressionKey, ContentEncryptionKey, ContentTypeKey, CriticalKey, EphemeralPublicKeyKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
+
 type stdHeaders struct {
 	agreementPartyUInfo    []byte
 	agreementPartyVInfo    []byte
