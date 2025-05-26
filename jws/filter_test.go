@@ -90,8 +90,10 @@ func TestHeaderNameFilter(t *testing.T) {
 
 		// Run filter and reject operations concurrently
 		var wg sync.WaitGroup
-		for i := 0; i < 10; i++ {
-			wg.Add(2)
+		const iterations = 10
+		const numGoroutines = 2
+		wg.Add(iterations * numGoroutines)
+		for range iterations {
 			go func() {
 				defer wg.Done()
 				filtered, err := fn.Filter(headers)
