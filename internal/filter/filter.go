@@ -1,6 +1,8 @@
 // Package filter provides common filtering functionality for JWX objects.
 package filter
 
+import "sync"
+
 // Filterable is an interface that must be implemented by objects that can be filtered.
 type Filterable[T any] interface {
 	// Keys returns the names of all fields in the object.
@@ -54,4 +56,36 @@ func filterWith[T Filterable[T]](object T, names []string, include bool) (T, err
 	}
 
 	return result, nil
+}
+
+type NameBasedFilter[T Filterable[T]] struct {
+	names []string
+	mu    sync.RWMutex
+}
+
+// NewNameBasedFilter creates a new NameBasedFilter with the specified field names.
+func NewNameBasedFilter[T Filterable[T]](names ...string) *NameBasedFilter[T] {
+	return &NameBasedFilter[T]{
+		names: names,
+	}
+}
+
+// Filter returns a new object with only the fields that match the filter.
+func (nf *NameBasedFilter[T]) Filter(object T) (T, error) {
+	nf.mu.RLock()
+	names := make([]string, len(nf.names))
+	copy(names, nf.names)
+	nf.mu.RUnlock()
+
+	return Apply(object, names)
+}
+
+// Reject returns a new object with only the fields that DO NOT match the filter.
+func (nf *NameBasedFilter[T]) Reject(object T) (T, error) {
+	nf.mu.RLock()
+	names := make([]string, len(nf.names))
+	copy(names, nf.names)
+	nf.mu.RUnlock()
+
+	return Reject(object, names)
 }
