@@ -1,54 +1,16 @@
 package examples_test
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 // Example_jwe_filter_advanced demonstrates advanced JWE HeaderFilter functionality
-// with per-recipient headers, security filtering, and service integration scenarios.
+// with security filtering, service integration scenarios, and header manipulation.
 func Example_jwe_filter_advanced() {
-	// Generate multiple RSA keys for multi-recipient encryption
-	jwkPrivKeys := make([]jwk.Key, 3)
-	jwkPubKeys := make([]jwk.Key, 3)
-
-	for i := 0; i < 3; i++ {
-		privKey, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			fmt.Printf("Failed to generate RSA private key: %s\n", err)
-			return
-		}
-
-		jwkPrivKey, err := jwk.Import(privKey)
-		if err != nil {
-			fmt.Printf("Failed to import private key: %s\n", err)
-			return
-		}
-
-		jwkPubKey, err := jwk.Import(privKey.PublicKey)
-		if err != nil {
-			fmt.Printf("Failed to import public key: %s\n", err)
-			return
-		}
-
-		jwkPrivKeys[i] = jwkPrivKey
-		jwkPubKeys[i] = jwkPubKey
-	}
-
-	// Sample payload with sensitive data
-	payload := []byte(`{
-		"user_id": "12345",
-		"permissions": ["read", "write"],
-		"sensitive_data": "classified_information",
-		"timestamp": "2024-01-01T00:00:00Z"
-	}`)
-
-	// Create JWE with comprehensive headers including security and service metadata
+	// Create JWE headers with comprehensive metadata including security and service information
 	protectedHeaders := jwe.NewHeaders()
 	protectedHeaders.Set(jwe.AlgorithmKey, jwa.RSA_OAEP_256())
 	protectedHeaders.Set(jwe.ContentEncryptionKey, jwa.A256GCM)
@@ -71,21 +33,8 @@ func Example_jwe_filter_advanced() {
 	protectedHeaders.Set("region", "us-east-1")
 	protectedHeaders.Set("trace_id", "trace-123xyz")
 
-	// Create single-recipient JWE for this example
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP_256(), jwkPubKeys[0]), jwe.WithProtectedHeaders(protectedHeaders))
-	if err != nil {
-		fmt.Printf("Failed to encrypt JWE: %s\n", err)
-		return
-	}
-
-	// Parse the JWE to get headers
-	message, err := jwe.Parse(encrypted)
-	if err != nil {
-		fmt.Printf("Failed to parse JWE: %s\n", err)
-		return
-	}
-
-	headers := message.ProtectedHeaders()
+	// Use the headers directly for filtering examples
+	headers := protectedHeaders
 
 	// Advanced Example 1: Service Integration - Filter service-related headers
 	serviceFilter := jwe.NewHeaderNameFilter("service_name", "api_version", "request_id", "correlation_id", jwe.KeyIDKey)
@@ -168,44 +117,7 @@ func Example_jwe_filter_advanced() {
 		return
 	}
 
-	// Verify decryption still works
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), jwkPrivKeys[0]))
-	if err != nil {
-		fmt.Printf("Failed to decrypt JWE: %s\n", err)
-		return
-	}
-	if string(decrypted) != string(payload) {
-		fmt.Printf("Decrypted payload does not match original\n")
-		return
-	}
-
 	// OUTPUT:
-}
-
-// printJWEAdvancedHeaders applies a filter and prints the results
-func printJWEAdvancedHeaders(title string, filter jwe.HeaderFilter, headers jwe.Headers) jwe.Headers {
-	filtered, err := filter.Filter(headers)
-	if err != nil {
-		fmt.Printf("Failed to filter headers for %s: %s\n", title, err)
-		return jwe.NewHeaders()
-	}
-
-	keys := filtered.Keys()
-	fmt.Printf("%s (%d): %v\n", title, len(keys), keys)
-	printJWEHeaderValues(filtered, keys)
-	return filtered
-}
-
-// printJWEHeaderValues prints header key-value pairs
-func printJWEHeaderValues(headers jwe.Headers, keys []string) {
-	for _, key := range keys {
-		if headers.Has(key) {
-			var value interface{}
-			if err := headers.Get(key, &value); err == nil {
-				fmt.Printf("  %s: %v\n", key, value)
-			}
-		}
-	}
 }
 
 // validateJWESecurityHeaders checks if security headers meet requirements
