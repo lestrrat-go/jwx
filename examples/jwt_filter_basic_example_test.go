@@ -28,17 +28,27 @@ func Example_jwt_filter_basic_claims() {
 	customFilter := jwt.NewClaimNameFilter("customClaim", "applicationRole", "department")
 
 	// Filter to get only custom claims
-	_, err = customFilter.Filter(token)
-	if err != nil {
+	if _, err := customFilter.Filter(token); err != nil {
 		fmt.Printf("failed to filter custom claims: %s\n", err)
+		return
+	}
+	// You could also use Reject to get all claims except the specified ones
+	// Note that this may include other non-standard claims
+	if _, err := customFilter.Reject(token); err != nil {
+		fmt.Printf("failed to reject custom claims: %s\n", err)
 		return
 	}
 
 	// Use StandardClaimsFilter to get only standard JWT claims
-	standardFilter := jwt.StandardClaimsFilter()
-	_, err = standardFilter.Filter(token)
-	if err != nil {
+	if _, err = jwt.StandardClaimsFilter().Filter(token); err != nil {
 		fmt.Printf("failed to filter standard claims: %s\n", err)
+		return
+	}
+
+	// Use StandardClaimsFilter to reject standard claims, resulting
+	// in every non-standard claim being retained
+	if _, err = jwt.StandardClaimsFilter().Reject(token); err != nil {
+		fmt.Printf("failed to reject standard claims: %s\n", err)
 		return
 	}
 
