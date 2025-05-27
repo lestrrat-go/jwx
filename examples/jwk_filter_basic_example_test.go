@@ -3,7 +3,6 @@ package examples_test
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -44,13 +43,6 @@ func Example_jwk_filter_basic_fields() {
 		return
 	}
 
-	buf, err := json.MarshalIndent(customOnlyKey, "", "  ")
-	if err != nil {
-		fmt.Printf("failed to marshal custom key: %s\n", err)
-		return
-	}
-	_ = buf // Don't print on success
-
 	// Use RSAStandardFieldsFilter to get only standard RSA JWK fields
 	standardFilter := jwk.RSAStandardFieldsFilter()
 	standardOnlyKey, err := standardFilter.Filter(key)
@@ -73,13 +65,6 @@ func Example_jwk_filter_basic_fields() {
 			displayKey.Set(field, "...")
 		}
 	}
-
-	buf, err = json.MarshalIndent(displayKey, "", "  ")
-	if err != nil {
-		fmt.Printf("failed to marshal standard key: %s\n", err)
-		return
-	}
-	_ = buf // Don't print on success
 
 	// Validate that the filtering worked correctly
 
