@@ -25,7 +25,7 @@ func Reject[T Filterable[T]](object T, names []string) (T, error) {
 	return filterWith(object, names, false)
 }
 
-// filterWith is an internal function used by both FilterWith and RejectWith functions
+// filterWith is an internal function used by both Apply and Reject functions
 // to apply the filtering logic to an object. If include is true, only fields
 // matching the names are included. If include is false, fields matching
 // the names are excluded.
