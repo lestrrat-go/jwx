@@ -24,6 +24,8 @@ func StandardClaimsFilter() TokenFilter {
 	return stdClaimsFilter
 }
 
+var stdClaimsFilter = NewClaimNameFilter(stdClaimNames...)
+
 // ClaimNameFilter is an object that allows you to filter JWT claims by claim names.
 type ClaimNameFilter struct {
 	names []string
@@ -44,7 +46,7 @@ func (cn *ClaimNameFilter) Filter(token Token) (Token, error) {
 	copy(names, cn.names)
 	cn.mu.RUnlock()
 
-	result, err := filter.Apply[Token](token, names)
+	result, err := filter.Apply(token, names)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func (cn *ClaimNameFilter) Reject(token Token) (Token, error) {
 	copy(names, cn.names)
 	cn.mu.RUnlock()
 
-	result, err := filter.Reject[Token](token, names)
+	result, err := filter.Reject(token, names)
 	if err != nil {
 		return nil, err
 	}

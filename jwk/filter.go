@@ -27,20 +27,7 @@ func StandardFieldsFilter() KeyFilter {
 	return stdFieldsFilter
 }
 
-// These are the standard field names defined in the JWK specification
-var standardFieldNames = []string{
-	KeyTypeKey,
-	KeyUsageKey,
-	KeyOpsKey,
-	AlgorithmKey,
-	KeyIDKey,
-	X509URLKey,
-	X509CertChainKey,
-	X509CertThumbprintKey,
-	X509CertThumbprintS256Key,
-}
-
-var stdFieldsFilter = NewFieldNameFilter(standardFieldNames...)
+var stdFieldsFilter = NewFieldNameFilter(stdFieldNames...)
 
 // FieldNameFilter is an object that allows you to filter JWK fields by field names.
 type FieldNameFilter struct {
@@ -62,7 +49,7 @@ func (fn *FieldNameFilter) Filter(key Key) (Key, error) {
 	copy(names, fn.names)
 	fn.mu.RUnlock()
 
-	result, err := filter.Apply[Key](key, names)
+	result, err := filter.Apply(key, names)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +64,7 @@ func (fn *FieldNameFilter) Reject(key Key) (Key, error) {
 	copy(names, fn.names)
 	fn.mu.RUnlock()
 
-	result, err := filter.Reject[Key](key, names)
+	result, err := filter.Reject(key, names)
 	if err != nil {
 		return nil, err
 	}

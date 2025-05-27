@@ -21,6 +21,9 @@ const (
 	X509CertThumbprintS256Key = "x5t#S256"
 )
 
+// stdFieldNames is a list of all standard field names defined in the JWK specification.
+var stdFieldNames = []string{KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key}
+
 // Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
 // between each key types, so you should use type assertions

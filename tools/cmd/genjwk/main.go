@@ -653,6 +653,13 @@ func generateGenericHeaders(fields codegen.FieldList) error {
 	}
 	o.L(")") // end const
 
+	o.LL("// stdFieldNames is a list of all standard field names defined in the JWK specification.")
+	o.L("var stdFieldNames = []string{KeyTypeKey")
+	for _, f := range fields {
+		o.R(", %sKey", f.Name(true))
+	}
+	o.R("}")
+
 	o.LL("// Key defines the minimal interface for each of the")
 	o.L("// key types. Their use and implementation differ significantly")
 	o.L("// between each key types, so you should use type assertions")
