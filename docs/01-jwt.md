@@ -21,7 +21,10 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   - [Validate for specific claim values](#validate-for-specific-claim-values)
   - [Use a custom validator](#use-a-custom-validator)
   - [Detecting error types](#detecting-error-types)
-- [Serialization](#jwt-serialization)
+- [Filtering Claims](#filtering-claims)
+  - [Filtering Using Standard Claim Names](#filtering-using-standard-claim-names)
+  - [Advanced filtering scenarios](#advanced-filtering-scenarios)
+- [Serialization](#serialization)
   - [Serialize using JWS](#serialize-using-jws)
   - [Serialize using JWE and JWS](#serialize-using-jwe-and-jws)
   - [Serialize the `aud` field as a single string](#serialize-the-aud-field-as-a-single-string)
@@ -973,7 +976,31 @@ func Example_jwt_validate_detect_error_type() {
 source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_detect_error_type_example_test.go)
 <!-- END INCLUDE -->
 
-# JWT Serialization
+# Filtering Claims
+
+JWT tokens can contain many different types of claims - standard claims like `iss`, `aud`, `exp`, as well as custom application-specific claims. Sometimes you need to create modified versions of tokens that only contain certain claims, either for security purposes, API compatibility, or to create specialized token types.
+
+While `jwt.Token` object itself does not offer ways to directly extract out these claims, you can use the `jwt.TokenFilter` interface provides methods to filter JWT claims in a flexible way.
+
+## Filtering Using Standard Claim Names
+
+The most common way to filter claims is by either excluding or including only the standard JWT claims. 
+
+For convenience, this library provides `jwt.StandardClaimsFilter()` which filters standard JWT claims defined in RFC 7519.  You can either use `(filter).Filter(token)` to create a `jwt.Token` that contains only the standard claims, or use `(filter).Reject(token)` to create a `jwt.Token` that contains only non-standard claims.
+
+<!-- INCLUDE(examples/jwt_filter_basic_example_test.go) -->
+<!-- END INCLUDE -->
+
+For OpenID tokens, you could also use `openid.StandardClaimsFilter()`.
+
+## Advanced filtering scenarios
+
+If you want to control what gets filtered, you can create a `jwt.TokenFilter` of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
+
+<!-- INCLUDE(examples/jwt_filter_advanced_example_test.go) -->
+<!-- END INCLUDE -->
+
+# Serialization
 
 ## Serialize as JSON
 
