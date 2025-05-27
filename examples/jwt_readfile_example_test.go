@@ -15,7 +15,7 @@ func Example_jwt_readfile() {
 	}
 	defer os.Remove(f.Name())
 
-	fmt.Fprintf(f, exampleJWTSignedHMAC)
+	fmt.Fprint(f, exampleJWTSignedHMAC)
 	f.Close()
 
 	// Note: this JWT has NOT been verified because we have not passed jwt.WithKey() and used

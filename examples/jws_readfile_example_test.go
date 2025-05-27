@@ -17,7 +17,7 @@ func Example_jws_readfile() {
 	}
 	defer os.Remove(f.Name())
 
-	fmt.Fprintf(f, src)
+	fmt.Fprint(f, src)
 	f.Close()
 
 	msg, err := jws.ReadFile(f.Name())
