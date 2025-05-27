@@ -4,7 +4,7 @@ build --keep_going
 test  --keep_going
 
 # Output test errors to stderr so users don't have to `cat` or open test failure log files when test
-# fail. This makes the log noiser in exchange for reducing the time-to-feedback on test failures for
+# fail. This makes the log noisier in exchange for reducing the time-to-feedback on test failures for
 # users.
 # Docs: https://bazel.build/docs/user-manual#test-output
 test --test_output=errors
