@@ -10,6 +10,10 @@ import (
 // It provides two methods: Filter and Reject; Filter returns a new header with only
 // the fields that match the filter criteria, while Reject returns a new header with
 // only the fields that DO NOT match the filter.
+//
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 type HeaderFilter interface {
 	Filter(header Headers) (Headers, error)
 	Reject(header Headers) (Headers, error)
@@ -29,6 +33,10 @@ func StandardHeadersFilter() HeaderFilter {
 var stdHeadersFilter = NewHeaderNameFilter(stdHeaderNames...)
 
 // HeaderNameFilter is an object that allows you to filter JWE header fields by field names.
+//
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 type HeaderNameFilter struct {
 	names []string
 	mu    sync.RWMutex

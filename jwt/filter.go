@@ -10,6 +10,10 @@ import (
 // It provides two methods: Filter and Reject; Filter returns a new token with only
 // the claims that match the filter criteria, while Reject returns a new token with
 // only the claims that DO NOT match the filter.
+//
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 type TokenFilter interface {
 	Filter(token Token) (Token, error)
 	Reject(token Token) (Token, error)
@@ -27,6 +31,10 @@ func StandardClaimsFilter() TokenFilter {
 var stdClaimsFilter = NewClaimNameFilter(stdClaimNames...)
 
 // ClaimNameFilter is an object that allows you to filter JWT claims by claim names.
+//
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 type ClaimNameFilter struct {
 	names []string
 	mu    sync.RWMutex
