@@ -201,7 +201,7 @@ func generateStandardFieldsFilterWithFields(o *codegen.Output, kt *KeyType, fiel
 	}
 
 	// Generate the standard fields variable
-	o.LL("var %sStandardFields *FieldNameFilter", strings.ToLower(kt.Prefix))
+	o.LL("var %sStandardFields KeyFilter", strings.ToLower(kt.Prefix))
 
 	// Generate the init function
 	o.LL("func init() {")
@@ -216,8 +216,8 @@ func generateStandardFieldsFilterWithFields(o *codegen.Output, kt *KeyType, fiel
 	o.L("}")
 
 	// Generate the convenience function
-	o.LL("// %sStandardFieldsFilter returns a FieldNameFilter that filters out standard %s fields.", kt.Prefix, kt.Prefix)
-	o.L("func %sStandardFieldsFilter() *FieldNameFilter {", kt.Prefix)
+	o.LL("// %sStandardFieldsFilter returns a KeyFilter that filters out standard %s fields.", kt.Prefix, kt.Prefix)
+	o.L("func %sStandardFieldsFilter() KeyFilter {", kt.Prefix)
 	o.L("return %sStandardFields", strings.ToLower(kt.Prefix))
 	o.L("}")
 

@@ -1514,13 +1514,13 @@ func (h *rsaPrivateKey) Keys() []string {
 	return keys
 }
 
-var rsaStandardFields *FieldNameFilter
+var rsaStandardFields KeyFilter
 
 func init() {
 	rsaStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, RSAEKey, RSANKey, RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey)
 }
 
-// RSAStandardFieldsFilter returns a FieldNameFilter that filters out standard RSA fields.
-func RSAStandardFieldsFilter() *FieldNameFilter {
+// RSAStandardFieldsFilter returns a KeyFilter that filters out standard RSA fields.
+func RSAStandardFieldsFilter() KeyFilter {
 	return rsaStandardFields
 }

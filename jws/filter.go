@@ -1,8 +1,6 @@
 package jws
 
 import (
-	"sync"
-
 	"github.com/lestrrat-go/jwx/v3/internal/filter"
 )
 
@@ -32,49 +30,7 @@ func StandardHeadersFilter() HeaderFilter {
 
 var stdHeadersFilter = NewHeaderNameFilter(stdHeaderNames...)
 
-// HeaderNameFilter is an object that allows you to filter JWS header fields by field names.
-//
-// EXPERIMENTAL: This API is experimental and its interface and behavior is
-// subject to change in future releases. This API is not subject to semver
-// compatibility guarantees.
-type HeaderNameFilter struct {
-	names []string
-	mu    sync.RWMutex
-}
-
 // NewHeaderNameFilter creates a new HeaderNameFilter with the specified field names.
-func NewHeaderNameFilter(names ...string) *HeaderNameFilter {
-	return &HeaderNameFilter{
-		names: names,
-	}
-}
-
-// Filter returns a new header with only the fields that match the filter.
-func (hn *HeaderNameFilter) Filter(header Headers) (Headers, error) {
-	hn.mu.RLock()
-	names := make([]string, len(hn.names))
-	copy(names, hn.names)
-	hn.mu.RUnlock()
-
-	result, err := filter.Apply(header, names)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-// Reject returns a new header with only the fields that DO NOT match the filter.
-func (hn *HeaderNameFilter) Reject(header Headers) (Headers, error) {
-	hn.mu.RLock()
-	names := make([]string, len(hn.names))
-	copy(names, hn.names)
-	hn.mu.RUnlock()
-
-	result, err := filter.Reject(header, names)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewHeaderNameFilter(names ...string) HeaderFilter {
+	return filter.NewNameBasedFilter[Headers](names...)
 }

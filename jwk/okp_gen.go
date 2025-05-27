@@ -1318,13 +1318,13 @@ func (h *okpPrivateKey) Keys() []string {
 	return keys
 }
 
-var okpStandardFields *FieldNameFilter
+var okpStandardFields KeyFilter
 
 func init() {
 	okpStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, OKPCrvKey, OKPXKey, OKPDKey)
 }
 
-// OKPStandardFieldsFilter returns a FieldNameFilter that filters out standard OKP fields.
-func OKPStandardFieldsFilter() *FieldNameFilter {
+// OKPStandardFieldsFilter returns a KeyFilter that filters out standard OKP fields.
+func OKPStandardFieldsFilter() KeyFilter {
 	return okpStandardFields
 }

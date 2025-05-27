@@ -1,8 +1,6 @@
 package jwt
 
 import (
-	"sync"
-
 	"github.com/lestrrat-go/jwx/v3/internal/filter"
 )
 
@@ -30,49 +28,7 @@ func StandardClaimsFilter() TokenFilter {
 
 var stdClaimsFilter = NewClaimNameFilter(stdClaimNames...)
 
-// ClaimNameFilter is an object that allows you to filter JWT claims by claim names.
-//
-// EXPERIMENTAL: This API is experimental and its interface and behavior is
-// subject to change in future releases. This API is not subject to semver
-// compatibility guarantees.
-type ClaimNameFilter struct {
-	names []string
-	mu    sync.RWMutex
-}
-
 // NewClaimNameFilter creates a new ClaimNameFilter with the specified claim names.
-func NewClaimNameFilter(names ...string) *ClaimNameFilter {
-	return &ClaimNameFilter{
-		names: names,
-	}
-}
-
-// Filter returns a new token with only the claims that match the filter.
-func (cn *ClaimNameFilter) Filter(token Token) (Token, error) {
-	cn.mu.RLock()
-	names := make([]string, len(cn.names))
-	copy(names, cn.names)
-	cn.mu.RUnlock()
-
-	result, err := filter.Apply(token, names)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-// Reject returns a new token with only the claims that DO NOT match the filter.
-func (cn *ClaimNameFilter) Reject(token Token) (Token, error) {
-	cn.mu.RLock()
-	names := make([]string, len(cn.names))
-	copy(names, cn.names)
-	cn.mu.RUnlock()
-
-	result, err := filter.Reject(token, names)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewClaimNameFilter(names ...string) TokenFilter {
+	return filter.NewNameBasedFilter[Token](names...)
 }
