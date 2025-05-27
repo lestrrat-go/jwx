@@ -206,7 +206,7 @@ func TestStandardFieldsFilter(t *testing.T) {
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 		require.NotNil(t, rawKey, "key should not be nil")
 
-		stdFilter := jwk.StandardFieldsFilter()
+		stdFilter := jwk.ECDSAStandardFieldsFilter()
 
 		t.Run("Filter standard fields", func(t *testing.T) {
 			// Filter should return a key with only standard fields

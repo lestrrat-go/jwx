@@ -15,20 +15,6 @@ type KeyFilter interface {
 	Reject(key Key) (Key, error)
 }
 
-// StandardFieldsFilter returns a KeyFilter that filters out standard JWK fields.
-//
-// You can use this filter to create keys that either only has standard fields
-// or only custom fields (note that some standard fields such as `kty` cannot be removed
-// because in this library it is a characteristic of the object and not a data field).
-//
-// If you need to configure the filter more precisely, consider
-// using the FieldNameFilter directly.
-func StandardFieldsFilter() KeyFilter {
-	return stdFieldsFilter
-}
-
-var stdFieldsFilter = NewFieldNameFilter(stdFieldNames...)
-
 // FieldNameFilter is an object that allows you to filter JWK fields by field names.
 type FieldNameFilter struct {
 	names []string

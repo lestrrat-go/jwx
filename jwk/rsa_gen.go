@@ -138,6 +138,8 @@ func (h *rsaPublicKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
+	case KeyTypeKey:
+		return true
 	case AlgorithmKey:
 		return h.algorithm != nil
 	case RSAEKey:
@@ -815,6 +817,8 @@ func (h *rsaPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
+	case KeyTypeKey:
+		return true
 	case AlgorithmKey:
 		return h.algorithm != nil
 	case RSADKey:
@@ -1508,4 +1512,15 @@ func (h *rsaPrivateKey) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+var rsaStandardFields *FieldNameFilter
+
+func init() {
+	rsaStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, RSAEKey, RSANKey, RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey)
+}
+
+// RSAStandardFieldsFilter returns a FieldNameFilter that filters out standard RSA fields.
+func RSAStandardFieldsFilter() *FieldNameFilter {
+	return rsaStandardFields
 }

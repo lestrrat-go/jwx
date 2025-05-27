@@ -118,6 +118,8 @@ func (h *symmetricKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
+	case KeyTypeKey:
+		return true
 	case AlgorithmKey:
 		return h.algorithm != nil
 	case KeyIDKey:
@@ -595,4 +597,15 @@ func (h *symmetricKey) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+var symmetricStandardFields *FieldNameFilter
+
+func init() {
+	symmetricStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, SymmetricOctetsKey)
+}
+
+// SymmetricStandardFieldsFilter returns a FieldNameFilter that filters out standard Symmetric fields.
+func SymmetricStandardFieldsFilter() *FieldNameFilter {
+	return symmetricStandardFields
 }
