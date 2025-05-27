@@ -22,6 +22,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Working with key-specific methods](#working-with-key-specific-methods)
   * [Setting values to fields](#setting-values-to-fields)
   * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
+  * [Filtering Keys with KeyFilter](#filtering-keys-with-keyfilter)
 
 ---
 
@@ -938,3 +939,22 @@ if err := jwk.ParseRawKey(src, &raw); err != nil {
   ...
 }
 ```
+
+## Filtering Keys with KeyFilter
+
+The [`jwk.KeyFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#KeyFilter) interface provides a mechanism to selectively include or exclude specific fields when working with JWK keys. This is useful when you need to serialize keys with only certain fields, or when you want to create clean representations of keys for specific purposes.
+
+KeyFilter objects provide two methods:
+- `Filter()`: Returns a new key containing only the fields that should be included
+- `Reject()`: Returns a new key with specified fields excluded
+
+### Standard Field Filters
+
+For convenience, the library provides pre-defined filters that include standard fields for each key type:
+
+- [`jwk.RSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#RSAStandardFieldsFilter) - for RSA keys
+- [`jwk.ECDSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAStandardFieldsFilter) - for ECDSA keys  
+- [`jwk.OKPStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#OKPStandardFieldsFilter) - for OKP keys
+- [`jwk.SymmetricStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#SymmetricStandardFieldsFilter) - for symmetric keys
+
+These functions return filters configured to include the standard fields defined in the JWK specification for each key type.

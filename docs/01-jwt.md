@@ -980,7 +980,7 @@ source: [examples/jwt_validate_detect_error_type_example_test.go](https://github
 
 JWT tokens can contain many different types of claims - standard claims like `iss`, `aud`, `exp`, as well as custom application-specific claims. Sometimes you need to create modified versions of tokens that only contain certain claims, either for security purposes, API compatibility, or to create specialized token types.
 
-While `jwt.Token` object itself does not offer ways to directly extract out these claims, you can use the `jwt.TokenFilter` interface provides methods to filter JWT claims in a flexible way.
+While [`jwt.Token`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Token) object itself does not offer ways to directly extract out these claims, you can use the [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#TokenFilter) interface provides methods to filter JWT claims in a flexible way.
 
 ## Filtering Using Standard Claim Names
 
@@ -995,7 +995,7 @@ For OpenID tokens, you could also use `openid.StandardClaimsFilter()`.
 
 ## Advanced filtering scenarios
 
-If you want to control what gets filtered, you can create a `jwt.TokenFilter` of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
+If you want to control what gets filtered, you can create a [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#TokenFilter) of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
 
 <!-- INCLUDE(examples/jwt_filter_advanced_example_test.go) -->
 <!-- END INCLUDE -->

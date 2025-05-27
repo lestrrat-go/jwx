@@ -20,6 +20,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
 * [Enabling ES256K](#enabling-es256k)
 * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
+* [Filtering JWS headers](#filtering-jws-headers)
 
 # Parsing
 
@@ -689,3 +690,30 @@ source: [examples/jws_sign_with_custom_base64_example_test.go](https://github.co
 <!-- END INCLUDE -->
 
 You can use these option for `jwt.Sign` and `jwt.Parse` as well. See the [JWT docs for an example](./01-jwt.md#using-a-custom-base64-encoder).
+
+# Filtering JWS headers
+
+**Important:** The filtering functionality described in this section operates on JWS headers only, not on the JWS message itself, nor can you filter or modify the payload of a JWS message directly using these filters.
+
+The JWS library provides filtering capabilities that allow you to selectively include or exclude specific header fields from JWS headers. This is particularly useful when you need to:
+
+- Remove sensitive information from headers before logging or transmission
+- Extract only specific header fields for processing
+- Separate standard JWS headers from custom application-specific headers
+- Create environment-specific header configurations
+
+The filtering operates on parsed JWS messages and their headers, allowing you to create new header objects with only the fields you need.
+
+## Basic header filtering
+
+You can filter JWS headers using the [`jws.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#HeaderNameFilter):
+
+<!-- INCLUDE(examples/jws_filter_basic_example_test.go) -->
+<!-- END INCLUDE -->
+
+## Advanced header filtering
+
+For more complex filtering scenarios, including multi-signature JWS messages:
+
+<!-- INCLUDE(examples/jws_filter_advanced_example_test.go) -->
+<!-- END INCLUDE -->
