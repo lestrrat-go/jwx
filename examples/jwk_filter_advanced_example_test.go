@@ -140,15 +140,13 @@ func Example_jwk_filter_advanced_use_cases() {
 	)
 
 	// Apply compliance filter to production key for demonstration
-	_, err = complianceFilter.Filter(prodJWK)
-	if err != nil {
+	if _, err := complianceFilter.Filter(prodJWK); err != nil {
 		fmt.Printf("failed to create compliance key: %s\n", err)
 		return
 	}
 
 	// Apply compliance filter to dev key for demonstration
-	_, err = complianceFilter.Filter(devJWK)
-	if err != nil {
+	if _, err := complianceFilter.Filter(devJWK); err != nil {
 		fmt.Printf("failed to create compliance dev key: %s\n", err)
 		return
 	}
@@ -160,8 +158,7 @@ func Example_jwk_filter_advanced_use_cases() {
 	)
 
 	// Apply ops filter to staging key for demonstration
-	_, err = opsFilter.Filter(stagingJWK)
-	if err != nil {
+	if _, err := opsFilter.Filter(stagingJWK); err != nil {
 		fmt.Printf("failed to create ops key: %s\n", err)
 		return
 	}

@@ -40,24 +40,21 @@ func Example_jwt_filter_advanced_use_cases() {
 
 	// Use case 1: Create a token for public APIs (remove sensitive information)
 	sensitiveFilter := jwt.NewClaimNameFilter("sessionInfo", "profile")
-	_, err = sensitiveFilter.Reject(token)
-	if err != nil {
+	if _, err := sensitiveFilter.Reject(token); err != nil {
 		fmt.Printf("failed to create public API token: %s\n", err)
 		return
 	}
 
 	// Use case 2: Create an identity-only token (only user identification claims)
 	identityFilter := jwt.NewClaimNameFilter("sub", "iss", "userRole", "department")
-	_, err = identityFilter.Filter(token)
-	if err != nil {
+	if _, err := identityFilter.Filter(token); err != nil {
 		fmt.Printf("failed to create identity token: %s\n", err)
 		return
 	}
 
 	// Use case 3: Create a minimal security token (only time-based and security claims)
 	securityFilter := jwt.NewClaimNameFilter("iss", "sub", "aud", "exp", "iat", "nbf", "jti")
-	_, err = securityFilter.Filter(token)
-	if err != nil {
+	if _, err := securityFilter.Filter(token); err != nil {
 		fmt.Printf("failed to create security token: %s\n", err)
 		return
 	}
@@ -72,8 +69,7 @@ func Example_jwt_filter_advanced_use_cases() {
 
 	// Then remove specific custom claims
 	customSensitiveFilter := jwt.NewClaimNameFilter("sessionInfo", "profile")
-	_, err = customSensitiveFilter.Reject(tempToken)
-	if err != nil {
+	if _, err := customSensitiveFilter.Reject(tempToken); err != nil {
 		fmt.Printf("failed to remove custom sensitive claims: %s\n", err)
 		return
 	}

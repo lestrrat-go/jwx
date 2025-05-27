@@ -58,14 +58,6 @@ func Example_jwk_filter_basic_fields() {
 		return
 	}
 
-	// Replace long values with "..." for consistent example output
-	longFields := []string{"d", "dp", "dq", "n", "p", "q", "qi"}
-	for _, field := range longFields {
-		if displayKey.Has(field) {
-			displayKey.Set(field, "...")
-		}
-	}
-
 	// Validate that the filtering worked correctly
 
 	// Check custom-only key has expected custom fields and no sensitive data
@@ -77,10 +69,6 @@ func Example_jwk_filter_basic_fields() {
 		fmt.Printf("custom key should not contain cryptographic fields\n")
 		return
 	}
-
-	// Check that display key has the expected fields (don't check values)
-	// The longFields that exist should still be present after filtering
-	_ = longFields // We don't need to validate the actual values
 
 	// Check that display key has expected standard fields
 	if !displayKey.Has("alg") || !displayKey.Has("kty") || !displayKey.Has("use") {
