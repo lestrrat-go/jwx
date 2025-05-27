@@ -101,11 +101,6 @@ func Example_jws_header_filter_advanced() {
 	// OUTPUT:
 }
 
-// Helper function to print JWS headers in a readable format for advanced examples
-func printJWSHeaders(headers jws.Headers) {
-	// This function is used for error cases only, so no normal output
-}
-
 // Helper function to demonstrate validation using filtered JWS headers
 func validateJWSSecurityHeaders(headers jws.Headers) {
 	// Check security level
