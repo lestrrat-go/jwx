@@ -18,6 +18,11 @@ type KeyFilter interface {
 }
 
 // NewFieldNameFilter creates a new FieldNameFilter with the specified field names.
+//
+// Note that because some JWK fields are associated with the type instead of
+// stored as data, this filter will not be able to remove them. An example would
+// be the `kty` field: it's associated with the underlying JWK key type, and will
+// always be present even if you attempt to remove it.
 func NewFieldNameFilter(names ...string) KeyFilter {
 	return filter.NewNameBasedFilter[Key](names...)
 }
