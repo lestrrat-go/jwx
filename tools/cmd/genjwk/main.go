@@ -176,6 +176,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("type %s interface {", ifName)
 	o.L("Key")
+	o.L("rlock() // used internally")
+	o.L("runlock() // used internally")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
 			continue
@@ -208,6 +210,14 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("func (h %s) KeyType() jwa.KeyType {", structName)
 	o.L("return %s", kt.KeyType)
+	o.L("}")
+
+	o.LL("func (h %s) rlock() {", structName)
+	o.L("h.mu.RLock()")
+	o.L("}")
+
+	o.LL("func (h %s) runlock() {", structName)
+	o.L("h.mu.RUnlock()")
 	o.L("}")
 
 	if objName == "PublicKey" || objName == "PrivateKey" {

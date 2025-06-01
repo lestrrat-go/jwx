@@ -25,6 +25,8 @@ const (
 
 type ECDSAPublicKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	X() ([]byte, bool)
 	Y() ([]byte, bool)
@@ -59,6 +61,14 @@ func newECDSAPublicKey() *ecdsaPublicKey {
 
 func (h ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC()
+}
+
+func (h ecdsaPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h ecdsaPublicKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h ecdsaPublicKey) IsPrivate() bool {
@@ -692,6 +702,8 @@ func (h *ecdsaPublicKey) Keys() []string {
 
 type ECDSAPrivateKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	D() ([]byte, bool)
 	X() ([]byte, bool)
@@ -728,6 +740,14 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC()
+}
+
+func (h ecdsaPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h ecdsaPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h ecdsaPrivateKey) IsPrivate() bool {

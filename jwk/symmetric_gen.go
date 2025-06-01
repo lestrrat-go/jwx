@@ -22,6 +22,8 @@ const (
 
 type SymmetricKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	Octets() ([]byte, bool)
 }
 
@@ -52,6 +54,14 @@ func newSymmetricKey() *symmetricKey {
 
 func (h symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq()
+}
+
+func (h symmetricKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h symmetricKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h *symmetricKey) Algorithm() (jwa.KeyAlgorithm, bool) {

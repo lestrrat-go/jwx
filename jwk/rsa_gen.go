@@ -29,6 +29,8 @@ const (
 
 type RSAPublicKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	E() ([]byte, bool)
 	N() ([]byte, bool)
 }
@@ -61,6 +63,14 @@ func newRSAPublicKey() *rsaPublicKey {
 
 func (h rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
+}
+
+func (h rsaPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h rsaPublicKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h rsaPublicKey) IsPrivate() bool {
@@ -652,6 +662,8 @@ func (h *rsaPublicKey) Keys() []string {
 
 type RSAPrivateKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	D() ([]byte, bool)
 	DP() ([]byte, bool)
 	DQ() ([]byte, bool)
@@ -696,6 +708,14 @@ func newRSAPrivateKey() *rsaPrivateKey {
 
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
+}
+
+func (h rsaPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h rsaPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h rsaPrivateKey) IsPrivate() bool {

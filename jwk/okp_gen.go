@@ -24,6 +24,8 @@ const (
 
 type OKPPublicKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	X() ([]byte, bool)
 }
@@ -56,6 +58,14 @@ func newOKPPublicKey() *okpPublicKey {
 
 func (h okpPublicKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
+}
+
+func (h okpPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h okpPublicKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h okpPublicKey) IsPrivate() bool {
@@ -649,6 +659,8 @@ func (h *okpPublicKey) Keys() []string {
 
 type OKPPrivateKey interface {
 	Key
+	rlock()   // used internally
+	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	D() ([]byte, bool)
 	X() ([]byte, bool)
@@ -683,6 +695,14 @@ func newOKPPrivateKey() *okpPrivateKey {
 
 func (h okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
+}
+
+func (h okpPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h okpPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h okpPrivateKey) IsPrivate() bool {
