@@ -351,6 +351,15 @@ func bytesToKey(src interface{}) (Key, error) {
 	return k, nil
 }
 
+type Embedded struct {
+	Key
+}
+type DoubleEmbedded struct {
+	Embedded
+}
+
+var _ Key = &DoubleEmbedded{}
+
 // Export converts a `jwk.Key` to a Export key. The dst argument must be a pointer to the
 // object that the user wants the result to be assigned to.
 //
@@ -364,6 +373,24 @@ func bytesToKey(src interface{}) (Key, error) {
 //
 // If you already know the exact type, it is recommended that you
 // pass a pointer to the zero value of the actual key type for efficiency.
+//
+// Although `key` takes a `jwk.Key` interface and thus allows third parties
+// to create their own key types, generally they would end up causing some
+// errors, because a great deal of knowledge about the concrete key type
+// is necessary to convert a `jwk.Key` to a raw key.
+//
+// One notable limitation is that if you create a `jwk.Key` type by
+// embedding a `jwk.Key` interface in a struct, this function will
+// only work if the `jwk.Key` is embedded direcctly in the struct.
+// For example, the following will not work:
+//
+//	type DirectEmbed struct { jwk.Key }
+//	type IndirectEmbed struct { DirectEmbed }
+//	jwk.Export(&IndirectEmbed{...}, ...)
+//
+// But this probably will:
+//
+//	jwk.Export(&DirectEmbed{...}, ...)
 func Export(key Key, dst interface{}) error {
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)

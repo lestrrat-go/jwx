@@ -6,6 +6,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ed25519"
 	"fmt"
+	"reflect"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -139,9 +140,19 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 	}
 }
 
+var okpConvertibleKeys = []reflect.Type{
+	reflect.TypeOf((*OKPPrivateKey)(nil)).Elem(),
+	reflect.TypeOf((*OKPPublicKey)(nil)).Elem(),
+}
+
 // This is half baked. I think it will blow up if we used ecdh.* keys and/or x25519 keys
 func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half baked */) (interface{}, error) {
-	switch key := key.(type) {
+	extracted, err := extractEmbeddedKey(key, okpConvertibleKeys)
+	if err != nil {
+		return nil, fmt.Errorf(`jwk.OKP: failed to extract embedded key: %w`, err)
+	}
+
+	switch key := extracted.(type) {
 	case OKPPrivateKey:
 		locker, ok := key.(rlocker)
 		if ok {

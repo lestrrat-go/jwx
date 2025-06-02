@@ -631,3 +631,42 @@ type keyWithD interface {
 }
 
 var _ keyWithD = &okpPrivateKey{}
+
+func extractEmbeddedKey(keyif Key, concretTypes []reflect.Type) (Key, error) {
+	rv := reflect.ValueOf(keyif)
+
+	// If the value can be converted to one of the concrete types, then we're done
+	for _, t := range concretTypes {
+		if rv.Type().ConvertibleTo(t) {
+			return keyif, nil
+		}
+	}
+
+	// When a struct implements the Key interface via embedding, you unfortunately
+	// cannot use a type switch to determine the concrete type, because
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return nil, fmt.Errorf(`invalid key value (0): %w`, ContinueError())
+		}
+		rv = rv.Elem()
+	}
+
+	if rv.Kind() != reflect.Struct {
+		return nil, fmt.Errorf(`invalid key value type %T (1): %w`, keyif, ContinueError())
+	}
+	if rv.NumField() == 0 {
+		return nil, fmt.Errorf(`invalid key value type %T (2): %w`, keyif, ContinueError())
+	}
+	// Iterate through the fields of the struct to find the first field that
+	// implements the Key interface
+	for i := range rv.NumField() {
+		field := rv.Field(i)
+		if field.CanInterface() {
+			if k, ok := field.Interface().(Key); ok {
+				return k, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf(`invalid key value type %T (3): %w`, keyif, ContinueError())
+}

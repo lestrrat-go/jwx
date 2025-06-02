@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -113,8 +114,17 @@ func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) {
 	key.E = int(bie.Int64())
 }
 
+var rsaConvertibleKeys = []reflect.Type{
+	reflect.TypeOf((*RSAPrivateKey)(nil)).Elem(),
+	reflect.TypeOf((*RSAPublicKey)(nil)).Elem(),
+}
+
 func rsaJWKToRaw(key Key, hint interface{}) (interface{}, error) {
-	switch key := key.(type) {
+	extracted, err := extractEmbeddedKey(key, rsaConvertibleKeys)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+	}
+	switch key := extracted.(type) {
 	case RSAPrivateKey:
 		switch hint.(type) {
 		case *rsa.PrivateKey, *interface{}:

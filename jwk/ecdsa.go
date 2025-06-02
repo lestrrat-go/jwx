@@ -140,10 +140,20 @@ func buildECDHPrivateKey(alg jwa.EllipticCurveAlgorithm, dbuf []byte) (*ecdh.Pri
 	return ecdhcrv.NewPrivateKey(dbuf)
 }
 
+var ecdsaConvertibleTypes = []reflect.Type{
+	reflect.TypeOf((*ECDSAPrivateKey)(nil)).Elem(),
+	reflect.TypeOf((*ECDSAPublicKey)(nil)).Elem(),
+}
+
 func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 	var isECDH bool
 
-	switch k := keyif.(type) {
+	extracted, err := extractEmbeddedKey(keyif, ecdsaConvertibleTypes)
+	if err != nil {
+		return nil, fmt.Errorf(`jwk: failed to extract embedded key: %w`, err)
+	}
+
+	switch k := extracted.(type) {
 	case ECDSAPrivateKey:
 		switch hint.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
@@ -246,6 +256,7 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 		}
 		return buildECDSAPublicKey(crv, x, y)
 	default:
+		fmt.Println("ECDSAPrivateKey/ ECDSAPublicKey didn't match")
 		return nil, ContinueError()
 	}
 }
