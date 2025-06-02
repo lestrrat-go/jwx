@@ -256,7 +256,6 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 		}
 		return buildECDSAPublicKey(crv, x, y)
 	default:
-		fmt.Println("ECDSAPrivateKey/ ECDSAPublicKey didn't match")
 		return nil, ContinueError()
 	}
 }
