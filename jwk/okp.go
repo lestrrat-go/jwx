@@ -142,29 +142,44 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 // This is half baked. I think it will blow up if we used ecdh.* keys and/or x25519 keys
 func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half baked */) (interface{}, error) {
 	switch key := key.(type) {
-	case *okpPrivateKey:
-		key.mu.RLock()
-		defer key.mu.RUnlock()
+	case OKPPrivateKey:
+		key.rlock()
+		defer key.runlock()
 
 		crv, ok := key.Crv()
 		if !ok {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
 
-		privk, err := buildOKPPrivateKey(crv, key.x, key.d)
+		x, ok := key.X()
+		if !ok {
+			return nil, fmt.Errorf(`missing "x" field`)
+		}
+
+		d, ok := key.D()
+		if !ok {
+			return nil, fmt.Errorf(`missing "d" field`)
+		}
+
+		privk, err := buildOKPPrivateKey(crv, x, d)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.OKPPrivateKey: failed to build private key: %w`, err)
 		}
 		return privk, nil
-	case *okpPublicKey:
-		key.mu.RLock()
-		defer key.mu.RUnlock()
+	case OKPPublicKey:
+		key.rlock()
+		defer key.runlock()
 
 		crv, ok := key.Crv()
 		if !ok {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
-		pubk, err := buildOKPPublicKey(crv, key.x)
+
+		x, ok := key.X()
+		if !ok {
+			return nil, fmt.Errorf(`missing "x" field`)
+		}
+		pubk, err := buildOKPPublicKey(crv, x)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
 		}
