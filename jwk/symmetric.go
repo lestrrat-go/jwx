@@ -27,16 +27,26 @@ func (k *symmetricKey) Import(rawKey []byte) error {
 
 func octetSeqToRaw(key Key, hint interface{}) (interface{}, error) {
 	switch key := key.(type) {
-	case *symmetricKey:
+	case SymmetricKey:
 		switch hint.(type) {
 		case *[]byte, *interface{}:
 		default:
 			return nil, fmt.Errorf(`invalid destination object type %T for symmetric key: %w`, hint, ContinueError())
 		}
-		key.mu.RLock()
-		defer key.mu.RUnlock()
-		octets := make([]byte, len(key.octets))
-		copy(octets, key.octets)
+
+		locker, ok := key.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
+
+		ooctets, ok := key.Octets()
+		if !ok {
+			return nil, fmt.Errorf(`jwk.SymmetricKey: missing "k" field`)
+		}
+
+		octets := make([]byte, len(ooctets))
+		copy(octets, ooctets)
 		return octets, nil
 	default:
 		return nil, ContinueError()
