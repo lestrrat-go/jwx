@@ -24,8 +24,6 @@ const (
 
 type OKPPublicKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	X() ([]byte, bool)
 }
@@ -659,8 +657,6 @@ func (h *okpPublicKey) Keys() []string {
 
 type OKPPrivateKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	D() ([]byte, bool)
 	X() ([]byte, bool)

@@ -25,8 +25,6 @@ const (
 
 type ECDSAPublicKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	X() ([]byte, bool)
 	Y() ([]byte, bool)
@@ -702,8 +700,6 @@ func (h *ecdsaPublicKey) Keys() []string {
 
 type ECDSAPrivateKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	D() ([]byte, bool)
 	X() ([]byte, bool)

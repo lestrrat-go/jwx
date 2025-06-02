@@ -143,8 +143,11 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half baked */) (interface{}, error) {
 	switch key := key.(type) {
 	case OKPPrivateKey:
-		key.rlock()
-		defer key.runlock()
+		locker, ok := key.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
 
 		crv, ok := key.Crv()
 		if !ok {
@@ -167,8 +170,11 @@ func okpJWKToRaw(key Key, _ interface{} /* this is unused because this is half b
 		}
 		return privk, nil
 	case OKPPublicKey:
-		key.rlock()
-		defer key.runlock()
+		locker, ok := key.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
 
 		crv, ok := key.Crv()
 		if !ok {

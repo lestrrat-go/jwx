@@ -160,8 +160,11 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 			}
 		}
 
-		k.rlock()
-		defer k.runlock()
+		locker, ok := k.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
 
 		crv, ok := k.Crv()
 		if !ok {
@@ -218,8 +221,11 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 			}
 		}
 
-		k.rlock()
-		defer k.runlock()
+		locker, ok := k.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
 
 		crv, ok := k.Crv()
 		if !ok {

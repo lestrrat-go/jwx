@@ -176,8 +176,6 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("type %s interface {", ifName)
 	o.L("Key")
-	o.L("rlock() // used internally")
-	o.L("runlock() // used internally")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
 			continue

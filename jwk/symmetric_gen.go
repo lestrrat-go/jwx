@@ -22,8 +22,6 @@ const (
 
 type SymmetricKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	Octets() ([]byte, bool)
 }
 

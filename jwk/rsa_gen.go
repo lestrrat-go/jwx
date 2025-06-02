@@ -29,8 +29,6 @@ const (
 
 type RSAPublicKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	E() ([]byte, bool)
 	N() ([]byte, bool)
 }
@@ -662,8 +660,6 @@ func (h *rsaPublicKey) Keys() []string {
 
 type RSAPrivateKey interface {
 	Key
-	rlock()   // used internally
-	runlock() // used internally
 	D() ([]byte, bool)
 	DP() ([]byte, bool)
 	DQ() ([]byte, bool)
