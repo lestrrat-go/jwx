@@ -24,7 +24,7 @@ func Example_jws_sign_detached_payload() {
 	hdrs := jws.NewHeaders()
 	hdrs.Set("b64", false)
 	hdrs.Set("crit", []string{"b64"})
-	
+
 	serialized, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)), jws.WithDetachedPayload([]byte(payload)))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
@@ -33,5 +33,5 @@ func Example_jws_sign_detached_payload() {
 
 	fmt.Printf("%s\n", serialized)
 	// OUTPUT:
-	// eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk
+	// eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..lnRw_MSpQjARa5LWqPcu8Qls9p3wYGrC6tz4-nr0rkA
 }
