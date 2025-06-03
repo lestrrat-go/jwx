@@ -1,6 +1,11 @@
 package transform
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/lestrrat-go/blackmagic"
+)
 
 // Mappable is an interface that defines methods required when converting
 // a jwx structure into a map[string]interface{}.
@@ -25,7 +30,10 @@ func AsMap(m Mappable, dst map[string]interface{}) error {
 	for _, k := range m.Keys() {
 		var val interface{}
 		if err := m.Get(k, &val); err != nil {
-			return fmt.Errorf(`jwx.AsMap: failed to get key %q: %w`, k, err)
+			// Allow invalid value errors. Assume they are just nil values.
+			if !errors.Is(err, blackmagic.InvalidValueError()) {
+				return fmt.Errorf(`jwx.AsMap: failed to get key %q: %w`, k, err)
+			}
 		}
 		dst[k] = val
 	}
