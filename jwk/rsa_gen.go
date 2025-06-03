@@ -63,6 +63,14 @@ func (h rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
 }
 
+func (h rsaPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h rsaPublicKey) runlock() {
+	h.mu.RUnlock()
+}
+
 func (h rsaPublicKey) IsPrivate() bool {
 	return false
 }
@@ -698,6 +706,14 @@ func newRSAPrivateKey() *rsaPrivateKey {
 
 func (h rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
+}
+
+func (h rsaPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h rsaPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h rsaPrivateKey) IsPrivate() bool {

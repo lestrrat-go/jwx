@@ -58,6 +58,14 @@ func (h okpPublicKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
 }
 
+func (h okpPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h okpPublicKey) runlock() {
+	h.mu.RUnlock()
+}
+
 func (h okpPublicKey) IsPrivate() bool {
 	return false
 }
@@ -685,6 +693,14 @@ func newOKPPrivateKey() *okpPrivateKey {
 
 func (h okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
+}
+
+func (h okpPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h okpPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h okpPrivateKey) IsPrivate() bool {

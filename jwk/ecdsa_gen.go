@@ -61,6 +61,14 @@ func (h ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC()
 }
 
+func (h ecdsaPublicKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h ecdsaPublicKey) runlock() {
+	h.mu.RUnlock()
+}
+
 func (h ecdsaPublicKey) IsPrivate() bool {
 	return false
 }
@@ -730,6 +738,14 @@ func newECDSAPrivateKey() *ecdsaPrivateKey {
 
 func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC()
+}
+
+func (h ecdsaPrivateKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h ecdsaPrivateKey) runlock() {
+	h.mu.RUnlock()
 }
 
 func (h ecdsaPrivateKey) IsPrivate() bool {

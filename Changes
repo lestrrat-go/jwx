@@ -10,6 +10,15 @@ v3.0.2 UNRELEASED
   * [jws] (EXPERIMENTAL) Added header filtering functionality through the HeaderFilter interface.
   * [jwe] (EXPERIMENTAL) Added header filtering functionality through the HeaderFilter interface.
   * [jwk] (EXPERIMENTAL) Added key filtering functionality through the KeyFilter interface.
+  * [jwk] `jwk.Export` previously did not recognize third-party objects that implemented `jwk.Key`,
+    as it was detecting what to do by checking if the object was one of our own unexported
+    types. This caused some problems for consumers of this library that wanted to extend the
+    features of the keys.
+
+    Now `jwk.Export` checks types against interface types such as `jwk.RSAPrivateKey`, `jwk.ECDSAPrivateKey`, etc.
+    It also uses some reflect blackmagic to detect if the given object implements the `jwk.Key` interface
+    via embedding, so you should be able to embed a `jwk.Key` to another object to act as if it
+    is a legitimate `jwk.Key`, as far as `jwk.Export` is concerned.
 
 v3.0.1 29 Apr 2025
   * [jwe] Fixed a long standing bug that could lead to degraded encryption or failure to

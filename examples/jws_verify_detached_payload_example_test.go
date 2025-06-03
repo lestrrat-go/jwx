@@ -9,7 +9,7 @@ import (
 )
 
 func Example_jws_verify_detached_payload() {
-	serialized := `eyJhbGciOiJIUzI1NiJ9..H14oXKwyvAsl0IbBLjw9tLxNIoYisuIyb_oDV4-30Vk`
+	serialized := `eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..lnRw_MSpQjARa5LWqPcu8Qls9p3wYGrC6tz4-nr0rkA`
 	payload := `$.02`
 
 	key, err := jwk.Import([]byte(`abracadabra`))

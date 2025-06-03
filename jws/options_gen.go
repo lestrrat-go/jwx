@@ -282,6 +282,8 @@ func WithDetached(v bool) CompactOption {
 
 // WithDetachedPayload can be used to both sign or verify a JWS message with a
 // detached payload.
+// Note that this option does NOT populate the `b64` header, which is sometimes
+// required by other JWS implementations.
 //
 // When this option is used for `jws.Sign()`, the first parameter (normally the payload)
 // must be set to `nil`.

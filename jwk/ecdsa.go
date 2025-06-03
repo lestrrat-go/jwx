@@ -140,38 +140,21 @@ func buildECDHPrivateKey(alg jwa.EllipticCurveAlgorithm, dbuf []byte) (*ecdh.Pri
 	return ecdhcrv.NewPrivateKey(dbuf)
 }
 
+var ecdsaConvertibleTypes = []reflect.Type{
+	reflect.TypeOf((*ECDSAPrivateKey)(nil)).Elem(),
+	reflect.TypeOf((*ECDSAPublicKey)(nil)).Elem(),
+}
+
 func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 	var isECDH bool
-	switch k := keyif.(type) {
-	case *ecdsaPublicKey:
-		switch hint.(type) {
-		case ecdsa.PublicKey, *ecdsa.PublicKey:
-		case ecdh.PublicKey, *ecdh.PublicKey:
-			isECDH = true
-		default:
-			rv := reflect.ValueOf(hint)
-			//nolint:revive
-			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
-				// pointer to an interface value, presumably they want us to dynamically
-				// create an object of the right type
-			} else {
-				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
-			}
-		}
 
-		k.mu.RLock()
-		defer k.mu.RUnlock()
+	extracted, err := extractEmbeddedKey(keyif, ecdsaConvertibleTypes)
+	if err != nil {
+		return nil, fmt.Errorf(`jwk: failed to extract embedded key: %w`, err)
+	}
 
-		crv, ok := k.Crv()
-		if !ok {
-			return nil, fmt.Errorf(`missing "crv" field`)
-		}
-
-		if isECDH {
-			return buildECDHPublicKey(crv, k.x, k.y)
-		}
-		return buildECDSAPublicKey(crv, k.x, k.y)
-	case *ecdsaPrivateKey:
+	switch k := extracted.(type) {
+	case ECDSAPrivateKey:
 		switch hint.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
 		case ecdh.PrivateKey, *ecdh.PrivateKey:
@@ -187,8 +170,11 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 			}
 		}
 
-		k.mu.RLock()
-		defer k.mu.RUnlock()
+		locker, ok := k.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
 
 		crv, ok := k.Crv()
 		if !ok {
@@ -196,20 +182,79 @@ func ecdsaJWKToRaw(keyif Key, hint interface{}) (interface{}, error) {
 		}
 
 		if isECDH {
-			return buildECDHPrivateKey(crv, k.d)
+			d, ok := k.D()
+			if !ok {
+				return nil, fmt.Errorf(`missing "d" field`)
+			}
+			return buildECDHPrivateKey(crv, d)
 		}
-		pubk, err := buildECDSAPublicKey(crv, k.x, k.y)
+
+		x, ok := k.X()
+		if !ok {
+			return nil, fmt.Errorf(`missing "x" field`)
+		}
+		y, ok := k.Y()
+		if !ok {
+			return nil, fmt.Errorf(`missing "y" field`)
+		}
+		pubk, err := buildECDSAPublicKey(crv, x, y)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to build public key: %w`, err)
 		}
 
 		var key ecdsa.PrivateKey
 		var d big.Int
-		d.SetBytes(k.d)
+
+		origD, ok := k.D()
+		if !ok {
+			return nil, fmt.Errorf(`missing "d" field`)
+		}
+
+		d.SetBytes(origD)
 		key.D = &d
 		key.PublicKey = *pubk
 
 		return &key, nil
+	case ECDSAPublicKey:
+		switch hint.(type) {
+		case ecdsa.PublicKey, *ecdsa.PublicKey:
+		case ecdh.PublicKey, *ecdh.PublicKey:
+			isECDH = true
+		default:
+			rv := reflect.ValueOf(hint)
+			//nolint:revive
+			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
+				// pointer to an interface value, presumably they want us to dynamically
+				// create an object of the right type
+			} else {
+				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
+			}
+		}
+
+		locker, ok := k.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
+
+		crv, ok := k.Crv()
+		if !ok {
+			return nil, fmt.Errorf(`missing "crv" field`)
+		}
+
+		x, ok := k.X()
+		if !ok {
+			return nil, fmt.Errorf(`missing "x" field`)
+		}
+
+		y, ok := k.Y()
+		if !ok {
+			return nil, fmt.Errorf(`missing "y" field`)
+		}
+		if isECDH {
+			return buildECDHPublicKey(crv, x, y)
+		}
+		return buildECDSAPublicKey(crv, x, y)
 	default:
 		return nil, ContinueError()
 	}
