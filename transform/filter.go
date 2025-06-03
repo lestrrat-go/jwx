@@ -28,6 +28,7 @@ type Filterable[T any] interface {
 
 // Apply is a standalone function that provides type-safe filtering based on
 // specified filter logic.
+//
 // It returns a new object with only the fields that match the result of `logic.Apply`.
 func Apply[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 	return filterWith(object, logic, true)
@@ -35,6 +36,7 @@ func Apply[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 
 // Reject is a standalone function that provides type-safe filtering based on
 // specified filter logic.
+//
 // It returns a new object with only the fields that DO NOT match the result
 // of `logic.Apply`.
 func Reject[T Filterable[T]](object T, logic FilterLogic) (T, error) {
@@ -74,6 +76,10 @@ type NameBasedFilter[T Filterable[T]] struct {
 }
 
 // NewNameBasedFilter creates a new NameBasedFilter with the specified field names.
+//
+// NameBasedFilter is the underlying implementation of the
+// various filters in jwe, jwk, jws, and jwt packages. You normally do not
+// need to use this directly.
 func NewNameBasedFilter[T Filterable[T]](names ...string) *NameBasedFilter[T] {
 	nameMap := make(map[string]struct{}, len(names))
 	for _, name := range names {
