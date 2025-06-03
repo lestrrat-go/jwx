@@ -1,7 +1,7 @@
 package jwk
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/filter"
+	"github.com/lestrrat-go/jwx/v3/transform"
 )
 
 // KeyFilter is an interface that allows users to filter JWK key fields.
@@ -24,5 +24,5 @@ type KeyFilter interface {
 // be the `kty` field: it's associated with the underlying JWK key type, and will
 // always be present even if you attempt to remove it.
 func NewFieldNameFilter(names ...string) KeyFilter {
-	return filter.NewNameBasedFilter[Key](names...)
+	return transform.NewNameBasedFilter[Key](names...)
 }

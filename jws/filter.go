@@ -1,7 +1,7 @@
 package jws
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/filter"
+	"github.com/lestrrat-go/jwx/v3/transform"
 )
 
 // HeaderFilter is an interface that allows users to filter JWS header fields.
@@ -32,5 +32,5 @@ var stdHeadersFilter = NewHeaderNameFilter(stdHeaderNames...)
 
 // NewHeaderNameFilter creates a new HeaderNameFilter with the specified field names.
 func NewHeaderNameFilter(names ...string) HeaderFilter {
-	return filter.NewNameBasedFilter[Headers](names...)
+	return transform.NewNameBasedFilter[Headers](names...)
 }

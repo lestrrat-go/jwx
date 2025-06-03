@@ -35,7 +35,7 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
-        "//internal/filter",
+        "//transform",
         "//internal/json",
         "//internal/pool",
         "//jwa",

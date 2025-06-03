@@ -22,7 +22,7 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
-        "//internal/filter",
+        "//transform",
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",

@@ -23,7 +23,7 @@ go_library(
     deps = [
         "//:jwx",
         "//internal/base64",
-        "//internal/filter",
+        "//transform",
         "//internal/json",
         "//internal/pool",
         "//jwa",

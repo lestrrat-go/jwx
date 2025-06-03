@@ -1,17 +1,16 @@
-// Package filter provides common filtering functionality for JWX objects.
-package filter
+package transform
 
 import "sync"
 
-// Logic is an interface that defines the logic for filtering objects.
-type Logic interface {
+// FilterLogic is an interface that defines the logic for filtering objects.
+type FilterLogic interface {
 	Apply(key string, object any) bool
 }
 
-// LogicFunc is a function type that implements the FilterLogic interface.
-type LogicFunc func(key string, object any) bool
+// FilterLogicFunc is a function type that implements the FilterLogic interface.
+type FilterLogicFunc func(key string, object any) bool
 
-func (f LogicFunc) Apply(key string, object any) bool {
+func (f FilterLogicFunc) Apply(key string, object any) bool {
 	return f(key, object)
 }
 
@@ -30,7 +29,7 @@ type Filterable[T any] interface {
 // Apply is a standalone function that provides type-safe filtering based on
 // specified filter logic.
 // It returns a new object with only the fields that match the result of `logic.Apply`.
-func Apply[T Filterable[T]](object T, logic Logic) (T, error) {
+func Apply[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 	return filterWith(object, logic, true)
 }
 
@@ -38,7 +37,7 @@ func Apply[T Filterable[T]](object T, logic Logic) (T, error) {
 // specified filter logic.
 // It returns a new object with only the fields that DO NOT match the result
 // of `logic.Apply`.
-func Reject[T Filterable[T]](object T, logic Logic) (T, error) {
+func Reject[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 	return filterWith(object, logic, false)
 }
 
@@ -46,7 +45,7 @@ func Reject[T Filterable[T]](object T, logic Logic) (T, error) {
 // to apply the filtering logic to an object. If include is true, only fields
 // matching the logic are included. If include is false, fields matching
 // the logic are excluded.
-func filterWith[T Filterable[T]](object T, logic Logic, include bool) (T, error) {
+func filterWith[T Filterable[T]](object T, logic FilterLogic, include bool) (T, error) {
 	var zero T
 
 	result, err := object.Clone()
@@ -71,7 +70,7 @@ func filterWith[T Filterable[T]](object T, logic Logic, include bool) (T, error)
 type NameBasedFilter[T Filterable[T]] struct {
 	names map[string]struct{}
 	mu    sync.RWMutex
-	logic Logic
+	logic FilterLogic
 }
 
 // NewNameBasedFilter creates a new NameBasedFilter with the specified field names.
@@ -85,7 +84,7 @@ func NewNameBasedFilter[T Filterable[T]](names ...string) *NameBasedFilter[T] {
 		names: nameMap,
 	}
 
-	nf.logic = LogicFunc(nf.filter)
+	nf.logic = FilterLogicFunc(nf.filter)
 	return nf
 }
 

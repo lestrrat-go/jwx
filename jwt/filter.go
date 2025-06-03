@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/filter"
+	"github.com/lestrrat-go/jwx/v3/transform"
 )
 
 // TokenFilter is an interface that allows users to filter JWT claims.
@@ -30,5 +30,5 @@ var stdClaimsFilter = NewClaimNameFilter(stdClaimNames...)
 
 // NewClaimNameFilter creates a new ClaimNameFilter with the specified claim names.
 func NewClaimNameFilter(names ...string) TokenFilter {
-	return filter.NewNameBasedFilter[Token](names...)
+	return transform.NewNameBasedFilter[Token](names...)
 }
