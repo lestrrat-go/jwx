@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "transform",
-    srcs = ["filter.go"],
+    srcs = [
+        "filter.go",
+        "map.go",
+    ],
     importpath = "github.com/lestrrat-go/jwx/v3/transform",
     visibility = ["//visibility:public"],
 )
