@@ -8,10 +8,10 @@ type Logic interface {
 	Apply(key string, object any) bool
 }
 
-// FilterLogicFunc is a function type that implements the FilterLogic interface.
-type FilterLogicFunc func(key string, object any) bool
+// LogicFunc is a function type that implements the FilterLogic interface.
+type LogicFunc func(key string, object any) bool
 
-func (f FilterLogicFunc) Apply(key string, object any) bool {
+func (f LogicFunc) Apply(key string, object any) bool {
 	return f(key, object)
 }
 
@@ -85,7 +85,7 @@ func NewNameBasedFilter[T Filterable[T]](names ...string) *NameBasedFilter[T] {
 		names: nameMap,
 	}
 
-	nf.logic = FilterLogicFunc(nf.filter)
+	nf.logic = LogicFunc(nf.filter)
 	return nf
 }
 
