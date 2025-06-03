@@ -1,4 +1,4 @@
-package jwx
+package transform
 
 import "fmt"
 
@@ -13,12 +13,13 @@ type Mappable interface {
 
 // AsMap takes the specified Mappable object and populates the map
 // `dst` with the key-value pairs from the Mappable object.
-// If `dst` is nil, it will be initialized to a new map.
+// Many objects in jwe, jwk, jws, and jwt packages including
+// `jwt.Token`, `jwk.Key`, `jws.Header`, etc.
 //
 // This feature is experimental and may change or be removed in the future.
 func AsMap(m Mappable, dst map[string]interface{}) error {
 	if dst == nil {
-		dst = make(map[string]interface{})
+		return fmt.Errorf("jwx.AsMap: destination map cannot be nil")
 	}
 
 	for _, k := range m.Keys() {
