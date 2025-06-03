@@ -28,7 +28,7 @@ type Mappable interface {
 // compatibility guarantees.
 func AsMap(m Mappable, dst map[string]interface{}) error {
 	if dst == nil {
-		return fmt.Errorf("jwx.AsMap: destination map cannot be nil")
+		return fmt.Errorf("transform.AsMap: destination map cannot be nil")
 	}
 
 	for _, k := range m.Keys() {
@@ -36,7 +36,7 @@ func AsMap(m Mappable, dst map[string]interface{}) error {
 		if err := m.Get(k, &val); err != nil {
 			// Allow invalid value errors. Assume they are just nil values.
 			if !errors.Is(err, blackmagic.InvalidValueError()) {
-				return fmt.Errorf(`jwx.AsMap: failed to get key %q: %w`, k, err)
+				return fmt.Errorf(`transform.AsMap: failed to get key %q: %w`, k, err)
 			}
 		}
 		dst[k] = val
