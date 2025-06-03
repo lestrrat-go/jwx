@@ -351,15 +351,6 @@ func bytesToKey(src interface{}) (Key, error) {
 	return k, nil
 }
 
-type Embedded struct {
-	Key
-}
-type DoubleEmbedded struct {
-	Embedded
-}
-
-var _ Key = &DoubleEmbedded{}
-
 // Export converts a `jwk.Key` to a Export key. The dst argument must be a pointer to the
 // object that the user wants the result to be assigned to.
 //

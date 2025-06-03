@@ -4,6 +4,17 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.2 UNRELEASED
+  * [jwk] `jwk.Export` previously did not recognize third-party objects that implemented `jwk.Key`,
+    as it was detecting what to do by checking if the object was one of our own unexported
+    types. This caused some problems for consumers of this library that wanted to extend the
+    features of the keys.
+
+    Now `jwk.Export` checks types against interface types such as `jwk.RSAPrivateKey`, `jwk.ECDSAPrivateKey`, etc.
+    It also uses some reflect blackmagic to detect if the given object implements the `jwk.Key` interface
+    via embedding, so you should be able to embed a `jwk.Key` to another object to act as if it
+    is a legitimate `jwk.Key`, as far as `jwk.Export` is concerned.
+
 v3.0.1 29 Apr 2025
   * [jwe] Fixed a long standing bug that could lead to degraded encryption or failure to
     decrypt JWE messages when a very specific combination of inputs were used for
