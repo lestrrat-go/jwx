@@ -10,7 +10,9 @@ import (
 // Mappable is an interface that defines methods required when converting
 // a jwx structure into a map[string]interface{}.
 //
-// This feature is experimental and may change or be removed in the future.
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 type Mappable interface {
 	Get(key string, dst interface{}) error
 	Keys() []string
@@ -21,7 +23,9 @@ type Mappable interface {
 // Many objects in jwe, jwk, jws, and jwt packages including
 // `jwt.Token`, `jwk.Key`, `jws.Header`, etc.
 //
-// This feature is experimental and may change or be removed in the future.
+// EXPERIMENTAL: This API is experimental and its interface and behavior is
+// subject to change in future releases. This API is not subject to semver
+// compatibility guarantees.
 func AsMap(m Mappable, dst map[string]interface{}) error {
 	if dst == nil {
 		return fmt.Errorf("jwx.AsMap: destination map cannot be nil")
