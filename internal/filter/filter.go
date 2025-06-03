@@ -3,8 +3,8 @@ package filter
 
 import "sync"
 
-// FilterLogic is an interface that defines the logic for filtering objects.
-type FilterLogic interface {
+// Logic is an interface that defines the logic for filtering objects.
+type Logic interface {
 	Apply(key string, object any) bool
 }
 
@@ -30,7 +30,7 @@ type Filterable[T any] interface {
 // Apply is a standalone function that provides type-safe filtering based on
 // specified filter logic.
 // It returns a new object with only the fields that match the result of `logic.Apply`.
-func Apply[T Filterable[T]](object T, logic FilterLogic) (T, error) {
+func Apply[T Filterable[T]](object T, logic Logic) (T, error) {
 	return filterWith(object, logic, true)
 }
 
@@ -38,7 +38,7 @@ func Apply[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 // specified filter logic.
 // It returns a new object with only the fields that DO NOT match the result
 // of `logic.Apply`.
-func Reject[T Filterable[T]](object T, logic FilterLogic) (T, error) {
+func Reject[T Filterable[T]](object T, logic Logic) (T, error) {
 	return filterWith(object, logic, false)
 }
 
@@ -46,7 +46,7 @@ func Reject[T Filterable[T]](object T, logic FilterLogic) (T, error) {
 // to apply the filtering logic to an object. If include is true, only fields
 // matching the logic are included. If include is false, fields matching
 // the logic are excluded.
-func filterWith[T Filterable[T]](object T, logic FilterLogic, include bool) (T, error) {
+func filterWith[T Filterable[T]](object T, logic Logic, include bool) (T, error) {
 	var zero T
 
 	result, err := object.Clone()
@@ -71,7 +71,7 @@ func filterWith[T Filterable[T]](object T, logic FilterLogic, include bool) (T, 
 type NameBasedFilter[T Filterable[T]] struct {
 	names map[string]struct{}
 	mu    sync.RWMutex
-	logic FilterLogic
+	logic Logic
 }
 
 // NewNameBasedFilter creates a new NameBasedFilter with the specified field names.
@@ -89,7 +89,7 @@ func NewNameBasedFilter[T Filterable[T]](names ...string) *NameBasedFilter[T] {
 	return nf
 }
 
-func (nf *NameBasedFilter[T]) filter(k string, object any) bool {
+func (nf *NameBasedFilter[T]) filter(k string, _ any) bool {
 	_, ok := nf.names[k]
 	return ok
 }
