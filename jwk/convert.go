@@ -374,23 +374,11 @@ var _ Key = &DoubleEmbedded{}
 // If you already know the exact type, it is recommended that you
 // pass a pointer to the zero value of the actual key type for efficiency.
 //
-// Although `key` takes a `jwk.Key` interface and thus allows third parties
-// to create their own key types, generally they would end up causing some
-// errors, because a great deal of knowledge about the concrete key type
-// is necessary to convert a `jwk.Key` to a raw key.
-//
-// One notable limitation is that if you create a `jwk.Key` type by
-// embedding a `jwk.Key` interface in a struct, this function will
-// only work if the `jwk.Key` is embedded direcctly in the struct.
-// For example, the following will not work:
-//
-//	type DirectEmbed struct { jwk.Key }
-//	type IndirectEmbed struct { DirectEmbed }
-//	jwk.Export(&IndirectEmbed{...}, ...)
-//
-// But this probably will:
-//
-//	jwk.Export(&DirectEmbed{...}, ...)
+// Be careful when/if you are using a third party key type that implements
+// the `jwk.Key` interface, as the first argument. This function tries hard
+// to Do The Right Thing, but it is not guaranteed to work in all cases,
+// especially when the object implements the `jwk.Key` interface via
+// embedding.
 func Export(key Key, dst interface{}) error {
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)

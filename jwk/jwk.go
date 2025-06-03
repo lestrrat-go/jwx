@@ -659,11 +659,19 @@ func extractEmbeddedKey(keyif Key, concretTypes []reflect.Type) (Key, error) {
 	}
 	// Iterate through the fields of the struct to find the first field that
 	// implements the Key interface
+	rt := rv.Type()
 	for i := range rv.NumField() {
 		field := rv.Field(i)
+		ft := rt.Field(i)
+		if !ft.Anonymous {
+			// We can only salvage this object if the object implements jwk.Key
+			// via embedding, so we skip fields that are not anonymous
+			continue
+		}
+
 		if field.CanInterface() {
 			if k, ok := field.Interface().(Key); ok {
-				return k, nil
+				return extractEmbeddedKey(k, concretTypes)
 			}
 		}
 	}

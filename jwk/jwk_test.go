@@ -2045,3 +2045,68 @@ func TestGH1262(t *testing.T) {
 		_ = secretCli // doing some non-standard encryption
 	})
 }
+
+// DirectEmbed embeds jwk.Key directly
+type DirectEmbed struct {
+	jwk.Key
+}
+
+// IndirectEmbed embeds DirectEmbed which embeds jwk.Key
+type IndirectEmbed struct {
+	DirectEmbed
+}
+
+// DoubleIndirectEmbed embeds IndirectEmbed which embeds DirectEmbed which embeds jwk.Key
+type DoubleIndirectEmbed struct {
+	IndirectEmbed
+}
+
+func TestExportEmbeddedKey(t *testing.T) {
+	t.Run("Direct Embed", func(t *testing.T) {
+		// Create a RSA key
+		rsaKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, "jwxtest.GenerateRsaJwk should succeed")
+
+		// Create a direct embedding
+		directEmbed := &DirectEmbed{Key: rsaKey}
+
+		// Export the key from the direct embedding
+		var rawKey rsa.PrivateKey
+		err = jwk.Export(directEmbed, &rawKey)
+		require.NoError(t, err, "jwk.Export should succeed with direct embed")
+	})
+
+	t.Run("Indirect Embed", func(t *testing.T) {
+		// Create a RSA key
+		rsaKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, "jwxtest.GenerateRsaJwk should succeed")
+
+		// Create an indirect embedding
+		directEmbed := DirectEmbed{Key: rsaKey}
+		indirectEmbed := &IndirectEmbed{DirectEmbed: directEmbed}
+
+		// Export the key from the indirect embedding
+		var rawKey rsa.PrivateKey
+		err = jwk.Export(indirectEmbed, &rawKey)
+		if err != nil {
+			t.Logf("Error: %s", err)
+		}
+		require.NoError(t, err, "jwk.Export should succeed with indirect embed")
+	})
+
+	t.Run("Double Indirect Embed", func(t *testing.T) {
+		// Create a RSA key
+		rsaKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, "jwxtest.GenerateRsaJwk should succeed")
+
+		// Create a double indirect embedding
+		directEmbed := DirectEmbed{Key: rsaKey}
+		indirectEmbed := IndirectEmbed{DirectEmbed: directEmbed}
+		doubleIndirectEmbed := &DoubleIndirectEmbed{IndirectEmbed: indirectEmbed}
+
+		// Export the key from the double indirect embedding
+		var rawKey rsa.PrivateKey
+		err = jwk.Export(doubleIndirectEmbed, &rawKey)
+		require.NoError(t, err, "jwk.Export should succeed with double indirect embed")
+	})
+}
