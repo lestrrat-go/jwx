@@ -4,7 +4,7 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.2 UNRELEASED
+v3.0.2 03 Jun 2025
   * [transform] (EXPERIMENTAL) Add utility function `transform.AsMap` to convert a
     Mappable object to a map[string]interface{}. This is useful for converting
     objects such as `jws.Header`, `jwk.Key`, `jwt.Token`, etc. to a map that can
