@@ -41,3 +41,12 @@ func mergeHeaders(h1, h2 Headers) (Headers, error) {
 func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
 	return mergeHeaders(h, h2)
 }
+
+// Clone creates a deep copy of the header
+func (h *stdHeaders) Clone() (Headers, error) {
+	dst := NewHeaders()
+	if err := h.Copy(dst); err != nil {
+		return nil, fmt.Errorf(`failed to copy header: %w`, err)
+	}
+	return dst, nil
+}

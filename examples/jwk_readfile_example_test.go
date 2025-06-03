@@ -32,7 +32,7 @@ func Example_jwk_readfile() {
 	}
 	defer os.Remove(f.Name())
 
-	fmt.Fprintf(f, src)
+	fmt.Fprint(f, src)
 	f.Close()
 
 	key, err := jwk.ReadFile(f.Name())

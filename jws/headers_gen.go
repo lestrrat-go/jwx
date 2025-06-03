@@ -52,6 +52,7 @@ type Headers interface {
 	X509URL() (string, bool)
 	Copy(Headers) error
 	Merge(Headers) (Headers, error)
+	Clone() (Headers, error)
 	// Get is used to extract the value of any field, including non-standard fields, out of the header.
 	//
 	// The first argument is the name of the field. The second argument is a pointer
@@ -68,6 +69,9 @@ type Headers interface {
 	Has(string) bool
 	Keys() []string
 }
+
+// stdHeaderNames is a list of all standard header names defined in the JWS specification.
+var stdHeaderNames = []string{AlgorithmKey, ContentTypeKey, CriticalKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
 
 type stdHeaders struct {
 	algorithm              *jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1

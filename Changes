@@ -5,6 +5,11 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.2 UNRELEASED
+  * [jwt] (EXPERIMENTAL) Added token filtering functionality through the TokenFilter interface. 
+  * [jwt/openid] (EXPERIMENTAL) Added StandardClaimsFilter() for filtering standard OpenID claims.
+  * [jws] (EXPERIMENTAL) Added header filtering functionality through the HeaderFilter interface.
+  * [jwe] (EXPERIMENTAL) Added header filtering functionality through the HeaderFilter interface.
+  * [jwk] (EXPERIMENTAL) Added key filtering functionality through the KeyFilter interface.
   * [jwk] `jwk.Export` previously did not recognize third-party objects that implemented `jwk.Key`,
     as it was detecting what to do by checking if the object was one of our own unexported
     types. This caused some problems for consumers of this library that wanted to extend the

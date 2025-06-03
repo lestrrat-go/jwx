@@ -44,7 +44,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	}
 	defer os.Remove(f.Name())
 
-	fmt.Fprintf(f, src)
+	fmt.Fprint(f, src)
 	f.Close()
 
 	key, err := jwk.ReadFile(f.Name(), jwk.WithPEM(true))

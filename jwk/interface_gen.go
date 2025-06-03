@@ -23,7 +23,7 @@ const (
 
 // Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly
-// between each key types, so you should use type assertions
+// between each key type, so you should use type assertions
 // to perform more specific tasks with each key
 type Key interface {
 

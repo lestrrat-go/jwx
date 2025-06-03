@@ -151,6 +151,8 @@ func (h *ecdsaPublicKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
+	case KeyTypeKey:
+		return true
 	case AlgorithmKey:
 		return h.algorithm != nil
 	case ECDSACrvKey:
@@ -835,6 +837,8 @@ func (h *ecdsaPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
+	case KeyTypeKey:
+		return true
 	case AlgorithmKey:
 		return h.algorithm != nil
 	case ECDSACrvKey:
@@ -1413,4 +1417,15 @@ func (h *ecdsaPrivateKey) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+var ecdsaStandardFields KeyFilter
+
+func init() {
+	ecdsaStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, ECDSACrvKey, ECDSAXKey, ECDSAYKey, ECDSADKey)
+}
+
+// ECDSAStandardFieldsFilter returns a KeyFilter that filters out standard ECDSA fields.
+func ECDSAStandardFieldsFilter() KeyFilter {
+	return ecdsaStandardFields
 }

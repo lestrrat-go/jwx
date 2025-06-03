@@ -113,6 +113,22 @@ func generateToken(obj *codegen.Object) error {
 	}
 	o.L(")") // end const
 
+	var pkgPrefix string
+	if obj.String(`package`) != `jwt` {
+		pkgPrefix = `jwt.`
+	}
+
+	// Create a stdClaimNames array
+	o.LL("// stdClaimNames is a list of all standard claim names defined in the JWT specification.")
+	o.L("var stdClaimNames = []string{")
+	for i, f := range fields {
+		if i > 0 {
+			o.R(", ")
+		}
+		o.R("%sKey", f.Name(true))
+	}
+	o.R("}")
+
 	if obj.String(`package`) == "jwt" && obj.Name(false) == "stdToken" {
 		o.LL("// Token represents a generic JWT token.")
 		o.L("// which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`")
@@ -166,11 +182,6 @@ func generateToken(obj *codegen.Object) error {
 	o.L("Has(string) bool")
 
 	o.L("Remove(string) error")
-
-	var pkgPrefix string
-	if obj.String(`package`) != `jwt` {
-		pkgPrefix = `jwt.`
-	}
 
 	o.LL("// Options returns the per-token options associated with this token.")
 	o.L("// The options set value will be copied when the token is cloned via `Clone()`")

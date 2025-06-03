@@ -6,6 +6,7 @@ go_library(
         "ecdsa.go",
         "eddsa.go",
         "errors.go",
+        "filter.go",
         "headers.go",
         "headers_gen.go",
         "hmac.go",
@@ -26,6 +27,7 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
+        "//transform",
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
@@ -39,6 +41,8 @@ go_library(
 go_test(
     name = "jws_test",
     srcs = [
+        "es256k_test.go",
+        "filter_test.go",
         "headers_test.go",
         "jws_test.go",
         "message_test.go",

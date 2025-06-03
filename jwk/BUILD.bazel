@@ -9,6 +9,7 @@ go_library(
         "ecdsa_gen.go",
         "errors.go",
         "fetch.go",
+        "filter.go",
         "interface.go",
         "interface_gen.go",
         "io.go",
@@ -34,6 +35,7 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
+        "//transform",
         "//internal/json",
         "//internal/pool",
         "//jwa",
@@ -47,6 +49,7 @@ go_library(
 go_test(
     name = "jwk_test",
     srcs = [
+        "filter_test.go",
         "headers_test.go",
         "jwk_internal_test.go",
         "jwk_test.go",

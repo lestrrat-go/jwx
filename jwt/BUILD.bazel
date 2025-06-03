@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "builder_gen.go",
         "errors.go",
+        "filter.go",
         "http.go",
         "interface.go",
         "io.go",
@@ -22,6 +23,7 @@ go_library(
     deps = [
         "//:jwx",
         "//internal/base64",
+        "//transform",
         "//internal/json",
         "//internal/pool",
         "//jwa",

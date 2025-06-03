@@ -12,6 +12,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Decrypting](#decrypting)
   * [Decrypting using a single key](#decrypting-using-a-single-key)
   * [Decrypting using a JWKS](#decrypting-using-a-jwks)
+* [Filtering JWE headers](#filtering-jwe-headers)
 
 # Parsing
 
@@ -431,4 +432,31 @@ func Example_jwe_verify_with_jwk_set() {
 }
 ```
 source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_decrypt_with_keyset_example_test.go)
+<!-- END INCLUDE -->
+
+# Filtering JWE headers
+
+**Important**: Filtering operates on JWE headers only, not the JWE message or encrypted payload itself. When working with JWE messages, you may need to filter or manipulate the headers for various purposes while leaving the encrypted content intact.
+
+Header filtering is particularly useful for:
+
+- Removing sensitive information from headers before logging or transmission
+- Extract only specific header fields for processing  
+- Separate standard JWE headers from custom application-specific headers
+- Create environment-specific header configurations
+
+The filtering operates on parsed JWE messages and their headers, allowing you to create new header objects with only the fields you need.
+
+## Basic header filtering
+
+You can filter JWE headers using the [`jwe.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#HeaderNameFilter):
+
+<!-- INCLUDE(examples/jwe_filter_basic_example_test.go) -->
+<!-- END INCLUDE -->
+
+## Advanced header filtering
+
+For more complex filtering scenarios, including multi-recipient JWE messages:
+
+<!-- INCLUDE(examples/jwe_filter_advanced_example_test.go) -->
 <!-- END INCLUDE -->
