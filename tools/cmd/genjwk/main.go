@@ -210,6 +210,14 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return %s", kt.KeyType)
 	o.L("}")
 
+	o.LL("func (h %s) rlock() {", structName)
+	o.L("h.mu.RLock()")
+	o.L("}")
+
+	o.LL("func (h %s) runlock() {", structName)
+	o.L("h.mu.RUnlock()")
+	o.L("}")
+
 	if objName == "PublicKey" || objName == "PrivateKey" {
 		o.LL("func (h %s) IsPrivate() bool {", structName)
 		o.L("return %s", fmt.Sprint(objName == "PrivateKey"))

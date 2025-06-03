@@ -364,6 +364,12 @@ func bytesToKey(src interface{}) (Key, error) {
 //
 // If you already know the exact type, it is recommended that you
 // pass a pointer to the zero value of the actual key type for efficiency.
+//
+// Be careful when/if you are using a third party key type that implements
+// the `jwk.Key` interface, as the first argument. This function tries hard
+// to Do The Right Thing, but it is not guaranteed to work in all cases,
+// especially when the object implements the `jwk.Key` interface via
+// embedding.
 func Export(key Key, dst interface{}) error {
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)

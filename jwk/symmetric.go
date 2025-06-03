@@ -3,6 +3,7 @@ package jwk
 import (
 	"crypto"
 	"fmt"
+	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -25,18 +26,37 @@ func (k *symmetricKey) Import(rawKey []byte) error {
 	return nil
 }
 
+var symmetricConvertibleKeys = []reflect.Type{
+	reflect.TypeOf((*SymmetricKey)(nil)).Elem(),
+}
+
 func octetSeqToRaw(key Key, hint interface{}) (interface{}, error) {
-	switch key := key.(type) {
-	case *symmetricKey:
+	extracted, err := extractEmbeddedKey(key, symmetricConvertibleKeys)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+	}
+
+	switch key := extracted.(type) {
+	case SymmetricKey:
 		switch hint.(type) {
 		case *[]byte, *interface{}:
 		default:
 			return nil, fmt.Errorf(`invalid destination object type %T for symmetric key: %w`, hint, ContinueError())
 		}
-		key.mu.RLock()
-		defer key.mu.RUnlock()
-		octets := make([]byte, len(key.octets))
-		copy(octets, key.octets)
+
+		locker, ok := key.(rlocker)
+		if ok {
+			locker.rlock()
+			defer locker.runlock()
+		}
+
+		ooctets, ok := key.Octets()
+		if !ok {
+			return nil, fmt.Errorf(`jwk.SymmetricKey: missing "k" field`)
+		}
+
+		octets := make([]byte, len(ooctets))
+		copy(octets, ooctets)
 		return octets, nil
 	default:
 		return nil, ContinueError()

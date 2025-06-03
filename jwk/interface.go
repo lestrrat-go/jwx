@@ -135,3 +135,9 @@ type KeyWithDecodeCtx interface {
 	SetDecodeCtx(DecodeCtx)
 	DecodeCtx() DecodeCtx
 }
+
+// Used internally: It's used to lock a key
+type rlocker interface {
+	rlock()
+	runlock()
+}

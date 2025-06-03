@@ -54,6 +54,14 @@ func (h symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq()
 }
 
+func (h symmetricKey) rlock() {
+	h.mu.RLock()
+}
+
+func (h symmetricKey) runlock() {
+	h.mu.RUnlock()
+}
+
 func (h *symmetricKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 	if h.algorithm != nil {
 		return *(h.algorithm), true
