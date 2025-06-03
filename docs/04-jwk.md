@@ -246,7 +246,7 @@ func Example_jwk_readfile() {
   }
   defer os.Remove(f.Name())
 
-  fmt.Fprintf(f, src)
+  fmt.Fprint(f, src)
   f.Close()
 
   key, err := jwk.ReadFile(f.Name())
@@ -314,7 +314,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   }
   defer os.Remove(f.Name())
 
-  fmt.Fprintf(f, src)
+  fmt.Fprint(f, src)
   f.Close()
 
   key, err := jwk.ReadFile(f.Name(), jwk.WithPEM(true))
@@ -616,6 +616,7 @@ import (
 
 func Example_jwk_cache() {
   ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 

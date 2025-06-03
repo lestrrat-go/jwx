@@ -124,7 +124,7 @@ func Example_jwt_readfile() {
   }
   defer os.Remove(f.Name())
 
-  fmt.Fprintf(f, exampleJWTSignedHMAC)
+  fmt.Fprint(f, exampleJWTSignedHMAC)
   f.Close()
 
   // Note: this JWT has NOT been verified because we have not passed jwt.WithKey() and used
@@ -989,6 +989,65 @@ The most common way to filter claims is by either excluding or including only th
 For convenience, this library provides `jwt.StandardClaimsFilter()` which filters standard JWT claims defined in RFC 7519.  You can either use `(filter).Filter(token)` to create a `jwt.Token` that contains only the standard claims, or use `(filter).Reject(token)` to create a `jwt.Token` that contains only non-standard claims.
 
 <!-- INCLUDE(examples/jwt_filter_basic_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v3/jwt"
+)
+
+func Example_jwt_filter_basic_claims() {
+  // Create a token with standard and custom claims
+  token, err := jwt.NewBuilder().
+    Issuer("github.com/lestrrat-go/jwx").
+    Subject("jwt_filter_example").
+    Audience([]string{"developers", "users"}).
+    IssuedAt(time.Unix(1234567890, 0)).
+    Expiration(time.Unix(1234567890+3600, 0)).
+    Claim("customClaim", "customValue").
+    Claim("applicationRole", "admin").
+    Claim("department", "engineering").
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build token: %s\n", err)
+    return
+  }
+
+  // Create a custom claim name filter
+  customFilter := jwt.NewClaimNameFilter("customClaim", "applicationRole", "department")
+
+  // Filter to get only custom claims
+  if _, err := customFilter.Filter(token); err != nil {
+    fmt.Printf("failed to filter custom claims: %s\n", err)
+    return
+  }
+  // You could also use Reject to get all claims except the specified ones
+  // Note that this may include other non-standard claims
+  if _, err := customFilter.Reject(token); err != nil {
+    fmt.Printf("failed to reject custom claims: %s\n", err)
+    return
+  }
+
+  // Use StandardClaimsFilter to get only standard JWT claims
+  if _, err = jwt.StandardClaimsFilter().Filter(token); err != nil {
+    fmt.Printf("failed to filter standard claims: %s\n", err)
+    return
+  }
+
+  // Use StandardClaimsFilter to reject standard claims, resulting
+  // in every non-standard claim being retained
+  if _, err = jwt.StandardClaimsFilter().Reject(token); err != nil {
+    fmt.Printf("failed to reject standard claims: %s\n", err)
+    return
+  }
+
+  // OUTPUT:
+}
+```
+source: [examples/jwt_filter_basic_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_filter_basic_example_test.go)
 <!-- END INCLUDE -->
 
 For OpenID tokens, you could also use `openid.StandardClaimsFilter()`.
@@ -998,6 +1057,87 @@ For OpenID tokens, you could also use `openid.StandardClaimsFilter()`.
 If you want to control what gets filtered, you can create a [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#TokenFilter) of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
 
 <!-- INCLUDE(examples/jwt_filter_advanced_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/jwx/v3/jwt"
+)
+
+func Example_jwt_filter_advanced_use_cases() {
+  // Create a comprehensive token with various types of claims
+  token, err := jwt.NewBuilder().
+    Issuer("auth-service.example.com").
+    Subject("user-456").
+    Audience([]string{"web-app", "mobile-app", "api-gateway"}).
+    IssuedAt(time.Unix(1234567890, 0)).
+    Expiration(time.Unix(1234567890+7200, 0)).
+    NotBefore(time.Unix(1234567890, 0)).
+    JwtID("session-xyz789").
+    Claim("userRole", "manager").
+    Claim("department", "sales").
+    Claim("permissions", []string{"read:reports", "write:orders", "approve:discounts"}).
+    Claim("profile", map[string]interface{}{
+      "name":  "John Doe",
+      "email": "john@example.com",
+      "phone": "+1-555-0123",
+    }).
+    Claim("sessionInfo", map[string]interface{}{
+      "loginIP":      "10.0.1.100",
+      "deviceType":   "desktop",
+      "browser":      "Chrome/91.0",
+      "lastActivity": "2023-01-01T12:30:00Z",
+    }).
+    Claim("features", []string{"beta-ui", "advanced-analytics", "mobile-push"}).
+    Build()
+  if err != nil {
+    fmt.Printf("failed to build comprehensive token: %s\n", err)
+    return
+  }
+
+  // Use case 1: Create a token for public APIs (remove sensitive information)
+  sensitiveFilter := jwt.NewClaimNameFilter("sessionInfo", "profile")
+  if _, err := sensitiveFilter.Reject(token); err != nil {
+    fmt.Printf("failed to create public API token: %s\n", err)
+    return
+  }
+
+  // Use case 2: Create an identity-only token (only user identification claims)
+  identityFilter := jwt.NewClaimNameFilter("sub", "iss", "userRole", "department")
+  if _, err := identityFilter.Filter(token); err != nil {
+    fmt.Printf("failed to create identity token: %s\n", err)
+    return
+  }
+
+  // Use case 3: Create a minimal security token (only time-based and security claims)
+  securityFilter := jwt.NewClaimNameFilter("iss", "sub", "aud", "exp", "iat", "nbf", "jti")
+  if _, err := securityFilter.Filter(token); err != nil {
+    fmt.Printf("failed to create security token: %s\n", err)
+    return
+  }
+
+  // Use case 4: Combine filters - remove both standard claims and specific custom claims
+  standardFilter := jwt.StandardClaimsFilter()
+  tempToken, err := standardFilter.Reject(token) // Remove standard claims first
+  if err != nil {
+    fmt.Printf("failed to remove standard claims: %s\n", err)
+    return
+  }
+
+  // Then remove specific custom claims
+  customSensitiveFilter := jwt.NewClaimNameFilter("sessionInfo", "profile")
+  if _, err := customSensitiveFilter.Reject(tempToken); err != nil {
+    fmt.Printf("failed to remove custom sensitive claims: %s\n", err)
+    return
+  }
+
+  // OUTPUT:
+}
+```
+source: [examples/jwt_filter_advanced_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_filter_advanced_example_test.go)
 <!-- END INCLUDE -->
 
 # Serialization
