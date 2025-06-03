@@ -43,6 +43,7 @@ import (
 
 func Example_jwk_cache() {
   ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
