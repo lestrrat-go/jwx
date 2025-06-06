@@ -485,15 +485,17 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	// XXX check if this is correct
 	hdrs := s.ProtectedHeaders()
 
-	hdrbuf, err := json.Marshal(hdrs)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.Compress: failed to marshal headers: %w`, err)
+	hdrbuf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(hdrbuf)
+
+	if err := json.NewEncoder(hdrbuf).Encode(hdrs); err != nil {
+		return nil, fmt.Errorf(`jws.Compact: failed to marshal headers: %w`, err)
 	}
 
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
-	buf.WriteString(encoder.EncodeToString(hdrbuf))
+	buf.WriteString(encoder.EncodeToString(hdrbuf.Bytes()[:hdrbuf.Len()-1])) // remove trailing newline
 	buf.WriteByte('.')
 
 	if !detached {
