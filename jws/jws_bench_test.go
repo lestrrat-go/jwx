@@ -157,17 +157,29 @@ func BenchmarkSignerAlgorithms(b *testing.B) {
 		{"ECDSA", jwa.ES256(), ecdsaKey},
 	}
 
+	formats := []struct {
+		name    string
+		options []jws.SignOption
+	}{
+		{"Compact", []jws.SignOption{jws.WithCompact()}},
+		{"JSON", []jws.SignOption{jws.WithJSON()}},
+		{"JSON Pretty", []jws.SignOption{jws.WithJSON(jws.WithPretty(true))}},
+	}
+
 	payload := []byte("Lorem Ipsum")
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
-				signed, err := jws.Sign(payload, jws.WithKey(tc.alg, tc.key))
-				if err != nil {
-					b.Fatal(err)
+		for _, format := range formats {
+			b.Run(tc.name+"/"+format.name, func(b *testing.B) {
+				options := append([]jws.SignOption{jws.WithKey(tc.alg, tc.key)}, format.options...)
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					signed, err := jws.Sign(payload, options...)
+					if err != nil {
+						b.Fatal(err)
+					}
+					_ = signed
 				}
-				_ = signed
-			}
-		})
+			})
+		}
 	}
 }
