@@ -167,7 +167,13 @@ func validateKeyBeforeUse(key interface{}) error {
 // You can use `errors.Is` with `jws.SignError()` to check if an error is from this function.
 func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	format := fmtCompact
+
 	var signers []*payloadSigner
+	// This is a fixed size array that is optimized for the most common case
+	// of having a single signer.
+	var fixedSigners [1]*payloadSigner
+	signers = fixedSigners[:0] // convert the underlying fixed size array into a slice
+
 	var detached bool
 	var noneSignature *payloadSigner
 	var validateKey bool
@@ -239,10 +245,11 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	// Create a Message object with all the bits and bobs, and we'll
 	// serialize it in the end
 	var result Message
-
 	result.payload = payload
 
-	result.signatures = make([]*Signature, 0, len(signers))
+	var fixedSignatures [1]*Signature
+	result.signatures = fixedSignatures[:0]
+
 	for i, signer := range signers {
 		protected := signer.ProtectedHeader()
 		if protected == nil {
