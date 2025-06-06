@@ -11,6 +11,12 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
+// HMACSigner uses crypto/hmac to sign the payloads.
+type HMACSigner struct {
+	alg   jwa.SignatureAlgorithm
+	hfunc func() hash.Hash
+}
+
 var hmacSigners map[jwa.SignatureAlgorithm]Signer
 
 func init() {
@@ -24,24 +30,14 @@ func init() {
 
 	for alg, h := range algs {
 		hmacSigners[alg] = &HMACSigner{
-			alg:  alg,
-			sign: makeHMACSignFunc(h),
+			alg:   alg,
+			hfunc: h,
 		}
 	}
 }
 
 func newHMACSigner(alg jwa.SignatureAlgorithm) Signer {
 	return hmacSigners[alg]
-}
-
-func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
-	return func(payload []byte, key []byte) ([]byte, error) {
-		h := hmac.New(hfunc, key)
-		if _, err := h.Write(payload); err != nil {
-			return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
-		}
-		return h.Sum(nil), nil
-	}
 }
 
 func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {
@@ -58,7 +54,11 @@ func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 		return nil, fmt.Errorf(`missing key while signing payload`)
 	}
 
-	return s.sign(payload, hmackey)
+	h := hmac.New(s.hfunc, hmackey)
+	if _, err := h.Write(payload); err != nil {
+		return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
+	}
+	return h.Sum(nil), nil
 }
 
 func newHMACVerifier(alg jwa.SignatureAlgorithm) Verifier {
