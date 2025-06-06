@@ -113,18 +113,7 @@ func BenchmarkMakeSignerOriginal(b *testing.B) {
 	}
 }
 
-func BenchmarkSignerCreation(b *testing.B) {
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		_, err := jws.NewSigner(jwa.RS256())
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkMakeSignerAlgorithms(b *testing.B) {
+func BenchmarkNewSigner(b *testing.B) {
 	testCases := []struct {
 		name string
 		alg  jwa.SignatureAlgorithm
@@ -143,6 +132,41 @@ func BenchmarkMakeSignerAlgorithms(b *testing.B) {
 					b.Fatal(err)
 				}
 				_ = signer
+			}
+		})
+	}
+}
+
+func BenchmarkSignerAlgorithms(b *testing.B) {
+	hmacKey := []byte("secret")
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	if err != nil {
+		b.Fatal(err)
+	}
+	ecdsaKey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+	if err != nil {
+		b.Fatal(err)
+	}
+	testCases := []struct {
+		name string
+		alg  jwa.SignatureAlgorithm
+		key  any
+	}{
+		{"HMAC", jwa.HS256(), hmacKey},
+		{"RSA", jwa.RS256(), rsaKey},
+		{"ECDSA", jwa.ES256(), ecdsaKey},
+	}
+
+	payload := []byte("Lorem Ipsum")
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				signed, err := jws.Sign(payload, jws.WithKey(tc.alg, tc.key))
+				if err != nil {
+					b.Fatal(err)
+				}
+				_ = signed
 			}
 		})
 	}
