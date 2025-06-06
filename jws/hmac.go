@@ -11,7 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
-var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
+var hmacSigners map[jwa.SignatureAlgorithm]Signer
 
 func init() {
 	algs := map[jwa.SignatureAlgorithm]func() hash.Hash{
@@ -20,16 +20,18 @@ func init() {
 		jwa.HS512(): sha512.New,
 	}
 
+	hmacSigners = make(map[jwa.SignatureAlgorithm]Signer)
+
 	for alg, h := range algs {
-		hmacSignFuncs[alg] = makeHMACSignFunc(h)
+		hmacSigners[alg] = &HMACSigner{
+			alg:  alg,
+			sign: makeHMACSignFunc(h),
+		}
 	}
 }
 
 func newHMACSigner(alg jwa.SignatureAlgorithm) Signer {
-	return &HMACSigner{
-		alg:  alg,
-		sign: hmacSignFuncs[alg], // we know this will succeed
-	}
+	return hmacSigners[alg]
 }
 
 func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
