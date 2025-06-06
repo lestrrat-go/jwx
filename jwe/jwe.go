@@ -107,7 +107,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 		var raw interface{}
 		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return nil, nil, fmt.Errorf(`failed to retrieve raw key out of %T: %w`, b.key, err)
+			return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
 		rawKey = raw
@@ -118,23 +118,23 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 		case jwa.RSA1_5():
 			var pubkey rsa.PublicKey
 			if err := keyconv.RSAPublicKey(&pubkey, rawKey); err != nil {
-				return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, rawKey, err)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to generate RSA public key from key (%T) for algorithm %q: %w`, rawKey, b.alg, err)
 			}
 
 			v, err := keyenc.NewRSAPKCSEncrypt(b.alg, &pubkey)
 			if err != nil {
-				return nil, nil, fmt.Errorf(`failed to create RSA PKCS encrypter: %w`, err)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create RSA PKCS encrypter for algorithm %q: %w`, b.alg, err)
 			}
 			enc = v
 		case jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
 			var pubkey rsa.PublicKey
 			if err := keyconv.RSAPublicKey(&pubkey, rawKey); err != nil {
-				return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, rawKey, err)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to generate RSA OAEP public key from key (%T) for algorithm: %q: %w`, rawKey, b.alg, err)
 			}
 
 			v, err := keyenc.NewRSAOAEPEncrypt(b.alg, &pubkey)
 			if err != nil {
-				return nil, nil, fmt.Errorf(`failed to create RSA OAEP encrypter: %w`, err)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create RSA OAEP encrypter for algorithm %q: %w`, b.alg, err)
 			}
 			enc = v
 		case jwa.A128KW(), jwa.A192KW(), jwa.A256KW(),
@@ -142,7 +142,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 			jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
 			sharedkey, ok := rawKey.([]byte)
 			if !ok {
-				return nil, nil, fmt.Errorf(`invalid key: []byte required (%T)`, rawKey)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: invalid key: []byte required (%T) for algorithm %q`, rawKey, b.alg)
 			}
 
 			var err error
@@ -155,7 +155,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 				enc, err = keyenc.NewAESGCMEncrypt(b.alg, sharedkey)
 			}
 			if err != nil {
-				return nil, nil, fmt.Errorf(`failed to create key wrap encrypter: %w`, err)
+				return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create key wrap encrypter for algorithm %q: %w`, b.alg, err)
 			}
 			// NOTE: there was formerly a restriction, introduced
 			// in PR #26, which disallowed certain key/content
@@ -191,13 +191,13 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 				v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, rawKey, apu, apv)
 				if err != nil {
-					return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
+					return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create ECDHS key wrap encrypter for algorithm %q: %w`, b.alg, err)
 				}
 				enc = v
 			default:
 				var pubkey ecdsa.PublicKey
 				if err := keyconv.ECDSAPublicKey(&pubkey, rawKey); err != nil {
-					return nil, nil, fmt.Errorf(`failed to generate public key from key (%T): %w`, key, err)
+					return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to generate ECDSA public key from key (%T) for algorithm %q: %w`, key, b.alg, err)
 				}
 
 				var apu, apv []byte
@@ -213,18 +213,18 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 				v, err := keyenc.NewECDHESEncrypt(b.alg, calg, keysize, &pubkey, apu, apv)
 				if err != nil {
-					return nil, nil, fmt.Errorf(`failed to create ECDHS key wrap encrypter: %w`, err)
+					return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create ECDHS key wrap encrypter for algorithm %q: %w`, b.alg, err)
 				}
 				enc = v
 			}
 		case jwa.DIRECT():
 			sharedkey, ok := rawKey.([]byte)
 			if !ok {
-				return nil, nil, fmt.Errorf("invalid key: []byte required")
+				return nil, nil, fmt.Errorf("jwe.Encrypt: recipientBuilder: invalid key: []byte required for algorithm %q", b.alg)
 			}
 			enc, _ = keyenc.NewNoop(b.alg, sharedkey)
 		default:
-			return nil, nil, fmt.Errorf(`invalid key encryption algorithm (%s)`, b.alg)
+			return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: invalid key encryption algorithm (%s)`, b.alg)
 		}
 	}
 
@@ -703,7 +703,7 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key inter
 
 	if v, ok := recipient.Headers().Algorithm(); !ok || v != alg {
 		// algorithms don't match
-		return nil, fmt.Errorf(`jwe.Decrypt: key and recipient algorithms do not match`)
+		return nil, fmt.Errorf(`jwe.Decrypt: key (%q) and recipient (%q) algorithms do not match`, alg, v)
 	}
 
 	h2, err := dctx.protectedHeaders.Clone()
