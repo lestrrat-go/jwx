@@ -119,8 +119,11 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 			}
 		}
 	}
-	hdrbuf, err := json.Marshal(hdrs)
-	if err != nil {
+
+	hdrbuf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(hdrbuf)
+
+	if err := json.NewEncoder(hdrbuf).Encode(hdrs); err != nil {
 		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
 	}
 
@@ -131,7 +134,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	if encoder == nil {
 		encoder = base64.DefaultEncoder()
 	}
-	buf.WriteString(encoder.EncodeToString(hdrbuf))
+	buf.WriteString(encoder.EncodeToString(hdrbuf.Bytes()[:hdrbuf.Len()-1])) // remove trailing newline
 	buf.WriteByte('.')
 
 	var plen int
