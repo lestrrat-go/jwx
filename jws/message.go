@@ -523,38 +523,36 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		}
 	}
 
+	dstptr := pool.GetByteSlice()
+	defer pool.ReleaseByteSlice(dstptr)
+
 	s := msg.signatures[0]
 	// XXX check if this is correct
 	hdrs := s.ProtectedHeaders()
 
-	hdrbuf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(hdrbuf)
-
-	if err := json.NewEncoder(hdrbuf).Encode(hdrs); err != nil {
+	hdrbuf, err := json.Marshal(hdrs)
+	if err != nil {
 		return nil, fmt.Errorf(`jws.Compact: failed to marshal headers: %w`, err)
 	}
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-
-	buf.WriteString(encoder.EncodeToString(hdrbuf.Bytes()[:hdrbuf.Len()-1])) // remove trailing newline
-	buf.WriteByte('.')
+	*dstptr = encoder.AppendEncode(*dstptr, hdrbuf)
+	*dstptr = append(*dstptr, '.')
 
 	if !detached {
 		if getB64Value(hdrs) {
-			encoded := encoder.EncodeToString(msg.payload)
-			buf.WriteString(encoded)
+			*dstptr = encoder.AppendEncode(*dstptr, msg.payload)
 		} else {
 			if bytes.Contains(msg.payload, []byte{'.'}) {
 				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
 			}
-			buf.Write(msg.payload)
+			*dstptr = append(*dstptr, msg.payload...)
 		}
 	}
 
-	buf.WriteByte('.')
-	buf.WriteString(encoder.EncodeToString(s.signature))
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	*dstptr = append(*dstptr, '.')
+	*dstptr = encoder.AppendEncode(*dstptr, s.signature)
+
+	ret := make([]byte, len(*dstptr))
+	copy(ret, *dstptr)
 	return ret, nil
 }
