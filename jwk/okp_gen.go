@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -438,9 +439,9 @@ LOOP:
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
 			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
+			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
@@ -588,21 +589,21 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 	sort.Strings(fields)
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
-	buf.WriteByte('{')
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
@@ -610,7 +611,7 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
@@ -1101,9 +1102,9 @@ LOOP:
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
 			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
+			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
@@ -1262,21 +1263,21 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 	sort.Strings(fields)
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
-	buf.WriteByte('{')
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
@@ -1284,7 +1285,7 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

@@ -7,6 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
@@ -74,7 +75,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	s.headers = sup.Header
 	if buf := sup.Protected; buf != nil {
 		src := []byte(*buf)
-		if !bytes.HasPrefix(src, []byte{'{'}) {
+		if len(src) <= 0 || src[0] != tokens.OpenCurlyBracket {
 			decoded, err := base64.Decode(src)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
@@ -177,7 +178,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		return nil, nil, fmt.Errorf(`failed to encode headers: %w`, err)
 	}
 
-	*dstptr = append(*dstptr, '.')
+	*dstptr = append(*dstptr, tokens.Period)
 
 	var plen int
 	b64 := getB64Value(hdrs)
@@ -187,7 +188,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		plen = olen - len(*dstptr)
 	} else {
 		if !s.detached {
-			if bytes.Contains(payload, []byte{'.'}) {
+			if bytes.Contains(payload, []byte{tokens.Period}) {
 				return nil, nil, fmt.Errorf(`payload must not contain a "."`)
 			}
 		}
@@ -206,7 +207,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		*dstptr = (*dstptr)[:len(*dstptr)-plen]
 	}
 
-	*dstptr = append(*dstptr, '.')
+	*dstptr = append(*dstptr, tokens.Period)
 	*dstptr = encoder.AppendEncode(*dstptr, signature)
 	return signature, *dstptr, nil
 }
@@ -403,7 +404,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 
 	sig := m.signatures[0]
 
-	buf.WriteRune('{')
+	buf.WriteRune(tokens.OpenCurlyBracket)
 	var wrote bool
 
 	if hdr := sig.headers; hdr != nil {
@@ -417,11 +418,11 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	}
 
 	if wrote {
-		buf.WriteRune(',')
+		buf.WriteRune(tokens.Comma)
 	}
 	buf.WriteString(`"payload":"`)
 	buf.WriteString(base64.EncodeToString(m.payload))
-	buf.WriteRune('"')
+	buf.WriteRune(tokens.DoubleQuote)
 
 	if protected := sig.protected; protected != nil {
 		protectedbuf, err := json.Marshal(protected)
@@ -430,13 +431,13 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		}
 		buf.WriteString(`,"protected":"`)
 		buf.WriteString(base64.EncodeToString(protectedbuf))
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 	}
 
 	buf.WriteString(`,"signature":"`)
 	buf.WriteString(base64.EncodeToString(sig.signature))
-	buf.WriteRune('"')
-	buf.WriteRune('}')
+	buf.WriteRune(tokens.DoubleQuote)
+	buf.WriteRune(tokens.CloseCurlyBracket)
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -452,10 +453,10 @@ func (m Message) marshalFull() ([]byte, error) {
 	buf.WriteString(`","signatures":[`)
 	for i, sig := range m.signatures {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
 
-		buf.WriteRune('{')
+		buf.WriteRune(tokens.OpenCurlyBracket)
 		var wrote bool
 		if hdr := sig.headers; hdr != nil {
 			hdrbuf, err := json.Marshal(hdr)
@@ -473,24 +474,24 @@ func (m Message) marshalFull() ([]byte, error) {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"protected":"`)
 			buf.WriteString(base64.EncodeToString(protectedbuf))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			wrote = true
 		}
 
 		if len(sig.signature) > 0 {
 			// If InsecureNoSignature is enabled, signature may not exist
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"signature":"`)
 			buf.WriteString(base64.EncodeToString(sig.signature))
-			buf.WriteString(`"`)
+			buf.WriteRune(tokens.DoubleQuote)
 		}
-		buf.WriteString(`}`)
+		buf.WriteRune(tokens.CloseCurlyBracket)
 	}
 	buf.WriteString(`]}`)
 
@@ -536,20 +537,20 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	}
 
 	*dstptr = encoder.AppendEncode(*dstptr, hdrbuf)
-	*dstptr = append(*dstptr, '.')
+	*dstptr = append(*dstptr, tokens.Period)
 
 	if !detached {
 		if getB64Value(hdrs) {
 			*dstptr = encoder.AppendEncode(*dstptr, msg.payload)
 		} else {
-			if bytes.Contains(msg.payload, []byte{'.'}) {
+			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
 				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
 			}
 			*dstptr = append(*dstptr, msg.payload...)
 		}
 	}
 
-	*dstptr = append(*dstptr, '.')
+	*dstptr = append(*dstptr, tokens.Period)
 	*dstptr = encoder.AppendEncode(*dstptr, s.signature)
 
 	ret := make([]byte, len(*dstptr))
