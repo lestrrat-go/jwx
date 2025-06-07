@@ -230,6 +230,11 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return nil, signerr(`no signers available. Specify an alogirthm and akey using jws.WithKey()`)
 	}
 
+	// Optimized path for single signer, compact format.
+	if lsigner == 1 && format == fmtCompact {
+
+	}
+
 	// Design note: while we could have easily set format = fmtJSON when
 	// lsigner > 1, I believe the decision to change serialization formats
 	// must be explicitly stated by the caller. Otherwise, I'm pretty sure

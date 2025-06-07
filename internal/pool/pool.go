@@ -24,6 +24,27 @@ func ReleaseBytesBuffer(b *bytes.Buffer) {
 	bytesBufferPool.Put(b)
 }
 
+var bytesSlicePool = sync.Pool{
+	New: allocByteSlice,
+}
+
+func allocByteSlice() interface{} {
+	buf := make([]byte, 0, 1024) // Preallocate a slice with a capacity of 1024 bytes
+	return &buf
+}
+
+func GetByteSlice() *[]byte {
+	//nolint:forcetypeassert
+	return bytesSlicePool.Get().(*[]byte)
+}
+
+func ReleaseByteSlice(b *[]byte) {
+	// Reset the slice to its zero value
+	*b = (*b)[:0]
+	// Put the slice back into the pool
+	bytesSlicePool.Put(b)
+}
+
 var bigIntPool = sync.Pool{
 	New: allocBigInt,
 }
