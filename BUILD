@@ -29,6 +29,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//internal/json",
+        "//internal/tokens",
         "@com_github_lestrrat_go_option//:option",
     ],
 )

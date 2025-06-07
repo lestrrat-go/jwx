@@ -26,6 +26,7 @@ go_library(
         "//transform",
         "//internal/json",
         "//internal/pool",
+        "//internal/tokens",
         "//jwa",
         "//jwe",
         "//jwk",
