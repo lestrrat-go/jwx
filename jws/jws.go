@@ -81,26 +81,25 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
-func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) (*payloadSigner, error) {
+func initSigner(ps *payloadSigner, alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) error {
 	muSigner.Lock()
 	signer, ok := signers[alg]
 	if !ok {
 		v, err := NewSigner(alg)
 		if err != nil {
 			muSigner.Unlock()
-			return nil, fmt.Errorf(`failed to create payload signer: %w`, err)
+			return fmt.Errorf(`failed to create payload signer: %w`, err)
 		}
 		signers[alg] = v
 		signer = v
 	}
 	muSigner.Unlock()
 
-	return &payloadSigner{
-		signer:    signer,
-		key:       key,
-		public:    public,
-		protected: protected,
-	}, nil
+	ps.signer = signer
+	ps.key = key
+	ps.public = public
+	ps.protected = protected
+	return nil
 }
 
 const (
@@ -166,74 +165,178 @@ func validateKeyBeforeUse(key interface{}) error {
 // for a complete list of options that can be passed to this function.
 //
 // You can use `errors.Is` with `jws.SignError()` to check if an error is from this function.
-func Sign(payload []byte, options ...SignOption) ([]byte, error) {
-	format := fmtCompact
+func Sign(userPayload []byte, options ...SignOption) ([]byte, error) {
+	signContext := signContextPool.Get()
+	defer signContextPool.Put(signContext)
 
-	var signers []*payloadSigner
-	// This is a fixed size array that is optimized for the most common case
-	// of having a single signer.
-	var fixedSigners [1]*payloadSigner
-	signers = fixedSigners[:0] // convert the underlying fixed size array into a slice
+	// note: DO NOT use userPayload after this. signContext.payload
+	// is the one that will be used for signing, as it may be modified
+	signContext.payload = userPayload
 
-	var detached bool
-	var noneSignature *payloadSigner
-	var validateKey bool
-	var encoder Base64Encoder = base64.DefaultEncoder()
+	if err := signContext.ProcessOptions(options); err != nil {
+		return nil, signerr(`failed to process options: %w`, err)
+	}
+
+	signed, err := signContext.Do()
+	if err != nil {
+		return nil, signerr("failed to sign payload: %w", err)
+	}
+	return signed, nil
+}
+
+type signContext struct {
+	format         int
+	detached       bool
+	validateKey    bool
+	encoder        Base64Encoder
+	signers        []*payloadSigner
+	noneSigner     *payloadSigner
+	payload        []byte
+	compactOptions []CompactOption
+}
+
+var signContextPool = pool.New(allocSignContext, destroySignContext)
+
+func allocSignContext() interface{} {
+	return &signContext{
+		format:         fmtCompact,
+		detached:       false,
+		validateKey:    false,
+		encoder:        base64.DefaultEncoder(),
+		signers:        make([]*payloadSigner, 0, 4),
+		noneSigner:     nil,
+		payload:        nil,
+		compactOptions: make([]CompactOption, 0, 2),
+	}
+}
+
+func destroySignContext(ctx *signContext) {
+	ctx.format = fmtCompact
+	ctx.detached = false
+	ctx.validateKey = false
+	ctx.encoder = base64.DefaultEncoder()
+	for _, signer := range ctx.signers {
+		payloadSignerPool.Put(signer)
+	}
+	ctx.signers = ctx.signers[:0] // clear the slice, but do not reallocate
+	ctx.noneSigner = nil
+	ctx.payload = nil
+	ctx.compactOptions = ctx.compactOptions[:0] // clear the slice, but do not reallocate
+}
+
+var msgPool = pool.New(allocMessage, destroyMessage)
+
+func allocMessage() interface{} {
+	return &Message{
+		payload:    nil,
+		signatures: make([]*Signature, 0, 1),
+	}
+}
+
+func destroyMessage(msg *Message) {
+	msg.payload = nil
+	for _, sig := range msg.signatures {
+		signaturePool.Put(sig)
+	}
+	msg.signatures = msg.signatures[:0] // clear the slice, but do not reallocate
+	msg.clearRaw()                      // clear the raw buffer
+	msg.b64 = false
+}
+
+var signaturePool = pool.New(allocSignature, destroySignature)
+
+func allocSignature() interface{} {
+	return &Signature{}
+}
+
+func destroySignature(sig *Signature) {
+	sig.headers = nil
+	sig.protected = nil
+	sig.signature = nil
+	sig.encoder = nil
+	sig.detached = false
+}
+
+var payloadSignerPool = pool.New(allocPayloadSigner, destroyPayloadSigner)
+
+func allocPayloadSigner() interface{} {
+	return &payloadSigner{}
+}
+
+func destroyPayloadSigner(ps *payloadSigner) {
+	ps.signer = nil
+	ps.key = nil
+	ps.protected = nil
+	ps.public = nil
+}
+
+var errNoneSignature = errors.New(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
+var errNilPayloadRequiredWhenDetached = errors.New(`payload must be nil when jws.WithDetachedPayload() is specified`)
+var errNoSignersAvailable = errors.New(`no signers available. Specify an alogirthm and akey using jws.WithKey()`)
+var errMultipleSignersForCompactSerialization = errors.New(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+var errInvalidSerializationFormat = errors.New(`invalid serialization format`)
+
+func (sc *signContext) ProcessOptions(options []SignOption) error {
 	for _, option := range options {
+		if cop, ok := option.(CompactOption); ok {
+			sc.compactOptions = append(sc.compactOptions, cop)
+			continue
+		}
+
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
-			format = option.Value().(int)
+			sc.format = option.Value().(int)
 		case identInsecureNoSignature{}:
 			data := option.Value().(*withInsecureNoSignature)
 			// only the last one is used (we overwrite previous values)
-			noneSignature = &payloadSigner{
-				signer:    noneSigner{},
-				protected: data.protected,
-			}
+			signer := payloadSignerPool.Get()
+
+			signer.signer = noneSigner{}
+			signer.protected = data.protected
+			sc.noneSigner = signer
 		case identKey{}:
 			data := option.Value().(*withKey)
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return nil, signerr(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
+				return fmt.Errorf(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
 			}
 
 			// No, we don't accept "none" here.
 			if alg == jwa.NoSignature() {
-				return nil, signerr(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
+				return errNoneSignature
 			}
 
-			signer, err := makeSigner(alg, data.key, data.public, data.protected)
-			if err != nil {
-				return nil, signerr(`failed to create signer: %w`, err)
+			signer := payloadSignerPool.Get()
+			if err := initSigner(signer, alg, data.key, data.public, data.protected); err != nil {
+				return fmt.Errorf(`failed to create signer: %w`, err)
 			}
-			signers = append(signers, signer)
+			sc.signers = append(sc.signers, signer)
 		case identDetachedPayload{}:
-			detached = true
-			if payload != nil {
-				return nil, signerr(`payload must be nil when jws.WithDetachedPayload() is specified`)
+			if sc.payload != nil {
+				return errNilPayloadRequiredWhenDetached
 			}
-			payload = option.Value().([]byte)
+			sc.payload = option.Value().([]byte)
+			sc.compactOptions = append(sc.compactOptions, WithDetached(true))
+			sc.detached = true
 		case identValidateKey{}:
-			validateKey = option.Value().(bool)
+			sc.validateKey = option.Value().(bool)
 		case identBase64Encoder{}:
-			encoder = option.Value().(Base64Encoder)
+			sc.encoder = option.Value().(Base64Encoder)
 		}
 	}
+	return nil
+}
 
-	if noneSignature != nil {
-		signers = append(signers, noneSignature)
+func (sc *signContext) Do() ([]byte, error) {
+	if sc.noneSigner != nil {
+		sc.signers = append(sc.signers, sc.noneSigner)
 	}
 
-	lsigner := len(signers)
+	lsigner := len(sc.signers)
 	if lsigner == 0 {
-		return nil, signerr(`no signers available. Specify an alogirthm and akey using jws.WithKey()`)
-	}
-
-	// Optimized path for single signer, compact format.
-	if lsigner == 1 && format == fmtCompact {
-
+		return nil, errNoSignersAvailable
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when
@@ -244,77 +347,74 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	//
 	// Therefore, instead of making implicit format conversions, we force the
 	// user to spell it out as `jws.Sign(..., jws.WithJSON(), jws.WithKey(...), jws.WithKey(...))`
-	if format == fmtCompact && lsigner != 1 {
-		return nil, signerr(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+	if sc.format == fmtCompact && lsigner != 1 {
+		return nil, errMultipleSignersForCompactSerialization
 	}
 
 	// Create a Message object with all the bits and bobs, and we'll
 	// serialize it in the end
-	var result Message
-	result.payload = payload
+	result := msgPool.Get()
+	defer msgPool.Put(result)
 
-	var fixedSignatures [1]*Signature
-	result.signatures = fixedSignatures[:0]
-
-	for i, signer := range signers {
-		protected := signer.ProtectedHeader()
-		if protected == nil {
-			protected = NewHeaders()
-		}
-
-		if err := protected.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-			return nil, signerr(`failed to set "alg" header: %w`, err)
-		}
-
-		if key, ok := signer.key.(jwk.Key); ok {
-			if kid, ok := key.KeyID(); ok && kid != "" {
-				if err := protected.Set(KeyIDKey, kid); err != nil {
-					return nil, signerr(`failed to set "kid" header: %w`, err)
-				}
-			}
-		}
-		sig := &Signature{
-			headers:   signer.PublicHeader(),
-			protected: protected,
-			encoder:   encoder,
-			// cheat. FIXXXXXXMEEEEEE
-			detached: detached,
-		}
-
-		if validateKey {
-			if err := validateKeyBeforeUse(signer.key); err != nil {
-				return nil, signerr(`failed to validate key before signing: %w`, err)
-			}
-		}
-		_, _, err := sig.Sign(payload, signer.signer, signer.key)
+	result.payload = sc.payload
+	for i, signer := range sc.signers {
+		sig, err := sc.generateSignature(signer)
 		if err != nil {
-			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
+			return nil, fmt.Errorf(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
 		}
 
 		result.signatures = append(result.signatures, sig)
 	}
 
-	switch format {
+	switch sc.format {
 	case fmtJSON:
 		return json.Marshal(result)
 	case fmtJSONPretty:
 		return json.MarshalIndent(result, "", "  ")
 	case fmtCompact:
-		// Take the only signature object, and convert it into a Compact
-		// serialization format
-		var compactOpts []CompactOption
-		if detached {
-			compactOpts = append(compactOpts, WithDetached(detached))
-		}
-		for _, option := range options {
-			if copt, ok := option.(CompactOption); ok {
-				compactOpts = append(compactOpts, copt)
+		return Compact(result, sc.compactOptions...)
+	default:
+		return nil, errInvalidSerializationFormat
+	}
+}
+
+func (sc *signContext) generateSignature(signer *payloadSigner) (*Signature, error) {
+	protected := signer.ProtectedHeader()
+	if protected == nil {
+		protected = NewHeaders()
+	}
+
+	if err := protected.Set(AlgorithmKey, signer.Algorithm()); err != nil {
+		return nil, fmt.Errorf(`failed to set "alg" header: %w`, err)
+	}
+
+	if key, ok := signer.key.(jwk.Key); ok {
+		if kid, ok := key.KeyID(); ok && kid != "" {
+			if err := protected.Set(KeyIDKey, kid); err != nil {
+				return nil, fmt.Errorf(`failed to set "kid" header: %w`, err)
 			}
 		}
-		return Compact(&result, compactOpts...)
-	default:
-		return nil, signerr(`invalid serialization format`)
 	}
+
+	// releasing is done by the message
+	sig := signaturePool.Get()
+
+	sig.headers = signer.PublicHeader()
+	sig.protected = protected
+	sig.encoder = sc.encoder
+	sig.detached = sc.detached
+
+	if sc.validateKey {
+		if err := validateKeyBeforeUse(signer.key); err != nil {
+			return nil, fmt.Errorf(`failed to validate key before signing: %w`, err)
+		}
+	}
+	_, _, err := sig.Sign(sc.payload, signer.signer, signer.key)
+	if err != nil {
+		signaturePool.Put(sig)
+		return nil, err
+	}
+	return sig, nil
 }
 
 var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {

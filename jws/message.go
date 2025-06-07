@@ -544,7 +544,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 			*dstptr = encoder.AppendEncode(*dstptr, msg.payload)
 		} else {
 			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
-				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
+				return nil, fmt.Errorf(`jws.Compact: payload must not contain a "."`)
 			}
 			*dstptr = append(*dstptr, msg.payload...)
 		}
