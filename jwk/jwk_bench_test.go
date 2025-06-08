@@ -158,3 +158,51 @@ func BenchmarkOKPX25519PrivateKeyMarshal(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkSetMultipleKeysMarshal(b *testing.B) {
+	set := jwk.NewSet()
+
+	// Add RSA key
+	rsakey, err := jwxtest.GenerateRsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := set.AddKey(rsakey); err != nil {
+		b.Fatal(err)
+	}
+
+	// Add ECDSA key
+	eckey, err := jwxtest.GenerateEcdsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := set.AddKey(eckey); err != nil {
+		b.Fatal(err)
+	}
+
+	// Add Symmetric key
+	symkey, err := jwxtest.GenerateSymmetricJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := set.AddKey(symkey); err != nil {
+		b.Fatal(err)
+	}
+
+	// Add Ed25519 key
+	ed25519key, err := jwxtest.GenerateEd25519Jwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := set.AddKey(ed25519key); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(set)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
