@@ -621,13 +621,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
 	o.L("dataptr := pool.Map().Get()")
-	o.L("data := *dataptr")
 	o.L("defer pool.Map().Put(dataptr)")
 	o.L("fieldsptr := pool.StringSlice().Get()")
-	o.L("fields := *fieldsptr")
 	o.L("defer pool.StringSlice().Put(fieldsptr)")
-	o.L("data[KeyTypeKey] = %s", kt.KeyType)
-	o.L("fields = append(fields, KeyTypeKey)")
+	o.L("(*dataptr)[KeyTypeKey] = %s", kt.KeyType)
+	o.L("*fieldsptr = append(*fieldsptr, KeyTypeKey)")
 	for _, f := range obj.Fields() {
 		var keyName string
 		if f.Bool(`is_std`) {
@@ -637,31 +635,31 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		}
 		o.L("if h.%s != nil {", f.Name(false))
 		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("data[%s] = *(h.%s)", keyName, f.Name(false))
+			o.L("(*dataptr)[%s] = *(h.%s)", keyName, f.Name(false))
 		} else {
-			o.L("data[%s] = h.%s", keyName, f.Name(false))
+			o.L("(*dataptr)[%s] = h.%s", keyName, f.Name(false))
 		}
-		o.L("fields = append(fields, %s)", keyName)
+		o.L("*fieldsptr = append(*fieldsptr, %s)", keyName)
 		o.L("}")
 	}
 	o.L("for k, v := range h.privateParams {")
-	o.L("data[k] = v")
-	o.L("fields = append(fields, k)")
+	o.L("(*dataptr)[k] = v")
+	o.L("*fieldsptr = append(*fieldsptr, k)")
 	o.L("}")
 
-	o.LL("sort.Strings(fields)")
+	o.LL("sort.Strings(*fieldsptr)")
 	o.L("buf := pool.BytesBuffer().Get()")
 	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
 	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, f := range fields {")
+	o.L("for i, f := range *fieldsptr {")
 	o.L("if i > 0 {")
 	o.L("buf.WriteRune(tokens.Comma)")
 	o.L("}")
 	o.L("buf.WriteRune(tokens.DoubleQuote)")
 	o.L("buf.WriteString(f)")
 	o.L("buf.WriteString(`\":`)")
-	o.L("v := data[f]")
+	o.L("v := (*dataptr)[f]")
 	o.L("switch v := v.(type) {")
 	o.L("case []byte:")
 	o.L("buf.WriteRune(tokens.DoubleQuote)")

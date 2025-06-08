@@ -541,71 +541,69 @@ LOOP:
 
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 	dataptr := pool.Map().Get()
-	data := *dataptr
 	defer pool.Map().Put(dataptr)
 	fieldsptr := pool.StringSlice().Get()
-	fields := *fieldsptr
 	defer pool.StringSlice().Put(fieldsptr)
-	data[KeyTypeKey] = jwa.RSA()
-	fields = append(fields, KeyTypeKey)
+	(*dataptr)[KeyTypeKey] = jwa.RSA()
+	*fieldsptr = append(*fieldsptr, KeyTypeKey)
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		(*dataptr)[AlgorithmKey] = *(h.algorithm)
+		*fieldsptr = append(*fieldsptr, AlgorithmKey)
 	}
 	if h.e != nil {
-		data[RSAEKey] = h.e
-		fields = append(fields, RSAEKey)
+		(*dataptr)[RSAEKey] = h.e
+		*fieldsptr = append(*fieldsptr, RSAEKey)
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		(*dataptr)[KeyIDKey] = *(h.keyID)
+		*fieldsptr = append(*fieldsptr, KeyIDKey)
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		(*dataptr)[KeyOpsKey] = *(h.keyOps)
+		*fieldsptr = append(*fieldsptr, KeyOpsKey)
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		(*dataptr)[KeyUsageKey] = *(h.keyUsage)
+		*fieldsptr = append(*fieldsptr, KeyUsageKey)
 	}
 	if h.n != nil {
-		data[RSANKey] = h.n
-		fields = append(fields, RSANKey)
+		(*dataptr)[RSANKey] = h.n
+		*fieldsptr = append(*fieldsptr, RSANKey)
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		(*dataptr)[X509CertChainKey] = h.x509CertChain
+		*fieldsptr = append(*fieldsptr, X509CertChainKey)
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		(*dataptr)[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintKey)
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		(*dataptr)[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintS256Key)
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		(*dataptr)[X509URLKey] = *(h.x509URL)
+		*fieldsptr = append(*fieldsptr, X509URLKey)
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		(*dataptr)[k] = v
+		*fieldsptr = append(*fieldsptr, k)
 	}
 
-	sort.Strings(fields)
+	sort.Strings(*fieldsptr)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, f := range *fieldsptr {
 		if i > 0 {
 			buf.WriteRune(tokens.Comma)
 		}
 		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
-		v := data[f]
+		v := (*dataptr)[f]
 		switch v := v.(type) {
 		case []byte:
 			buf.WriteRune(tokens.DoubleQuote)
@@ -1373,95 +1371,93 @@ LOOP:
 
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	dataptr := pool.Map().Get()
-	data := *dataptr
 	defer pool.Map().Put(dataptr)
 	fieldsptr := pool.StringSlice().Get()
-	fields := *fieldsptr
 	defer pool.StringSlice().Put(fieldsptr)
-	data[KeyTypeKey] = jwa.RSA()
-	fields = append(fields, KeyTypeKey)
+	(*dataptr)[KeyTypeKey] = jwa.RSA()
+	*fieldsptr = append(*fieldsptr, KeyTypeKey)
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		(*dataptr)[AlgorithmKey] = *(h.algorithm)
+		*fieldsptr = append(*fieldsptr, AlgorithmKey)
 	}
 	if h.d != nil {
-		data[RSADKey] = h.d
-		fields = append(fields, RSADKey)
+		(*dataptr)[RSADKey] = h.d
+		*fieldsptr = append(*fieldsptr, RSADKey)
 	}
 	if h.dp != nil {
-		data[RSADPKey] = h.dp
-		fields = append(fields, RSADPKey)
+		(*dataptr)[RSADPKey] = h.dp
+		*fieldsptr = append(*fieldsptr, RSADPKey)
 	}
 	if h.dq != nil {
-		data[RSADQKey] = h.dq
-		fields = append(fields, RSADQKey)
+		(*dataptr)[RSADQKey] = h.dq
+		*fieldsptr = append(*fieldsptr, RSADQKey)
 	}
 	if h.e != nil {
-		data[RSAEKey] = h.e
-		fields = append(fields, RSAEKey)
+		(*dataptr)[RSAEKey] = h.e
+		*fieldsptr = append(*fieldsptr, RSAEKey)
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		(*dataptr)[KeyIDKey] = *(h.keyID)
+		*fieldsptr = append(*fieldsptr, KeyIDKey)
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		(*dataptr)[KeyOpsKey] = *(h.keyOps)
+		*fieldsptr = append(*fieldsptr, KeyOpsKey)
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		(*dataptr)[KeyUsageKey] = *(h.keyUsage)
+		*fieldsptr = append(*fieldsptr, KeyUsageKey)
 	}
 	if h.n != nil {
-		data[RSANKey] = h.n
-		fields = append(fields, RSANKey)
+		(*dataptr)[RSANKey] = h.n
+		*fieldsptr = append(*fieldsptr, RSANKey)
 	}
 	if h.p != nil {
-		data[RSAPKey] = h.p
-		fields = append(fields, RSAPKey)
+		(*dataptr)[RSAPKey] = h.p
+		*fieldsptr = append(*fieldsptr, RSAPKey)
 	}
 	if h.q != nil {
-		data[RSAQKey] = h.q
-		fields = append(fields, RSAQKey)
+		(*dataptr)[RSAQKey] = h.q
+		*fieldsptr = append(*fieldsptr, RSAQKey)
 	}
 	if h.qi != nil {
-		data[RSAQIKey] = h.qi
-		fields = append(fields, RSAQIKey)
+		(*dataptr)[RSAQIKey] = h.qi
+		*fieldsptr = append(*fieldsptr, RSAQIKey)
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		(*dataptr)[X509CertChainKey] = h.x509CertChain
+		*fieldsptr = append(*fieldsptr, X509CertChainKey)
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		(*dataptr)[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintKey)
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		(*dataptr)[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintS256Key)
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		(*dataptr)[X509URLKey] = *(h.x509URL)
+		*fieldsptr = append(*fieldsptr, X509URLKey)
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		(*dataptr)[k] = v
+		*fieldsptr = append(*fieldsptr, k)
 	}
 
-	sort.Strings(fields)
+	sort.Strings(*fieldsptr)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, f := range *fieldsptr {
 		if i > 0 {
 			buf.WriteRune(tokens.Comma)
 		}
 		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
-		v := data[f]
+		v := (*dataptr)[f]
 		switch v := v.(type) {
 		case []byte:
 			buf.WriteRune(tokens.DoubleQuote)
