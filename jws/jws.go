@@ -278,11 +278,6 @@ var errInvalidSerializationFormat = errors.New(`invalid serialization format`)
 
 func (sc *signContext) ProcessOptions(options []SignOption) error {
 	for _, option := range options {
-		if cop, ok := option.(CompactOption); ok {
-			sc.compactOptions = append(sc.compactOptions, cop)
-			continue
-		}
-
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
@@ -324,6 +319,11 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.validateKey = option.Value().(bool)
 		case identBase64Encoder{}:
 			sc.encoder = option.Value().(Base64Encoder)
+			sc.compactOptions = append(sc.compactOptions, WithBase64Encoder(sc.encoder))
+		default:
+			if cop, ok := option.(CompactOption); ok {
+				sc.compactOptions = append(sc.compactOptions, cop)
+			}
 		}
 	}
 	return nil
