@@ -2,6 +2,10 @@ package pool
 
 var mapPool = New(allocMap, destroyMap)
 
+func Map() *Pool[*map[string]interface{}] {
+	return mapPool
+}
+
 func allocMap() interface{} {
 	m := make(map[string]interface{})
 	return &m
@@ -16,12 +20,4 @@ func destroyMap(m *map[string]interface{}) {
 	for key := range *m {
 		delete(*m, key)
 	}
-}
-
-func GetMap() *map[string]interface{} {
-	return mapPool.Get()
-}
-
-func ReleaseMap(m *map[string]interface{}) {
-	mapPool.Put(m)
 }
