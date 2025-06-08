@@ -203,10 +203,10 @@ func allocSignContext() interface{} {
 		detached:       false,
 		validateKey:    false,
 		encoder:        base64.DefaultEncoder(),
-		signers:        make([]*payloadSigner, 0, 4),
+		signers:        make([]*payloadSigner, 0, 1),
 		noneSigner:     nil,
 		payload:        nil,
-		compactOptions: make([]CompactOption, 0, 2),
+		compactOptions: make([]CompactOption, 0, 1),
 	}
 }
 
@@ -329,7 +329,21 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 	return nil
 }
 
+func (sc *signContext) canUseFastPath() bool {
+	return len(sc.signers) == 1 && sc.format == fmtCompact && sc.payload != nil && !sc.detached
+}
+
 func (sc *signContext) Do() ([]byte, error) {
+	if sc.canUseFastPath() {
+		signer := sc.signers[0]
+		sig, err := sc.generateSignature(signer)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to generate signature for signer #0 (alg=%s): %w`, signer.Algorithm(), err)
+		}
+		defer signaturePool.Put(sig)
+		return compactSingle(sc.payload, sig, false, sc.encoder)
+	}
+
 	if sc.noneSigner != nil {
 		sc.signers = append(sc.signers, sc.noneSigner)
 	}
@@ -337,16 +351,6 @@ func (sc *signContext) Do() ([]byte, error) {
 	lsigner := len(sc.signers)
 	if lsigner == 0 {
 		return nil, errNoSignersAvailable
-	}
-
-	if lsigner == 1 && sc.format == fmtCompact {
-		signer := sc.signers[0]
-		sig, err := sc.generateSignature(signer)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to generate signature for signer #0 (alg=%s): %w`, signer.Algorithm(), err)
-		}
-		defer signaturePool.Put(sig)
-		return compactSingle(sc.payload, sig, sc.detached, sc.encoder)
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when

@@ -504,9 +504,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 }
 
 func compactSingle(payload []byte, sig *Signature, detached bool, encoder Base64Encoder) ([]byte, error) {
-	// XXX check if this is correct
 	hdrs := sig.ProtectedHeaders()
-
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
 		return nil, fmt.Errorf(`jws.Compact: failed to marshal headers: %w`, err)
