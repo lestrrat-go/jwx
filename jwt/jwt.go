@@ -13,6 +13,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
@@ -170,7 +171,7 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	return tok, nil
 }
 
-type parseCtx struct {
+type parseContext struct {
 	token            Token
 	validateOpts     []ValidateOption
 	verifyOpts       []jws.VerifyOption
@@ -180,8 +181,28 @@ type parseCtx struct {
 	validate         bool
 }
 
+var parseContextPool = pool.New(allocParseContext, destroyParseContext)
+
+func allocParseContext() interface{} {
+	return &parseContext{
+		validateOpts: make([]ValidateOption, 0, 4),
+		verifyOpts:   make([]jws.VerifyOption, 0, 4),
+	}
+}
+
+func destroyParseContext(ctx *parseContext) {
+	ctx.token = nil
+	ctx.validateOpts = ctx.validateOpts[:0]
+	ctx.verifyOpts = ctx.verifyOpts[:0]
+	ctx.localReg = nil
+	ctx.pedantic = false
+	ctx.skipVerification = false
+	ctx.validate = true
+}
+
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
-	var ctx parseCtx
+	ctx := parseContextPool.Get()
+	defer parseContextPool.Put(ctx)
 
 	// Validation is turned on by default. You need to specify
 	// jwt.WithValidate(false) if you want to disable it
@@ -193,6 +214,8 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	verification := true
 
 	var verifyOpts []Option
+	var tmpVerifyOpts [1]Option
+	verifyOpts = tmpVerifyOpts[:0]
 	for _, o := range options {
 		if v, ok := o.(ValidateOption); ok {
 			ctx.validateOpts = append(ctx.validateOpts, v)
@@ -242,7 +265,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	}
 
 	data = bytes.TrimSpace(data)
-	return parse(&ctx, data)
+	return parse(ctx, data)
 }
 
 const (
@@ -254,7 +277,7 @@ const (
 
 var _ = _JwsVerifyInvalid
 
-func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
+func verifyJWS(ctx *parseContext, payload []byte) ([]byte, int, error) {
 	if len(ctx.verifyOpts) == 0 {
 		return nil, _JwsVerifySkipped, nil
 	}
@@ -266,12 +289,35 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(ctx *parseCtx, data []byte) (Token, error) {
-	payload := data
-	const maxDecodeLevels = 2
+func parse(ctx *parseContext, data []byte) (Token, error) {
+	var payload []byte
 
 	// If cty = `JWT`, we expect this to be a nested structure
 	var expectNested bool
+
+	// First, try the most common case, which is a JWT in compact form.
+	// The first clause is for when we need to verify the JWS, the
+	// second clause is for when we just want to parse the JWT out of the
+	// payload, and we don't care about the signature.
+	if !ctx.skipVerification && len(ctx.verifyOpts) > 0 {
+		options := make([]jws.VerifyOption, 0, len(ctx.verifyOpts)+1)
+		options = append(options, jws.WithCompact())
+		options = append(options, ctx.verifyOpts...)
+		verified, err := jws.Verify(data, options...)
+		if err == nil {
+			payload = verified
+			goto UNMARSHAL_TOKEN
+		}
+	} else {
+		msg, err := jws.Parse(data, jws.WithCompact())
+		if err == nil {
+			payload = msg.Payload()
+			goto UNMARSHAL_TOKEN
+		}
+	}
+
+	payload = data
+	const maxDecodeLevels = 2
 
 OUTER:
 	for i := range maxDecodeLevels {
@@ -357,6 +403,7 @@ OUTER:
 		expectNested = false
 	}
 
+UNMARSHAL_TOKEN:
 	if ctx.token == nil {
 		ctx.token = New()
 	}
