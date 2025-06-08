@@ -334,6 +334,10 @@ func (sc *signContext) canUseFastPath() bool {
 }
 
 func (sc *signContext) Do() ([]byte, error) {
+	if sc.noneSigner != nil {
+		sc.signers = append(sc.signers, sc.noneSigner)
+	}
+
 	if sc.canUseFastPath() {
 		signer := sc.signers[0]
 		sig, err := sc.generateSignature(signer)
@@ -342,10 +346,6 @@ func (sc *signContext) Do() ([]byte, error) {
 		}
 		defer signaturePool.Put(sig)
 		return compactSingle(sc.payload, sig, false, sc.encoder)
-	}
-
-	if sc.noneSigner != nil {
-		sc.signers = append(sc.signers, sc.noneSigner)
 	}
 
 	lsigner := len(sc.signers)
