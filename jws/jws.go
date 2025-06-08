@@ -342,10 +342,10 @@ func (sc *signContext) Do() ([]byte, error) {
 	if lsigner == 1 && sc.format == fmtCompact {
 		signer := sc.signers[0]
 		sig, err := sc.generateSignature(signer)
-		defer signaturePool.Put(sig)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to generate signature for signer #0 (alg=%s): %w`, signer.Algorithm(), err)
 		}
+		defer signaturePool.Put(sig)
 		return compactSingle(sc.payload, sig, sc.detached, sc.encoder)
 	}
 
