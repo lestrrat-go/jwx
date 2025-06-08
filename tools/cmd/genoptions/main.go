@@ -230,6 +230,10 @@ func genOptions(objects *Objects) error {
 
 		// If the options specification contains a finite set of options, optimize for
 		// those, but allow taking other values, just in case (except for booleans)
+		if option.ArgumentType == `bool` {
+			o.LL(`var true%s = &%s{option.New(ident%s{}, true)}`, option.OptionName, option.ConcreteType, option.Ident)
+			o.L(`var false%s = &%s{option.New(ident%s{}, false)}`, option.OptionName, option.ConcreteType, option.Ident)
+		}
 
 		if writeComment(o, option.Comment) {
 			o.L(`func %s(`, option.OptionName)
@@ -244,6 +248,11 @@ func genOptions(objects *Objects) error {
 		value := `v`
 		if cv != "" {
 			o.L(`return val%s`, option.OptionName)
+		} else if option.ArgumentType == `bool` {
+			o.L(`if v {`)
+			o.L(`return true%s`, option.OptionName)
+			o.L(`}`)
+			o.L(`return false%s`, option.OptionName)
 		} else {
 			o.L(`return &%s{option.New(ident%s{}, %s)}`, option.ConcreteType, option.Ident, value)
 		}

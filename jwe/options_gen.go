@@ -313,11 +313,17 @@ func WithMaxPBES2Count(v int) GlobalOption {
 	return &globalOption{option.New(identMaxPBES2Count{}, v)}
 }
 
+var trueWithMergeProtectedHeaders = &encryptOption{option.New(identMergeProtectedHeaders{}, true)}
+var falseWithMergeProtectedHeaders = &encryptOption{option.New(identMergeProtectedHeaders{}, false)}
+
 // WithMergeProtectedHeaders specify that when given multiple headers
 // as options to `jwe.Encrypt`, these headers should be merged instead
 // of overwritten
 func WithMergeProtectedHeaders(v bool) EncryptOption {
-	return &encryptOption{option.New(identMergeProtectedHeaders{}, v)}
+	if v {
+		return trueWithMergeProtectedHeaders
+	}
+	return falseWithMergeProtectedHeaders
 }
 
 // WithMessage provides a message object to be populated by `jwe.Decrypt`
@@ -327,17 +333,29 @@ func WithMessage(v *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, v)}
 }
 
+var trueWithPretty = &withJSONSuboption{option.New(identPretty{}, true)}
+var falseWithPretty = &withJSONSuboption{option.New(identPretty{}, false)}
+
 // WithPretty specifies whether the JSON output should be formatted and
 // indented
 func WithPretty(v bool) WithJSONSuboption {
-	return &withJSONSuboption{option.New(identPretty{}, v)}
+	if v {
+		return trueWithPretty
+	}
+	return falseWithPretty
 }
+
+var trueWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, true)}
+var falseWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, false)}
 
 // WithRequiredKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWE message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
+	if v {
+		return trueWithRequireKid
+	}
+	return falseWithRequireKid
 }
 
 var valWithCompact = &encryptOption{option.New(identSerialization{}, fmtCompact)}

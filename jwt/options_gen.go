@@ -337,6 +337,9 @@ func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
 }
 
+var trueWithFlattenAudience = &globalOption{option.New(identFlattenAudience{}, true)}
+var falseWithFlattenAudience = &globalOption{option.New(identFlattenAudience{}, false)}
+
 // WithFlattenAudience specifies the the `jwt.FlattenAudience` option on
 // every token defaults to enabled. You can still disable this on a per-object
 // basis using the `jwt.Options().Disable(jwt.FlattenAudience)` method call.
@@ -344,7 +347,10 @@ func WithFS(v fs.FS) ReadFileOption {
 // See the documentation for `jwt.TokenOptionSet`, `(jwt.Token).Options`, and
 // `jwt.FlattenAudience` for more details
 func WithFlattenAudience(v bool) GlobalOption {
-	return &globalOption{option.New(identFlattenAudience{}, v)}
+	if v {
+		return trueWithFlattenAudience
+	}
+	return falseWithFlattenAudience
 }
 
 // WithFormKey is used to specify header keys to search for tokens.
@@ -377,6 +383,9 @@ func WithNumericDateFormatPrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateFormatPrecision{}, v)}
 }
 
+var trueWithNumericDateParsePedantic = &globalOption{option.New(identNumericDateParsePedantic{}, true)}
+var falseWithNumericDateParsePedantic = &globalOption{option.New(identNumericDateParsePedantic{}, false)}
+
 // WithNumericDateParsePedantic specifies if the parser should behave
 // in a pedantic manner when parsing numeric dates. Normally this library
 // attempts to interpret timestamps as a numeric value representing
@@ -387,7 +396,10 @@ func WithNumericDateFormatPrecision(v int) GlobalOption {
 // However, when you set WithNumericDateParePedantic to `true`, the
 // RFC3339 parser is not tried, and we expect a numeric value strictly
 func WithNumericDateParsePedantic(v bool) GlobalOption {
-	return &globalOption{option.New(identNumericDateParsePedantic{}, v)}
+	if v {
+		return trueWithNumericDateParsePedantic
+	}
+	return falseWithNumericDateParsePedantic
 }
 
 // WithNumericDateParsePrecision sets the precision up to which the
@@ -397,11 +409,20 @@ func WithNumericDateParsePrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateParsePrecision{}, v)}
 }
 
+var trueWithPedantic = &parseOption{option.New(identPedantic{}, true)}
+var falseWithPedantic = &parseOption{option.New(identPedantic{}, false)}
+
 // WithPedantic enables pedantic mode for parsing JWTs. Currently this only
 // applies to checking for the correct `typ` and/or `cty` when necessary.
 func WithPedantic(v bool) ParseOption {
-	return &parseOption{option.New(identPedantic{}, v)}
+	if v {
+		return trueWithPedantic
+	}
+	return falseWithPedantic
 }
+
+var trueWithResetValidators = &validateOption{option.New(identResetValidators{}, true)}
+var falseWithResetValidators = &validateOption{option.New(identResetValidators{}, false)}
 
 // WithResetValidators specifies that the default validators should be
 // reset before applying the custom validators. By default `jwt.Validate()`
@@ -422,7 +443,10 @@ func WithPedantic(v bool) ParseOption {
 //
 // The default value is `false` (`iat`, `exp`, and `nbf` are automatically checked).
 func WithResetValidators(v bool) ValidateOption {
-	return &validateOption{option.New(identResetValidators{}, v)}
+	if v {
+		return trueWithResetValidators
+	}
+	return falseWithResetValidators
 }
 
 // WithSignOption provides an escape hatch for cases where extra options to
@@ -452,6 +476,9 @@ func WithTruncation(v time.Duration) GlobalValidateOption {
 	return &globalValidateOption{option.New(identTruncation{}, v)}
 }
 
+var trueWithValidate = &parseOption{option.New(identValidate{}, true)}
+var falseWithValidate = &parseOption{option.New(identValidate{}, false)}
+
 // WithValidate is passed to `Parse()` method to denote that the
 // validation of the JWT token should be performed (or not) after
 // a successful parsing of the incoming payload.
@@ -461,7 +488,10 @@ func WithTruncation(v time.Duration) GlobalValidateOption {
 // If you would like disable validation,
 // you must use `jwt.WithValidate(false)` or use `jwt.ParseInsecure()`
 func WithValidate(v bool) ParseOption {
-	return &parseOption{option.New(identValidate{}, v)}
+	if v {
+		return trueWithValidate
+	}
+	return falseWithValidate
 }
 
 // WithValidator validates the token with the given Validator.
@@ -479,6 +509,9 @@ func WithValidator(v Validator) ValidateOption {
 	return &validateOption{option.New(identValidator{}, v)}
 }
 
+var trueWithVerify = &parseOption{option.New(identVerify{}, true)}
+var falseWithVerify = &parseOption{option.New(identVerify{}, false)}
+
 // WithVerify is passed to `Parse()` method to denote that the
 // signature verification should be performed after a successful
 // deserialization of the incoming payload.
@@ -491,5 +524,8 @@ func WithValidator(v Validator) ValidateOption {
 // If you would like to only parse the JWT payload and not verify it,
 // you must use `jwt.WithVerify(false)` or use `jwt.ParseInsecure()`
 func WithVerify(v bool) ParseOption {
-	return &parseOption{option.New(identVerify{}, v)}
+	if v {
+		return trueWithVerify
+	}
+	return falseWithVerify
 }

@@ -75,15 +75,27 @@ func (identIsSymmetric) String() string {
 	return "WithIsSymmetric"
 }
 
+var trueWithDeprecated = &newAlgorithmOption{option.New(identDeprecated{}, true)}
+var falseWithDeprecated = &newAlgorithmOption{option.New(identDeprecated{}, false)}
+
 // WithDeprecated specifies that the algorithm is deprecated. In order to
 // un-deprecate an algorithm, you will have to create a new algorithm
 // with the same values but with the Deprecated option set to false, and
 // then call RegisterXXXXAlgorithm with the new algorithm.
 func WithDeprecated(v bool) NewAlgorithmOption {
-	return &newAlgorithmOption{option.New(identDeprecated{}, v)}
+	if v {
+		return trueWithDeprecated
+	}
+	return falseWithDeprecated
 }
+
+var trueWithIsSymmetric = &newSignatureKeyEncryptionAlgorithmOption{option.New(identIsSymmetric{}, true)}
+var falseWithIsSymmetric = &newSignatureKeyEncryptionAlgorithmOption{option.New(identIsSymmetric{}, false)}
 
 // IsSymmetric specifies that the algorithm is symmetric
 func WithIsSymmetric(v bool) NewSignatureKeyEncryptionAlgorithmOption {
-	return &newSignatureKeyEncryptionAlgorithmOption{option.New(identIsSymmetric{}, v)}
+	if v {
+		return trueWithIsSymmetric
+	}
+	return falseWithIsSymmetric
 }
