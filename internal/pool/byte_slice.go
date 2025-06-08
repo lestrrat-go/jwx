@@ -2,13 +2,8 @@ package pool
 
 var bytesSlicePool = New(allocByteSlice, destroyByteSlice)
 
-func GetByteSlice() *[]byte {
-	return bytesSlicePool.Get()
-}
-
-func ReleaseByteSlice(b *[]byte) {
-	// Put the slice back into the pool
-	bytesSlicePool.Put(b)
+func ByteSlice() *Pool[*[]byte] {
+	return bytesSlicePool
 }
 
 func allocByteSlice() interface{} {

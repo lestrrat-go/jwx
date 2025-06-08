@@ -147,8 +147,8 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	if err != nil {
 		return nil, nil, err
 	}
-	dstptr := pool.GetByteSlice()
-	defer pool.ReleaseByteSlice(dstptr)
+	dstptr := pool.ByteSlice().Get()
+	defer pool.ByteSlice().Put(dstptr)
 
 	if err := encodeHeaders(dstptr, hdrs, encoder); err != nil {
 		return nil, nil, fmt.Errorf(`failed to encode headers: %w`, err)
