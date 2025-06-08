@@ -528,9 +528,6 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 }
 
 func compactSingle(payload []byte, sig *Signature, detached bool, encoder Base64Encoder) ([]byte, error) {
-	dstptr := pool.GetByteSlice()
-	defer pool.ReleaseByteSlice(dstptr)
-
 	// XXX check if this is correct
 	hdrs := sig.ProtectedHeaders()
 
@@ -539,24 +536,32 @@ func compactSingle(payload []byte, sig *Signature, detached bool, encoder Base64
 		return nil, fmt.Errorf(`jws.Compact: failed to marshal headers: %w`, err)
 	}
 
-	*dstptr = encoder.AppendEncode(*dstptr, hdrbuf)
-	*dstptr = append(*dstptr, tokens.Period)
+	var payloadEncodedLen int
+	doB64 := getB64Value(hdrs)
 
 	if !detached {
-		if getB64Value(hdrs) {
-			*dstptr = encoder.AppendEncode(*dstptr, payload)
+		if doB64 {
+			payloadEncodedLen = encoder.EncodedLen(len(payload))
 		} else {
+			// Check for error case while we're at it
 			if bytes.Contains(payload, []byte{tokens.Period}) {
 				return nil, fmt.Errorf(`jws.Compact: payload must not contain a "."`)
 			}
-			*dstptr = append(*dstptr, payload...)
+			payloadEncodedLen = len(payload)
 		}
 	}
 
-	*dstptr = append(*dstptr, tokens.Period)
-	*dstptr = encoder.AppendEncode(*dstptr, sig.signature)
-
-	ret := make([]byte, len(*dstptr))
-	copy(ret, *dstptr)
+	ret := make([]byte, 0, encoder.EncodedLen(len(hdrbuf)+payloadEncodedLen+len(sig.signature)+2))
+	ret = encoder.AppendEncode(ret, hdrbuf)
+	ret = append(ret, tokens.Period)
+	if !detached {
+		if doB64 {
+			ret = encoder.AppendEncode(ret, payload)
+		} else {
+			ret = append(ret, payload...)
+		}
+	}
+	ret = append(ret, tokens.Period)
+	ret = encoder.AppendEncode(ret, sig.signature)
 	return ret, nil
 }
