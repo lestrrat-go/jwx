@@ -6,12 +6,8 @@ func allocKeyToErrorMap() interface{} {
 	return make(map[string]error)
 }
 
-func GetKeyToErrorMap() map[string]error {
-	return keyToErrorMapPool.Get()
-}
-
-func ReleaseKeyToErrorMap(m map[string]error) {
-	keyToErrorMapPool.Put(m)
+func KeyToErrorMap() *Pool[map[string]error] {
+	return keyToErrorMapPool
 }
 
 func destroyKeyToErrorMap(m map[string]error) {
