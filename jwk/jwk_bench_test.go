@@ -2,6 +2,7 @@ package jwk_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -187,6 +188,30 @@ func BenchmarkSetMultipleKeysMarshal(b *testing.B) {
 	}
 	if err := set.AddKey(ed25519key); err != nil {
 		b.Fatal(err)
+	}
+
+	// Add custom private parameters to the set
+	const numCustomFields = 10
+
+	// Add string values
+	for i := range numCustomFields {
+		if err := set.Set(fmt.Sprintf("string_field_%d", i+1), fmt.Sprintf("benchmark_value_%d", i+1)); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	// Add integer values
+	for i := range numCustomFields {
+		if err := set.Set(fmt.Sprintf("int_field_%d", i+1), (i+1)*12345); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	// Add boolean values
+	for i := range numCustomFields {
+		if err := set.Set(fmt.Sprintf("bool_field_%d", i+1), (i+1)%2 == 1); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()
