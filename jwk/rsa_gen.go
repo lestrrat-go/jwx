@@ -540,8 +540,12 @@ LOOP:
 }
 
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 10)
+	dataptr := pool.Map().Get()
+	data := *dataptr
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	fields := *fieldsptr
+	defer pool.StringSlice().Put(fieldsptr)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
@@ -1368,8 +1372,12 @@ LOOP:
 }
 
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 16)
+	dataptr := pool.Map().Get()
+	data := *dataptr
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	fields := *fieldsptr
+	defer pool.StringSlice().Put(fieldsptr)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {

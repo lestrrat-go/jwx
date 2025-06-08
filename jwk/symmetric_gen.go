@@ -494,8 +494,12 @@ LOOP:
 }
 
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 9)
+	dataptr := pool.Map().Get()
+	data := *dataptr
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	fields := *fieldsptr
+	defer pool.StringSlice().Put(fieldsptr)
 	data[KeyTypeKey] = jwa.OctetSeq()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {

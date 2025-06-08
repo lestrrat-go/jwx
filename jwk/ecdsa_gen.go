@@ -573,8 +573,12 @@ LOOP:
 }
 
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 11)
+	dataptr := pool.Map().Get()
+	data := *dataptr
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	fields := *fieldsptr
+	defer pool.StringSlice().Put(fieldsptr)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {
@@ -1285,8 +1289,12 @@ LOOP:
 }
 
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 12)
+	dataptr := pool.Map().Get()
+	data := *dataptr
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	fields := *fieldsptr
+	defer pool.StringSlice().Put(fieldsptr)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
 	if h.algorithm != nil {

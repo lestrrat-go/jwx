@@ -1,0 +1,160 @@
+package jwk_test
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/jwk"
+)
+
+func BenchmarkRSAPublicKeyMarshal(b *testing.B) {
+	rsakey, err := jwxtest.GenerateRsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	pubkey, err := jwk.PublicKeyOf(rsakey)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(pubkey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkRSAPrivateKeyMarshal(b *testing.B) {
+	rsakey, err := jwxtest.GenerateRsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(rsakey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkECDSAPublicKeyMarshal(b *testing.B) {
+	eckey, err := jwxtest.GenerateEcdsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	pubkey, err := jwk.PublicKeyOf(eckey)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(pubkey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkECDSAPrivateKeyMarshal(b *testing.B) {
+	eckey, err := jwxtest.GenerateEcdsaJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(eckey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkSymmetricKeyMarshal(b *testing.B) {
+	symkey, err := jwxtest.GenerateSymmetricJwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(symkey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkOKPEd25519PublicKeyMarshal(b *testing.B) {
+	ed25519key, err := jwxtest.GenerateEd25519Jwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	pubkey, err := jwk.PublicKeyOf(ed25519key)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(pubkey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkOKPEd25519PrivateKeyMarshal(b *testing.B) {
+	ed25519key, err := jwxtest.GenerateEd25519Jwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(ed25519key)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkOKPX25519PublicKeyMarshal(b *testing.B) {
+	x25519key, err := jwxtest.GenerateX25519Jwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+	pubkey, err := jwk.PublicKeyOf(x25519key)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(pubkey)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkOKPX25519PrivateKeyMarshal(b *testing.B) {
+	x25519key, err := jwxtest.GenerateX25519Jwk()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(x25519key)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

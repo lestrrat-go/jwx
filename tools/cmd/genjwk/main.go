@@ -620,8 +620,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
-	o.L("data := make(map[string]interface{})")
-	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
+	o.L("dataptr := pool.Map().Get()")
+	o.L("data := *dataptr")
+	o.L("defer pool.Map().Put(dataptr)")
+	o.L("fieldsptr := pool.StringSlice().Get()")
+	o.L("fields := *fieldsptr")
+	o.L("defer pool.StringSlice().Put(fieldsptr)")
 	o.L("data[KeyTypeKey] = %s", kt.KeyType)
 	o.L("fields = append(fields, KeyTypeKey)")
 	for _, f := range obj.Fields() {
