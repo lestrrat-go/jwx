@@ -152,72 +152,91 @@ func BenchmarkOKPX25519PrivateKeyMarshal(b *testing.B) {
 }
 
 func BenchmarkSetMultipleKeysMarshal(b *testing.B) {
-	set := jwk.NewSet()
+	createBaseSet := func(b *testing.B) jwk.Set {
+		set := jwk.NewSet()
 
-	// Add RSA key
-	rsakey, err := jwxtest.GenerateRsaJwk()
-	if err != nil {
-		b.Fatal(err)
-	}
-	if err := set.AddKey(rsakey); err != nil {
-		b.Fatal(err)
-	}
-
-	// Add ECDSA key
-	eckey, err := jwxtest.GenerateEcdsaJwk()
-	if err != nil {
-		b.Fatal(err)
-	}
-	if err := set.AddKey(eckey); err != nil {
-		b.Fatal(err)
-	}
-
-	// Add Symmetric key
-	symkey, err := jwxtest.GenerateSymmetricJwk()
-	if err != nil {
-		b.Fatal(err)
-	}
-	if err := set.AddKey(symkey); err != nil {
-		b.Fatal(err)
-	}
-
-	// Add Ed25519 key
-	ed25519key, err := jwxtest.GenerateEd25519Jwk()
-	if err != nil {
-		b.Fatal(err)
-	}
-	if err := set.AddKey(ed25519key); err != nil {
-		b.Fatal(err)
-	}
-
-	// Add custom private parameters to the set
-	const numCustomFields = 10
-
-	// Add string values
-	for i := range numCustomFields {
-		if err := set.Set(fmt.Sprintf("string_field_%d", i+1), fmt.Sprintf("benchmark_value_%d", i+1)); err != nil {
+		// Add RSA key
+		rsakey, err := jwxtest.GenerateRsaJwk()
+		if err != nil {
 			b.Fatal(err)
 		}
-	}
-
-	// Add integer values
-	for i := range numCustomFields {
-		if err := set.Set(fmt.Sprintf("int_field_%d", i+1), (i+1)*12345); err != nil {
+		if err := set.AddKey(rsakey); err != nil {
 			b.Fatal(err)
 		}
-	}
 
-	// Add boolean values
-	for i := range numCustomFields {
-		if err := set.Set(fmt.Sprintf("bool_field_%d", i+1), (i+1)%2 == 1); err != nil {
+		// Add ECDSA key
+		eckey, err := jwxtest.GenerateEcdsaJwk()
+		if err != nil {
 			b.Fatal(err)
 		}
-	}
-
-	b.ResetTimer()
-	for range b.N {
-		if _, err := json.Marshal(set); err != nil {
+		if err := set.AddKey(eckey); err != nil {
 			b.Fatal(err)
 		}
+
+		// Add Symmetric key
+		symkey, err := jwxtest.GenerateSymmetricJwk()
+		if err != nil {
+			b.Fatal(err)
+		}
+		if err := set.AddKey(symkey); err != nil {
+			b.Fatal(err)
+		}
+
+		// Add Ed25519 key
+		ed25519key, err := jwxtest.GenerateEd25519Jwk()
+		if err != nil {
+			b.Fatal(err)
+		}
+		if err := set.AddKey(ed25519key); err != nil {
+			b.Fatal(err)
+		}
+
+		return set
 	}
+
+	b.Run("WithoutCustomFields", func(b *testing.B) {
+		set := createBaseSet(b)
+
+		b.ResetTimer()
+		for range b.N {
+			if _, err := json.Marshal(set); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run("WithCustomFields", func(b *testing.B) {
+		set := createBaseSet(b)
+
+		// Add custom private parameters to the set
+		const numCustomFields = 10
+
+		// Add string values
+		for i := range numCustomFields {
+			if err := set.Set(fmt.Sprintf("string_field_%d", i+1), fmt.Sprintf("benchmark_value_%d", i+1)); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		// Add integer values
+		for i := range numCustomFields {
+			if err := set.Set(fmt.Sprintf("int_field_%d", i+1), (i+1)*12345); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		// Add boolean values
+		for i := range numCustomFields {
+			if err := set.Set(fmt.Sprintf("bool_field_%d", i+1), (i+1)%2 == 1); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		b.ResetTimer()
+		for range b.N {
+			if _, err := json.Marshal(set); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
