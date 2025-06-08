@@ -156,11 +156,22 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 
-	fields := []string{keysKey}
-	for k := range s.privateParams {
-		fields = append(fields, k)
+	var fields []string
+	if len(s.privateParams) == 0 {
+		// optimized path for most common case
+		var jwkSetOnlyKeys = [1]string{keysKey}
+		fields = jwkSetOnlyKeys[:]
+	} else {
+		fieldsptr := pool.StringSlice().Get()
+		defer pool.StringSlice().Put(fieldsptr)
+		fields = *fieldsptr
+
+		fields = append(fields, keysKey)
+		for k := range s.privateParams {
+			fields = append(fields, k)
+		}
+		sort.Strings(fields)
 	}
-	sort.Strings(fields)
 
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	for i, field := range fields {
