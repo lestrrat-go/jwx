@@ -524,12 +524,15 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		}
 	}
 
+	return compactSingle(msg.payload, msg.signatures[0], detached, encoder)
+}
+
+func compactSingle(payload []byte, sig *Signature, detached bool, encoder Base64Encoder) ([]byte, error) {
 	dstptr := pool.GetByteSlice()
 	defer pool.ReleaseByteSlice(dstptr)
 
-	s := msg.signatures[0]
 	// XXX check if this is correct
-	hdrs := s.ProtectedHeaders()
+	hdrs := sig.ProtectedHeaders()
 
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
@@ -541,17 +544,17 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 
 	if !detached {
 		if getB64Value(hdrs) {
-			*dstptr = encoder.AppendEncode(*dstptr, msg.payload)
+			*dstptr = encoder.AppendEncode(*dstptr, payload)
 		} else {
-			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
+			if bytes.Contains(payload, []byte{tokens.Period}) {
 				return nil, fmt.Errorf(`jws.Compact: payload must not contain a "."`)
 			}
-			*dstptr = append(*dstptr, msg.payload...)
+			*dstptr = append(*dstptr, payload...)
 		}
 	}
 
 	*dstptr = append(*dstptr, tokens.Period)
-	*dstptr = encoder.AppendEncode(*dstptr, s.signature)
+	*dstptr = encoder.AppendEncode(*dstptr, sig.signature)
 
 	ret := make([]byte, len(*dstptr))
 	copy(ret, *dstptr)

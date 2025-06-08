@@ -339,6 +339,16 @@ func (sc *signContext) Do() ([]byte, error) {
 		return nil, errNoSignersAvailable
 	}
 
+	if lsigner == 1 && sc.format == fmtCompact {
+		signer := sc.signers[0]
+		sig, err := sc.generateSignature(signer)
+		defer signaturePool.Put(sig)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to generate signature for signer #0 (alg=%s): %w`, signer.Algorithm(), err)
+		}
+		return compactSingle(sc.payload, sig, sc.detached, sc.encoder)
+	}
+
 	// Design note: while we could have easily set format = fmtJSON when
 	// lsigner > 1, I believe the decision to change serialization formats
 	// must be explicitly stated by the caller. Otherwise, I'm pretty sure
