@@ -589,8 +589,8 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (t %s) MarshalJSON() ([]byte, error) {", obj.Name(false))
-	o.L("buf := pool.GetBytesBuffer()")
-	o.L("defer pool.ReleaseBytesBuffer(buf)")
+	o.L("buf := pool.BytesBuffer().Get()")
+	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("pairs, err := t.makePairs()")
 	o.L("if err != nil {")
 	o.L("return nil, fmt.Errorf(`failed to make pairs: %%w`, err)")

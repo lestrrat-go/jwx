@@ -540,8 +540,8 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	}
 
 	sort.Strings(fields)
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {

@@ -375,8 +375,8 @@ func (m Message) MarshalJSON() ([]byte, error) {
 }
 
 func (m Message) marshalFlattened() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	sig := m.signatures[0]
 
@@ -421,8 +421,8 @@ func (m Message) marshalFlattened() ([]byte, error) {
 }
 
 func (m Message) marshalFull() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"payload":"`)
 	buf.WriteString(base64.EncodeToString(m.payload))

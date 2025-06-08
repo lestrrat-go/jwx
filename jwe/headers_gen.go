@@ -846,8 +846,8 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RUnlock()
 
 	sort.Strings(keys)
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	for i, k := range keys {

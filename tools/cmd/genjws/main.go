@@ -430,8 +430,8 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("h.mu.RUnlock()")
 	o.L("sort.Strings(keys)")
 
-	o.L("buf := pool.GetBytesBuffer()")
-	o.L("defer pool.ReleaseBytesBuffer(buf)")
+	o.L("buf := pool.BytesBuffer().Get()")
+	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("enc := json.NewEncoder(buf)")
 
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")

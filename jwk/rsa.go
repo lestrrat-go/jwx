@@ -293,8 +293,8 @@ func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"e":"`)
 	buf.WriteString(base64.EncodeUint64ToString(uint64(key.E)))

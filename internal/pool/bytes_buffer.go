@@ -6,18 +6,14 @@ import (
 
 var bytesBufferPool = New(allocBytesBuffer, destroyBytesBuffer)
 
+func BytesBuffer() *Pool[*bytes.Buffer] {
+	return bytesBufferPool
+}
+
 func destroyBytesBuffer(b *bytes.Buffer) {
 	b.Reset()
 }
 
 func allocBytesBuffer() interface{} {
 	return &bytes.Buffer{}
-}
-
-func GetBytesBuffer() *bytes.Buffer {
-	return bytesBufferPool.Get()
-}
-
-func ReleaseBytesBuffer(b *bytes.Buffer) {
-	bytesBufferPool.Put(b)
 }

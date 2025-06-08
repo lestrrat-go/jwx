@@ -1507,8 +1507,8 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	pairs, err := t.makePairs()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to make pairs: %w`, err)

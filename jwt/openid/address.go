@@ -203,8 +203,8 @@ func (t *AddressClaim) Accept(v interface{}) error {
 
 // MarshalJSON serializes the token in JSON format.
 func (t AddressClaim) MarshalJSON() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	prev := buf.Len()
