@@ -103,9 +103,9 @@ func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 }
 
 func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) {
-	bin := pool.GetBigInt()
-	bie := pool.GetBigInt()
-	defer pool.ReleaseBigInt(bie)
+	bin := pool.BigInt().Get()
+	bie := pool.BigInt().Get()
+	defer pool.BigInt().Put(bie)
 
 	bin.SetBytes(n)
 	bie.SetBytes(e)
