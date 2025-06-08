@@ -386,13 +386,15 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
 }
 
+var valWithCompact = &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
+
 // WithCompact specifies that the result of `jws.Sign()` is serialized in
 // compact format.
 //
 // By default `jws.Sign()` will opt to use compact format, so you usually
 // do not need to specify this option other than to be explicit about it
 func WithCompact() SignVerifyParseOption {
-	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
+	return valWithCompact
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains

@@ -340,11 +340,13 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
 }
 
+var valWithCompact = &encryptOption{option.New(identSerialization{}, fmtCompact)}
+
 // WithCompact specifies that the result of `jwe.Encrypt()` is serialized in
 // compact format.
 //
 // By default `jwe.Encrypt()` will opt to use compact format, so you usually
 // do not need to specify this option other than to be explicit about it
 func WithCompact() EncryptOption {
-	return &encryptOption{option.New(identSerialization{}, fmtCompact)}
+	return valWithCompact
 }

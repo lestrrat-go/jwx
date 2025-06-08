@@ -75,8 +75,9 @@ type Objects struct {
 		Interface     string
 		ConcreteType  string
 		Comment       string
-		ArgumentType  string `yaml:"argument_type"`
-		ConstantValue string `yaml:"constant_value"`
+		ArgumentType  string   `yaml:"argument_type"`
+		ConstantValue string   `yaml:"constant_value"`
+		Values        []string `yaml:"values"` // if this is a finite set of options, specify them here
 	} `yaml:"options"`
 }
 
@@ -218,6 +219,18 @@ func genOptions(objects *Objects) error {
 			continue
 		}
 
+		// ConstantValue is a special case, where the option is not
+		// expected to take an argument, but rather a constant value.
+		// In this case, just create a single instance of that option
+		// and always return that.
+		cv := option.ConstantValue
+		if cv != "" {
+			o.LL(`var val%s = &%s{option.New(ident%s{}, %s)}`, option.OptionName, option.ConcreteType, option.Ident, cv)
+		}
+
+		// If the options specification contains a finite set of options, optimize for
+		// those, but allow taking other values, just in case (except for booleans)
+
 		if writeComment(o, option.Comment) {
 			o.L(`func %s(`, option.OptionName)
 		} else {
@@ -229,11 +242,11 @@ func genOptions(objects *Objects) error {
 		o.R(`) %s {`, option.Interface)
 
 		value := `v`
-		if cv := option.ConstantValue; cv != "" {
-			value = cv
+		if cv != "" {
+			o.L(`return val%s`, option.OptionName)
+		} else {
+			o.L(`return &%s{option.New(ident%s{}, %s)}`, option.ConcreteType, option.Ident, value)
 		}
-
-		o.L(`return &%s{option.New(ident%s{}, %s)}`, option.ConcreteType, option.Ident, value)
 		o.L(`}`)
 	}
 
