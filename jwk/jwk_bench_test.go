@@ -19,9 +19,8 @@ func BenchmarkRSAPublicKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(pubkey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(pubkey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -34,9 +33,8 @@ func BenchmarkRSAPrivateKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(rsakey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(rsakey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -53,9 +51,8 @@ func BenchmarkECDSAPublicKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(pubkey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(pubkey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -68,9 +65,8 @@ func BenchmarkECDSAPrivateKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(eckey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(eckey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -83,9 +79,8 @@ func BenchmarkSymmetricKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(symkey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(symkey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -102,9 +97,8 @@ func BenchmarkOKPEd25519PublicKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(pubkey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(pubkey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -117,9 +111,8 @@ func BenchmarkOKPEd25519PrivateKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(ed25519key)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(ed25519key); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -136,9 +129,8 @@ func BenchmarkOKPX25519PublicKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(pubkey)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(pubkey); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -151,9 +143,8 @@ func BenchmarkOKPX25519PrivateKeyMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(x25519key)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(x25519key); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -199,9 +190,8 @@ func BenchmarkSetMultipleKeysMarshal(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(set)
-		if err != nil {
+	for range b.N {
+		if _, err := json.Marshal(set); err != nil {
 			b.Fatal(err)
 		}
 	}
