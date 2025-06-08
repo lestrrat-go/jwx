@@ -3,7 +3,6 @@ package pool
 var bytesSlicePool = New(allocByteSlice, destroyByteSlice)
 
 func GetByteSlice() *[]byte {
-	//nolint:forcetypeassert
 	return bytesSlicePool.Get()
 }
 

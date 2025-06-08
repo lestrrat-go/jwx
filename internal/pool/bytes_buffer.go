@@ -15,7 +15,6 @@ func allocBytesBuffer() interface{} {
 }
 
 func GetBytesBuffer() *bytes.Buffer {
-	//nolint:forcetypeassert
 	return bytesBufferPool.Get()
 }
 

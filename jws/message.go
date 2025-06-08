@@ -12,14 +12,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-// This is an internal-use only, optimized JWS message object for
-// generating JWS with single signatures.
-type singleSignatureMessage struct {
-	payload   []byte
-	signature []byte // initiall empty
-	headers   Headers
-}
-
 func NewSignature() *Signature {
 	return &Signature{}
 }
@@ -113,22 +105,6 @@ func encodeHeaders(dst *[]byte, hdrs Headers, encoder Base64Encoder) error {
 	}
 
 	*dst = encoder.AppendEncode(*(dst), serialized)
-	return nil
-}
-
-func generateSignature(dst *[]byte, encoder Base64Encoder, public, protected Headers, payload []byte, signer Signer, key interface{}) error {
-	// Do the same as Signature.Sign, but instead of returning a
-	// new []byte, write to dst. Also, this is a standalone function,
-	// not an object method
-	hdrs, err := setupSignatureHeader(public, protected, signer.Algorithm(), key)
-	if err != nil {
-		return err
-	}
-
-	if err := encodeHeaders(dst, hdrs, encoder); err != nil {
-		return fmt.Errorf(`failed to encode headers: %w`, err)
-	}
-
 	return nil
 }
 

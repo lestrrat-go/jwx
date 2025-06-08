@@ -12,7 +12,6 @@ func destroyStringSlice(s *[]string) {
 }
 
 func GetStringSlice() *[]string {
-	//nolint:forcetypeassert
 	return stringSlicePool.Get()
 }
 

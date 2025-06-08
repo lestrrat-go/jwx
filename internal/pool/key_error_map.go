@@ -7,7 +7,6 @@ func allocKeyToErrorMap() interface{} {
 }
 
 func GetKeyToErrorMap() map[string]error {
-	//nolint:forcetypeassert
 	return keyToErrorMapPool.Get()
 }
 

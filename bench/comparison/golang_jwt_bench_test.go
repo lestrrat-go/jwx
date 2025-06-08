@@ -62,7 +62,7 @@ func BenchmarkGolangJWT_SignHS256(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		_, err := token.SignedString(golangJwtHMACKey)
 		if err != nil {
@@ -80,7 +80,7 @@ func BenchmarkGolangJWT_SignRS256(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 		_, err := token.SignedString(golangJwtRSAKey)
 		if err != nil {
@@ -91,8 +91,8 @@ func BenchmarkGolangJWT_SignRS256(b *testing.B) {
 
 func BenchmarkGolangJWT_ParseHS256(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		token, err := jwt.Parse(golangJwtToken, func(token *jwt.Token) (interface{}, error) {
+	for range b.N {
+		token, err := jwt.Parse(golangJwtToken, func(_ *jwt.Token) (interface{}, error) {
 			return golangJwtHMACKey, nil
 		})
 		if err != nil {
@@ -106,8 +106,8 @@ func BenchmarkGolangJWT_ParseHS256(b *testing.B) {
 
 func BenchmarkGolangJWT_ParseRS256(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		token, err := jwt.Parse(golangJwtTokenRS256, func(token *jwt.Token) (interface{}, error) {
+	for range b.N {
+		token, err := jwt.Parse(golangJwtTokenRS256, func(_ *jwt.Token) (interface{}, error) {
 			return &golangJwtRSAKey.PublicKey, nil
 		})
 		if err != nil {
@@ -123,8 +123,8 @@ func BenchmarkGolangJWT_ParseWithClaims(b *testing.B) {
 	claims := &jwt.MapClaims{}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		token, err := jwt.ParseWithClaims(golangJwtToken, claims, func(token *jwt.Token) (interface{}, error) {
+	for range b.N {
+		token, err := jwt.ParseWithClaims(golangJwtToken, claims, func(_ *jwt.Token) (interface{}, error) {
 			return golangJwtHMACKey, nil
 		})
 		if err != nil {
@@ -145,7 +145,7 @@ func BenchmarkGolangJWT_CreateAndParseHS256(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		// Create token
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		tokenString, err := token.SignedString(golangJwtHMACKey)
@@ -154,7 +154,7 @@ func BenchmarkGolangJWT_CreateAndParseHS256(b *testing.B) {
 		}
 
 		// Parse token
-		parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		parsedToken, err := jwt.Parse(tokenString, func(_ *jwt.Token) (interface{}, error) {
 			return golangJwtHMACKey, nil
 		})
 		if err != nil {

@@ -15,7 +15,6 @@ func destroyBigInt(i *big.Int) {
 }
 
 func GetBigInt() *big.Int {
-	//nolint:forcetypeassert
 	return bigIntPool.Get()
 }
 

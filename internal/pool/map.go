@@ -19,7 +19,6 @@ func destroyMap(m *map[string]interface{}) {
 }
 
 func GetMap() *map[string]interface{} {
-	//nolint:forcetypeassert
 	return mapPool.Get()
 }
 

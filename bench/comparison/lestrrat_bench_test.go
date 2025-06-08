@@ -70,7 +70,7 @@ func BenchmarkJWX_JWTSignHS256(b *testing.B) {
 	tok.Set(jwt.ExpirationKey, time.Now().Add(time.Hour))
 	options := []jwt.SignOption{jwt.WithKey(jwa.HS256(), jwxHMACKey)}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jwt.Sign(tok, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -86,7 +86,7 @@ func BenchmarkJWX_JWTSignRS256(b *testing.B) {
 	tok.Set(jwt.ExpirationKey, time.Now().Add(time.Hour))
 	options := []jwt.SignOption{jwt.WithKey(jwa.RS256(), jwxRSAKey)}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jwt.Sign(tok, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -97,7 +97,7 @@ func BenchmarkJWX_JWTSignRS256(b *testing.B) {
 func BenchmarkJWX_JWTParseHS256(b *testing.B) {
 	options := []jwt.ParseOption{jwt.WithKey(jwa.HS256(), jwxHMACKey)}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jwt.Parse(jwxToken, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -113,7 +113,7 @@ func BenchmarkJWX_JWTParseRS256(b *testing.B) {
 	options := []jwt.ParseOption{jwt.WithKey(jwa.RS256(), publicKey)}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jwt.Parse(jwxTokenRS256, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -124,7 +124,7 @@ func BenchmarkJWX_JWTParseRS256(b *testing.B) {
 func BenchmarkJWX_JWTParseWithValidation(b *testing.B) {
 	options := []jwt.ParseOption{jwt.WithKey(jwa.HS256(), jwxHMACKey), jwt.WithValidate(true)}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jwt.Parse(jwxToken, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -140,7 +140,7 @@ func BenchmarkJWX_CreateAndParseHS256(b *testing.B) {
 	tok.Set(jwt.ExpirationKey, time.Now().Add(time.Hour))
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		// Create token
 		tokenBytes, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), jwxHMACKey))
 		if err != nil {
@@ -159,7 +159,7 @@ func BenchmarkJWX_JWSSignHS256(b *testing.B) {
 	payload := []byte(`{"sub":"1234567890","name":"John Doe","iat":1516239022}`)
 	options := []jws.SignOption{jws.WithKey(jwa.HS256(), jwxHMACKey)}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Sign(payload, options...)
 		if err != nil {
 			b.Fatal(err)
@@ -176,7 +176,7 @@ func BenchmarkJWX_JWSParseHS256(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Verify(signature, jws.WithKey(jwa.HS256(), jwxHMACKey))
 		if err != nil {
 			b.Fatal(err)

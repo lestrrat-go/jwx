@@ -32,7 +32,7 @@ func BenchmarkCompact(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Compact(msg)
 		if err != nil {
 			b.Fatal(err)
@@ -52,7 +52,7 @@ func BenchmarkSign(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), key))
 		if err != nil {
 			b.Fatal(err)
@@ -67,7 +67,7 @@ func BenchmarkSignHMAC(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key))
 		if err != nil {
 			b.Fatal(err)
@@ -86,7 +86,7 @@ func BenchmarkSignECDSA(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), key))
 		if err != nil {
 			b.Fatal(err)
@@ -104,7 +104,7 @@ func BenchmarkMakeSignerOriginal(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		// This will internally call makeSigner multiple times
 		_, err := jws.Sign([]byte("test payload"), jws.WithKey(jwa.RS256(), key))
 		if err != nil {
@@ -126,7 +126,7 @@ func BenchmarkNewSigner(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				signer, err := jws.NewSigner(tc.alg)
 				if err != nil {
 					b.Fatal(err)
@@ -172,7 +172,7 @@ func BenchmarkSignerAlgorithms(b *testing.B) {
 			b.Run(tc.name+"/"+format.name, func(b *testing.B) {
 				options := append([]jws.SignOption{jws.WithKey(tc.alg, tc.key)}, format.options...)
 				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					signed, err := jws.Sign(payload, options...)
 					if err != nil {
 						b.Fatal(err)
