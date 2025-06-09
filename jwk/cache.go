@@ -126,7 +126,6 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
 	waitReady := true
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch opt := option.(type) {
 		case ParseOption:

@@ -61,7 +61,6 @@ func Validate(t Token, options ...ValidateOption) error {
 	var extraValidators []Validator
 	var resetValidators bool
 	for _, o := range options {
-		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identClock{}:
 			if err := o.Value(&clock); err != nil {
@@ -76,7 +75,6 @@ func Validate(t Token, options ...ValidateOption) error {
 				return fmt.Errorf(`jwt.Validate: invalid value for WithTruncation: %w`, err)
 			}
 		case identContext{}:
-			//nolint:fatcontext
 			if err := o.Value(&ctx); err != nil {
 				return fmt.Errorf(`jwt.Validate: invalid value for WithContext: %w`, err)
 			}

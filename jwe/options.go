@@ -54,7 +54,6 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPerRecipientHeaders{}:
 			if err := option.Value(&hdr); err != nil {
@@ -73,7 +72,6 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
 	requireKid := true
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identRequireKid{}:
 			if err := option.Value(&requireKid); err != nil {
@@ -96,7 +94,6 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
 func WithJSON(options ...WithJSONSuboption) EncryptOption {
 	var pretty bool
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPretty{}:
 			if err := option.Value(&pretty); err != nil {

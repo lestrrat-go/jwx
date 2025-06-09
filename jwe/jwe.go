@@ -38,7 +38,6 @@ var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
 	defer muSettings.Unlock()
-	//nolint:forcetypeassert
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxPBES2Count{}:
@@ -342,7 +341,6 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	var mergeProtected bool
 	var useRawCEK bool
 	for _, opt := range options {
-		//nolint:forcetypeassert
 		switch opt.Ident() {
 		case identKey{}:
 			var data withKey
@@ -566,7 +564,6 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var dst *Message
 	perCallMaxDecompressBufferSize := maxDecompressBufferSize
 	ctx := context.Background()
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
@@ -605,7 +602,6 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithMaxDecompressBufferSize: %w`, err)
 			}
 		case identContext{}:
-			//nolint:fatcontext
 			if err := option.Value(&ctx); err != nil {
 				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithContext: %w`, err)
 			}

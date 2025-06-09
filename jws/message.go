@@ -491,7 +491,6 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	var detached bool
 	var encoder Base64Encoder = base64.DefaultEncoder()
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identDetached{}:
 			if err := option.Value(&detached); err != nil {

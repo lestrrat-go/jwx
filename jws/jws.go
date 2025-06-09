@@ -278,7 +278,6 @@ var errInvalidSerializationFormat = errors.New(`invalid serialization format`)
 
 func (sc *signContext) ProcessOptions(options []SignOption) error {
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
 			if err := option.Value(&sc.format); err != nil {
@@ -517,7 +516,6 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 				return nil, verifyerr(`invalid value for WithKeyUsed: %w`, err)
 			}
 		case identContext{}:
-			//nolint:fatcontext
 			if err := option.Value(&ctx); err != nil {
 				return nil, verifyerr(`invalid value for WithContext: %w`, err)
 			}
@@ -675,7 +673,6 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	var formats int
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
 			var v int

@@ -200,7 +200,6 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
 	for _, opt := range options {
-		//nolint:forcetypeassert
 		switch opt.Ident() {
 		case identPEM{}:
 			if err := opt.Value(&parsePEM); err != nil {
@@ -290,7 +289,6 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
 	for _, opt := range options {
-		//nolint:forcetypeassert
 		switch opt.Ident() {
 		case identPEM{}:
 			if err := opt.Value(&parsePEM); err != nil {
@@ -395,7 +393,6 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			if err := option.Value(&hash); err != nil {
@@ -631,7 +628,6 @@ func IsKeyValidationError(err error) bool {
 // Configure is used to configure global behavior of the jwk package.
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:

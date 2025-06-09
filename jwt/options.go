@@ -56,7 +56,6 @@ func convertToJwsSignOption(src *option.Set[SignOption], dst *option.Set[jws.Sig
 func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
 	soptions := make([]jwe.EncryptOption, 0, len(options))
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identKey{}:
 			var wk withKey

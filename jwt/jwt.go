@@ -28,7 +28,6 @@ func Settings(options ...GlobalOption) {
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identTruncation{}:
@@ -234,7 +233,6 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			continue
 		}
 
-		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
 			verifyOpts.Add(o)
