@@ -53,34 +53,33 @@ func convertToJwsSignOption(src *option.Set[SignOption], dst *option.Set[jws.Sig
 	return nil
 }
 
-func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
-	soptions := make([]jwe.EncryptOption, 0, len(options))
-	for _, option := range options {
-		switch option.Ident() {
+func convertToJweEncryptOptions(src *option.Set[EncryptOption], dst *option.Set[jwe.EncryptOption]) error {
+	for i := range src.Len() {
+		switch option := src.Option(i); option.Ident() {
 		case identKey{}:
 			var wk withKey
 			if err := option.Value(&wk); err != nil {
-				return nil, fmt.Errorf(`invalid value for jwt.WithKey: %w`, err)
+				return fmt.Errorf(`invalid value for jwt.WithKey: %w`, err)
 			}
 			var wksoptions []jwe.WithKeySuboption
 			for _, subopt := range wk.options {
 				wksopt, ok := subopt.(jwe.WithKeySuboption)
 				if !ok {
-					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jwe.WithKeySuboption, but got %T`, subopt)
+					return fmt.Errorf(`expected optional arguments in jwt.WithKey to be jwe.WithKeySuboption, but got %T`, subopt)
 				}
 				wksoptions = append(wksoptions, wksopt)
 			}
 
-			soptions = append(soptions, jwe.WithKey(wk.alg, wk.key, wksoptions...))
+			dst.Add(jwe.WithKey(wk.alg, wk.key, wksoptions...))
 		case identEncryptOption{}:
 			var encOpt jwe.EncryptOption
 			if err := option.Value(&encOpt); err != nil {
-				return nil, fmt.Errorf(`invalid value for jwt.WithEncryptOption: %w`, err)
+				return fmt.Errorf(`invalid value for jwt.WithEncryptOption: %w`, err)
 			}
-			soptions = append(soptions, encOpt)
+			dst.Add(encOpt)
 		}
 	}
-	return soptions, nil
+	return nil
 }
 
 func convertToJwsVerifyOpts(src *option.Set[ParseOption], dst *option.Set[jws.VerifyOption]) error {

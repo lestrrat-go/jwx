@@ -210,22 +210,20 @@ func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 // MUST add some extra headers to construct a proper JWE message.
 // Be careful when you pass multiple `jwe.EncryptOption`s.
 func (s *Serializer) Encrypt(options ...EncryptOption) *Serializer {
-	var eoptions []jwe.EncryptOption
-	if l := len(options); l > 0 {
-		// we need to from SignOption to Option because ... reasons
-		// (todo: when go1.18 prevails, use type parameters
-		rawoptions := make([]Option, l)
-		for i, option := range options {
-			rawoptions[i] = option
-		}
+	src := EncryptOptionListPool().Get()
+	defer EncryptOptionListPool().Put(src)
 
-		converted, err := toEncryptOptions(rawoptions...)
-		if err != nil {
-			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Encrypt: failed to convert options into jwe.EncryptOption: %w`, err)})
-		}
-		eoptions = converted
+	for _, option := range options {
+		src.Add(option)
 	}
-	return s.encrypt(eoptions...)
+
+	dst := jwe.EncryptOptionListPool().Get()
+	defer jwe.EncryptOptionListPool().Put(dst)
+
+	if err := convertToJweEncryptOptions(src, dst); err != nil {
+		return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Encrypt: failed to convert options into jwe.EncryptOption: %w`, err)})
+	}
+	return s.encrypt(dst.List()...)
 }
 
 func (s *Serializer) encrypt(options ...jwe.EncryptOption) *Serializer {
