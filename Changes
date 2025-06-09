@@ -4,6 +4,43 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.4 09 Jun 2025
+  * This release contains various performance improvements all over the code.
+
+    Because of the direction that this library is taking, we have always been
+    more focused on correctness and usability/flexibility over performance.
+
+    It just so happens that I had a moment of inspiration and decided to see
+    just how good our AI-based coding agents are in this sort of analysis-heavy tasks.
+
+    Long story short, the AI was fairly good at identifying suspicious code with
+    an okay accuracy, but completely failed to make any meaningful changes to the
+    code in a way that both did not break the code _and_ improved performance.
+    I am sure that they will get better in the near future, but for now,
+    I had to do the changes myself. I should clarify to their defence that
+    the AI was very helpful in writing cumbersome benchmark code for me.
+
+    The end result is that we have anywhere from 10 to 30% performance improvements
+    in various parts of the code that we touched, based on number of allocations.
+    We believe that this would be a significant improvement for many users.
+
+    For further improvements, we can see that there would be a clear benefit to
+    writing optimized code path that is designed to serve the most common cases.
+    For example, for the case of signing JWTs with a single key, we could provide
+    a path that skips a lot of extra processing (we kind of did that in this change,
+    but we _could_ go ever harder in this direction). However, it is a trade-off between
+    maintainability and performance, and as I am currently the sole maintainer of
+    this library for the time being, I only plan to pursue such a route where it
+    requires minimal effort on my part.
+
+    If you are interested in helping out in this area, I hereby thank you in advance.
+    However, please be perfectly clear that unlike other types of changes, for performance
+    related changes, the balance between the performance gains and maintainability is
+    top priority. If you have good ideas and code, they will always be welcome, but
+    please be prepared to justify your changes.
+
+    Finally, thank you for using this library!
+
 v3.0.3 06 Jun 2025
   * Update some dependencies
   * [jwe] Change some error messages to contain more context information
