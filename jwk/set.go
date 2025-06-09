@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const keysKey = `keys` // appease linter
@@ -151,20 +152,31 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 
-	fields := []string{keysKey}
-	for k := range s.privateParams {
-		fields = append(fields, k)
-	}
-	sort.Strings(fields)
+	var fields []string
+	if len(s.privateParams) == 0 {
+		// optimized path for most common case
+		var jwkSetOnlyKeys = [1]string{keysKey}
+		fields = jwkSetOnlyKeys[:]
+	} else {
+		fieldsptr := pool.StringSlice().Get()
+		defer pool.StringSlice().Put(fieldsptr)
+		fields = *fieldsptr
 
-	buf.WriteByte('{')
+		fields = append(fields, keysKey)
+		for k := range s.privateParams {
+			fields = append(fields, k)
+		}
+		sort.Strings(fields)
+	}
+
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	for i, field := range fields {
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		fmt.Fprintf(buf, `%q:`, field)
 		if field != keysKey {
@@ -172,19 +184,19 @@ func (s *set) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
-			buf.WriteByte('[')
+			buf.WriteByte(tokens.OpenSquareBracket)
 			for j, k := range s.keys {
 				if j > 0 {
-					buf.WriteByte(',')
+					buf.WriteByte(tokens.Comma)
 				}
 				if err := enc.Encode(k); err != nil {
 					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)
 				}
 			}
-			buf.WriteByte(']')
+			buf.WriteByte(tokens.CloseSquareBracket)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -219,11 +231,11 @@ LOOP:
 		switch tok := tok.(type) {
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
-			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
-				return fmt.Errorf(`expected '{', but got '%c'`, tok)
+			} else if tok != tokens.OpenCurlyBracket {
+				return fmt.Errorf(`expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
 			}
 		case string:
 			switch tok {

@@ -75,8 +75,9 @@ type Objects struct {
 		Interface     string
 		ConcreteType  string
 		Comment       string
-		ArgumentType  string `yaml:"argument_type"`
-		ConstantValue string `yaml:"constant_value"`
+		ArgumentType  string   `yaml:"argument_type"`
+		ConstantValue string   `yaml:"constant_value"`
+		Values        []string `yaml:"values"` // if this is a finite set of options, specify them here
 	} `yaml:"options"`
 }
 
@@ -140,6 +141,7 @@ func genOptions(objects *Objects) error {
 
 	imports := append(objects.Imports, []string{
 		`io/fs`, // for some reason without this the goimports in my environment tries to import a differnet package
+		`github.com/lestrrat-go/option/v2`,
 		`github.com/lestrrat-go/jwx/v3/jwa`,
 		`github.com/lestrrat-go/jwx/v3/jwe`,
 		`github.com/lestrrat-go/jwx/v3/jwk`,
@@ -170,6 +172,12 @@ func genOptions(objects *Objects) error {
 			o.L(`%s()`, method)
 		}
 		o.L(`}`)
+
+		o.LL(`var %sListPool = option.NewSetPool[%s](`, xstrings.LcFirst(iface.Name), iface.Name)
+		o.L(`&sync.Pool{New: func() any { return option.NewSet[%s]() } },`, iface.Name)
+		o.L(`)`)
+
+		o.LL(`func %[1]sListPool() *option.SetPool[%[1]s] { return %[2]sListPool }`, iface.Name, xstrings.LcFirst(iface.Name))
 
 		o.LL(`type %s struct {`, iface.ConcreteType)
 		o.L(`Option`)
@@ -218,6 +226,22 @@ func genOptions(objects *Objects) error {
 			continue
 		}
 
+		// ConstantValue is a special case, where the option is not
+		// expected to take an argument, but rather a constant value.
+		// In this case, just create a single instance of that option
+		// and always return that.
+		cv := option.ConstantValue
+		if cv != "" {
+			o.LL(`var val%s = &%s{option.New(ident%s{}, %s)}`, option.OptionName, option.ConcreteType, option.Ident, cv)
+		}
+
+		// If the options specification contains a finite set of options, optimize for
+		// those, but allow taking other values, just in case (except for booleans)
+		if option.ArgumentType == `bool` {
+			o.LL(`var true%s = &%s{option.New(ident%s{}, true)}`, option.OptionName, option.ConcreteType, option.Ident)
+			o.L(`var false%s = &%s{option.New(ident%s{}, false)}`, option.OptionName, option.ConcreteType, option.Ident)
+		}
+
 		if writeComment(o, option.Comment) {
 			o.L(`func %s(`, option.OptionName)
 		} else {
@@ -229,11 +253,16 @@ func genOptions(objects *Objects) error {
 		o.R(`) %s {`, option.Interface)
 
 		value := `v`
-		if cv := option.ConstantValue; cv != "" {
-			value = cv
+		if cv != "" {
+			o.L(`return val%s`, option.OptionName)
+		} else if option.ArgumentType == `bool` {
+			o.L(`if v {`)
+			o.L(`return true%s`, option.OptionName)
+			o.L(`}`)
+			o.L(`return false%s`, option.OptionName)
+		} else {
+			o.L(`return &%s{option.New(ident%s{}, %s)}`, option.ConcreteType, option.Ident, value)
 		}
-
-		o.L(`return &%s{option.New(ident%s{}, %s)}`, option.ConcreteType, option.Ident, value)
 		o.L(`}`)
 	}
 

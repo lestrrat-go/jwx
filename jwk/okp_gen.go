@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -438,9 +439,9 @@ LOOP:
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
 			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
+			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
@@ -536,73 +537,75 @@ LOOP:
 }
 
 func (h okpPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 10)
-	data[KeyTypeKey] = jwa.OKP()
-	fields = append(fields, KeyTypeKey)
+	dataptr := pool.Map().Get()
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	defer pool.StringSlice().Put(fieldsptr)
+	(*dataptr)[KeyTypeKey] = jwa.OKP()
+	*fieldsptr = append(*fieldsptr, KeyTypeKey)
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		(*dataptr)[AlgorithmKey] = *(h.algorithm)
+		*fieldsptr = append(*fieldsptr, AlgorithmKey)
 	}
 	if h.crv != nil {
-		data[OKPCrvKey] = *(h.crv)
-		fields = append(fields, OKPCrvKey)
+		(*dataptr)[OKPCrvKey] = *(h.crv)
+		*fieldsptr = append(*fieldsptr, OKPCrvKey)
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		(*dataptr)[KeyIDKey] = *(h.keyID)
+		*fieldsptr = append(*fieldsptr, KeyIDKey)
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		(*dataptr)[KeyOpsKey] = *(h.keyOps)
+		*fieldsptr = append(*fieldsptr, KeyOpsKey)
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		(*dataptr)[KeyUsageKey] = *(h.keyUsage)
+		*fieldsptr = append(*fieldsptr, KeyUsageKey)
 	}
 	if h.x != nil {
-		data[OKPXKey] = h.x
-		fields = append(fields, OKPXKey)
+		(*dataptr)[OKPXKey] = h.x
+		*fieldsptr = append(*fieldsptr, OKPXKey)
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		(*dataptr)[X509CertChainKey] = h.x509CertChain
+		*fieldsptr = append(*fieldsptr, X509CertChainKey)
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		(*dataptr)[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintKey)
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		(*dataptr)[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintS256Key)
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		(*dataptr)[X509URLKey] = *(h.x509URL)
+		*fieldsptr = append(*fieldsptr, X509URLKey)
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		(*dataptr)[k] = v
+		*fieldsptr = append(*fieldsptr, k)
 	}
 
-	sort.Strings(fields)
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-	buf.WriteByte('{')
+	sort.Strings(*fieldsptr)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, f := range *fieldsptr {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
-		v := data[f]
+		v := (*dataptr)[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
@@ -610,7 +613,7 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
@@ -1101,9 +1104,9 @@ LOOP:
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
 			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
+			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
@@ -1206,77 +1209,79 @@ LOOP:
 }
 
 func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
-	fields := make([]string, 0, 11)
-	data[KeyTypeKey] = jwa.OKP()
-	fields = append(fields, KeyTypeKey)
+	dataptr := pool.Map().Get()
+	defer pool.Map().Put(dataptr)
+	fieldsptr := pool.StringSlice().Get()
+	defer pool.StringSlice().Put(fieldsptr)
+	(*dataptr)[KeyTypeKey] = jwa.OKP()
+	*fieldsptr = append(*fieldsptr, KeyTypeKey)
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		(*dataptr)[AlgorithmKey] = *(h.algorithm)
+		*fieldsptr = append(*fieldsptr, AlgorithmKey)
 	}
 	if h.crv != nil {
-		data[OKPCrvKey] = *(h.crv)
-		fields = append(fields, OKPCrvKey)
+		(*dataptr)[OKPCrvKey] = *(h.crv)
+		*fieldsptr = append(*fieldsptr, OKPCrvKey)
 	}
 	if h.d != nil {
-		data[OKPDKey] = h.d
-		fields = append(fields, OKPDKey)
+		(*dataptr)[OKPDKey] = h.d
+		*fieldsptr = append(*fieldsptr, OKPDKey)
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		(*dataptr)[KeyIDKey] = *(h.keyID)
+		*fieldsptr = append(*fieldsptr, KeyIDKey)
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		(*dataptr)[KeyOpsKey] = *(h.keyOps)
+		*fieldsptr = append(*fieldsptr, KeyOpsKey)
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		(*dataptr)[KeyUsageKey] = *(h.keyUsage)
+		*fieldsptr = append(*fieldsptr, KeyUsageKey)
 	}
 	if h.x != nil {
-		data[OKPXKey] = h.x
-		fields = append(fields, OKPXKey)
+		(*dataptr)[OKPXKey] = h.x
+		*fieldsptr = append(*fieldsptr, OKPXKey)
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		(*dataptr)[X509CertChainKey] = h.x509CertChain
+		*fieldsptr = append(*fieldsptr, X509CertChainKey)
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		(*dataptr)[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintKey)
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		(*dataptr)[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		*fieldsptr = append(*fieldsptr, X509CertThumbprintS256Key)
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		(*dataptr)[X509URLKey] = *(h.x509URL)
+		*fieldsptr = append(*fieldsptr, X509URLKey)
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		(*dataptr)[k] = v
+		*fieldsptr = append(*fieldsptr, k)
 	}
 
-	sort.Strings(fields)
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
-	buf.WriteByte('{')
+	sort.Strings(*fieldsptr)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	enc := json.NewEncoder(buf)
-	for i, f := range fields {
+	for i, f := range *fieldsptr {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
-		v := data[f]
+		v := (*dataptr)[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
@@ -1284,7 +1289,7 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

@@ -3,6 +3,7 @@
 package jwk
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 )
@@ -14,18 +15,21 @@ func (sysFS) Open(path string) (fs.File, error) {
 }
 
 func ReadFile(path string, options ...ReadFileOption) (Set, error) {
-	var parseOptions []ParseOption
+	parseOptions := ParseOptionListPool().Get()
+	defer ParseOptionListPool().Put(parseOptions)
 	for _, option := range options {
 		if po, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, po)
+			parseOptions.Add(po)
 		}
 	}
 
 	var srcFS fs.FS = sysFS{}
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identFS{}:
-			srcFS = option.Value().(fs.FS)
+			if err := opt.Value(&srcFS); err != nil {
+				return nil, fmt.Errorf("jwk.ReadFile: %s", err.Error())
+			}
 		}
 	}
 
@@ -35,5 +39,5 @@ func ReadFile(path string, options ...ReadFileOption) (Set, error) {
 	}
 
 	defer f.Close()
-	return ParseReader(f, parseOptions...)
+	return ParseReader(f, parseOptions.List()...)
 }

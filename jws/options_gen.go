@@ -5,8 +5,9 @@ package jws
 import (
 	"context"
 	"io/fs"
+	"sync"
 
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -16,6 +17,12 @@ type CompactOption interface {
 	Option
 	compactOption()
 }
+
+var compactOptionListPool = option.NewSetPool[CompactOption](
+	&sync.Pool{New: func() any { return option.NewSet[CompactOption]() }},
+)
+
+func CompactOptionListPool() *option.SetPool[CompactOption] { return compactOptionListPool }
 
 type compactOption struct {
 	Option
@@ -29,6 +36,12 @@ type ParseOption interface {
 	readFileOption()
 }
 
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
+
 type parseOption struct {
 	Option
 }
@@ -41,6 +54,12 @@ type ReadFileOption interface {
 	readFileOption()
 }
 
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
+
 type readFileOption struct {
 	Option
 }
@@ -52,6 +71,12 @@ type SignOption interface {
 	Option
 	signOption()
 }
+
+var signOptionListPool = option.NewSetPool[SignOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignOption]() }},
+)
+
+func SignOptionListPool() *option.SetPool[SignOption] { return signOptionListPool }
 
 type signOption struct {
 	Option
@@ -67,6 +92,14 @@ type SignVerifyCompactOption interface {
 	verifyOption()
 	compactOption()
 	parseOption()
+}
+
+var signVerifyCompactOptionListPool = option.NewSetPool[SignVerifyCompactOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyCompactOption]() }},
+)
+
+func SignVerifyCompactOptionListPool() *option.SetPool[SignVerifyCompactOption] {
+	return signVerifyCompactOptionListPool
 }
 
 type signVerifyCompactOption struct {
@@ -89,6 +122,12 @@ type SignVerifyOption interface {
 	parseOption()
 }
 
+var signVerifyOptionListPool = option.NewSetPool[SignVerifyOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyOption]() }},
+)
+
+func SignVerifyOptionListPool() *option.SetPool[SignVerifyOption] { return signVerifyOptionListPool }
+
 type signVerifyOption struct {
 	Option
 }
@@ -105,6 +144,14 @@ type SignVerifyParseOption interface {
 	verifyOption()
 	parseOption()
 	readFileOption()
+}
+
+var signVerifyParseOptionListPool = option.NewSetPool[SignVerifyParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyParseOption]() }},
+)
+
+func SignVerifyParseOptionListPool() *option.SetPool[SignVerifyParseOption] {
+	return signVerifyParseOptionListPool
 }
 
 type signVerifyParseOption struct {
@@ -126,6 +173,12 @@ type VerifyOption interface {
 	parseOption()
 }
 
+var verifyOptionListPool = option.NewSetPool[VerifyOption](
+	&sync.Pool{New: func() any { return option.NewSet[VerifyOption]() }},
+)
+
+func VerifyOptionListPool() *option.SetPool[VerifyOption] { return verifyOptionListPool }
+
 type verifyOption struct {
 	Option
 }
@@ -140,6 +193,12 @@ type WithJSONSuboption interface {
 	withJSONSuboption()
 }
 
+var withJSONSuboptionListPool = option.NewSetPool[WithJSONSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithJSONSuboption]() }},
+)
+
+func WithJSONSuboptionListPool() *option.SetPool[WithJSONSuboption] { return withJSONSuboptionListPool }
+
 type withJSONSuboption struct {
 	Option
 }
@@ -150,6 +209,14 @@ func (*withJSONSuboption) withJSONSuboption() {}
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()
+}
+
+var withKeySetSuboptionListPool = option.NewSetPool[WithKeySetSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithKeySetSuboption]() }},
+)
+
+func WithKeySetSuboptionListPool() *option.SetPool[WithKeySetSuboption] {
+	return withKeySetSuboptionListPool
 }
 
 type withKeySetSuboption struct {
@@ -164,6 +231,12 @@ type WithKeySuboption interface {
 	Option
 	withKeySuboption()
 }
+
+var withKeySuboptionListPool = option.NewSetPool[WithKeySuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithKeySuboption]() }},
+)
+
+func WithKeySuboptionListPool() *option.SetPool[WithKeySuboption] { return withKeySuboptionListPool }
 
 type withKeySuboption struct {
 	Option
@@ -273,11 +346,17 @@ func WithContext(v context.Context) VerifyOption {
 	return &verifyOption{option.New(identContext{}, v)}
 }
 
+var trueWithDetached = &compactOption{option.New(identDetached{}, true)}
+var falseWithDetached = &compactOption{option.New(identDetached{}, false)}
+
 // WithDetached specifies that the `jws.Message` should be serialized in
 // JWS compact serialization with detached payload. The resulting octet
 // sequence will not contain the payload section.
 func WithDetached(v bool) CompactOption {
-	return &compactOption{option.New(identDetached{}, v)}
+	if v {
+		return trueWithDetached
+	}
+	return falseWithDetached
 }
 
 // WithDetachedPayload can be used to both sign or verify a JWS message with a
@@ -297,6 +376,9 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
 }
+
+var trueWithInferAlgorithmFromKey = &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, true)}
+var falseWithInferAlgorithmFromKey = &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, false)}
 
 // WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name
 // should be inferred by looking at the provided key, in case the JWS
@@ -318,7 +400,10 @@ func WithFS(v fs.FS) ReadFileOption {
 // header field instead of resorting to using this option, but sometimes
 // it just needs to happen.
 func WithInferAlgorithmFromKey(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, v)}
+	if v {
+		return trueWithInferAlgorithmFromKey
+	}
+	return falseWithInferAlgorithmFromKey
 }
 
 func WithKeyProvider(v KeyProvider) VerifyOption {
@@ -345,19 +430,31 @@ func WithMessage(v *Message) VerifyOption {
 	return &verifyOption{option.New(identMessage{}, v)}
 }
 
+var trueWithMultipleKeysPerKeyID = &withKeySetSuboption{option.New(identMultipleKeysPerKeyID{}, true)}
+var falseWithMultipleKeysPerKeyID = &withKeySetSuboption{option.New(identMultipleKeysPerKeyID{}, false)}
+
 // WithMultipleKeysPerKeyID specifies if we should expect multiple keys
 // to match against a key ID. By default it is assumed that key IDs are
 // unique, i.e. for a given key ID, the key set only contains a single
 // key that has the matching ID. When this option is set to true,
 // multiple keys that match the same key ID in the set can be tried.
 func WithMultipleKeysPerKeyID(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identMultipleKeysPerKeyID{}, v)}
+	if v {
+		return trueWithMultipleKeysPerKeyID
+	}
+	return falseWithMultipleKeysPerKeyID
 }
+
+var trueWithPretty = &withJSONSuboption{option.New(identPretty{}, true)}
+var falseWithPretty = &withJSONSuboption{option.New(identPretty{}, false)}
 
 // WithPretty specifies whether the JSON output should be formatted and
 // indented
 func WithPretty(v bool) WithJSONSuboption {
-	return &withJSONSuboption{option.New(identPretty{}, v)}
+	if v {
+		return trueWithPretty
+	}
+	return falseWithPretty
 }
 
 // WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
@@ -379,12 +476,20 @@ func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
 }
 
+var trueWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, true)}
+var falseWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, false)}
+
 // WithRequiredKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWS message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
+	if v {
+		return trueWithRequireKid
+	}
+	return falseWithRequireKid
 }
+
+var valWithCompact = &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
 
 // WithCompact specifies that the result of `jws.Sign()` is serialized in
 // compact format.
@@ -392,14 +497,23 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // By default `jws.Sign()` will opt to use compact format, so you usually
 // do not need to specify this option other than to be explicit about it
 func WithCompact() SignVerifyParseOption {
-	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
+	return valWithCompact
 }
+
+var trueWithUseDefault = &withKeySetSuboption{option.New(identUseDefault{}, true)}
+var falseWithUseDefault = &withKeySetSuboption{option.New(identUseDefault{}, false)}
 
 // WithUseDefault specifies that if and only if a jwk.Key contains
 // exactly one jwk.Key, that key should be used.
 func WithUseDefault(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
+	if v {
+		return trueWithUseDefault
+	}
+	return falseWithUseDefault
 }
+
+var trueWithValidateKey = &signVerifyOption{option.New(identValidateKey{}, true)}
+var falseWithValidateKey = &signVerifyOption{option.New(identValidateKey{}, false)}
 
 // WithValidateKey specifies whether the key used for signing or verification
 // should be validated before using. Note that this means calling
@@ -419,5 +533,8 @@ func WithUseDefault(v bool) WithKeySetSuboption {
 //
 // By default, the key is not validated.
 func WithValidateKey(v bool) SignVerifyOption {
-	return &signVerifyOption{option.New(identValidateKey{}, v)}
+	if v {
+		return trueWithValidateKey
+	}
+	return falseWithValidateKey
 }

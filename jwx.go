@@ -23,6 +23,8 @@
 package jwx
 
 import (
+	"fmt"
+
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 )
 
@@ -33,10 +35,11 @@ func DecoderSettings(options ...JSONOption) {
 	// in case a new option is to be added some time later
 	var useNumber bool
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identUseNumber{}:
-			useNumber = option.Value().(bool)
+			if err := option.Value(&useNumber); err != nil {
+				panic(fmt.Sprintf("jwx.DecoderSettings: invalid value for WithUseNumber: %s", err.Error()))
+			}
 		}
 	}
 

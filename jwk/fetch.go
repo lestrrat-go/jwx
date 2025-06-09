@@ -67,22 +67,27 @@ func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (
 // consider using `jwk.Cache`, which automatically refreshes
 // jwk.Set objects asynchronously.
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
-	var parseOptions []ParseOption
+	parseOptions := ParseOptionListPool().Get()
+	defer ParseOptionListPool().Put(parseOptions)
+
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
 	var client HTTPClient = http.DefaultClient
 	for _, option := range options {
 		if parseOpt, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, parseOpt)
+			parseOptions.Add(parseOpt)
 			continue
 		}
 
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
-			client = option.Value().(HTTPClient)
+			if err := option.Value(&client); err != nil {
+				return nil, fmt.Errorf(`jwk.Fetch: %s`, err.Error())
+			}
 		case identFetchWhitelist{}:
-			wl = option.Value().(Whitelist)
+			if err := option.Value(&wl); err != nil {
+				return nil, fmt.Errorf(`jwk.Fetch: %s`, err.Error())
+			}
 		}
 	}
 
@@ -110,5 +115,5 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		return nil, fmt.Errorf(`jwk.Fetch: failed to read response body for %q: %w`, u, err)
 	}
 
-	return Parse(buf, parseOptions...)
+	return Parse(buf, parseOptions.List()...)
 }

@@ -5,9 +5,10 @@ package jwk
 import (
 	"crypto"
 	"io/fs"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -16,6 +17,12 @@ type AssignKeyIDOption interface {
 	Option
 	assignKeyIDOption()
 }
+
+var assignKeyIDOptionListPool = option.NewSetPool[AssignKeyIDOption](
+	&sync.Pool{New: func() any { return option.NewSet[AssignKeyIDOption]() }},
+)
+
+func AssignKeyIDOptionListPool() *option.SetPool[AssignKeyIDOption] { return assignKeyIDOptionListPool }
 
 type assignKeyIDOption struct {
 	Option
@@ -29,6 +36,12 @@ type CacheOption interface {
 	Option
 	cacheOption()
 }
+
+var cacheOptionListPool = option.NewSetPool[CacheOption](
+	&sync.Pool{New: func() any { return option.NewSet[CacheOption]() }},
+)
+
+func CacheOptionListPool() *option.SetPool[CacheOption] { return cacheOptionListPool }
 
 type cacheOption struct {
 	Option
@@ -45,6 +58,12 @@ type FetchOption interface {
 	parseOption()
 	registerOption()
 }
+
+var fetchOptionListPool = option.NewSetPool[FetchOption](
+	&sync.Pool{New: func() any { return option.NewSet[FetchOption]() }},
+)
+
+func FetchOptionListPool() *option.SetPool[FetchOption] { return fetchOptionListPool }
 
 type fetchOption struct {
 	Option
@@ -63,6 +82,12 @@ type GlobalOption interface {
 	globalOption()
 }
 
+var globalOptionListPool = option.NewSetPool[GlobalOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalOption]() }},
+)
+
+func GlobalOptionListPool() *option.SetPool[GlobalOption] { return globalOptionListPool }
+
 type globalOption struct {
 	Option
 }
@@ -78,6 +103,12 @@ type ParseOption interface {
 	registerOption()
 	readFileOption()
 }
+
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
 
 type parseOption struct {
 	Option
@@ -95,6 +126,12 @@ type ReadFileOption interface {
 	readFileOption()
 }
 
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
+
 type readFileOption struct {
 	Option
 }
@@ -107,6 +144,14 @@ type RegisterFetchOption interface {
 	fetchOption()
 	registerOption()
 	parseOption()
+}
+
+var registerFetchOptionListPool = option.NewSetPool[RegisterFetchOption](
+	&sync.Pool{New: func() any { return option.NewSet[RegisterFetchOption]() }},
+)
+
+func RegisterFetchOptionListPool() *option.SetPool[RegisterFetchOption] {
+	return registerFetchOptionListPool
 }
 
 type registerFetchOption struct {
@@ -125,6 +170,12 @@ type RegisterOption interface {
 	registerOption()
 }
 
+var registerOptionListPool = option.NewSetPool[RegisterOption](
+	&sync.Pool{New: func() any { return option.NewSet[RegisterOption]() }},
+)
+
+func RegisterOptionListPool() *option.SetPool[RegisterOption] { return registerOptionListPool }
+
 type registerOption struct {
 	Option
 }
@@ -137,6 +188,12 @@ type ResourceOption interface {
 	Option
 	resourceOption()
 }
+
+var resourceOptionListPool = option.NewSetPool[ResourceOption](
+	&sync.Pool{New: func() any { return option.NewSet[ResourceOption]() }},
+)
+
+func ResourceOptionListPool() *option.SetPool[ResourceOption] { return resourceOptionListPool }
 
 type resourceOption struct {
 	Option
@@ -213,6 +270,9 @@ func WithHTTPClient(v HTTPClient) RegisterFetchOption {
 	return &registerFetchOption{option.New(identHTTPClient{}, v)}
 }
 
+var trueWithIgnoreParseError = &parseOption{option.New(identIgnoreParseError{}, true)}
+var falseWithIgnoreParseError = &parseOption{option.New(identIgnoreParseError{}, false)}
+
 // WithIgnoreParseError is only applicable when used with `jwk.Parse()`
 // (i.e. to parse JWK sets). If passed to `jwk.ParseKey()`, the function
 // will return an error no matter what the input is.
@@ -233,7 +293,10 @@ func WithHTTPClient(v HTTPClient) RegisterFetchOption {
 // When you use this option, you will not be able to tell if you are
 // using a faulty JWKS, except for when there are JSON syntax errors.
 func WithIgnoreParseError(v bool) ParseOption {
-	return &parseOption{option.New(identIgnoreParseError{}, v)}
+	if v {
+		return trueWithIgnoreParseError
+	}
+	return falseWithIgnoreParseError
 }
 
 // This option is only available for internal code. Users don't get to play with it
@@ -241,9 +304,15 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
 }
 
+var trueWithPEM = &parseOption{option.New(identPEM{}, true)}
+var falseWithPEM = &parseOption{option.New(identPEM{}, false)}
+
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
 func WithPEM(v bool) ParseOption {
-	return &parseOption{option.New(identPEM{}, v)}
+	if v {
+		return trueWithPEM
+	}
+	return falseWithPEM
 }
 
 // WithPEMDecoder specifies the PEMDecoder object to use when decoding
@@ -251,6 +320,9 @@ func WithPEM(v bool) ParseOption {
 func WithPEMDecoder(v PEMDecoder) ParseOption {
 	return &parseOption{option.New(identPEMDecoder{}, v)}
 }
+
+var trueWithStrictKeyUsage = &globalOption{option.New(identStrictKeyUsage{}, true)}
+var falseWithStrictKeyUsage = &globalOption{option.New(identStrictKeyUsage{}, false)}
 
 // WithStrictKeyUsage specifies if during JWK parsing, the "use" field
 // should be confined to the values that have been registered via
@@ -262,12 +334,18 @@ func WithPEMDecoder(v PEMDecoder) ParseOption {
 // be one of the registered values, and otherwise an error will be
 // reported during parsing / assignment to `jwk.KeyUsageType`
 func WithStrictKeyUsage(v bool) GlobalOption {
-	return &globalOption{option.New(identStrictKeyUsage{}, v)}
+	if v {
+		return trueWithStrictKeyUsage
+	}
+	return falseWithStrictKeyUsage
 }
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
 }
+
+var trueWithWaitReady = &registerOption{option.New(identWaitReady{}, true)}
+var falseWithWaitReady = &registerOption{option.New(identWaitReady{}, false)}
 
 // WithWaitReady specifies that the `jwk.Cache` should wait until the
 // first fetch is done before returning from the `Register()` call.
@@ -277,5 +355,8 @@ func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 //
 // This options is exactly the same as `httprc.WithWaitReady()`
 func WithWaitReady(v bool) RegisterOption {
-	return &registerOption{option.New(identWaitReady{}, v)}
+	if v {
+		return trueWithWaitReady
+	}
+	return falseWithWaitReady
 }

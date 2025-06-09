@@ -26,13 +26,14 @@ go_library(
         "//transform",
         "//internal/json",
         "//internal/pool",
+        "//internal/tokens",
         "//jwa",
         "//jwe",
         "//jwk",
         "//jws",
         "//jwt/internal/types",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_option//:option",
+        "@com_github_lestrrat_go_option_v2//:option",
     ],
 )
 

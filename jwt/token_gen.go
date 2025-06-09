@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
@@ -412,9 +413,9 @@ LOOP:
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
 			// get either '{' or '}' here.
-			if tok == '}' { // End of object
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
-			} else if tok != '{' {
+			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '{', but got '%c'`, tok)
 			}
 		case string: // Objects can only have string keys
@@ -611,21 +612,21 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 }
 
 func (t stdToken) MarshalJSON() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	pairs, err := t.makePairs()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
 	}
-	buf.WriteByte('{')
+	buf.WriteByte(tokens.OpenCurlyBracket)
 
 	for i, pair := range pairs {
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	putClaimPairList(pairs)

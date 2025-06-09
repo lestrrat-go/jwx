@@ -690,10 +690,17 @@ func TestWithBase64Encoder(t *testing.T) {
 		signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), key), jwt.WithBase64Encoder(base64.URLEncoding))
 		require.NoError(t, err, `jwt.Sign should succeed`)
 
-		parsed := openid.New()
-		_, err = jwt.Parse(signed, jwt.WithToken(parsed), jwt.WithKey(jwa.ES256(), key.PublicKey), jwt.WithBase64Encoder(base64.URLEncoding))
-		require.NoError(t, err, `jwt.Parse should succeed`)
-		require.Equal(t, tok, parsed, `parsed token should match original`)
+		t.Run("Parse as jwt.Token", func(t *testing.T) {
+			parsed, err := jwt.Parse(signed, jwt.WithKey(jwa.ES256(), key.PublicKey), jwt.WithBase64Encoder(base64.URLEncoding))
+			require.NoError(t, err, `jwt.Parse should succeed`)
+			require.IsType(t, jwt.New(), parsed, `parsed token should match original`)
+		})
+		t.Run("Parse as openid.Token", func(t *testing.T) {
+			parsed := openid.New()
+			_, err = jwt.Parse(signed, jwt.WithToken(parsed), jwt.WithKey(jwa.ES256(), key.PublicKey), jwt.WithBase64Encoder(base64.URLEncoding))
+			require.NoError(t, err, `jwt.Parse should succeed`)
+			require.Equal(t, tok, parsed, `parsed token should match original`)
+		})
 	})
 	t.Run("Contributed Test Case", func(t *testing.T) {
 		key, err := jwxtest.GenerateEcdsaKey(jwa.P256())

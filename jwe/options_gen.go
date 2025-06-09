@@ -5,9 +5,10 @@ package jwe
 import (
 	"context"
 	"io/fs"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -17,6 +18,12 @@ type CompactOption interface {
 	Option
 	compactOption()
 }
+
+var compactOptionListPool = option.NewSetPool[CompactOption](
+	&sync.Pool{New: func() any { return option.NewSet[CompactOption]() }},
+)
+
+func CompactOptionListPool() *option.SetPool[CompactOption] { return compactOptionListPool }
 
 type compactOption struct {
 	Option
@@ -30,6 +37,12 @@ type DecryptOption interface {
 	decryptOption()
 }
 
+var decryptOptionListPool = option.NewSetPool[DecryptOption](
+	&sync.Pool{New: func() any { return option.NewSet[DecryptOption]() }},
+)
+
+func DecryptOptionListPool() *option.SetPool[DecryptOption] { return decryptOptionListPool }
+
 type decryptOption struct {
 	Option
 }
@@ -41,6 +54,14 @@ type EncryptDecryptOption interface {
 	Option
 	encryptOption()
 	decryptOption()
+}
+
+var encryptDecryptOptionListPool = option.NewSetPool[EncryptDecryptOption](
+	&sync.Pool{New: func() any { return option.NewSet[EncryptDecryptOption]() }},
+)
+
+func EncryptDecryptOptionListPool() *option.SetPool[EncryptDecryptOption] {
+	return encryptDecryptOptionListPool
 }
 
 type encryptDecryptOption struct {
@@ -57,6 +78,12 @@ type EncryptOption interface {
 	encryptOption()
 }
 
+var encryptOptionListPool = option.NewSetPool[EncryptOption](
+	&sync.Pool{New: func() any { return option.NewSet[EncryptOption]() }},
+)
+
+func EncryptOptionListPool() *option.SetPool[EncryptOption] { return encryptOptionListPool }
+
 type encryptOption struct {
 	Option
 }
@@ -68,6 +95,14 @@ type GlobalDecryptOption interface {
 	Option
 	globalOption()
 	decryptOption()
+}
+
+var globalDecryptOptionListPool = option.NewSetPool[GlobalDecryptOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalDecryptOption]() }},
+)
+
+func GlobalDecryptOptionListPool() *option.SetPool[GlobalDecryptOption] {
+	return globalDecryptOptionListPool
 }
 
 type globalDecryptOption struct {
@@ -84,6 +119,12 @@ type GlobalOption interface {
 	globalOption()
 }
 
+var globalOptionListPool = option.NewSetPool[GlobalOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalOption]() }},
+)
+
+func GlobalOptionListPool() *option.SetPool[GlobalOption] { return globalOptionListPool }
+
 type globalOption struct {
 	Option
 }
@@ -95,6 +136,12 @@ type ParseOption interface {
 	Option
 	readFileOption()
 }
+
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
 
 type parseOption struct {
 	Option
@@ -108,6 +155,12 @@ type ReadFileOption interface {
 	readFileOption()
 }
 
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
+
 type readFileOption struct {
 	Option
 }
@@ -120,6 +173,12 @@ type WithJSONSuboption interface {
 	withJSONSuboption()
 }
 
+var withJSONSuboptionListPool = option.NewSetPool[WithJSONSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithJSONSuboption]() }},
+)
+
+func WithJSONSuboptionListPool() *option.SetPool[WithJSONSuboption] { return withJSONSuboptionListPool }
+
 type withJSONSuboption struct {
 	Option
 }
@@ -130,6 +189,14 @@ func (*withJSONSuboption) withJSONSuboption() {}
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()
+}
+
+var withKeySetSuboptionListPool = option.NewSetPool[WithKeySetSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithKeySetSuboption]() }},
+)
+
+func WithKeySetSuboptionListPool() *option.SetPool[WithKeySetSuboption] {
+	return withKeySetSuboptionListPool
 }
 
 type withKeySetSuboption struct {
@@ -313,11 +380,17 @@ func WithMaxPBES2Count(v int) GlobalOption {
 	return &globalOption{option.New(identMaxPBES2Count{}, v)}
 }
 
+var trueWithMergeProtectedHeaders = &encryptOption{option.New(identMergeProtectedHeaders{}, true)}
+var falseWithMergeProtectedHeaders = &encryptOption{option.New(identMergeProtectedHeaders{}, false)}
+
 // WithMergeProtectedHeaders specify that when given multiple headers
 // as options to `jwe.Encrypt`, these headers should be merged instead
 // of overwritten
 func WithMergeProtectedHeaders(v bool) EncryptOption {
-	return &encryptOption{option.New(identMergeProtectedHeaders{}, v)}
+	if v {
+		return trueWithMergeProtectedHeaders
+	}
+	return falseWithMergeProtectedHeaders
 }
 
 // WithMessage provides a message object to be populated by `jwe.Decrypt`
@@ -327,18 +400,32 @@ func WithMessage(v *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, v)}
 }
 
+var trueWithPretty = &withJSONSuboption{option.New(identPretty{}, true)}
+var falseWithPretty = &withJSONSuboption{option.New(identPretty{}, false)}
+
 // WithPretty specifies whether the JSON output should be formatted and
 // indented
 func WithPretty(v bool) WithJSONSuboption {
-	return &withJSONSuboption{option.New(identPretty{}, v)}
+	if v {
+		return trueWithPretty
+	}
+	return falseWithPretty
 }
+
+var trueWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, true)}
+var falseWithRequireKid = &withKeySetSuboption{option.New(identRequireKid{}, false)}
 
 // WithRequiredKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWE message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {
-	return &withKeySetSuboption{option.New(identRequireKid{}, v)}
+	if v {
+		return trueWithRequireKid
+	}
+	return falseWithRequireKid
 }
+
+var valWithCompact = &encryptOption{option.New(identSerialization{}, fmtCompact)}
 
 // WithCompact specifies that the result of `jwe.Encrypt()` is serialized in
 // compact format.
@@ -346,5 +433,5 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // By default `jwe.Encrypt()` will opt to use compact format, so you usually
 // do not need to specify this option other than to be explicit about it
 func WithCompact() EncryptOption {
-	return &encryptOption{option.New(identSerialization{}, fmtCompact)}
+	return valWithCompact
 }
