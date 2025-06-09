@@ -33,8 +33,8 @@ def go_dependencies():
         name = "com_github_lestrrat_go_blackmagic",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/lestrrat-go/blackmagic",
-        sum = "h1:94HXkVLxkZO9vJI/w2u1T0DAoprShFd13xtnSINtDWs=",
-        version = "v1.0.3",
+        sum = "h1:IwQibdnf8l2KoO+qC3uT4OaTWsW7tuRQXy9TRN9QanA=",
+        version = "v1.0.4",
     )
     go_repository(
         name = "com_github_lestrrat_go_httpcc",
