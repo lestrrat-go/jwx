@@ -5,8 +5,9 @@ package jws
 import (
 	"context"
 	"io/fs"
+	"sync"
 
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -16,6 +17,12 @@ type CompactOption interface {
 	Option
 	compactOption()
 }
+
+var compactOptionListPool = option.NewSetPool[CompactOption](
+	&sync.Pool{New: func() any { return option.NewSet[CompactOption]() }},
+)
+
+func CompactOptionListPool() *option.SetPool[CompactOption] { return compactOptionListPool }
 
 type compactOption struct {
 	Option
@@ -29,6 +36,12 @@ type ParseOption interface {
 	readFileOption()
 }
 
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
+
 type parseOption struct {
 	Option
 }
@@ -41,6 +54,12 @@ type ReadFileOption interface {
 	readFileOption()
 }
 
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
+
 type readFileOption struct {
 	Option
 }
@@ -52,6 +71,12 @@ type SignOption interface {
 	Option
 	signOption()
 }
+
+var signOptionListPool = option.NewSetPool[SignOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignOption]() }},
+)
+
+func SignOptionListPool() *option.SetPool[SignOption] { return signOptionListPool }
 
 type signOption struct {
 	Option
@@ -67,6 +92,14 @@ type SignVerifyCompactOption interface {
 	verifyOption()
 	compactOption()
 	parseOption()
+}
+
+var signVerifyCompactOptionListPool = option.NewSetPool[SignVerifyCompactOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyCompactOption]() }},
+)
+
+func SignVerifyCompactOptionListPool() *option.SetPool[SignVerifyCompactOption] {
+	return signVerifyCompactOptionListPool
 }
 
 type signVerifyCompactOption struct {
@@ -89,6 +122,12 @@ type SignVerifyOption interface {
 	parseOption()
 }
 
+var signVerifyOptionListPool = option.NewSetPool[SignVerifyOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyOption]() }},
+)
+
+func SignVerifyOptionListPool() *option.SetPool[SignVerifyOption] { return signVerifyOptionListPool }
+
 type signVerifyOption struct {
 	Option
 }
@@ -105,6 +144,14 @@ type SignVerifyParseOption interface {
 	verifyOption()
 	parseOption()
 	readFileOption()
+}
+
+var signVerifyParseOptionListPool = option.NewSetPool[SignVerifyParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignVerifyParseOption]() }},
+)
+
+func SignVerifyParseOptionListPool() *option.SetPool[SignVerifyParseOption] {
+	return signVerifyParseOptionListPool
 }
 
 type signVerifyParseOption struct {
@@ -126,6 +173,12 @@ type VerifyOption interface {
 	parseOption()
 }
 
+var verifyOptionListPool = option.NewSetPool[VerifyOption](
+	&sync.Pool{New: func() any { return option.NewSet[VerifyOption]() }},
+)
+
+func VerifyOptionListPool() *option.SetPool[VerifyOption] { return verifyOptionListPool }
+
 type verifyOption struct {
 	Option
 }
@@ -140,6 +193,12 @@ type WithJSONSuboption interface {
 	withJSONSuboption()
 }
 
+var withJSONSuboptionListPool = option.NewSetPool[WithJSONSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithJSONSuboption]() }},
+)
+
+func WithJSONSuboptionListPool() *option.SetPool[WithJSONSuboption] { return withJSONSuboptionListPool }
+
 type withJSONSuboption struct {
 	Option
 }
@@ -150,6 +209,14 @@ func (*withJSONSuboption) withJSONSuboption() {}
 type WithKeySetSuboption interface {
 	Option
 	withKeySetSuboption()
+}
+
+var withKeySetSuboptionListPool = option.NewSetPool[WithKeySetSuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithKeySetSuboption]() }},
+)
+
+func WithKeySetSuboptionListPool() *option.SetPool[WithKeySetSuboption] {
+	return withKeySetSuboptionListPool
 }
 
 type withKeySetSuboption struct {
@@ -164,6 +231,12 @@ type WithKeySuboption interface {
 	Option
 	withKeySuboption()
 }
+
+var withKeySuboptionListPool = option.NewSetPool[WithKeySuboption](
+	&sync.Pool{New: func() any { return option.NewSet[WithKeySuboption]() }},
+)
+
+func WithKeySuboptionListPool() *option.SetPool[WithKeySuboption] { return withKeySuboptionListPool }
 
 type withKeySuboption struct {
 	Option

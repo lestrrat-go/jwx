@@ -5,9 +5,10 @@ package jwk
 import (
 	"crypto"
 	"io/fs"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -16,6 +17,12 @@ type AssignKeyIDOption interface {
 	Option
 	assignKeyIDOption()
 }
+
+var assignKeyIDOptionListPool = option.NewSetPool[AssignKeyIDOption](
+	&sync.Pool{New: func() any { return option.NewSet[AssignKeyIDOption]() }},
+)
+
+func AssignKeyIDOptionListPool() *option.SetPool[AssignKeyIDOption] { return assignKeyIDOptionListPool }
 
 type assignKeyIDOption struct {
 	Option
@@ -29,6 +36,12 @@ type CacheOption interface {
 	Option
 	cacheOption()
 }
+
+var cacheOptionListPool = option.NewSetPool[CacheOption](
+	&sync.Pool{New: func() any { return option.NewSet[CacheOption]() }},
+)
+
+func CacheOptionListPool() *option.SetPool[CacheOption] { return cacheOptionListPool }
 
 type cacheOption struct {
 	Option
@@ -45,6 +58,12 @@ type FetchOption interface {
 	parseOption()
 	registerOption()
 }
+
+var fetchOptionListPool = option.NewSetPool[FetchOption](
+	&sync.Pool{New: func() any { return option.NewSet[FetchOption]() }},
+)
+
+func FetchOptionListPool() *option.SetPool[FetchOption] { return fetchOptionListPool }
 
 type fetchOption struct {
 	Option
@@ -63,6 +82,12 @@ type GlobalOption interface {
 	globalOption()
 }
 
+var globalOptionListPool = option.NewSetPool[GlobalOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalOption]() }},
+)
+
+func GlobalOptionListPool() *option.SetPool[GlobalOption] { return globalOptionListPool }
+
 type globalOption struct {
 	Option
 }
@@ -78,6 +103,12 @@ type ParseOption interface {
 	registerOption()
 	readFileOption()
 }
+
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
 
 type parseOption struct {
 	Option
@@ -95,6 +126,12 @@ type ReadFileOption interface {
 	readFileOption()
 }
 
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
+
 type readFileOption struct {
 	Option
 }
@@ -107,6 +144,14 @@ type RegisterFetchOption interface {
 	fetchOption()
 	registerOption()
 	parseOption()
+}
+
+var registerFetchOptionListPool = option.NewSetPool[RegisterFetchOption](
+	&sync.Pool{New: func() any { return option.NewSet[RegisterFetchOption]() }},
+)
+
+func RegisterFetchOptionListPool() *option.SetPool[RegisterFetchOption] {
+	return registerFetchOptionListPool
 }
 
 type registerFetchOption struct {
@@ -125,6 +170,12 @@ type RegisterOption interface {
 	registerOption()
 }
 
+var registerOptionListPool = option.NewSetPool[RegisterOption](
+	&sync.Pool{New: func() any { return option.NewSet[RegisterOption]() }},
+)
+
+func RegisterOptionListPool() *option.SetPool[RegisterOption] { return registerOptionListPool }
+
 type registerOption struct {
 	Option
 }
@@ -137,6 +188,12 @@ type ResourceOption interface {
 	Option
 	resourceOption()
 }
+
+var resourceOptionListPool = option.NewSetPool[ResourceOption](
+	&sync.Pool{New: func() any { return option.NewSet[ResourceOption]() }},
+)
+
+func ResourceOptionListPool() *option.SetPool[ResourceOption] { return resourceOptionListPool }
 
 type resourceOption struct {
 	Option

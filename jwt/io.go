@@ -3,6 +3,7 @@
 package jwt
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 )
@@ -22,10 +23,12 @@ func ReadFile(path string, options ...ReadFileOption) (Token, error) {
 	}
 
 	var srcFS fs.FS = sysFS{}
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identFS{}:
-			srcFS = option.Value().(fs.FS)
+			if err := opt.Value(&srcFS); err != nil {
+				return nil, fmt.Errorf("jwt.ReadFile: %s", err.Error())
+			}
 		}
 	}
 

@@ -64,18 +64,31 @@ func Validate(t Token, options ...ValidateOption) error {
 		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identClock{}:
-			clock = o.Value().(Clock)
+			if err := o.Value(&clock); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WitClock: %w`, err)
+			}
 		case identAcceptableSkew{}:
-			skew = o.Value().(time.Duration)
+			if err := o.Value(&skew); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WithAcceptableSkew: %w`, err)
+			}
 		case identTruncation{}:
-			trunc = o.Value().(time.Duration)
+			if err := o.Value(&trunc); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WithTruncation: %w`, err)
+			}
 		case identContext{}:
 			//nolint:fatcontext
-			ctx = o.Value().(context.Context)
+			if err := o.Value(&ctx); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WithContext: %w`, err)
+			}
 		case identResetValidators{}:
-			resetValidators = o.Value().(bool)
+			if err := o.Value(&resetValidators); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WithResetValidators: %w`, err)
+			}
 		case identValidator{}:
-			v := o.Value().(Validator)
+			var v Validator
+			if err := o.Value(&v); err != nil {
+				return fmt.Errorf(`jwt.Validate: invalid value for WithValidator: %w`, err)
+			}
 			switch v := v.(type) {
 			case *isInTimeRange:
 				if v.c1 != "" {

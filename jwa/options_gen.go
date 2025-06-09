@@ -2,7 +2,11 @@
 
 package jwa
 
-import "github.com/lestrrat-go/option"
+import (
+	"sync"
+
+	"github.com/lestrrat-go/option/v2"
+)
 
 type Option = option.Interface
 
@@ -12,6 +16,14 @@ type NewAlgorithmOption interface {
 	newSignatureAlgorithmOption()
 	newKeyEncryptionAlgorithmOption()
 	newSignatureKeyEncryptionAlgorithmOption()
+}
+
+var newAlgorithmOptionListPool = option.NewSetPool[NewAlgorithmOption](
+	&sync.Pool{New: func() any { return option.NewSet[NewAlgorithmOption]() }},
+)
+
+func NewAlgorithmOptionListPool() *option.SetPool[NewAlgorithmOption] {
+	return newAlgorithmOptionListPool
 }
 
 type newAlgorithmOption struct {
@@ -30,6 +42,14 @@ type NewKeyEncryptionAlgorithmOption interface {
 	newKeyEncryptionAlgorithmOption()
 }
 
+var newKeyEncryptionAlgorithmOptionListPool = option.NewSetPool[NewKeyEncryptionAlgorithmOption](
+	&sync.Pool{New: func() any { return option.NewSet[NewKeyEncryptionAlgorithmOption]() }},
+)
+
+func NewKeyEncryptionAlgorithmOptionListPool() *option.SetPool[NewKeyEncryptionAlgorithmOption] {
+	return newKeyEncryptionAlgorithmOptionListPool
+}
+
 type newKeyEncryptionAlgorithmOption struct {
 	Option
 }
@@ -40,6 +60,14 @@ func (*newKeyEncryptionAlgorithmOption) newKeyEncryptionAlgorithmOption() {}
 type NewSignatureAlgorithmOption interface {
 	Option
 	newSignatureAlgorithmOption()
+}
+
+var newSignatureAlgorithmOptionListPool = option.NewSetPool[NewSignatureAlgorithmOption](
+	&sync.Pool{New: func() any { return option.NewSet[NewSignatureAlgorithmOption]() }},
+)
+
+func NewSignatureAlgorithmOptionListPool() *option.SetPool[NewSignatureAlgorithmOption] {
+	return newSignatureAlgorithmOptionListPool
 }
 
 type newSignatureAlgorithmOption struct {
@@ -54,6 +82,14 @@ type NewSignatureKeyEncryptionAlgorithmOption interface {
 	Option
 	newSignatureAlgorithmOption()
 	newKeyEncryptionAlgorithmOption()
+}
+
+var newSignatureKeyEncryptionAlgorithmOptionListPool = option.NewSetPool[NewSignatureKeyEncryptionAlgorithmOption](
+	&sync.Pool{New: func() any { return option.NewSet[NewSignatureKeyEncryptionAlgorithmOption]() }},
+)
+
+func NewSignatureKeyEncryptionAlgorithmOptionListPool() *option.SetPool[NewSignatureKeyEncryptionAlgorithmOption] {
+	return newSignatureKeyEncryptionAlgorithmOptionListPool
 }
 
 type newSignatureKeyEncryptionAlgorithmOption struct {

@@ -139,8 +139,8 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 	}
 
 	for _, option := range s.options {
-		pc, ok := option.Value().(interface{ Protected(jws.Headers) jws.Headers })
-		if !ok {
+		var pc interface{ Protected(jws.Headers) jws.Headers }
+		if err := option.Value(&pc); err != nil {
 			continue
 		}
 		hdrs := pc.Protected(jws.NewHeaders())
@@ -161,22 +161,20 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 }
 
 func (s *Serializer) Sign(options ...SignOption) *Serializer {
-	var soptions []jws.SignOption
-	if l := len(options); l > 0 {
-		// we need to from SignOption to Option because ... reasons
-		// (todo: when go1.18 prevails, use type parameters
-		rawoptions := make([]Option, l)
-		for i, option := range options {
-			rawoptions[i] = option
-		}
+	src := SignOptionListPool().Get()
+	defer SignOptionListPool().Put(src)
 
-		converted, err := toSignOptions(rawoptions...)
-		if err != nil {
-			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Sign: failed to convert options into jws.SignOption: %w`, err)})
-		}
-		soptions = converted
+	for _, option := range options {
+		src.Add(option)
 	}
-	return s.sign(soptions...)
+
+	dst := jws.SignOptionListPool().Get()
+	defer jws.SignOptionListPool().Put(dst)
+
+	if err := convertToJwsSignOption(src, dst); err != nil {
+		return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Sign: failed to convert options into jws.SignOption: %w`, err)})
+	}
+	return s.sign(dst.List()...)
 }
 
 func (s *Serializer) sign(options ...jws.SignOption) *Serializer {

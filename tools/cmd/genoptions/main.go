@@ -141,6 +141,7 @@ func genOptions(objects *Objects) error {
 
 	imports := append(objects.Imports, []string{
 		`io/fs`, // for some reason without this the goimports in my environment tries to import a differnet package
+		`github.com/lestrrat-go/option/v2`,
 		`github.com/lestrrat-go/jwx/v3/jwa`,
 		`github.com/lestrrat-go/jwx/v3/jwe`,
 		`github.com/lestrrat-go/jwx/v3/jwk`,
@@ -171,6 +172,12 @@ func genOptions(objects *Objects) error {
 			o.L(`%s()`, method)
 		}
 		o.L(`}`)
+
+		o.LL(`var %sListPool = option.NewSetPool[%s](`, xstrings.LcFirst(iface.Name), iface.Name)
+		o.L(`&sync.Pool{New: func() any { return option.NewSet[%s]() } },`, iface.Name)
+		o.L(`)`)
+
+		o.LL(`func %[1]sListPool() *option.SetPool[%[1]s] { return %[2]sListPool }`, iface.Name, xstrings.LcFirst(iface.Name))
 
 		o.LL(`type %s struct {`, iface.ConcreteType)
 		o.L(`Option`)

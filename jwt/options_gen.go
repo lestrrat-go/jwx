@@ -6,11 +6,12 @@ import (
 	"context"
 	"io/fs"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface
@@ -20,6 +21,12 @@ type EncryptOption interface {
 	Option
 	encryptOption()
 }
+
+var encryptOptionListPool = option.NewSetPool[EncryptOption](
+	&sync.Pool{New: func() any { return option.NewSet[EncryptOption]() }},
+)
+
+func EncryptOptionListPool() *option.SetPool[EncryptOption] { return encryptOptionListPool }
 
 type encryptOption struct {
 	Option
@@ -32,6 +39,12 @@ type GlobalOption interface {
 	Option
 	globalOption()
 }
+
+var globalOptionListPool = option.NewSetPool[GlobalOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalOption]() }},
+)
+
+func GlobalOptionListPool() *option.SetPool[GlobalOption] { return globalOptionListPool }
 
 type globalOption struct {
 	Option
@@ -46,6 +59,14 @@ type GlobalValidateOption interface {
 	parseOption()
 	readFileOption()
 	validateOption()
+}
+
+var globalValidateOptionListPool = option.NewSetPool[GlobalValidateOption](
+	&sync.Pool{New: func() any { return option.NewSet[GlobalValidateOption]() }},
+)
+
+func GlobalValidateOptionListPool() *option.SetPool[GlobalValidateOption] {
+	return globalValidateOptionListPool
 }
 
 type globalValidateOption struct {
@@ -69,6 +90,12 @@ type ParseOption interface {
 	readFileOption()
 }
 
+var parseOptionListPool = option.NewSetPool[ParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[ParseOption]() }},
+)
+
+func ParseOptionListPool() *option.SetPool[ParseOption] { return parseOptionListPool }
+
 type parseOption struct {
 	Option
 }
@@ -82,6 +109,12 @@ type ReadFileOption interface {
 	Option
 	readFileOption()
 }
+
+var readFileOptionListPool = option.NewSetPool[ReadFileOption](
+	&sync.Pool{New: func() any { return option.NewSet[ReadFileOption]() }},
+)
+
+func ReadFileOptionListPool() *option.SetPool[ReadFileOption] { return readFileOptionListPool }
 
 type readFileOption struct {
 	Option
@@ -97,6 +130,14 @@ type SignEncryptParseOption interface {
 	encryptOption()
 	readFileOption()
 	signOption()
+}
+
+var signEncryptParseOptionListPool = option.NewSetPool[SignEncryptParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignEncryptParseOption]() }},
+)
+
+func SignEncryptParseOptionListPool() *option.SetPool[SignEncryptParseOption] {
+	return signEncryptParseOptionListPool
 }
 
 type signEncryptParseOption struct {
@@ -118,6 +159,12 @@ type SignOption interface {
 	signOption()
 }
 
+var signOptionListPool = option.NewSetPool[SignOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignOption]() }},
+)
+
+func SignOptionListPool() *option.SetPool[SignOption] { return signOptionListPool }
+
 type signOption struct {
 	Option
 }
@@ -132,6 +179,12 @@ type SignParseOption interface {
 	parseOption()
 	readFileOption()
 }
+
+var signParseOptionListPool = option.NewSetPool[SignParseOption](
+	&sync.Pool{New: func() any { return option.NewSet[SignParseOption]() }},
+)
+
+func SignParseOptionListPool() *option.SetPool[SignParseOption] { return signParseOptionListPool }
 
 type signParseOption struct {
 	Option
@@ -152,6 +205,12 @@ type ValidateOption interface {
 	readFileOption()
 	validateOption()
 }
+
+var validateOptionListPool = option.NewSetPool[ValidateOption](
+	&sync.Pool{New: func() any { return option.NewSet[ValidateOption]() }},
+)
+
+func ValidateOptionListPool() *option.SetPool[ValidateOption] { return validateOptionListPool }
 
 type validateOption struct {
 	Option

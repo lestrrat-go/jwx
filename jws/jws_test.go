@@ -65,23 +65,23 @@ func TestSanity(t *testing.T) {
 
 		payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
 
-		signed, err := jws.Sign(
-			payload,
-			jws.WithJSON(),
-			jws.WithKey(jwa.HS256(), key1),
-			jws.WithKey(jwa.RS256(), key2),
-			jws.WithKey(jwa.ES256(), key3),
-		)
+		options := jws.SignOptionListPool().Get()
+		defer jws.SignOptionListPool().Put(options)
+		options.Add(jws.WithJSON())
+		options.Add(jws.WithKey(jwa.HS256(), key1))
+		options.Add(jws.WithKey(jwa.RS256(), key2))
+		options.Add(jws.WithKey(jwa.ES256(), key3))
+		signed, err := jws.Sign(payload, options.List()...)
 		require.NoError(t, err, `jws.Sign should succeed`)
 
 		t.Run("error type when parse fails", func(t *testing.T) {
 			// try to verify a malformed jws message
-			_, err = jws.Verify(
-				[]byte(`this.is.not.a.ws.message`),
-				jws.WithKey(jwa.HS256(), key1),
-				jws.WithKey(jwa.RS256(), key2),
-				jws.WithKey(jwa.ES256(), key3),
-			)
+			options := jws.VerifyOptionListPool().Get()
+			defer jws.VerifyOptionListPool().Put(options)
+			options.Add(jws.WithKey(jwa.HS256(), key1))
+			options.Add(jws.WithKey(jwa.RS256(), key2))
+			options.Add(jws.WithKey(jwa.ES256(), key3))
+			_, err = jws.Verify([]byte(`this.is.not.a.ws.message`), options.List()...)
 			require.Error(t, err, `jws.Verify should fail`)
 
 			// this should return true because it's an error returned from jws.Verify

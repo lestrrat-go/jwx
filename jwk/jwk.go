@@ -199,20 +199,29 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
-	for _, option := range options {
+	for _, opt := range options {
 		//nolint:forcetypeassert
-		switch option.Ident() {
+		switch opt.Ident() {
 		case identPEM{}:
-			parsePEM = option.Value().(bool)
+			if err := opt.Value(&parsePEM); err != nil {
+				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithParsePEM: %w`, err)
+			}
 		case identPEMDecoder{}:
-			pemDecoder = option.Value().(PEMDecoder)
+			if err := opt.Value(&pemDecoder); err != nil {
+				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithPEMDecoder: %w`, err)
+			}
 		case identLocalRegistry{}:
 			// in reality you can only pass either withLocalRegistry or
 			// WithTypedField, but since withLocalRegistry is used only by us,
 			// we skip checking
-			localReg = option.Value().(*json.Registry)
+			if err := opt.Value(&localReg); err != nil {
+				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithLocalRegistry: %w`, err)
+			}
 		case identTypedField{}:
-			pair := option.Value().(typedFieldPair)
+			var pair typedFieldPair
+			if err := opt.Value(&pair); err != nil {
+				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithTypedField: %w`, err)
+			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -280,17 +289,26 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var localReg *json.Registry
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
-	for _, option := range options {
+	for _, opt := range options {
 		//nolint:forcetypeassert
-		switch option.Ident() {
+		switch opt.Ident() {
 		case identPEM{}:
-			parsePEM = option.Value().(bool)
+			if err := opt.Value(&parsePEM); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithParsePEM: %w`, err)
+			}
 		case identPEMDecoder{}:
-			pemDecoder = option.Value().(PEMDecoder)
+			if err := opt.Value(&pemDecoder); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithPEMDecoder: %w`, err)
+			}
 		case identIgnoreParseError{}:
-			ignoreParseError = option.Value().(bool)
+			if err := opt.Value(&ignoreParseError); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithIgnoreParseError: %w`, err)
+			}
 		case identTypedField{}:
-			pair := option.Value().(typedFieldPair)
+			var pair typedFieldPair
+			if err := opt.Value(&pair); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithTypedField: %w`, err)
+			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -380,7 +398,9 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
-			hash = option.Value().(crypto.Hash)
+			if err := option.Value(&hash); err != nil {
+				return fmt.Errorf(`jwk.AssignKeyID: invalid value for WithThumbprintHash: %w`, err)
+			}
 		}
 	}
 
@@ -615,7 +635,10 @@ func Configure(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
-			v := option.Value().(bool)
+			var v bool
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Errorf(`jwk.Configure: invalid value for WithStrictKeyUsage: %w`, err))
+			}
 			strictKeyUsagePtr = &v
 		}
 	}

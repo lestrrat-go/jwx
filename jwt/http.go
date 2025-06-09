@@ -18,7 +18,9 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	for _, option := range options {
 		switch option.Ident() {
 		case identCookie{}:
-			dst = option.Value().(**http.Cookie)
+			if err := option.Value(&dst); err != nil {
+				return nil, fmt.Errorf(`jwt.ParseCookie: invalid value for WithCookie: %w`, err)
+			}
 		}
 	}
 
@@ -104,11 +106,23 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHeaderKey{}:
-			hdrkeys = append(hdrkeys, option.Value().(string))
+			var hdrkey string
+			if err := option.Value(&hdrkey); err != nil {
+				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithHeaderKey: %w`, err)
+			}
+			hdrkeys = append(hdrkeys, hdrkey)
 		case identFormKey{}:
-			formkeys = append(formkeys, option.Value().(string))
+			var formkey string
+			if err := option.Value(&formkey); err != nil {
+				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithFormKey: %w`, err)
+			}
+			formkeys = append(formkeys, formkey)
 		case identCookieKey{}:
-			cookiekeys = append(cookiekeys, option.Value().(string))
+			var cookiekey string
+			if err := option.Value(&cookiekey); err != nil {
+				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithCookieKey: %w`, err)
+			}
+			cookiekeys = append(cookiekeys, cookiekey)
 		default:
 			parseOptions = append(parseOptions, option)
 		}
