@@ -45,6 +45,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/option/v2"
 )
 
 var registry = json.NewRegistry()
@@ -192,7 +193,7 @@ type signContext struct {
 	signers        []*payloadSigner
 	noneSigner     *payloadSigner
 	payload        []byte
-	compactOptions []CompactOption
+	compactOptions *option.Set[CompactOption]
 }
 
 var signContextPool = pool.New(allocSignContext, destroySignContext)
@@ -206,7 +207,7 @@ func allocSignContext() interface{} {
 		signers:        make([]*payloadSigner, 0, 1),
 		noneSigner:     nil,
 		payload:        nil,
-		compactOptions: make([]CompactOption, 0, 1),
+		compactOptions: CompactOptionListPool().Get(),
 	}
 }
 
@@ -221,7 +222,7 @@ func destroySignContext(ctx *signContext) {
 	ctx.signers = ctx.signers[:0] // clear the slice, but do not reallocate
 	ctx.noneSigner = nil
 	ctx.payload = nil
-	ctx.compactOptions = ctx.compactOptions[:0] // clear the slice, but do not reallocate
+	ctx.compactOptions.Reset()
 }
 
 var msgPool = pool.New(allocMessage, destroyMessage)
@@ -322,7 +323,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if err := option.Value(&sc.payload); err != nil {
 				return fmt.Errorf(`invalid value for WithDetachedPayload: %w`, err)
 			}
-			sc.compactOptions = append(sc.compactOptions, WithDetached(true))
+			sc.compactOptions.Add(WithDetached(true))
 			sc.detached = true
 		case identValidateKey{}:
 			if err := option.Value(&sc.validateKey); err != nil {
@@ -332,10 +333,10 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if err := option.Value(&sc.encoder); err != nil {
 				return fmt.Errorf(`invalid value for WithBase64Encoder: %w`, err)
 			}
-			sc.compactOptions = append(sc.compactOptions, WithBase64Encoder(sc.encoder))
+			sc.compactOptions.Add(WithBase64Encoder(sc.encoder))
 		default:
 			if cop, ok := option.(CompactOption); ok {
-				sc.compactOptions = append(sc.compactOptions, cop)
+				sc.compactOptions.Add(cop)
 			}
 		}
 	}
@@ -399,7 +400,7 @@ func (sc *signContext) Do() ([]byte, error) {
 	case fmtJSONPretty:
 		return json.MarshalIndent(result, "", "  ")
 	case fmtCompact:
-		return Compact(result, sc.compactOptions...)
+		return Compact(result, sc.compactOptions.List()...)
 	default:
 		return nil, errInvalidSerializationFormat
 	}
