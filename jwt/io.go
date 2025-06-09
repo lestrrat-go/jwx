@@ -15,10 +15,11 @@ func (sysFS) Open(path string) (fs.File, error) {
 }
 
 func ReadFile(path string, options ...ReadFileOption) (Token, error) {
-	var parseOptions []ParseOption
+	parseOptions := ParseOptionListPool().Get()
+	defer ParseOptionListPool().Put(parseOptions)
 	for _, option := range options {
 		if po, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, po)
+			parseOptions.Add(po)
 		}
 	}
 
@@ -38,5 +39,5 @@ func ReadFile(path string, options ...ReadFileOption) (Token, error) {
 	}
 
 	defer f.Close()
-	return ParseReader(f, parseOptions...)
+	return ParseReader(f, parseOptions.List()...)
 }

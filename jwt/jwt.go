@@ -315,10 +315,8 @@ func parse(ctx *parseContext, data []byte) (Token, error) {
 	// second clause is for when we just want to parse the JWT out of the
 	// payload, and we don't care about the signature.
 	if !ctx.skipVerification && ctx.verifyOpts.Len() > 0 {
-		options := make([]jws.VerifyOption, 0, ctx.verifyOpts.Len()+1)
-		options = append(options, jws.WithCompact())
-		options = append(options, ctx.verifyOpts.List()...)
-		verified, err := jws.Verify(data, options...)
+		ctx.verifyOpts.Add(jws.WithCompact())
+		verified, err := jws.Verify(data, ctx.verifyOpts.List()...)
 		if err == nil {
 			payload = verified
 			goto UNMARSHAL_TOKEN
