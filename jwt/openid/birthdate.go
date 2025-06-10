@@ -80,7 +80,7 @@ var birthdateRx = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})$`)
 // Accepts a value read from JSON, and converts it to a BirthdateClaim.
 // This method DOES NOT verify the correctness of a date.
 // Consumers should check for validity of dates such as Apr 31 et al
-func (b *BirthdateClaim) Accept(v interface{}) error {
+func (b *BirthdateClaim) Accept(v any) error {
 	b.year = nil
 	b.month = nil
 	b.day = nil

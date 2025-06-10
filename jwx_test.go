@@ -32,7 +32,7 @@ type jsonUnmarshalWrapper struct {
 	buf []byte
 }
 
-func (w jsonUnmarshalWrapper) Decode(v interface{}) error {
+func (w jsonUnmarshalWrapper) Decode(v any) error {
 	return json.Unmarshal(w.buf, v)
 }
 
@@ -51,7 +51,7 @@ func TestDecoderSetting(t *testing.T) {
 			// json.NewDecoder must be called AFTER the above jwx.DecoderSettings call
 			decoders := []struct {
 				Name    string
-				Decoder interface{ Decode(interface{}) error }
+				Decoder interface{ Decode(any) error }
 			}{
 				{Name: "Decoder", Decoder: json.NewDecoder(strings.NewReader(src))},
 				{Name: "Unmarshal", Decoder: jsonUnmarshalWrapper{buf: []byte(src)}},
@@ -59,7 +59,7 @@ func TestDecoderSetting(t *testing.T) {
 
 			for _, tc := range decoders {
 				t.Run(tc.Name, func(t *testing.T) {
-					var m map[string]interface{}
+					var m map[string]any
 					require.NoError(t, tc.Decoder.Decode(&m), `Decode should succeed`)
 
 					v, ok := m["foo"]
@@ -94,7 +94,7 @@ func TestJoseCompatibility(t *testing.T) {
 	t.Run("jwk", func(t *testing.T) {
 		testcases := []struct {
 			Name      string
-			Raw       interface{}
+			Raw       any
 			Template  string
 			VerifyKey func(context.Context, *testing.T, jwk.Key)
 		}{
@@ -472,34 +472,34 @@ func TestGH996(t *testing.T) {
 	testcases := []struct {
 		Name                    string
 		Algorithm               jwa.SignatureAlgorithm
-		ValidSigningKeys        []interface{}
-		InvalidSigningKeys      []interface{}
-		ValidVerificationKeys   []interface{}
-		InvalidVerificationKeys []interface{}
+		ValidSigningKeys        []any
+		InvalidSigningKeys      []any
+		ValidVerificationKeys   []any
+		InvalidVerificationKeys []any
 	}{
 		{
 			Name:                    `ECDSA`,
 			Algorithm:               jwa.ES256(),
-			ValidSigningKeys:        []interface{}{ecdsaKey},
-			InvalidSigningKeys:      []interface{}{rsaKey, okpKey, symmetricKey},
-			ValidVerificationKeys:   []interface{}{ecdsaKey.PublicKey},
-			InvalidVerificationKeys: []interface{}{rsaKey.PublicKey, okpKey.Public(), symmetricKey},
+			ValidSigningKeys:        []any{ecdsaKey},
+			InvalidSigningKeys:      []any{rsaKey, okpKey, symmetricKey},
+			ValidVerificationKeys:   []any{ecdsaKey.PublicKey},
+			InvalidVerificationKeys: []any{rsaKey.PublicKey, okpKey.Public(), symmetricKey},
 		},
 		{
 			Name:                    `RSA`,
 			Algorithm:               jwa.RS256(),
-			ValidSigningKeys:        []interface{}{rsaKey},
-			InvalidSigningKeys:      []interface{}{ecdsaKey, okpKey, symmetricKey},
-			ValidVerificationKeys:   []interface{}{rsaKey.PublicKey},
-			InvalidVerificationKeys: []interface{}{ecdsaKey.PublicKey, okpKey.Public(), symmetricKey},
+			ValidSigningKeys:        []any{rsaKey},
+			InvalidSigningKeys:      []any{ecdsaKey, okpKey, symmetricKey},
+			ValidVerificationKeys:   []any{rsaKey.PublicKey},
+			InvalidVerificationKeys: []any{ecdsaKey.PublicKey, okpKey.Public(), symmetricKey},
 		},
 		{
 			Name:                    `OKP`,
 			Algorithm:               jwa.EdDSA(),
-			ValidSigningKeys:        []interface{}{okpKey},
-			InvalidSigningKeys:      []interface{}{ecdsaKey, rsaKey, symmetricKey},
-			ValidVerificationKeys:   []interface{}{okpKey.Public()},
-			InvalidVerificationKeys: []interface{}{ecdsaKey.PublicKey, rsaKey.PublicKey, symmetricKey},
+			ValidSigningKeys:        []any{okpKey},
+			InvalidSigningKeys:      []any{ecdsaKey, rsaKey, symmetricKey},
+			ValidVerificationKeys:   []any{okpKey.Public()},
+			InvalidVerificationKeys: []any{ecdsaKey.PublicKey, rsaKey.PublicKey, symmetricKey},
 		},
 	}
 

@@ -47,7 +47,7 @@ func yaml2json(fn string) ([]byte, error) {
 	}
 	defer in.Close()
 
-	var v interface{}
+	var v any
 	if err := yaml.NewDecoder(in).Decode(&v); err != nil {
 		return nil, fmt.Errorf(`failed to decode %q: %w`, fn, err)
 	}

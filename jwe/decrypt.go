@@ -36,8 +36,8 @@ type decrypter struct {
 	keysalt     []byte
 	keytag      []byte
 	tag         []byte
-	privkey     interface{}
-	pubkey      interface{}
+	privkey     any
+	pubkey      any
 	ctalg       jwa.ContentEncryptionAlgorithm
 	keyalg      jwa.KeyEncryptionAlgorithm
 	cipher      content_crypt.Cipher
@@ -52,7 +52,7 @@ type decrypter struct {
 // *rsa.PrivateKey, instead of jwk.Key)
 //
 // You should consider this object immutable once you assign values to it.
-func newDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey interface{}) *decrypter {
+func newDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey any) *decrypter {
 	return &decrypter{
 		ctalg:   ctalg,
 		keyalg:  keyalg,
@@ -112,7 +112,7 @@ func (d *decrypter) KeyTag(keytag []byte) *decrypter {
 
 // PublicKey sets the public key to be used in decoding EC based encryptions.
 // The key must be in its "raw" format (i.e. *ecdsa.PublicKey, instead of jwk.Key)
-func (d *decrypter) PublicKey(pubkey interface{}) *decrypter {
+func (d *decrypter) PublicKey(pubkey any) *decrypter {
 	d.pubkey = pubkey
 	return d
 }

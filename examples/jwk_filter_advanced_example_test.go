@@ -34,7 +34,7 @@ func Example_jwk_filter_advanced_use_cases() {
 	prodJWK.Set("contactEmail", "security@company.com")
 	prodJWK.Set("purpose", "payment-processing")
 	prodJWK.Set("dataTypes", []string{"pii", "financial", "authentication"})
-	prodJWK.Set("compliance", map[string]interface{}{
+	prodJWK.Set("compliance", map[string]any{
 		"pci-dss": "level-1",
 		"sox":     true,
 		"gdpr":    true,
@@ -66,7 +66,7 @@ func Example_jwk_filter_advanced_use_cases() {
 	devJWK.Set("contactEmail", "dev@company.com")
 	devJWK.Set("purpose", "testing")
 	devJWK.Set("dataTypes", []string{"test-data", "mock-data"})
-	devJWK.Set("compliance", map[string]interface{}{
+	devJWK.Set("compliance", map[string]any{
 		"pci-dss": "not-applicable",
 		"sox":     false,
 		"gdpr":    false,
@@ -98,7 +98,7 @@ func Example_jwk_filter_advanced_use_cases() {
 	stagingJWK.Set("contactEmail", "qa@company.com")
 	stagingJWK.Set("purpose", "integration-testing")
 	stagingJWK.Set("dataTypes", []string{"sanitized-production-data"})
-	stagingJWK.Set("compliance", map[string]interface{}{
+	stagingJWK.Set("compliance", map[string]any{
 		"pci-dss": "level-3",
 		"sox":     true,
 		"gdpr":    true,

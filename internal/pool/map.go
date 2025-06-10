@@ -2,18 +2,18 @@ package pool
 
 var mapPool = New(allocMap, destroyMap)
 
-func Map() *Pool[*map[string]interface{}] {
+func Map() *Pool[*map[string]any] {
 	return mapPool
 }
 
-func allocMap() interface{} {
-	m := make(map[string]interface{})
+func allocMap() any {
+	m := make(map[string]any)
 	return &m
 }
 
-func destroyMap(m *map[string]interface{}) {
+func destroyMap(m *map[string]any) {
 	if len(*m) > 16 {
-		*m = make(map[string]interface{})
+		*m = make(map[string]any)
 		return
 	}
 

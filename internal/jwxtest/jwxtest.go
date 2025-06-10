@@ -154,7 +154,7 @@ func WriteFile(dir, template string, src io.Reader) (string, func(), error) {
 	return file.Name(), cleanup, nil
 }
 
-func WriteJSONFile(dir, template string, v interface{}) (string, func(), error) {
+func WriteJSONFile(dir, template string, v any) (string, func(), error) {
 	var buf bytes.Buffer
 
 	enc := json.NewEncoder(&buf)
@@ -172,11 +172,11 @@ func DumpFile(t *testing.T, file string) {
 		// Looks like a JSON-like thing. Dump that in a formatted manner, and
 		// be done with it
 
-		var v interface{}
+		var v any
 		if isHash {
-			v = map[string]interface{}{}
+			v = map[string]any{}
 		} else {
-			v = []interface{}{}
+			v = []any{}
 		}
 
 		require.NoError(t, json.Unmarshal(buf, &v), `failed to parse contents as JSON`)
@@ -261,7 +261,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	var rawkey interface{}
+	var rawkey any
 	if err := jwk.Export(key, &rawkey); err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
@@ -275,7 +275,7 @@ func EncryptJweFile(ctx context.Context, dir string, payload []byte, keyalg jwa.
 		return "", nil, fmt.Errorf(`failed to parse keyfile %s: %w`, keyfile, err)
 	}
 
-	var keyif interface{}
+	var keyif any
 
 	switch keyalg {
 	case jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
@@ -317,7 +317,7 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	var rawkey, pubkey interface{}
+	var rawkey, pubkey any
 	if err := jwk.Export(key, &rawkey); err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}

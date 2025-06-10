@@ -29,8 +29,8 @@ func TestHeader(t *testing.T) {
 
 	data := []struct {
 		Key      string
-		Value    interface{}
-		Expected interface{}
+		Value    any
+		Expected any
 		Method   string
 	}{
 		{
@@ -99,13 +99,13 @@ func TestHeader(t *testing.T) {
 		h := jws.NewHeaders()
 
 		for _, k := range base.Keys() {
-			var v interface{}
+			var v any
 			require.NoError(t, base.Get(k, &v), `base.Get should succeed for key %#v`, k)
 			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
 		}
 		for _, tc := range data {
-			var values []interface{}
-			var viaGet interface{}
+			var values []any
+			var viaGet any
 			require.NoError(t, h.Get(tc.Key, &viaGet), `h.Get should succeed`)
 			values = append(values, viaGet)
 
@@ -130,13 +130,13 @@ func TestHeader(t *testing.T) {
 	t.Run("PrivateParams", func(t *testing.T) {
 		h := base
 
-		var v interface{}
+		var v any
 		require.NoError(t, h.Get(`private`, &v), `h.Get should succeed`)
 		require.Equal(t, v, "boofoo", "value for 'private' should match")
 	})
 
 	t.Run("Iterator", func(t *testing.T) {
-		expected := map[string]interface{}{}
+		expected := map[string]any{}
 		for _, tc := range data {
 			v := tc.Value
 			if expected := tc.Expected; expected != nil {
@@ -147,10 +147,10 @@ func TestHeader(t *testing.T) {
 
 		h := base
 		t.Run("Iterate", func(t *testing.T) {
-			seen := make(map[string]interface{})
+			seen := make(map[string]any)
 			for _, k := range h.Keys() {
-				var v interface{}
-				var getV interface{}
+				var v any
+				var getV any
 				require.NoError(t, h.Get(k, &v), `h.Get should succeed`)
 				require.NoError(t, h.Get(k, &getV), `v.Get should succeed`)
 				require.Equal(t, v, getV, `pair.Value should match value from v.Get()`)

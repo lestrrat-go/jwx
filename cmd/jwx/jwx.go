@@ -63,7 +63,7 @@ func main() {
 	}
 }
 
-func dumpJSON(dst io.Writer, v interface{}) error {
+func dumpJSON(dst io.Writer, v any) error {
 	buf, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return fmt.Errorf(`failed to serialize to JSON: %w`, err)

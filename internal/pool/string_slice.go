@@ -6,7 +6,7 @@ func StringSlice() *Pool[*[]string] {
 	return stringSlicePool
 }
 
-func allocStringSlice() interface{} {
+func allocStringSlice() any {
 	ret := make([]string, 0, 16)
 	return &ret
 }

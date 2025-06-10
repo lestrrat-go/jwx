@@ -52,7 +52,7 @@ var registry = json.NewRegistry()
 
 type payloadSigner struct {
 	signer    Signer
-	key       interface{}
+	key       any
 	protected Headers
 	public    Headers
 }
@@ -82,7 +82,7 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
-func initSigner(ps *payloadSigner, alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) error {
+func initSigner(ps *payloadSigner, alg jwa.SignatureAlgorithm, key any, public, protected Headers) error {
 	muSigner.Lock()
 	signer, ok := signers[alg]
 	if !ok {
@@ -115,7 +115,7 @@ const (
 var _ = fmtInvalid
 var _ = fmtMax
 
-func validateKeyBeforeUse(key interface{}) error {
+func validateKeyBeforeUse(key any) error {
 	jwkKey, ok := key.(jwk.Key)
 	if !ok {
 		converted, err := jwk.Import(key)
@@ -198,7 +198,7 @@ type signContext struct {
 
 var signContextPool = pool.New(allocSignContext, destroySignContext)
 
-func allocSignContext() interface{} {
+func allocSignContext() any {
 	return &signContext{
 		format:         fmtCompact,
 		detached:       false,
@@ -227,7 +227,7 @@ func destroySignContext(ctx *signContext) {
 
 var msgPool = pool.New(allocMessage, destroyMessage)
 
-func allocMessage() interface{} {
+func allocMessage() any {
 	return &Message{
 		payload:    nil,
 		signatures: make([]*Signature, 0, 1),
@@ -246,7 +246,7 @@ func destroyMessage(msg *Message) {
 
 var signaturePool = pool.New(allocSignature, destroySignature)
 
-func allocSignature() interface{} {
+func allocSignature() any {
 	return &Signature{}
 }
 
@@ -260,7 +260,7 @@ func destroySignature(sig *Signature) {
 
 var payloadSignerPool = pool.New(allocPayloadSigner, destroyPayloadSigner)
 
-func allocPayloadSigner() interface{} {
+func allocPayloadSigner() any {
 	return &payloadSigner{}
 }
 
@@ -476,7 +476,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	var dst *Message
 	var detachedPayload []byte
 	var keyProviders []KeyProvider
-	var keyUsed interface{}
+	var keyUsed any
 	var validateKey bool
 	var encoder Base64Encoder = base64.DefaultEncoder()
 
@@ -990,7 +990,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 
@@ -1026,7 +1026,7 @@ func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 // be used for a given key. It only takes in consideration keys/algorithms
 // for verification purposes, as this is the only usage where one may need
 // dynamically figure out which method to use.
-func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
+func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	var kty jwa.KeyType
 	switch key := key.(type) {
 	case jwk.Key:
@@ -1062,7 +1062,7 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 //
 // Notes: symmetric keys are obviously not part of this. for v2 OKP keys,
 // x25519 does not implement Sign()
-func isValidRSAKey(key interface{}) bool {
+func isValidRSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ecdsa.PrivateKey, *ecdsa.PrivateKey,
@@ -1074,7 +1074,7 @@ func isValidRSAKey(key interface{}) bool {
 	return true
 }
 
-func isValidECDSAKey(key interface{}) bool {
+func isValidECDSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ed25519.PrivateKey,
@@ -1086,7 +1086,7 @@ func isValidECDSAKey(key interface{}) bool {
 	return true
 }
 
-func isValidEDDSAKey(key interface{}) bool {
+func isValidEDDSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ecdsa.PrivateKey, *ecdsa.PrivateKey,

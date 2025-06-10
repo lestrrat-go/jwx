@@ -11,7 +11,7 @@ func TestStringList_Accept(t *testing.T) {
 	t.Parallel()
 
 	var x types.StringList
-	interfaceList := make([]interface{}, 0)
+	interfaceList := make([]any, 0)
 	interfaceList = append(interfaceList, "first")
 	interfaceList = append(interfaceList, "second")
 	require.NoError(t, x.Accept(interfaceList), "failed to convert []interface{} into StringList")

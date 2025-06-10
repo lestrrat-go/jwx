@@ -14,6 +14,6 @@ func destroyBytesBuffer(b *bytes.Buffer) {
 	b.Reset()
 }
 
-func allocBytesBuffer() interface{} {
+func allocBytesBuffer() any {
 	return &bytes.Buffer{}
 }

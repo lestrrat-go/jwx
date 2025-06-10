@@ -362,7 +362,7 @@ func audienceClaimContainsString(value string) Validator {
 
 type claimValueIs struct {
 	name    string
-	value   interface{}
+	value   any
 	makeErr func(string, ...any) error
 }
 
@@ -370,7 +370,7 @@ type claimValueIs struct {
 // matches `value`. The comparison is done using a simple `==` comparison,
 // and therefore complex comparisons may fail using this code. If you
 // need to do more, use a custom Validator.
-func ClaimValueIs(name string, value interface{}) Validator {
+func ClaimValueIs(name string, value any) Validator {
 	return &claimValueIs{
 		name:    name,
 		value:   value,
@@ -379,7 +379,7 @@ func ClaimValueIs(name string, value interface{}) Validator {
 }
 
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
-	var v interface{}
+	var v any
 	if err := t.Get(cv.name, &v); err != nil {
 		return cv.makeErr(`claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
 	}

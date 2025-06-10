@@ -43,8 +43,8 @@ var certChainSrc = []string{
 }
 
 type keyDef struct {
-	Expected interface{}
-	Value    interface{}
+	Expected any
+	Value    any
 	Method   string
 }
 
@@ -121,7 +121,7 @@ func complimentDef(def map[string]keyDef) map[string]keyDef {
 }
 
 func makeKeyJSON(def map[string]keyDef) []byte {
-	data := map[string]interface{}{}
+	data := map[string]any{}
 	for k, v := range def {
 		data[k] = v.Value
 	}
@@ -141,7 +141,7 @@ func expectBase64(kdef keyDef) keyDef {
 	return kdef
 }
 
-func expectedRawKeyType(key jwk.Key) interface{} {
+func expectedRawKeyType(key jwk.Key) any {
 	switch key := key.(type) {
 	case jwk.RSAPrivateKey:
 		return &rsa.PrivateKey{}
@@ -194,7 +194,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
 			t.Run(k, func(t *testing.T) {
-				var getval interface{}
+				var getval any
 				require.NoError(t, key.Get(k, &getval), `key.Get(%s) should succeed`, k)
 
 				expected := kdef.Expected
@@ -254,8 +254,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 						}
 					}
 
-					var v interface{}
-					var v2 interface{}
+					var v any
+					var v2 any
 					require.NoError(t, key.Get(k, &v), `key.Get(%s) should succeed`, k)
 					require.NoError(t, newkey.Get(k, &v2), `newkey.Get(%s) should succeed`, k)
 					require.Equal(t, v, v2, `values should match`)
@@ -266,7 +266,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Raw", func(t *testing.T) {
 		typ := expectedRawKeyType(key)
 
-		var rawkey interface{}
+		var rawkey any
 		require.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`)
 		require.IsType(t, rawkey, typ, `raw key should be of this type`)
 	})
@@ -294,7 +294,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 
 		for _, k := range key.Keys() {
-			var v interface{}
+			var v any
 			require.NoError(t, key.Get(k, &v), `key.Get should succeed`)
 			require.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
 		}
@@ -348,13 +348,13 @@ func TestParse(t *testing.T) {
 			t.Run("Raw", func(t *testing.T) {
 				t.Helper()
 
-				var irawkey interface{}
+				var irawkey any
 				require.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`)
 
 				isPrivate, err := jwk.IsPrivateKey(key)
 				require.NoError(t, err, "jwk.IsPrivateKey(%T) should succeed", key)
 
-				var crawkey interface{}
+				var crawkey any
 				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&rsa.PrivateKey) should be true`)
@@ -415,7 +415,7 @@ func TestParse(t *testing.T) {
 			})
 		})
 		t.Run("ParseRawKey", func(t *testing.T) {
-			var v interface{}
+			var v any
 			require.NoError(t, jwk.ParseRawKey([]byte(src), &v), `jwk.ParseRawKey should succeed`)
 		})
 	}
@@ -662,7 +662,7 @@ func TestAccept(t *testing.T) {
 	t.Run("KeyOperation", func(t *testing.T) {
 		t.Parallel()
 		testcases := []struct {
-			Args  interface{}
+			Args  any
 			Error bool
 		}{
 			{
@@ -675,7 +675,7 @@ func TestAccept(t *testing.T) {
 				Args: jwk.KeyOperationList{jwk.KeyOpSign, jwk.KeyOpVerify, jwk.KeyOpEncrypt, jwk.KeyOpDecrypt, jwk.KeyOpWrapKey, jwk.KeyOpUnwrapKey},
 			},
 			{
-				Args: []interface{}{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
+				Args: []any{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
 			},
 			{
 				Args: []string{"sign", "verify", "encrypt", "decrypt", "wrapKey", "unwrapKey"},
@@ -698,7 +698,7 @@ func TestAccept(t *testing.T) {
 	t.Run("KeyUsage", func(t *testing.T) {
 		t.Parallel()
 		testcases := []struct {
-			Args  interface{}
+			Args  any
 			Error bool
 		}{
 			{Args: jwk.ForSignature},
@@ -761,7 +761,7 @@ func TestPublicKeyOf(t *testing.T) {
 	require.NoError(t, err, `generating raw X25519 key should succeed`)
 
 	keys := []struct {
-		Key           interface{}
+		Key           any
 		PublicKeyType reflect.Type
 	}{
 		{
@@ -834,7 +834,7 @@ func TestPublicKeyOf(t *testing.T) {
 			require.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey)
 
 			// Get the raw key to compare
-			var rawKey interface{}
+			var rawKey any
 			require.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		})
@@ -876,7 +876,7 @@ func TestPublicKeyOf(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("key%d", i), kid, `KeyID() should match for %T`, setKey)
 
 			// Get the raw key to compare
-			var rawKey interface{}
+			var rawKey any
 			require.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		}
@@ -1280,7 +1280,7 @@ func TestCustomField(t *testing.T) {
 
 	// XXX has global effect!!!
 	jwk.RegisterCustomField(rfc3339Key, time.Time{})
-	jwk.RegisterCustomField(rfc1123Key, jwk.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+	jwk.RegisterCustomField(rfc1123Key, jwk.CustomDecodeFunc(func(data []byte) (any, error) {
 		var s string
 		if err := json.Unmarshal(data, &s); err != nil {
 			return nil, err
@@ -1386,12 +1386,12 @@ func TestTypedFields(t *testing.T) {
 	testcases := []struct {
 		Name        string
 		Options     []jwk.ParseOption
-		PostProcess func(*testing.T, interface{}) (*typedField, error)
+		PostProcess func(*testing.T, any) (*typedField, error)
 	}{
 		{
 			Name:    "Basic",
 			Options: []jwk.ParseOption{jwk.WithTypedField("typed-field", typedField{})},
-			PostProcess: func(t *testing.T, field interface{}) (*typedField, error) {
+			PostProcess: func(t *testing.T, field any) (*typedField, error) {
 				t.Helper()
 				v, ok := field.(typedField)
 				if !ok {
@@ -1403,7 +1403,7 @@ func TestTypedFields(t *testing.T) {
 		{
 			Name:    "json.RawMessage",
 			Options: []jwk.ParseOption{jwk.WithTypedField("typed-field", json.RawMessage{})},
-			PostProcess: func(t *testing.T, field interface{}) (*typedField, error) {
+			PostProcess: func(t *testing.T, field any) (*typedField, error) {
 				t.Helper()
 				v, ok := field.(json.RawMessage)
 				if !ok {
@@ -1428,7 +1428,7 @@ func TestTypedFields(t *testing.T) {
 				t.Run(tc.Name, func(t *testing.T) {
 					got, err := jwk.ParseKey(serialized, tc.Options...)
 					require.NoError(t, err, `jwk.Parse should succeed`)
-					var v interface{}
+					var v any
 					require.NoError(t, got.Get("typed-field", &v), `got.Get() should succeed`)
 
 					field, err := tc.PostProcess(t, v)
@@ -1456,7 +1456,7 @@ func TestTypedFields(t *testing.T) {
 				for i := range got.Len() {
 					key, ok := got.Key(i)
 					require.True(t, ok, `got.Key() should succeed`)
-					var v interface{}
+					var v any
 					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
 					field, err := tc.PostProcess(t, v)
 					require.NoError(t, err, `tc.PostProcess should succeed`)
@@ -1596,7 +1596,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 			require.NoError(t, err, `jwk.Parse should succeed`)
 			require.Equal(t, 3, set.Len(), `set.Len() should be 3`)
 
-			var v interface{}
+			var v any
 			require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`)
 
 			require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)
@@ -1618,7 +1618,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 		set := jwk.NewSet()
 		require.NoError(t, set.Set(`renewal_kid`, `foo`), `set.Set should succeed`)
 
-		var v interface{}
+		var v any
 		require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should succeed`)
 
 		require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)

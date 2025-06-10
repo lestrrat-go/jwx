@@ -82,7 +82,7 @@ type Signer interface {
 	// for `jwa.RSXXX` and `jwa.PSXXX` types, you need to pass the
 	// `*"crypto/rsa".PrivateKey` type.
 	// Check the documentation for each signer for details
-	Sign([]byte, interface{}) ([]byte, error)
+	Sign([]byte, any) ([]byte, error)
 
 	Algorithm() jwa.SignatureAlgorithm
 }
@@ -95,7 +95,7 @@ type Verifier interface {
 	// for `jwa.RSXXX` and `jwa.PSXXX` types, you need to pass the
 	// `*"crypto/rsa".PublicKey` type.
 	// Check the documentation for each verifier for details
-	Verify(payload []byte, signature []byte, key interface{}) error
+	Verify(payload []byte, signature []byte, key any) error
 }
 
 type HMACVerifier struct {

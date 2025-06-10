@@ -42,7 +42,7 @@ func init() {
 	jwk.RegisterKeyExporter(jwa.EC(), jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
 
-func convertShangMiSm2(key interface{}) (jwk.Key, error) {
+func convertShangMiSm2(key any) (jwk.Key, error) {
 	shangmi2pk, ok := key.(*sm2.PrivateKey)
 	if !ok {
 		return nil, fmt.Errorf("invalid SM2 private key")
@@ -50,7 +50,7 @@ func convertShangMiSm2(key interface{}) (jwk.Key, error) {
 	return jwk.Import(shangmi2pk.PrivateKey)
 }
 
-func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) {
+func convertJWKToShangMiSm2(key jwk.Key, hint any) (any, error) {
 	ecdsaKey, ok := key.(jwk.ECDSAPrivateKey)
 	if !ok {
 		return nil, fmt.Errorf(`invalid key type %T: %w`, key, jwk.ContinueError())
@@ -60,7 +60,7 @@ func convertJWKToShangMiSm2(key jwk.Key, hint interface{}) (interface{}, error) 
 	}
 
 	switch hint.(type) {
-	case *sm2.PrivateKey, *interface{}:
+	case *sm2.PrivateKey, *any:
 	default:
 		return nil, fmt.Errorf(`can only convert SM2 key to *sm2.PrivateKey (got %T): %w`, hint, jwk.ContinueError())
 	}
@@ -130,7 +130,7 @@ func Example_shang_mi_sm2() {
 	}
 
 	{ // Can do the same thing for interface{}
-		var clone interface{}
+		var clone any
 		if err := jwk.Export(shangmi2JWK, &clone); err != nil {
 			fmt.Printf("failed to create ShangMi private key from jwk.Key (via interface{}): %s\n", err)
 			return

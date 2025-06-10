@@ -141,7 +141,7 @@ func convertToJwsVerifyOpts(src *option.Set[ParseOption], dst *option.Set[jws.Ve
 
 type withKey struct {
 	alg     jwa.KeyAlgorithm
-	key     interface{}
+	key     any
 	options []Option
 }
 
@@ -159,7 +159,7 @@ type withKey struct {
 // In the above example, the creation of the option via `jwt.WithKey()` will work, but
 // when `jwt.Sign()` is called, the fact that you passed JWE suboptions will be
 // detected, and an error will occur.
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, suboptions ...Option) SignEncryptParseOption {
+func WithKey(alg jwa.KeyAlgorithm, key any, suboptions ...Option) SignEncryptParseOption {
 	return &signEncryptParseOption{option.New(identKey{}, &withKey{
 		alg:     alg,
 		key:     key,
@@ -169,7 +169,7 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, suboptions ...Option) SignEn
 
 type withKeySet struct {
 	set     jwk.Set
-	options []interface{}
+	options []any
 }
 
 // WithKeySet forces the Parse method to verify the JWT message
@@ -196,7 +196,7 @@ type withKeySet struct {
 //
 // If you have only one key in the set, and are sure you want to
 // use that key, you can use the `jwt.WithDefaultKey` option.
-func WithKeySet(set jwk.Set, options ...interface{}) ParseOption {
+func WithKeySet(set jwk.Set, options ...any) ParseOption {
 	return &parseOption{option.New(identKeySet{}, &withKeySet{
 		set:     set,
 		options: options,
@@ -230,7 +230,7 @@ func WithAudience(s string) ValidateOption {
 }
 
 // WithClaimValue specifies the expected value for a given claim
-func WithClaimValue(name string, v interface{}) ValidateOption {
+func WithClaimValue(name string, v any) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
 }
 
@@ -257,7 +257,7 @@ func WithClaimValue(name string, v interface{}) ValidateOption {
 // parsing mechanism. For example, while tokens obtained from `jwt.New()` and
 // `openid.New()` will respect this option, if you provide your own custom
 // token type, it will need to implement the TokenWithDecodeCtx interface.
-func WithTypedClaim(name string, object interface{}) ParseOption {
+func WithTypedClaim(name string, object any) ParseOption {
 	return &parseOption{option.New(identTypedClaim{}, claimPair{Name: name, Value: object})}
 }
 

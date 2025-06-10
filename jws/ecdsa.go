@@ -53,7 +53,7 @@ func (es ecdsaSigner) Algorithm() jwa.SignatureAlgorithm {
 	return es.alg
 }
 
-func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (es *ecdsaSigner) Sign(payload []byte, key any) ([]byte, error) {
 	if key == nil {
 		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
@@ -155,7 +155,7 @@ func (v ecdsaVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return v.alg
 }
 
-func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}) error {
+func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key any) error {
 	if key == nil {
 		return fmt.Errorf(`missing public key while verifying payload`)
 	}

@@ -240,7 +240,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	lmhdrs := len(mhdrs)
 	lmfrms := len(mfrms)
 	lmcookies := len(mcookies)
-	var errors []interface{}
+	var errors []any
 	if lmhdrs > 0 || lmfrms > 0 || lmcookies > 0 {
 		b.WriteString(". Additionally, errors were encountered during attempts to verify using:")
 

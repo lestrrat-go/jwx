@@ -89,7 +89,7 @@ func (w *keyEncrypterWrapper) EncryptKey(cek []byte) (keygen.ByteSource, error) 
 
 type recipientBuilder struct {
 	alg     jwa.KeyEncryptionAlgorithm
-	key     interface{}
+	key     any
 	headers Headers
 }
 
@@ -113,7 +113,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 			keyID = v
 		}
 
-		var raw interface{}
+		var raw any
 		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
@@ -559,7 +559,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var keyProviders []KeyProvider
-	var keyUsed interface{}
+	var keyUsed any
 	var cek *[]byte
 	var dst *Message
 	perCallMaxDecompressBufferSize := maxDecompressBufferSize
@@ -682,7 +682,7 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	return nil, fmt.Errorf(`failed to decrypt any of the recipients: %w`, errors.Join(errs...))
 }
 
-func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed interface{}) ([]byte, error) {
+func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed any) ([]byte, error) {
 	var tried int
 	var lastError error
 	for i, kp := range dctx.keyProviders {
@@ -717,9 +717,9 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed in
 	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
 }
 
-func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key interface{}, recipient Recipient) ([]byte, error) {
+func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
-		var raw interface{}
+		var raw any
 		if err := jwk.Export(jwkKey, &raw); err != nil {
 			return nil, fmt.Errorf(`failed to retrieve raw key from %T: %w`, key, err)
 		}
@@ -754,7 +754,7 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key inter
 
 	switch alg {
 	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-		var epk interface{}
+		var epk any
 		if err := h2.Get(EphemeralPublicKeyKey, &epk); err != nil {
 			return nil, fmt.Errorf(`failed to get 'epk' field: %w`, err)
 		}
@@ -766,7 +766,7 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key inter
 			}
 			dec.PublicKey(&pubkey)
 		case jwk.OKPPublicKey:
-			var pubkey interface{}
+			var pubkey any
 			if err := jwk.Export(epk, &pubkey); err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
@@ -1028,6 +1028,6 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }

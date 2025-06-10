@@ -108,7 +108,7 @@ func encodeHeaders(dst *[]byte, hdrs Headers, encoder Base64Encoder) error {
 	return nil
 }
 
-func setupSignatureHeader(h1, h2 Headers, alg jwa.SignatureAlgorithm, key interface{}) (Headers, error) {
+func setupSignatureHeader(h1, h2 Headers, alg jwa.SignatureAlgorithm, key any) (Headers, error) {
 	hdrs, err := mergeHeaders(h1, h2)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to merge headers: %w`, err)
@@ -137,7 +137,7 @@ func setupSignatureHeader(h1, h2 Headers, alg jwa.SignatureAlgorithm, key interf
 // The first return value is the raw signature in binary format.
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
-func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
+func (s *Signature) Sign(payload []byte, signer Signer, key any) ([]byte, []byte, error) {
 	encoder := s.encoder
 	if encoder == nil {
 		encoder = base64.DefaultEncoder()

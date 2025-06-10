@@ -31,7 +31,7 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
-func intToTime(v interface{}, t *time.Time) bool {
+func intToTime(v any, t *time.Time) bool {
 	var n int64
 	switch x := v.(type) {
 	case int64:
@@ -107,7 +107,7 @@ func parseNumericString(x string) (time.Time, error) {
 	return time.Unix(n, nsecs).UTC(), nil
 }
 
-func (n *NumericDate) Accept(v interface{}) error {
+func (n *NumericDate) Accept(v any) error {
 	var t time.Time
 	switch x := v.(type) {
 	case float32:
@@ -178,7 +178,7 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 }
 
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)
 	}

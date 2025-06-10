@@ -12,13 +12,13 @@ func (l StringList) Get() []string {
 	return []string(l)
 }
 
-func (l *StringList) Accept(v interface{}) error {
+func (l *StringList) Accept(v any) error {
 	switch x := v.(type) {
 	case string:
 		*l = StringList([]string{x})
 	case []string:
 		*l = StringList(x)
-	case []interface{}:
+	case []any:
 		list := make(StringList, len(x))
 		for i, e := range x {
 			if s, ok := e.(string); ok {
@@ -35,7 +35,7 @@ func (l *StringList) Accept(v interface{}) error {
 }
 
 func (l *StringList) UnmarshalJSON(data []byte) error {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal data: %w`, err)
 	}

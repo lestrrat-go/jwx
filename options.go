@@ -19,7 +19,7 @@ type jsonOption struct {
 
 func (o *jsonOption) isJSONOption() {}
 
-func newJSONOption(n interface{}, v interface{}) JSONOption {
+func newJSONOption(n any, v any) JSONOption {
 	return &jsonOption{option.New(n, v)}
 }
 

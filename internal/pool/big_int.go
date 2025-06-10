@@ -10,7 +10,7 @@ func BigInt() *Pool[*big.Int] {
 	return bigIntPool
 }
 
-func allocBigInt() interface{} {
+func allocBigInt() any {
 	return &big.Int{}
 }
 

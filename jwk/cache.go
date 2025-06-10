@@ -277,7 +277,7 @@ func (*cachedSet) Clear() error {
 }
 
 // Set is a no-op for `jwk.CachedSet`, as the `jwk.Set` should be treated read-only
-func (*cachedSet) Set(_ string, _ interface{}) error {
+func (*cachedSet) Set(_ string, _ any) error {
 	return fmt.Errorf(`(jwk.cachedSet).Set: jwk.CachedSet is immutable`)
 }
 
@@ -302,7 +302,7 @@ func (cs *cachedSet) Clone() (Set, error) {
 }
 
 // Get returns the value of non-Key field stored in the jwk.Set
-func (cs *cachedSet) Get(name string, dst interface{}) error {
+func (cs *cachedSet) Get(name string, dst any) error {
 	set, err := cs.cached()
 	if err != nil {
 		return err

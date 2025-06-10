@@ -195,7 +195,7 @@ type parseContext struct {
 
 var parseContextPool = pool.New(allocParseContext, destroyParseContext)
 
-func allocParseContext() interface{} {
+func allocParseContext() any {
 	return &parseContext{
 		validateOpts: ValidateOptionListPool().Get(),
 		verifyOpts:   jws.VerifyOptionListPool().Get(),
@@ -517,7 +517,7 @@ func (t *stdToken) Clone() (Token, error) {
 
 	dst.Options().Set(*(t.Options()))
 	for _, k := range t.Keys() {
-		var v interface{}
+		var v any
 		if err := t.Get(k, &v); err != nil {
 			return nil, fmt.Errorf(`jwt.Clone: failed to get %s: %w`, k, err)
 		}
@@ -567,7 +567,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 

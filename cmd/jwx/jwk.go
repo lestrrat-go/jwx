@@ -129,7 +129,7 @@ func makeJwkGenerateCmd() *cli.Command {
 	}
 
 	cmd.Action = func(c *cli.Context) error {
-		var rawkey interface{}
+		var rawkey any
 		typ, ok := jwa.LookupKeyType(c.String("type"))
 		if !ok {
 			return fmt.Errorf(`invalid key type %s`, c.String("type"))
@@ -196,7 +196,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		default:
 			return fmt.Errorf(`invalid key type %s`, typ)
 		}
-		var attrs map[string]interface{}
+		var attrs map[string]any
 		if tmpl := c.String("template"); tmpl != "" {
 			if err := json.Unmarshal([]byte(tmpl), &attrs); err != nil {
 				return fmt.Errorf(`failed to unmarshal template: %w`, err)

@@ -70,8 +70,8 @@ type Headers interface {
 	// an error if the field does not exist, or if the value cannot be assigned to
 	// the destination variable. Note that a field is considered to "exist" even if
 	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
-	Get(string, interface{}) error
-	Set(string, interface{}) error
+	Get(string, any) error
+	Set(string, any) error
 	Remove(string) error
 	// Has returns true if the specified header has a value, even if
 	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
@@ -107,14 +107,14 @@ type stdHeaders struct {
 	x509CertThumbprint     *string
 	x509CertThumbprintS256 *string
 	x509URL                *string
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 }
 
 func NewHeaders() Headers {
 	return &stdHeaders{
 		mu:            &sync.RWMutex{},
-		privateParams: map[string]interface{}{},
+		privateParams: map[string]any{},
 	}
 }
 
@@ -244,7 +244,7 @@ func (h *stdHeaders) X509URL() (string, bool) {
 	return *(h.x509URL), true
 }
 
-func (h *stdHeaders) PrivateParams() map[string]interface{} {
+func (h *stdHeaders) PrivateParams() map[string]any {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.privateParams
@@ -292,7 +292,7 @@ func (h *stdHeaders) Has(name string) bool {
 	}
 }
 
-func (h *stdHeaders) Get(name string, dst interface{}) error {
+func (h *stdHeaders) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -420,13 +420,13 @@ func (h *stdHeaders) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *stdHeaders) Set(name string, value interface{}) error {
+func (h *stdHeaders) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *stdHeaders) setNoLock(name string, value interface{}) error {
+func (h *stdHeaders) setNoLock(name string, value any) error {
 	switch name {
 	case AgreementPartyUInfoKey:
 		if v, ok := value.([]byte); ok {
@@ -529,7 +529,7 @@ func (h *stdHeaders) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -772,7 +772,7 @@ func (h *stdHeaders) Keys() []string {
 }
 
 func (h stdHeaders) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	keys := make([]string, 0, 16+len(h.privateParams))
 	h.mu.RLock()
 	if h.agreementPartyUInfo != nil {

@@ -45,7 +45,7 @@ type ByteKey []byte
 // proper values in the JWE headers
 type ByteWithECPublicKey struct {
 	ByteKey
-	PublicKey interface{}
+	PublicKey any
 }
 
 type ByteWithIVAndTag struct {
@@ -68,5 +68,5 @@ type ByteSource interface {
 }
 
 type Setter interface {
-	Set(string, interface{}) error
+	Set(string, any) error
 }

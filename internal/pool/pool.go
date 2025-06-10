@@ -9,10 +9,10 @@ type Pool[T any] struct {
 	destructor func(T)
 }
 
-func New[T any](allocator func() interface{}, destructor func(T)) *Pool[T] {
+func New[T any](allocator func() any, destructor func(T)) *Pool[T] {
 	return &Pool[T]{
 		pool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return allocator()
 			},
 		},

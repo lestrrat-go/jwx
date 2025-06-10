@@ -33,7 +33,7 @@ func WithJSON(options ...WithJSONSuboption) SignVerifyParseOption {
 
 type withKey struct {
 	alg       jwa.KeyAlgorithm
-	key       interface{}
+	key       any
 	protected Headers
 	public    Headers
 }
@@ -94,7 +94,7 @@ func (w *withKey) Protected(v Headers) Headers {
 // `{"b64": false}`, then the payload is not base64 encoded.
 //
 // These suboptions are ignored when the `jws.WithKey()` option is used with `jws.Verify()`.
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) SignVerifyOption {
+func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) SignVerifyOption {
 	// Implementation note: this option is shared between Sign() and
 	// Verify(). As such we don't create a KeyProvider here because
 	// if used in Sign() we would be doing something else.

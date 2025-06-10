@@ -23,7 +23,7 @@ func TestES256K(t *testing.T) {
 	key, err := jwxtest.GenerateEcdsaKey(jwa.Secp256k1())
 	require.NoError(t, err, "ECDSA key generated")
 	jwkKey, _ := jwk.Import(key.PublicKey)
-	keys := map[string]interface{}{
+	keys := map[string]any{
 		"Verify(ecdsa.PublicKey)":  key.PublicKey,
 		"Verify(*ecdsa.PublicKey)": &key.PublicKey,
 		"Verify(jwk.Key)":          jwkKey,

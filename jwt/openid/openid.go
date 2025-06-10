@@ -20,7 +20,7 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
 	for _, k := range t.Keys() {
-		var v interface{}
+		var v any
 		if err := t.Get(k, &v); err != nil {
 			return nil, fmt.Errorf(`openid.Clone: failed to get %s: %w`, k, err)
 		}
@@ -48,6 +48,6 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 //
 //	bdayif, _ := token.Get(`x-birthday`)
 //	bday := bdayif.(time.Time)
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }

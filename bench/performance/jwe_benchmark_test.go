@@ -13,7 +13,7 @@ func BenchmarkJWE(b *testing.B) {
 	m, _ := jwe.Parse([]byte(s))
 	js, _ := json.Marshal(m)
 
-	var v interface{}
+	var v any
 
 	b.Run("Serialization", func(b *testing.B) {
 		b.Run("JSON", func(b *testing.B) {

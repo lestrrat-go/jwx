@@ -23,7 +23,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.NoError(t, token.Set(jwt.NotBeforeKey, expectedTime))
 		require.NoError(t, token.Set(jwt.JwtIDKey, "jwt-id-123"))
 
-		dst := make(map[string]interface{})
+		dst := make(map[string]any)
 		err := transform.AsMap(token, dst)
 		require.NoError(t, err, "AsMap should succeed")
 
@@ -48,12 +48,12 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.NoError(t, token.Set("custom_claim", "custom_value"))
 		require.NoError(t, token.Set("user_role", "admin"))
 		require.NoError(t, token.Set("permissions", []string{"read", "write", "delete"}))
-		require.NoError(t, token.Set("metadata", map[string]interface{}{
+		require.NoError(t, token.Set("metadata", map[string]any{
 			"version": "1.0",
 			"source":  "test",
 		}))
 
-		dst := make(map[string]interface{})
+		dst := make(map[string]any)
 		err := transform.AsMap(token, dst)
 		require.NoError(t, err, "AsMap should succeed")
 
@@ -66,7 +66,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.Equal(t, "admin", dst["user_role"])
 		require.Equal(t, []string{"read", "write", "delete"}, dst["permissions"])
 
-		metadata, ok := dst["metadata"].(map[string]interface{})
+		metadata, ok := dst["metadata"].(map[string]any)
 		require.True(t, ok, "metadata should be a map")
 		require.Equal(t, "1.0", metadata["version"])
 		require.Equal(t, "test", metadata["source"])
@@ -75,7 +75,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 	t.Run("Empty JWT Token", func(t *testing.T) {
 		token := jwt.New()
 
-		dst := make(map[string]interface{})
+		dst := make(map[string]any)
 		err := transform.AsMap(token, dst)
 		require.NoError(t, err, "AsMap should succeed for empty token")
 
@@ -87,7 +87,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		token := jwt.New()
 		require.NoError(t, token.Set(jwt.IssuerKey, "single-issuer"))
 
-		dst := make(map[string]interface{})
+		dst := make(map[string]any)
 		err := transform.AsMap(token, dst)
 		require.NoError(t, err, "AsMap should succeed")
 
@@ -103,10 +103,10 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.NoError(t, token.Set("int_claim", 42))
 		require.NoError(t, token.Set("bool_claim", true))
 		require.NoError(t, token.Set("float_claim", 3.14))
-		require.NoError(t, token.Set("array_claim", []interface{}{"a", "b", "c"}))
+		require.NoError(t, token.Set("array_claim", []any{"a", "b", "c"}))
 		require.NoError(t, token.Set("null_claim", nil))
 
-		dst := make(map[string]interface{})
+		dst := make(map[string]any)
 		err := transform.AsMap(token, dst)
 		require.NoError(t, err, "AsMap should succeed")
 
@@ -114,7 +114,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.Equal(t, 42, dst["int_claim"])
 		require.Equal(t, true, dst["bool_claim"])
 		require.Equal(t, 3.14, dst["float_claim"])
-		require.Equal(t, []interface{}{"a", "b", "c"}, dst["array_claim"])
+		require.Equal(t, []any{"a", "b", "c"}, dst["array_claim"])
 		require.Nil(t, dst["null_claim"])
 	})
 
@@ -133,7 +133,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.NoError(t, token.Set("custom_claim", "token-value"))
 
 		// Pre-populate destination map
-		dst := map[string]interface{}{
+		dst := map[string]any{
 			"existing_key": "existing_value",
 			"another_key":  123,
 		}
@@ -158,7 +158,7 @@ func TestAsMapWithJWTToken(t *testing.T) {
 		require.NoError(t, token.Set("shared_key", "token-value"))
 
 		// Pre-populate with overlapping keys
-		dst := map[string]interface{}{
+		dst := map[string]any{
 			jwt.IssuerKey: "original-issuer",
 			"shared_key":  "original-value",
 			"unique_key":  "unique-value",

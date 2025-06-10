@@ -2,7 +2,7 @@ package pool
 
 var keyToErrorMapPool = New(allocKeyToErrorMap, destroyKeyToErrorMap)
 
-func allocKeyToErrorMap() interface{} {
+func allocKeyToErrorMap() any {
 	return make(map[string]error)
 }
 

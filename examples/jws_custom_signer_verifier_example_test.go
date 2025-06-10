@@ -23,7 +23,7 @@ func (s CirclEdDSASignerVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA()
 }
 
-func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byte, error) {
+func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif any) ([]byte, error) {
 	switch key := keyif.(type) {
 	case ed25519.PrivateKey:
 		return ed25519.Sign(key, payload), nil
@@ -32,7 +32,7 @@ func (s CirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byt
 	}
 }
 
-func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif interface{}) error {
+func (s CirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif any) error {
 	switch key := keyif.(type) {
 	case ed25519.PublicKey:
 		if ed25519.Verify(key, payload, signature) {
