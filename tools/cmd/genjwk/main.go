@@ -55,7 +55,7 @@ func _main() error {
 	codegen.RegisterZeroVal(`jwa.KeyType`, `jwa.InvalidKeyType()`)
 	codegen.RegisterZeroVal(`jwa.KeyAlgorithm`, `nil`)
 
-	var objectsFile = flag.String("objects", "objects.yml", "")
+	objectsFile := flag.String("objects", "objects.yml", "")
 	flag.Parse()
 	jsonSrc, err := yaml2json(*objectsFile)
 	if err != nil {
@@ -99,6 +99,7 @@ func IsPointer(f codegen.Field) bool {
 func PointerElem(f codegen.Field) string {
 	return strings.TrimPrefix(f.Type(), `*`)
 }
+
 func fieldStorageType(s string) string {
 	if fieldStorageTypeIsIndirect(s) {
 		return `*` + s
@@ -252,7 +253,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.R(" // %s", c)
 		}
 	}
-	o.L("privateParams map[string]interface{}")
+	o.L("privateParams map[string]any")
 	o.L("mu *sync.RWMutex")
 	o.L("dc json.DecodeCtx")
 	o.L("}")
@@ -263,7 +264,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.LL("func new%s() *%s {", ifName, structName)
 	o.L("return &%s{", structName)
 	o.L("mu: &sync.RWMutex{},")
-	o.L("privateParams: make(map[string]interface{}),")
+	o.L("privateParams: make(map[string]any),")
 	o.L("}")
 	o.L("}")
 
@@ -344,7 +345,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (h *%s) Get(name string, dst interface{}) error {", structName)
+	o.LL("func (h *%s) Get(name string, dst any) error {", structName)
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
@@ -385,15 +386,15 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 	o.L("}") // end switch name
 	o.L("return nil")
-	o.L("}") // func (h *%s) Get(name string) (interface{}, bool)
+	o.L("}") // func (h *%s) Get(name string) (any, bool)
 
-	o.LL("func (h *%s) Set(name string, value interface{}) error {", structName)
+	o.LL("func (h *%s) Set(name string, value any) error {", structName)
 	o.L("h.mu.Lock()")
 	o.L("defer h.mu.Unlock()")
 	o.L("return h.setNoLock(name, value)")
 	o.L(`}`)
 
-	o.LL("func (h *%s) setNoLock(name string, value interface{}) error {", structName)
+	o.LL("func (h *%s) setNoLock(name string, value any) error {", structName)
 	o.L("switch name {")
 	o.L("case \"kty\":")
 	o.L("return nil") // This is not great, but we just ignore it
@@ -457,12 +458,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	}
 	o.L("default:")
 	o.L("if h.privateParams == nil {")
-	o.L("h.privateParams = map[string]interface{}{}")
+	o.L("h.privateParams = map[string]any{}")
 	o.L("}") // end if h.privateParams == nil
 	o.L("h.privateParams[name] = value")
 	o.L("}") // end switch name
 	o.L("return nil")
-	o.L("}") // end func (h *%s) Set(name string, value interface{})
+	o.L("}") // end func (h *%s) Set(name string, value any)
 
 	o.LL("func (k *%s) Remove(key string) error {", structName)
 	o.L("k.mu.Lock()")
@@ -745,13 +746,13 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 	o.L("// an error if the field does not exist, or if the value cannot be assigned to")
 	o.L("// the destination variable. Note that a field is considered to \"exist\" even if")
 	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
-	o.L("Get(string, interface{}) error")
+	o.L("Get(string, any) error")
 	o.LL("// Set sets the value of a single field. Note that certain fields,")
 	o.L("// notably \"kty\", cannot be altered, but will not return an error")
-	o.L("//\n// This method, which takes an `interface{}`, exists because")
+	o.L("//\n// This method, which takes an `any`, exists because")
 	o.L("// these objects can contain extra _arbitrary_ fields that users can")
 	o.L("// specify, and there is no way of knowing what type they could be")
-	o.L("Set(string, interface{}) error")
+	o.L("Set(string, any) error")
 	o.LL("// Remove removes the field associated with the specified key.")
 	o.L("// There is no way to remove the `kty` (key type). You will ALWAYS be left with one field in a jwk.Key.")
 	o.L("Remove(string) error")

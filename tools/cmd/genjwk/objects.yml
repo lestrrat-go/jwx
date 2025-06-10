@@ -137,7 +137,7 @@ key_types:
     key_type: jwa.OKP()
     objects:
       - name: publicKey
-        raw_key_type: "interface{}"
+        raw_key_type: "any"
         fields:
           - name: x
             type: "[]byte"
@@ -147,7 +147,7 @@ key_types:
             type: jwa.EllipticCurveAlgorithm
             required: true
       - name: privateKey
-        raw_key_type: "interface{}"
+        raw_key_type: "any"
         fields:
           - name: x
             type: "[]byte"
