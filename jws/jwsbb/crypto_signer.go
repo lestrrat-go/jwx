@@ -7,11 +7,17 @@ import (
 )
 
 func cryptosign(payload []byte, hash crypto.Hash, signer crypto.Signer, opts crypto.SignerOpts) ([]byte, error) {
-	h := hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return nil, fmt.Errorf(`failed to write payload to hash: %w`, err)
+	var digest []byte
+	if hash == crypto.Hash(0) {
+		digest = payload
+	} else {
+		h := hash.New()
+		if _, err := h.Write(payload); err != nil {
+			return nil, fmt.Errorf(`failed to write payload to hash: %w`, err)
+		}
+		digest = h.Sum(nil)
 	}
-	return signer.Sign(rand.Reader, h.Sum(nil), opts)
+	return signer.Sign(rand.Reader, digest, opts)
 }
 
 type CryptoSigner struct {

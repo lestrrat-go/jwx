@@ -43,4 +43,11 @@ func init() {
 			})
 		}(alg))
 	}
+
+	RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
+		return legacy.NewEdDSASigner(), nil
+	}))
+	RegisterVerifier(jwa.EdDSA(), VerifierFactoryFn(func() (Verifier, error) {
+		return legacy.NewEdDSAVerifier(), nil
+	}))
 }

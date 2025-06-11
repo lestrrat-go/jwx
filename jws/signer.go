@@ -72,12 +72,6 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 	removeSigner(alg)
 }
 
-func init() {
-	RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
-		return newEdDSASigner(), nil
-	}))
-}
-
 // NewSigner creates a signer that signs payloads using the given signature algorithm.
 func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 	muSignerDB.RLock()

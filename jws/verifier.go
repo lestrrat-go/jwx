@@ -75,12 +75,6 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 	muVerifierDB.Unlock()
 }
 
-func init() {
-	RegisterVerifier(jwa.EdDSA(), VerifierFactoryFn(func() (Verifier, error) {
-		return newEdDSAVerifier(), nil
-	}))
-}
-
 // NewVerifier creates a verifier that signs payloads using the given signature algorithm.
 func NewVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	muVerifierDB.RLock()
