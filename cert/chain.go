@@ -28,7 +28,7 @@ func (cc Chain) MarshalJSON() ([]byte, error) {
 		buf.Write(cert)
 		buf.WriteByte('"')
 	}
-	buf.WriteByte(']')
+	buf.WriteByte(tokens.CloseSquareBracket)
 	return buf.Bytes(), nil
 }
 

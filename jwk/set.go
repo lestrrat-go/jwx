@@ -182,7 +182,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)
 				}
 			}
-			buf.WriteByte(']')
+			buf.WriteByte(tokens.CloseSquareBracket)
 		}
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)

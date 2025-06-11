@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 // ParseCookie parses a JWT stored in a http.Cookie with the given name.
@@ -204,7 +205,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	if triedHdrs.Len() > 0 {
 		b.WriteString(`header keys: [`)
 		b.WriteString(triedHdrs.String())
-		b.WriteByte(']')
+		b.WriteByte(tokens.CloseSquareBracket)
 	}
 	if triedForms.Len() > 0 {
 		if b.Len() > olen {
@@ -212,7 +213,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		}
 		b.WriteString("form keys: [")
 		b.WriteString(triedForms.String())
-		b.WriteByte(']')
+		b.WriteByte(tokens.CloseSquareBracket)
 	}
 
 	if triedCookies.Len() > 0 {
@@ -221,7 +222,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		}
 		b.WriteString("cookie keys: [")
 		b.WriteString(triedCookies.String())
-		b.WriteByte(']')
+		b.WriteByte(tokens.CloseSquareBracket)
 	}
 	b.WriteByte(')')
 
