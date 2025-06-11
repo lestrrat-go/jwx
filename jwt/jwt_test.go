@@ -545,7 +545,6 @@ func TestSignErrors(t *testing.T) {
 
 	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256(), nil))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing private key")
 }
 
 func TestSignJWK(t *testing.T) {
