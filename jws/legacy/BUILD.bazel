@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "legacy",
+    srcs = [
+        "hmac.go",
+        "legacy.go",
+    ],
+    importpath = "github.com/lestrrat-go/jwx/v3/jws/legacy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/keyconv",
+        "//jwa",
+    ],
+)
