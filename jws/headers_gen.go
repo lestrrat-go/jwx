@@ -682,14 +682,14 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteRune(',')
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(k)
 		buf.WriteString(`":`)
 		switch v := data[k].(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, k, err)

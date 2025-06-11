@@ -635,15 +635,15 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteRune(',')
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
@@ -1351,15 +1351,15 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteRune(',')
 		}
-		buf.WriteRune('"')
+		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)
 		buf.WriteString(`":`)
 		v := data[f]
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune('"')
+			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
