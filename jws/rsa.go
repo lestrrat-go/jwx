@@ -40,16 +40,20 @@ func init() {
 	}
 
 	for alg, item := range data {
-		RegisterSigner(alg, rsasigner{
+		if err := RegisterSigner(alg, rsasigner{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
-		})
-		RegisterVerifier(alg, rsaverifier{
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
+		if err := RegisterVerifier(alg, rsaverifier{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
-		})
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+		}
 	}
 }
 

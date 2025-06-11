@@ -20,15 +20,19 @@ func init() {
 	}
 
 	for alg, hash := range algs {
-		RegisterSigner(alg, ecdsasigner{
+		if err := RegisterSigner(alg, ecdsasigner{
 			alg:  alg,
 			hash: hash,
-		})
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
 
-		RegisterVerifier(alg, ecdsaverifier{
+		if err := RegisterVerifier(alg, ecdsaverifier{
 			alg:  alg,
 			hash: hash,
-		})
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+		}
 	}
 }
 

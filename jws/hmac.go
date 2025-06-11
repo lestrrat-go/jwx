@@ -20,16 +20,20 @@ func init() {
 	}
 
 	for alg, h := range algs {
-		RegisterSigner(alg, hmacsigner{
+		if err := RegisterSigner(alg, hmacsigner{
 			alg:   alg,
 			hfunc: h,
-		})
-		RegisterVerifier(alg, hmacverifier{
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
+		if err := RegisterVerifier(alg, hmacverifier{
 			signer: hmacsigner{
 				alg:   alg,
 				hfunc: h,
 			},
-		})
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+		}
 	}
 }
 

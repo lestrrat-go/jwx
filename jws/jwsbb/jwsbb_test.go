@@ -21,6 +21,7 @@ import (
 const sampleHeader = "eyJmb28iOiJiYXIifQ" // Base64URL of {"foo":"bar"}
 
 func TestHMAC(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		alg           string
 		hfunc         func() hash.Hash

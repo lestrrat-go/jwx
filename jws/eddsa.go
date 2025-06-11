@@ -12,12 +12,16 @@ import (
 )
 
 func init() {
-	RegisterSigner(jwa.EdDSA(), eddsasigner{
+	if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
 		alg: jwa.EdDSA(),
-	})
-	RegisterVerifier(jwa.EdDSA(), eddsaverifier{
+	}); err != nil {
+		panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+	}
+	if err := RegisterVerifier(jwa.EdDSA(), eddsaverifier{
 		alg: jwa.EdDSA(),
-	})
+	}); err != nil {
+		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+	}
 }
 
 type eddsasigner struct {
