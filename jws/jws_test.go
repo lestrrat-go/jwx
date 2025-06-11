@@ -271,22 +271,32 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 		},
 	}
 
+	verifyKeys := make(map[string]any)
+
+	for k, v := range keys {
+		verifyKeys[k] = v
+	}
+
 	if es, ok := signKey.(*ecdsa.PrivateKey); ok {
+		k := &dummyECDSACryptoSigner{raw: es}
 		signKeys = append(signKeys, struct {
 			Name string
 			Key  interface{}
 		}{
-			Name: "crypto.Hash",
-			Key:  &dummyECDSACryptoSigner{raw: es},
+			Name: "crypto.Signer",
+			Key:  k,
 		})
+		verifyKeys["Verify(crypto.Signer)"] = k
 	} else if cs, ok := signKey.(crypto.Signer); ok {
+		k := &dummyCryptoSigner{raw: cs}
 		signKeys = append(signKeys, struct {
 			Name string
 			Key  interface{}
 		}{
-			Name: "crypto.Hash",
-			Key:  &dummyCryptoSigner{raw: cs},
+			Name: "crypto.Signer",
+			Key:  k,
 		})
+		verifyKeys["Verify(crypto.Signer)"] = k
 	}
 
 	for _, key := range signKeys {
@@ -308,7 +318,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 				})
 			}
 
-			for name, testKey := range keys {
+			for name, testKey := range verifyKeys {
 				t.Run(name, func(t *testing.T) {
 					verified, err := jws.Verify(signed, jws.WithKey(alg, testKey))
 					require.NoError(t, err, "(%s) Verify is successful", alg)
