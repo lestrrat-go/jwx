@@ -23,6 +23,18 @@ type compactOption struct {
 
 func (*compactOption) compactOption() {}
 
+// GlobalOption can be passed to `jws.Settings()` to set global options for the JWS package.
+type GlobalOption interface {
+	Option
+	globalOption()
+}
+
+type globalOption struct {
+	Option
+}
+
+func (*globalOption) globalOption() {}
+
 // ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
 type ParseOption interface {
 	Option
@@ -180,6 +192,7 @@ type identInferAlgorithmFromKey struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
+type identLegacySigners struct{}
 type identMessage struct{}
 type identMultipleKeysPerKeyID struct{}
 type identPretty struct{}
@@ -224,6 +237,10 @@ func (identKeyProvider) String() string {
 
 func (identKeyUsed) String() string {
 	return "WithKeyUsed"
+}
+
+func (identLegacySigners) String() string {
+	return "WithLegacySigners"
 }
 
 func (identMessage) String() string {
@@ -337,6 +354,15 @@ func WithKeyProvider(v KeyProvider) VerifyOption {
 // jwx API allows users to specify a raw key such as *rsa.PublicKey)
 func WithKeyUsed(v interface{}) VerifyOption {
 	return &verifyOption{option.New(identKeyUsed{}, v)}
+}
+
+// WithLegacySigners specifies whether the JWS package should use legacy
+// signers for signing JWS messages.
+//
+// Usually there's no need to use this option, as the new signers and
+// verifiers are loaded by default.
+func WithLegacySigners() GlobalOption {
+	return &globalOption{option.New(identLegacySigners{}, true)}
 }
 
 // WithMessage can be passed to Verify() to obtain the jws.Message upon

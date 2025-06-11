@@ -54,6 +54,9 @@ interfaces:
       - verifyOption
       - parseOption
       - readFileOption
+  - name: GlobalOption
+    comment: |
+      GlobalOption can be passed to `jws.Settings()` to set global options for the JWS package.
 options:
   - ident: Key
     skip_option: true
@@ -220,3 +223,12 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
+  - ident: LegacySigners
+    interface: GlobalOption
+    constant_value: true
+    comment: |
+      WithLegacySigners specifies whether the JWS package should use legacy
+      signers for signing JWS messages. 
+      
+      Usually there's no need to use this option, as the new signers and
+      verifiers are loaded by default.

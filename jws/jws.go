@@ -85,7 +85,10 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
-func signerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
+// SignerFor returns the registered signer for the given algorithm.
+//
+// This function does not support the legacy signers.
+func SignerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
 	muSigner2DB.RLock()
 	defer muSigner2DB.RUnlock()
 
@@ -103,7 +106,7 @@ func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected H
 		protected: protected,
 	}
 
-	signer2, err := signerFor(alg)
+	signer2, err := SignerFor(alg)
 	if err == nil {
 		ps.signer2 = signer2
 		return ps, nil
@@ -956,4 +959,13 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 		return nil, fmt.Errorf(`unregistered key type %q`, kty)
 	}
 	return algs, nil
+}
+
+func Settings(options ...GlobalOption) {
+	for _, option := range options {
+		switch option.Ident() {
+		case identLegacySigners{}:
+			enableLegacySigners()
+		}
+	}
 }

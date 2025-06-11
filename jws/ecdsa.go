@@ -20,12 +20,12 @@ func init() {
 	}
 
 	for alg, hash := range algs {
-		RegisterSigner2(alg, ecdsasigner{
+		RegisterSigner(alg, ecdsasigner{
 			alg:  alg,
 			hash: hash,
 		})
 
-		RegisterVerifier2(alg, ecdsaverifier{
+		RegisterVerifier(alg, ecdsaverifier{
 			alg:  alg,
 			hash: hash,
 		})
@@ -35,6 +35,10 @@ func init() {
 type ecdsasigner struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
+}
+
+func (es ecdsasigner) Create() (Signer, error) {
+	return nil, fmt.Errorf(`jws.ECDSASigner does not support Create() method`)
 }
 
 func (es ecdsasigner) Algorithm() jwa.SignatureAlgorithm {
@@ -69,6 +73,10 @@ func (es ecdsasigner) Do(payload, protected []byte, encoder Base64Encoder, encod
 type ecdsaverifier struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
+}
+
+func (ecdsaverifier) Create() (Verifier, error) {
+	return nil, fmt.Errorf(`jws.ECDSAVerifier does not support Create() method`)
 }
 
 func (ev ecdsaverifier) Algorithm() jwa.SignatureAlgorithm {

@@ -9,16 +9,15 @@ import (
 
 type Verifier2 interface {
 	Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error
+
+	// Create implements VerifierFactory, but this is actually a no-op,
+	// and will return an error if called. This is a hack to allow
+	// passing Verifier2 objects to RegisterVerifier
+	Create() (Verifier, error)
 }
 
 var muVerifier2DB sync.RWMutex
 var verifier2DB = make(map[jwa.SignatureAlgorithm]Verifier2)
-
-func RegisterVerifier2(alg jwa.SignatureAlgorithm, verifier Verifier2) {
-	muVerifier2DB.Lock()
-	verifier2DB[alg] = verifier
-	muVerifier2DB.Unlock()
-}
 
 func verifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
 	muVerifier2DB.RLock()
@@ -43,21 +42,29 @@ func (fn VerifierFactoryFn) Create() (Verifier, error) {
 var muVerifierDB sync.RWMutex
 var verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 
-// RegisterVerifier is used to register a factory object that creates
-// Verifier objects based on the given algorithm.
+// RegisterVerifier is used to register a verifier for the given
+// algorithm.
 //
-// For example, if you would like to provide a custom verifier for
-// jwa.EdDSA, use this function to register a `VerifierFactory`
-// (probably in your `init()`)
+// Please note that while this function takes a `VerifierFactory`
+// as an argument, this is only so for backwards compatibility,
+// and as of this writing you should use objects that implement
+// the `Verifier2` interface instead.
 //
 // Unlike the `UnregisterVerifier` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 	jwa.RegisterSignatureAlgorithm(alg)
-	muVerifierDB.Lock()
-	verifierDB[alg] = f
-	muVerifierDB.Unlock()
+	switch v := f.(type) {
+	case Verifier2:
+		muVerifier2DB.Lock()
+		verifier2DB[alg] = v
+		muVerifier2DB.Unlock()
+	default:
+		muVerifierDB.Lock()
+		verifierDB[alg] = f
+		muVerifierDB.Unlock()
+	}
 }
 
 // UnregisterVerifier removes the signer factory associated with
@@ -70,6 +77,10 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
 // Therefore, in order to completely remove the algorithm, you must
 // call `jwa.UnregisterSignatureAlgorithm` yourself.
 func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
+	muVerifier2DB.Lock()
+	delete(verifier2DB, alg)
+	muVerifier2DB.Unlock()
+
 	muVerifierDB.Lock()
 	delete(verifierDB, alg)
 	muVerifierDB.Unlock()

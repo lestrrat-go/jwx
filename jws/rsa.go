@@ -3,6 +3,7 @@ package jws
 import (
 	"crypto"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
@@ -40,12 +41,12 @@ func init() {
 	}
 
 	for alg, item := range data {
-		RegisterSigner2(alg, rsasigner{
+		RegisterSigner(alg, rsasigner{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
 		})
-		RegisterVerifier2(alg, rsaverifier{
+		RegisterVerifier(alg, rsaverifier{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
@@ -57,6 +58,10 @@ type rsasigner struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
 	pss  bool // whether to use PSS padding
+}
+
+func (s rsasigner) Create() (Signer, error) {
+	return nil, errors.New(`jws.RSASigner does not support Create() method`)
 }
 
 func (s rsasigner) Algorithm() jwa.SignatureAlgorithm {
@@ -90,6 +95,10 @@ type rsaverifier struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
 	pss  bool // whether to use PSS padding
+}
+
+func (rsaverifier) Create() (Verifier, error) {
+	return nil, errors.New(`jws.RSAVerifier does not support Create() method`)
 }
 
 func (v rsaverifier) Algorithm() jwa.SignatureAlgorithm {

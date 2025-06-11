@@ -12,16 +12,20 @@ import (
 )
 
 func init() {
-	RegisterSigner2(jwa.EdDSA(), eddsasigner{
+	RegisterSigner(jwa.EdDSA(), eddsasigner{
 		alg: jwa.EdDSA(),
 	})
-	RegisterVerifier2(jwa.EdDSA(), eddsaverifier{
+	RegisterVerifier(jwa.EdDSA(), eddsaverifier{
 		alg: jwa.EdDSA(),
 	})
 }
 
 type eddsasigner struct {
 	alg jwa.SignatureAlgorithm
+}
+
+func (s eddsasigner) Create() (Signer, error) {
+	return nil, fmt.Errorf(`jws.EdDSASigner does not support Create() method`)
 }
 
 func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
@@ -51,6 +55,10 @@ func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encode
 
 type eddsaverifier struct {
 	alg jwa.SignatureAlgorithm
+}
+
+func (eddsaverifier) Create() (Verifier, error) {
+	return nil, fmt.Errorf(`jws.EdDSAVerifier does not support Create() method`)
 }
 
 func (v eddsaverifier) Algorithm() jwa.SignatureAlgorithm {

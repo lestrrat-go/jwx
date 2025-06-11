@@ -20,11 +20,11 @@ func init() {
 	}
 
 	for alg, h := range algs {
-		RegisterSigner2(alg, hmacsigner{
+		RegisterSigner(alg, hmacsigner{
 			alg:   alg,
 			hfunc: h,
 		})
-		RegisterVerifier2(alg, hmacverifier{
+		RegisterVerifier(alg, hmacverifier{
 			signer: hmacsigner{
 				alg:   alg,
 				hfunc: h,
@@ -36,6 +36,10 @@ func init() {
 type hmacsigner struct {
 	alg   jwa.SignatureAlgorithm
 	hfunc func() hash.Hash
+}
+
+func (s hmacsigner) Create() (Signer, error) {
+	return nil, fmt.Errorf(`jws.HMACSigner does not support Create() method`)
 }
 
 func (s hmacsigner) Algorithm() jwa.SignatureAlgorithm {
@@ -57,6 +61,10 @@ func (s hmacsigner) Do(payload, protected []byte, encoder Base64Encoder, encodeP
 
 type hmacverifier struct {
 	signer hmacsigner
+}
+
+func (hmacverifier) Create() (Verifier, error) {
+	return nil, fmt.Errorf(`jws.HMACVerifier does not support Create() method`)
 }
 
 func (v hmacverifier) Algorithm() jwa.SignatureAlgorithm {

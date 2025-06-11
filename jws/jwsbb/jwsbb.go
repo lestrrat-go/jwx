@@ -62,3 +62,18 @@ func verify[K any](payload, hdr, signature []byte, verifier Verifier[K], encoder
 	defer pool.ByteSlice().Put(buf)
 	return verifier.Verify(buf, signature, key)
 }
+
+func Join(buf, hdr, payload, signature []byte, encoder Base64Encoder) []byte {
+	l := len(hdr) + len(payload) + len(signature) + 2
+	if cap(buf) < l {
+		buf = make([]byte, 0, l)
+	}
+	buf = buf[:0]
+	buf = encoder.AppendEncode(buf, hdr)
+	buf = append(buf, tokens.Period)
+	buf = encoder.AppendEncode(buf, payload)
+	buf = append(buf, tokens.Period)
+	buf = encoder.AppendEncode(buf, signature)
+
+	return buf
+}
