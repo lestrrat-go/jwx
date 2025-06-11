@@ -181,10 +181,10 @@ func (v *ecdsaVerifier) Verify(payload []byte, signature []byte, key interface{}
 		return fmt.Errorf(`public key used does not contain a point (X,Y) on the curve`)
 	}
 
-	r := pool.BigInt().Get()
-	s := pool.BigInt().Get()
-	defer pool.BigInt().Put(r)
-	defer pool.BigInt().Put(s)
+	r := pool.GetBigInt()
+	s := pool.GetBigInt()
+	defer pool.ReleaseBigInt(r)
+	defer pool.ReleaseBigInt(s)
 
 	keySize := ecutil.CalculateKeySize(pubkey.Curve)
 	if len(signature) != keySize*2 {

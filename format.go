@@ -3,8 +3,6 @@ package jwx
 import (
 	"bytes"
 	"encoding/json"
-
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 type FormatKind int
@@ -62,9 +60,9 @@ func GuessFormat(payload []byte) FormatKind {
 		return UnknownFormat
 	}
 
-	if payload[0] != tokens.OpenCurlyBracket {
+	if payload[0] != '{' {
 		// Compact format. It's probably a JWS or JWE
-		sep := []byte{tokens.Period} // I want to const this :/
+		sep := []byte{'.'} // I want to const this :/
 
 		// Note: this counts the number of occurrences of the
 		// separator, but the RFC talks about the number of segments.

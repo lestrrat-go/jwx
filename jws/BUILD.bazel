@@ -31,11 +31,10 @@ go_library(
         "//internal/json",
         "//internal/keyconv",
         "//internal/pool",
-        "//internal/tokens",
         "//jwa",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_option_v2//:option",
+        "@com_github_lestrrat_go_option//:option",
     ],
 )
 

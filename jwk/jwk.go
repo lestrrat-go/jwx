@@ -199,28 +199,20 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identPEM{}:
-			if err := opt.Value(&parsePEM); err != nil {
-				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithParsePEM: %w`, err)
-			}
+			parsePEM = option.Value().(bool)
 		case identPEMDecoder{}:
-			if err := opt.Value(&pemDecoder); err != nil {
-				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithPEMDecoder: %w`, err)
-			}
+			pemDecoder = option.Value().(PEMDecoder)
 		case identLocalRegistry{}:
 			// in reality you can only pass either withLocalRegistry or
 			// WithTypedField, but since withLocalRegistry is used only by us,
 			// we skip checking
-			if err := opt.Value(&localReg); err != nil {
-				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithLocalRegistry: %w`, err)
-			}
+			localReg = option.Value().(*json.Registry)
 		case identTypedField{}:
-			var pair typedFieldPair
-			if err := opt.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`jwk.ParseKey: invalid value for WithTypedField: %w`, err)
-			}
+			pair := option.Value().(typedFieldPair)
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -288,25 +280,17 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var localReg *json.Registry
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identPEM{}:
-			if err := opt.Value(&parsePEM); err != nil {
-				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithParsePEM: %w`, err)
-			}
+			parsePEM = option.Value().(bool)
 		case identPEMDecoder{}:
-			if err := opt.Value(&pemDecoder); err != nil {
-				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithPEMDecoder: %w`, err)
-			}
+			pemDecoder = option.Value().(PEMDecoder)
 		case identIgnoreParseError{}:
-			if err := opt.Value(&ignoreParseError); err != nil {
-				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithIgnoreParseError: %w`, err)
-			}
+			ignoreParseError = option.Value().(bool)
 		case identTypedField{}:
-			var pair typedFieldPair
-			if err := opt.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`jwk.Parse: invalid value for WithTypedField: %w`, err)
-			}
+			pair := option.Value().(typedFieldPair)
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -393,11 +377,10 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
-			if err := option.Value(&hash); err != nil {
-				return fmt.Errorf(`jwk.AssignKeyID: invalid value for WithThumbprintHash: %w`, err)
-			}
+			hash = option.Value().(crypto.Hash)
 		}
 	}
 
@@ -628,13 +611,11 @@ func IsKeyValidationError(err error) bool {
 // Configure is used to configure global behavior of the jwk package.
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
-			var v bool
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Errorf(`jwk.Configure: invalid value for WithStrictKeyUsage: %w`, err))
-			}
+			v := option.Value().(bool)
 			strictKeyUsagePtr = &v
 		}
 	}

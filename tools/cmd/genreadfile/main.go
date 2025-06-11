@@ -72,21 +72,18 @@ func generateFile(def definition) error {
 
 	o.LL("func ReadFile(path string, options ...ReadFileOption) (%s, error) {", def.ReturnType)
 	if def.ParseOptions {
-		o.L("parseOptions := ParseOptionListPool().Get()")
-		o.L("defer ParseOptionListPool().Put(parseOptions)")
+		o.L("var parseOptions []ParseOption")
 		o.L(`for _, option := range options {`)
 		o.L(`if po, ok := option.(ParseOption); ok {`)
-		o.L(`parseOptions.Add(po)`)
+		o.L(`parseOptions = append(parseOptions, po)`)
 		o.L(`}`)
 		o.L(`}`)
 	}
 	o.LL(`var srcFS fs.FS = sysFS{}`)
-	o.L("for _, opt := range options {")
-	o.L(`switch opt.Ident() {`)
+	o.L("for _, option := range options {")
+	o.L(`switch option.Ident() {`)
 	o.L(`case identFS{}:`)
-	o.L(`if err := opt.Value(&srcFS); err != nil {`)
-	o.L(`return nil, fmt.Errorf("%s.ReadFile: %%s", err.Error())`, def.Package)
-	o.L("}")
+	o.L(`srcFS = option.Value().(fs.FS)`)
 	o.L("}")
 	o.L("}")
 	o.LL("f, err := srcFS.Open(path)")
@@ -95,7 +92,7 @@ func generateFile(def definition) error {
 	o.L("}")
 	o.LL("defer f.Close()")
 	if def.ParseOptions {
-		o.L("return ParseReader(f, parseOptions.List()...)")
+		o.L("return ParseReader(f, parseOptions...)")
 	} else {
 		o.L("return ParseReader(f)")
 	}

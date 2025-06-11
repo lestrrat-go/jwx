@@ -19,7 +19,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -38,22 +37,15 @@ var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
 	defer muSettings.Unlock()
-	for _, opt := range options {
-		switch opt.Ident() {
+	//nolint:forcetypeassert
+	for _, option := range options {
+		switch option.Ident() {
 		case identMaxPBES2Count{}:
-			if err := opt.Value(&maxPBES2Count); err != nil {
-				panic(fmt.Sprintf(`jwe.Settings: invalid value for WithMaxPBES2Count: %s`, err))
-			}
+			maxPBES2Count = option.Value().(int)
 		case identMaxDecompressBufferSize{}:
-			if err := opt.Value(&maxDecompressBufferSize); err != nil {
-				panic(fmt.Sprintf(`jwe.Settings: invalid value for WithMaxDecompressBufferSize: %s`, err))
-			}
+			maxDecompressBufferSize = option.Value().(int64)
 		case identCBCBufferSize{}:
-			var v int64
-			if err := opt.Value(&v); err != nil {
-				panic(fmt.Sprintf(`jwe.Settings: invalid value for WithCBCBufferSize: %s`, err))
-			}
-			aescbc.SetMaxBufferSize(v)
+			aescbc.SetMaxBufferSize(option.Value().(int64))
 		}
 	}
 }
@@ -340,13 +332,11 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	var protected Headers
 	var mergeProtected bool
 	var useRawCEK bool
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identKey{}:
-			var data withKey
-			if err := opt.Value(&data); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for WithKey: %w`, err)
-			}
+			data := option.Value().(*withKey)
 			v, ok := data.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return nil, fmt.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, data.alg)
@@ -363,22 +353,13 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 				headers: data.headers,
 			})
 		case identContentEncryptionAlgorithm{}:
-			if err := opt.Value(&calg); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for WithContentEncryptionAlgorithm: %w`, err)
-			}
+			calg = option.Value().(jwa.ContentEncryptionAlgorithm)
 		case identCompress{}:
-			if err := opt.Value(&compression); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for WithCompress: %w`, err)
-			}
+			compression = option.Value().(jwa.CompressionAlgorithm)
 		case identMergeProtectedHeaders{}:
-			if err := opt.Value(&mergeProtected); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for WithMergeProtectedHeaders: %w`, err)
-			}
+			mergeProtected = option.Value().(bool)
 		case identProtectedHeaders{}:
-			var v Headers
-			if err := opt.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for WithProtectedHeaders: %w`, err)
-			}
+			v := option.Value().(Headers)
 			if !mergeProtected || protected == nil {
 				protected = v
 			} else {
@@ -389,9 +370,7 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 				protected = merged
 			}
 		case identSerialization{}:
-			if err := opt.Value(&format); err != nil {
-				return nil, fmt.Errorf(`jwe.Encrypt: invalid value for serialization: %w`, err)
-			}
+			format = option.Value().(int)
 		}
 	}
 
@@ -564,27 +543,17 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	var dst *Message
 	perCallMaxDecompressBufferSize := maxDecompressBufferSize
 	ctx := context.Background()
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			if err := option.Value(&dst); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithMessage: %w`, err)
-			}
+			dst = option.Value().(*Message)
 		case identKeyProvider{}:
-			var kp KeyProvider
-			if err := option.Value(&kp); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithKeyProvider: %w`, err)
-			}
-			keyProviders = append(keyProviders, kp)
+			keyProviders = append(keyProviders, option.Value().(KeyProvider))
 		case identKeyUsed{}:
-			if err := option.Value(&keyUsed); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithKeyUsed: %w`, err)
-			}
+			keyUsed = option.Value()
 		case identKey{}:
-			var pair withKey
-			if err := option.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithKey: %w`, err)
-			}
+			pair := option.Value().(*withKey)
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)`, pair.alg)
@@ -594,17 +563,12 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 				key: pair.key,
 			})
 		case identCEK{}:
-			if err := option.Value(&cek); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithCEK: %w`, err)
-			}
+			cek = option.Value().(*[]byte)
 		case identMaxDecompressBufferSize{}:
-			if err := option.Value(&perCallMaxDecompressBufferSize); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithMaxDecompressBufferSize: %w`, err)
-			}
+			perCallMaxDecompressBufferSize = option.Value().(int64)
 		case identContext{}:
-			if err := option.Value(&ctx); err != nil {
-				return nil, fmt.Errorf(`jwe.Decrypt: invalid value for WithContext: %w`, err)
-			}
+			//nolint:fatcontext
+			ctx = option.Value().(context.Context)
 		}
 	}
 
@@ -878,7 +842,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 
 	var msg *Message
 	var err error
-	if buf[0] == tokens.OpenCurlyBracket {
+	if buf[0] == '{' {
 		msg, err = parseJSON(buf, storeProtectedHeaders)
 	} else {
 		msg, err = parseCompact(buf, storeProtectedHeaders)
@@ -926,13 +890,13 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	var ok bool
 
 	for i := range 4 {
-		parts[i], buf, ok = bytes.Cut(buf, []byte{tokens.Period})
+		parts[i], buf, ok = bytes.Cut(buf, []byte{'.'})
 		if !ok {
 			return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, i+1)
 		}
 	}
 	// Validate that the last part does not contain more dots
-	if bytes.ContainsRune(buf, tokens.Period) {
+	if bytes.ContainsRune(buf, '.') {
 		return nil, errors.New(`compact JWE format must have five parts, not more`)
 	}
 	parts[4] = buf

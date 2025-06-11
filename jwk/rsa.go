@@ -103,9 +103,9 @@ func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 }
 
 func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) {
-	bin := pool.BigInt().Get()
-	bie := pool.BigInt().Get()
-	defer pool.BigInt().Put(bie)
+	bin := pool.GetBigInt()
+	bie := pool.GetBigInt()
+	defer pool.ReleaseBigInt(bie)
 
 	bin.SetBytes(n)
 	bie.SetBytes(e)
@@ -293,8 +293,8 @@ func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.WriteString(`{"e":"`)
 	buf.WriteString(base64.EncodeUint64ToString(uint64(key.E)))

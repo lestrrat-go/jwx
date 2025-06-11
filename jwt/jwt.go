@@ -13,10 +13,8 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
-	"github.com/lestrrat-go/option/v2"
 )
 
 var defaultTruncation atomic.Int64
@@ -28,34 +26,23 @@ func Settings(options ...GlobalOption) {
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identTruncation{}:
-			if err := option.Value(&truncation); err != nil {
-				panic(fmt.Sprintf(`jwt.Settings: invalid value for WithTruncation: %s`, err))
-			}
+			truncation = option.Value().(time.Duration)
 		case identFlattenAudience{}:
-			if err := option.Value(&flattenAudience); err != nil {
-				panic(fmt.Sprintf(`jwt.Settings: invalid value for WithFlattenAudience: %s`, err))
-			}
+			flattenAudience = option.Value().(bool)
 		case identNumericDateParsePedantic{}:
-			if err := option.Value(&parsePedantic); err != nil {
-				panic(fmt.Sprintf(`jwt.Settings: invalid value for WIthParsePedantic: %s`, err))
-			}
+			parsePedantic = option.Value().(bool)
 		case identNumericDateParsePrecision{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf(`jwt.Settings: invalid value for WithNumericDateParsePrecision: %s`, err))
-			}
+			v := option.Value().(int)
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				parsePrecision = uint32(v)
 			}
 		case identNumericDateFormatPrecision{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf(`jwt.Settings: invalid value for WithNumericDateFormatPrecision: %s`, err))
-			}
+			v := option.Value().(int)
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				formatPrecision = uint32(v)
@@ -183,38 +170,18 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	return tok, nil
 }
 
-type parseContext struct {
+type parseCtx struct {
 	token            Token
-	validateOpts     *option.Set[ValidateOption]
-	verifyOpts       *option.Set[jws.VerifyOption]
+	validateOpts     []ValidateOption
+	verifyOpts       []jws.VerifyOption
 	localReg         *json.Registry
 	pedantic         bool
 	skipVerification bool
 	validate         bool
 }
 
-var parseContextPool = pool.New(allocParseContext, destroyParseContext)
-
-func allocParseContext() interface{} {
-	return &parseContext{
-		validateOpts: ValidateOptionListPool().Get(),
-		verifyOpts:   jws.VerifyOptionListPool().Get(),
-	}
-}
-
-func destroyParseContext(ctx *parseContext) {
-	ctx.token = nil
-	ctx.validateOpts.Reset()
-	ctx.verifyOpts.Reset()
-	ctx.localReg = nil
-	ctx.pedantic = false
-	ctx.skipVerification = false
-	ctx.validate = true
-}
-
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
-	ctx := parseContextPool.Get()
-	defer parseContextPool.Put(ctx)
+	var ctx parseCtx
 
 	// Validation is turned on by default. You need to specify
 	// jwt.WithValidate(false) if you want to disable it
@@ -225,38 +192,31 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 	// it to be skipped.
 	verification := true
 
-	verifyOpts := ParseOptionListPool().Get()
-	defer ParseOptionListPool().Put(verifyOpts)
+	var verifyOpts []Option
 	for _, o := range options {
 		if v, ok := o.(ValidateOption); ok {
-			ctx.validateOpts.Add(v)
+			ctx.validateOpts = append(ctx.validateOpts, v)
 			continue
 		}
 
+		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
-			verifyOpts.Add(o)
+			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
-			if err := o.Value(&ctx.token); err != nil {
-				return nil, fmt.Errorf(`jwt.Parse: invalid value for WithToken: %s`, err)
+			token, ok := o.Value().(Token)
+			if !ok {
+				return nil, fmt.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
 			}
+			ctx.token = token
 		case identPedantic{}:
-			if err := o.Value(&ctx.pedantic); err != nil {
-				return nil, fmt.Errorf(`jwt.Parse: invalid value for WithPedantic: %s`, err)
-			}
+			ctx.pedantic = o.Value().(bool)
 		case identValidate{}:
-			if err := o.Value(&ctx.validate); err != nil {
-				return nil, fmt.Errorf(`jwt.Parse: invalid value for WithValidate: %s`, err)
-			}
+			ctx.validate = o.Value().(bool)
 		case identVerify{}:
-			if err := o.Value(&verification); err != nil {
-				return nil, fmt.Errorf(`jwt.Parse: invalid value for WithVerify: %s`, err)
-			}
+			verification = o.Value().(bool)
 		case identTypedClaim{}:
-			var pair claimPair
-			if err := o.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`jwt.Parse: invalid value for WithTypedClaim: %s`, err)
-			}
+			pair := o.Value().(claimPair)
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
 			}
@@ -268,19 +228,21 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		ctx.skipVerification = true
 	}
 
-	lvo := verifyOpts.Len()
+	lvo := len(verifyOpts)
 	if lvo == 0 && verification {
 		return nil, fmt.Errorf(`jwt.Parse: no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
 	}
 
 	if lvo > 0 {
-		if err := convertToJwsVerifyOpts(verifyOpts, ctx.verifyOpts); err != nil {
+		converted, err := toVerifyOptions(verifyOpts...)
+		if err != nil {
 			return nil, fmt.Errorf(`jwt.Parse: failed to convert options into jws.VerifyOption: %w`, err)
 		}
+		ctx.verifyOpts = converted
 	}
 
 	data = bytes.TrimSpace(data)
-	return parse(ctx, data)
+	return parse(&ctx, data)
 }
 
 const (
@@ -292,45 +254,24 @@ const (
 
 var _ = _JwsVerifyInvalid
 
-func verifyJWS(ctx *parseContext, payload []byte) ([]byte, int, error) {
-	if ctx.verifyOpts.Len() == 0 {
+func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
+	if len(ctx.verifyOpts) == 0 {
 		return nil, _JwsVerifySkipped, nil
 	}
 
-	ctx.verifyOpts.Add(jws.WithCompact())
-	verified, err := jws.Verify(payload, ctx.verifyOpts.List()...)
+	verifyOpts := append(ctx.verifyOpts, jws.WithCompact())
+	verified, err := jws.Verify(payload, verifyOpts...)
 	return verified, _JwsVerifyDone, err
 }
 
 // verify parameter exists to make sure that we don't accidentally skip
 // over verification just because alg == ""  or key == nil or something.
-func parse(ctx *parseContext, data []byte) (Token, error) {
-	var payload []byte
+func parse(ctx *parseCtx, data []byte) (Token, error) {
+	payload := data
+	const maxDecodeLevels = 2
 
 	// If cty = `JWT`, we expect this to be a nested structure
 	var expectNested bool
-
-	// First, try the most common case, which is a JWT in compact form.
-	// The first clause is for when we need to verify the JWS, the
-	// second clause is for when we just want to parse the JWT out of the
-	// payload, and we don't care about the signature.
-	if !ctx.skipVerification && ctx.verifyOpts.Len() > 0 {
-		ctx.verifyOpts.Add(jws.WithCompact())
-		verified, err := jws.Verify(data, ctx.verifyOpts.List()...)
-		if err == nil {
-			payload = verified
-			goto UNMARSHAL_TOKEN
-		}
-	} else {
-		msg, err := jws.Parse(data, jws.WithCompact())
-		if err == nil {
-			payload = msg.Payload()
-			goto UNMARSHAL_TOKEN
-		}
-	}
-
-	payload = data
-	const maxDecodeLevels = 2
 
 OUTER:
 	for i := range maxDecodeLevels {
@@ -416,7 +357,6 @@ OUTER:
 		expectNested = false
 	}
 
-UNMARSHAL_TOKEN:
 	if ctx.token == nil {
 		ctx.token = New()
 	}
@@ -436,7 +376,7 @@ UNMARSHAL_TOKEN:
 	}
 
 	if ctx.validate {
-		if err := Validate(ctx.token, ctx.validateOpts.List()...); err != nil {
+		if err := Validate(ctx.token, ctx.validateOpts...); err != nil {
 			return nil, err
 		}
 	}
@@ -464,20 +404,22 @@ UNMARSHAL_TOKEN:
 // to the literal value `JWT`, unless you provide a custom value for it
 // by jws.WithProtectedHeaders option, that can be passed to `jwt.WithKey“.
 func Sign(t Token, options ...SignOption) ([]byte, error) {
-	src := SignOptionListPool().Get()
-	defer SignOptionListPool().Put(src)
+	var soptions []jws.SignOption
+	if l := len(options); l > 0 {
+		// we need to from SignOption to Option because ... reasons
+		// (todo: when go1.18 prevails, use type parameters
+		rawoptions := make([]Option, l)
+		for i, option := range options {
+			rawoptions[i] = option
+		}
 
-	for _, option := range options {
-		src.Add(option)
+		converted, err := toSignOptions(rawoptions...)
+		if err != nil {
+			return nil, fmt.Errorf(`jwt.Sign: failed to convert options into jws.SignOption: %w`, err)
+		}
+		soptions = converted
 	}
-
-	dst := jws.SignOptionListPool().Get()
-	defer jws.SignOptionListPool().Put(dst)
-
-	if err := convertToJwsSignOption(src, dst); err != nil {
-		return nil, fmt.Errorf(`jwt.Sign: failed to convert options into jws.SignOption: %w`, err)
-	}
-	return NewSerializer().sign(dst.List()...).Serialize(t)
+	return NewSerializer().sign(soptions...).Serialize(t)
 }
 
 // Equal compares two JWT tokens. Do not use `reflect.Equal` or the like

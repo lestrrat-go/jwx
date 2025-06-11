@@ -1,11 +1,9 @@
 package jwe
 
 import (
-	"fmt"
-
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option"
 )
 
 // Specify contents of the protected header. Some fields such as
@@ -54,11 +52,10 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPerRecipientHeaders{}:
-			if err := option.Value(&hdr); err != nil {
-				panic(fmt.Sprintf("jwe.WithKey(jwe.WithPerRecipientHeaders) requires a Headers value: %s", err))
-			}
+			hdr = option.Value().(Headers)
 		}
 	}
 
@@ -72,11 +69,10 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
 	requireKid := true
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identRequireKid{}:
-			if err := option.Value(&requireKid); err != nil {
-				panic(fmt.Sprintf("jwe.WithKeySet(jwe.WithRequireKid) requires a bool value: %s", err))
-			}
+			requireKid = option.Value().(bool)
 		}
 	}
 
@@ -94,11 +90,10 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
 func WithJSON(options ...WithJSONSuboption) EncryptOption {
 	var pretty bool
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPretty{}:
-			if err := option.Value(&pretty); err != nil {
-				panic(fmt.Sprintf("jwe.WithJSON(jwe.WithPretty) requires a bool value: %s", err))
-			}
+			pretty = option.Value().(bool)
 		}
 	}
 

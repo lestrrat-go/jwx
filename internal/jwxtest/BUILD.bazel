@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v3/internal/jwxtest",
     visibility = ["//:__subpackages__"],
     deps = [
-        "//internal/tokens",
         "//jwa",
         "//jwe",
         "//jwk",

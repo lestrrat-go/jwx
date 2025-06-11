@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const (
@@ -77,7 +76,7 @@ func parseNumericString(x string) (time.Time, error) {
 
 	var fractional string
 	whole := x
-	if i := strings.IndexRune(x, tokens.Period); i > 0 {
+	if i := strings.IndexRune(x, '.'); i > 0 {
 		if ParsePrecision > 0 && len(x) > i+1 {
 			fractional = x[i+1:] // everything after the '.'
 			if int(ParsePrecision) < len(fractional) {
@@ -160,7 +159,7 @@ func (n NumericDate) String() string {
 
 	slwhole := len(s) - int(MaxPrecision)
 	s = s[:slwhole] + "." + s[slwhole:slwhole+int(FormatPrecision)]
-	if s[0] == tokens.Period {
+	if s[0] == '.' {
 		s = "0" + s
 	}
 

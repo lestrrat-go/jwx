@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option"
 )
 
 type identInsecureNoSignature struct{}
@@ -17,126 +17,103 @@ type identKeySet struct{}
 type identTypedClaim struct{}
 type identVerifyAuto struct{}
 
-func convertToJwsSignOption(src *option.Set[SignOption], dst *option.Set[jws.SignOption]) error {
-	for i := range src.Len() {
-		switch option := src.Option(i); option.Ident() {
+func toSignOptions(options ...Option) ([]jws.SignOption, error) {
+	soptions := make([]jws.SignOption, 0, len(options))
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identInsecureNoSignature{}:
-			dst.Add(jws.WithInsecureNoSignature())
+			soptions = append(soptions, jws.WithInsecureNoSignature())
 		case identKey{}:
-			var wk withKey
-			if err := option.Value(&wk); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithKey: %w`, err)
-			}
+			wk := option.Value().(*withKey) // this always succeeds
 			var wksoptions []jws.WithKeySuboption
 			for _, subopt := range wk.options {
 				wksopt, ok := subopt.(jws.WithKeySuboption)
 				if !ok {
-					return fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
 				}
 				wksoptions = append(wksoptions, wksopt)
 			}
-			dst.Add(jws.WithKey(wk.alg, wk.key, wksoptions...))
+
+			soptions = append(soptions, jws.WithKey(wk.alg, wk.key, wksoptions...))
 		case identSignOption{}:
-			var sigOpt jws.SignOption
-			if err := option.Value(&sigOpt); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithSignOption: %w`, err)
-			}
-			dst.Add(sigOpt)
+			sigOpt := option.Value().(jws.SignOption) // this always succeeds
+			soptions = append(soptions, sigOpt)
 		case identBase64Encoder{}:
-			var enc jws.Base64Encoder
-			if err := option.Value(&enc); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithBase64Encoder: %w`, err)
-			}
-			dst.Add(jws.WithBase64Encoder(enc))
+			soptions = append(soptions, jws.WithBase64Encoder(option.Value().(jws.Base64Encoder)))
 		}
 	}
-	return nil
+	return soptions, nil
 }
 
-func convertToJweEncryptOptions(src *option.Set[EncryptOption], dst *option.Set[jwe.EncryptOption]) error {
-	for i := range src.Len() {
-		switch option := src.Option(i); option.Ident() {
+func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
+	soptions := make([]jwe.EncryptOption, 0, len(options))
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identKey{}:
-			var wk withKey
-			if err := option.Value(&wk); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithKey: %w`, err)
-			}
+			wk := option.Value().(*withKey) // this always succeeds
 			var wksoptions []jwe.WithKeySuboption
 			for _, subopt := range wk.options {
 				wksopt, ok := subopt.(jwe.WithKeySuboption)
 				if !ok {
-					return fmt.Errorf(`expected optional arguments in jwt.WithKey to be jwe.WithKeySuboption, but got %T`, subopt)
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jwe.WithKeySuboption, but got %T`, subopt)
 				}
 				wksoptions = append(wksoptions, wksopt)
 			}
 
-			dst.Add(jwe.WithKey(wk.alg, wk.key, wksoptions...))
+			soptions = append(soptions, jwe.WithKey(wk.alg, wk.key, wksoptions...))
 		case identEncryptOption{}:
-			var encOpt jwe.EncryptOption
-			if err := option.Value(&encOpt); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithEncryptOption: %w`, err)
-			}
-			dst.Add(encOpt)
+			encOpt := option.Value().(jwe.EncryptOption) // this always succeeds
+			soptions = append(soptions, encOpt)
 		}
 	}
-	return nil
+	return soptions, nil
 }
 
-func convertToJwsVerifyOpts(src *option.Set[ParseOption], dst *option.Set[jws.VerifyOption]) error {
-	for i := range src.Len() {
-		switch option := src.Option(i); option.Ident() {
+func toVerifyOptions(options ...Option) ([]jws.VerifyOption, error) {
+	voptions := make([]jws.VerifyOption, 0, len(options))
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identKey{}:
-			var wk withKey
-			if err := option.Value(&wk); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithKey: %w`, err)
-			}
+			wk := option.Value().(*withKey) // this always succeeds
 			var wksoptions []jws.WithKeySuboption
 			for _, subopt := range wk.options {
 				wksopt, ok := subopt.(jws.WithKeySuboption)
 				if !ok {
-					return fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySuboption, but got %T`, subopt)
 				}
 				wksoptions = append(wksoptions, wksopt)
 			}
 
-			dst.Add(jws.WithKey(wk.alg, wk.key, wksoptions...))
+			voptions = append(voptions, jws.WithKey(wk.alg, wk.key, wksoptions...))
 		case identKeySet{}:
-			var wks withKeySet
-			if err := option.Value(&wks); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithKeySet: %w`, err)
-			}
+			wks := option.Value().(*withKeySet) // this always succeeds
 			var wkssoptions []jws.WithKeySetSuboption
 			for _, subopt := range wks.options {
 				wkssopt, ok := subopt.(jws.WithKeySetSuboption)
 				if !ok {
-					return fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySetSuboption, but got %T`, subopt)
+					return nil, fmt.Errorf(`expected optional arguments in jwt.WithKey to be jws.WithKeySetSuboption, but got %T`, subopt)
 				}
 				wkssoptions = append(wkssoptions, wkssopt)
 			}
 
-			dst.Add(jws.WithKeySet(wks.set, wkssoptions...))
+			voptions = append(voptions, jws.WithKeySet(wks.set, wkssoptions...))
 		case identVerifyAuto{}:
 			// this one doesn't need conversion. just get the stored option
-			var vopt jws.VerifyOption
-			if err := option.Value(&vopt); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithVerifyAuto: %w`, err)
-			}
-			dst.Add(vopt)
+			voptions = append(voptions, option.Value().(jws.VerifyOption))
 		case identKeyProvider{}:
-			var kp jws.KeyProvider
-			if err := option.Value(&kp); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithKeyProvider: %w`, err)
+			kp, ok := option.Value().(jws.KeyProvider)
+			if !ok {
+				return nil, fmt.Errorf(`expected jws.KeyProvider, got %T`, option.Value())
 			}
-			dst.Add(jws.WithKeyProvider(kp))
+			voptions = append(voptions, jws.WithKeyProvider(kp))
 		case identBase64Encoder{}:
-			var enc jws.Base64Encoder
-			if err := option.Value(&enc); err != nil {
-				return fmt.Errorf(`invalid value for jwt.WithBase64Encoder: %w`, err)
-			}
-			dst.Add(jws.WithBase64Encoder(enc))
+			voptions = append(voptions, jws.WithBase64Encoder(option.Value().(jws.Base64Encoder)))
 		}
 	}
-	return nil
+	return voptions, nil
 }
 
 type withKey struct {
@@ -315,5 +292,5 @@ func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
 }
 
 func WithInsecureNoSignature() SignOption {
-	return &signEncryptParseOption{option.New(identInsecureNoSignature{}, struct{}{})}
+	return &signEncryptParseOption{option.New(identInsecureNoSignature{}, nil)}
 }

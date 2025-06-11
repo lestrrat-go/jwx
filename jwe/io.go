@@ -3,7 +3,6 @@
 package jwe
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 )
@@ -17,12 +16,10 @@ func (sysFS) Open(path string) (fs.File, error) {
 func ReadFile(path string, options ...ReadFileOption) (*Message, error) {
 
 	var srcFS fs.FS = sysFS{}
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		switch option.Ident() {
 		case identFS{}:
-			if err := opt.Value(&srcFS); err != nil {
-				return nil, fmt.Errorf("jwe.ReadFile: %s", err.Error())
-			}
+			srcFS = option.Value().(fs.FS)
 		}
 	}
 

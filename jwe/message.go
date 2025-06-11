@@ -8,7 +8,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 // NewRecipient creates a Recipient object
@@ -58,8 +57,8 @@ func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
 }
 
 func (r *stdRecipient) MarshalJSON() ([]byte, error) {
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.WriteString(`{"header":`)
 	hdrbuf, err := json.Marshal(r.headers)
@@ -199,8 +198,8 @@ type jsonKV struct {
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 	enc := json.NewEncoder(buf)
 
 	var fields []jsonKV
@@ -248,7 +247,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		aad = base64.Encode(aad)
 		if encodedProtectedHeaders != nil {
-			tmp := append(encodedProtectedHeaders, tokens.Period)
+			tmp := append(encodedProtectedHeaders, '.')
 			aad = append(tmp, aad...)
 		}
 
@@ -526,18 +525,18 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	cipher := base64.Encode(m.cipherText)
 	tag := base64.Encode(m.tag)
 
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
 	buf.Write(protected)
-	buf.WriteByte(tokens.Period)
+	buf.WriteByte('.')
 	buf.Write(encryptedKey)
-	buf.WriteByte(tokens.Period)
+	buf.WriteByte('.')
 	buf.Write(iv)
-	buf.WriteByte(tokens.Period)
+	buf.WriteByte('.')
 	buf.Write(cipher)
-	buf.WriteByte(tokens.Period)
+	buf.WriteByte('.')
 	buf.Write(tag)
 
 	result := make([]byte, buf.Len())

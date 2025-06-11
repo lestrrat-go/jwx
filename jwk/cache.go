@@ -126,28 +126,19 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
 	waitReady := true
+	//nolint:forcetypeassert
 	for _, option := range options {
-		switch opt := option.(type) {
+		switch option := option.(type) {
 		case ParseOption:
-			parseOptions = append(parseOptions, opt)
+			parseOptions = append(parseOptions, option)
 		case ResourceOption:
-			var nropt httprc.NewResourceOption
-			if err := option.Value(&nropt); err != nil {
-				return fmt.Errorf(`jwk.Cache: Register: failed to parse ResourceOption: %w`, err)
-			}
-			resourceOptions = append(resourceOptions, nropt)
+			resourceOptions = append(resourceOptions, option.Value().(httprc.NewResourceOption))
 		default:
 			switch option.Ident() {
 			case identHTTPClient{}:
-				var httpClient HTTPClient
-				if err := option.Value(&httpClient); err != nil {
-					return fmt.Errorf(`jwk.Cache: Register: failed to parse identHTTPClient option: %w`, err)
-				}
-				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(httpClient))
+				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(option.Value().(HTTPClient)))
 			case identWaitReady{}:
-				if err := option.Value(&waitReady); err != nil {
-					return fmt.Errorf(`jwk.Cache: Register: failed to parse identWaitReady option: %w`, err)
-				}
+				waitReady = option.Value().(bool)
 			}
 		}
 	}

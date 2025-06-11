@@ -40,8 +40,8 @@ func uncompress(src []byte, maxBufferSize int64) ([]byte, error) {
 }
 
 func compress(plaintext []byte) ([]byte, error) {
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
 	w, _ := flate.NewWriter(buf, 1)
 	in := plaintext

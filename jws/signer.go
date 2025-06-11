@@ -16,17 +16,6 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 	return fn()
 }
 
-type staticSignerFactory struct {
-	signer Signer
-}
-
-func (f staticSignerFactory) Create() (Signer, error) {
-	if f.signer == nil {
-		return nil, fmt.Errorf(`static signer factory does not have a signer`)
-	}
-	return f.signer, nil
-}
-
 var muSignerDB sync.RWMutex
 var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 
@@ -73,26 +62,32 @@ func init() {
 	signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
-		RegisterSigner(alg, &staticSignerFactory{
-			signer: newRSASigner(alg),
-		})
+		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
+			return SignerFactoryFn(func() (Signer, error) {
+				return newRSASigner(alg), nil
+			})
+		}(alg))
 	}
 
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
-		RegisterSigner(alg, &staticSignerFactory{
-			signer: newECDSASigner(alg),
-		})
+		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
+			return SignerFactoryFn(func() (Signer, error) {
+				return newECDSASigner(alg), nil
+			})
+		}(alg))
 	}
 
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
-		RegisterSigner(alg, &staticSignerFactory{
-			signer: newHMACSigner(alg),
-		})
+		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
+			return SignerFactoryFn(func() (Signer, error) {
+				return newHMACSigner(alg), nil
+			})
+		}(alg))
 	}
 
-	RegisterSigner(jwa.EdDSA(), &staticSignerFactory{
-		signer: newEdDSASigner(),
-	})
+	RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
+		return newEdDSASigner(), nil
+	}))
 }
 
 // NewSigner creates a signer that signs payloads using the given signature algorithm.

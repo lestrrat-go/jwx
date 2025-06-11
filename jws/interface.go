@@ -87,6 +87,14 @@ type Signer interface {
 	Algorithm() jwa.SignatureAlgorithm
 }
 
+type hmacSignFunc func([]byte, []byte) ([]byte, error)
+
+// HMACSigner uses crypto/hmac to sign the payloads.
+type HMACSigner struct {
+	alg  jwa.SignatureAlgorithm
+	sign hmacSignFunc
+}
+
 type Verifier interface {
 	// Verify checks whether the payload and signature are valid for
 	// the given key.

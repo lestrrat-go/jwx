@@ -6,7 +6,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const (
@@ -203,10 +202,10 @@ func (t *AddressClaim) Accept(v interface{}) error {
 
 // MarshalJSON serializes the token in JSON format.
 func (t AddressClaim) MarshalJSON() ([]byte, error) {
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	buf := pool.GetBytesBuffer()
+	defer pool.ReleaseBytesBuffer(buf)
 
-	buf.WriteByte(tokens.OpenCurlyBracket)
+	buf.WriteByte('{')
 	prev := buf.Len()
 	if v := t.country; v != nil {
 		buf.WriteString(`"country":`)
@@ -215,7 +214,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.formatted; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
+			buf.WriteByte(',')
 		}
 		prev = buf.Len()
 		buf.WriteString(`"formatted":`)
@@ -224,7 +223,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.locality; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
+			buf.WriteByte(',')
 		}
 		prev = buf.Len()
 		buf.WriteString(`"locality":`)
@@ -233,7 +232,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.postalCode; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
+			buf.WriteByte(',')
 		}
 		prev = buf.Len()
 		buf.WriteString(`"postal_code":`)
@@ -242,7 +241,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.region; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
+			buf.WriteByte(',')
 		}
 		prev = buf.Len()
 		buf.WriteString(`"region":`)
@@ -251,13 +250,13 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.streetAddress; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
+			buf.WriteByte(',')
 		}
 		buf.WriteString(`"street_address":`)
 		buf.WriteString(strconv.Quote(*v))
 	}
 
-	buf.WriteByte(tokens.CloseCurlyBracket)
+	buf.WriteByte('}')
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

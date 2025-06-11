@@ -90,9 +90,7 @@ func NewKeyType(name string, options ...NewAlgorithmOption) KeyType {
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic(fmt.Sprintf(`jwa: NewKeyType: %s`, err))
-			}
+			deprecated = option.Value().(bool)
 		}
 	}
 	return KeyType{name: name, deprecated: deprecated}
