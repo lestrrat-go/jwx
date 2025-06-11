@@ -42,6 +42,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
@@ -426,7 +427,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		}
 
 		verifyBuf.WriteString(encodedProtectedHeader)
-		verifyBuf.WriteByte('.')
+		verifyBuf.WriteByte(tokens.Period)
 		verifyBuf.WriteString(payload)
 
 		for i, kp := range keyProviders {
@@ -690,23 +691,23 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 
 		// append to current buffer
 		sofar = append(sofar, buf[:n]...)
-		// loop to capture multiple '.' in current buffer
+		// loop to capture multiple tokens.Period in current buffer
 		for loop := true; loop; {
-			var i = bytes.IndexByte(sofar, '.')
+			var i = bytes.IndexByte(sofar, tokens.Period)
 			if i == -1 && err != io.EOF {
-				// no '.' found -> exit and read next bytes (outer loop)
+				// no tokens.Period found -> exit and read next bytes (outer loop)
 				loop = false
 				continue
 			} else if i == -1 && err == io.EOF {
-				// no '.' found -> process rest and exit
+				// no tokens.Period found -> process rest and exit
 				i = len(sofar)
 				loop = false
 			} else {
-				// '.' found
+				// tokens.Period found
 				periods++
 			}
 
-			// Reaching this point means we have found a '.' or EOF and process the rest of the buffer
+			// Reaching this point means we have found a tokens.Period or EOF and process the rest of the buffer
 			switch state {
 			case 0:
 				protected = sofar[:i]

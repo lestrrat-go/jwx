@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -890,13 +891,13 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	var ok bool
 
 	for i := range 4 {
-		parts[i], buf, ok = bytes.Cut(buf, []byte{'.'})
+		parts[i], buf, ok = bytes.Cut(buf, []byte{tokens.Period})
 		if !ok {
 			return nil, fmt.Errorf(`compact JWE format must have five parts (%d)`, i+1)
 		}
 	}
 	// Validate that the last part does not contain more dots
-	if bytes.ContainsRune(buf, '.') {
+	if bytes.ContainsRune(buf, tokens.Period) {
 		return nil, errors.New(`compact JWE format must have five parts, not more`)
 	}
 	parts[4] = buf

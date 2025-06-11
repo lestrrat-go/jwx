@@ -23,6 +23,7 @@ import (
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -368,7 +369,7 @@ func TestJWTParseVerify(t *testing.T) {
 			dummyEncoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(dummyMarshaled)))
 			base64.RawURLEncoding.Encode(dummyEncoded, dummyMarshaled)
 
-			signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{'.'})
+			signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{tokens.Period})
 
 			pubkey, err := jwk.Import(&key.PublicKey)
 			require.NoError(t, err)
@@ -1518,8 +1519,8 @@ func TestGH951(t *testing.T) {
 	require.NoError(t, err, `jwt.NewSerializer()....Serizlie() should succeed`)
 
 	require.NotEqual(t,
-		len(bytes.Split(serialized, []byte{'.'})[3]),
-		len(bytes.Split(serialized2, []byte{'.'})[3]),
+		len(bytes.Split(serialized, []byte{tokens.Period})[3]),
+		len(bytes.Split(serialized2, []byte{tokens.Period})[3]),
 	)
 
 	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW(), sharedKey))

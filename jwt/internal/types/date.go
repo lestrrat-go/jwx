@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const (
@@ -60,7 +61,7 @@ func parseNumericString(x string) (time.Time, error) {
 		// This is an escape hatch for non-conformant providers
 		// that gives us RFC3339 instead of epoch time
 		for _, r := range x {
-			// 0x30 = '0', 0x39 = '9', 0x2E = '.'
+			// 0x30 = '0', 0x39 = '9', 0x2E = tokens.Period
 			if (r >= 0x30 && r <= 0x39) || r == 0x2E {
 				continue
 			}
@@ -76,9 +77,9 @@ func parseNumericString(x string) (time.Time, error) {
 
 	var fractional string
 	whole := x
-	if i := strings.IndexRune(x, '.'); i > 0 {
+	if i := strings.IndexRune(x, tokens.Period); i > 0 {
 		if ParsePrecision > 0 && len(x) > i+1 {
-			fractional = x[i+1:] // everything after the '.'
+			fractional = x[i+1:] // everything after the tokens.Period
 			if int(ParsePrecision) < len(fractional) {
 				// Remove insignificant digits
 				fractional = fractional[:int(ParsePrecision)]
@@ -159,7 +160,7 @@ func (n NumericDate) String() string {
 
 	slwhole := len(s) - int(MaxPrecision)
 	s = s[:slwhole] + "." + s[slwhole:slwhole+int(FormatPrecision)]
-	if s[0] == '.' {
+	if s[0] == tokens.Period {
 		s = "0" + s
 	}
 

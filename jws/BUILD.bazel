@@ -29,6 +29,7 @@ go_library(
         "//internal/ecutil",
         "//transform",
         "//internal/json",
+        "//internal/tokens",
         "//internal/keyconv",
         "//internal/pool",
         "//jwa",

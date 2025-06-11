@@ -28,6 +28,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
@@ -442,7 +443,7 @@ func TestEncode(t *testing.T) {
 				hdrbuf,
 				payload,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 
 		sign, err := jws.NewSigner(jwa.HS256())
@@ -457,7 +458,7 @@ func TestEncode(t *testing.T) {
 				signingInput,
 				sigbuf,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 		require.Equal(t, expected, string(encoded), "generated compact serialization should match")
 
@@ -529,7 +530,7 @@ func TestEncode(t *testing.T) {
 				signingHdr,
 				signingPayload,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 		hashed512 := sha512.Sum512(jwsSigningInput)
 		ecdsaPrivateKey := key.(*ecdsa.PrivateKey)
@@ -576,7 +577,7 @@ func TestEncode(t *testing.T) {
 				hdrbuf,
 				payload,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 		signature, err := sign.Sign(signingInput, rawkey)
 		require.NoError(t, err, "PayloadSign is successful")
@@ -587,7 +588,7 @@ func TestEncode(t *testing.T) {
 				signingInput,
 				sigbuf,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 
 		require.Equal(t, expected, string(encoded), "generated compact serialization should match")
@@ -634,7 +635,7 @@ func TestEncode(t *testing.T) {
 				hdrbuf,
 				payload,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 		signature, err := signer.Sign(signingInput, &rawkey)
 		require.NoError(t, err, "PayloadSign is successful")
@@ -646,7 +647,7 @@ func TestEncode(t *testing.T) {
 				signingInput,
 				sigbuf,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 
 		// The signature contains random factor, so unfortunately we can't match
@@ -699,7 +700,7 @@ func TestEncode(t *testing.T) {
 				hdrbuf,
 				payload,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 
 		signature, err := signer.Sign(signingInput, rawkey)
@@ -710,7 +711,7 @@ func TestEncode(t *testing.T) {
 				signingInput,
 				sigbuf,
 			},
-			[]byte{'.'},
+			[]byte{tokens.Period},
 		)
 
 		// The signature contains random factor, so unfortunately we can't match
@@ -842,11 +843,11 @@ func TestEncode(t *testing.T) {
 				for range size {
 					payload = append(payload, 'X')
 				}
-				payload = append(payload, '.')
+				payload = append(payload, tokens.Period)
 				for range size {
 					payload = append(payload, 'Y')
 				}
-				payload = append(payload, '.')
+				payload = append(payload, tokens.Period)
 
 				for range size {
 					payload = append(payload, 'Y')
@@ -912,7 +913,7 @@ func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
 
 	var buf bytes.Buffer
 	buf.Write(protected)
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.Write(payload)
 
 	decodedSignature, err := base64.Decode(signature)
@@ -1876,7 +1877,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 					t.Logf("Original JWS payload: %q", signed)
 					require.Len(t, unpaddedSig, 63)
 
-					i := bytes.LastIndexByte(signed, '.')
+					i := bytes.LastIndexByte(signed, tokens.Period)
 					modified := append(signed[:i+1], base64.Encode(unpaddedSig)...)
 					t.Logf("JWS payload with unpadded signature: %q", modified)
 
@@ -1989,9 +1990,9 @@ func TestEmptyProtectedField(t *testing.T) {
 
 	// Test for cases when we have an incomplete compact form JWS
 	var buf bytes.Buffer
-	buf.WriteRune('.')
+	buf.WriteRune(tokens.Period)
 	buf.Write(payload)
-	buf.WriteRune('.')
+	buf.WriteRune(tokens.Period)
 	buf.Write(signature)
 	invalidMessage := buf.Bytes()
 
