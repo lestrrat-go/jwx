@@ -165,7 +165,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	for i, field := range fields {
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		fmt.Fprintf(buf, `%q:`, field)
 		if field != keysKey {
@@ -176,7 +176,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 			buf.WriteByte(tokens.OpenSquareBracket)
 			for j, k := range s.keys {
 				if j > 0 {
-					buf.WriteByte(',')
+					buf.WriteByte(tokens.Comma)
 				}
 				if err := enc.Encode(k); err != nil {
 					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)

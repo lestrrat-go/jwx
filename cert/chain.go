@@ -22,7 +22,7 @@ func (cc Chain) MarshalJSON() ([]byte, error) {
 	buf.WriteByte(tokens.OpenSquareBracket)
 	for i, cert := range cc.certificates {
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		buf.WriteByte('"')
 		buf.Write(cert)

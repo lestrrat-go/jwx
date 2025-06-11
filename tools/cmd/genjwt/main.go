@@ -598,7 +598,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
 	o.LL("for i, pair := range pairs {")
 	o.L("if i > 0 {")
-	o.L("buf.WriteByte(',')")
+	o.L("buf.WriteByte(tokens.Comma)")
 	o.L("}")
 	o.L(`fmt.Fprintf(buf, "%%q: %%s", pair.Name, pair.Value)`)
 	o.L("}")

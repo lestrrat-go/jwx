@@ -546,7 +546,7 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 	enc := json.NewEncoder(buf)
 	for i, f := range fields {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
 		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(f)

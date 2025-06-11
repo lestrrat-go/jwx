@@ -622,7 +622,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 
 	for i, pair := range pairs {
 		if i > 0 {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
 	}

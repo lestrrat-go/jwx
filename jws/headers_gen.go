@@ -680,7 +680,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	for i, k := range keys {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
 		buf.WriteRune(tokens.DoubleQuote)
 		buf.WriteString(k)

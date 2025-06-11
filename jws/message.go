@@ -376,7 +376,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	}
 
 	if wrote {
-		buf.WriteRune(',')
+		buf.WriteRune(tokens.Comma)
 	}
 	buf.WriteString(`"payload":"`)
 	buf.WriteString(base64.EncodeToString(m.payload))
@@ -411,7 +411,7 @@ func (m Message) marshalFull() ([]byte, error) {
 	buf.WriteString(`","signatures":[`)
 	for i, sig := range m.signatures {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
 
 		buf.WriteRune(tokens.OpenCurlyBracket)
@@ -432,7 +432,7 @@ func (m Message) marshalFull() ([]byte, error) {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"protected":"`)
 			buf.WriteString(base64.EncodeToString(protectedbuf))
@@ -443,7 +443,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		if len(sig.signature) > 0 {
 			// If InsecureNoSignature is enabled, signature may not exist
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"signature":"`)
 			buf.WriteString(base64.EncodeToString(sig.signature))

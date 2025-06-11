@@ -652,7 +652,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("enc := json.NewEncoder(buf)")
 	o.L("for i, f := range fields {")
 	o.L("if i > 0 {")
-	o.L("buf.WriteRune(',')")
+	o.L("buf.WriteRune(tokens.Comma)")
 	o.L("}")
 	o.L("buf.WriteRune(tokens.DoubleQuote)")
 	o.L("buf.WriteString(f)")

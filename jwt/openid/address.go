@@ -215,7 +215,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.formatted; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		prev = buf.Len()
 		buf.WriteString(`"formatted":`)
@@ -224,7 +224,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.locality; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		prev = buf.Len()
 		buf.WriteString(`"locality":`)
@@ -233,7 +233,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.postalCode; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		prev = buf.Len()
 		buf.WriteString(`"postal_code":`)
@@ -242,7 +242,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.region; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		prev = buf.Len()
 		buf.WriteString(`"region":`)
@@ -251,7 +251,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	if v := t.streetAddress; v != nil {
 		if buf.Len() > prev {
-			buf.WriteByte(',')
+			buf.WriteByte(tokens.Comma)
 		}
 		buf.WriteString(`"street_address":`)
 		buf.WriteString(strconv.Quote(*v))

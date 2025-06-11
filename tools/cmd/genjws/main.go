@@ -437,7 +437,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
 	o.L("for i, k := range keys {")
 	o.L("if i > 0 {")
-	o.L("buf.WriteRune(',')")
+	o.L("buf.WriteRune(tokens.Comma)")
 	o.L("}")
 	o.L("buf.WriteRune(tokens.DoubleQuote)")
 	o.L("buf.WriteString(k)")
