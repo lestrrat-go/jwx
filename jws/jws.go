@@ -403,8 +403,8 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		payload = string(msg.payload)
 	}
 
-	verifyBuf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(verifyBuf)
+	verifyBuf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(verifyBuf)
 
 	var errs []error
 	for i, sig := range msg.signatures {

@@ -58,8 +58,8 @@ func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
 }
 
 func (r *stdRecipient) MarshalJSON() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"header":`)
 	hdrbuf, err := json.Marshal(r.headers)
@@ -199,8 +199,8 @@ type jsonKV struct {
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 
 	var fields []jsonKV
@@ -526,8 +526,8 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	cipher := base64.Encode(m.cipherText)
 	tag := base64.Encode(m.tag)
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
 	buf.Write(protected)
