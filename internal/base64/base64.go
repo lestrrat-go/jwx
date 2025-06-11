@@ -16,6 +16,7 @@ type Encoder interface {
 	Encode([]byte, []byte)
 	EncodedLen(int) int
 	EncodeToString([]byte) string
+	AppendEncode([]byte, []byte) []byte
 }
 
 var muEncoder sync.RWMutex
