@@ -107,7 +107,6 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 }
 
 func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.SignatureAlgorithm }, key interface{}) ([]byte, []byte, error) {
-
 	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)

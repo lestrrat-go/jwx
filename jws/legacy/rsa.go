@@ -54,7 +54,6 @@ func init() {
 			pss:  item.PSS,
 		}
 	}
-
 }
 
 type rsaSigner struct {

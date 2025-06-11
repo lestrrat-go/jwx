@@ -119,7 +119,6 @@ func TestECDSA(t *testing.T) {
 }
 
 func TestEdDSA(t *testing.T) {
-
 	testcases := []struct {
 		name          string
 		encodePayload bool

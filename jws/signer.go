@@ -45,7 +45,6 @@ var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
-	fmt.Println("RegisterSigner", alg)
 	jwa.RegisterSignatureAlgorithm(alg)
 	muSignerDB.Lock()
 	signerDB[alg] = f
