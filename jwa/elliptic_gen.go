@@ -108,9 +108,7 @@ func NewEllipticCurveAlgorithm(name string, options ...NewAlgorithmOption) Ellip
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic(fmt.Sprintf(`jwa: NewEllipticCurveAlgorithm: %s`, err))
-			}
+			deprecated = option.Value().(bool)
 		}
 	}
 	return EllipticCurveAlgorithm{name: name, deprecated: deprecated}

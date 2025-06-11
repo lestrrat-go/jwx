@@ -3,7 +3,7 @@ package jws
 import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option"
 )
 
 type identInsecureNoSignature struct{}
@@ -15,12 +15,11 @@ type identInsecureNoSignature struct{}
 // you also pass this option.
 func WithJSON(options ...WithJSONSuboption) SignVerifyParseOption {
 	var pretty bool
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identPretty{}:
-			if err := opt.Value(&pretty); err != nil {
-				panic("jws.WithJSON() option must be a boolean value")
-			}
+			pretty = option.Value().(bool)
 		}
 	}
 
@@ -99,16 +98,13 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 	// Verify(). As such we don't create a KeyProvider here because
 	// if used in Sign() we would be doing something else.
 	var protected, public Headers
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identProtectedHeaders{}:
-			if err := opt.Value(&protected); err != nil {
-				panic("jws.WithKey() option must be a Headers value")
-			}
+			protected = option.Value().(Headers)
 		case identPublicHeaders{}:
-			if err := opt.Value(&public); err != nil {
-				panic("jws.WithKey() option must be a Headers value")
-			}
+			public = option.Value().(Headers)
 		}
 	}
 
@@ -144,24 +140,17 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	requireKid := true
 	var useDefault, inferAlgorithm, multipleKeysPerKeyID bool
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identRequireKid{}:
-			if err := opt.Value(&requireKid); err != nil {
-				panic("jws.WithKeySet(jws.RequireKid(...)) option must be a boolean value")
-			}
+			requireKid = option.Value().(bool)
 		case identUseDefault{}:
-			if err := opt.Value(&useDefault); err != nil {
-				panic("jws.WithKeySet(jws.UseDefault(...)) option must be a boolean value")
-			}
+			useDefault = option.Value().(bool)
 		case identMultipleKeysPerKeyID{}:
-			if err := opt.Value(&multipleKeysPerKeyID); err != nil {
-				panic("jws.WithKeySet(jws.MultipleKeysPerKeyID(...)) option must be a boolean value")
-			}
+			multipleKeysPerKeyID = option.Value().(bool)
 		case identInferAlgorithmFromKey{}:
-			if err := opt.Value(&inferAlgorithm); err != nil {
-				panic("jws.WithKeySet(jws.InferAlgorithmFromKey(...)) option must be a boolean value")
-			}
+			inferAlgorithm = option.Value().(bool)
 		}
 	}
 
@@ -240,12 +229,11 @@ func (w *withInsecureNoSignature) Protected(v Headers) Headers {
 // TODO: create specific suboption set for this option
 func WithInsecureNoSignature(options ...WithKeySuboption) SignOption {
 	var protected Headers
-	for _, opt := range options {
-		switch opt.Ident() {
+	for _, option := range options {
+		//nolint:forcetypeassert
+		switch option.Ident() {
 		case identProtectedHeaders{}:
-			if err := opt.Value(&protected); err != nil {
-				panic("jws.WithInsecureNoSignature() option must be a Headers value")
-			}
+			protected = option.Value().(Headers)
 		}
 	}
 

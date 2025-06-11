@@ -71,9 +71,7 @@ func NewCompressionAlgorithm(name string, options ...NewAlgorithmOption) Compres
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic(fmt.Sprintf(`jwa: NewCompressionAlgorithm: %s`, err))
-			}
+			deprecated = option.Value().(bool)
 		}
 	}
 	return CompressionAlgorithm{name: name, deprecated: deprecated}

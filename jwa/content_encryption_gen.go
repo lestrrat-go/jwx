@@ -95,9 +95,7 @@ func NewContentEncryptionAlgorithm(name string, options ...NewAlgorithmOption) C
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic(fmt.Sprintf(`jwa: NewContentEncryptionAlgorithm: %s`, err))
-			}
+			deprecated = option.Value().(bool)
 		}
 	}
 	return ContentEncryptionAlgorithm{name: name, deprecated: deprecated}

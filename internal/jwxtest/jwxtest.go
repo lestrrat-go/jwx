@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -168,7 +167,7 @@ func DumpFile(t *testing.T, file string) {
 	buf, err := os.ReadFile(file)
 	require.NoError(t, err, `failed to read file %s for debugging`, file)
 
-	if isHash, isArray := bytes.ContainsRune(buf, tokens.OpenCurlyBracket), bytes.ContainsRune(buf, tokens.OpenSquareBracket); isHash || isArray {
+	if isHash, isArray := bytes.ContainsRune(buf, '{'), bytes.ContainsRune(buf, '['); isHash || isArray {
 		// Looks like a JSON-like thing. Dump that in a formatted manner, and
 		// be done with it
 

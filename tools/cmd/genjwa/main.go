@@ -232,14 +232,10 @@ func Generate(t Algorithm) error {
 	o.L("switch option.Ident() {")
 	if t.Symmetric {
 		o.L("case identIsSymmetric{}:")
-		o.L("if err := option.Value(&isSymmetric); err != nil {")
-		o.L("panic(fmt.Sprintf(`jwa: New%s: %%s`, err))", t.Name)
-		o.L("}")
+		o.L("isSymmetric = option.Value().(bool)")
 	}
 	o.L("case identDeprecated{}:")
-	o.L("if err := option.Value(&deprecated); err != nil {")
-	o.L("panic(fmt.Sprintf(`jwa: New%s: %%s`, err))", t.Name)
-	o.L("}")
+	o.L("deprecated = option.Value().(bool)")
 	o.L("}")
 	o.L("}")
 	o.L("return %s{name: name, deprecated: deprecated", t.Name)

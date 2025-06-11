@@ -14,12 +14,11 @@ import (
 // If the specified cookie is not found, http.ErrNoCookie is returned.
 func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token, error) {
 	var dst **http.Cookie
+	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identCookie{}:
-			if err := option.Value(&dst); err != nil {
-				return nil, fmt.Errorf(`jwt.ParseCookie: invalid value for WithCookie: %w`, err)
-			}
+			dst = option.Value().(**http.Cookie)
 		}
 	}
 
@@ -102,25 +101,14 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var cookiekeys []string
 	var parseOptions []ParseOption
 	for _, option := range options {
+		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHeaderKey{}:
-			var hdrkey string
-			if err := option.Value(&hdrkey); err != nil {
-				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithHeaderKey: %w`, err)
-			}
-			hdrkeys = append(hdrkeys, hdrkey)
+			hdrkeys = append(hdrkeys, option.Value().(string))
 		case identFormKey{}:
-			var formkey string
-			if err := option.Value(&formkey); err != nil {
-				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithFormKey: %w`, err)
-			}
-			formkeys = append(formkeys, formkey)
+			formkeys = append(formkeys, option.Value().(string))
 		case identCookieKey{}:
-			var cookiekey string
-			if err := option.Value(&cookiekey); err != nil {
-				return nil, fmt.Errorf(`jwt.ParseRequest: invalid value for WithCookieKey: %w`, err)
-			}
-			cookiekeys = append(cookiekeys, cookiekey)
+			cookiekeys = append(cookiekeys, option.Value().(string))
 		default:
 			parseOptions = append(parseOptions, option)
 		}
@@ -130,12 +118,12 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		hdrkeys = append(hdrkeys, "Authorization")
 	}
 
-	mhdrs := pool.KeyToErrorMap().Get()
-	defer pool.KeyToErrorMap().Put(mhdrs)
-	mfrms := pool.KeyToErrorMap().Get()
-	defer pool.KeyToErrorMap().Put(mfrms)
-	mcookies := pool.KeyToErrorMap().Get()
-	defer pool.KeyToErrorMap().Put(mcookies)
+	mhdrs := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mhdrs)
+	mfrms := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mfrms)
+	mcookies := pool.GetKeyToErrorMap()
+	defer pool.ReleaseKeyToErrorMap(mcookies)
 
 	for _, hdrkey := range hdrkeys {
 		// Check presence via a direct map lookup

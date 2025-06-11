@@ -180,13 +180,9 @@ func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithm
 	for _, option := range options {
 		switch option.Ident() {
 		case identIsSymmetric{}:
-			if err := option.Value(&isSymmetric); err != nil {
-				panic(fmt.Sprintf(`jwa: NewKeyEncryptionAlgorithm: %s`, err))
-			}
+			isSymmetric = option.Value().(bool)
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic(fmt.Sprintf(`jwa: NewKeyEncryptionAlgorithm: %s`, err))
-			}
+			deprecated = option.Value().(bool)
 		}
 	}
 	return KeyEncryptionAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option"
 )
 
 type identTypedField struct{}
