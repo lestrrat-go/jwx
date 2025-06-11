@@ -3,7 +3,6 @@ package jws
 import (
 	"crypto"
 	"crypto/rsa"
-	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
@@ -60,10 +59,6 @@ type rsasigner struct {
 	pss  bool // whether to use PSS padding
 }
 
-func (s rsasigner) Create() (Signer, error) {
-	return nil, errors.New(`jws.RSASigner does not support Create() method`)
-}
-
 func (s rsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
@@ -81,24 +76,20 @@ func (s rsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePa
 			options = &rsaopts
 		}
 
-		return jwsbb.SignCryptoSigner(payload, protected, s.hash, signer, options, encoder, encodePayload)
+		return jwsbb.SignCryptoSigner(signer, payload, protected, s.hash, options, encoder, encodePayload)
 	}
 
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
 		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
 	}
-	return jwsbb.SignRSA(payload, protected, s.hash, s.pss, encoder, encodePayload, privkey)
+	return jwsbb.SignRSA(privkey, payload, protected, s.hash, s.pss, encoder, encodePayload)
 }
 
 type rsaverifier struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
 	pss  bool // whether to use PSS padding
-}
-
-func (rsaverifier) Create() (Verifier, error) {
-	return nil, errors.New(`jws.RSAVerifier does not support Create() method`)
 }
 
 func (v rsaverifier) Algorithm() jwa.SignatureAlgorithm {
@@ -123,5 +114,5 @@ func (v rsaverifier) Do(payload, protected, signature []byte, encoder Base64Enco
 		}
 	}
 
-	return jwsbb.VerifyRSA(payload, protected, signature, v.hash, v.pss, encoder, encodePayload, pubkey)
+	return jwsbb.VerifyRSA(pubkey, payload, protected, signature, v.hash, v.pss, encoder, encodePayload)
 }

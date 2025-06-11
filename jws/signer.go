@@ -10,11 +10,6 @@ import (
 type Signer2 interface {
 	Algorithm() jwa.SignatureAlgorithm
 	Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
-
-	// Create implements SignerFactory, but this is actually a no-op,
-	// and will return an error if called. This is a hack to allow
-	// passing Signer2 objects to RegisterSigner
-	Create() (Signer, error)
 }
 
 var muSigner2DB sync.RWMutex
@@ -35,29 +30,44 @@ var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 // RegisterSigner is used to register a signer for the given
 // algorithm.
 //
-// Please note that while this function takes a `SignerFactory`
-// as an argument, this is only so for backwards compatibility,
-// and as of this writing you should use objects that implement
-// the `Signer2` interface instead.
+// Please note that this function is intended to be passed a
+// signer object as its second argument, but due to historical
+// reasons the function signature is defined as taking `any` type.
+//
+// You should create a signer object that implements the `Signer2`
+// interface to register a signer, unless you have legacy code that
+// plugged into the `SignerFactory` interface.
 //
 // Unlike the `UnregisterSigner` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
-func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
+func RegisterSigner(alg jwa.SignatureAlgorithm, f any) error {
 	jwa.RegisterSignatureAlgorithm(alg)
 	switch s := f.(type) {
 	case Signer2:
 		muSigner2DB.Lock()
 		signer2DB[alg] = s
 		muSigner2DB.Unlock()
-	default:
+
+		// delete the other signer, if there was one
 		muSignerDB.Lock()
-		signerDB[alg] = f
+		delete(signerDB, alg)
+		muSignerDB.Unlock()
+	case SignerFactory:
+		muSignerDB.Lock()
+		signerDB[alg] = s
 		muSignerDB.Unlock()
 
 		// Remove previous signer, if there was one
 		removeSigner(alg)
+
+		muSigner2DB.Lock()
+		delete(signer2DB, alg)
+		muSigner2DB.Unlock()
+	default:
+		return fmt.Errorf(`jws.RegisterSigner: unsupported type %T for algorithm %q`, f, alg)
 	}
+	return nil
 }
 
 // UnregisterSigner removes the signer factory associated with

@@ -50,7 +50,7 @@ type EcdsaSigner struct {
 	h crypto.Hash
 }
 
-func (es EcdsaSigner) Sign(payload []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+func (es EcdsaSigner) Sign(key *ecdsa.PrivateKey, payload []byte) ([]byte, error) {
 	hh := es.h.New()
 	if _, err := hh.Write(payload); err != nil {
 		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
@@ -88,16 +88,16 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 	return append(rBytesPadded, sBytesPadded...), nil
 }
 
-func SignECDSA(payload, hdr []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool, key *ecdsa.PrivateKey) ([]byte, error) {
-	return sign[*ecdsa.PrivateKey](payload, hdr, EcdsaSigner{h: h}, encoder, encodePayload, key)
+func SignECDSA(key *ecdsa.PrivateKey, payload, hdr []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
+	return Sign[*ecdsa.PrivateKey](key, payload, hdr, EcdsaSigner{h: h}, encoder, encodePayload)
 }
 
-func SignECDSACryptoSigner(payload, hdr []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool, signer crypto.Signer) ([]byte, error) {
+func SignECDSACryptoSigner(signer crypto.Signer, payload, hdr []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
 	// Because crypto/ecdsa.PrivateKey's crypto.Signer interface behaves differently
 	// than the ecdsa.Sign function (it returns a ASN.1/DER encoded signature), we
 	// need to handle the signing process manually.
 	// (i.e. we can't just pass it to SignCryptoSigner() as we do with RSA keys)
-	signed, err := SignCryptoSigner(payload, hdr, h, signer, h, encoder, encodePayload)
+	signed, err := SignCryptoSigner(signer, payload, hdr, h, h, encoder, encodePayload)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload using crypto.Signer: %w`, err)
 	}
@@ -122,16 +122,16 @@ type EcdsaVerifier struct {
 	h crypto.Hash
 }
 
-func (v EcdsaVerifier) Verify(buf []byte, signature []byte, key *ecdsa.PublicKey) error {
+func (v EcdsaVerifier) Verify(key *ecdsa.PublicKey, buf []byte, signature []byte) error {
 	var r, s big.Int
 	if err := UnpackECDSASignature(signature, key, &r, &s); err != nil {
 		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ECDSA signature: %w", err)
 	}
 
-	return ecdsaVerify(buf, v.h, &r, &s, key)
+	return ecdsaVerify(key, buf, v.h, &r, &s)
 }
 
-func ecdsaVerify(buf []byte, h crypto.Hash, r, s *big.Int, key *ecdsa.PublicKey) error {
+func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int) error {
 	hasher := h.New()
 	hasher.Write(buf)
 	digest := hasher.Sum(nil)
@@ -142,15 +142,15 @@ func ecdsaVerify(buf []byte, h crypto.Hash, r, s *big.Int, key *ecdsa.PublicKey)
 }
 
 // VerifyECDSA verifies the ECDSA signature for the given payload and header.
-func VerifyECDSA(payload, hdr, signature []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool, pubKey *ecdsa.PublicKey) error {
-	return verify[*ecdsa.PublicKey](payload, hdr, signature, EcdsaVerifier{h: h}, encoder, encodePayload, pubKey)
+func VerifyECDSA(key *ecdsa.PublicKey, payload, hdr, signature []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool) error {
+	return Verify[*ecdsa.PublicKey](key, payload, hdr, signature, EcdsaVerifier{h: h}, encoder, encodePayload)
 }
 
 type EcdsaCryptoSignerVerifier struct {
 	h crypto.Hash
 }
 
-func (v EcdsaCryptoSignerVerifier) Verify(buf []byte, signature []byte, signer crypto.Signer) error {
+func (v EcdsaCryptoSignerVerifier) Verify(signer crypto.Signer, buf []byte, signature []byte) error {
 	var pubkey *ecdsa.PublicKey
 	switch cpub := signer.Public(); cpub := cpub.(type) {
 	case ecdsa.PublicKey:
@@ -166,9 +166,9 @@ func (v EcdsaCryptoSignerVerifier) Verify(buf []byte, signature []byte, signer c
 		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ASN.1 encoded ECDSA signature: %w", err)
 	}
 
-	return ecdsaVerify(buf, v.h, &r, &s, pubkey)
+	return ecdsaVerify(pubkey, buf, v.h, &r, &s)
 }
 
-func VerifyECDSACryptoSigner(payload, hdr, signature []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool, signer crypto.Signer) error {
-	return verify[crypto.Signer](payload, hdr, signature, EcdsaCryptoSignerVerifier{h: h}, encoder, encodePayload, signer)
+func VerifyECDSACryptoSigner(signer crypto.Signer, payload, hdr, signature []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool) error {
+	return Verify[crypto.Signer](signer, payload, hdr, signature, EcdsaCryptoSignerVerifier{h: h}, encoder, encodePayload)
 }

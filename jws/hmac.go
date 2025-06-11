@@ -38,10 +38,6 @@ type hmacsigner struct {
 	hfunc func() hash.Hash
 }
 
-func (s hmacsigner) Create() (Signer, error) {
-	return nil, fmt.Errorf(`jws.HMACSigner does not support Create() method`)
-}
-
 func (s hmacsigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
@@ -56,15 +52,11 @@ func (s hmacsigner) Do(payload, protected []byte, encoder Base64Encoder, encodeP
 		return nil, fmt.Errorf(`jws.HMACSigner: missing key while signing payload`)
 	}
 
-	return jwsbb.SignHMAC(payload, protected, s.hfunc, encoder, encodePayload, hmackey)
+	return jwsbb.SignHMAC(hmackey, payload, protected, s.hfunc, encoder, encodePayload)
 }
 
 type hmacverifier struct {
 	signer hmacsigner
-}
-
-func (hmacverifier) Create() (Verifier, error) {
-	return nil, fmt.Errorf(`jws.HMACVerifier does not support Create() method`)
 }
 
 func (v hmacverifier) Algorithm() jwa.SignatureAlgorithm {

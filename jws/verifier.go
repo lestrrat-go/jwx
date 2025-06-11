@@ -9,11 +9,6 @@ import (
 
 type Verifier2 interface {
 	Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error
-
-	// Create implements VerifierFactory, but this is actually a no-op,
-	// and will return an error if called. This is a hack to allow
-	// passing Verifier2 objects to RegisterVerifier
-	Create() (Verifier, error)
 }
 
 var muVerifier2DB sync.RWMutex
@@ -45,26 +40,40 @@ var verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 // RegisterVerifier is used to register a verifier for the given
 // algorithm.
 //
-// Please note that while this function takes a `VerifierFactory`
-// as an argument, this is only so for backwards compatibility,
-// and as of this writing you should use objects that implement
-// the `Verifier2` interface instead.
+// Please note that this function is intended to be passed a
+// verifier object as its second argument, but due to historical
+// reasons the function signature is defined as taking `any` type.
+//
+// You should create a signer object that implements the `Verifier2`
+// interface to register a signer, unless you have legacy code that
+// plugged into the `SignerFactory` interface.
 //
 // Unlike the `UnregisterVerifier` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
-func RegisterVerifier(alg jwa.SignatureAlgorithm, f VerifierFactory) {
+func RegisterVerifier(alg jwa.SignatureAlgorithm, f any) error {
 	jwa.RegisterSignatureAlgorithm(alg)
 	switch v := f.(type) {
 	case Verifier2:
 		muVerifier2DB.Lock()
 		verifier2DB[alg] = v
 		muVerifier2DB.Unlock()
-	default:
+
 		muVerifierDB.Lock()
-		verifierDB[alg] = f
+		delete(verifierDB, alg)
 		muVerifierDB.Unlock()
+	case VerifierFactory:
+		muVerifierDB.Lock()
+		verifierDB[alg] = v
+		muVerifierDB.Unlock()
+
+		muVerifier2DB.Lock()
+		delete(verifier2DB, alg)
+		muVerifier2DB.Unlock()
+	default:
+		return fmt.Errorf(`jws.RegisterVerifier: unsupported type %T for algorithm %q`, f, alg)
 	}
+	return nil
 }
 
 // UnregisterVerifier removes the signer factory associated with

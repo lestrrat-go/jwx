@@ -24,10 +24,6 @@ type eddsasigner struct {
 	alg jwa.SignatureAlgorithm
 }
 
-func (s eddsasigner) Create() (Signer, error) {
-	return nil, fmt.Errorf(`jws.EdDSASigner does not support Create() method`)
-}
-
 func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
@@ -50,15 +46,11 @@ func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encode
 		signer = privkey
 	}
 
-	return jwsbb.SignCryptoSigner(payload, protected, crypto.Hash(0), signer, crypto.Hash(0), encoder, encodePayload)
+	return jwsbb.SignCryptoSigner(signer, payload, protected, crypto.Hash(0), crypto.Hash(0), encoder, encodePayload)
 }
 
 type eddsaverifier struct {
 	alg jwa.SignatureAlgorithm
-}
-
-func (eddsaverifier) Create() (Verifier, error) {
-	return nil, fmt.Errorf(`jws.EdDSAVerifier does not support Create() method`)
 }
 
 func (v eddsaverifier) Algorithm() jwa.SignatureAlgorithm {
@@ -80,5 +72,5 @@ func (v eddsaverifier) Do(payload, protected, signature []byte, encoder Base64En
 		}
 	}
 
-	return jwsbb.VerifyEdDSA(payload, protected, signature, encoder, encodePayload, pubkey)
+	return jwsbb.VerifyEdDSA(pubkey, payload, protected, signature, encoder, encodePayload)
 }

@@ -26,10 +26,25 @@ type Base64Encoder interface {
 
 // Signer is an interface that defines the method for signing payloads.
 type Signer[K any] interface {
-	Sign(payload []byte, key K) ([]byte, error)
+	Sign(key K, payload []byte) ([]byte, error)
 }
 
-func sign[K any](payload, hdr []byte, signer Signer[K], encoder Base64Encoder, encodePayload bool, key K) ([]byte, error) {
+type SignerFunc[K any] func(key K, payload []byte) ([]byte, error)
+
+func (fn SignerFunc[K]) Sign(key K, payload []byte) ([]byte, error) {
+	return fn(key, payload)
+}
+
+// Sign takes the basic compnents of a JWS (payload, header, and key), creates a
+// combined buffer to be used to generate a signature, and then calls the
+// `signer` to generate the signature.
+//
+// It's a low-level function that does not perform any validation of the input parameters,
+// so callers need to ensure that the parameters are valid before calling this function.
+//
+// Users who want to provide a custom signing implementation should implement the `Signer` interface.
+// and plug it into this function.
+func Sign[K any](key K, payload, hdr []byte, signer Signer[K], encoder Base64Encoder, encodePayload bool) ([]byte, error) {
 	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
 
 	buf = encoder.AppendEncode(buf, hdr)
@@ -41,14 +56,14 @@ func sign[K any](payload, hdr []byte, signer Signer[K], encoder Base64Encoder, e
 	}
 
 	defer pool.ByteSlice().Put(buf)
-	return signer.Sign(buf, key)
+	return signer.Sign(key, buf)
 }
 
 type Verifier[K any] interface {
-	Verify(buf []byte, signature []byte, key K) error
+	Verify(key K, buf []byte, signature []byte) error
 }
 
-func verify[K any](payload, hdr, signature []byte, verifier Verifier[K], encoder Base64Encoder, encodePayload bool, key K) error {
+func Verify[K any](key K, payload, hdr, signature []byte, verifier Verifier[K], encoder Base64Encoder, encodePayload bool) error {
 	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
 
 	buf = encoder.AppendEncode(buf, hdr)
@@ -60,9 +75,11 @@ func verify[K any](payload, hdr, signature []byte, verifier Verifier[K], encoder
 	}
 
 	defer pool.ByteSlice().Put(buf)
-	return verifier.Verify(buf, signature, key)
+	return verifier.Verify(key, buf, signature)
 }
 
+// Join combines the header, payload, and signature into a single byte slice,
+// using the specified Base64Encoder to encode the components.
 func Join(buf, hdr, payload, signature []byte, encoder Base64Encoder) []byte {
 	l := len(hdr) + len(payload) + len(signature) + 2
 	if cap(buf) < l {

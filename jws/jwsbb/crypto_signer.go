@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func cryptosign(payload []byte, hash crypto.Hash, signer crypto.Signer, opts crypto.SignerOpts) ([]byte, error) {
+func cryptosign(signer crypto.Signer, payload []byte, hash crypto.Hash, opts crypto.SignerOpts) ([]byte, error) {
 	var digest []byte
 	if hash == crypto.Hash(0) {
 		digest = payload
@@ -25,10 +25,10 @@ type CryptoSigner struct {
 	options crypto.SignerOpts
 }
 
-func (s CryptoSigner) Sign(payload []byte, key crypto.Signer) ([]byte, error) {
-	return cryptosign(payload, s.h, key, s.options)
+func (s CryptoSigner) Sign(key crypto.Signer, payload []byte) ([]byte, error) {
+	return cryptosign(key, payload, s.h, s.options)
 }
 
-func SignCryptoSigner(payload, protected []byte, h crypto.Hash, signer crypto.Signer, opts crypto.SignerOpts, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
-	return sign[crypto.Signer](payload, protected, CryptoSigner{h: h, options: opts}, encoder, encodePayload, signer)
+func SignCryptoSigner(signer crypto.Signer, payload, protected []byte, h crypto.Hash, opts crypto.SignerOpts, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
+	return Sign[crypto.Signer](signer, payload, protected, CryptoSigner{h: h, options: opts}, encoder, encodePayload)
 }

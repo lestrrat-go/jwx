@@ -41,10 +41,10 @@ func TestHMAC(t *testing.T) {
 			key := []byte("secretkey")
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignHMAC(payload, header, tc.hfunc, encoder, tc.encodePayload, key)
+			sig, err := jwsbb.SignHMAC(key, payload, header, tc.hfunc, encoder, tc.encodePayload)
 			require.NoError(t, err, "SignHMAC should not return error")
-			require.NoError(t, jwsbb.VerifyHMAC(payload, header, sig, tc.hfunc, encoder, tc.encodePayload, key), "VerifyHMAC should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyHMAC(payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload, key), "VerifyHMAC should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyHMAC(key, payload, header, sig, tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyHMAC(key, payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should fail for an invalid signature")
 		})
 	}
 
@@ -58,7 +58,7 @@ func TestHMAC(t *testing.T) {
 		hmacKeyDecoded, err := base64.DecodeString(hmacKey)
 		require.NoError(t, err, "decoding key should succeed")
 
-		signature, err := jwsbb.SignHMAC([]byte(examplePayload), []byte(hdr), sha256.New, base64.DefaultEncoder(), true, hmacKeyDecoded)
+		signature, err := jwsbb.SignHMAC(hmacKeyDecoded, []byte(examplePayload), []byte(hdr), sha256.New, base64.DefaultEncoder(), true)
 		require.NoError(t, err, "SignHMAC should succeed")
 
 		buf := pool.ByteSlice().Get()
@@ -98,10 +98,10 @@ func TestRSA(t *testing.T) {
 			payload := []byte("hello")
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignRSA(payload, header, tc.h, tc.pss, encoding, tc.encodePayload, priv)
+			sig, err := jwsbb.SignRSA(priv, payload, header, tc.h, tc.pss, encoding, tc.encodePayload)
 			require.NoError(t, err, "SignRSA should not return error")
-			require.NoError(t, jwsbb.VerifyRSA(payload, header, sig, tc.h, tc.pss, encoding, tc.encodePayload, &priv.PublicKey), "VerifyRSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyRSA(payload, header, sig[:len(sig)-1], tc.h, tc.pss, encoding, tc.encodePayload, &priv.PublicKey), "VerifyRSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig, tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should fail for an invalid signature")
 		})
 	}
 }
@@ -131,10 +131,10 @@ func TestECDSA(t *testing.T) {
 			// prepare placeholder header
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignECDSA(payload, header, tc.h, encoder, tc.encodePayload, priv)
+			sig, err := jwsbb.SignECDSA(priv, payload, header, tc.h, encoder, tc.encodePayload)
 			require.NoError(t, err, "SignECDSA should not return error")
-			require.NoError(t, jwsbb.VerifyECDSA(payload, header, sig, tc.h, encoder, tc.encodePayload, &priv.PublicKey), "VerifyECDSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyECDSA(payload, header, sig[:len(sig)-1], tc.h, encoder, tc.encodePayload, &priv.PublicKey), "VerifyECDSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig, tc.h, encoder, tc.encodePayload), "VerifyECDSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, encoder, tc.encodePayload), "VerifyECDSA should fail for an invalid signature")
 		})
 	}
 }
@@ -158,10 +158,10 @@ func TestEdDSA(t *testing.T) {
 			// prepare placeholder header
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignEdDSA(payload, header, encoding, tc.encodePayload, priv)
+			sig, err := jwsbb.SignEdDSA(priv, payload, header, encoding, tc.encodePayload)
 			require.NoError(t, err, "SignEdDSA should not return error")
-			require.NoError(t, jwsbb.VerifyEdDSA(payload, header, sig, encoding, tc.encodePayload, pub), "VerifyEdDSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyEdDSA(payload, header, sig[:len(sig)-1], encoding, tc.encodePayload, pub), "VerifyEdDSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyEdDSA(pub, payload, header, sig, encoding, tc.encodePayload), "VerifyEdDSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyEdDSA(pub, payload, header, sig[:len(sig)-1], encoding, tc.encodePayload), "VerifyEdDSA should fail for an invalid signature")
 		})
 	}
 }

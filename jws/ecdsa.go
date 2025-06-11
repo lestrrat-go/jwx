@@ -37,10 +37,6 @@ type ecdsasigner struct {
 	hash crypto.Hash
 }
 
-func (es ecdsasigner) Create() (Signer, error) {
-	return nil, fmt.Errorf(`jws.ECDSASigner does not support Create() method`)
-}
-
 func (es ecdsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return es.alg
 }
@@ -60,23 +56,19 @@ func (es ecdsasigner) Do(payload, protected []byte, encoder Base64Encoder, encod
 	}
 
 	if isCryptoSigner {
-		return jwsbb.SignECDSACryptoSigner(payload, protected, es.hash, encoder, encodePayload, cs)
+		return jwsbb.SignECDSACryptoSigner(cs, payload, protected, es.hash, encoder, encodePayload)
 	}
 
 	var privkey *ecdsa.PrivateKey
 	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
 		return nil, fmt.Errorf(`jws.ECDSASigner: invalid key type %T. ecdsa.PrivateKey is required: %w`, key, err)
 	}
-	return jwsbb.SignECDSA(payload, protected, es.hash, encoder, encodePayload, privkey)
+	return jwsbb.SignECDSA(privkey, payload, protected, es.hash, encoder, encodePayload)
 }
 
 type ecdsaverifier struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
-}
-
-func (ecdsaverifier) Create() (Verifier, error) {
-	return nil, fmt.Errorf(`jws.ECDSAVerifier does not support Create() method`)
 }
 
 func (ev ecdsaverifier) Algorithm() jwa.SignatureAlgorithm {
@@ -98,12 +90,12 @@ func (ev ecdsaverifier) Do(payload, protected []byte, signature []byte, encoder 
 	}
 
 	if isCryptoSigner {
-		return jwsbb.VerifyECDSACryptoSigner(payload, protected, signature, ev.hash, encoder, encodePayload, cs)
+		return jwsbb.VerifyECDSACryptoSigner(cs, payload, protected, signature, ev.hash, encoder, encodePayload)
 	}
 
 	var pubkey *ecdsa.PublicKey
 	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
 		return fmt.Errorf(`jws.ECDSAVerifier: invalid key type %T. ecdsa.PublicKey is required: %w`, key, err)
 	}
-	return jwsbb.VerifyECDSA(payload, protected, signature, ev.hash, encoder, encodePayload, pubkey)
+	return jwsbb.VerifyECDSA(pubkey, payload, protected, signature, ev.hash, encoder, encodePayload)
 }

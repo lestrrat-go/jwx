@@ -17,17 +17,17 @@ func RSAPSSOptions(h crypto.Hash) rsa.PSSOptions {
 	}
 }
 
-func (s RsaSigner) Sign(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
+func (s RsaSigner) Sign(key *rsa.PrivateKey, payload []byte) ([]byte, error) {
 	var opts crypto.SignerOpts = s.h
 	if s.pss {
 		rsaopts := RSAPSSOptions(s.h)
 		opts = &rsaopts
 	}
-	return cryptosign(payload, s.h, key, opts)
+	return cryptosign(key, payload, s.h, opts)
 }
 
-func SignRSA(payload, hdr []byte, h crypto.Hash, pss bool, encoder Base64Encoder, encodePayload bool, key *rsa.PrivateKey) ([]byte, error) {
-	return sign[*rsa.PrivateKey](payload, hdr, RsaSigner{h: h, pss: pss}, encoder, encodePayload, key)
+func SignRSA(key *rsa.PrivateKey, payload, hdr []byte, h crypto.Hash, pss bool, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
+	return Sign[*rsa.PrivateKey](key, payload, hdr, RsaSigner{h: h, pss: pss}, encoder, encodePayload)
 }
 
 // RsaVerifier verifies RSA signatures using the specified hash and options.
@@ -36,7 +36,7 @@ type RsaVerifier struct {
 	pss bool
 }
 
-func (v RsaVerifier) Verify(buf []byte, signature []byte, key *rsa.PublicKey) error {
+func (v RsaVerifier) Verify(key *rsa.PublicKey, buf []byte, signature []byte) error {
 	hasher := v.h.New()
 	hasher.Write(buf)
 	digest := hasher.Sum(nil)
@@ -47,6 +47,6 @@ func (v RsaVerifier) Verify(buf []byte, signature []byte, key *rsa.PublicKey) er
 }
 
 // VerifyRSA verifies the RSA signature for the given payload and header.
-func VerifyRSA(payload, hdr, signature []byte, h crypto.Hash, pss bool, encoder Base64Encoder, encodePayload bool, pubKey *rsa.PublicKey) error {
-	return verify[*rsa.PublicKey](payload, hdr, signature, RsaVerifier{h: h, pss: pss}, encoder, encodePayload, pubKey)
+func VerifyRSA(key *rsa.PublicKey, payload, hdr, signature []byte, h crypto.Hash, pss bool, encoder Base64Encoder, encodePayload bool) error {
+	return Verify[*rsa.PublicKey](key, payload, hdr, signature, RsaVerifier{h: h, pss: pss}, encoder, encodePayload)
 }

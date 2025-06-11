@@ -3,6 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "legacy",
     srcs = [
+        "ecdsa.go",
+        "eddsa.go",
         "hmac.go",
         "legacy.go",
         "rsa.go",
@@ -10,7 +12,9 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v3/jws/legacy",
     visibility = ["//visibility:public"],
     deps = [
+        "//internal/ecutil",
         "//internal/keyconv",
+        "//internal/pool",
         "//jwa",
         "//jws/internal/keytype",
     ],
