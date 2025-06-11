@@ -16,7 +16,6 @@ type identInsecureNoSignature struct{}
 func WithJSON(options ...WithJSONSuboption) SignVerifyParseOption {
 	var pretty bool
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPretty{}:
 			if err := option.Value(&pretty); err != nil {
@@ -101,7 +100,6 @@ func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption)
 	// if used in Sign() we would be doing something else.
 	var protected, public Headers
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identProtectedHeaders{}:
 			if err := option.Value(&protected); err != nil {
@@ -147,7 +145,6 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	requireKid := true
 	var useDefault, inferAlgorithm, multipleKeysPerKeyID bool
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identRequireKid{}:
 			if err := option.Value(&requireKid); err != nil {
@@ -244,7 +241,6 @@ func (w *withInsecureNoSignature) Protected(v Headers) Headers {
 func WithInsecureNoSignature(options ...WithKeySuboption) SignOption {
 	var protected Headers
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identProtectedHeaders{}:
 			if err := option.Value(&protected); err != nil {

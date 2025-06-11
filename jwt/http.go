@@ -15,7 +15,6 @@ import (
 // If the specified cookie is not found, http.ErrNoCookie is returned.
 func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token, error) {
 	var dst **http.Cookie
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identCookie{}:
@@ -104,7 +103,6 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var cookiekeys []string
 	var parseOptions []ParseOption
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHeaderKey{}:
 			var v string

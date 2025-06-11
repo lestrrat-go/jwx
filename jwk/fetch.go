@@ -77,7 +77,6 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 			continue
 		}
 
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
 			if err := option.Value(&client); err != nil {

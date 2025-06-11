@@ -174,7 +174,6 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var validateKey bool
 	var encoder Base64Encoder = base64.DefaultEncoder()
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
 			if err := option.Value(&format); err != nil {
@@ -544,7 +543,6 @@ func readAll(rdr io.Reader) ([]byte, bool) {
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	var formats int
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
 			var v int

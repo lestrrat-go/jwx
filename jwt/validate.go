@@ -61,7 +61,6 @@ func Validate(t Token, options ...ValidateOption) error {
 	var extraValidators []Validator
 	var resetValidators bool
 	for _, o := range options {
-		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identClock{}:
 			if err := o.Value(&clock); err != nil {

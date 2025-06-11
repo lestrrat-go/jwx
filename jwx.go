@@ -33,7 +33,6 @@ func DecoderSettings(options ...JSONOption) {
 	// in case a new option is to be added some time later
 	var useNumber bool
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identUseNumber{}:
 			if err := option.Value(&useNumber); err != nil {

@@ -20,7 +20,6 @@ type identVerifyAuto struct{}
 func toSignOptions(options ...Option) ([]jws.SignOption, error) {
 	soptions := make([]jws.SignOption, 0, len(options))
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identInsecureNoSignature{}:
 			soptions = append(soptions, jws.WithInsecureNoSignature())
@@ -59,7 +58,6 @@ func toSignOptions(options ...Option) ([]jws.SignOption, error) {
 func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
 	soptions := make([]jwe.EncryptOption, 0, len(options))
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identKey{}:
 			var wk withKey
@@ -90,7 +88,6 @@ func toEncryptOptions(options ...Option) ([]jwe.EncryptOption, error) {
 func toVerifyOptions(options ...Option) ([]jws.VerifyOption, error) {
 	voptions := make([]jws.VerifyOption, 0, len(options))
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identKey{}:
 			var wk withKey
