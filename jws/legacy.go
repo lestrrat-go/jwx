@@ -18,4 +18,18 @@ func init() {
 			})
 		}(alg))
 	}
+
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
+		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
+			return SignerFactoryFn(func() (Signer, error) {
+				return legacy.NewRSASigner(alg), nil
+			})
+		}(alg))
+		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
+			return VerifierFactoryFn(func() (Verifier, error) {
+				return legacy.NewRSAVerifier(alg), nil
+			})
+		}(alg))
+	}
+
 }

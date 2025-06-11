@@ -35,6 +35,7 @@ go_library(
         "//internal/pool",
         "//jwa",
         "//jwk",
+        "//jws/internal/keytype",
         "//jws/jwsbb",
         "//jws/legacy",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",

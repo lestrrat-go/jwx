@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "hmac.go",
         "legacy.go",
+        "rsa.go",
     ],
     importpath = "github.com/lestrrat-go/jwx/v3/jws/legacy",
     visibility = ["//visibility:public"],
     deps = [
         "//internal/keyconv",
         "//jwa",
+        "//jws/internal/keytype",
     ],
 )

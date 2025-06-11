@@ -2,19 +2,17 @@ package jws
 
 import (
 	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-var rsaSigners map[jwa.SignatureAlgorithm]*rsaSigner
-var rsaVerifiers map[jwa.SignatureAlgorithm]*rsaVerifier
-
 func init() {
-	algs := map[jwa.SignatureAlgorithm]struct {
+	data := map[jwa.SignatureAlgorithm]struct {
 		Hash crypto.Hash
 		PSS  bool
 	}{
@@ -41,106 +39,80 @@ func init() {
 		},
 	}
 
-	rsaSigners = make(map[jwa.SignatureAlgorithm]*rsaSigner)
-	rsaVerifiers = make(map[jwa.SignatureAlgorithm]*rsaVerifier)
-	for alg, item := range algs {
-		rsaSigners[alg] = &rsaSigner{
+	for alg, item := range data {
+		RegisterSigner2(alg, rsasigner{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
-		}
-		rsaVerifiers[alg] = &rsaVerifier{
+		})
+		RegisterVerifier2(alg, rsaverifier{
 			alg:  alg,
 			hash: item.Hash,
 			pss:  item.PSS,
-		}
-	}
-}
-
-type rsaSigner struct {
-	alg  jwa.SignatureAlgorithm
-	hash crypto.Hash
-	pss  bool
-}
-
-func newRSASigner(alg jwa.SignatureAlgorithm) Signer {
-	return rsaSigners[alg]
-}
-
-func (rs *rsaSigner) Algorithm() jwa.SignatureAlgorithm {
-	return rs.alg
-}
-
-func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
-	if key == nil {
-		return nil, fmt.Errorf(`missing private key while signing payload`)
-	}
-
-	signer, ok := key.(crypto.Signer)
-	if ok {
-		if !isValidRSAKey(key) {
-			return nil, fmt.Errorf(`cannot use key of type %T to generate RSA based signatures`, key)
-		}
-	} else {
-		var privkey rsa.PrivateKey
-		if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
-			return nil, fmt.Errorf(`failed to retrieve rsa.PrivateKey out of %T: %w`, key, err)
-		}
-		signer = &privkey
-	}
-
-	h := rs.hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return nil, fmt.Errorf(`failed to write payload to hash: %w`, err)
-	}
-	if rs.pss {
-		return signer.Sign(rand.Reader, h.Sum(nil), &rsa.PSSOptions{
-			Hash:       rs.hash,
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
 		})
 	}
-	return signer.Sign(rand.Reader, h.Sum(nil), rs.hash)
 }
 
-type rsaVerifier struct {
+type rsasigner struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
-	pss  bool
+	pss  bool // whether to use PSS padding
 }
 
-func newRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
-	return rsaVerifiers[alg]
+func (s rsasigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
 }
 
-func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error {
-	if key == nil {
-		return fmt.Errorf(`missing public key while verifying payload`)
+func (s rsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error) {
+	signer, ok := key.(crypto.Signer)
+	if ok {
+		if !keytype.IsValidRSAKey(key) {
+			return nil, fmt.Errorf(`cannot use key of type %T to generate RSA based signatures`, key)
+		}
+
+		var options crypto.SignerOpts = s.hash
+		if s.pss {
+			rsaopts := jwsbb.RSAPSSOptions(s.hash)
+			options = &rsaopts
+		}
+
+		return jwsbb.SignCryptoSigner(payload, protected, s.hash, signer, options, encoder, encodePayload)
 	}
 
-	var pubkey rsa.PublicKey
+	var privkey *rsa.PrivateKey
+	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
+	}
+	return jwsbb.SignRSA(payload, protected, s.hash, s.pss, encoder, encodePayload, privkey)
+}
+
+type rsaverifier struct {
+	alg  jwa.SignatureAlgorithm
+	hash crypto.Hash
+	pss  bool // whether to use PSS padding
+}
+
+func (v rsaverifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.alg
+}
+func (v rsaverifier) Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
+	var pubkey *rsa.PublicKey
+
 	if cs, ok := key.(crypto.Signer); ok {
 		cpub := cs.Public()
 		switch cpub := cpub.(type) {
 		case rsa.PublicKey:
-			pubkey = cpub
+			pubkey = &cpub
 		case *rsa.PublicKey:
-			pubkey = *cpub
+			pubkey = cpub
 		default:
-			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
+			return fmt.Errorf(`jws.RSAVerifier: failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
 		}
 	} else {
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of %T: %w`, key, err)
+			return fmt.Errorf(`jws.RSAVerifier: failed to retrieve rsa.PublicKey out of %T: %w`, key, err)
 		}
 	}
 
-	h := rv.hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return fmt.Errorf(`failed to write payload to hash: %w`, err)
-	}
-
-	if rv.pss {
-		return rsa.VerifyPSS(&pubkey, rv.hash, h.Sum(nil), signature, nil)
-	}
-	return rsa.VerifyPKCS1v15(&pubkey, rv.hash, h.Sum(nil), signature)
+	return jwsbb.VerifyRSA(payload, protected, signature, v.hash, v.pss, encoder, encodePayload, pubkey)
 }

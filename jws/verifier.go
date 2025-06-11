@@ -76,14 +76,6 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
-		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
-			return VerifierFactoryFn(func() (Verifier, error) {
-				return newRSAVerifier(alg), nil
-			})
-		}(alg))
-	}
-
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {

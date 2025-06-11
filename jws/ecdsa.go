@@ -12,6 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
 
 var ecdsaSigners map[jwa.SignatureAlgorithm]*ecdsaSigner
@@ -65,7 +66,7 @@ func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 
 	signer, ok := key.(crypto.Signer)
 	if ok {
-		if !isValidECDSAKey(key) {
+		if !keytype.IsValidECDSAKey(key) {
 			return nil, fmt.Errorf(`cannot use key of type %T to generate ECDSA based signatures`, key)
 		}
 		switch key.(type) {

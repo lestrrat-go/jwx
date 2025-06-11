@@ -11,13 +11,18 @@ type RsaSigner struct {
 	pss bool
 }
 
+func RSAPSSOptions(h crypto.Hash) rsa.PSSOptions {
+	return rsa.PSSOptions{
+		Hash:       h,
+		SaltLength: rsa.PSSSaltLengthEqualsHash,
+	}
+}
+
 func (s RsaSigner) Sign(payload []byte, key *rsa.PrivateKey) ([]byte, error) {
 	var opts crypto.SignerOpts = s.h
 	if s.pss {
-		opts = &rsa.PSSOptions{
-			Hash:       s.h,
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
-		}
+		rsaopts := RSAPSSOptions(s.h)
+		opts = &rsaopts
 	}
 	return cryptosign(payload, s.h, key, opts)
 }

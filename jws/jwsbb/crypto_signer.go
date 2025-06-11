@@ -13,3 +13,16 @@ func cryptosign(payload []byte, hash crypto.Hash, signer crypto.Signer, opts cry
 	}
 	return signer.Sign(rand.Reader, h.Sum(nil), opts)
 }
+
+type CryptoSigner struct {
+	h       crypto.Hash
+	options crypto.SignerOpts
+}
+
+func (s CryptoSigner) Sign(payload []byte, key crypto.Signer) ([]byte, error) {
+	return cryptosign(payload, s.h, key, s.options)
+}
+
+func SignCryptoSigner(payload, protected []byte, h crypto.Hash, signer crypto.Signer, opts crypto.SignerOpts, encoder Base64Encoder, encodePayload bool) ([]byte, error) {
+	return sign[crypto.Signer](payload, protected, CryptoSigner{h: h, options: opts}, encoder, encodePayload, signer)
+}

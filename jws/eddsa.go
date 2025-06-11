@@ -8,6 +8,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
 
 type eddsaSigner struct{}
@@ -29,7 +30,7 @@ func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	// simply accept a crypto.Signer here.
 	signer, ok := key.(crypto.Signer)
 	if ok {
-		if !isValidEDDSAKey(key) {
+		if !keytype.IsValidEDDSAKey(key) {
 			return nil, fmt.Errorf(`cannot use key of type %T to generate EdDSA based signatures`, key)
 		}
 	} else {
