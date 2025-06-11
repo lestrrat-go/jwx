@@ -467,8 +467,8 @@ LOOP:
 		switch tok := tok.(type) {
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or '}' here.
-			if tok == '}' { // End of object
+			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
@@ -651,7 +651,7 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
@@ -1172,8 +1172,8 @@ LOOP:
 		switch tok := tok.(type) {
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or '}' here.
-			if tok == '}' { // End of object
+			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
@@ -1367,7 +1367,7 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 			buf.Truncate(buf.Len() - 1)
 		}
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

@@ -1031,8 +1031,8 @@ LOOP:
 		switch tok := tok.(type) {
 		case json.Delim:
 			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or '}' here.
-			if tok == '}' { // End of object
+			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
+			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
 				return fmt.Errorf(`expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
@@ -1521,7 +1521,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 		}
 		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
 	}
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	putClaimPairList(pairs)

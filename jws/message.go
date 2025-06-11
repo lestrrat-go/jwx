@@ -395,7 +395,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	buf.WriteString(`,"signature":"`)
 	buf.WriteString(base64.EncodeToString(sig.signature))
 	buf.WriteRune('"')
-	buf.WriteRune('}')
+	buf.WriteRune(tokens.CloseCurlyBracket)
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())

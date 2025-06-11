@@ -257,7 +257,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 		buf.WriteString(strconv.Quote(*v))
 	}
 
-	buf.WriteByte('}')
+	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
