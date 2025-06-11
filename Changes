@@ -4,6 +4,10 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.5 11 Jun 2025
+  * Retract v3.0.4
+  * Code for v3.0.3 is the same as v3.0.3
+
 v3.0.4 09 Jun 2025
   * This release contains various performance improvements all over the code.
 
