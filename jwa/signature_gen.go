@@ -152,13 +152,16 @@ func EmptySignatureAlgorithm() SignatureAlgorithm {
 func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) SignatureAlgorithm {
 	var deprecated bool
 	var isSymmetric bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identIsSymmetric{}:
-			isSymmetric = option.Value().(bool)
+			if err := option.Value(&isSymmetric); err != nil {
+				panic("jwa.NewSignatureAlgorithm: WithIsSymmetric option must be a boolean")
+			}
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewSignatureAlgorithm: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return SignatureAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}

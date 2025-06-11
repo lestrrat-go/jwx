@@ -476,9 +476,13 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identDetached{}:
-			detached = option.Value().(bool)
+			if err := option.Value(&detached); err != nil {
+				return nil, fmt.Errorf(`jws.Compact: failed to retrieve detached option value: %w`, err)
+			}
 		case identBase64Encoder{}:
-			encoder = option.Value().(Base64Encoder)
+			if err := option.Value(&encoder); err != nil {
+				return nil, fmt.Errorf(`jws.Compact: failed to retrieve base64 encoder option value: %w`, err)
+			}
 		}
 	}
 

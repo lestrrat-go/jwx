@@ -10,7 +10,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface

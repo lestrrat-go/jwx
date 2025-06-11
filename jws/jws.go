@@ -177,16 +177,24 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
-			format = option.Value().(int)
+			if err := option.Value(&format); err != nil {
+				return nil, signerr(`failed to retrieve serialization option value: %w`, err)
+			}
 		case identInsecureNoSignature{}:
-			data := option.Value().(*withInsecureNoSignature)
+			var data withInsecureNoSignature
+			if err := option.Value(&data); err != nil {
+				return nil, signerr(`failed to retrieve insecure-no-signature option value: %w`, err)
+			}
 			// only the last one is used (we overwrite previous values)
 			noneSignature = &payloadSigner{
 				signer:    noneSigner{},
 				protected: data.protected,
 			}
 		case identKey{}:
-			data := option.Value().(*withKey)
+			var data *withKey
+			if err := option.Value(&data); err != nil {
+				return nil, signerr(`jws.Sign: invalid value for WithKey option: %w`, err)
+			}
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
@@ -204,15 +212,21 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			}
 			signers = append(signers, signer)
 		case identDetachedPayload{}:
-			detached = true
 			if payload != nil {
 				return nil, signerr(`payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
-			payload = option.Value().([]byte)
+			if err := option.Value(&payload); err != nil {
+				return nil, signerr(`failed to retrieve detached payload option value: %w`, err)
+			}
+			detached = true
 		case identValidateKey{}:
-			validateKey = option.Value().(bool)
+			if err := option.Value(&validateKey); err != nil {
+				return nil, signerr(`failed to retrieve validate-key option value: %w`, err)
+			}
 		case identBase64Encoder{}:
-			encoder = option.Value().(Base64Encoder)
+			if err := option.Value(&encoder); err != nil {
+				return nil, signerr(`failed to retrieve base64-encoder option value: %w`, err)
+			}
 		}
 	}
 
@@ -346,32 +360,46 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			dst = option.Value().(*Message)
+			if err := option.Value(&dst); err != nil {
+				return nil, verifyerr(`invalid value for option WithMEssage: %w`, err)
+			}
 		case identDetachedPayload{}:
-			detachedPayload = option.Value().([]byte)
+			if err := option.Value(&detachedPayload); err != nil {
+				return nil, verifyerr(`invalid value for option WithDetachedPayload: %w`, err)
+			}
 		case identKey{}:
-			pair := option.Value().(*withKey)
-			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
-			if !ok {
-				return nil, verifyerr(`WithKey() option must be specified using jwa.SignatureAlgorithm (got %T)`, pair.alg)
+			var pair *withKey
+			if err := option.Value(&pair); err != nil {
+				return nil, verifyerr(`invalid value for option WithKey: %w`, err)
 			}
 			keyProviders = append(keyProviders, &staticKeyProvider{
-				alg: alg,
+				alg: pair.alg.(jwa.SignatureAlgorithm),
 				key: pair.key,
 			})
 		case identKeyProvider{}:
-			keyProviders = append(keyProviders, option.Value().(KeyProvider))
+			var kp KeyProvider
+			if err := option.Value(&kp); err != nil {
+				return nil, verifyerr(`failed to retrieve key-provider option value: %w`, err)
+			}
+			keyProviders = append(keyProviders, kp)
 		case identKeyUsed{}:
-			keyUsed = option.Value()
+			if err := option.Value(&keyUsed); err != nil {
+				return nil, verifyerr(`failed to retrieve key-used option value: %w`, err)
+			}
 		case identContext{}:
-			//nolint:fatcontext
-			ctx = option.Value().(context.Context)
+			if err := option.Value(&ctx); err != nil {
+				return nil, verifyerr(`failed to retrieve context option value: %w`, err)
+			}
 		case identValidateKey{}:
-			validateKey = option.Value().(bool)
+			if err := option.Value(&validateKey); err != nil {
+				return nil, verifyerr(`failed to retrieve validate-key option value: %w`, err)
+			}
 		case identSerialization{}:
 			parseOptions = append(parseOptions, option.(ParseOption))
 		case identBase64Encoder{}:
-			encoder = option.Value().(Base64Encoder)
+			if err := option.Value(&encoder); err != nil {
+				return nil, verifyerr(`failed to retrieve base64-encoder option value: %w`, err)
+			}
 		default:
 			return nil, verifyerr(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
@@ -519,7 +547,11 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identSerialization{}:
-			switch option.Value().(int) {
+			var v int
+			if err := option.Value(&v); err != nil {
+				return nil, parseerr(`failed to retrieve serialization option value: %w`, err)
+			}
+			switch v {
 			case fmtJSON:
 				formats |= fmtJSON
 			case fmtCompact:

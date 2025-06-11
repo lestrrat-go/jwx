@@ -42,11 +42,19 @@ func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identMaxPBES2Count{}:
-			maxPBES2Count = option.Value().(int)
+			if err := option.Value(&maxPBES2Count); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxPBES2Count must be an int: %s", err))
+			}
 		case identMaxDecompressBufferSize{}:
-			maxDecompressBufferSize = option.Value().(int64)
+			if err := option.Value(&maxDecompressBufferSize); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxDecompressBufferSize must be an int64: %s", err))
+			}
 		case identCBCBufferSize{}:
-			aescbc.SetMaxBufferSize(option.Value().(int64))
+			var v int64
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithCBCBufferSize must be an int64: %s", err))
+			}
+			aescbc.SetMaxBufferSize(v)
 		}
 	}
 }
@@ -337,41 +345,56 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identKey{}:
-			data := option.Value().(*withKey)
-			v, ok := data.alg.(jwa.KeyEncryptionAlgorithm)
-			if !ok {
-				return nil, fmt.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, data.alg)
+			var wk *withKey
+			if err := option.Value(&wk); err != nil {
+				return nil, err
 			}
-
-			switch v {
-			case jwa.DIRECT(), jwa.ECDH_ES():
+			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
+			if !ok {
+				return nil, fmt.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, wk.alg)
+			}
+			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
 				useRawCEK = true
 			}
-
-			builders = append(builders, &recipientBuilder{
-				alg:     v,
-				key:     data.key,
-				headers: data.headers,
-			})
+			builders = append(builders, &recipientBuilder{alg: v, key: wk.key, headers: wk.headers})
 		case identContentEncryptionAlgorithm{}:
-			calg = option.Value().(jwa.ContentEncryptionAlgorithm)
+			var c jwa.ContentEncryptionAlgorithm
+			if err := option.Value(&c); err != nil {
+				return nil, err
+			}
+			calg = c
 		case identCompress{}:
-			compression = option.Value().(jwa.CompressionAlgorithm)
+			var comp jwa.CompressionAlgorithm
+			if err := option.Value(&comp); err != nil {
+				return nil, err
+			}
+			compression = comp
 		case identMergeProtectedHeaders{}:
-			mergeProtected = option.Value().(bool)
+			var mp bool
+			if err := option.Value(&mp); err != nil {
+				return nil, err
+			}
+			mergeProtected = mp
 		case identProtectedHeaders{}:
-			v := option.Value().(Headers)
+			var hdrs Headers
+			if err := option.Value(&hdrs); err != nil {
+				return nil, err
+			}
 			if !mergeProtected || protected == nil {
-				protected = v
+				protected = hdrs
 			} else {
-				merged, err := protected.Merge(v)
+				merged, err := protected.Merge(hdrs)
 				if err != nil {
 					return nil, fmt.Errorf(`failed to merge headers: %w`, err)
 				}
 				protected = merged
 			}
 		case identSerialization{}:
-			format = option.Value().(int)
+			var fmtOpt int
+			if err := option.Value(&fmtOpt); err != nil {
+				return nil, err
+			}
+			format = fmtOpt
 		}
 	}
 
@@ -548,28 +571,51 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			dst = option.Value().(*Message)
+			var dstMsg *Message
+			if err := option.Value(&dstMsg); err != nil {
+				return nil, err
+			}
+			dst = dstMsg
 		case identKeyProvider{}:
-			keyProviders = append(keyProviders, option.Value().(KeyProvider))
+			var kp KeyProvider
+			if err := option.Value(&kp); err != nil {
+				return nil, err
+			}
+			keyProviders = append(keyProviders, kp)
 		case identKeyUsed{}:
-			keyUsed = option.Value()
+			var ku interface{}
+			if err := option.Value(&ku); err != nil {
+				return nil, err
+			}
+			keyUsed = ku
 		case identKey{}:
-			pair := option.Value().(*withKey)
+			var pair *withKey
+			if err := option.Value(&pair); err != nil {
+				return nil, err
+			}
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)`, pair.alg)
 			}
-			keyProviders = append(keyProviders, &staticKeyProvider{
-				alg: alg,
-				key: pair.key,
-			})
+			keyProviders = append(keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
-			cek = option.Value().(*[]byte)
+			var c *[]byte
+			if err := option.Value(&c); err != nil {
+				return nil, err
+			}
+			cek = c
 		case identMaxDecompressBufferSize{}:
-			perCallMaxDecompressBufferSize = option.Value().(int64)
+			var max int64
+			if err := option.Value(&max); err != nil {
+				return nil, err
+			}
+			perCallMaxDecompressBufferSize = max
 		case identContext{}:
-			//nolint:fatcontext
-			ctx = option.Value().(context.Context)
+			var ctx2 context.Context
+			if err := option.Value(&ctx2); err != nil {
+				return nil, err
+			}
+			ctx = ctx2
 		}
 	}
 

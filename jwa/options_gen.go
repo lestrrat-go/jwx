@@ -2,7 +2,9 @@
 
 package jwa
 
-import "github.com/lestrrat-go/option"
+import (
+	"github.com/lestrrat-go/option/v2"
+)
 
 type Option = option.Interface
 

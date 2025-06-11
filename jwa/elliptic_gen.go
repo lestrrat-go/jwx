@@ -104,11 +104,12 @@ func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
 // NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object with the given name.
 func NewEllipticCurveAlgorithm(name string, options ...NewAlgorithmOption) EllipticCurveAlgorithm {
 	var deprecated bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewEllipticCurveAlgorithm: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return EllipticCurveAlgorithm{name: name, deprecated: deprecated}

@@ -176,13 +176,16 @@ func EmptyKeyEncryptionAlgorithm() KeyEncryptionAlgorithm {
 func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithmOption) KeyEncryptionAlgorithm {
 	var deprecated bool
 	var isSymmetric bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identIsSymmetric{}:
-			isSymmetric = option.Value().(bool)
+			if err := option.Value(&isSymmetric); err != nil {
+				panic("jwa.NewKeyEncryptionAlgorithm: WithIsSymmetric option must be a boolean")
+			}
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewKeyEncryptionAlgorithm: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return KeyEncryptionAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}

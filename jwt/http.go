@@ -19,7 +19,9 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	for _, option := range options {
 		switch option.Ident() {
 		case identCookie{}:
-			dst = option.Value().(**http.Cookie)
+			if err := option.Value(&dst); err != nil {
+				return nil, fmt.Errorf(`jws.ParseCookie: value to option WithCookie must be **http.Cookie: %w`, err)
+			}
 		}
 	}
 
@@ -29,7 +31,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	}
 	tok, err := ParseString(cookie.Value, options...)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to parse token stored in cookie: %w`, err)
+		return nil, fmt.Errorf(`jws.ParseCookie: failed to parse token stored in cookie: %w`, err)
 	}
 
 	if dst != nil {
@@ -105,11 +107,23 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHeaderKey{}:
-			hdrkeys = append(hdrkeys, option.Value().(string))
+			var v string
+			if err := option.Value(&v); err != nil {
+				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithHeaderKey must be string: %w`, err)
+			}
+			hdrkeys = append(hdrkeys, v)
 		case identFormKey{}:
-			formkeys = append(formkeys, option.Value().(string))
+			var v string
+			if err := option.Value(&v); err != nil {
+				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithFormKey must be string: %w`, err)
+			}
+			formkeys = append(formkeys, v)
 		case identCookieKey{}:
-			cookiekeys = append(cookiekeys, option.Value().(string))
+			var v string
+			if err := option.Value(&v); err != nil {
+				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithCookieKey must be string: %w`, err)
+			}
+			cookiekeys = append(cookiekeys, v)
 		default:
 			parseOptions = append(parseOptions, option)
 		}

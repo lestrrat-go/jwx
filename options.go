@@ -1,6 +1,6 @@
 package jwx
 
-import "github.com/lestrrat-go/option"
+import "github.com/lestrrat-go/option/v2"
 
 type identUseNumber struct{}
 

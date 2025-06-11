@@ -36,7 +36,9 @@ func DecoderSettings(options ...JSONOption) {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identUseNumber{}:
-			useNumber = option.Value().(bool)
+			if err := option.Value(&useNumber); err != nil {
+				panic("jwx.DecoderSettings: useNumber option must be a boolean")
+			}
 		}
 	}
 

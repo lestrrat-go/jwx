@@ -132,13 +132,23 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 		case ParseOption:
 			parseOptions = append(parseOptions, option)
 		case ResourceOption:
-			resourceOptions = append(resourceOptions, option.Value().(httprc.NewResourceOption))
+			var v httprc.NewResourceOption
+			if err := option.Value(&v); err != nil {
+				return fmt.Errorf(`failed to retrieve NewResourceOption option value: %w`, err)
+			}
+			resourceOptions = append(resourceOptions, v)
 		default:
 			switch option.Ident() {
 			case identHTTPClient{}:
-				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(option.Value().(HTTPClient)))
+				var cli HTTPClient
+				if err := option.Value(&cli); err != nil {
+					return fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
+				}
+				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(cli))
 			case identWaitReady{}:
-				waitReady = option.Value().(bool)
+				if err := option.Value(&waitReady); err != nil {
+					return fmt.Errorf(`failed to retrieve WaitReady option value: %w`, err)
+				}
 			}
 		}
 	}

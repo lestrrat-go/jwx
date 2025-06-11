@@ -139,8 +139,8 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{},
 	}
 
 	for _, option := range s.options {
-		pc, ok := option.Value().(interface{ Protected(jws.Headers) jws.Headers })
-		if !ok {
+		var pc interface{ Protected(jws.Headers) jws.Headers }
+		if err := option.Value(&pc); err != nil {
 			continue
 		}
 		hdrs := pc.Protected(jws.NewHeaders())

@@ -6,7 +6,7 @@ import (
 	"context"
 	"io/fs"
 
-	"github.com/lestrrat-go/option"
+	"github.com/lestrrat-go/option/v2"
 )
 
 type Option = option.Interface

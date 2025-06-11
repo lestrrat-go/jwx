@@ -35,7 +35,7 @@ go_library(
         "//jwe/internal/keygen",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_option//:option",
+        "@com_github_lestrrat_go_option_v2//:option",
         "@org_golang_x_crypto//pbkdf2",
     ],
 )
