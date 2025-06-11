@@ -173,7 +173,7 @@ func (s *set) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
-			buf.WriteByte('[')
+			buf.WriteByte(tokens.OpenSquareBracket)
 			for j, k := range s.keys {
 				if j > 0 {
 					buf.WriteByte(',')

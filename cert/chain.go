@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 // Chain represents a certificate chain as used in the `x5c` field of
@@ -17,7 +19,7 @@ type Chain struct {
 
 func (cc Chain) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
-	buf.WriteByte('[')
+	buf.WriteByte(tokens.OpenSquareBracket)
 	for i, cert := range cc.certificates {
 		if i > 0 {
 			buf.WriteByte(',')

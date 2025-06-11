@@ -168,7 +168,7 @@ func DumpFile(t *testing.T, file string) {
 	buf, err := os.ReadFile(file)
 	require.NoError(t, err, `failed to read file %s for debugging`, file)
 
-	if isHash, isArray := bytes.ContainsRune(buf, tokens.OpenCurlyBracket), bytes.ContainsRune(buf, '['); isHash || isArray {
+	if isHash, isArray := bytes.ContainsRune(buf, tokens.OpenCurlyBracket), bytes.ContainsRune(buf, tokens.OpenSquareBracket); isHash || isArray {
 		// Looks like a JSON-like thing. Dump that in a formatted manner, and
 		// be done with it
 
