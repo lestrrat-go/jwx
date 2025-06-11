@@ -13,6 +13,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -746,7 +747,7 @@ func TestWithBase64Encoder(t *testing.T) {
 		// Assemble `<header>.<payload>`
 		var buf bytes.Buffer
 		buf.WriteString(headerEncoded)
-		buf.WriteRune('.')
+		buf.WriteRune(tokens.Period)
 		buf.WriteString(payloadEncoded)
 
 		// Sign
@@ -776,7 +777,7 @@ func TestWithBase64Encoder(t *testing.T) {
 		signatureEncoded := base64.URLEncoding.EncodeToString(signature)
 
 		// Tack on signature to get `<header>.<payload>.<signature>`
-		buf.WriteRune('.')
+		buf.WriteRune(tokens.Period)
 		buf.WriteString(signatureEncoded)
 
 		_, err = jwt.Parse(buf.Bytes(), jwt.WithBase64Encoder(base64.URLEncoding), jwt.WithKey(jwa.ES256(), key))

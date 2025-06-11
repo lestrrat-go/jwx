@@ -7,6 +7,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
@@ -65,7 +66,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	s.headers = sup.Header
 	if buf := sup.Protected; buf != nil {
 		src := []byte(*buf)
-		if !bytes.HasPrefix(src, []byte{'{'}) {
+		if !bytes.HasPrefix(src, []byte{tokens.OpenCurlyBracket}) {
 			decoded, err := base64.Decode(src)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
@@ -132,7 +133,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		encoder = base64.DefaultEncoder()
 	}
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 
 	var plen int
 	b64 := getB64Value(hdrs)
@@ -142,7 +143,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		buf.WriteString(encoded)
 	} else {
 		if !s.detached {
-			if bytes.Contains(payload, []byte{'.'}) {
+			if bytes.Contains(payload, []byte{tokens.Period}) {
 				return nil, nil, fmt.Errorf(`payload must not contain a "."`)
 			}
 		}
@@ -161,7 +162,7 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		buf.Truncate(buf.Len() - plen)
 	}
 
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.WriteString(encoder.EncodeToString(signature))
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -361,7 +362,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 
 	sig := m.signatures[0]
 
-	buf.WriteRune('{')
+	buf.WriteRune(tokens.OpenCurlyBracket)
 	var wrote bool
 
 	if hdr := sig.headers; hdr != nil {
@@ -375,7 +376,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	}
 
 	if wrote {
-		buf.WriteRune(',')
+		buf.WriteRune(tokens.Comma)
 	}
 	buf.WriteString(`"payload":"`)
 	buf.WriteString(base64.EncodeToString(m.payload))
@@ -394,7 +395,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	buf.WriteString(`,"signature":"`)
 	buf.WriteString(base64.EncodeToString(sig.signature))
 	buf.WriteRune('"')
-	buf.WriteRune('}')
+	buf.WriteRune(tokens.CloseCurlyBracket)
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -410,10 +411,10 @@ func (m Message) marshalFull() ([]byte, error) {
 	buf.WriteString(`","signatures":[`)
 	for i, sig := range m.signatures {
 		if i > 0 {
-			buf.WriteRune(',')
+			buf.WriteRune(tokens.Comma)
 		}
 
-		buf.WriteRune('{')
+		buf.WriteRune(tokens.OpenCurlyBracket)
 		var wrote bool
 		if hdr := sig.headers; hdr != nil {
 			hdrbuf, err := json.Marshal(hdr)
@@ -431,7 +432,7 @@ func (m Message) marshalFull() ([]byte, error) {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"protected":"`)
 			buf.WriteString(base64.EncodeToString(protectedbuf))
@@ -442,7 +443,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		if len(sig.signature) > 0 {
 			// If InsecureNoSignature is enabled, signature may not exist
 			if wrote {
-				buf.WriteRune(',')
+				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"signature":"`)
 			buf.WriteString(base64.EncodeToString(sig.signature))
@@ -494,21 +495,21 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	defer pool.ReleaseBytesBuffer(buf)
 
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 
 	if !detached {
 		if getB64Value(hdrs) {
 			encoded := encoder.EncodeToString(msg.payload)
 			buf.WriteString(encoded)
 		} else {
-			if bytes.Contains(msg.payload, []byte{'.'}) {
+			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
 				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
 			}
 			buf.Write(msg.payload)
 		}
 	}
 
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.WriteString(encoder.EncodeToString(s.signature))
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())

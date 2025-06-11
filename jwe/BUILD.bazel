@@ -24,6 +24,7 @@ go_library(
         "//internal/base64",
         "//transform",
         "//internal/json",
+        "//internal/tokens",
         "//internal/keyconv",
         "//internal/pool",
         "//jwa",

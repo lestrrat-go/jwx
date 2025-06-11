@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
@@ -158,7 +159,7 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 
 	computedAad := d.computedAad
 	if d.aad != nil {
-		computedAad = append(append(computedAad, '.'), d.aad...)
+		computedAad = append(append(computedAad, tokens.Period), d.aad...)
 	}
 
 	plaintext, err = cipher.Decrypt(cek, d.iv, ciphertext, d.tag, computedAad)

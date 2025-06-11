@@ -8,6 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 // NewRecipient creates a Recipient object
@@ -247,7 +248,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		aad = base64.Encode(aad)
 		if encodedProtectedHeaders != nil {
-			tmp := append(encodedProtectedHeaders, '.')
+			tmp := append(encodedProtectedHeaders, tokens.Period)
 			aad = append(tmp, aad...)
 		}
 
@@ -530,13 +531,13 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 
 	buf.Grow(len(protected) + len(encryptedKey) + len(iv) + len(cipher) + len(tag) + 4)
 	buf.Write(protected)
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.Write(encryptedKey)
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.Write(iv)
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.Write(cipher)
-	buf.WriteByte('.')
+	buf.WriteByte(tokens.Period)
 	buf.Write(tag)
 
 	result := make([]byte, buf.Len())

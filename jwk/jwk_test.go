@@ -28,6 +28,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
@@ -1585,9 +1586,9 @@ func TestSetWithPrivateParams(t *testing.T) {
 		buf.WriteString(`{"renewal_kid":"foo","keys":[`)
 		enc := json.NewEncoder(&buf)
 		_ = enc.Encode(k1)
-		buf.WriteByte(',')
+		buf.WriteByte(tokens.Comma)
 		_ = enc.Encode(k2)
-		buf.WriteByte(',')
+		buf.WriteByte(tokens.Comma)
 		_ = enc.Encode(k3)
 		buf.WriteString(`]}`)
 
