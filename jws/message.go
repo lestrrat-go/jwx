@@ -66,7 +66,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	s.headers = sup.Header
 	if buf := sup.Protected; buf != nil {
 		src := []byte(*buf)
-		if !bytes.HasPrefix(src, []byte{'{'}) {
+		if !bytes.HasPrefix(src, []byte{tokens.OpenCurlyBracket}) {
 			decoded, err := base64.Decode(src)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
@@ -362,7 +362,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 
 	sig := m.signatures[0]
 
-	buf.WriteRune('{')
+	buf.WriteRune(tokens.OpenCurlyBracket)
 	var wrote bool
 
 	if hdr := sig.headers; hdr != nil {
@@ -414,7 +414,7 @@ func (m Message) marshalFull() ([]byte, error) {
 			buf.WriteRune(',')
 		}
 
-		buf.WriteRune('{')
+		buf.WriteRune(tokens.OpenCurlyBracket)
 		var wrote bool
 		if hdr := sig.headers; hdr != nil {
 			hdrbuf, err := json.Marshal(hdr)

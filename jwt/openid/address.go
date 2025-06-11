@@ -6,6 +6,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const (
@@ -205,7 +206,7 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 	buf := pool.GetBytesBuffer()
 	defer pool.ReleaseBytesBuffer(buf)
 
-	buf.WriteByte('{')
+	buf.WriteByte(tokens.OpenCurlyBracket)
 	prev := buf.Len()
 	if v := t.country; v != nil {
 		buf.WriteString(`"country":`)

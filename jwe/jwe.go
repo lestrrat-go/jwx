@@ -843,7 +843,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 
 	var msg *Message
 	var err error
-	if buf[0] == '{' {
+	if buf[0] == tokens.OpenCurlyBracket {
 		msg, err = parseJSON(buf, storeProtectedHeaders)
 	} else {
 		msg, err = parseCompact(buf, storeProtectedHeaders)

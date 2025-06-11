@@ -537,7 +537,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 				r, _ = utf8.DecodeRune(src)
 			}
 			if !unicode.IsSpace(r) {
-				if r == '{' {
+				if r == tokens.OpenCurlyBracket {
 					formats = fmtJSON
 				} else {
 					formats = fmtCompact
@@ -603,7 +603,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 	}
 
 	var parser func(io.Reader) (*Message, error)
-	if first == '{' {
+	if first == tokens.OpenCurlyBracket {
 		parser = parseJSONReader
 	} else {
 		parser = parseCompactReader
