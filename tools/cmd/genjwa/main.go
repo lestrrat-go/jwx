@@ -227,15 +227,18 @@ func Generate(t Algorithm) error {
 	if t.Symmetric {
 		o.L("var isSymmetric bool")
 	}
-	o.L("//nolint:forcetypeassert")
 	o.L("for _, option := range options {")
 	o.L("switch option.Ident() {")
 	if t.Symmetric {
 		o.L("case identIsSymmetric{}:")
-		o.L("isSymmetric = option.Value().(bool)")
+		o.L("if err := option.Value(&isSymmetric); err != nil {")
+		o.L("panic(\"jwa.New%s: WithIsSymmetric option must be a boolean\")", t.Name)
+		o.L("}")
 	}
 	o.L("case identDeprecated{}:")
-	o.L("deprecated = option.Value().(bool)")
+	o.L("if err := option.Value(&deprecated); err != nil {")
+	o.L("panic(\"jwa.New%s: WithDeprecated option must be a boolean\")", t.Name)
+	o.L("}")
 	o.L("}")
 	o.L("}")
 	o.L("return %s{name: name, deprecated: deprecated", t.Name)

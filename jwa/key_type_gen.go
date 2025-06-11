@@ -86,11 +86,12 @@ func EmptyKeyType() KeyType {
 // NewKeyType creates a new KeyType object with the given name.
 func NewKeyType(name string, options ...NewAlgorithmOption) KeyType {
 	var deprecated bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewKeyType: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return KeyType{name: name, deprecated: deprecated}

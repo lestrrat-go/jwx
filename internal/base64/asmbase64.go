@@ -9,8 +9,23 @@ import (
 )
 
 func init() {
-	SetEncoder(asmbase64.RawURLEncoding)
+	SetEncoder(asmEncoder{asmbase64.RawURLEncoding})
 	SetDecoder(asmDecoder{})
+}
+
+type asmEncoder struct {
+	*asmbase64.Encoding
+}
+
+func (e asmEncoder) AppendEncode(dst, src []byte) []byte {
+	n := e.Encoding.EncodedLen(len(src))
+	if cap(dst) < n {
+		dst = make([]byte, n)
+	} else {
+		dst = dst[:n]
+	}
+	e.Encoding.Encode(dst, src)
+	return dst
 }
 
 type asmDecoder struct{}

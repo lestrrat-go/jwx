@@ -26,23 +26,34 @@ func Settings(options ...GlobalOption) {
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identTruncation{}:
-			truncation = option.Value().(time.Duration)
+			if err := option.Value(&truncation); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithTruncation must be time.Duration: %s", err))
+			}
 		case identFlattenAudience{}:
-			flattenAudience = option.Value().(bool)
+			if err := option.Value(&flattenAudience); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithFlattenAudience must be bool: %s", err))
+			}
 		case identNumericDateParsePedantic{}:
-			parsePedantic = option.Value().(bool)
+			if err := option.Value(&parsePedantic); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateParsePedantic must be bool: %s", err))
+			}
 		case identNumericDateParsePrecision{}:
-			v := option.Value().(int)
+			var v int
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateParsePrecision must be int: %s", err))
+			}
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				parsePrecision = uint32(v)
 			}
 		case identNumericDateFormatPrecision{}:
-			v := option.Value().(int)
+			var v int
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateFormatPrecision must be int: %s", err))
+			}
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				formatPrecision = uint32(v)
@@ -199,24 +210,32 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			continue
 		}
 
-		//nolint:forcetypeassert
 		switch o.Ident() {
 		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
-			token, ok := o.Value().(Token)
-			if !ok {
-				return nil, fmt.Errorf(`invalid token passed via WithToken() option (%T)`, o.Value())
+			var token Token
+			if err := o.Value(&token); err != nil {
+				return nil, fmt.Errorf("jws.parseBytes: value for WithToken option must be a jwt.Token: %w", err)
 			}
 			ctx.token = token
 		case identPedantic{}:
-			ctx.pedantic = o.Value().(bool)
+			if err := o.Value(&ctx.pedantic); err != nil {
+				return nil, fmt.Errorf("jws.parseBytes: value for WithPedantic option must be a bool: %w", err)
+			}
 		case identValidate{}:
-			ctx.validate = o.Value().(bool)
+			if err := o.Value(&ctx.validate); err != nil {
+				return nil, fmt.Errorf("jws.parseBytes: value for WithValidate option must be a bool: %w", err)
+			}
 		case identVerify{}:
-			verification = o.Value().(bool)
+			if err := o.Value(&verification); err != nil {
+				return nil, fmt.Errorf("jws.parseBytes: value for WithVerify option must be a bool: %w", err)
+			}
 		case identTypedClaim{}:
-			pair := o.Value().(claimPair)
+			var pair claimPair
+			if err := o.Value(&pair); err != nil {
+				return nil, fmt.Errorf("jws.parseBytes: value for WithTypedClaim option must be claimPair: %w", err)
+			}
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
 			}

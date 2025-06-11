@@ -91,11 +91,12 @@ func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
 // NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object with the given name.
 func NewContentEncryptionAlgorithm(name string, options ...NewAlgorithmOption) ContentEncryptionAlgorithm {
 	var deprecated bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewContentEncryptionAlgorithm: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return ContentEncryptionAlgorithm{name: name, deprecated: deprecated}

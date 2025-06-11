@@ -33,8 +33,8 @@ def go_dependencies():
         name = "com_github_lestrrat_go_blackmagic",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/lestrrat-go/blackmagic",
-        sum = "h1:94HXkVLxkZO9vJI/w2u1T0DAoprShFd13xtnSINtDWs=",
-        version = "v1.0.3",
+        sum = "h1:IwQibdnf8l2KoO+qC3uT4OaTWsW7tuRQXy9TRN9QanA=",
+        version = "v1.0.4",
     )
     go_repository(
         name = "com_github_lestrrat_go_httpcc",
@@ -56,6 +56,13 @@ def go_dependencies():
         importpath = "github.com/lestrrat-go/option",
         sum = "h1:oAzP2fvZGQKWkvHa1/SAcFolBEca1oN+mQ7eooNBEYU=",
         version = "v1.0.1",
+    )
+    go_repository(
+        name = "com_github_lestrrat_go_option_v2",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/lestrrat-go/option/v2",
+        sum = "h1:XxrcaJESE1fokHy3FpaQ/cXW8ZsIdWcdFzzLOcID3Ss=",
+        version = "v2.0.0",
     )
     go_repository(
         name = "com_github_pmezard_go_difflib",

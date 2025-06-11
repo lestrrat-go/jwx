@@ -200,19 +200,24 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
-			parsePEM = option.Value().(bool)
+			if err := option.Value(&parsePEM); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve PEM option value: %w`, err)
+			}
 		case identPEMDecoder{}:
-			pemDecoder = option.Value().(PEMDecoder)
+			if err := option.Value(&pemDecoder); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve PEMDecoder option value: %w`, err)
+			}
 		case identLocalRegistry{}:
-			// in reality you can only pass either withLocalRegistry or
-			// WithTypedField, but since withLocalRegistry is used only by us,
-			// we skip checking
-			localReg = option.Value().(*json.Registry)
+			if err := option.Value(&localReg); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve local registry option value: %w`, err)
+			}
 		case identTypedField{}:
-			pair := option.Value().(typedFieldPair)
+			var pair typedFieldPair // temporary var needed for typed field
+			if err := option.Value(&pair); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve typed field option value: %w`, err)
+			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -281,16 +286,24 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
-			parsePEM = option.Value().(bool)
+			if err := option.Value(&parsePEM); err != nil {
+				return nil, parseerr(`failed to retrieve PEM option value: %w`, err)
+			}
 		case identPEMDecoder{}:
-			pemDecoder = option.Value().(PEMDecoder)
+			if err := option.Value(&pemDecoder); err != nil {
+				return nil, parseerr(`failed to retrieve PEMDecoder option value: %w`, err)
+			}
 		case identIgnoreParseError{}:
-			ignoreParseError = option.Value().(bool)
+			if err := option.Value(&ignoreParseError); err != nil {
+				return nil, parseerr(`failed to retrieve IgnoreParseError option value: %w`, err)
+			}
 		case identTypedField{}:
-			pair := option.Value().(typedFieldPair)
+			var pair typedFieldPair // temporary var needed for typed field
+			if err := option.Value(&pair); err != nil {
+				return nil, parseerr(`failed to retrieve typed field option value: %w`, err)
+			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -377,10 +390,11 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 
 	hash := crypto.SHA256
 	for _, option := range options {
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identThumbprintHash{}:
-			hash = option.Value().(crypto.Hash)
+			if err := option.Value(&hash); err != nil {
+				return fmt.Errorf(`failed to retrieve thumbprint hash option value: %w`, err)
+			}
 		}
 	}
 
@@ -611,11 +625,13 @@ func IsKeyValidationError(err error) bool {
 // Configure is used to configure global behavior of the jwk package.
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
-			v := option.Value().(bool)
+			var v bool
+			if err := option.Value(&v); err != nil {
+				continue
+			}
 			strictKeyUsagePtr = &v
 		}
 	}

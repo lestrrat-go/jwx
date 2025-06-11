@@ -77,12 +77,15 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 			continue
 		}
 
-		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identHTTPClient{}:
-			client = option.Value().(HTTPClient)
+			if err := option.Value(&client); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
+			}
 		case identFetchWhitelist{}:
-			wl = option.Value().(Whitelist)
+			if err := option.Value(&wl); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve fetch whitelist option value: %w`, err)
+			}
 		}
 	}
 

@@ -67,11 +67,12 @@ func EmptyCompressionAlgorithm() CompressionAlgorithm {
 // NewCompressionAlgorithm creates a new CompressionAlgorithm object with the given name.
 func NewCompressionAlgorithm(name string, options ...NewAlgorithmOption) CompressionAlgorithm {
 	var deprecated bool
-	//nolint:forcetypeassert
 	for _, option := range options {
 		switch option.Ident() {
 		case identDeprecated{}:
-			deprecated = option.Value().(bool)
+			if err := option.Value(&deprecated); err != nil {
+				panic("jwa.NewCompressionAlgorithm: WithDeprecated option must be a boolean")
+			}
 		}
 	}
 	return CompressionAlgorithm{name: name, deprecated: deprecated}

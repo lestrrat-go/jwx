@@ -3,6 +3,7 @@
 package jwk
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 )
@@ -25,7 +26,9 @@ func ReadFile(path string, options ...ReadFileOption) (Set, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identFS{}:
-			srcFS = option.Value().(fs.FS)
+			if err := option.Value(&srcFS); err != nil {
+				return nil, fmt.Errorf("failed to set fs.FS: %w", err)
+			}
 		}
 	}
 

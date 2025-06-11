@@ -30,7 +30,7 @@ go_library(
     deps = [
         "//internal/json",
         "//internal/tokens",
-        "@com_github_lestrrat_go_option//:option",
+        "@com_github_lestrrat_go_option_v2//:option",
     ],
 )
 
