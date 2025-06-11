@@ -119,12 +119,12 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		hdrkeys = append(hdrkeys, "Authorization")
 	}
 
-	mhdrs := pool.GetKeyToErrorMap()
-	defer pool.ReleaseKeyToErrorMap(mhdrs)
-	mfrms := pool.GetKeyToErrorMap()
-	defer pool.ReleaseKeyToErrorMap(mfrms)
-	mcookies := pool.GetKeyToErrorMap()
-	defer pool.ReleaseKeyToErrorMap(mcookies)
+	mhdrs := pool.KeyToErrorMap().Get()
+	defer pool.KeyToErrorMap().Put(mhdrs)
+	mfrms := pool.KeyToErrorMap().Get()
+	defer pool.KeyToErrorMap().Put(mfrms)
+	mcookies := pool.KeyToErrorMap().Get()
+	defer pool.KeyToErrorMap().Put(mcookies)
 
 	for _, hdrkey := range hdrkeys {
 		// Check presence via a direct map lookup

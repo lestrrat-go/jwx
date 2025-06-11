@@ -125,8 +125,8 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
 	}
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	encoder := s.encoder
 	if encoder == nil {
@@ -357,8 +357,8 @@ func (m Message) MarshalJSON() ([]byte, error) {
 }
 
 func (m Message) marshalFlattened() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	sig := m.signatures[0]
 
@@ -403,8 +403,8 @@ func (m Message) marshalFlattened() ([]byte, error) {
 }
 
 func (m Message) marshalFull() ([]byte, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"payload":"`)
 	buf.WriteString(base64.EncodeToString(m.payload))
@@ -491,8 +491,8 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		return nil, fmt.Errorf(`jws.Compress: failed to marshal headers: %w`, err)
 	}
 
-	buf := pool.GetBytesBuffer()
-	defer pool.ReleaseBytesBuffer(buf)
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
 	buf.WriteByte(tokens.Period)

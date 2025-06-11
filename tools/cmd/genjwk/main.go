@@ -646,8 +646,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("sort.Strings(fields)")
-	o.L("buf := pool.GetBytesBuffer()")
-	o.L("defer pool.ReleaseBytesBuffer(buf)")
+	o.L("buf := pool.BytesBuffer().Get()")
+	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
 	o.L("enc := json.NewEncoder(buf)")
 	o.L("for i, f := range fields {")
