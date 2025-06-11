@@ -7,6 +7,30 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
+type Verifier2 interface {
+	Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error
+}
+
+var muVerifier2DB sync.RWMutex
+var verifier2DB = make(map[jwa.SignatureAlgorithm]Verifier2)
+
+func RegisterVerifier2(alg jwa.SignatureAlgorithm, verifier Verifier2) {
+	muVerifier2DB.Lock()
+	verifier2DB[alg] = verifier
+	muVerifier2DB.Unlock()
+}
+
+func verifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
+	muVerifier2DB.RLock()
+	defer muVerifier2DB.RUnlock()
+
+	v, ok := verifier2DB[alg]
+	if !ok {
+		return nil, fmt.Errorf(`no verifier registered for algorithm %q`, alg)
+	}
+	return v, nil
+}
+
 type VerifierFactory interface {
 	Create() (Verifier, error)
 }
@@ -17,7 +41,7 @@ func (fn VerifierFactoryFn) Create() (Verifier, error) {
 }
 
 var muVerifierDB sync.RWMutex
-var verifierDB map[jwa.SignatureAlgorithm]VerifierFactory
+var verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
 
 // RegisterVerifier is used to register a factory object that creates
 // Verifier objects based on the given algorithm.
@@ -52,8 +76,6 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	verifierDB = make(map[jwa.SignatureAlgorithm]VerifierFactory)
-
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
@@ -66,14 +88,6 @@ func init() {
 		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
 			return VerifierFactoryFn(func() (Verifier, error) {
 				return newECDSAVerifier(alg), nil
-			})
-		}(alg))
-	}
-
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
-		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
-			return VerifierFactoryFn(func() (Verifier, error) {
-				return newHMACVerifier(alg), nil
 			})
 		}(alg))
 	}
@@ -92,5 +106,5 @@ func NewVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, fmt.Errorf(`unsupported signature algorithm "%s"`, alg)
+	return nil, fmt.Errorf(`jws.NewVerifier: unsupported signature algorithm "%s"`, alg)
 }

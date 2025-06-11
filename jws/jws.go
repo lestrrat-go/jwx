@@ -51,6 +51,7 @@ var registry = json.NewRegistry()
 
 type payloadSigner struct {
 	signer    Signer
+	signer2   Signer2
 	key       interface{}
 	protected Headers
 	public    Headers
@@ -61,6 +62,9 @@ func (s *payloadSigner) Sign(payload []byte) ([]byte, error) {
 }
 
 func (s *payloadSigner) Algorithm() jwa.SignatureAlgorithm {
+	if s.signer2 != nil {
+		return s.signer2.Algorithm()
+	}
 	return s.signer.Algorithm()
 }
 
@@ -81,7 +85,30 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
+func signerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
+	muSigner2DB.RLock()
+	defer muSigner2DB.RUnlock()
+
+	signer, ok := signer2DB[alg]
+	if !ok {
+		return nil, fmt.Errorf(`no signer registered for algorithm %q`, alg)
+	}
+	return signer, nil
+}
+
 func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) (*payloadSigner, error) {
+	ps := &payloadSigner{
+		key:       key,
+		public:    public,
+		protected: protected,
+	}
+
+	signer2, err := signerFor(alg)
+	if err == nil {
+		ps.signer2 = signer2
+		return ps, nil
+	}
+
 	muSigner.Lock()
 	signer, ok := signers[alg]
 	if !ok {
@@ -94,13 +121,8 @@ func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected H
 		signer = v
 	}
 	muSigner.Unlock()
-
-	return &payloadSigner{
-		signer:    signer,
-		key:       key,
-		public:    public,
-		protected: protected,
-	}, nil
+	ps.signer = signer
+	return ps, nil
 }
 
 const (
@@ -287,9 +309,15 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, signerr(`failed to validate key before signing: %w`, err)
 			}
 		}
-		_, _, err := sig.Sign(payload, signer.signer, signer.key)
-		if err != nil {
-			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
+
+		var sign2err error
+		if signer.signer2 != nil {
+			_, _, sign2err = sig.sign2(payload, signer.signer2, signer.key)
+		} else {
+			_, _, sign2err = sig.sign2(payload, signer.signer, signer.key)
+		}
+		if sign2err != nil {
+			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), sign2err)
 		}
 
 		result.signatures = append(result.signatures, sig)
@@ -438,8 +466,10 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		verifyBuf.Reset()
 
 		var encodedProtectedHeader string
+		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
+				rawHeaders = raw
 				encodedProtectedHeader = encoder.EncodeToString(raw)
 			}
 		}
@@ -449,6 +479,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			if err != nil {
 				return nil, verifyerr(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
+			rawHeaders = protected
 
 			encodedProtectedHeader = encoder.EncodeToString(protected)
 		}
@@ -476,14 +507,22 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 						return nil, verifyerr(`failed to validate key before signing: %w`, err)
 					}
 				}
-				verifier, err := NewVerifier(alg)
-				if err != nil {
-					return nil, verifyerr(`failed to create verifier for algorithm %q: %w`, alg, err)
-				}
 
-				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
-					errs = append(errs, verificationError{err})
-					continue
+				if verifier2, err := verifierFor(alg); err == nil {
+					if err := verifier2.Do(msg.payload, rawHeaders, sig.signature, encoder, msg.b64, key); err != nil {
+						errs = append(errs, verificationError{err})
+						continue
+					}
+				} else {
+					verifier, err := NewVerifier(alg)
+					if err != nil {
+						return nil, verifyerr(`failed to create verifier for algorithm %q: %w`, alg, err)
+					}
+
+					if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
+						errs = append(errs, verificationError{err})
+						continue
+					}
 				}
 
 				if keyUsed != nil {

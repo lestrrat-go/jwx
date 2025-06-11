@@ -7,6 +7,20 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
+type Signer2 interface {
+	Algorithm() jwa.SignatureAlgorithm
+	Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
+}
+
+var muSigner2DB sync.RWMutex
+var signer2DB = make(map[jwa.SignatureAlgorithm]Signer2)
+
+func RegisterSigner2(alg jwa.SignatureAlgorithm, signer Signer2) {
+	muSigner2DB.Lock()
+	signer2DB[alg] = signer
+	muSigner2DB.Unlock()
+}
+
 type SignerFactory interface {
 	Create() (Signer, error)
 }
@@ -17,7 +31,7 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 }
 
 var muSignerDB sync.RWMutex
-var signerDB map[jwa.SignatureAlgorithm]SignerFactory
+var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 
 // RegisterSigner is used to register a factory object that creates
 // Signer objects based on the given algorithm. Previous object instantiated
@@ -31,6 +45,7 @@ var signerDB map[jwa.SignatureAlgorithm]SignerFactory
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f SignerFactory) {
+	fmt.Println("RegisterSigner", alg)
 	jwa.RegisterSignatureAlgorithm(alg)
 	muSignerDB.Lock()
 	signerDB[alg] = f
@@ -59,8 +74,6 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
-
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
@@ -73,14 +86,6 @@ func init() {
 		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
 				return newECDSASigner(alg), nil
-			})
-		}(alg))
-	}
-
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
-		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
-			return SignerFactoryFn(func() (Signer, error) {
-				return newHMACSigner(alg), nil
 			})
 		}(alg))
 	}
@@ -99,7 +104,7 @@ func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, fmt.Errorf(`unsupported signature algorithm "%s"`, alg)
+	return nil, fmt.Errorf(`jws.NewSigner: unsupported signature algorithm "%s"`, alg)
 }
 
 type noneSigner struct{}
