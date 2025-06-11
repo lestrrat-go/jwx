@@ -76,14 +76,6 @@ func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
-		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
-			return VerifierFactoryFn(func() (Verifier, error) {
-				return newECDSAVerifier(alg), nil
-			})
-		}(alg))
-	}
-
 	RegisterVerifier(jwa.EdDSA(), VerifierFactoryFn(func() (Verifier, error) {
 		return newEdDSAVerifier(), nil
 	}))

@@ -31,4 +31,17 @@ func init() {
 			})
 		}(alg))
 	}
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
+		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
+			return SignerFactoryFn(func() (Signer, error) {
+				return legacy.NewECDSASigner(alg), nil
+			})
+		}(alg))
+		RegisterVerifier(alg, func(alg jwa.SignatureAlgorithm) VerifierFactory {
+			return VerifierFactoryFn(func() (Verifier, error) {
+				return legacy.NewECDSAVerifier(alg), nil
+			})
+		}(alg))
+	}
+
 }

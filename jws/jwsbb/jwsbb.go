@@ -29,6 +29,21 @@ type Signer[K any] interface {
 	Sign(payload []byte, key K) ([]byte, error)
 }
 
+func sign[K any](payload, hdr []byte, signer Signer[K], encoder Base64Encoder, encodePayload bool, key K) ([]byte, error) {
+	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
+
+	buf = encoder.AppendEncode(buf, hdr)
+	buf = append(buf, tokens.Period)
+	if encodePayload {
+		buf = encoder.AppendEncode(buf, payload)
+	} else {
+		buf = append(buf, payload...)
+	}
+
+	defer pool.ByteSlice().Put(buf)
+	return signer.Sign(buf, key)
+}
+
 type Verifier[K any] interface {
 	Verify(buf []byte, signature []byte, key K) error
 }

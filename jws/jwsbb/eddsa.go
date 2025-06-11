@@ -2,9 +2,7 @@ package jwsbb
 
 import (
 	"crypto/ed25519"
-
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"fmt"
 )
 
 // EdDSASigner signs payloads using EdDSA (Ed25519).
@@ -19,17 +17,17 @@ func SignEdDSA(payload, hdr []byte, encoder Base64Encoder, encodePayload bool, k
 	return sign[ed25519.PrivateKey](payload, hdr, EdDSASigner{}, encoder, encodePayload, key)
 }
 
-func sign[K any](payload, hdr []byte, signer Signer[K], encoder Base64Encoder, encodePayload bool, key K) ([]byte, error) {
-	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
+// EdDSAVerifier verifies EdDSA (Ed25519) signatures.
+type EdDSAVerifier struct{}
 
-	buf = encoder.AppendEncode(buf, hdr)
-	buf = append(buf, tokens.Period)
-	if encodePayload {
-		buf = encoder.AppendEncode(buf, payload)
-	} else {
-		buf = append(buf, payload...)
+func (v EdDSAVerifier) Verify(buf []byte, signature []byte, key ed25519.PublicKey) error {
+	if !ed25519.Verify(key, buf, signature) {
+		return fmt.Errorf("invalid EdDSA signature")
 	}
+	return nil
+}
 
-	defer pool.ByteSlice().Put(buf)
-	return signer.Sign(buf, key)
+// VerifyEdDSA verifies the EdDSA (Ed25519) signature for the given payload and header.
+func VerifyEdDSA(payload, hdr, signature []byte, encoder Base64Encoder, encodePayload bool, pubKey ed25519.PublicKey) error {
+	return verify[ed25519.PublicKey](payload, hdr, signature, EdDSAVerifier{}, encoder, encodePayload, pubKey)
 }

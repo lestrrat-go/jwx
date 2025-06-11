@@ -73,14 +73,6 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 }
 
 func init() {
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
-		RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
-			return SignerFactoryFn(func() (Signer, error) {
-				return newECDSASigner(alg), nil
-			})
-		}(alg))
-	}
-
 	RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
 		return newEdDSASigner(), nil
 	}))

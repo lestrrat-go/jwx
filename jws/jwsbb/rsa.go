@@ -2,7 +2,6 @@ package jwsbb
 
 import (
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/rsa"
 )
 
@@ -50,9 +49,4 @@ func (v RsaVerifier) Verify(buf []byte, signature []byte, key *rsa.PublicKey) er
 // VerifyRSA verifies the RSA signature for the given payload and header.
 func VerifyRSA(payload, hdr, signature []byte, h crypto.Hash, pss bool, encoder Base64Encoder, encodePayload bool, pubKey *rsa.PublicKey) error {
 	return verify[*rsa.PublicKey](payload, hdr, signature, RsaVerifier{h: h, pss: pss}, encoder, encodePayload, pubKey)
-}
-
-// VerifyECDSA verifies the ECDSA signature for the given payload and header.
-func VerifyECDSA(payload, hdr, signature []byte, h crypto.Hash, encoder Base64Encoder, encodePayload bool, pubKey *ecdsa.PublicKey) error {
-	return verify[*ecdsa.PublicKey](payload, hdr, signature, EcdsaVerifier{h: h}, encoder, encodePayload, pubKey)
 }
