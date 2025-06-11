@@ -347,11 +347,11 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 		case identKey{}:
 			var wk *withKey
 			if err := option.Value(&wk); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
 			}
 			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf(`expected alg to be jwa.KeyEncryptionAlgorithm, but got %T`, wk.alg)
+				return nil, fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
 			}
 			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
 				useRawCEK = true
@@ -571,51 +571,41 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			var dstMsg *Message
-			if err := option.Value(&dstMsg); err != nil {
-				return nil, err
+			if err := option.Value(&dst); err != nil {
+				return nil, fmt.Errorf("jwe.decrypt: WithMessage must be a *jwe.Message: %w", err)
 			}
-			dst = dstMsg
 		case identKeyProvider{}:
 			var kp KeyProvider
 			if err := option.Value(&kp); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("jwe.decrypt: WithKeyProvider must be a KeyProvider: %w", err)
 			}
 			keyProviders = append(keyProviders, kp)
 		case identKeyUsed{}:
-			var ku interface{}
-			if err := option.Value(&ku); err != nil {
-				return nil, err
+			if err := option.Value(&keyUsed); err != nil {
+				return nil, fmt.Errorf("jwe.decrypt: WithKeyUsed must be an interface{}: %w", err)
 			}
-			keyUsed = ku
 		case identKey{}:
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
 			}
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf(`WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)`, pair.alg)
+				return nil, fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
 			}
 			keyProviders = append(keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
-			var c *[]byte
-			if err := option.Value(&c); err != nil {
-				return nil, err
+			if err := option.Value(&cek); err != nil {
+				return nil, fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
 			}
-			cek = c
 		case identMaxDecompressBufferSize{}:
-			var max int64
-			if err := option.Value(&max); err != nil {
-				return nil, err
+			if err := option.Value(&perCallMaxDecompressBufferSize); err != nil {
+				return nil, fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
 			}
-			perCallMaxDecompressBufferSize = max
 		case identContext{}:
-			var ctx2 context.Context
-			if err := option.Value(&ctx2); err != nil {
-				return nil, err
+			if err := option.Value(&ctx); err != nil {
+				return nil, fmt.Errorf("jwe.decrypt: WithContext must be a context.Context: %w", err)
 			}
-			ctx = ctx2
 		}
 	}
 
