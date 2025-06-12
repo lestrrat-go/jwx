@@ -13,9 +13,10 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v3/jws/jwsbb",
     visibility = ["//visibility:public"],
     deps = [
+        "//internal/ecutil",
+        "//internal/jwxio",
         "//internal/pool",
         "//internal/tokens",
-        "//internal/ecutil",
     ],
 )
 

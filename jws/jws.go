@@ -23,7 +23,6 @@ package jws
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -41,10 +40,12 @@ import (
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
 var registry = json.NewRegistry()
@@ -557,22 +558,6 @@ func getB64Value(hdr Headers) bool {
 	return b64
 }
 
-// This is an "optimized" io.ReadAll(). It will attempt to read
-// all of the contents from the reader IF the reader is of a certain
-// concrete type.
-func readAll(rdr io.Reader) ([]byte, bool) {
-	switch rdr.(type) {
-	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
-		data, err := io.ReadAll(rdr)
-		if err != nil {
-			return nil, false
-		}
-		return data, true
-	default:
-		return nil, false
-	}
-}
-
 // Parse parses contents from the given source and creates a jws.Message
 // struct. By default the input can be in either compact or full JSON serialization.
 //
@@ -653,8 +638,13 @@ func ParseString(src string) (*Message, error) {
 //
 // On error, returns a jws.ParseError.
 func ParseReader(src io.Reader) (*Message, error) {
-	if data, ok := readAll(src); ok {
+	data, err := jwxio.ReadAllFromFiniteSource(src)
+	if err == nil {
 		return Parse(data)
+	}
+
+	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
+		return nil, rparseerr(`failed to read from finite source: %w`, err)
 	}
 
 	rdr := bufio.NewReader(src)
@@ -705,106 +695,46 @@ func parseJSON(data []byte) (result *Message, err error) {
 	return &m, nil
 }
 
-const tokenDelim = "."
-
-// SplitCompact splits a JWT and returns its three parts
+// SplitCompact splits a JWS in compact format and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
-	protected, s, ok := bytes.Cut(src, []byte(tokenDelim))
-	if !ok { // no period found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
+	hdr, payload, signature, err := jwsbb.SplitCompact(src)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
 	}
-	payload, s, ok := bytes.Cut(s, []byte(tokenDelim))
-	if !ok { // only one period found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-	signature, _, ok := bytes.Cut(s, []byte(tokenDelim))
-	if ok { // three periods found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-	return protected, payload, signature, nil
+	return hdr, payload, signature, nil
 }
 
 // SplitCompactString splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
-	return SplitCompact([]byte(src))
+	hdr, payload, signature, err := jwsbb.SplitCompactString(src)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
+	}
+	return hdr, payload, signature, nil
 }
 
 // SplitCompactReader splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
-	if data, ok := readAll(rdr); ok {
-		return SplitCompact(data)
+	hdr, payload, signature, err := jwsbb.SplitCompactReader(rdr)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
 	}
-
-	var protected []byte
-	var payload []byte
-	var signature []byte
-	var periods int
-	var state int
-
-	buf := make([]byte, 4096)
-	var sofar []byte
-
-	for {
-		// read next bytes
-		n, err := rdr.Read(buf)
-		// return on unexpected read error
-		if err != nil && err != io.EOF {
-			return nil, nil, nil, parseerr(`unexpected end of input: %w`, err)
-		}
-
-		// append to current buffer
-		sofar = append(sofar, buf[:n]...)
-		// loop to capture multiple tokens.Period in current buffer
-		for loop := true; loop; {
-			var i = bytes.IndexByte(sofar, tokens.Period)
-			if i == -1 && err != io.EOF {
-				// no tokens.Period found -> exit and read next bytes (outer loop)
-				loop = false
-				continue
-			} else if i == -1 && err == io.EOF {
-				// no tokens.Period found -> process rest and exit
-				i = len(sofar)
-				loop = false
-			} else {
-				// tokens.Period found
-				periods++
-			}
-
-			// Reaching this point means we have found a tokens.Period or EOF and process the rest of the buffer
-			switch state {
-			case 0:
-				protected = sofar[:i]
-				state++
-			case 1:
-				payload = sofar[:i]
-				state++
-			case 2:
-				signature = sofar[:i]
-			}
-			// Shorten current buffer
-			if len(sofar) > i {
-				sofar = sofar[i+1:]
-			}
-		}
-		// Exit on EOF
-		if err == io.EOF {
-			break
-		}
-	}
-	if periods != 2 {
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-
-	return protected, payload, signature, nil
+	return hdr, payload, signature, nil
 }
 
 // parseCompactReader parses a JWS value serialized via compact serialization.
