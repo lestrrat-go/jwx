@@ -4,6 +4,7 @@ package base64
 
 import (
 	"fmt"
+	"slices"
 
 	asmbase64 "github.com/segmentio/asm/base64"
 )
@@ -19,13 +20,9 @@ type asmEncoder struct {
 
 func (e asmEncoder) AppendEncode(dst, src []byte) []byte {
 	n := e.Encoding.EncodedLen(len(src))
-	if cap(dst) < n {
-		dst = make([]byte, n)
-	} else {
-		dst = dst[:n]
-	}
-	e.Encoding.Encode(dst, src)
-	return dst
+	dst = slices.Grow(dst, n)
+	e.Encoding.Encode(dst[len(dst):][:n], src)
+	return dst[:len(dst)+n]
 }
 
 type asmDecoder struct{}

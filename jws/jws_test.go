@@ -10,7 +10,6 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -25,7 +24,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
@@ -271,22 +269,32 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 		},
 	}
 
+	verifyKeys := make(map[string]any)
+
+	for k, v := range keys {
+		verifyKeys[k] = v
+	}
+
 	if es, ok := signKey.(*ecdsa.PrivateKey); ok {
+		k := &dummyECDSACryptoSigner{raw: es}
 		signKeys = append(signKeys, struct {
 			Name string
 			Key  interface{}
 		}{
-			Name: "crypto.Hash",
-			Key:  &dummyECDSACryptoSigner{raw: es},
+			Name: "crypto.Signer",
+			Key:  k,
 		})
+		verifyKeys["Verify(crypto.Signer)"] = k
 	} else if cs, ok := signKey.(crypto.Signer); ok {
+		k := &dummyCryptoSigner{raw: cs}
 		signKeys = append(signKeys, struct {
 			Name string
 			Key  interface{}
 		}{
-			Name: "crypto.Hash",
-			Key:  &dummyCryptoSigner{raw: cs},
+			Name: "crypto.Signer",
+			Key:  k,
 		})
+		verifyKeys["Verify(crypto.Signer)"] = k
 	}
 
 	for _, key := range signKeys {
@@ -308,7 +316,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 				})
 			}
 
-			for name, testKey := range keys {
+			for name, testKey := range verifyKeys {
 				t.Run(name, func(t *testing.T) {
 					verified, err := jws.Verify(signed, jws.WithKey(alg, testKey))
 					require.NoError(t, err, "(%s) Verify is successful", alg)
@@ -425,315 +433,6 @@ func TestSignMulti2(t *testing.T) {
 func TestEncode(t *testing.T) {
 	t.Parallel()
 
-	// HS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.1 works
-	t.Run("HS256Compact", func(t *testing.T) {
-		t.Parallel()
-		const hdr = `{"typ":"JWT",` + "\r\n" + ` "alg":"HS256"}`
-		const hmacKey = `AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow`
-		const expected = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
-
-		hmacKeyDecoded, err := base64.DecodeString(hmacKey)
-		require.NoError(t, err, "HMAC base64 decoded successful")
-
-		hdrbuf := base64.Encode([]byte(hdr))
-		payload := base64.Encode([]byte(examplePayload))
-
-		signingInput := bytes.Join(
-			[][]byte{
-				hdrbuf,
-				payload,
-			},
-			[]byte{tokens.Period},
-		)
-
-		sign, err := jws.NewSigner(jwa.HS256())
-		require.NoError(t, err, "HMAC signer created successfully")
-
-		signature, err := sign.Sign(signingInput, hmacKeyDecoded)
-		require.NoError(t, err, "PayloadSign is successful")
-		sigbuf := base64.Encode(signature)
-
-		encoded := bytes.Join(
-			[][]byte{
-				signingInput,
-				sigbuf,
-			},
-			[]byte{tokens.Period},
-		)
-		require.Equal(t, expected, string(encoded), "generated compact serialization should match")
-
-		msg, err := jws.ParseReader(bytes.NewReader(encoded))
-		require.NoError(t, err, "Parsing compact encoded serialization succeeds")
-
-		signatures := msg.Signatures()
-		require.Len(t, signatures, 1, `there should be exactly one signature`)
-
-		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
-		if !ok || algorithm != jwa.HS256() {
-			t.Fatal("Algorithm in header does not match")
-		}
-
-		v, err := jws.NewVerifier(jwa.HS256())
-		require.NoError(t, err, "HmacVerify created")
-
-		require.NoError(t, v.Verify(signingInput, signature, hmacKeyDecoded), "Verify succeeds")
-	})
-	t.Run("ES512Compact", func(t *testing.T) {
-		t.Parallel()
-		// ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
-		hdr := []byte{123, 34, 97, 108, 103, 34, 58, 34, 69, 83, 53, 49, 50, 34, 125}
-		const jwksrc = `{
-"kty":"EC",
-"crv":"P-521",
-"x":"AekpBQ8ST8a8VcfVOTNl353vSrDCLLJXmPk06wTjxrrjcBpXp5EOnYG_NjFZ6OvLFV1jSfS9tsz4qUxcWceqwQGk",
-"y":"ADSmRA43Z1DSNx_RvcLI87cdL07l6jQyyBXMoxVg_l2Th-x3S1WDhjDly79ajL4Kkd0AZMaZmh9ubmf63e3kyMj2",
-"d":"AY5pb7A0UFiB3RELSD64fTLOSV_jazdF7fLYyuTw8lOfRhWg6Y6rUrPAxerEzgdRhajnu0ferB0d53vM9mE15j2C"
-}`
-
-		// "Payload"
-		jwsPayload := []byte{80, 97, 121, 108, 111, 97, 100}
-
-		standardHeaders := jws.NewHeaders()
-		require.NoError(t, json.Unmarshal(hdr, standardHeaders), `parsing headers should succeed`)
-
-		alg, ok := standardHeaders.Algorithm()
-		require.True(t, ok, `algorithm should be present in headers`)
-		jwkKey, err := jwk.ParseKey([]byte(jwksrc))
-		if err != nil {
-			t.Fatal("Failed to parse JWK")
-		}
-		var key interface{}
-		require.NoError(t, jwk.Export(jwkKey, &key), `jwk.Export should succeed`)
-		var jwsCompact []byte
-		jwsCompact, err = jws.Sign(jwsPayload, jws.WithKey(alg, key))
-		if err != nil {
-			t.Fatal("Failed to sign message")
-		}
-
-		// Verify with standard ecdsa library
-		_, _, jwsSignature, err := jws.SplitCompact(jwsCompact)
-		if err != nil {
-			t.Fatal("Failed to split compact JWT")
-		}
-
-		decodedJwsSignature, err := base64.Decode(jwsSignature)
-		require.NoError(t, err, `base64.Decode should succeed`)
-		r, s := &big.Int{}, &big.Int{}
-		n := len(decodedJwsSignature) / 2
-		r.SetBytes(decodedJwsSignature[:n])
-		s.SetBytes(decodedJwsSignature[n:])
-		signingHdr := base64.Encode(hdr)
-		signingPayload := base64.Encode(jwsPayload)
-
-		jwsSigningInput := bytes.Join(
-			[][]byte{
-				signingHdr,
-				signingPayload,
-			},
-			[]byte{tokens.Period},
-		)
-		hashed512 := sha512.Sum512(jwsSigningInput)
-		ecdsaPrivateKey := key.(*ecdsa.PrivateKey)
-		require.True(t, ecdsa.Verify(&ecdsaPrivateKey.PublicKey, hashed512[:], r, s), "ecdsa.Verify should succeed")
-
-		// Verify with API library
-		publicKey, err := jwk.PublicRawKeyOf(key)
-		require.NoError(t, err, `jwk.PublicRawKeyOf should succeed`)
-		verifiedPayload, err := jws.Verify(jwsCompact, jws.WithKey(alg, publicKey))
-		if err != nil || string(verifiedPayload) != string(jwsPayload) {
-			t.Fatal("Failed to verify message")
-		}
-	})
-	t.Run("RS256Compact", func(t *testing.T) {
-		t.Parallel()
-		// RS256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.2 works
-		const hdr = `{"alg":"RS256"}`
-		const expected = `eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw`
-		const jwksrc = `{
-    "kty":"RSA",
-    "n":"ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
-    "e":"AQAB",
-    "d":"Eq5xpGnNCivDflJsRQBXHx1hdR1k6Ulwe2JZD50LpXyWPEAeP88vLNO97IjlA7_GQ5sLKMgvfTeXZx9SE-7YwVol2NXOoAJe46sui395IW_GO-pWJ1O0BkTGoVEn2bKVRUCgu-GjBVaYLU6f3l9kJfFNS3E0QbVdxzubSu3Mkqzjkn439X0M_V51gfpRLI9JYanrC4D4qAdGcopV_0ZHHzQlBjudU2QvXt4ehNYTCBr6XCLQUShb1juUO1ZdiYoFaFQT5Tw8bGUl_x_jTj3ccPDVZFD9pIuhLhBOneufuBiB4cS98l2SR_RQyGWSeWjnczT0QU91p1DhOVRuOopznQ",
-    "p":"4BzEEOtIpmVdVEZNCqS7baC4crd0pqnRH_5IB3jw3bcxGn6QLvnEtfdUdiYrqBdss1l58BQ3KhooKeQTa9AB0Hw_Py5PJdTJNPY8cQn7ouZ2KKDcmnPGBY5t7yLc1QlQ5xHdwW1VhvKn-nXqhJTBgIPgtldC-KDV5z-y2XDwGUc",
-    "q":"uQPEfgmVtjL0Uyyx88GZFF1fOunH3-7cepKmtH4pxhtCoHqpWmT8YAmZxaewHgHAjLYsp1ZSe7zFYHj7C6ul7TjeLQeZD_YwD66t62wDmpe_HlB-TnBA-njbglfIsRLtXlnDzQkv5dTltRJ11BKBBypeeF6689rjcJIDEz9RWdc",
-    "dp":"BwKfV3Akq5_MFZDFZCnW-wzl-CCo83WoZvnLQwCTeDv8uzluRSnm71I3QCLdhrqE2e9YkxvuxdBfpT_PI7Yz-FOKnu1R6HsJeDCjn12Sk3vmAktV2zb34MCdy7cpdTh_YVr7tss2u6vneTwrA86rZtu5Mbr1C1XsmvkxHQAdYo0",
-    "dq":"h_96-mK1R_7glhsum81dZxjTnYynPbZpHziZjeeHcXYsXaaMwkOlODsWa7I9xXDoRwbKgB719rrmI2oKr6N3Do9U0ajaHF-NKJnwgjMd2w9cjz3_-kyNlxAr2v4IKhGNpmM5iIgOS1VZnOZ68m6_pbLBSp3nssTdlqvd0tIiTHU",
-    "qi":"IYd7DHOhrWvxkwPQsRM2tOgrjbcrfvtQJipd-DlcxyVuuM9sQLdgjVk2oy26F0EmpScGLq2MowX7fhd_QJQ3ydy5cY7YIBi87w93IKLEdfnbJtoOPLUW0ITrJReOgo1cq9SbsxYawBgfp_gh6A5603k2-ZQwVK0JKSHuLFkuQ3U"
-  }`
-
-		privkey, err := jwk.ParseKey([]byte(jwksrc))
-		require.NoError(t, err, `parsing jwk should be successful`)
-
-		var rawkey rsa.PrivateKey
-		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
-
-		sign, err := jws.NewSigner(jwa.RS256())
-		require.NoError(t, err, "RsaSign created successfully")
-
-		hdrbuf := base64.Encode([]byte(hdr))
-		payload := base64.Encode([]byte(examplePayload))
-		signingInput := bytes.Join(
-			[][]byte{
-				hdrbuf,
-				payload,
-			},
-			[]byte{tokens.Period},
-		)
-		signature, err := sign.Sign(signingInput, rawkey)
-		require.NoError(t, err, "PayloadSign is successful")
-		sigbuf := base64.Encode(signature)
-
-		encoded := bytes.Join(
-			[][]byte{
-				signingInput,
-				sigbuf,
-			},
-			[]byte{tokens.Period},
-		)
-
-		require.Equal(t, expected, string(encoded), "generated compact serialization should match")
-
-		msg, err := jws.ParseReader(bytes.NewReader(encoded))
-		require.NoError(t, err, "Parsing compact encoded serialization succeeds")
-
-		signatures := msg.Signatures()
-		require.Len(t, signatures, 1, `there should be exactly one signature`)
-
-		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
-		if !ok || algorithm != jwa.RS256() {
-			t.Fatal("Algorithm in header does not match")
-		}
-
-		v, err := jws.NewVerifier(jwa.RS256())
-		require.NoError(t, err, "Verify created")
-		require.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds")
-	})
-	t.Run("ES256Compact", func(t *testing.T) {
-		t.Parallel()
-		// ES256Compact tests that https://tools.ietf.org/html/rfc7515#appendix-A.3 works
-		const hdr = `{"alg":"ES256"}`
-		const jwksrc = `{
-    "kty":"EC",
-    "crv":"P-256",
-    "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
-    "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
-    "d":"jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
-  }`
-		privkey, err := jwk.ParseKey([]byte(jwksrc))
-		require.NoError(t, err, `parsing jwk should succeed`)
-
-		var rawkey ecdsa.PrivateKey
-		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
-
-		signer, err := jws.NewSigner(jwa.ES256())
-		require.NoError(t, err, "RsaSign created successfully")
-
-		hdrbuf := base64.Encode([]byte(hdr))
-		payload := base64.Encode([]byte(examplePayload))
-		signingInput := bytes.Join(
-			[][]byte{
-				hdrbuf,
-				payload,
-			},
-			[]byte{tokens.Period},
-		)
-		signature, err := signer.Sign(signingInput, &rawkey)
-		require.NoError(t, err, "PayloadSign is successful")
-		sigbuf := base64.Encode(signature)
-		require.NoError(t, err, "base64 encode successful")
-
-		encoded := bytes.Join(
-			[][]byte{
-				signingInput,
-				sigbuf,
-			},
-			[]byte{tokens.Period},
-		)
-
-		// The signature contains random factor, so unfortunately we can't match
-		// the output against a fixed expected outcome. We'll wave doing an
-		// exact match, and just try to verify using the signature
-
-		msg, err := jws.ParseReader(bytes.NewReader(encoded))
-		require.NoError(t, err, "Parsing compact encoded serialization succeeds")
-
-		signatures := msg.Signatures()
-		require.Len(t, signatures, 1, `there should be exactly one signature`)
-
-		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
-		if !ok || algorithm != jwa.ES256() {
-			t.Fatal("Algorithm in header does not match")
-		}
-
-		v, err := jws.NewVerifier(jwa.ES256())
-		require.NoError(t, err, "EcdsaVerify created")
-		require.NoError(t, v.Verify(signingInput, signature, rawkey.PublicKey), "Verify succeeds")
-	})
-	t.Run("EdDSACompact", func(t *testing.T) {
-		t.Parallel()
-		// EdDSACompact tests that https://tools.ietf.org/html/rfc8037#appendix-A.1-5 works
-		const hdr = `{"alg":"EdDSA"}`
-		const jwksrc = `{
-    "kty":"OKP",
-    "crv":"Ed25519",
-    "d":"nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
-    "x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
-  }`
-		const examplePayload = `Example of Ed25519 signing`
-		const expected = `hgyY0il_MGCjP0JzlnLWG1PPOt7-09PGcvMg3AIbQR6dWbhijcNR4ki4iylGjg5BhVsPt9g7sVvpAr_MuM0KAg`
-		expectedDecoded, err := base64.Decode([]byte(expected))
-		require.NoError(t, err, "Expected Signature decode successful")
-
-		privkey, err := jwk.ParseKey([]byte(jwksrc))
-		require.NoError(t, err, `parsing jwk should succeed`)
-
-		var rawkey ed25519.PrivateKey
-		require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
-
-		signer, err := jws.NewSigner(jwa.EdDSA())
-		require.NoError(t, err, "EdDSASign created successfully")
-
-		hdrbuf := base64.Encode([]byte(hdr))
-		payload := base64.Encode([]byte(examplePayload))
-		signingInput := bytes.Join(
-			[][]byte{
-				hdrbuf,
-				payload,
-			},
-			[]byte{tokens.Period},
-		)
-
-		signature, err := signer.Sign(signingInput, rawkey)
-		require.NoError(t, err, "PayloadSign is successful")
-		sigbuf := base64.Encode(signature)
-		encoded := bytes.Join(
-			[][]byte{
-				signingInput,
-				sigbuf,
-			},
-			[]byte{tokens.Period},
-		)
-
-		// The signature contains random factor, so unfortunately we can't match
-		// the output against a fixed expected outcome. We'll wave doing an
-		// exact match, and just try to verify using the signature
-
-		msg, err := jws.ParseReader(bytes.NewReader(encoded))
-		require.NoError(t, err, "Parsing compact encoded serialization succeeds")
-
-		signatures := msg.Signatures()
-		require.Len(t, signatures, 1, `there should be exactly one signature`)
-
-		algorithm, ok := signatures[0].ProtectedHeaders().Algorithm()
-		if !ok || algorithm != jwa.EdDSA() {
-			t.Fatal("Algorithm in header does not match")
-		}
-
-		v, err := jws.NewVerifier(jwa.EdDSA())
-		require.NoError(t, err, "EcdsaVerify created")
-		require.NoError(t, v.Verify(signingInput, signature, rawkey.Public()), "Verify succeeds")
-		require.Equal(t, signature, expectedDecoded, "signatures match")
-	})
 	t.Run("UnsecuredCompact", func(t *testing.T) {
 		t.Parallel()
 		s := `eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.`
@@ -879,7 +578,7 @@ func TestPublicHeaders(t *testing.T) {
 	key, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "GenerateKey should succeed")
 
-	signer, err := jws.NewSigner(jwa.RS256())
+	signer, err := jws.SignerFor(jwa.RS256())
 	require.NoError(t, err, "jws.NewSigner should succeed")
 	_ = signer // TODO
 
@@ -887,38 +586,6 @@ func TestPublicHeaders(t *testing.T) {
 	pubjwk, err := jwk.Import(&pubkey)
 	require.NoError(t, err, "NewRsaPublicKey should succeed")
 	_ = pubjwk // TODO
-}
-
-func TestDecode_ES384Compact_NoSigTrim(t *testing.T) {
-	incoming := "eyJhbGciOiJFUzM4NCIsInR5cCI6IkpXVCIsImtpZCI6IjE5MzFmZTQ0YmFhMWNhZTkyZWUzNzYzOTQ0MDU1OGMwODdlMTRlNjk5ZWU5NjVhM2Q1OGU1MmU2NGY4MDE0NWIifQ.eyJpc3MiOiJicmt0LWNsaS0xLjAuN3ByZTEiLCJpYXQiOjE0ODQ2OTU1MjAsImp0aSI6IjgxYjczY2Y3In0.DdFi0KmPHSv4PfIMGcWGMSRLmZsfRPQ3muLFW6Ly2HpiLFFQWZ0VEanyrFV263wjlp3udfedgw_vrBLz3XC8CkbvCo_xeHMzaTr_yfhjoheSj8gWRLwB-22rOnUX_M0A"
-	t.Logf("incoming = '%s'", incoming)
-	const jwksrc = `{
-    "kty":"EC",
-    "crv":"P-384",
-    "x":"YHVZ4gc1RDoqxKm4NzaN_Y1r7R7h3RM3JMteC478apSKUiLVb4UNytqWaLoE6ygH",
-    "y":"CRKSqP-aYTIsqJfg_wZEEYUayUR5JhZaS2m4NLk2t1DfXZgfApAJ2lBO0vWKnUMp"
-  }`
-
-	pubkey, err := jwk.ParseKey([]byte(jwksrc))
-	require.NoError(t, err, `parsing jwk should be successful`)
-
-	var rawkey ecdsa.PublicKey
-	require.NoError(t, jwk.Export(pubkey, &rawkey), `obtaining raw key should succeed`)
-
-	v, err := jws.NewVerifier(jwa.ES384())
-	require.NoError(t, err, "EcdsaVerify created")
-
-	protected, payload, signature, err := jws.SplitCompact([]byte(incoming))
-	require.NoError(t, err, `jws.SplitCompact should succeed`)
-
-	var buf bytes.Buffer
-	buf.Write(protected)
-	buf.WriteByte(tokens.Period)
-	buf.Write(payload)
-
-	decodedSignature, err := base64.Decode(signature)
-	require.NoError(t, err, `decoding signature should succeed`)
-	require.NoError(t, v.Verify(buf.Bytes(), decodedSignature, rawkey), "Verify succeeds")
 }
 
 func TestReadFile(t *testing.T) {

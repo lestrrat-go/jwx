@@ -1,38 +1,31 @@
-package jws
+package legacy
 
 import (
 	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
-	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-func init() {
-	if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
-		alg: jwa.EdDSA(),
-	}); err != nil {
-		panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+type eddsaSigner struct{}
+
+func NewEdDSASigner() Signer {
+	return &eddsaSigner{}
+}
+
+func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
+	return jwa.EdDSA()
+}
+
+func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+	if key == nil {
+		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
-	if err := RegisterVerifier(jwa.EdDSA(), eddsaverifier{
-		alg: jwa.EdDSA(),
-	}); err != nil {
-		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
-	}
-}
 
-type eddsasigner struct {
-	alg jwa.SignatureAlgorithm
-}
-
-func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
-	return s.alg
-}
-
-func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key interface{}) ([]byte, error) {
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
 	// simply accept a crypto.Signer here.
 	signer, ok := key.(crypto.Signer)
@@ -50,18 +43,20 @@ func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encode
 		signer = privkey
 	}
 
-	return jwsbb.SignCryptoSigner(signer, payload, protected, crypto.Hash(0), crypto.Hash(0), encoder, encodePayload)
+	return signer.Sign(rand.Reader, payload, crypto.Hash(0))
 }
 
-type eddsaverifier struct {
-	alg jwa.SignatureAlgorithm
+type eddsaVerifier struct{}
+
+func NewEdDSAVerifier() Verifier {
+	return &eddsaVerifier{}
 }
 
-func (v eddsaverifier) Algorithm() jwa.SignatureAlgorithm {
-	return v.alg
-}
+func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
+	if key == nil {
+		return fmt.Errorf(`missing public key while verifying payload`)
+	}
 
-func (v eddsaverifier) Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key interface{}) error {
 	var pubkey ed25519.PublicKey
 	signer, ok := key.(crypto.Signer)
 	if ok {
@@ -76,5 +71,9 @@ func (v eddsaverifier) Do(payload, protected, signature []byte, encoder Base64En
 		}
 	}
 
-	return jwsbb.VerifyEdDSA(pubkey, payload, protected, signature, encoder, encodePayload)
+	if !ed25519.Verify(pubkey, payload, signature) {
+		return fmt.Errorf(`failed to match EdDSA signature`)
+	}
+
+	return nil
 }
