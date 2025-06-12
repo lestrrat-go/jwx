@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
+	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
@@ -406,27 +407,22 @@ func TestSignMulti2(t *testing.T) {
 	sharedkey := []byte("Avracadabra")
 	payload := []byte("Lorem ipsum")
 	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()}
-	var signed []byte
-	t.Run("Sign", func(t *testing.T) {
-		var options = []jws.SignOption{jws.WithJSON()}
-		for _, alg := range hmacAlgorithms {
-			options = append(options, jws.WithKey(alg, sharedkey)) // (signer, sharedkey, nil, nil))
-		}
-		var err error
-		signed, err = jws.Sign(payload, options...)
-		require.NoError(t, err, `jws.SignMulti should succeed`)
-	})
+	var options = []jws.SignOption{jws.WithJSON()}
 	for _, alg := range hmacAlgorithms {
-		t.Run("Verify "+alg.String(), func(t *testing.T) {
-			m := jws.NewMessage()
-			verified, err := jws.Verify(signed, jws.WithKey(alg, sharedkey), jws.WithMessage(m))
-			require.NoError(t, err, "Verify succeeded")
-			require.Equal(t, payload, verified, "verified payload matches")
+		options = append(options, jws.WithKey(alg, sharedkey)) // (signer, sharedkey, nil, nil))
+	}
+	signed, err := jws.Sign(payload, options...)
+	require.NoError(t, err, `jws.Sign with multiple keys should succeed`)
 
-			// XXX This actually doesn't really test much, but if there was anything
-			// wrong, the process should have failed well before reaching here
-			require.Equal(t, payload, m.Payload(), "message payload matches")
-		})
+	for _, alg := range hmacAlgorithms {
+		m := jws.NewMessage()
+		verified, err := jws.Verify(signed, jws.WithKey(alg, sharedkey), jws.WithMessage(m))
+		require.NoError(t, err, "Verify succeeded")
+		require.Equal(t, payload, verified, "verified payload matches")
+
+		// XXX This actually doesn't really test much, but if there was anything
+		// wrong, the process should have failed well before reaching here
+		require.Equal(t, payload, m.Payload(), "message payload matches")
 	}
 }
 
@@ -1465,7 +1461,7 @@ func (s256SignerVerifier) Sign(payload []byte, _ interface{}) ([]byte, error) {
 func (s256SignerVerifier) Verify(payload, signature []byte, _ interface{}) error {
 	h := sha256.Sum256(payload)
 	if !bytes.Equal(h[:], signature) {
-		return errors.New("invalid signature")
+		return fmt.Errorf("invalid signature: expected %q, got %q", base64.EncodeToString(h[:]), base64.EncodeToString(signature))
 	}
 	return nil
 }

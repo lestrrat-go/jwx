@@ -170,7 +170,7 @@ func (s *ContentEncryptionAlgorithm) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupContentEncryptionAlgorithm(name)
 	if !ok {
-		return fmt.Errorf(`unknown ContentEncryptionAlgorithm: %s`, name)
+		return fmt.Errorf(`unknown ContentEncryptionAlgorithm: %q`, name)
 	}
 	*s = v
 	return nil

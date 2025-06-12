@@ -102,6 +102,8 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The first return value is the raw signature in binary format.
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
+//
+// This method is deprecated, and will be remove in a future release.
 func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
 	return s.sign2(payload, signer, key)
 }

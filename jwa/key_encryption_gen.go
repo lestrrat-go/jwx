@@ -259,7 +259,7 @@ func (s *KeyEncryptionAlgorithm) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupKeyEncryptionAlgorithm(name)
 	if !ok {
-		return fmt.Errorf(`unknown KeyEncryptionAlgorithm: %s`, name)
+		return fmt.Errorf(`unknown KeyEncryptionAlgorithm: %q`, name)
 	}
 	*s = v
 	return nil

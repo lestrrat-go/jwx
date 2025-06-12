@@ -183,7 +183,7 @@ func (s *EllipticCurveAlgorithm) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupEllipticCurveAlgorithm(name)
 	if !ok {
-		return fmt.Errorf(`unknown EllipticCurveAlgorithm: %s`, name)
+		return fmt.Errorf(`unknown EllipticCurveAlgorithm: %q`, name)
 	}
 	*s = v
 	return nil

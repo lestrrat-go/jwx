@@ -235,7 +235,7 @@ func (s *SignatureAlgorithm) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupSignatureAlgorithm(name)
 	if !ok {
-		return fmt.Errorf(`unknown SignatureAlgorithm: %s`, name)
+		return fmt.Errorf(`unknown SignatureAlgorithm: %q`, name)
 	}
 	*s = v
 	return nil

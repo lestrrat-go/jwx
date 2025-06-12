@@ -316,7 +316,7 @@ func Generate(t Algorithm) error {
 	o.L("}")
 	o.L("v, ok := Lookup%[1]s(name)", t.Name)
 	o.L("if !ok {")
-	o.L("return fmt.Errorf(`unknown %[1]s: %%s`, name)", t.Name)
+	o.L("return fmt.Errorf(`unknown %[1]s: %%q`, name)", t.Name)
 	o.L("}")
 	o.L("*s = v")
 	o.L("return nil")
