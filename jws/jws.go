@@ -23,7 +23,6 @@ package jws
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -41,16 +40,19 @@ import (
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
 var registry = json.NewRegistry()
 
 type payloadSigner struct {
 	signer    Signer
+	signer2   Signer2
 	key       interface{}
 	protected Headers
 	public    Headers
@@ -61,6 +63,9 @@ func (s *payloadSigner) Sign(payload []byte) ([]byte, error) {
 }
 
 func (s *payloadSigner) Algorithm() jwa.SignatureAlgorithm {
+	if s.signer2 != nil {
+		return s.signer2.Algorithm()
+	}
 	return s.signer.Algorithm()
 }
 
@@ -81,7 +86,33 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
+// SignerFor returns the registered signer for the given algorithm.
+//
+// This function does not support the legacy signers.
+func SignerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
+	muSigner2DB.RLock()
+	defer muSigner2DB.RUnlock()
+
+	signer, ok := signer2DB[alg]
+	if !ok {
+		return nil, fmt.Errorf(`no signer registered for algorithm %q`, alg)
+	}
+	return signer, nil
+}
+
 func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected Headers) (*payloadSigner, error) {
+	ps := &payloadSigner{
+		key:       key,
+		public:    public,
+		protected: protected,
+	}
+
+	signer2, err := SignerFor(alg)
+	if err == nil {
+		ps.signer2 = signer2
+		return ps, nil
+	}
+
 	muSigner.Lock()
 	signer, ok := signers[alg]
 	if !ok {
@@ -94,13 +125,8 @@ func makeSigner(alg jwa.SignatureAlgorithm, key interface{}, public, protected H
 		signer = v
 	}
 	muSigner.Unlock()
-
-	return &payloadSigner{
-		signer:    signer,
-		key:       key,
-		public:    public,
-		protected: protected,
-	}, nil
+	ps.signer = signer
+	return ps, nil
 }
 
 const (
@@ -287,9 +313,15 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 				return nil, signerr(`failed to validate key before signing: %w`, err)
 			}
 		}
-		_, _, err := sig.Sign(payload, signer.signer, signer.key)
-		if err != nil {
-			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), err)
+
+		var sign2err error
+		if signer.signer2 != nil {
+			_, _, sign2err = sig.sign2(payload, signer.signer2, signer.key)
+		} else {
+			_, _, sign2err = sig.sign2(payload, signer.signer, signer.key)
+		}
+		if sign2err != nil {
+			return nil, signerr(`failed to generate signature for signer #%d (alg=%s): %w`, i, signer.Algorithm(), sign2err)
 		}
 
 		result.signatures = append(result.signatures, sig)
@@ -438,8 +470,10 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 		verifyBuf.Reset()
 
 		var encodedProtectedHeader string
+		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
+				rawHeaders = raw
 				encodedProtectedHeader = encoder.EncodeToString(raw)
 			}
 		}
@@ -449,6 +483,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 			if err != nil {
 				return nil, verifyerr(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
+			rawHeaders = protected
 
 			encodedProtectedHeader = encoder.EncodeToString(protected)
 		}
@@ -476,14 +511,22 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 						return nil, verifyerr(`failed to validate key before signing: %w`, err)
 					}
 				}
-				verifier, err := NewVerifier(alg)
-				if err != nil {
-					return nil, verifyerr(`failed to create verifier for algorithm %q: %w`, alg, err)
-				}
 
-				if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
-					errs = append(errs, verificationError{err})
-					continue
+				if verifier2, err := verifierFor(alg); err == nil {
+					if err := verifier2.Do(msg.payload, rawHeaders, sig.signature, encoder, msg.b64, key); err != nil {
+						errs = append(errs, verificationError{err})
+						continue
+					}
+				} else {
+					verifier, err := NewVerifier(alg)
+					if err != nil {
+						return nil, verifyerr(`failed to create verifier for algorithm %q: %w`, alg, err)
+					}
+
+					if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
+						errs = append(errs, verificationError{err})
+						continue
+					}
 				}
 
 				if keyUsed != nil {
@@ -513,22 +556,6 @@ func getB64Value(hdr Headers) bool {
 	}
 
 	return b64
-}
-
-// This is an "optimized" io.ReadAll(). It will attempt to read
-// all of the contents from the reader IF the reader is of a certain
-// concrete type.
-func readAll(rdr io.Reader) ([]byte, bool) {
-	switch rdr.(type) {
-	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
-		data, err := io.ReadAll(rdr)
-		if err != nil {
-			return nil, false
-		}
-		return data, true
-	default:
-		return nil, false
-	}
 }
 
 // Parse parses contents from the given source and creates a jws.Message
@@ -611,8 +638,13 @@ func ParseString(src string) (*Message, error) {
 //
 // On error, returns a jws.ParseError.
 func ParseReader(src io.Reader) (*Message, error) {
-	if data, ok := readAll(src); ok {
+	data, err := jwxio.ReadAllFromFiniteSource(src)
+	if err == nil {
 		return Parse(data)
+	}
+
+	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
+		return nil, rparseerr(`failed to read from finite source: %w`, err)
 	}
 
 	rdr := bufio.NewReader(src)
@@ -663,106 +695,46 @@ func parseJSON(data []byte) (result *Message, err error) {
 	return &m, nil
 }
 
-const tokenDelim = "."
-
-// SplitCompact splits a JWT and returns its three parts
+// SplitCompact splits a JWS in compact format and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
-	protected, s, ok := bytes.Cut(src, []byte(tokenDelim))
-	if !ok { // no period found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
+	hdr, payload, signature, err := jwsbb.SplitCompact(src)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
 	}
-	payload, s, ok := bytes.Cut(s, []byte(tokenDelim))
-	if !ok { // only one period found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-	signature, _, ok := bytes.Cut(s, []byte(tokenDelim))
-	if ok { // three periods found
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-	return protected, payload, signature, nil
+	return hdr, payload, signature, nil
 }
 
 // SplitCompactString splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
-	return SplitCompact([]byte(src))
+	hdr, payload, signature, err := jwsbb.SplitCompactString(src)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
+	}
+	return hdr, payload, signature, nil
 }
 
 // SplitCompactReader splits a JWT and returns its three parts
 // separately: protected headers, payload and signature.
-//
 // On error, returns a jws.ParseError.
+//
+// This function will be deprecated in v4. It is a low-level API, and
+// thus will be available in the `jwsbb` package.
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
-	if data, ok := readAll(rdr); ok {
-		return SplitCompact(data)
+	hdr, payload, signature, err := jwsbb.SplitCompactReader(rdr)
+	if err != nil {
+		return nil, nil, nil, parseerr(`%w`, err)
 	}
-
-	var protected []byte
-	var payload []byte
-	var signature []byte
-	var periods int
-	var state int
-
-	buf := make([]byte, 4096)
-	var sofar []byte
-
-	for {
-		// read next bytes
-		n, err := rdr.Read(buf)
-		// return on unexpected read error
-		if err != nil && err != io.EOF {
-			return nil, nil, nil, parseerr(`unexpected end of input: %w`, err)
-		}
-
-		// append to current buffer
-		sofar = append(sofar, buf[:n]...)
-		// loop to capture multiple tokens.Period in current buffer
-		for loop := true; loop; {
-			var i = bytes.IndexByte(sofar, tokens.Period)
-			if i == -1 && err != io.EOF {
-				// no tokens.Period found -> exit and read next bytes (outer loop)
-				loop = false
-				continue
-			} else if i == -1 && err == io.EOF {
-				// no tokens.Period found -> process rest and exit
-				i = len(sofar)
-				loop = false
-			} else {
-				// tokens.Period found
-				periods++
-			}
-
-			// Reaching this point means we have found a tokens.Period or EOF and process the rest of the buffer
-			switch state {
-			case 0:
-				protected = sofar[:i]
-				state++
-			case 1:
-				payload = sofar[:i]
-				state++
-			case 2:
-				signature = sofar[:i]
-			}
-			// Shorten current buffer
-			if len(sofar) > i {
-				sofar = sofar[i+1:]
-			}
-		}
-		// Exit on EOF
-		if err == io.EOF {
-			break
-		}
-	}
-	if periods != 2 {
-		return nil, nil, nil, parseerr(`invalid number of segments`)
-	}
-
-	return protected, payload, signature, nil
+	return hdr, payload, signature, nil
 }
 
 // parseCompactReader parses a JWS value serialized via compact serialization.
@@ -919,50 +891,11 @@ func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
 	return algs, nil
 }
 
-// Because the keys defined in github.com/lestrrat-go/jwx/jwk may also implement
-// crypto.Signer, it would be possible for to mix up key types when signing/verifying
-// for example, when we specify jws.WithKey(jwa.RSA256, cryptoSigner), the cryptoSigner
-// can be for RSA, or any other type that implements crypto.Signer... even if it's for the
-// wrong algorithm.
-//
-// These functions are there to differentiate between the valid KNOWN key types.
-// For any other key type that is outside of the Go std library and our own code,
-// we must rely on the user to be vigilant.
-//
-// Notes: symmetric keys are obviously not part of this. for v2 OKP keys,
-// x25519 does not implement Sign()
-func isValidRSAKey(key interface{}) bool {
-	switch key.(type) {
-	case
-		ecdsa.PrivateKey, *ecdsa.PrivateKey,
-		ed25519.PrivateKey,
-		jwk.ECDSAPrivateKey, jwk.OKPPrivateKey:
-		// these are NOT ok
-		return false
+func Settings(options ...GlobalOption) {
+	for _, option := range options {
+		switch option.Ident() {
+		case identLegacySigners{}:
+			enableLegacySigners()
+		}
 	}
-	return true
-}
-
-func isValidECDSAKey(key interface{}) bool {
-	switch key.(type) {
-	case
-		ed25519.PrivateKey,
-		rsa.PrivateKey, *rsa.PrivateKey,
-		jwk.RSAPrivateKey, jwk.OKPPrivateKey:
-		// these are NOT ok
-		return false
-	}
-	return true
-}
-
-func isValidEDDSAKey(key interface{}) bool {
-	switch key.(type) {
-	case
-		ecdsa.PrivateKey, *ecdsa.PrivateKey,
-		rsa.PrivateKey, *rsa.PrivateKey,
-		jwk.RSAPrivateKey, jwk.ECDSAPrivateKey:
-		// these are NOT ok
-		return false
-	}
-	return true
 }

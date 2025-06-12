@@ -8,6 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
@@ -102,6 +103,10 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
 func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
+	return s.sign2(payload, signer, key)
+}
+
+func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.SignatureAlgorithm }, key interface{}) ([]byte, []byte, error) {
 	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
@@ -151,11 +156,23 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 		buf.Write(payload)
 	}
 
-	signature, err := signer.Sign(buf.Bytes(), key)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
+	switch signer := signer.(type) {
+	case Signer2:
+		hdr, _ := json.Marshal(hdrs)
+		signature, err := signer.Do(payload, hdr, encoder, b64, key)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
+		}
+		s.signature = signature
+	case Signer:
+		signature, err := signer.Sign(buf.Bytes(), key)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
+		}
+		s.signature = signature
+	default:
+		panic("can't get here")
 	}
-	s.signature = signature
 
 	// Detached payload, this should be removed from the end result
 	if s.detached {
@@ -163,11 +180,11 @@ func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte
 	}
 
 	buf.WriteByte(tokens.Period)
-	buf.WriteString(encoder.EncodeToString(signature))
+	buf.WriteString(encoder.EncodeToString(s.signature))
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 
-	return signature, ret, nil
+	return s.signature, ret, nil
 }
 
 func NewMessage() *Message {

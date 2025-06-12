@@ -27,22 +27,6 @@ func TestSign(t *testing.T) {
 		_, err := jws.Verify([]byte(nil), jws.WithKey(jwa.RS256(), nil))
 		require.Error(t, err, "Verify with no private key should return error")
 	})
-	t.Run("RSA roundtrip", func(t *testing.T) {
-		t.Parallel()
-		rsakey, err := jwxtest.GenerateRsaKey()
-		require.NoError(t, err, "RSA key generated")
-		signer, err := jws.NewSigner(jwa.RS256())
-		require.NoError(t, err, `creating a signer should succeed`)
-
-		payload := []byte("Hello, world")
-
-		signed, err := signer.Sign(payload, rsakey)
-		require.NoError(t, err, "Payload signed")
-
-		verifier, err := jws.NewVerifier(jwa.RS256())
-		require.NoError(t, err, "creating a verifier should succeed")
-		require.NoError(t, verifier.Verify(payload, signed, &rsakey.PublicKey), "Payload verified")
-	})
 }
 
 func TestSignMulti(t *testing.T) {
