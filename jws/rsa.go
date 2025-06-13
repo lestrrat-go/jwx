@@ -15,45 +15,31 @@ var _ Signer2 = rsasigner{}
 var _ Verifier2 = rsaverifier{}
 
 func init() {
-	data := map[jwa.SignatureAlgorithm]struct {
-		Hash crypto.Hash
-		PSS  bool
-	}{
-		jwa.RS256(): {
-			Hash: crypto.SHA256,
-		},
-		jwa.RS384(): {
-			Hash: crypto.SHA384,
-		},
-		jwa.RS512(): {
-			Hash: crypto.SHA512,
-		},
-		jwa.PS256(): {
-			Hash: crypto.SHA256,
-			PSS:  true,
-		},
-		jwa.PS384(): {
-			Hash: crypto.SHA384,
-			PSS:  true,
-		},
-		jwa.PS512(): {
-			Hash: crypto.SHA512,
-			PSS:  true,
-		},
+	algs := []jwa.SignatureAlgorithm{
+		jwa.RS256(),
+		jwa.RS384(),
+		jwa.RS512(),
+		jwa.PS256(),
+		jwa.PS384(),
+		jwa.PS512(),
 	}
 
-	for alg, item := range data {
+	for _, alg := range algs {
+		h, pss, err := jwsbb.RSAHashFuncFor(alg.String())
+		if err != nil {
+			panic(fmt.Sprintf("jws.RSASigner: failed to get hash function for %s: %v", alg, err))
+		}
 		if err := RegisterSigner(alg, rsasigner{
 			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+			hash: h,
+			pss:  pss,
 		}); err != nil {
 			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
 		}
 		if err := RegisterVerifier(alg, rsaverifier{
 			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+			hash: h,
+			pss:  pss,
 		}); err != nil {
 			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 		}

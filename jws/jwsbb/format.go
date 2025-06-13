@@ -10,9 +10,18 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
-// SignBuffer combines the base64-encodedheader and payload into
-// a single byte slice. The result can be passed to the various
-// SignXXXXCompact() functions to create a JWS signature.
+// SignBuffer combines the base64-encoded header and payload into a single byte slice
+// for signing purposes. This creates the signing input according to JWS specification (RFC 7515).
+// The result should be passed to signature generation functions.
+//
+// Parameters:
+//   - buf: Reusable buffer (can be nil for automatic allocation)
+//   - hdr: Raw header bytes (will be base64-encoded)
+//   - payload: Raw payload bytes (encoded based on encodePayload flag)
+//   - encoder: Base64 encoder to use for encoding components
+//   - encodePayload: If true, payload is base64-encoded; if false, payload is used as-is
+//
+// Returns the constructed signing input in the format: base64(header).base64(payload) or base64(header).payload
 func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload bool) []byte {
 	l := encoder.EncodedLen(len(hdr)+len(payload)) + 1
 	if cap(buf) < l {
@@ -30,9 +39,17 @@ func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload 
 	return buf
 }
 
-// AppendSignature appends the signature to the compactly serialized JWS
-// that consists of the header and payload. The signature is appended
-// in Base64URL format, and a period ('.') is added before the signature.
+// AppendSignature appends a base64-encoded signature to a JWS signing input buffer.
+// This completes the compact JWS serialization by adding the final signature component.
+// The input buffer should contain the signing input (header.payload), and this function
+// adds the period separator and base64-encoded signature.
+//
+// Parameters:
+//   - buf: Buffer containing the signing input (typically from SignBuffer)
+//   - signature: Raw signature bytes (will be base64-encoded)
+//   - encoder: Base64 encoder to use for encoding the signature
+//
+// Returns the complete compact JWS in the format: base64(header).base64(payload).base64(signature)
 func AppendSignature(buf, signature []byte, encoder base64.Encoder) []byte {
 	l := len(buf) + len(signature) + 1
 	if cap(buf) < l {
@@ -44,8 +61,19 @@ func AppendSignature(buf, signature []byte, encoder base64.Encoder) []byte {
 	return buf
 }
 
-// JoinCompact combines the header, payload, and signature into a single byte slice,
-// using the specified base64.Encoder to encode the components.
+// JoinCompact creates a complete compact JWS serialization from individual components.
+// This is a one-step function that combines header, payload, and signature into the final JWS format.
+// It includes safety checks to prevent excessive memory allocation.
+//
+// Parameters:
+//   - buf: Reusable buffer (can be nil for automatic allocation)
+//   - hdr: Raw header bytes (will be base64-encoded)
+//   - payload: Raw payload bytes (encoded based on encodePayload flag)
+//   - signature: Raw signature bytes (will be base64-encoded)
+//   - encoder: Base64 encoder to use for encoding all components
+//   - encodePayload: If true, payload is base64-encoded; if false, payload is used as-is
+//
+// Returns the complete compact JWS or an error if the total size exceeds safety limits (1GB).
 func JoinCompact(buf, hdr, payload, signature []byte, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
 	const MaxBufferSize = 1 << 30 // 1 GB
 	totalSize := len(hdr) + len(payload) + len(signature) + 2
@@ -73,11 +101,24 @@ var compactDelim = []byte{tokens.Period}
 
 var errInvalidNumberOfSegments = errors.New(`jwsbb: invalid number of segments`)
 
+// InvalidNumberOfSegmentsError returns the standard error for invalid JWS segment count.
+// A valid compact JWS must have exactly 3 segments separated by periods: header.payload.signature
 func InvalidNumberOfSegmentsError() error {
 	return errInvalidNumberOfSegments
 }
 
-// SplitCompact splits the JWS into its components: header, payload, and signature.
+// SplitCompact parses a compact JWS serialization into its three components.
+// This function validates that the input has exactly 3 segments separated by periods
+// and returns the base64-encoded components without decoding them.
+//
+// Parameters:
+//   - src: Complete compact JWS string as bytes
+//
+// Returns:
+//   - protected: Base64-encoded protected header
+//   - payload: Base64-encoded payload (or raw payload if b64=false was used)
+//   - signature: Base64-encoded signature
+//   - err: Error if the format is invalid or segment count is wrong
 func SplitCompact(src []byte) (protected, payload, signature []byte, err error) {
 	var s []byte
 	var ok bool
@@ -97,11 +138,32 @@ func SplitCompact(src []byte) (protected, payload, signature []byte, err error) 
 	return protected, payload, signature, nil
 }
 
-// SplieCompactString splits the JWS into its components: header, payload, and signature.
+// SplitCompactString is a convenience wrapper around SplitCompact for string inputs.
+// It converts the string to bytes and parses the compact JWS serialization.
+//
+// Parameters:
+//   - src: Complete compact JWS as a string
+//
+// Returns the same components as SplitCompact: protected header, payload, signature, and error.
 func SplitCompactString(src string) (protected, payload, signature []byte, err error) {
 	return SplitCompact([]byte(src))
 }
 
+// SplitCompactReader parses a compact JWS serialization from an io.Reader.
+// This function handles both finite and streaming sources efficiently.
+// For finite sources, it reads all data at once. For streaming sources,
+// it uses a buffer-based approach to find segment boundaries.
+//
+// Parameters:
+//   - rdr: Reader containing the compact JWS data
+//
+// Returns:
+//   - protected: Base64-encoded protected header
+//   - payload: Base64-encoded payload (or raw payload if b64=false was used)
+//   - signature: Base64-encoded signature
+//   - err: Error if reading fails or the format is invalid
+//
+// The function validates that exactly 3 segments are present, separated by periods.
 func SplitCompactReader(rdr io.Reader) (protected, payload, signature []byte, err error) {
 	data, err := jwxio.ReadAllFromFiniteSource(rdr)
 	if err == nil {
