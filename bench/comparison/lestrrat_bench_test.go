@@ -140,15 +140,17 @@ func BenchmarkJWX_CreateAndParseHS256(b *testing.B) {
 	tok.Set(jwt.ExpirationKey, time.Now().Add(time.Hour))
 
 	b.ResetTimer()
+	signoptions := []jwt.SignOption{jwt.WithKey(jwa.HS256(), jwxHMACKey)}
+	parseoptions := []jwt.ParseOption{jwt.WithKey(jwa.HS256(), jwxHMACKey)}
 	for range b.N {
 		// Create token
-		tokenBytes, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), jwxHMACKey))
+		tokenBytes, err := jwt.Sign(tok, signoptions...)
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		// Parse token
-		_, err = jwt.Parse(tokenBytes, jwt.WithKey(jwa.HS256(), jwxHMACKey))
+		_, err = jwt.Parse(tokenBytes, parseoptions...)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -169,15 +171,16 @@ func BenchmarkJWX_JWSSignHS256(b *testing.B) {
 
 func BenchmarkJWX_JWSParseHS256(b *testing.B) {
 	payload := []byte(`{"sub":"1234567890","name":"John Doe","iat":1516239022}`)
-	options := []jws.SignOption{jws.WithKey(jwa.HS256(), jwxHMACKey)}
-	signature, err := jws.Sign(payload, options...)
+	signoptions := []jws.SignOption{jws.WithKey(jwa.HS256(), jwxHMACKey)}
+	signature, err := jws.Sign(payload, signoptions...)
 	if err != nil {
 		b.Fatal(err)
 	}
 
+	parseoptions := []jws.VerifyOption{jws.WithKey(jwa.HS256(), jwxHMACKey)}
 	b.ResetTimer()
 	for range b.N {
-		_, err := jws.Verify(signature, jws.WithKey(jwa.HS256(), jwxHMACKey))
+		_, err := jws.Verify(signature, parseoptions...)
 		if err != nil {
 			b.Fatal(err)
 		}
