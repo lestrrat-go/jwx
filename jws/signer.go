@@ -9,7 +9,8 @@ import (
 
 type Signer2 interface {
 	Algorithm() jwa.SignatureAlgorithm
-	Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
+	Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
+	SignRaw(key any, raw []byte) ([]byte, error)
 }
 
 var muSigner2DB sync.RWMutex

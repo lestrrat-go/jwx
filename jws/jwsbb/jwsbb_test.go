@@ -63,7 +63,7 @@ func TestHMAC(t *testing.T) {
 		require.NoError(t, err, "SignHMAC should succeed")
 
 		buf := pool.ByteSlice().Get()
-		buf = jwsbb.Join(buf, []byte(hdr), []byte(examplePayload), signature, base64.DefaultEncoder())
+		buf = jwsbb.JoinCompact(buf, []byte(hdr), []byte(examplePayload), signature, base64.DefaultEncoder(), true)
 		defer pool.ByteSlice().Put(buf)
 		require.Equal(t, expected, string(buf), "serialized output should match expected value")
 	})

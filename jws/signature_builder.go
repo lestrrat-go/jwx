@@ -9,6 +9,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
 var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, freeSignatureBuilder)
@@ -92,7 +93,7 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	sig.headers = sb.public
 
 	if sb.signer2 != nil {
-		signature, err := sb.signer2.Do(payload, hdrbuf, sc.encoder, b64, sb.key)
+		signature, err := sb.signer2.Sign(payload, hdrbuf, sc.encoder, b64, sb.key)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to sign payload: %w`, err)
 		}
@@ -103,21 +104,13 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	if sb.signer == nil {
 		panic("can't get here")
 	}
-	buf := pool.ByteSlice().Get()
-	buf = sc.encoder.AppendEncode(buf, hdrbuf)
-	buf = append(buf, tokens.Period)
 
-	if b64 {
-		buf = sc.encoder.AppendEncode(buf, payload)
-	} else {
-		buf = append(buf, payload...)
-	}
-	defer pool.ByteSlice().Put(buf)
-
-	signature, err := sb.signer.Sign(buf, sb.key)
+	combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, b64)
+	signature, err := sb.signer.Sign(combined, sb.key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
+
 	sig.signature = signature
 
 	return &sig, nil

@@ -11,6 +11,9 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
+var _ Signer2 = eddsasigner{}
+var _ Verifier2 = eddsaverifier{}
+
 func init() {
 	if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
 		alg: jwa.EdDSA(),
@@ -32,7 +35,7 @@ func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
 
-func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key interface{}) ([]byte, error) {
+func eddsaGetSigner(key any) (crypto.Signer, error) {
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
 	// simply accept a crypto.Signer here.
 	signer, ok := key.(crypto.Signer)
@@ -40,17 +43,34 @@ func (s eddsasigner) Do(payload, protected []byte, encoder Base64Encoder, encode
 		if !keytype.IsValidEDDSAKey(key) {
 			return nil, fmt.Errorf(`cannot use key of type %T to generate EdDSA based signatures`, key)
 		}
-	} else {
-		// This fallback exists for cases when jwk.Key was passed, or
-		// users gave us a pointer instead of non-pointer, etc.
-		var privkey ed25519.PrivateKey
-		if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
-			return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
-		}
-		signer = privkey
+		return signer, nil
+	}
+
+	// This fallback exists for cases when jwk.Key was passed, or
+	// users gave us a pointer instead of non-pointer, etc.
+	var privkey ed25519.PrivateKey
+	if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
+	}
+	return privkey, nil
+}
+
+func (s eddsasigner) Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key interface{}) ([]byte, error) {
+	signer, err := eddsaGetSigner(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
 	}
 
 	return jwsbb.SignCryptoSigner(signer, payload, protected, crypto.Hash(0), crypto.Hash(0), encoder, encodePayload)
+}
+
+func (s eddsasigner) SignRaw(key any, raw []byte) ([]byte, error) {
+	signer, err := eddsaGetSigner(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
+	}
+
+	return jwsbb.SignCryptoSignerRaw(signer, raw, crypto.Hash(0), crypto.Hash(0))
 }
 
 type eddsaverifier struct {
