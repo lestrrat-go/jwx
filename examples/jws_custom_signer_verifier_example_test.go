@@ -82,7 +82,7 @@ func (CirclECDSASignerAdapter) Sign(key ed25519.PrivateKey, payload []byte) ([]b
 	return ed25519.Sign(key, payload), nil
 }
 
-// Do implements the jws.Signer interface for Circl's EdDSA signer.
+// Sign implements the jws.Signer2 interface for Circl's EdDSA signer.
 //
 // Signer2 is a relatively low-level API. It receives multiple parameters because of this.
 //
@@ -91,12 +91,15 @@ func (CirclECDSASignerAdapter) Sign(key ed25519.PrivateKey, payload []byte) ([]b
 // the implementation details of your custom signer, and thus we cannot guarantee that
 // users will pass in the correct type of key.
 //
-// Those implementing the jws.Signer2 interface can construct the buffer to be signed
+// Those implementing the jws.Signer2 interface could construct the buffer to be signed
 // themselves and generate the signature, but it is often easier to use the jwsbb.Sign
 // function, which takes care of the constructiion. In this example, we would like to
 // tell jwsbb.Sign to construct the buffer and generate the signature using ed25519.Sign,
 // but since the function signatures do not match, we are providing an adapter
 // that implements the jwsbb.Signer interface.
+//
+// If you need to construct the buffer yourself, you can do so by using the
+// jwsbb.SignBuffer() function in combination with the jwsbb.SignRaw() function.
 func (CirclECDSASigner) Sign(payload []byte, protected []byte, encoder jws.Base64Encoder, encodePayload bool, key any) ([]byte, error) {
 	fmt.Println("Custom signer called")
 	privkey, ok := key.(ed25519.PrivateKey)
