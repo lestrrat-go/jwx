@@ -190,6 +190,8 @@ type parseCtx struct {
 	pedantic         bool
 	skipVerification bool
 	validate         bool
+	withKeyCount     int
+	withKey          *withKey // this is used to detect if we have a WithKey option
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
@@ -212,7 +214,20 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		}
 
 		switch o.Ident() {
-		case identKey{}, identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
+		case identKey{}:
+			// it would be nice to be able to detect if ctx.verifyOpts[0]
+			// is a WithKey option, but unfortunately at that point we have
+			// already converted the options to a jws option, which means
+			// we can no longer compare its Ident() to jwt.identKey{}.
+			// So let's just count this here
+			ctx.withKeyCount++
+			if ctx.withKeyCount == 1 {
+				if err := o.Value(&ctx.withKey); err != nil {
+					return nil, fmt.Errorf("jws.parseBytes: value for WithKey option must be a *jwt.withKey: %w", err)
+				}
+			}
+			verifyOpts = append(verifyOpts, o)
+		case identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}:
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
 			var token Token
@@ -275,8 +290,21 @@ const (
 var _ = _JwsVerifyInvalid
 
 func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
-	if len(ctx.verifyOpts) == 0 {
+	lvo := len(ctx.verifyOpts)
+	if lvo == 0 {
 		return nil, _JwsVerifySkipped, nil
+	}
+
+	if lvo == 1 && ctx.withKeyCount == 1 {
+		wk := ctx.withKey
+		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
+		if ok && len(wk.options) == 0 {
+			verified, err := jws.VerifyCompactFast(wk.key, payload, alg)
+			if err != nil {
+				return nil, _JwsVerifyDone, err
+			}
+			return verified, _JwsVerifyDone, nil
+		}
 	}
 
 	verifyOpts := append(ctx.verifyOpts, jws.WithCompact())
@@ -430,23 +458,19 @@ OUTER:
 // by jws.WithProtectedHeaders option, that can be passed to `jwt.WithKey“.
 func Sign(t Token, options ...SignOption) ([]byte, error) {
 	// fast path; can only happen if there is exactly one option
-	if len(options) == 1 {
+	if len(options) == 1 && (options[0].Ident() == identKey{}) {
 		// The option must be a withKey option.
 		var wk *withKey
 		if err := options[0].Value(&wk); err == nil {
-			// The algorithm better be a jwa.SignatureAlgorithm
 			alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 			if !ok {
 				return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
 			}
 
-			if signFastSupportedAlgorithm(alg) {
-				// Check if option contains anything other than alg/key
-				if len(wk.options) == 0 {
-					// yay, we have something we can put in the FAST PATH!
-					return signFast(t, alg, wk.key)
-				}
-				// fallthrough
+			// Check if option contains anything other than alg/key
+			if len(wk.options) == 0 {
+				// yay, we have something we can put in the FAST PATH!
+				return signFast(t, alg, wk.key)
 			}
 			// fallthrough
 		}

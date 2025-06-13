@@ -579,3 +579,61 @@ func Settings(options ...GlobalOption) {
 		}
 	}
 }
+
+// VerifyCompactFast is a fast path verification function for JWS messages
+// in compact serialization format.
+//
+// This function is considered experimental, and may change or be removed
+// in the future.
+//
+// VerifyCompactFast performs signature verification on a JWS compact
+// serialization without fully parsing the message into a jws.Message object.
+// This makes it more efficient for cases where you only need to verify
+// the signature and extract the payload, without needing access to headers
+// or other JWS metadata.
+//
+// Returns the original payload that was signed if verification succeeds.
+//
+// Unlike jws.Verify(), this function requires you to specify the
+// algorithm explicitly rather than extracting it from the JWS headers.
+// This can be useful for performance-critical applications where the
+// algorithm is known in advance.
+//
+// Since this function avoids doing many checks that jws.Verify would perform,
+// you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
+func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
+	algstr := alg.String()
+
+	// Split the serialized JWT into its components
+	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
+	if err != nil {
+		return nil, fmt.Errorf("jwt.verifyFast: failed to split compact: %w", err)
+	}
+
+	signature, err := base64.Decode(encodedSig)
+	if err != nil {
+		return nil, fmt.Errorf("jwt.verifyFast: failed to decode signature: %w", err)
+	}
+	verifyBuf := append(append(hdr, '.'), payload...)
+
+	// Verify the signature
+	if verifier2, err := VerifierFor(alg); err == nil {
+		if err := verifier2.Verify(key, verifyBuf, signature); err != nil {
+			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+		}
+	} else {
+		legacyVerifier, err := NewVerifier(alg)
+		if err != nil {
+			return nil, verifyerr("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
+		}
+		if err := legacyVerifier.Verify(verifyBuf, signature, key); err != nil {
+			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+		}
+	}
+
+	decoded, err := base64.Decode(payload)
+	if err != nil {
+		return nil, verifyerr("jwt.VerifyCompact: failed to decode payload: %w", err)
+	}
+	return decoded, nil
+}

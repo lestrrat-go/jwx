@@ -14,7 +14,7 @@ type Verifier2 interface {
 var muVerifier2DB sync.RWMutex
 var verifier2DB = make(map[jwa.SignatureAlgorithm]Verifier2)
 
-func verifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
+func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
 	muVerifier2DB.RLock()
 	defer muVerifier2DB.RUnlock()
 

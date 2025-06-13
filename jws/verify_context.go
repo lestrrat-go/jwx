@@ -183,7 +183,7 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		}
 	}
 
-	if verifier2, err := verifierFor(alg); err == nil {
+	if verifier2, err := VerifierFor(alg); err == nil {
 		if err := verifier2.Verify(key, verifyBuf, sig.signature); err != nil {
 			return verificationError{err}
 		}
