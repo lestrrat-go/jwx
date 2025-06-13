@@ -3,12 +3,12 @@ package keyconv
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"golang.org/x/crypto/ed25519"
 )
 
 // RSAPrivateKey assigns src to dst.

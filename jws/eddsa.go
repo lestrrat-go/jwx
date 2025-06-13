@@ -3,58 +3,76 @@ package jws
 import (
 	"crypto"
 	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-type eddsaSigner struct{}
+var _ Signer2 = eddsasigner{}
+var _ Verifier2 = eddsaverifier{}
 
-func newEdDSASigner() Signer {
-	return &eddsaSigner{}
-}
-
-func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
-	return jwa.EdDSA()
-}
-
-func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
-	if key == nil {
-		return nil, fmt.Errorf(`missing private key while signing payload`)
+func init() {
+	if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
+		alg: jwa.EdDSA(),
+	}); err != nil {
+		panic(fmt.Sprintf("RegisterSigner failed: %v", err))
 	}
+	if err := RegisterVerifier(jwa.EdDSA(), eddsaverifier{
+		alg: jwa.EdDSA(),
+	}); err != nil {
+		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+	}
+}
 
+type eddsasigner struct {
+	alg jwa.SignatureAlgorithm
+}
+
+func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
+}
+
+func eddsaGetSigner(key any) (crypto.Signer, error) {
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
 	// simply accept a crypto.Signer here.
 	signer, ok := key.(crypto.Signer)
 	if ok {
-		if !isValidEDDSAKey(key) {
+		if !keytype.IsValidEDDSAKey(key) {
 			return nil, fmt.Errorf(`cannot use key of type %T to generate EdDSA based signatures`, key)
 		}
-	} else {
-		// This fallback exists for cases when jwk.Key was passed, or
-		// users gave us a pointer instead of non-pointer, etc.
-		var privkey ed25519.PrivateKey
-		if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
-			return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
-		}
-		signer = privkey
-	}
-	return signer.Sign(rand.Reader, payload, crypto.Hash(0))
-}
-
-type eddsaVerifier struct{}
-
-func newEdDSAVerifier() Verifier {
-	return &eddsaVerifier{}
-}
-
-func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
-	if key == nil {
-		return fmt.Errorf(`missing public key while verifying payload`)
+		return signer, nil
 	}
 
+	// This fallback exists for cases when jwk.Key was passed, or
+	// users gave us a pointer instead of non-pointer, etc.
+	var privkey ed25519.PrivateKey
+	if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
+	}
+	return privkey, nil
+}
+
+func (s eddsasigner) Sign(key any, raw []byte) ([]byte, error) {
+	signer, err := eddsaGetSigner(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
+	}
+
+	return jwsbb.SignCryptoSigner(signer, raw, crypto.Hash(0), crypto.Hash(0))
+}
+
+type eddsaverifier struct {
+	alg jwa.SignatureAlgorithm
+}
+
+func (v eddsaverifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.alg
+}
+
+func (v eddsaverifier) Verify(key any, payload, signature []byte) error {
 	var pubkey ed25519.PublicKey
 	signer, ok := key.(crypto.Signer)
 	if ok {
@@ -69,9 +87,5 @@ func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err e
 		}
 	}
 
-	if !ed25519.Verify(pubkey, payload, signature) {
-		return fmt.Errorf(`failed to match EdDSA signature`)
-	}
-
-	return nil
+	return jwsbb.VerifyEdDSA(pubkey, payload, signature)
 }

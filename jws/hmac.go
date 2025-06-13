@@ -2,76 +2,96 @@ package jws
 
 import (
 	"crypto/hmac"
-	"crypto/sha256"
-	"crypto/sha512"
 	"fmt"
 	"hash"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-var hmacSignFuncs = map[jwa.SignatureAlgorithm]hmacSignFunc{}
+var _ Signer2 = hmacsigner{}
+var _ Verifier2 = hmacverifier{}
 
 func init() {
-	algs := map[jwa.SignatureAlgorithm]func() hash.Hash{
-		jwa.HS256(): sha256.New,
-		jwa.HS384(): sha512.New384,
-		jwa.HS512(): sha512.New,
+	algs := []jwa.SignatureAlgorithm{
+		jwa.HS256(),
+		jwa.HS384(),
+		jwa.HS512(),
 	}
 
-	for alg, h := range algs {
-		hmacSignFuncs[alg] = makeHMACSignFunc(h)
-	}
-}
-
-func newHMACSigner(alg jwa.SignatureAlgorithm) Signer {
-	return &HMACSigner{
-		alg:  alg,
-		sign: hmacSignFuncs[alg], // we know this will succeed
-	}
-}
-
-func makeHMACSignFunc(hfunc func() hash.Hash) hmacSignFunc {
-	return func(payload []byte, key []byte) ([]byte, error) {
-		h := hmac.New(hfunc, key)
-		if _, err := h.Write(payload); err != nil {
-			return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
+	for _, alg := range algs {
+		h, err := jwsbb.HMACHashFuncFor(alg.String())
+		if err != nil {
+			panic(fmt.Sprintf("jws.HMACSigner: failed to get hash function for %s: %v", alg, err))
 		}
-		return h.Sum(nil), nil
+
+		if err := RegisterSigner(alg, hmacsigner{
+			alg:   alg,
+			hfunc: h,
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
+		if err := RegisterVerifier(alg, hmacverifier{
+			signer: hmacsigner{
+				alg:   alg,
+				hfunc: h,
+			},
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+		}
 	}
 }
 
-func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {
+func toHMACKey(dst *[]byte, key any) error {
+	if err := keyconv.ByteSliceKey(dst, key); err != nil {
+		return fmt.Errorf(`jws.toHMACKey: invalid key type %T. []byte is required: %w`, key, err)
+	}
+
+	if len(*dst) == 0 {
+		return fmt.Errorf(`jws.toHMACKey: missing key while signing payload`)
+	}
+	return nil
+}
+
+type hmacsigner struct {
+	alg   jwa.SignatureAlgorithm
+	hfunc func() hash.Hash
+}
+
+func (s hmacsigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
 
-func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (s hmacsigner) Sign(key any, raw []byte) ([]byte, error) {
 	var hmackey []byte
-	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
-		return nil, fmt.Errorf(`invalid key type %T. []byte is required: %w`, key, err)
+	if err := toHMACKey(&hmackey, key); err != nil {
+		return nil, fmt.Errorf(`jws.HMACSigner: %w`, err)
 	}
 
-	if len(hmackey) == 0 {
-		return nil, fmt.Errorf(`missing key while signing payload`)
-	}
-
-	return s.sign(payload, hmackey)
-}
-
-func newHMACVerifier(alg jwa.SignatureAlgorithm) Verifier {
-	s := newHMACSigner(alg)
-	return &HMACVerifier{signer: s}
-}
-
-func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
-	expected, err := v.signer.Sign(payload, key)
+	signature, err := jwsbb.SignHMAC(hmackey, raw, s.hfunc)
 	if err != nil {
-		return fmt.Errorf(`failed to generated signature: %w`, err)
+		return nil, fmt.Errorf(`jws.HMACSigner: failed to generate signature: %w`, err)
+	}
+	return signature, nil
+}
+
+type hmacverifier struct {
+	signer hmacsigner
+}
+
+func (v hmacverifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.signer.Algorithm()
+}
+
+func (v hmacverifier) Verify(key any, payload, signature []byte) error {
+	expected, err := v.signer.Sign(key, payload)
+	if err != nil {
+		return fmt.Errorf(`jws.HMACVerifier: failed to generated signature: %w`, err)
 	}
 
 	if !hmac.Equal(signature, expected) {
-		return fmt.Errorf(`failed to match hmac signature`)
+		return fmt.Errorf(`jws.HMACVerifier: failed to match hmac signature`)
 	}
 	return nil
 }

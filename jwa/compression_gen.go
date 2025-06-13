@@ -146,7 +146,7 @@ func (s *CompressionAlgorithm) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupCompressionAlgorithm(name)
 	if !ok {
-		return fmt.Errorf(`unknown CompressionAlgorithm: %s`, name)
+		return fmt.Errorf(`unknown CompressionAlgorithm: %q`, name)
 	}
 	*s = v
 	return nil

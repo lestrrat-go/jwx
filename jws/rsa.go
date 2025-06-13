@@ -2,145 +2,119 @@ package jws
 
 import (
 	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-var rsaSigners map[jwa.SignatureAlgorithm]*rsaSigner
-var rsaVerifiers map[jwa.SignatureAlgorithm]*rsaVerifier
+var _ Signer2 = rsasigner{}
+var _ Verifier2 = rsaverifier{}
 
 func init() {
-	algs := map[jwa.SignatureAlgorithm]struct {
-		Hash crypto.Hash
-		PSS  bool
-	}{
-		jwa.RS256(): {
-			Hash: crypto.SHA256,
-		},
-		jwa.RS384(): {
-			Hash: crypto.SHA384,
-		},
-		jwa.RS512(): {
-			Hash: crypto.SHA512,
-		},
-		jwa.PS256(): {
-			Hash: crypto.SHA256,
-			PSS:  true,
-		},
-		jwa.PS384(): {
-			Hash: crypto.SHA384,
-			PSS:  true,
-		},
-		jwa.PS512(): {
-			Hash: crypto.SHA512,
-			PSS:  true,
-		},
+	algs := []jwa.SignatureAlgorithm{
+		jwa.RS256(),
+		jwa.RS384(),
+		jwa.RS512(),
+		jwa.PS256(),
+		jwa.PS384(),
+		jwa.PS512(),
 	}
 
-	rsaSigners = make(map[jwa.SignatureAlgorithm]*rsaSigner)
-	rsaVerifiers = make(map[jwa.SignatureAlgorithm]*rsaVerifier)
-	for alg, item := range algs {
-		rsaSigners[alg] = &rsaSigner{
-			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+	for _, alg := range algs {
+		h, pss, err := jwsbb.RSAHashFuncFor(alg.String())
+		if err != nil {
+			panic(fmt.Sprintf("jws.RSASigner: failed to get hash function for %s: %v", alg, err))
 		}
-		rsaVerifiers[alg] = &rsaVerifier{
+		if err := RegisterSigner(alg, rsasigner{
 			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+			hash: h,
+			pss:  pss,
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
+		if err := RegisterVerifier(alg, rsaverifier{
+			alg:  alg,
+			hash: h,
+			pss:  pss,
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 		}
 	}
 }
 
-type rsaSigner struct {
+type rsasigner struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
-	pss  bool
+	pss  bool // whether to use PSS padding
 }
 
-func newRSASigner(alg jwa.SignatureAlgorithm) Signer {
-	return rsaSigners[alg]
+func (s rsasigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
 }
 
-func (rs *rsaSigner) Algorithm() jwa.SignatureAlgorithm {
-	return rs.alg
-}
-
-func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
-	if key == nil {
-		return nil, fmt.Errorf(`missing private key while signing payload`)
-	}
-
-	signer, ok := key.(crypto.Signer)
-	if ok {
-		if !isValidRSAKey(key) {
-			return nil, fmt.Errorf(`cannot use key of type %T to generate RSA based signatures`, key)
+func rsaGetSignerCryptoSignerKey(key any) (crypto.Signer, bool, error) {
+	cs, isCryptoSigner := key.(crypto.Signer)
+	if isCryptoSigner {
+		if !keytype.IsValidRSAKey(key) {
+			return nil, false, fmt.Errorf(`cannot use key of type %T`, key)
 		}
-	} else {
-		var privkey rsa.PrivateKey
-		if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
-			return nil, fmt.Errorf(`failed to retrieve rsa.PrivateKey out of %T: %w`, key, err)
-		}
-		signer = &privkey
+		return cs, true, nil
 	}
-
-	h := rs.hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return nil, fmt.Errorf(`failed to write payload to hash: %w`, err)
-	}
-	if rs.pss {
-		return signer.Sign(rand.Reader, h.Sum(nil), &rsa.PSSOptions{
-			Hash:       rs.hash,
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
-		})
-	}
-	return signer.Sign(rand.Reader, h.Sum(nil), rs.hash)
+	return nil, false, nil
 }
 
-type rsaVerifier struct {
+func (s rsasigner) Sign(key any, raw []byte) ([]byte, error) {
+	cs, isCryptoSigner, err := rsaGetSignerCryptoSignerKey(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.RSASigner: %w`, err)
+	}
+	if isCryptoSigner {
+		var options crypto.SignerOpts = s.hash
+		if s.pss {
+			rsaopts := jwsbb.RSAPSSOptions(s.hash)
+			options = &rsaopts
+		}
+		return jwsbb.SignCryptoSigner(cs, raw, s.hash, options)
+	}
+
+	var privkey *rsa.PrivateKey
+	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
+	}
+	return jwsbb.SignRSA(privkey, raw, s.hash, s.pss)
+}
+
+type rsaverifier struct {
 	alg  jwa.SignatureAlgorithm
 	hash crypto.Hash
-	pss  bool
+	pss  bool // whether to use PSS padding
 }
 
-func newRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
-	return rsaVerifiers[alg]
+func (v rsaverifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.alg
 }
+func (v rsaverifier) Verify(key any, payload, signature []byte) error {
+	var pubkey *rsa.PublicKey
 
-func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error {
-	if key == nil {
-		return fmt.Errorf(`missing public key while verifying payload`)
-	}
-
-	var pubkey rsa.PublicKey
 	if cs, ok := key.(crypto.Signer); ok {
 		cpub := cs.Public()
 		switch cpub := cpub.(type) {
 		case rsa.PublicKey:
-			pubkey = cpub
+			pubkey = &cpub
 		case *rsa.PublicKey:
-			pubkey = *cpub
+			pubkey = cpub
 		default:
-			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
+			return fmt.Errorf(`jws.RSAVerifier: failed to retrieve rsa.PublicKey out of crypto.Signer %T`, key)
 		}
 	} else {
 		if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
-			return fmt.Errorf(`failed to retrieve rsa.PublicKey out of %T: %w`, key, err)
+			return fmt.Errorf(`jws.RSAVerifier: failed to retrieve rsa.PublicKey out of %T: %w`, key, err)
 		}
 	}
 
-	h := rv.hash.New()
-	if _, err := h.Write(payload); err != nil {
-		return fmt.Errorf(`failed to write payload to hash: %w`, err)
-	}
-
-	if rv.pss {
-		return rsa.VerifyPSS(&pubkey, rv.hash, h.Sum(nil), signature, nil)
-	}
-	return rsa.VerifyPKCS1v15(&pubkey, rv.hash, h.Sum(nil), signature)
+	return jwsbb.VerifyRSA(pubkey, payload, signature, v.hash, v.pss)
 }
