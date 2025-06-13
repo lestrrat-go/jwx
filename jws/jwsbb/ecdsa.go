@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 )
 
@@ -140,6 +139,13 @@ type ecdsaVerifier struct {
 	h crypto.Hash
 }
 
+// newECDSAVerifier creates a new ECDSA verifier with the specified hash algorithm.
+func newECDSAVerifier(h crypto.Hash) ecdsaVerifier {
+	return ecdsaVerifier{
+		h: h,
+	}
+}
+
 func (v ecdsaVerifier) Verify(key *ecdsa.PublicKey, buf []byte, signature []byte) error {
 	var r, s big.Int
 	if err := UnpackECDSASignature(signature, key, &r, &s); err != nil {
@@ -159,11 +165,12 @@ func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int)
 	return nil
 }
 
-// VerifyECDSA verifies an ECDSA signature for the given payload and header.
-// This function constructs the signing input by encoding the header and payload according to JWS specification,
-// then verifies the signature using the specified public key and hash algorithm.
-func VerifyECDSA(key *ecdsa.PublicKey, payload, hdr, signature []byte, h crypto.Hash, encoder base64.Encoder, encodePayload bool) error {
-	return Verify[*ecdsa.PublicKey](key, payload, hdr, signature, ecdsaVerifier{h: h}, encoder, encodePayload)
+// VerifyECDSA verifies an ECDSA signature for the given payload.
+// This function verifies the signature using the specified public key and hash algorithm.
+// The payload parameter should be the pre-computed signing input (typically header.payload).
+func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash) error {
+	v := newECDSAVerifier(h)
+	return v.Verify(key, payload, signature)
 }
 
 // ecdsaCryptoSignerVerifier implements ECDSA signature verification for crypto.Signer interfaces.
@@ -193,6 +200,8 @@ func (v ecdsaCryptoSignerVerifier) Verify(signer crypto.Signer, buf []byte, sign
 // VerifyECDSACryptoSigner verifies an ECDSA signature for crypto.Signer implementations.
 // This function is useful for verifying signatures created by hardware security modules
 // or other implementations of the crypto.Signer interface.
-func VerifyECDSACryptoSigner(signer crypto.Signer, payload, hdr, signature []byte, h crypto.Hash, encoder base64.Encoder, encodePayload bool) error {
-	return Verify[crypto.Signer](signer, payload, hdr, signature, ecdsaCryptoSignerVerifier{h: h}, encoder, encodePayload)
+// The payload parameter should be the pre-computed signing input (typically header.payload).
+func VerifyECDSACryptoSigner(signer crypto.Signer, payload, signature []byte, h crypto.Hash) error {
+	v := ecdsaCryptoSignerVerifier{h: h}
+	return v.Verify(signer, payload, signature)
 }

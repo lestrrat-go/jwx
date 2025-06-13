@@ -3,8 +3,6 @@ package jwsbb
 import (
 	"crypto/ed25519"
 	"fmt"
-
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
 // eddsaSigner implements EdDSA (Ed25519) signature generation.
@@ -27,6 +25,11 @@ func SignEdDSA(key ed25519.PrivateKey, raw []byte) ([]byte, error) {
 // EdDSA verification is straightforward as it doesn't require hash function specification.
 type eddsaVerifier struct{}
 
+// newEdDSAVerifier creates a new EdDSA verifier.
+func newEdDSAVerifier() eddsaVerifier {
+	return eddsaVerifier{}
+}
+
 func (v eddsaVerifier) Verify(key ed25519.PublicKey, buf []byte, signature []byte) error {
 	if !ed25519.Verify(key, buf, signature) {
 		return fmt.Errorf("invalid EdDSA signature")
@@ -34,10 +37,11 @@ func (v eddsaVerifier) Verify(key ed25519.PublicKey, buf []byte, signature []byt
 	return nil
 }
 
-// VerifyEdDSA verifies an EdDSA (Ed25519) signature for the given payload and header.
-// This function constructs the signing input by encoding the header and payload according to JWS specification,
-// then verifies the signature using Ed25519 verification algorithm.
+// VerifyEdDSA verifies an EdDSA (Ed25519) signature for the given payload.
+// This function verifies the signature using Ed25519 verification algorithm.
+// The payload parameter should be the pre-computed signing input (typically header.payload).
 // EdDSA is deterministic and provides strong security guarantees without requiring hash function selection.
-func VerifyEdDSA(key ed25519.PublicKey, payload, hdr, signature []byte, encoder base64.Encoder, encodePayload bool) error {
-	return Verify[ed25519.PublicKey](key, payload, hdr, signature, eddsaVerifier{}, encoder, encodePayload)
+func VerifyEdDSA(key ed25519.PublicKey, payload, signature []byte) error {
+	v := newEdDSAVerifier()
+	return v.Verify(key, payload, signature)
 }

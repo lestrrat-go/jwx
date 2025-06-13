@@ -4,8 +4,6 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"fmt"
-
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
 // RSAHashFuncFor returns the appropriate hash function and PSS flag for the given RSA algorithm.
@@ -77,6 +75,13 @@ type rsaVerifier struct {
 	pss bool
 }
 
+func newRSAVerifier(h crypto.Hash, pss bool) rsaVerifier {
+	return rsaVerifier{
+		h:   h,
+		pss: pss,
+	}
+}
+
 func (v rsaVerifier) Verify(key *rsa.PublicKey, buf []byte, signature []byte) error {
 	hasher := v.h.New()
 	hasher.Write(buf)
@@ -91,6 +96,7 @@ func (v rsaVerifier) Verify(key *rsa.PublicKey, buf []byte, signature []byte) er
 // This function constructs the signing input by encoding the header and payload according to JWS specification,
 // then verifies the signature using the specified public key and hash algorithm.
 // If pss is true, RSA-PSS verification is used; otherwise, PKCS#1 v1.5 verification is used.
-func VerifyRSA(key *rsa.PublicKey, payload, hdr, signature []byte, h crypto.Hash, pss bool, encoder base64.Encoder, encodePayload bool) error {
-	return Verify[*rsa.PublicKey](key, payload, hdr, signature, rsaVerifier{h: h, pss: pss}, encoder, encodePayload)
+func VerifyRSA(key *rsa.PublicKey, payload, signature []byte, h crypto.Hash, pss bool) error {
+	v := newRSAVerifier(h, pss)
+	return v.Verify(key, payload, signature)
 }

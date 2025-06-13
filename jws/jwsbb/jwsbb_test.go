@@ -44,8 +44,8 @@ func TestHMAC(t *testing.T) {
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
 			sig, err := jwsbb.SignHMAC(key, signBuffer, tc.hfunc)
 			require.NoError(t, err, "SignHMAC should not return error")
-			require.NoError(t, jwsbb.VerifyHMAC(key, payload, header, sig, tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyHMAC(key, payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyHMAC(key, signBuffer, sig, tc.hfunc), "VerifyHMAC should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyHMAC(key, signBuffer, sig[:len(sig)-1], tc.hfunc), "VerifyHMAC should fail for an invalid signature")
 		})
 	}
 
@@ -104,8 +104,8 @@ func TestRSA(t *testing.T) {
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoding, tc.encodePayload)
 			sig, err := jwsbb.SignRSA(priv, signBuffer, tc.h, tc.pss)
 			require.NoError(t, err, "SignRSA should not return error")
-			require.NoError(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig, tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyRSA(&priv.PublicKey, signBuffer, sig, tc.h, tc.pss), "VerifyRSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyRSA(&priv.PublicKey, signBuffer, sig[:len(sig)-1], tc.h, tc.pss), "VerifyRSA should fail for an invalid signature")
 		})
 	}
 }
@@ -138,8 +138,8 @@ func TestECDSA(t *testing.T) {
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
 			sig, err := jwsbb.SignECDSA(priv, signBuffer, tc.h)
 			require.NoError(t, err, "SignECDSA should not return error")
-			require.NoError(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig, tc.h, encoder, tc.encodePayload), "VerifyECDSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, encoder, tc.encodePayload), "VerifyECDSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyECDSA(&priv.PublicKey, signBuffer, sig, tc.h), "VerifyECDSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyECDSA(&priv.PublicKey, signBuffer, sig[:len(sig)-1], tc.h), "VerifyECDSA should fail for an invalid signature")
 		})
 	}
 }
@@ -166,8 +166,8 @@ func TestEdDSA(t *testing.T) {
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoding, tc.encodePayload)
 			sig, err := jwsbb.SignEdDSA(priv, signBuffer)
 			require.NoError(t, err, "SignEdDSA should not return error")
-			require.NoError(t, jwsbb.VerifyEdDSA(pub, payload, header, sig, encoding, tc.encodePayload), "VerifyEdDSA should succeed for a valid signature")
-			require.Error(t, jwsbb.VerifyEdDSA(pub, payload, header, sig[:len(sig)-1], encoding, tc.encodePayload), "VerifyEdDSA should fail for an invalid signature")
+			require.NoError(t, jwsbb.VerifyEdDSA(pub, signBuffer, sig), "VerifyEdDSA should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyEdDSA(pub, signBuffer, sig[:len(sig)-1]), "VerifyEdDSA should fail for an invalid signature")
 		})
 	}
 }

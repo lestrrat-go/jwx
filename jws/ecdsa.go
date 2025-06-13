@@ -119,13 +119,13 @@ func ecdsaGetVerifierKey(key any) (*ecdsa.PublicKey, crypto.Signer, bool, error)
 	return pubkey, nil, false, nil
 }
 
-func (ev ecdsaverifier) Do(payload, protected []byte, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
+func (ev ecdsaverifier) Verify(key any, payload, signature []byte) error {
 	pubkey, cs, isCryptoSigner, err := ecdsaGetVerifierKey(key)
 	if err != nil {
 		return fmt.Errorf(`jws.ECDSAVerifier: %w`, err)
 	}
 	if isCryptoSigner {
-		return jwsbb.VerifyECDSACryptoSigner(cs, payload, protected, signature, ev.hash, encoder, encodePayload)
+		return jwsbb.VerifyECDSACryptoSigner(cs, payload, signature, ev.hash)
 	}
-	return jwsbb.VerifyECDSA(pubkey, payload, protected, signature, ev.hash, encoder, encodePayload)
+	return jwsbb.VerifyECDSA(pubkey, payload, signature, ev.hash)
 }

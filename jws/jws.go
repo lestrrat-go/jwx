@@ -23,7 +23,6 @@ package jws
 
 import (
 	"bufio"
-	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -32,16 +31,13 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 	"sync"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -220,173 +216,14 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // while the former is returned when any other part of the `jws.Verify()`
 // function fails.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
-	var parseOptions []ParseOption
-	var dst *Message
-	var detachedPayload []byte
-	var keyProviders []KeyProvider
-	var keyUsed interface{}
-	var validateKey bool
-	var encoder Base64Encoder = base64.DefaultEncoder()
+	vc := verifyContextPool.Get()
+	defer verifyContextPool.Put(vc)
 
-	ctx := context.Background()
-
-	//nolint:forcetypeassert
-	for _, option := range options {
-		switch option.Ident() {
-		case identMessage{}:
-			if err := option.Value(&dst); err != nil {
-				return nil, verifyerr(`invalid value for option WithMEssage: %w`, err)
-			}
-		case identDetachedPayload{}:
-			if err := option.Value(&detachedPayload); err != nil {
-				return nil, verifyerr(`invalid value for option WithDetachedPayload: %w`, err)
-			}
-		case identKey{}:
-			var pair *withKey
-			if err := option.Value(&pair); err != nil {
-				return nil, verifyerr(`invalid value for option WithKey: %w`, err)
-			}
-			keyProviders = append(keyProviders, &staticKeyProvider{
-				alg: pair.alg.(jwa.SignatureAlgorithm),
-				key: pair.key,
-			})
-		case identKeyProvider{}:
-			var kp KeyProvider
-			if err := option.Value(&kp); err != nil {
-				return nil, verifyerr(`failed to retrieve key-provider option value: %w`, err)
-			}
-			keyProviders = append(keyProviders, kp)
-		case identKeyUsed{}:
-			if err := option.Value(&keyUsed); err != nil {
-				return nil, verifyerr(`failed to retrieve key-used option value: %w`, err)
-			}
-		case identContext{}:
-			if err := option.Value(&ctx); err != nil {
-				return nil, verifyerr(`failed to retrieve context option value: %w`, err)
-			}
-		case identValidateKey{}:
-			if err := option.Value(&validateKey); err != nil {
-				return nil, verifyerr(`failed to retrieve validate-key option value: %w`, err)
-			}
-		case identSerialization{}:
-			parseOptions = append(parseOptions, option.(ParseOption))
-		case identBase64Encoder{}:
-			if err := option.Value(&encoder); err != nil {
-				return nil, verifyerr(`failed to retrieve base64-encoder option value: %w`, err)
-			}
-		default:
-			return nil, verifyerr(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
-		}
+	if err := vc.ProcessOptions(options); err != nil {
+		return nil, verifyerr(`failed to process options: %w`, err)
 	}
 
-	if len(keyProviders) < 1 {
-		return nil, verifyerr(`no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
-	}
-
-	msg, err := Parse(buf, parseOptions...)
-	if err != nil {
-		return nil, verifyerr(`failed to parse jws: %w`, err)
-	}
-	defer msg.clearRaw()
-
-	if detachedPayload != nil {
-		if len(msg.payload) != 0 {
-			return nil, verifyerr(`can't specify detached payload for JWS with payload`)
-		}
-
-		msg.payload = detachedPayload
-	}
-
-	// Pre-compute the base64 encoded version of payload
-	var payload string
-	if msg.b64 {
-		payload = encoder.EncodeToString(msg.payload)
-	} else {
-		payload = string(msg.payload)
-	}
-
-	verifyBuf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(verifyBuf)
-
-	var errs []error
-	for i, sig := range msg.signatures {
-		verifyBuf.Reset()
-
-		var encodedProtectedHeader string
-		var rawHeaders []byte
-		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
-			if raw := rbp.rawBuffer(); raw != nil {
-				rawHeaders = raw
-				encodedProtectedHeader = encoder.EncodeToString(raw)
-			}
-		}
-
-		if encodedProtectedHeader == "" {
-			protected, err := json.Marshal(sig.protected)
-			if err != nil {
-				return nil, verifyerr(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
-			}
-			rawHeaders = protected
-
-			encodedProtectedHeader = encoder.EncodeToString(protected)
-		}
-
-		verifyBuf.WriteString(encodedProtectedHeader)
-		verifyBuf.WriteByte(tokens.Period)
-		verifyBuf.WriteString(payload)
-
-		for i, kp := range keyProviders {
-			var sink algKeySink
-			if err := kp.FetchKeys(ctx, &sink, sig, msg); err != nil {
-				return nil, verifyerr(`key provider %d failed: %w`, i, err)
-			}
-
-			for _, pair := range sink.list {
-				// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
-				// this may seem ugly, but we're trying to avoid declaring separate
-				// structs for `alg jwa.KeyEncryptionAlgorithm` and `alg jwa.SignatureAlgorithm`
-				//nolint:forcetypeassert
-				alg := pair.alg.(jwa.SignatureAlgorithm)
-				key := pair.key
-
-				if validateKey {
-					if err := validateKeyBeforeUse(key); err != nil {
-						return nil, verifyerr(`failed to validate key before signing: %w`, err)
-					}
-				}
-
-				if verifier2, err := verifierFor(alg); err == nil {
-					if err := verifier2.Do(msg.payload, rawHeaders, sig.signature, encoder, msg.b64, key); err != nil {
-						errs = append(errs, verificationError{err})
-						continue
-					}
-				} else {
-					verifier, err := NewVerifier(alg)
-					if err != nil {
-						return nil, verifyerr(`failed to create verifier for algorithm %q: %w`, alg, err)
-					}
-
-					if err := verifier.Verify(verifyBuf.Bytes(), sig.signature, key); err != nil {
-						errs = append(errs, verificationError{err})
-						continue
-					}
-				}
-
-				if keyUsed != nil {
-					if err := blackmagic.AssignIfCompatible(keyUsed, key); err != nil {
-						return nil, verifyerr(`failed to assign used key (%T) to %T: %w`, key, keyUsed, err)
-					}
-				}
-
-				if dst != nil {
-					*(dst) = *msg
-				}
-
-				return msg.payload, nil
-			}
-		}
-	}
-	return nil, verifyerr(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
+	return vc.VerifyMessage(buf)
 }
 
 // get the value of b64 header field.

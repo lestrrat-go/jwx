@@ -8,7 +8,7 @@ import (
 )
 
 type Verifier2 interface {
-	Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error
+	Verify(key any, payload, signature []byte) error
 }
 
 var muVerifier2DB sync.RWMutex

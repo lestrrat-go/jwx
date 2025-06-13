@@ -72,7 +72,7 @@ func (v eddsaverifier) Algorithm() jwa.SignatureAlgorithm {
 	return v.alg
 }
 
-func (v eddsaverifier) Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key interface{}) error {
+func (v eddsaverifier) Verify(key any, payload, signature []byte) error {
 	var pubkey ed25519.PublicKey
 	signer, ok := key.(crypto.Signer)
 	if ok {
@@ -87,5 +87,5 @@ func (v eddsaverifier) Do(payload, protected, signature []byte, encoder Base64En
 		}
 	}
 
-	return jwsbb.VerifyEdDSA(pubkey, payload, protected, signature, encoder, encodePayload)
+	return jwsbb.VerifyEdDSA(pubkey, payload, signature)
 }

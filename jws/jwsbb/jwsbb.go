@@ -14,12 +14,6 @@
 // 3. Does not rely on other public jwx packages (they are standalone, except for internal packages).
 package jwsbb
 
-import (
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-)
-
 // Signer is a generic interface that defines the method for signing payloads.
 // The type parameter K represents the key type (e.g., []byte for HMAC keys,
 // *rsa.PrivateKey for RSA keys, *ecdsa.PrivateKey for ECDSA keys).
@@ -32,35 +26,4 @@ type Signer[K any] interface {
 // *rsa.PublicKey for RSA keys, *ecdsa.PublicKey for ECDSA keys).
 type Verifier[K any] interface {
 	Verify(key K, buf []byte, signature []byte) error
-}
-
-// Verify verifies a JWS signature using the provided verifier.
-//
-// This function constructs the signing input by combining the base64-encoded header
-// and payload (or raw payload if encodePayload is false) separated by a period ('.').
-// The constructed buffer is then passed to the verifier to validate the signature.
-//
-// Parameters:
-//   - key: The verification key (type depends on the signature algorithm)
-//   - payload: The raw payload bytes
-//   - hdr: The raw header bytes
-//   - signature: The signature to verify
-//   - verifier: The verifier implementation for the specific algorithm
-//   - encoder: The base64 encoder to use for encoding header and optionally payload
-//   - encodePayload: If true, payload is base64-encoded; if false, payload is used as-is
-//
-// Returns an error if verification fails, nil if verification succeeds.
-func Verify[K any](key K, payload, hdr, signature []byte, verifier Verifier[K], encoder base64.Encoder, encodePayload bool) error {
-	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
-
-	buf = encoder.AppendEncode(buf, hdr)
-	buf = append(buf, tokens.Period)
-	if encodePayload {
-		buf = encoder.AppendEncode(buf, payload)
-	} else {
-		buf = append(buf, payload...)
-	}
-
-	defer pool.ByteSlice().Put(buf)
-	return verifier.Verify(key, buf, signature)
 }

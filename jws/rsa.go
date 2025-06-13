@@ -97,7 +97,7 @@ type rsaverifier struct {
 func (v rsaverifier) Algorithm() jwa.SignatureAlgorithm {
 	return v.alg
 }
-func (v rsaverifier) Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
+func (v rsaverifier) Verify(key any, payload, signature []byte) error {
 	var pubkey *rsa.PublicKey
 
 	if cs, ok := key.(crypto.Signer); ok {
@@ -116,5 +116,5 @@ func (v rsaverifier) Do(payload, protected, signature []byte, encoder Base64Enco
 		}
 	}
 
-	return jwsbb.VerifyRSA(pubkey, payload, protected, signature, v.hash, v.pss, encoder, encodePayload)
+	return jwsbb.VerifyRSA(pubkey, payload, signature, v.hash, v.pss)
 }
