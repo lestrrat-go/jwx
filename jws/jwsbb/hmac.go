@@ -6,8 +6,6 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
-
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
 // HMACHashFuncFor returns the appropriate hash function for the given HMAC algorithm.
@@ -58,6 +56,13 @@ type hmacVerifier struct {
 	hfunc func() hash.Hash
 }
 
+// newHMACVerifier creates a new HMAC verifier with the specified hash function.
+func newHMACVerifier(hfunc func() hash.Hash) hmacVerifier {
+	return hmacVerifier{
+		hfunc: hfunc,
+	}
+}
+
 func (v hmacVerifier) Verify(key, buf, signature []byte) error {
 	expected := hmac.New(v.hfunc, key)
 	expected.Write(buf)
@@ -67,9 +72,10 @@ func (v hmacVerifier) Verify(key, buf, signature []byte) error {
 	return nil
 }
 
-// VerifyHMAC verifies an HMAC signature for the given payload and header.
-// This function constructs the signing input by encoding the header and payload according to JWS specification,
-// then verifies the signature using constant-time comparison to prevent timing attacks.
-func VerifyHMAC(key, payload, hdr, signature []byte, hfunc func() hash.Hash, encoder base64.Encoder, encodePayload bool) error {
-	return Verify[[]byte](key, payload, hdr, signature, hmacVerifier{hfunc: hfunc}, encoder, encodePayload)
+// VerifyHMAC verifies an HMAC signature for the given payload.
+// This function verifies the signature using the specified key and hash function.
+// The payload parameter should be the pre-computed signing input (typically header.payload).
+func VerifyHMAC(key, payload, signature []byte, hfunc func() hash.Hash) error {
+	v := newHMACVerifier(hfunc)
+	return v.Verify(key, payload, signature)
 }

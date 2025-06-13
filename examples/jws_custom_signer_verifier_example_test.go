@@ -7,7 +7,6 @@ import (
 	"github.com/cloudflare/circl/sign/ed25519"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
 func Example_jws_custom_signer_verifier() {
@@ -109,26 +108,20 @@ func (CirclEdDSAVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA()
 }
 
-type CirclEdDSAVerifierAdapter struct{}
-
-func (CirclEdDSAVerifierAdapter) Verify(key ed25519.PublicKey, payload []byte, signature []byte) error {
-	if ed25519.Verify(key, payload, signature) {
-		return nil
-	}
-	return fmt.Errorf(`failed to verify EdDSA signature`)
-}
-
 // Do implements the jws.Verifier interface for Circl's EdDSA verifier.
 //
 // See the comments for CirclECDSASigner.Do for more information on what this function does.
-func (CirclEdDSAVerifier) Do(payload []byte, protected []byte, signature []byte, encoder jws.Base64Encoder, encodePayload bool, key any) error {
+func (CirclEdDSAVerifier) Verify(key any, payload, signature []byte) error {
 	fmt.Println("Custom verifier called")
 	pubkey, ok := key.(ed25519.PublicKey)
 	if !ok {
 		return fmt.Errorf(`jws.CirclECDSASignerVerifier: invalid key type %T. ed25519.PublicKey is required`, key)
 	}
 
-	return jwsbb.Verify(pubkey, payload, protected, signature, CirclEdDSAVerifierAdapter{}, encoder, encodePayload)
+	if ed25519.Verify(pubkey, payload, signature) {
+		return nil
+	}
+	return fmt.Errorf(`failed to verify EdDSA signature`)
 }
 
 type LegacyCirclEdDSASignerVerifier struct{}

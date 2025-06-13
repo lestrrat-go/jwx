@@ -47,6 +47,7 @@ go_test(
         "token_options_test.go",
         "token_test.go",
         "validate_test.go",
+        "verify_test.go",
     ],
     embed = [":jwt"],
     deps = [

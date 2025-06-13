@@ -8,13 +8,13 @@ import (
 )
 
 type Verifier2 interface {
-	Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error
+	Verify(key any, payload, signature []byte) error
 }
 
 var muVerifier2DB sync.RWMutex
 var verifier2DB = make(map[jwa.SignatureAlgorithm]Verifier2)
 
-func verifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
+func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
 	muVerifier2DB.RLock()
 	defer muVerifier2DB.RUnlock()
 

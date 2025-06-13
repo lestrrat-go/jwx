@@ -12,15 +12,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-func signFastSupportedAlgorithm(alg jwa.SignatureAlgorithm) bool {
-	if _, err := jws.SignerFor(alg); err == nil {
-		return true
-	}
-
-	_, err := jws.NewSigner(alg)
-	return err == nil
-}
-
 // signFast reinvents the wheel a bit to avoid the overhead of
 // going through the entire jws.Sign() machinery.
 func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {

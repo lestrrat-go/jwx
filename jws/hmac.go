@@ -84,9 +84,8 @@ func (v hmacverifier) Algorithm() jwa.SignatureAlgorithm {
 	return v.signer.Algorithm()
 }
 
-func (v hmacverifier) Do(payload, protected, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
-	combined := jwsbb.SignBuffer(nil, protected, payload, encoder, encodePayload)
-	expected, err := v.signer.Sign(key, combined)
+func (v hmacverifier) Verify(key any, payload, signature []byte) error {
+	expected, err := v.signer.Sign(key, payload)
 	if err != nil {
 		return fmt.Errorf(`jws.HMACVerifier: failed to generated signature: %w`, err)
 	}

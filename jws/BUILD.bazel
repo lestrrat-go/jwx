@@ -23,6 +23,7 @@ go_library(
         "sign_context.go",
         "signature_builder.go",
         "verifier.go",
+        "verify_context.go",
     ],
     importpath = "github.com/lestrrat-go/jwx/v3/jws",
     visibility = ["//visibility:public"],

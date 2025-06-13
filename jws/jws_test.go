@@ -121,7 +121,7 @@ func TestSanity(t *testing.T) {
 			require.True(t, errors.Is(err, jws.VerifyError()), `errors.Is(jws.VerifyError()) should return true`)
 
 			// this should also return true because it's an error returned from the verification process
-			require.True(t, errors.Is(err, jws.VerificationError()), `errors.Is(jws.VerificationError()) should return true`)
+			require.ErrorIs(t, err, jws.VerificationError(), `errors.Is(jws.VerificationError()) should return true (was %T)`, err)
 		})
 	})
 }
