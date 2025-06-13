@@ -70,6 +70,7 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 	var signature []byte
 	if signer2, err := jws.SignerFor(alg); err == nil {
 		// This type conversion WILL succeed, because we already checked
+		//nolint:forcetypeassert
 		v, err := signer2.(jws.RawSigner).SignRaw(key, combined)
 		if err != nil {
 			return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
