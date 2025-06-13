@@ -38,6 +38,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -614,7 +615,15 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("jwt.verifyFast: failed to decode signature: %w", err)
 	}
-	verifyBuf := append(append(hdr, '.'), payload...)
+
+	// Instead of appending, copy the data from hdr/payload
+	lvb := len(hdr) + 1 + len(payload)
+	verifyBuf := pool.ByteSlice().GetCapacity(lvb)
+	verifyBuf = verifyBuf[:lvb]
+	copy(verifyBuf, hdr)
+	verifyBuf[len(hdr)] = tokens.Period
+	copy(verifyBuf[len(hdr)+1:], payload)
+	defer pool.ByteSlice().Put(verifyBuf)
 
 	// Verify the signature
 	if verifier2, err := VerifierFor(alg); err == nil {
