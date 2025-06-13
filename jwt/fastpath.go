@@ -88,6 +88,9 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 		signature = v
 	}
 
-	serialized := jwsbb.JoinCompact(nil, hdr, payload, signature, base64.DefaultEncoder(), true)
+	serialized, err := jwsbb.JoinCompact(nil, hdr, payload, signature, base64.DefaultEncoder(), true)
+	if err != nil {
+		return nil, fmt.Errorf("jwt.signFast: failed to join compact: %w", err)
+	}
 	return serialized, nil
 }

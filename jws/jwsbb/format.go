@@ -46,10 +46,14 @@ func AppendSignature(buf, signature []byte, encoder base64.Encoder) []byte {
 
 // JoinCompact combines the header, payload, and signature into a single byte slice,
 // using the specified base64.Encoder to encode the components.
-func JoinCompact(buf, hdr, payload, signature []byte, encoder base64.Encoder, encodePayload bool) []byte {
-	l := len(hdr) + len(payload) + len(signature) + 2
-	if cap(buf) < l {
-		buf = make([]byte, 0, l)
+func JoinCompact(buf, hdr, payload, signature []byte, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
+	const MaxBufferSize = 1 << 30 // 1 GB
+	totalSize := len(hdr) + len(payload) + len(signature) + 2
+	if totalSize > MaxBufferSize {
+		return nil, errors.New("input sizes exceed maximum allowable buffer size")
+	}
+	if cap(buf) < totalSize {
+		buf = make([]byte, 0, totalSize)
 	}
 	buf = buf[:0]
 	buf = encoder.AppendEncode(buf, hdr)
@@ -62,7 +66,7 @@ func JoinCompact(buf, hdr, payload, signature []byte, encoder base64.Encoder, en
 	buf = append(buf, tokens.Period)
 	buf = encoder.AppendEncode(buf, signature)
 
-	return buf
+	return buf, nil
 }
 
 var compactDelim = []byte{tokens.Period}
