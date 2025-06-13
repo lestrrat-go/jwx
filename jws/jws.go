@@ -148,7 +148,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 
 	lsigner := len(sc.sigbuilders)
 	if lsigner == 0 {
-		return nil, signerr(`no signers available. Specify an alogirthm and a key using jws.WithKey()`)
+		return nil, signerr(`no signers available. Specify an algorithm and a key using jws.WithKey()`)
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when
