@@ -25,30 +25,6 @@ type Signer[K any] interface {
 	Sign(key K, payload []byte) ([]byte, error)
 }
 
-// Sign takes the basic compnents of a JWS (payload, header, and key), creates a
-// combined buffer to be used to generate a signature, and then calls the
-// `signer` to generate the signature.
-//
-// It's a low-level function that does not perform any validation of the input parameters,
-// so callers need to ensure that the parameters are valid before calling this function.
-//
-// Users who want to provide a custom signing implementation should implement the `Signer` interface.
-// and plug it into this function.
-func Sign[K any](key K, payload, hdr []byte, signer Signer[K], encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	buf := pool.ByteSlice().GetCapacity(len(payload) + len(hdr) + 1)
-
-	buf = encoder.AppendEncode(buf, hdr)
-	buf = append(buf, tokens.Period)
-	if encodePayload {
-		buf = encoder.AppendEncode(buf, payload)
-	} else {
-		buf = append(buf, payload...)
-	}
-
-	defer pool.ByteSlice().Put(buf)
-	return signer.Sign(key, buf)
-}
-
 type Verifier[K any] interface {
 	Verify(key K, buf []byte, signature []byte) error
 }

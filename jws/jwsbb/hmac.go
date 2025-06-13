@@ -41,13 +41,9 @@ func (s HMACSigner) Sign(key, payload []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// SignHMAC generates a single signature for the given payload and header
+// SignHMAC generates a single signature for the given payload
 // using the specified hash function and key.
-func SignHMAC(key, payload, hdr []byte, hfunc func() hash.Hash, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	return Sign[[]byte](key, payload, hdr, NewHMACSigner(hfunc), encoder, encodePayload)
-}
-
-func SignHMACRaw(key, raw []byte, hfunc func() hash.Hash) ([]byte, error) {
+func SignHMAC(key, raw []byte, hfunc func() hash.Hash) ([]byte, error) {
 	s := NewHMACSigner(hfunc)
 	return s.Sign(key, raw)
 }

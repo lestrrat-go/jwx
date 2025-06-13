@@ -92,14 +92,14 @@ func (s rsasigner) Sign(key any, raw []byte) ([]byte, error) {
 			rsaopts := jwsbb.RSAPSSOptions(s.hash)
 			options = &rsaopts
 		}
-		return jwsbb.SignCryptoSignerRaw(cs, raw, s.hash, options)
+		return jwsbb.SignCryptoSigner(cs, raw, s.hash, options)
 	}
 
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
 		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
 	}
-	return jwsbb.SignRSARaw(privkey, raw, s.hash, s.pss)
+	return jwsbb.SignRSA(privkey, raw, s.hash, s.pss)
 }
 
 type rsaverifier struct {

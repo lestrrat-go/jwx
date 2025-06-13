@@ -95,30 +95,13 @@ func NewECDSASigner(h crypto.Hash) ECDSASigner {
 	}
 }
 
-func SignECDSA(key *ecdsa.PrivateKey, payload, hdr []byte, h crypto.Hash, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	return Sign[*ecdsa.PrivateKey](key, payload, hdr, NewECDSASigner(h), encoder, encodePayload)
-}
-
-func SignECDSARaw(key *ecdsa.PrivateKey, raw []byte, h crypto.Hash) ([]byte, error) {
+func SignECDSA(key *ecdsa.PrivateKey, raw []byte, h crypto.Hash) ([]byte, error) {
 	s := NewECDSASigner(h)
 	return s.Sign(key, raw)
 }
 
-func SignECDSACryptoSignerRaw(signer crypto.Signer, raw []byte, h crypto.Hash) ([]byte, error) {
-	signed, err := SignCryptoSignerRaw(signer, raw, h, h)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to sign payload using crypto.Signer: %w`, err)
-	}
-
-	return signECDSACryptoSigner(signer, signed)
-}
-
-func SignECDSACryptoSigner(signer crypto.Signer, payload, hdr []byte, h crypto.Hash, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	// Because crypto/ecdsa.PrivateKey's crypto.Signer interface behaves differently
-	// than the ecdsa.Sign function (it returns a ASN.1/DER encoded signature), we
-	// need to handle the signing process manually.
-	// (i.e. we can't just pass it to SignCryptoSigner() as we do with RSA keys)
-	signed, err := SignCryptoSigner(signer, payload, hdr, h, h, encoder, encodePayload)
+func SignECDSACryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash) ([]byte, error) {
+	signed, err := SignCryptoSigner(signer, raw, h, h)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload using crypto.Signer: %w`, err)
 	}

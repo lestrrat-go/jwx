@@ -76,12 +76,6 @@ func (CirclEdDSASigner) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA()
 }
 
-type CirclEdDSASignerAdapter struct{}
-
-func (CirclEdDSASignerAdapter) Sign(key ed25519.PrivateKey, payload []byte) ([]byte, error) {
-	return ed25519.Sign(key, payload), nil
-}
-
 // Sign implements the jws.Signer2 interface for Circl's EdDSA signer.
 //
 // Signer2 is a relatively low-level API. It receives multiple parameters because of this.
@@ -100,14 +94,13 @@ func (CirclEdDSASignerAdapter) Sign(key ed25519.PrivateKey, payload []byte) ([]b
 //
 // If you need to construct the buffer yourself, you can do so by using the
 // jwsbb.SignBuffer() function in combination with the jwsbb.SignRaw() function.
-func (CirclEdDSASigner) Sign(payload []byte, protected []byte, encoder jws.Base64Encoder, encodePayload bool, key any) ([]byte, error) {
+func (CirclEdDSASigner) Sign(key any, payload []byte) ([]byte, error) {
 	fmt.Println("Custom signer called")
 	privkey, ok := key.(ed25519.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf(`jws.CirclECDSASignerVerifier: invalid key type %T. ed25519.PrivateKey is required`, key)
+		return nil, fmt.Errorf(`jws.CirclEdDSASigner: invalid key type %T. ed25519.PrivateKey is required`, key)
 	}
-
-	return jwsbb.Sign(privkey, payload, protected, CirclEdDSASignerAdapter{}, encoder, encodePayload)
+	return ed25519.Sign(privkey, payload), nil
 }
 
 type CirclEdDSAVerifier struct{}

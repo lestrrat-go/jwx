@@ -61,7 +61,7 @@ func (s eddsasigner) Sign(key any, raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
 	}
 
-	return jwsbb.SignCryptoSignerRaw(signer, raw, crypto.Hash(0), crypto.Hash(0))
+	return jwsbb.SignCryptoSigner(signer, raw, crypto.Hash(0), crypto.Hash(0))
 }
 
 type eddsaverifier struct {

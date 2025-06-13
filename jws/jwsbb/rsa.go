@@ -55,11 +55,7 @@ func (s RSASigner) Sign(key *rsa.PrivateKey, payload []byte) ([]byte, error) {
 	return cryptosign(key, payload, s.h, opts)
 }
 
-func SignRSA(key *rsa.PrivateKey, payload, hdr []byte, h crypto.Hash, pss bool, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	return Sign[*rsa.PrivateKey](key, payload, hdr, RSASigner{h: h, pss: pss}, encoder, encodePayload)
-}
-
-func SignRSARaw(key *rsa.PrivateKey, raw []byte, h crypto.Hash, pss bool) ([]byte, error) {
+func SignRSA(key *rsa.PrivateKey, raw []byte, h crypto.Hash, pss bool) ([]byte, error) {
 	s := NewRSASigner(h, pss)
 	return s.Sign(key, raw)
 }

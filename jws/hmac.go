@@ -69,7 +69,7 @@ func (s hmacsigner) Sign(key any, raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf(`jws.HMACSigner: %w`, err)
 	}
 
-	signature, err := jwsbb.SignHMACRaw(hmackey, raw, s.hfunc)
+	signature, err := jwsbb.SignHMAC(hmackey, raw, s.hfunc)
 	if err != nil {
 		return nil, fmt.Errorf(`jws.HMACSigner: failed to generate signature: %w`, err)
 	}

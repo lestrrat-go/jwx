@@ -79,9 +79,9 @@ func (es ecdsasigner) Sign(key any, raw []byte) ([]byte, error) {
 		return nil, fmt.Errorf(`jws.ECDSASigner: %w`, err)
 	}
 	if isCryptoSigner {
-		return jwsbb.SignECDSACryptoSignerRaw(cs, raw, es.hash)
+		return jwsbb.SignECDSACryptoSigner(cs, raw, es.hash)
 	}
-	return jwsbb.SignECDSARaw(privkey, raw, es.hash)
+	return jwsbb.SignECDSA(privkey, raw, es.hash)
 }
 
 type ecdsaverifier struct {

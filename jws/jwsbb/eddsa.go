@@ -15,11 +15,7 @@ func (s EdDSASigner) Sign(key ed25519.PrivateKey, payload []byte) ([]byte, error
 	return ed25519.Sign(key, payload), nil
 }
 
-func SignEdDSA(key ed25519.PrivateKey, payload, hdr []byte, encoder base64.Encoder, encodePayload bool) ([]byte, error) {
-	return Sign[ed25519.PrivateKey](key, payload, hdr, EdDSASigner{}, encoder, encodePayload)
-}
-
-func SignEdDSARaw(key ed25519.PrivateKey, raw []byte) ([]byte, error) {
+func SignEdDSA(key ed25519.PrivateKey, raw []byte) ([]byte, error) {
 	return EdDSASigner{}.Sign(key, raw)
 }
 
