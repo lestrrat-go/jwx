@@ -4,6 +4,33 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.6 13 Jun 2025
+  * This release contains various performance improvements all over the code.
+    No, this time for real. In particular, the most common case for signing
+    a JWT with a key is approx 70% more efficient based on the number of allocations.
+
+    Please read the entry for the (retracted) v3.0.4 for what else I have to
+    say about performance improvements
+
+  * [jwt] Added fast-path for token signing and verification. The fast path
+    is triggered if you only pass `jwt.Sign()` and `jwt.Parse()` one options each
+    (`jwt.WithKey()`), with no suboptions.
+
+  * [jws] Major refactoring around basic operations:
+
+    * How to work with Signer/Verifier have completely changed. Please take
+      a look at examples/jws_custom_signer_verifier_example_test.go for how
+      to do it the new way. The old way still works, but it WILL be removed
+      when v4 arrives.
+    * Related to the above, old code has been moved to `jws/legacy`.
+
+    * A new package `jws/jwsbb` has been added. `bb` stands for building blocks.
+      This package separates out the low-level JWS operations into its own
+      package. So if you are looking for just the signing of a payload with
+      a key, this is it.
+
+      `jws/jwsbb` is currently considered to be EXPERIMENTAL.
+
 v3.0.5 11 Jun 2025
   * Retract v3.0.4
   * Code for v3.0.3 is the same as v3.0.3
