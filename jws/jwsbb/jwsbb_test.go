@@ -41,11 +41,11 @@ func TestHMAC(t *testing.T) {
 			payload := []byte("hello")
 			key := []byte("secretkey")
 			header := []byte(sampleHeader)
-		signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
-		sig, err := jwsbb.SignHMAC(key, signBuffer, tc.hfunc)
-		require.NoError(t, err, "SignHMAC should not return error")
-		require.NoError(t, jwsbb.VerifyHMAC(key, payload, header, sig, tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should succeed for a valid signature")
-		require.Error(t, jwsbb.VerifyHMAC(key, payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should fail for an invalid signature")
+			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
+			sig, err := jwsbb.SignHMAC(key, signBuffer, tc.hfunc)
+			require.NoError(t, err, "SignHMAC should not return error")
+			require.NoError(t, jwsbb.VerifyHMAC(key, payload, header, sig, tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should succeed for a valid signature")
+			require.Error(t, jwsbb.VerifyHMAC(key, payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should fail for an invalid signature")
 		})
 	}
 
