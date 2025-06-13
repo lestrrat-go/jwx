@@ -88,12 +88,14 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 		}
 	}
 
+	combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, b64)
+
 	var sig Signature
 	sig.protected = protected
 	sig.headers = sb.public
 
 	if sb.signer2 != nil {
-		signature, err := sb.signer2.Sign(payload, hdrbuf, sc.encoder, b64, sb.key)
+		signature, err := sb.signer2.Sign(sb.key, combined)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to sign payload: %w`, err)
 		}
@@ -105,7 +107,6 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 		panic("can't get here")
 	}
 
-	combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, b64)
 	signature, err := sb.signer.Sign(combined, sb.key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload: %w`, err)

@@ -73,20 +73,7 @@ func ecdsaGetSignerKey(key any) (*ecdsa.PrivateKey, crypto.Signer, bool, error) 
 	return privkey, nil, false, nil
 }
 
-func (es ecdsasigner) Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error) {
-	privkey, cs, isCryptoSigner, err := ecdsaGetSignerKey(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.ECDSASigner: %w`, err)
-	}
-
-	if isCryptoSigner {
-		return jwsbb.SignECDSACryptoSigner(cs, payload, protected, es.hash, encoder, encodePayload)
-	}
-
-	return jwsbb.SignECDSA(privkey, payload, protected, es.hash, encoder, encodePayload)
-}
-
-func (es ecdsasigner) SignRaw(key any, raw []byte) ([]byte, error) {
+func (es ecdsasigner) Sign(key any, raw []byte) ([]byte, error) {
 	privkey, cs, isCryptoSigner, err := ecdsaGetSignerKey(key)
 	if err != nil {
 		return nil, fmt.Errorf(`jws.ECDSASigner: %w`, err)

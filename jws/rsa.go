@@ -81,29 +81,7 @@ func rsaGetSignerCryptoSignerKey(key any) (crypto.Signer, bool, error) {
 	return nil, false, nil
 }
 
-func (s rsasigner) Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error) {
-	cs, isCryptoSigner, err := rsaGetSignerCryptoSignerKey(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.RSASigner: %w`, err)
-	}
-	if isCryptoSigner {
-		var options crypto.SignerOpts = s.hash
-		if s.pss {
-			rsaopts := jwsbb.RSAPSSOptions(s.hash)
-			options = &rsaopts
-		}
-
-		return jwsbb.SignCryptoSigner(cs, payload, protected, s.hash, options, encoder, encodePayload)
-	}
-
-	var privkey *rsa.PrivateKey
-	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
-		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
-	}
-	return jwsbb.SignRSA(privkey, payload, protected, s.hash, s.pss, encoder, encodePayload)
-}
-
-func (s rsasigner) SignRaw(key any, raw []byte) ([]byte, error) {
+func (s rsasigner) Sign(key any, raw []byte) ([]byte, error) {
 	cs, isCryptoSigner, err := rsaGetSignerCryptoSignerKey(key)
 	if err != nil {
 		return nil, fmt.Errorf(`jws.RSASigner: %w`, err)

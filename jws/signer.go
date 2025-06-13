@@ -7,16 +7,18 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
+// Signer2 is an interface that represents a per-signature algorithm signing
+// operation.
 type Signer2 interface {
 	Algorithm() jwa.SignatureAlgorithm
-	Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
-}
 
-// RawSigner is an interface that allows you to sign raw data, presumably
-// the combined buffer containing the JWS header and payload. This interface
-// is only required for JWT signing taking the fastpath.
-type RawSigner interface {
-	SignRaw(key any, raw []byte) ([]byte, error)
+	// Sign takes a key and a payload, and returns the signature for the payload.
+	// The key type is restricted by the signature algorithm that this
+	// signer is associated with.
+	//
+	// (Note to users of legacy Signer interface: the method signature
+	// is different from the legacy Signer interface)
+	Sign(key any, payload []byte) ([]byte, error)
 }
 
 var muSigner2DB sync.RWMutex

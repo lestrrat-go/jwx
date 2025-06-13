@@ -13,12 +13,8 @@ import (
 )
 
 func signFastSupportedAlgorithm(alg jwa.SignatureAlgorithm) bool {
-	if signer2, err := jws.SignerFor(alg); err == nil {
-		// I'm sure this check can be done once at registration time.
-		// Revisit this later.
-		if _, ok := signer2.(jws.RawSigner); ok {
-			return true
-		}
+	if _, err := jws.SignerFor(alg); err == nil {
+		return true
 	}
 
 	_, err := jws.NewSigner(alg)
@@ -69,9 +65,7 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 
 	var signature []byte
 	if signer2, err := jws.SignerFor(alg); err == nil {
-		// This type conversion WILL succeed, because we already checked
-		//nolint:forcetypeassert
-		v, err := signer2.(jws.RawSigner).SignRaw(key, combined)
+		v, err := signer2.Sign(key, combined)
 		if err != nil {
 			return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
 		}

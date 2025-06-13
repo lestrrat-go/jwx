@@ -55,16 +55,7 @@ func eddsaGetSigner(key any) (crypto.Signer, error) {
 	return privkey, nil
 }
 
-func (s eddsasigner) Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key interface{}) ([]byte, error) {
-	signer, err := eddsaGetSigner(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
-	}
-
-	return jwsbb.SignCryptoSigner(signer, payload, protected, crypto.Hash(0), crypto.Hash(0), encoder, encodePayload)
-}
-
-func (s eddsasigner) SignRaw(key any, raw []byte) ([]byte, error) {
+func (s eddsasigner) Sign(key any, raw []byte) ([]byte, error) {
 	signer, err := eddsaGetSigner(key)
 	if err != nil {
 		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
