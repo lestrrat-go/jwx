@@ -41,8 +41,8 @@ func TestHMAC(t *testing.T) {
 			payload := []byte("hello")
 			key := []byte("secretkey")
 			header := []byte(sampleHeader)
-
-			sig, err := jwsbb.SignHMAC(key, payload, header, tc.hfunc, encoder, tc.encodePayload)
+			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
+			sig, err := jwsbb.SignHMAC(key, signBuffer, tc.hfunc)
 			require.NoError(t, err, "SignHMAC should not return error")
 			require.NoError(t, jwsbb.VerifyHMAC(key, payload, header, sig, tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyHMAC(key, payload, header, sig[:len(sig)-1], tc.hfunc, encoder, tc.encodePayload), "VerifyHMAC should fail for an invalid signature")
@@ -59,11 +59,13 @@ func TestHMAC(t *testing.T) {
 		hmacKeyDecoded, err := base64.DecodeString(hmacKey)
 		require.NoError(t, err, "decoding key should succeed")
 
-		signature, err := jwsbb.SignHMAC(hmacKeyDecoded, []byte(examplePayload), []byte(hdr), sha256.New, base64.DefaultEncoder(), true)
+		signBuffer := jwsbb.SignBuffer(nil, []byte(hdr), []byte(examplePayload), base64.DefaultEncoder(), true)
+		signature, err := jwsbb.SignHMAC(hmacKeyDecoded, signBuffer, sha256.New)
 		require.NoError(t, err, "SignHMAC should succeed")
 
 		buf := pool.ByteSlice().Get()
-		buf = jwsbb.Join(buf, []byte(hdr), []byte(examplePayload), signature, base64.DefaultEncoder())
+		buf, err = jwsbb.JoinCompact(buf, []byte(hdr), []byte(examplePayload), signature, base64.DefaultEncoder(), true)
+		require.NoError(t, err, "JoinCompact should succeed")
 		defer pool.ByteSlice().Put(buf)
 		require.Equal(t, expected, string(buf), "serialized output should match expected value")
 	})
@@ -99,7 +101,8 @@ func TestRSA(t *testing.T) {
 			payload := []byte("hello")
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignRSA(priv, payload, header, tc.h, tc.pss, encoding, tc.encodePayload)
+			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoding, tc.encodePayload)
+			sig, err := jwsbb.SignRSA(priv, signBuffer, tc.h, tc.pss)
 			require.NoError(t, err, "SignRSA should not return error")
 			require.NoError(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig, tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyRSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, tc.pss, encoding, tc.encodePayload), "VerifyRSA should fail for an invalid signature")
@@ -132,7 +135,8 @@ func TestECDSA(t *testing.T) {
 			// prepare placeholder header
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignECDSA(priv, payload, header, tc.h, encoder, tc.encodePayload)
+			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
+			sig, err := jwsbb.SignECDSA(priv, signBuffer, tc.h)
 			require.NoError(t, err, "SignECDSA should not return error")
 			require.NoError(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig, tc.h, encoder, tc.encodePayload), "VerifyECDSA should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyECDSA(&priv.PublicKey, payload, header, sig[:len(sig)-1], tc.h, encoder, tc.encodePayload), "VerifyECDSA should fail for an invalid signature")
@@ -159,7 +163,8 @@ func TestEdDSA(t *testing.T) {
 			// prepare placeholder header
 			header := []byte(sampleHeader)
 
-			sig, err := jwsbb.SignEdDSA(priv, payload, header, encoding, tc.encodePayload)
+			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoding, tc.encodePayload)
+			sig, err := jwsbb.SignEdDSA(priv, signBuffer)
 			require.NoError(t, err, "SignEdDSA should not return error")
 			require.NoError(t, jwsbb.VerifyEdDSA(pub, payload, header, sig, encoding, tc.encodePayload), "VerifyEdDSA should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyEdDSA(pub, payload, header, sig[:len(sig)-1], encoding, tc.encodePayload), "VerifyEdDSA should fail for an invalid signature")

@@ -165,7 +165,7 @@ func (s *KeyType) UnmarshalJSON(data []byte) error {
 	}
 	v, ok := LookupKeyType(name)
 	if !ok {
-		return fmt.Errorf(`unknown KeyType: %s`, name)
+		return fmt.Errorf(`unknown KeyType: %q`, name)
 	}
 	*s = v
 	return nil

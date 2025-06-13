@@ -11,46 +11,35 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
+var _ Signer2 = rsasigner{}
+var _ Verifier2 = rsaverifier{}
+
 func init() {
-	data := map[jwa.SignatureAlgorithm]struct {
-		Hash crypto.Hash
-		PSS  bool
-	}{
-		jwa.RS256(): {
-			Hash: crypto.SHA256,
-		},
-		jwa.RS384(): {
-			Hash: crypto.SHA384,
-		},
-		jwa.RS512(): {
-			Hash: crypto.SHA512,
-		},
-		jwa.PS256(): {
-			Hash: crypto.SHA256,
-			PSS:  true,
-		},
-		jwa.PS384(): {
-			Hash: crypto.SHA384,
-			PSS:  true,
-		},
-		jwa.PS512(): {
-			Hash: crypto.SHA512,
-			PSS:  true,
-		},
+	algs := []jwa.SignatureAlgorithm{
+		jwa.RS256(),
+		jwa.RS384(),
+		jwa.RS512(),
+		jwa.PS256(),
+		jwa.PS384(),
+		jwa.PS512(),
 	}
 
-	for alg, item := range data {
+	for _, alg := range algs {
+		h, pss, err := jwsbb.RSAHashFuncFor(alg.String())
+		if err != nil {
+			panic(fmt.Sprintf("jws.RSASigner: failed to get hash function for %s: %v", alg, err))
+		}
 		if err := RegisterSigner(alg, rsasigner{
 			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+			hash: h,
+			pss:  pss,
 		}); err != nil {
 			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
 		}
 		if err := RegisterVerifier(alg, rsaverifier{
 			alg:  alg,
-			hash: item.Hash,
-			pss:  item.PSS,
+			hash: h,
+			pss:  pss,
 		}); err != nil {
 			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 		}
@@ -67,27 +56,36 @@ func (s rsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
 
-func (s rsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error) {
-	signer, ok := key.(crypto.Signer)
-	if ok {
+func rsaGetSignerCryptoSignerKey(key any) (crypto.Signer, bool, error) {
+	cs, isCryptoSigner := key.(crypto.Signer)
+	if isCryptoSigner {
 		if !keytype.IsValidRSAKey(key) {
-			return nil, fmt.Errorf(`cannot use key of type %T to generate RSA based signatures`, key)
+			return nil, false, fmt.Errorf(`cannot use key of type %T`, key)
 		}
+		return cs, true, nil
+	}
+	return nil, false, nil
+}
 
+func (s rsasigner) Sign(key any, raw []byte) ([]byte, error) {
+	cs, isCryptoSigner, err := rsaGetSignerCryptoSignerKey(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.RSASigner: %w`, err)
+	}
+	if isCryptoSigner {
 		var options crypto.SignerOpts = s.hash
 		if s.pss {
 			rsaopts := jwsbb.RSAPSSOptions(s.hash)
 			options = &rsaopts
 		}
-
-		return jwsbb.SignCryptoSigner(signer, payload, protected, s.hash, options, encoder, encodePayload)
+		return jwsbb.SignCryptoSigner(cs, raw, s.hash, options)
 	}
 
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
 		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
 	}
-	return jwsbb.SignRSA(privkey, payload, protected, s.hash, s.pss, encoder, encodePayload)
+	return jwsbb.SignRSA(privkey, raw, s.hash, s.pss)
 }
 
 type rsaverifier struct {
