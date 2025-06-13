@@ -23,7 +23,8 @@ type verifyContext struct {
 	keyUsed         interface{}
 	validateKey     bool
 	encoder         Base64Encoder
-	ctx             context.Context
+	//nolint:containedctx
+	ctx context.Context
 }
 
 var verifyContextPool = pool.New[*verifyContext](allocVerifyContext, freeVerifyContext)
