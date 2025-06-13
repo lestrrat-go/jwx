@@ -11,6 +11,9 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
+var _ Signer2 = ecdsasigner{}
+var _ Verifier2 = ecdsaverifier{}
+
 func init() {
 	algs := map[jwa.SignatureAlgorithm]crypto.Hash{
 		jwa.ES256():  crypto.SHA256,
@@ -45,11 +48,11 @@ func (es ecdsasigner) Algorithm() jwa.SignatureAlgorithm {
 	return es.alg
 }
 
-func (es ecdsasigner) Do(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error) {
+func ecdsaGetSignerKey(key any) (*ecdsa.PrivateKey, crypto.Signer, bool, error) {
 	cs, isCryptoSigner := key.(crypto.Signer)
 	if isCryptoSigner {
 		if !keytype.IsValidECDSAKey(key) {
-			return nil, fmt.Errorf(`cannot use key of type %T to generate ECDSA based signatures`, key)
+			return nil, nil, false, fmt.Errorf(`cannot use key of type %T`, key)
 		}
 		switch key.(type) {
 		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
@@ -60,14 +63,25 @@ func (es ecdsasigner) Do(payload, protected []byte, encoder Base64Encoder, encod
 	}
 
 	if isCryptoSigner {
-		return jwsbb.SignECDSACryptoSigner(cs, payload, protected, es.hash, encoder, encodePayload)
+		return nil, cs, true, nil
 	}
 
 	var privkey *ecdsa.PrivateKey
 	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
-		return nil, fmt.Errorf(`jws.ECDSASigner: invalid key type %T. ecdsa.PrivateKey is required: %w`, key, err)
+		return nil, nil, false, fmt.Errorf(`invalid key type %T. ecdsa.PrivateKey is required: %w`, key, err)
 	}
-	return jwsbb.SignECDSA(privkey, payload, protected, es.hash, encoder, encodePayload)
+	return privkey, nil, false, nil
+}
+
+func (es ecdsasigner) Sign(key any, raw []byte) ([]byte, error) {
+	privkey, cs, isCryptoSigner, err := ecdsaGetSignerKey(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jws.ECDSASigner: %w`, err)
+	}
+	if isCryptoSigner {
+		return jwsbb.SignECDSACryptoSigner(cs, raw, es.hash)
+	}
+	return jwsbb.SignECDSA(privkey, raw, es.hash)
 }
 
 type ecdsaverifier struct {
@@ -79,11 +93,11 @@ func (ev ecdsaverifier) Algorithm() jwa.SignatureAlgorithm {
 	return ev.alg
 }
 
-func (ev ecdsaverifier) Do(payload, protected []byte, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
+func ecdsaGetVerifierKey(key any) (*ecdsa.PublicKey, crypto.Signer, bool, error) {
 	cs, isCryptoSigner := key.(crypto.Signer)
 	if isCryptoSigner {
 		if !keytype.IsValidECDSAKey(key) {
-			return fmt.Errorf(`cannot use key of type %T to verify ECDSA based signatures`, key)
+			return nil, nil, false, fmt.Errorf(`cannot use key of type %T`, key)
 		}
 		switch key.(type) {
 		case ecdsa.PublicKey, *ecdsa.PublicKey:
@@ -94,12 +108,24 @@ func (ev ecdsaverifier) Do(payload, protected []byte, signature []byte, encoder 
 	}
 
 	if isCryptoSigner {
-		return jwsbb.VerifyECDSACryptoSigner(cs, payload, protected, signature, ev.hash, encoder, encodePayload)
+		return nil, cs, true, nil
 	}
 
 	var pubkey *ecdsa.PublicKey
 	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
-		return fmt.Errorf(`jws.ECDSAVerifier: invalid key type %T. ecdsa.PublicKey is required: %w`, key, err)
+		return nil, nil, false, fmt.Errorf(`invalid key type %T. ecdsa.PublicKey is required: %w`, key, err)
+	}
+
+	return pubkey, nil, false, nil
+}
+
+func (ev ecdsaverifier) Do(payload, protected []byte, signature []byte, encoder Base64Encoder, encodePayload bool, key any) error {
+	pubkey, cs, isCryptoSigner, err := ecdsaGetVerifierKey(key)
+	if err != nil {
+		return fmt.Errorf(`jws.ECDSAVerifier: %w`, err)
+	}
+	if isCryptoSigner {
+		return jwsbb.VerifyECDSACryptoSigner(cs, payload, protected, signature, ev.hash, encoder, encodePayload)
 	}
 	return jwsbb.VerifyECDSA(pubkey, payload, protected, signature, ev.hash, encoder, encodePayload)
 }

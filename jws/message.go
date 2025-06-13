@@ -9,7 +9,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 func NewSignature() *Signature {
@@ -102,41 +101,73 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // The first return value is the raw signature in binary format.
 // The second return value s the full three-segment signature
 // (e.g. "eyXXXX.XXXXX.XXXX")
+//
+// This method is deprecated, and will be remove in a future release.
+// Signature objects in the future will only be used as containers,
+// and signing will be done using the `jws.Sign` function, or alternatively
+// you could use jwsbb package to craft the signature manually.
 func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
 	return s.sign2(payload, signer, key)
 }
 
 func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.SignatureAlgorithm }, key interface{}) ([]byte, []byte, error) {
-	hdrs, err := mergeHeaders(s.headers, s.protected)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
+	// Create a signatureBuilder to use the shared signing logic
+	sb := signatureBuilderPool.Get()
+	defer signatureBuilderPool.Put(sb)
+
+	sb.alg = signer.Algorithm()
+	sb.key = key
+	sb.protected = s.protected
+	sb.public = s.headers
+
+	// Set up the appropriate signer interface
+	switch typedSigner := signer.(type) {
+	case Signer2:
+		sb.signer2 = typedSigner
+	case Signer:
+		sb.signer = typedSigner
+	default:
+		return nil, nil, fmt.Errorf(`invalid signer type: %T`, signer)
 	}
 
-	if err := hdrs.Set(AlgorithmKey, signer.Algorithm()); err != nil {
-		return nil, nil, fmt.Errorf(`failed to set "alg": %w`, err)
-	}
+	// Create a minimal sign context
+	sc := signContextPool.Get()
+	defer signContextPool.Put(sc)
 
-	// If the key is a jwk.Key instance, obtain the raw key
-	if jwkKey, ok := key.(jwk.Key); ok {
-		// If we have a key ID specified by this jwk.Key, use that in the header
-		if kid, ok := jwkKey.KeyID(); ok && kid != "" {
-			if err := hdrs.Set(jwk.KeyIDKey, kid); err != nil {
-				return nil, nil, fmt.Errorf(`set key ID from jwk.Key: %w`, err)
-			}
-		}
-	}
-	hdrbuf, err := json.Marshal(hdrs)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
-	}
-
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
+	sc.detached = s.detached
 
 	encoder := s.encoder
 	if encoder == nil {
 		encoder = base64.DefaultEncoder()
 	}
+	sc.encoder = encoder
+
+	// Build the signature using signatureBuilder
+	sig, err := sb.Build(sc, payload)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to build signature: %w`, err)
+	}
+
+	// Copy the signature result back to this signature instance
+	s.signature = sig.signature
+	s.protected = sig.protected
+	s.headers = sig.headers
+
+	// Build the complete JWS token for the return value
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+
+	// Marshal the merged headers for the final output
+	hdrs, err := mergeHeaders(s.headers, s.protected)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
+	}
+
+	hdrbuf, err := json.Marshal(hdrs)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
+	}
+
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
 	buf.WriteByte(tokens.Period)
 
@@ -156,25 +187,7 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 		buf.Write(payload)
 	}
 
-	switch signer := signer.(type) {
-	case Signer2:
-		hdr, _ := json.Marshal(hdrs)
-		signature, err := signer.Do(payload, hdr, encoder, b64, key)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
-		}
-		s.signature = signature
-	case Signer:
-		signature, err := signer.Sign(buf.Bytes(), key)
-		if err != nil {
-			return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
-		}
-		s.signature = signature
-	default:
-		panic("can't get here")
-	}
-
-	// Detached payload, this should be removed from the end result
+	// Handle detached payload
 	if s.detached {
 		buf.Truncate(buf.Len() - plen)
 	}

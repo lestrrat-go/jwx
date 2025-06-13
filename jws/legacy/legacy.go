@@ -5,7 +5,9 @@
 // This package will be available until v3 is sunset, but it will be removed in v4
 package legacy
 
-import "github.com/lestrrat-go/jwx/v3/jwa"
+import (
+	"github.com/lestrrat-go/jwx/v3/jwa"
+)
 
 // Signer generates the signature for a given payload.
 // This is for legacy support only.
