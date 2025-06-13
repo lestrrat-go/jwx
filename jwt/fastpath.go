@@ -13,17 +13,16 @@ import (
 )
 
 func signFastSupportedAlgorithm(alg jwa.SignatureAlgorithm) bool {
-	switch alg {
-	case jwa.HS256(), jwa.HS384(), jwa.HS512(),
-		jwa.RS256(), jwa.RS384(), jwa.RS512(),
-		jwa.PS256(), jwa.PS384(), jwa.PS512(),
-		jwa.ES256(), jwa.ES384(), jwa.ES512(),
-		jwa.EdDSA(),
-		jwa.ES256K():
-		return true
-	default:
-		return false
+	if signer2, err := jws.SignerFor(alg); err == nil {
+		// I'm sure this check can be done once at registration time.
+		// Revisit this later.
+		if _, ok := signer2.(jws.RawSigner); ok {
+			return true
+		}
 	}
+
+	_, err := jws.NewSigner(alg)
+	return err == nil
 }
 
 // signFast reinvents the wheel a bit to avoid the overhead of
@@ -70,7 +69,8 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 
 	var signature []byte
 	if signer2, err := jws.SignerFor(alg); err == nil {
-		v, err := signer2.SignRaw(key, combined)
+		// This type conversion WILL succeed, because we already checked
+		v, err := signer2.(jws.RawSigner).SignRaw(key, combined)
 		if err != nil {
 			return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
 		}

@@ -17,12 +17,26 @@ func Example_jws_custom_signer_verifier() {
 	for _, useLegacy := range []bool{false, true} {
 		if useLegacy {
 			// Legacy signer/verifier registration. DO NOT USE THIS IN NEW CODE.
-			jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(LegacyNewCirclEdDSASigner))
-			jws.RegisterVerifier(jwa.EdDSA(), jws.VerifierFactoryFn(LegacyNewCirclEdDSAVerifier))
+			if err := jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(LegacyNewCirclEdDSASigner)); err != nil {
+				fmt.Printf(`failed to register legacy signer: %s`, err)
+				return
+			}
+
+			if err := jws.RegisterVerifier(jwa.EdDSA(), jws.VerifierFactoryFn(LegacyNewCirclEdDSAVerifier)); err != nil {
+				fmt.Printf(`failed to register legacy verifier: %s`, err)
+				return
+			}
 		} else {
 			// Newer way of registering a custom signer/verifier
-			jws.RegisterSigner(jwa.EdDSA(), CirclECDSASigner{})
-			jws.RegisterVerifier(jwa.EdDSA(), CirclECDSAVerifier{})
+			if err := jws.RegisterSigner(jwa.EdDSA(), CirclECDSASigner{}); err != nil {
+				fmt.Printf(`failed to register signer: %s`, err)
+				return
+			}
+
+			if err := jws.RegisterVerifier(jwa.EdDSA(), CirclECDSAVerifier{}); err != nil {
+				fmt.Printf(`failed to register verifier: %s`, err)
+				return
+			}
 		}
 
 		pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
@@ -83,7 +97,7 @@ func (CirclECDSASignerAdapter) Sign(key ed25519.PrivateKey, payload []byte) ([]b
 // tell jwsbb.Sign to construct the buffer and generate the signature using ed25519.Sign,
 // but since the function signatures do not match, we are providing an adapter
 // that implements the jwsbb.Signer interface.
-func (CirclECDSASigner) Do(payload []byte, protected []byte, encoder jws.Base64Encoder, encodePayload bool, key any) ([]byte, error) {
+func (CirclECDSASigner) Sign(payload []byte, protected []byte, encoder jws.Base64Encoder, encodePayload bool, key any) ([]byte, error) {
 	fmt.Println("Custom signer called")
 	privkey, ok := key.(ed25519.PrivateKey)
 	if !ok {

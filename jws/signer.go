@@ -10,6 +10,12 @@ import (
 type Signer2 interface {
 	Algorithm() jwa.SignatureAlgorithm
 	Sign(payload, protected []byte, encoder Base64Encoder, encodePayload bool, key any) ([]byte, error)
+}
+
+// RawSigner is an interface that allows you to sign raw data, presumably
+// the combined buffer containing the JWS header and payload. This interface
+// is only required for JWT signing taking the fastpath.
+type RawSigner interface {
 	SignRaw(key any, raw []byte) ([]byte, error)
 }
 
