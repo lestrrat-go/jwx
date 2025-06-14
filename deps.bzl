@@ -93,6 +93,13 @@ def go_dependencies():
         version = "v1.10.0",
     )
     go_repository(
+        name = "com_github_valyala_fastjson",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/valyala/fastjson",
+        sum = "h1:uAUNq9Z6ymTgGhcm0UynUAB6tlbakBrz6CQFax3BXVQ=",
+        version = "v1.6.4",
+    )
+    go_repository(
         name = "in_gopkg_check_v1",
         build_file_proto_mode = "disable_global",
         importpath = "gopkg.in/check.v1",
