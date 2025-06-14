@@ -13,6 +13,8 @@ import (
 //
 // As of this writing, HeaderParser cannot be used from concurrent goroutines.
 // You will need to create a new instance for each goroutine that needs to parse a JWS header.
+// Also, in general values obtained from this object should only be used
+// while the Header object is still in scope.
 //
 // This type is experimental and may change or be removed in the future.
 type Header interface {
@@ -30,6 +32,8 @@ type header struct {
 func (h *header) jwsbbHeader() {}
 
 // HeaderParseCompact parses a JWS header from a compact serialization format.
+// You will need to call HeaderGet* functions to extract the values from the header.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderParseCompact(buf []byte) Header {
 	decoded, err := base64.Decode(buf)
@@ -115,6 +119,9 @@ func HeaderGetInt64(h Header, key string) (int64, error) {
 }
 
 // HeaderGetStringBytes returns the byte slice value for the given key from the JWS header.
+// Because of limitations of the underlying library, you cannot use the return value
+// of this function after the parser is garbage collected.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetStringBytes(h Header, key string) ([]byte, error) {
 	//nolint:forcetypeassert
