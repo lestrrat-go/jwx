@@ -6,6 +6,7 @@ go_library(
         "big_int.go",
         "byte_slice.go",
         "bytes_buffer.go",
+        "error_slice.go",
         "key_to_error_map.go",
         "pool.go",
     ],
