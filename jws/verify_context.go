@@ -172,6 +172,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 				return msg.payload, nil
 			}
 		}
+		errs = append(errs, verifyerr(`signature #%d could not be verified with any of the keys`, idx+1))
 	}
 	return nil, verifyerr(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }
