@@ -131,7 +131,10 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		pool.ByteSlice().Put(verifyBuf)
 	}()
 
-	var errs []error
+	errs := pool.ErrorSlice().Get()
+	defer func() {
+		pool.ErrorSlice().Put(errs)
+	}()
 	for idx, sig := range msg.signatures {
 		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
