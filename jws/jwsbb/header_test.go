@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -121,7 +120,6 @@ func TestHeader(t *testing.T) {
 			v, err := jwsbb.JoinCompact(nil, []byte(headerJSON), payload, signature, encoder, true)
 			require.NoError(t, err, "JoinCompact should not error")
 			signed = v
-			fmt.Printf("signed = %s\n", signed)
 		}
 
 		{
