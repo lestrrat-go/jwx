@@ -56,6 +56,18 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
+type defaultSigner struct {
+	alg jwa.SignatureAlgorithm
+}
+
+func (s defaultSigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
+}
+
+func (s defaultSigner) Sign(key any, payload []byte) ([]byte, error) {
+	return jwsbb.Sign(key, s.alg.String(), payload)
+}
+
 // SignerFor returns the registered signer for the given algorithm.
 //
 // This function does not support the legacy signers.

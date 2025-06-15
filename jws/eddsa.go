@@ -11,28 +11,20 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-var _ Signer2 = eddsasigner{}
 var _ Verifier2 = eddsaverifier{}
 
 func init() {
-	if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
-		alg: jwa.EdDSA(),
-	}); err != nil {
-		panic(fmt.Sprintf("RegisterSigner failed: %v", err))
-	}
+	/*
+		if err := RegisterSigner(jwa.EdDSA(), eddsasigner{
+			alg: jwa.EdDSA(),
+		}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}*/
 	if err := RegisterVerifier(jwa.EdDSA(), eddsaverifier{
 		alg: jwa.EdDSA(),
 	}); err != nil {
 		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 	}
-}
-
-type eddsasigner struct {
-	alg jwa.SignatureAlgorithm
-}
-
-func (s eddsasigner) Algorithm() jwa.SignatureAlgorithm {
-	return s.alg
 }
 
 func eddsaGetSigner(key any) (crypto.Signer, error) {
@@ -53,15 +45,6 @@ func eddsaGetSigner(key any) (crypto.Signer, error) {
 		return nil, fmt.Errorf(`failed to retrieve ed25519.PrivateKey out of %T: %w`, key, err)
 	}
 	return privkey, nil
-}
-
-func (s eddsasigner) Sign(key any, raw []byte) ([]byte, error) {
-	signer, err := eddsaGetSigner(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
-	}
-
-	return jwsbb.SignCryptoSigner(signer, raw, crypto.Hash(0), crypto.Hash(0))
 }
 
 type eddsaverifier struct {

@@ -25,12 +25,13 @@ func init() {
 			panic(fmt.Sprintf("jws.HMACSigner: failed to get hash function for %s: %v", alg, err))
 		}
 
-		if err := RegisterSigner(alg, hmacsigner{
-			alg:   alg,
-			hfunc: h,
-		}); err != nil {
-			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
-		}
+		/*
+			if err := RegisterSigner(alg, hmacsigner{
+				alg:   alg,
+				hfunc: h,
+			}); err != nil {
+				panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+			}*/
 		if err := RegisterVerifier(alg, hmacverifier{
 			alg:   alg,
 			hfunc: h,

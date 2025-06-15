@@ -87,19 +87,12 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if err == nil {
 				sb.signer2 = s2
 			} else {
-				muSigner.Lock()
-				s, ok := signers[alg]
-				if !ok {
-					v, err := NewSigner(alg)
-					if err != nil {
-						muSigner.Unlock()
-						return fmt.Errorf(`failed to create payload signer: %w`, err)
-					}
-					signers[alg] = v
-					s = v
+				s1, err := legacySignerFor(alg)
+				if err != nil {
+					sb.signer2 = defaultSigner{alg: alg}
+				} else {
+					sb.signer = s1
 				}
-				muSigner.Unlock()
-				sb.signer = s
 			}
 
 			sc.sigbuilders = append(sc.sigbuilders, sb)

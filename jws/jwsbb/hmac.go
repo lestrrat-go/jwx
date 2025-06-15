@@ -6,6 +6,8 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 )
 
 // HMACHashFuncFor returns the appropriate hash function for the given HMAC algorithm.
@@ -22,6 +24,17 @@ func HMACHashFuncFor(alg string) (func() hash.Hash, error) {
 	default:
 		return nil, fmt.Errorf("unsupported HMAC algorithm %s", alg)
 	}
+}
+
+func toHMACKey(dst *[]byte, key any) error {
+	if err := keyconv.ByteSliceKey(dst, key); err != nil {
+		return fmt.Errorf(`jws.toHMACKey: invalid key type %T. []byte is required: %w`, key, err)
+	}
+
+	if len(*dst) == 0 {
+		return fmt.Errorf(`jws.toHMACKey: missing key while signing payload`)
+	}
+	return nil
 }
 
 // SignHMAC generates an HMAC signature for the given payload using the specified hash function and key.
