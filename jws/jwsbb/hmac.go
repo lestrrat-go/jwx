@@ -24,58 +24,26 @@ func HMACHashFuncFor(alg string) (func() hash.Hash, error) {
 	}
 }
 
-// hmacSigner implements HMAC signature generation using the specified hash function.
-type hmacSigner struct {
-	hfunc func() hash.Hash
-}
-
-// newHMACSigner creates a new HMAC signer with the specified hash function.
-func newHMACSigner(hfunc func() hash.Hash) hmacSigner {
-	return hmacSigner{
-		hfunc: hfunc,
-	}
-}
-
-func (s hmacSigner) Sign(key, payload []byte) ([]byte, error) {
-	h := hmac.New(s.hfunc, key)
+// SignHMAC generates an HMAC signature for the given payload using the specified hash function and key.
+// The raw parameter should be the pre-computed signing input (typically header.payload).
+func SignHMAC(key, payload []byte, hfunc func() hash.Hash) ([]byte, error) {
+	h := hmac.New(hfunc, key)
 	if _, err := h.Write(payload); err != nil {
 		return nil, fmt.Errorf(`failed to write payload using hmac: %w`, err)
 	}
 	return h.Sum(nil), nil
 }
 
-// SignHMAC generates an HMAC signature for the given payload using the specified hash function and key.
-// The raw parameter should be the pre-computed signing input (typically header.payload).
-func SignHMAC(key, raw []byte, hfunc func() hash.Hash) ([]byte, error) {
-	s := newHMACSigner(hfunc)
-	return s.Sign(key, raw)
-}
-
-// hmacVerifier implements HMAC signature verification using the specified hash function.
-type hmacVerifier struct {
-	hfunc func() hash.Hash
-}
-
-// newHMACVerifier creates a new HMAC verifier with the specified hash function.
-func newHMACVerifier(hfunc func() hash.Hash) hmacVerifier {
-	return hmacVerifier{
-		hfunc: hfunc,
-	}
-}
-
-func (v hmacVerifier) Verify(key, buf, signature []byte) error {
-	expected := hmac.New(v.hfunc, key)
-	expected.Write(buf)
-	if !hmac.Equal(signature, expected.Sum(nil)) {
-		return fmt.Errorf("invalid HMAC signature")
-	}
-	return nil
-}
-
 // VerifyHMAC verifies an HMAC signature for the given payload.
 // This function verifies the signature using the specified key and hash function.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
 func VerifyHMAC(key, payload, signature []byte, hfunc func() hash.Hash) error {
-	v := newHMACVerifier(hfunc)
-	return v.Verify(key, payload, signature)
+	expected, err := SignHMAC(key, payload, hfunc)
+	if err != nil {
+		return fmt.Errorf("failed to sign payload for verification: %w", err)
+	}
+	if !hmac.Equal(signature, expected) {
+		return fmt.Errorf("invalid HMAC signature")
+	}
+	return nil
 }

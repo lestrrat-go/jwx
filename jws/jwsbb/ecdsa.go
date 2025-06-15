@@ -48,29 +48,6 @@ func UnpackECDSASignature(signature []byte, pubkey *ecdsa.PublicKey, r, s *big.I
 	return nil
 }
 
-// ecdsaSigner implements ECDSA signature generation using the specified hash algorithm.
-type ecdsaSigner struct {
-	h crypto.Hash
-}
-
-func (es ecdsaSigner) Sign(key *ecdsa.PrivateKey, payload []byte) ([]byte, error) {
-	hh := es.h.New()
-	if _, err := hh.Write(payload); err != nil {
-		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
-	}
-	digest := hh.Sum(nil)
-
-	// Here be dragons: depending on if tcrypto.Signer
-
-	// Sign and get r, s values
-	r, s, err := ecdsa.Sign(rand.Reader, key, digest)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
-	}
-
-	return PackECDSASignature(r, s, key.Curve.Params().BitSize)
-}
-
 // PackECDSASignature packs the r and s values from an ECDSA signature into a JWS-format byte slice.
 // The output format follows RFC 7515: r||s as fixed-length byte arrays.
 func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error) {
@@ -92,18 +69,22 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 	return append(rBytesPadded, sBytesPadded...), nil
 }
 
-// newECDSASigner creates a new ECDSA signer with the specified hash algorithm.
-func newECDSASigner(h crypto.Hash) ecdsaSigner {
-	return ecdsaSigner{
-		h: h,
-	}
-}
-
 // SignECDSA generates an ECDSA signature for the given payload using the specified private key and hash.
 // The raw parameter should be the pre-computed signing input (typically header.payload).
-func SignECDSA(key *ecdsa.PrivateKey, raw []byte, h crypto.Hash) ([]byte, error) {
-	s := newECDSASigner(h)
-	return s.Sign(key, raw)
+func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash) ([]byte, error) {
+	hh := h.New()
+	if _, err := hh.Write(payload); err != nil {
+		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
+	}
+	digest := hh.Sum(nil)
+
+	// Sign and get r, s values
+	r, s, err := ecdsa.Sign(rand.Reader, key, digest)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
+	}
+
+	return PackECDSASignature(r, s, key.Curve.Params().BitSize)
 }
 
 // SignECDSACryptoSigner generates an ECDSA signature using a crypto.Signer interface.
@@ -134,27 +115,6 @@ func signECDSACryptoSigner(signer crypto.Signer, signed []byte) ([]byte, error) 
 	return PackECDSASignature(&r, &s, curveBits)
 }
 
-// ecdsaVerifier implements ECDSA signature verification using the specified hash algorithm.
-type ecdsaVerifier struct {
-	h crypto.Hash
-}
-
-// newECDSAVerifier creates a new ECDSA verifier with the specified hash algorithm.
-func newECDSAVerifier(h crypto.Hash) ecdsaVerifier {
-	return ecdsaVerifier{
-		h: h,
-	}
-}
-
-func (v ecdsaVerifier) Verify(key *ecdsa.PublicKey, buf []byte, signature []byte) error {
-	var r, s big.Int
-	if err := UnpackECDSASignature(signature, key, &r, &s); err != nil {
-		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ECDSA signature: %w", err)
-	}
-
-	return ecdsaVerify(key, buf, v.h, &r, &s)
-}
-
 func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int) error {
 	hasher := h.New()
 	hasher.Write(buf)
@@ -169,16 +129,19 @@ func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int)
 // This function verifies the signature using the specified public key and hash algorithm.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
 func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash) error {
-	v := newECDSAVerifier(h)
-	return v.Verify(key, payload, signature)
+	var r, s big.Int
+	if err := UnpackECDSASignature(signature, key, &r, &s); err != nil {
+		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ECDSA signature: %w", err)
+	}
+
+	return ecdsaVerify(key, payload, h, &r, &s)
 }
 
-// ecdsaCryptoSignerVerifier implements ECDSA signature verification for crypto.Signer interfaces.
-type ecdsaCryptoSignerVerifier struct {
-	h crypto.Hash
-}
-
-func (v ecdsaCryptoSignerVerifier) Verify(signer crypto.Signer, buf []byte, signature []byte) error {
+// VerifyECDSACryptoSigner verifies an ECDSA signature for crypto.Signer implementations.
+// This function is useful for verifying signatures created by hardware security modules
+// or other implementations of the crypto.Signer interface.
+// The payload parameter should be the pre-computed signing input (typically header.payload).
+func VerifyECDSACryptoSigner(signer crypto.Signer, payload, signature []byte, h crypto.Hash) error {
 	var pubkey *ecdsa.PublicKey
 	switch cpub := signer.Public(); cpub := cpub.(type) {
 	case ecdsa.PublicKey:
@@ -194,14 +157,5 @@ func (v ecdsaCryptoSignerVerifier) Verify(signer crypto.Signer, buf []byte, sign
 		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ASN.1 encoded ECDSA signature: %w", err)
 	}
 
-	return ecdsaVerify(pubkey, buf, v.h, &r, &s)
-}
-
-// VerifyECDSACryptoSigner verifies an ECDSA signature for crypto.Signer implementations.
-// This function is useful for verifying signatures created by hardware security modules
-// or other implementations of the crypto.Signer interface.
-// The payload parameter should be the pre-computed signing input (typically header.payload).
-func VerifyECDSACryptoSigner(signer crypto.Signer, payload, signature []byte, h crypto.Hash) error {
-	v := ecdsaCryptoSignerVerifier{h: h}
-	return v.Verify(signer, payload, signature)
+	return ecdsaVerify(pubkey, payload, h, &r, &s)
 }
