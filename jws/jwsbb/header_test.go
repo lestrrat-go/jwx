@@ -16,6 +16,7 @@ func TestHeader(t *testing.T) {
 
 	// Test basic header parsing
 	t.Run("HeaderParseCompact", func(t *testing.T) {
+		t.Parallel()
 		// Base64URL encoded {"alg":"HS256","typ":"JWT","kid":"test-key"}
 		headerJSON := `{"alg":"HS256","typ":"JWT","kid":"test-key"}`
 		headerB64 := base64.DefaultEncoder().EncodeToString([]byte(headerJSON))
@@ -43,6 +44,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("HeaderGetBool", func(t *testing.T) {
+		t.Parallel()
 		headerJSON := `{"debug":true,"enabled":false}`
 		headerB64 := base64.DefaultEncoder().EncodeToString([]byte(headerJSON))
 		header := jwsbb.HeaderParseCompact([]byte(headerB64))
@@ -57,6 +59,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("HeaderGetInt", func(t *testing.T) {
+		t.Parallel()
 		headerJSON := `{"count":42,"negative":-10}`
 		headerB64 := base64.DefaultEncoder().EncodeToString([]byte(headerJSON))
 
@@ -72,6 +75,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("HeaderGetFloat64", func(t *testing.T) {
+		t.Parallel()
 		headerJSON := `{"pi":3.14159,"ratio":2.5}`
 		headerB64 := base64.DefaultEncoder().EncodeToString([]byte(headerJSON))
 
@@ -87,6 +91,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("HeaderWithKidLookupAndVerification", func(t *testing.T) {
+		t.Parallel()
 		// Generate RSA key pairs for signing
 		rsaKey1, err := rsa.GenerateKey(rand.Reader, 2048)
 		require.NoError(t, err, "RSA key generation should not error")
@@ -154,6 +159,7 @@ func TestHeader(t *testing.T) {
 	})
 
 	t.Run("ErrorHandling", func(t *testing.T) {
+		t.Parallel()
 		// Test invalid JSON
 		invalidHeader := jwsbb.HeaderParseCompact([]byte("invalid-json"))
 
