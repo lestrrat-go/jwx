@@ -1,7 +1,6 @@
 package jws
 
 import (
-	"crypto/hmac"
 	"fmt"
 	"hash"
 
@@ -33,10 +32,8 @@ func init() {
 			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
 		}
 		if err := RegisterVerifier(alg, hmacverifier{
-			signer: hmacsigner{
-				alg:   alg,
-				hfunc: h,
-			},
+			alg:   alg,
+			hfunc: h,
 		}); err != nil {
 			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 		}
@@ -77,21 +74,19 @@ func (s hmacsigner) Sign(key any, raw []byte) ([]byte, error) {
 }
 
 type hmacverifier struct {
-	signer hmacsigner
+	alg   jwa.SignatureAlgorithm
+	hfunc func() hash.Hash
 }
 
 func (v hmacverifier) Algorithm() jwa.SignatureAlgorithm {
-	return v.signer.Algorithm()
+	return v.alg
 }
 
 func (v hmacverifier) Verify(key any, payload, signature []byte) error {
-	expected, err := v.signer.Sign(key, payload)
-	if err != nil {
-		return fmt.Errorf(`jws.HMACVerifier: failed to generated signature: %w`, err)
+	var hmackey []byte
+	if err := toHMACKey(&hmackey, key); err != nil {
+		return fmt.Errorf(`jws.HMACVerifier: %w`, err)
 	}
 
-	if !hmac.Equal(signature, expected) {
-		return fmt.Errorf(`jws.HMACVerifier: failed to match hmac signature`)
-	}
-	return nil
+	return jwsbb.VerifyHMAC(hmackey, payload, signature, v.hfunc)
 }
