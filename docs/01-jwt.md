@@ -593,7 +593,7 @@ func Example_jwt_parse_with_key_provider_use_token() {
 func Example_jwt_parse_with_key_provider() {
   // Pretend that this is a storage somewhere (maybe a database) that maps
   // a signature algorithm to a key
-  store := make(map[jwa.KeyAlgorithm]interface{})
+  store := make(map[jwa.KeyAlgorithm]any)
   algorithms := []jwa.SignatureAlgorithm{
     jwa.RS256(),
     jwa.RS384(),
@@ -1080,12 +1080,12 @@ func Example_jwt_filter_advanced_use_cases() {
     Claim("userRole", "manager").
     Claim("department", "sales").
     Claim("permissions", []string{"read:reports", "write:orders", "approve:discounts"}).
-    Claim("profile", map[string]interface{}{
+    Claim("profile", map[string]any{
       "name":  "John Doe",
       "email": "john@example.com",
       "phone": "+1-555-0123",
     }).
-    Claim("sessionInfo", map[string]interface{}{
+    Claim("sessionInfo", map[string]any{
       "loginIP":      "10.0.1.100",
       "deviceType":   "desktop",
       "browser":      "Chrome/91.0",
@@ -1224,7 +1224,7 @@ func Example_jwt_serialize_jws() {
   //
   // If this were using RSA/ECDSA keys, you would be using
   // *rsa.PrivateKey/*ecdsa.PrivateKey as the raw key.
-  for _, key := range []interface{}{rawKey, jwkKey} {
+  for _, key := range []any{rawKey, jwkKey} {
     serialized, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
     if err != nil {
       fmt.Printf("failed to sign token: %s\n", err)
