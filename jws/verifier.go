@@ -5,7 +5,23 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
+
+type defaultVerifier struct {
+	alg jwa.SignatureAlgorithm
+}
+
+func (v defaultVerifier) Algorithm() jwa.SignatureAlgorithm {
+	return v.alg
+}
+
+func (v defaultVerifier) Verify(key any, payload, signature []byte) error {
+	if err := jwsbb.Verify(key, v.alg.String(), payload, signature); err != nil {
+		return verifyError{verificationError{err}}
+	}
+	return nil
+}
 
 type Verifier2 interface {
 	Verify(key any, payload, signature []byte) error
@@ -14,15 +30,45 @@ type Verifier2 interface {
 var muVerifier2DB sync.RWMutex
 var verifier2DB = make(map[jwa.SignatureAlgorithm]Verifier2)
 
+type verifierAdapter struct {
+	v Verifier
+}
+
+func (v verifierAdapter) Verify(key any, payload, signature []byte) error {
+	if err := v.v.Verify(payload, signature, key); err != nil {
+		return verifyError{verificationError{err}}
+	}
+	return nil
+}
+
+// VerifierFor returns a Verifier2 for the given signature algorithm.
+//
+// Currently, this function will never fail. It will always return a
+// valid Verifier2 object. The heuristic is as follows:
+//  1. If a Verifier2 is registered for the given algorithm, it will return that.
+//  2. If a legacy Verifier(Factory) is registered for the given algorithm, it will
+//     return a Verifier2 that wraps the legacy Verifier.
+//  3. If no Verifier2 or legacy Verifier(Factory) is registered, it will return a
+//     default verifier that uses jwsbb.Verify.
+//
+// jwsbb.Verify knows how to handle a static set of algorithms, so if the
+// algorithm is not supported, it will return an error when you call
+// `Verify` on the default verifier.
 func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier2, error) {
 	muVerifier2DB.RLock()
 	defer muVerifier2DB.RUnlock()
 
-	v, ok := verifier2DB[alg]
-	if !ok {
-		return nil, fmt.Errorf(`no verifier registered for algorithm %q`, alg)
+	v2, ok := verifier2DB[alg]
+	if ok {
+		return v2, nil
 	}
-	return v, nil
+
+	v1, err := NewVerifier(alg)
+	if err == nil {
+		return verifierAdapter{v: v1}, nil
+	}
+
+	return defaultVerifier{alg: alg}, nil
 }
 
 type VerifierFactory interface {

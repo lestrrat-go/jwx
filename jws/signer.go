@@ -33,6 +33,36 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 	return fn()
 }
 
+// SignerFor returns a Signer2 for the given signature algorithm.
+//
+// Currently, this function will never fail. It will always return a
+// valid Signer2 object. The heuristic is as follows:
+//  1. If a Signer2 is registered for the given algorithm, it will return that.
+//  2. If a legacy Signer(Factory) is registered for the given algorithm, it will
+//     return a Signer2 that wraps the legacy Signer.
+//  3. If no Signer2 or legacy Signer(Factory) is registered, it will return a
+//     default signer that uses jwsbb.Sign.
+//
+// jwsbb.Sign knows how to handle a static set of algorithms, so if the
+// algorithm is not supported, it will return an error when you call
+// `Sign` on the default signer.
+func SignerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
+	muSigner2DB.RLock()
+	defer muSigner2DB.RUnlock()
+
+	signer, ok := signer2DB[alg]
+	if ok {
+		return signer, nil
+	}
+
+	s1, err := legacySignerFor(alg)
+	if err == nil {
+		return signerAdapter{signer: s1}, nil
+	}
+
+	return defaultSigner{alg: alg}, nil
+}
+
 var muSignerDB sync.RWMutex
 var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 

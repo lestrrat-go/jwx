@@ -69,3 +69,20 @@ func enableLegacySigners() {
 		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 	}
 }
+
+func legacySignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
+	muSigner.Lock()
+	s, ok := signers[alg]
+	if !ok {
+		v, err := NewSigner(alg)
+		if err != nil {
+			muSigner.Unlock()
+			return nil, fmt.Errorf(`failed to create payload signer: %w`, err)
+		}
+		signers[alg] = v
+		s = v
+	}
+	muSigner.Unlock()
+
+	return s, nil
+}

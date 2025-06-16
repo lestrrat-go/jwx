@@ -187,19 +187,13 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		}
 	}
 
-	if verifier2, err := VerifierFor(alg); err == nil {
-		if err := verifier2.Verify(key, verifyBuf, sig.signature); err != nil {
-			return verificationError{err}
-		}
-	} else {
-		verifier, err := NewVerifier(alg)
-		if err != nil {
-			return fmt.Errorf(`failed to create verifier for algorithm %q: %w`, alg, err)
-		}
+	verifier, err := VerifierFor(alg)
+	if err != nil {
+		return fmt.Errorf(`failed to get verifier for algorithm %q: %w`, alg, err)
+	}
 
-		if err := verifier.Verify(verifyBuf, sig.signature, key); err != nil {
-			return verificationError{err}
-		}
+	if err := verifier.Verify(key, verifyBuf, sig.signature); err != nil {
+		return verificationError{err}
 	}
 
 	// Verification succeeded

@@ -56,18 +56,28 @@ func removeSigner(alg jwa.SignatureAlgorithm) {
 	delete(signers, alg)
 }
 
-// SignerFor returns the registered signer for the given algorithm.
-//
-// This function does not support the legacy signers.
-func SignerFor(alg jwa.SignatureAlgorithm) (Signer2, error) {
-	muSigner2DB.RLock()
-	defer muSigner2DB.RUnlock()
+type defaultSigner struct {
+	alg jwa.SignatureAlgorithm
+}
 
-	signer, ok := signer2DB[alg]
-	if !ok {
-		return nil, fmt.Errorf(`no signer registered for algorithm %q`, alg)
-	}
-	return signer, nil
+func (s defaultSigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
+}
+
+func (s defaultSigner) Sign(key any, payload []byte) ([]byte, error) {
+	return jwsbb.Sign(key, s.alg.String(), payload)
+}
+
+type signerAdapter struct {
+	signer Signer
+}
+
+func (s signerAdapter) Algorithm() jwa.SignatureAlgorithm {
+	return s.signer.Algorithm()
+}
+
+func (s signerAdapter) Sign(key any, payload []byte) ([]byte, error) {
+	return s.signer.Sign(payload, key)
 }
 
 const (
