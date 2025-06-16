@@ -59,7 +59,7 @@ func (s HMACSigner) Algorithm() jwa.SignatureAlgorithm {
 	return s.alg
 }
 
-func (s HMACSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (s HMACSigner) Sign(payload []byte, key any) ([]byte, error) {
 	var hmackey []byte
 	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
 		return nil, fmt.Errorf(`invalid key type %T. []byte is required: %w`, key, err)
@@ -77,7 +77,7 @@ func NewHMACVerifier(alg jwa.SignatureAlgorithm) Verifier {
 	return &HMACVerifier{signer: s}
 }
 
-func (v HMACVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
+func (v HMACVerifier) Verify(payload, signature []byte, key any) (err error) {
 	expected, err := v.signer.Sign(payload, key)
 	if err != nil {
 		return fmt.Errorf(`failed to generated signature: %w`, err)

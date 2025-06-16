@@ -110,8 +110,8 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
-	getVerify := func(token openid.Token, key string, expected interface{}) bool {
-		var v interface{}
+	getVerify := func(token openid.Token, key string, expected any) bool {
+		var v any
 		if assert.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key) {
 			return false
 		}
@@ -119,8 +119,8 @@ func TestOpenIDClaims(t *testing.T) {
 	}
 
 	var base = []struct {
-		Value    interface{}
-		Expected func(interface{}) interface{}
+		Value    any
+		Expected func(any) any
 		Check    func(openid.Token)
 		Key      string
 	}{
@@ -136,7 +136,7 @@ func TestOpenIDClaims(t *testing.T) {
 		{
 			Key:   openid.ExpirationKey,
 			Value: tokenTime,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				var n types.NumericDate
 				if err := n.Accept(v); err != nil {
 					panic(err)
@@ -152,7 +152,7 @@ func TestOpenIDClaims(t *testing.T) {
 		{
 			Key:   openid.IssuedAtKey,
 			Value: tokenTime,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				var n types.NumericDate
 				if err := n.Accept(v); err != nil {
 					panic(err)
@@ -186,7 +186,7 @@ func TestOpenIDClaims(t *testing.T) {
 		{
 			Key:   openid.NotBeforeKey,
 			Value: tokenTime,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				var n types.NumericDate
 				if err := n.Accept(v); err != nil {
 					panic(err)
@@ -319,7 +319,7 @@ func TestOpenIDClaims(t *testing.T) {
 		{
 			Value: "2015-11-04",
 			Key:   openid.BirthdateKey,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				var b openid.BirthdateClaim
 				if err := b.Accept(v); err != nil {
 					panic(err)
@@ -371,7 +371,7 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Value: map[string]interface{}{
+			Value: map[string]any{
 				"formatted":      "〒105-0011 東京都港区芝公園４丁目２−８",
 				"street_address": "芝公園４丁目２−８",
 				"locality":       "港区",
@@ -380,11 +380,11 @@ func TestOpenIDClaims(t *testing.T) {
 				"postal_code":    "105-0011",
 			},
 			Key: openid.AddressKey,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				address := openid.NewAddress()
-				m, ok := v.(map[string]interface{})
+				m, ok := v.(map[string]any)
 				if !ok {
-					panic(fmt.Sprintf("expected map[string]interface{}, got %T", v))
+					panic(fmt.Sprintf("expected map[string]any, got %T", v))
 				}
 				for name, val := range m {
 					require.NoError(t, address.Set(name, val), `address.Set should succeed`)
@@ -400,7 +400,7 @@ func TestOpenIDClaims(t *testing.T) {
 		{
 			Value: aLongLongTimeAgoString,
 			Key:   openid.UpdatedAtKey,
-			Expected: func(v interface{}) interface{} {
+			Expected: func(v any) any {
 				var n types.NumericDate
 				if err := n.Accept(v); err != nil {
 					panic(err)
@@ -417,15 +417,15 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: `dummy`,
 			Key:   `dummy`,
 			Check: func(token openid.Token) {
-				var v interface{}
+				var v any
 				require.NoError(t, token.Get(`dummy`, &v), `token.Get should return valid value`)
 				require.Equal(t, `dummy`, v, `values should match`)
 			},
 		},
 	}
 
-	var data = map[string]interface{}{}
-	var expected = map[string]interface{}{}
+	var data = map[string]any{}
+	var expected = map[string]any{}
 	for _, value := range base {
 		data[value.Key] = value.Value
 		if expf := value.Expected; expf != nil {
@@ -512,9 +512,9 @@ func TestOpenIDClaims(t *testing.T) {
 	t.Run("Iterator", func(t *testing.T) {
 		tok := tokens[0].Token
 		t.Run("Iterate", func(t *testing.T) {
-			seen := make(map[string]interface{})
+			seen := make(map[string]any)
 			for _, k := range tok.Keys() {
-				var v interface{}
+				var v any
 				require.NoError(t, tok.Get(k, &v), `tok.Get should succeed`)
 				seen[k] = v
 			}
@@ -705,7 +705,7 @@ func TestWithBase64Encoder(t *testing.T) {
 		expiry := time.Now().Add(time.Hour).Unix()
 
 		// Generate header + payload
-		header := map[string]interface{}{
+		header := map[string]any{
 			"typ":    "JWT",
 			"kid":    "2563ee81-616e-4a38-b2f8-48a2cccba80f", // Not a real AWS Key ID
 			"alg":    "ES256",
@@ -715,7 +715,7 @@ func TestWithBase64Encoder(t *testing.T) {
 			"exp":    expiry,
 		}
 
-		payload := map[string]interface{}{
+		payload := map[string]any{
 			"sub":                "some-subject-id",
 			"name":               "John Smith",
 			"locale":             "CA",

@@ -21,7 +21,7 @@ func (s eddsaSigner) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA()
 }
 
-func (s eddsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (s eddsaSigner) Sign(payload []byte, key any) ([]byte, error) {
 	if key == nil {
 		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
@@ -52,7 +52,7 @@ func NewEdDSAVerifier() Verifier {
 	return &eddsaVerifier{}
 }
 
-func (v eddsaVerifier) Verify(payload, signature []byte, key interface{}) (err error) {
+func (v eddsaVerifier) Verify(payload, signature []byte, key any) (err error) {
 	if key == nil {
 		return fmt.Errorf(`missing public key while verifying payload`)
 	}

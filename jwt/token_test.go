@@ -20,7 +20,7 @@ var expectedTokenTime = time.Unix(tokenTime, 0).UTC()
 
 func TestHeader(t *testing.T) {
 	t.Parallel()
-	values := map[string]interface{}{
+	values := map[string]any{
 		jwt.AudienceKey:   []string{"developers", "secops", "tac"},
 		jwt.ExpirationKey: expectedTokenTime,
 		jwt.IssuedAtKey:   expectedTokenTime,
@@ -35,7 +35,7 @@ func TestHeader(t *testing.T) {
 		h := jwt.New()
 		for k, v := range values {
 			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
-			var got interface{}
+			var got any
 			require.NoError(t, h.Get(k, &got), `h.Get should succeed for key %#v`, k)
 			if !reflect.DeepEqual(v, got) {
 				t.Fatalf("Values do not match: (%v, %v)", v, got)
@@ -51,7 +51,7 @@ func TestHeader(t *testing.T) {
 		}
 		dummy := &dummyStruct{1, 3.4}
 
-		values := map[string]interface{}{
+		values := map[string]any{
 			jwt.AudienceKey:   dummy,
 			jwt.ExpirationKey: dummy,
 			jwt.IssuedAtKey:   dummy,
@@ -72,7 +72,7 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Setting %s value failed", "default")
 		}
-		var tmp interface{}
+		var tmp any
 		for k := range values {
 			require.Error(t, h.Get(k, &tmp), `Getting %s value should have failed`)
 		}
@@ -143,7 +143,7 @@ func TestToken(t *testing.T) {
 	tok := jwt.New()
 
 	def := map[string]struct {
-		Value  interface{}
+		Value  any
 		Method string
 	}{
 		jwt.AudienceKey: {
@@ -187,7 +187,7 @@ func TestToken(t *testing.T) {
 	t.Run("Get", func(t *testing.T) {
 		rv := reflect.ValueOf(tok)
 		for k, kdef := range def {
-			var getval interface{}
+			var getval any
 			require.NoError(t, tok.Get(k, &getval), `tok.Get(%s) should succeed`, k)
 
 			if mname := kdef.Method; mname != "" {
@@ -215,7 +215,7 @@ func TestToken(t *testing.T) {
 
 		require.Len(t, newtok.Keys(), 0, `toks should have 0 tok`)
 		for _, k := range tok.Keys() {
-			var v interface{}
+			var v any
 			require.NoError(t, tok.Get(k, &v), `tok.Get(%s) should succeed`, k)
 			require.NoError(t, newtok.Set(k, v), `newtok.Set should succeed`)
 		}

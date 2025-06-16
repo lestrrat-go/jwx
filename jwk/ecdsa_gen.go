@@ -43,7 +43,7 @@ type ecdsaPublicKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -54,7 +54,7 @@ var _ Key = &ecdsaPublicKey{}
 func newECDSAPublicKey() *ecdsaPublicKey {
 	return &ecdsaPublicKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -182,7 +182,7 @@ func (h *ecdsaPublicKey) Has(name string) bool {
 	}
 }
 
-func (h *ecdsaPublicKey) Get(name string, dst interface{}) error {
+func (h *ecdsaPublicKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -290,13 +290,13 @@ func (h *ecdsaPublicKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *ecdsaPublicKey) Set(name string, value interface{}) error {
+func (h *ecdsaPublicKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *ecdsaPublicKey) setNoLock(name string, value interface{}) error {
+func (h *ecdsaPublicKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -384,7 +384,7 @@ func (h *ecdsaPublicKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -573,7 +573,7 @@ LOOP:
 }
 
 func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 11)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
@@ -722,7 +722,7 @@ type ecdsaPrivateKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -733,7 +733,7 @@ var _ Key = &ecdsaPrivateKey{}
 func newECDSAPrivateKey() *ecdsaPrivateKey {
 	return &ecdsaPrivateKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -870,7 +870,7 @@ func (h *ecdsaPrivateKey) Has(name string) bool {
 	}
 }
 
-func (h *ecdsaPrivateKey) Get(name string, dst interface{}) error {
+func (h *ecdsaPrivateKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -986,13 +986,13 @@ func (h *ecdsaPrivateKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *ecdsaPrivateKey) Set(name string, value interface{}) error {
+func (h *ecdsaPrivateKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *ecdsaPrivateKey) setNoLock(name string, value interface{}) error {
+func (h *ecdsaPrivateKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -1086,7 +1086,7 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -1285,7 +1285,7 @@ LOOP:
 }
 
 func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 12)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)

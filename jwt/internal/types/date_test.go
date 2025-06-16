@@ -29,7 +29,7 @@ func TestDate(t *testing.T) {
 		// NumericDate allows assignment from various different Go types,
 		// so that it's easier for the devs, and conversion to/from JSON
 		testcases := []struct {
-			Input     interface{}
+			Input     any
 			Expected  time.Time
 			Precision int
 		}{

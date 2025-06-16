@@ -92,7 +92,7 @@ const (
 var _ = fmtInvalid
 var _ = fmtMax
 
-func validateKeyBeforeUse(key interface{}) error {
+func validateKeyBeforeUse(key any) error {
 	jwkKey, ok := key.(jwk.Key)
 	if !ok {
 		converted, err := jwk.Import(key)
@@ -499,7 +499,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 //	jws.RegisterCustomField(`x-birthday`, time.Time{})
 //
 // Then you can use a `time.Time` variable to extract the value
-// of `x-birthday` field, instead of having to use `interface{}`
+// of `x-birthday` field, instead of having to use `any`
 // and later convert it to `time.Time`
 //
 //	var bday time.Time
@@ -509,7 +509,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // you can register a `CustomDecoder`. For example, below shows
 // how to register a decoder that can parse RFC1123 format string:
 //
-//	jws.RegisterCustomField(`x-birthday`, jws.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+//	jws.RegisterCustomField(`x-birthday`, jws.CustomDecodeFunc(func(data []byte) (any, error) {
 //	  return time.Parse(time.RFC1123, string(data))
 //	}))
 //
@@ -522,7 +522,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 
@@ -558,7 +558,7 @@ func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 // be used for a given key. It only takes in consideration keys/algorithms
 // for verification purposes, as this is the only usage where one may need
 // dynamically figure out which method to use.
-func AlgorithmsForKey(key interface{}) ([]jwa.SignatureAlgorithm, error) {
+func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	var kty jwa.KeyType
 	switch key := key.(type) {
 	case jwk.Key:

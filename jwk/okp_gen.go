@@ -40,7 +40,7 @@ type okpPublicKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -51,7 +51,7 @@ var _ Key = &okpPublicKey{}
 func newOKPPublicKey() *okpPublicKey {
 	return &okpPublicKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -170,7 +170,7 @@ func (h *okpPublicKey) Has(name string) bool {
 	}
 }
 
-func (h *okpPublicKey) Get(name string, dst interface{}) error {
+func (h *okpPublicKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -270,13 +270,13 @@ func (h *okpPublicKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *okpPublicKey) Set(name string, value interface{}) error {
+func (h *okpPublicKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *okpPublicKey) setNoLock(name string, value interface{}) error {
+func (h *okpPublicKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -358,7 +358,7 @@ func (h *okpPublicKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -537,7 +537,7 @@ LOOP:
 }
 
 func (h okpPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 10)
 	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)
@@ -677,7 +677,7 @@ type okpPrivateKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -688,7 +688,7 @@ var _ Key = &okpPrivateKey{}
 func newOKPPrivateKey() *okpPrivateKey {
 	return &okpPrivateKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -816,7 +816,7 @@ func (h *okpPrivateKey) Has(name string) bool {
 	}
 }
 
-func (h *okpPrivateKey) Get(name string, dst interface{}) error {
+func (h *okpPrivateKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -924,13 +924,13 @@ func (h *okpPrivateKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *okpPrivateKey) Set(name string, value interface{}) error {
+func (h *okpPrivateKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *okpPrivateKey) setNoLock(name string, value interface{}) error {
+func (h *okpPrivateKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -1018,7 +1018,7 @@ func (h *okpPrivateKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -1207,7 +1207,7 @@ LOOP:
 }
 
 func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 11)
 	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)

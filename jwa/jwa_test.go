@@ -24,7 +24,7 @@ func TestSanity(t *testing.T) {
 
 func TestKeyAlgorithmFrom(t *testing.T) {
 	testcases := []struct {
-		Input interface{}
+		Input any
 		Error bool
 	}{
 		{

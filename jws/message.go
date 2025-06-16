@@ -106,11 +106,11 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 // Signature objects in the future will only be used as containers,
 // and signing will be done using the `jws.Sign` function, or alternatively
 // you could use jwsbb package to craft the signature manually.
-func (s *Signature) Sign(payload []byte, signer Signer, key interface{}) ([]byte, []byte, error) {
+func (s *Signature) Sign(payload []byte, signer Signer, key any) ([]byte, []byte, error) {
 	return s.sign2(payload, signer, key)
 }
 
-func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.SignatureAlgorithm }, key interface{}) ([]byte, []byte, error) {
+func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.SignatureAlgorithm }, key any) ([]byte, []byte, error) {
 	// Create a signatureBuilder to use the shared signing logic
 	sb := signatureBuilderPool.Get()
 	defer signatureBuilderPool.Put(sb)

@@ -32,7 +32,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 
 	b.Run("Use json.Marshal/json.Unmarshal", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			serialized, err := json.Marshal(map[string]interface{}{
+			serialized, err := json.Marshal(map[string]any{
 				"kty": "EC",
 				"crv": "secp256k1",
 				"x":   xb64,

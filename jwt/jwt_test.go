@@ -106,7 +106,7 @@ func TestToken_Parse(t *testing.T) {
 func TestJWTParseVerify(t *testing.T) {
 	t.Parallel()
 
-	keys := make([]interface{}, 0, 6)
+	keys := make([]any, 0, 6)
 
 	keys = append(keys, []byte("abracadabra"))
 
@@ -130,7 +130,7 @@ func TestJWTParseVerify(t *testing.T) {
 			algs, err := jws.AlgorithmsForKey(key)
 			require.NoError(t, err, `jwas.AlgorithmsForKey should succeed`)
 
-			var dummyRawKey interface{}
+			var dummyRawKey any
 			switch pk := key.(type) {
 			case *rsa.PrivateKey:
 				dummyRawKey, err = jwxtest.GenerateRsaKey()
@@ -358,7 +358,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			dummyHeader := jws.NewHeaders()
 			for _, k := range hdrs.Keys() {
-				var v interface{}
+				var v any
 				require.NoError(t, hdrs.Get(k, &v), `hdrs.Get should succeed`)
 				require.NoError(t, dummyHeader.Set(k, v), `dummyHeader.Set should succeed`)
 			}
@@ -632,7 +632,7 @@ func TestCustomField(t *testing.T) {
 	const rfc3339Key = `x-test-rfc3339`
 	const rfc1123Key = `x-test-rfc1123`
 	jwt.RegisterCustomField(rfc3339Key, time.Time{})
-	jwt.RegisterCustomField(rfc1123Key, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+	jwt.RegisterCustomField(rfc1123Key, jwt.CustomDecodeFunc(func(data []byte) (any, error) {
 		var s string
 		if err := json.Unmarshal(data, &s); err != nil {
 			return nil, err
@@ -1006,12 +1006,12 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 	testcases := []struct {
 		Name        string
 		Options     []jwt.ParseOption
-		PostProcess func(*testing.T, interface{}) (*Claim, error)
+		PostProcess func(*testing.T, any) (*Claim, error)
 	}{
 		{
 			Name:    "Basic",
 			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", Claim{})},
-			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+			PostProcess: func(t *testing.T, claim any) (*Claim, error) {
 				t.Helper()
 				v, ok := claim.(Claim)
 				if !ok {
@@ -1023,7 +1023,7 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 		{
 			Name:    "json.RawMessage",
 			Options: []jwt.ParseOption{jwt.WithTypedClaim("typed-claim", json.RawMessage{})},
-			PostProcess: func(t *testing.T, claim interface{}) (*Claim, error) {
+			PostProcess: func(t *testing.T, claim any) (*Claim, error) {
 				t.Helper()
 				v, ok := claim.(json.RawMessage)
 				if !ok {
@@ -1059,7 +1059,7 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 			got, err := jwt.Parse(signed, options...)
 			require.NoError(t, err, `jwt.Parse should succeed`)
 
-			var v interface{}
+			var v any
 			require.NoError(t, got.Get("typed-claim", &v), `got.Get() should succeed`)
 
 			claim, err := tc.PostProcess(t, v)
@@ -1147,7 +1147,7 @@ func TestGH393(t *testing.T) {
 
 func TestGH430(t *testing.T) {
 	t1 := jwt.New()
-	err := t1.Set("payload", map[string]interface{}{
+	err := t1.Set("payload", map[string]any{
 		"name": "someone",
 	})
 	require.NoError(t, err, `t1.Set should succeed`)

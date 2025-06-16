@@ -41,7 +41,7 @@ func (h *stdHeaders) Clone() (Headers, error) {
 
 func (h *stdHeaders) Copy(dst Headers) error {
 	for _, key := range h.Keys() {
-		var v interface{}
+		var v any
 		if err := h.Get(key, &v); err != nil {
 			return fmt.Errorf(`jwe.Headers: Copy: failed to get header %q: %w`, key, err)
 		}

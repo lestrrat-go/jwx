@@ -54,8 +54,8 @@ type ECDHESDecrypt struct {
 	contentalg jwa.ContentEncryptionAlgorithm
 	apu        []byte
 	apv        []byte
-	privkey    interface{}
-	pubkey     interface{}
+	privkey    any
+	pubkey     any
 }
 
 // RSAOAEPEncrypt encrypts keys using RSA OAEP algorithm

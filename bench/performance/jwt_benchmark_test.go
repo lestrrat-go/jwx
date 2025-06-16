@@ -140,7 +140,7 @@ func BenchmarkJWT(b *testing.B) {
 			}
 		})
 		b.Run("JSON", func(b *testing.B) {
-			var v interface{}
+			var v any
 			testcases := []Case{
 				{
 					Name:      "jwt.ParseString",

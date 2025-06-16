@@ -70,7 +70,7 @@ func (rs *rsaSigner) Algorithm() jwa.SignatureAlgorithm {
 	return rs.alg
 }
 
-func (rs *rsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
+func (rs *rsaSigner) Sign(payload []byte, key any) ([]byte, error) {
 	if key == nil {
 		return nil, fmt.Errorf(`missing private key while signing payload`)
 	}
@@ -111,7 +111,7 @@ func NewRSAVerifier(alg jwa.SignatureAlgorithm) Verifier {
 	return rsaVerifiers[alg]
 }
 
-func (rv *rsaVerifier) Verify(payload, signature []byte, key interface{}) error {
+func (rv *rsaVerifier) Verify(payload, signature []byte, key any) error {
 	if key == nil {
 		return fmt.Errorf(`missing public key while verifying payload`)
 	}

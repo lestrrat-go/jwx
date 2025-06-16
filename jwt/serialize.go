@@ -27,7 +27,7 @@ func (ctx *serializeCtx) Nested() bool {
 }
 
 type SerializeStep interface {
-	Serialize(SerializeCtx, interface{}) (interface{}, error)
+	Serialize(SerializeCtx, any) (any, error)
 }
 
 // errStep is always an error. used to indicate that a method like
@@ -36,7 +36,7 @@ type errStep struct {
 	err error
 }
 
-func (e errStep) Serialize(_ SerializeCtx, _ interface{}) (interface{}, error) {
+func (e errStep) Serialize(_ SerializeCtx, _ any) (any, error) {
 	return nil, e.err
 }
 
@@ -84,7 +84,7 @@ func (s *Serializer) Step(step SerializeStep) *Serializer {
 
 type jsonSerializer struct{}
 
-func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, error) {
+func (jsonSerializer) Serialize(_ SerializeCtx, v any) (any, error) {
 	token, ok := v.(Token)
 	if !ok {
 		return nil, fmt.Errorf(`invalid input: expected jwt.Token`)
@@ -98,8 +98,8 @@ func (jsonSerializer) Serialize(_ SerializeCtx, v interface{}) (interface{}, err
 }
 
 type genericHeader interface {
-	Get(string, interface{}) error
-	Set(string, interface{}) error
+	Get(string, any) error
+	Set(string, any) error
 	Has(string) bool
 }
 
@@ -132,7 +132,7 @@ type jwsSerializer struct {
 	options []jws.SignOption
 }
 
-func (s *jwsSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
+func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, fmt.Errorf(`expected []byte as input`)
@@ -189,7 +189,7 @@ type jweSerializer struct {
 	options []jwe.EncryptOption
 }
 
-func (s *jweSerializer) Serialize(ctx SerializeCtx, v interface{}) (interface{}, error) {
+func (s *jweSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 	payload, ok := v.([]byte)
 	if !ok {
 		return nil, fmt.Errorf(`expected []byte as input`)
@@ -245,7 +245,7 @@ func (s *Serializer) Serialize(t Token) ([]byte, error) {
 
 	var ctx serializeCtx
 	ctx.nested = len(s.steps) > 1
-	var payload interface{} = t
+	var payload any = t
 	for i, step := range steps {
 		ctx.step = i
 		v, err := step.Serialize(&ctx, payload)

@@ -36,7 +36,7 @@ type symmetricKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -47,7 +47,7 @@ var _ Key = &symmetricKey{}
 func newSymmetricKey() *symmetricKey {
 	return &symmetricKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -153,7 +153,7 @@ func (h *symmetricKey) Has(name string) bool {
 	}
 }
 
-func (h *symmetricKey) Get(name string, dst interface{}) error {
+func (h *symmetricKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -245,13 +245,13 @@ func (h *symmetricKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *symmetricKey) Set(name string, value interface{}) error {
+func (h *symmetricKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *symmetricKey) setNoLock(name string, value interface{}) error {
+func (h *symmetricKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -327,7 +327,7 @@ func (h *symmetricKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -494,7 +494,7 @@ LOOP:
 }
 
 func (h symmetricKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 9)
 	data[KeyTypeKey] = jwa.OctetSeq()
 	fields = append(fields, KeyTypeKey)

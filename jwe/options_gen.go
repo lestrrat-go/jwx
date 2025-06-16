@@ -284,11 +284,11 @@ func WithKeyProvider(v KeyProvider) DecryptOption {
 // and you want to know which key was successful at decrypting the
 // CEK.
 //
-// `v` must be a pointer to an empty `interface{}`. Do not use
+// `v` must be a pointer to an empty `any`. Do not use
 // `jwk.Key` here unless you are 100% sure that all keys that you
 // have provided are instances of `jwk.Key` (remember that the
 // jwx API allows users to specify a raw key such as *rsa.PublicKey)
-func WithKeyUsed(v interface{}) DecryptOption {
+func WithKeyUsed(v any) DecryptOption {
 	return &decryptOption{option.New(identKeyUsed{}, v)}
 }
 

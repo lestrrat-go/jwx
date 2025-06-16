@@ -19,7 +19,7 @@ func TestKeyconv(t *testing.T) {
 		t.Run("PrivateKey", func(t *testing.T) {
 			jwkKey, _ := jwk.Import(key)
 			testcases := []struct {
-				Src   interface{}
+				Src   any
 				Error bool
 			}{
 				{Src: key},
@@ -31,7 +31,7 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to rsa.PrivateKey", func(t *testing.T) {
 					var dst rsa.PrivateKey
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -49,7 +49,7 @@ func TestKeyconv(t *testing.T) {
 				})
 				t.Run("Assign to *rsa.PrivateKey", func(t *testing.T) {
 					dst := &rsa.PrivateKey{}
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -71,7 +71,7 @@ func TestKeyconv(t *testing.T) {
 			pubkey := &key.PublicKey
 			jwkKey, _ := jwk.Import(pubkey)
 			testcases := []struct {
-				Src   interface{}
+				Src   any
 				Error bool
 			}{
 				{Src: pubkey},
@@ -83,7 +83,7 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to rsa.PublicKey", func(t *testing.T) {
 					var dst rsa.PublicKey
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -97,7 +97,7 @@ func TestKeyconv(t *testing.T) {
 				})
 				t.Run("Assign to *rsa.PublicKey", func(t *testing.T) {
 					dst := &rsa.PublicKey{}
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -119,7 +119,7 @@ func TestKeyconv(t *testing.T) {
 		t.Run("PrivateKey", func(t *testing.T) {
 			jwkKey, _ := jwk.Import(key)
 			testcases := []struct {
-				Src   interface{}
+				Src   any
 				Error bool
 			}{
 				{Src: key},
@@ -131,7 +131,7 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to ecdsa.PrivateKey", func(t *testing.T) {
 					var dst ecdsa.PrivateKey
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -145,7 +145,7 @@ func TestKeyconv(t *testing.T) {
 				})
 				t.Run("Assign to *ecdsa.PrivateKey", func(t *testing.T) {
 					dst := &ecdsa.PrivateKey{}
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -163,7 +163,7 @@ func TestKeyconv(t *testing.T) {
 			pubkey := &key.PublicKey
 			jwkKey, _ := jwk.Import(pubkey)
 			testcases := []struct {
-				Src   interface{}
+				Src   any
 				Error bool
 			}{
 				{Src: pubkey},
@@ -175,7 +175,7 @@ func TestKeyconv(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run("Assign to ecdsa.PublicKey", func(t *testing.T) {
 					var dst ecdsa.PublicKey
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
@@ -189,7 +189,7 @@ func TestKeyconv(t *testing.T) {
 				})
 				t.Run("Assign to *ecdsa.PublicKey", func(t *testing.T) {
 					dst := &ecdsa.PublicKey{}
-					var checker func(require.TestingT, error, ...interface{})
+					var checker func(require.TestingT, error, ...any)
 					if tc.Error {
 						checker = require.Error
 					} else {
