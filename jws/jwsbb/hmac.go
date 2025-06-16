@@ -10,20 +10,25 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 )
 
+var hmacHashFuncs = map[string]func() hash.Hash{
+	"HS256": sha256.New,
+	"HS384": sha512.New384,
+	"HS512": sha512.New,
+}
+
+func isSupportedHMACAlgorithm(alg string) bool {
+	_, ok := hmacHashFuncs[alg]
+	return ok
+}
+
 // HMACHashFuncFor returns the appropriate hash function for the given HMAC algorithm.
 // Supported algorithms: HS256 (SHA-256), HS384 (SHA-384), HS512 (SHA-512).
 // Returns the hash function constructor and an error if the algorithm is unsupported.
 func HMACHashFuncFor(alg string) (func() hash.Hash, error) {
-	switch alg {
-	case "HS256":
-		return sha256.New, nil
-	case "HS384":
-		return sha512.New384, nil
-	case "HS512":
-		return sha512.New, nil
-	default:
-		return nil, fmt.Errorf("unsupported HMAC algorithm %s", alg)
+	if h, ok := hmacHashFuncs[alg]; ok {
+		return h, nil
 	}
+	return nil, fmt.Errorf("unsupported HMAC algorithm %s", alg)
 }
 
 func toHMACKey(dst *[]byte, key any) error {

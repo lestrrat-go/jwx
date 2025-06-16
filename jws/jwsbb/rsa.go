@@ -4,28 +4,46 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
+
+func rsaGetSignerCryptoSignerKey(key any) (crypto.Signer, bool, error) {
+	cs, isCryptoSigner := key.(crypto.Signer)
+	if isCryptoSigner {
+		if !keytype.IsValidRSAKey(key) {
+			return nil, false, fmt.Errorf(`cannot use key of type %T`, key)
+		}
+		return cs, true, nil
+	}
+	return nil, false, nil
+}
+
+var rsaHashFuncs = map[string]struct {
+	Hash crypto.Hash
+	PSS  bool // whether to use PSS padding
+}{
+	"RS256": {Hash: crypto.SHA256, PSS: false},
+	"RS384": {Hash: crypto.SHA384, PSS: false},
+	"RS512": {Hash: crypto.SHA512, PSS: false},
+	"PS256": {Hash: crypto.SHA256, PSS: true},
+	"PS384": {Hash: crypto.SHA384, PSS: true},
+	"PS512": {Hash: crypto.SHA512, PSS: true},
+}
+
+func isSuppotedRSAAlgorithm(alg string) bool {
+	_, ok := rsaHashFuncs[alg]
+	return ok
+}
 
 // RSAHashFuncFor returns the appropriate hash function and PSS flag for the given RSA algorithm.
 // Supported algorithms: RS256, RS384, RS512 (PKCS#1 v1.5) and PS256, PS384, PS512 (PSS).
 // Returns the hash function, PSS flag, and an error if the algorithm is unsupported.
 func RSAHashFuncFor(alg string) (crypto.Hash, bool, error) {
-	switch alg {
-	case "RS256":
-		return crypto.SHA256, false, nil
-	case "RS384":
-		return crypto.SHA384, false, nil
-	case "RS512":
-		return crypto.SHA512, false, nil
-	case "PS256":
-		return crypto.SHA256, true, nil
-	case "PS384":
-		return crypto.SHA384, true, nil
-	case "PS512":
-		return crypto.SHA512, true, nil
-	default:
-		return 0, false, fmt.Errorf("unsupported RSA algorithm %s", alg)
+	if h, ok := rsaHashFuncs[alg]; ok {
+		return h.Hash, h.PSS, nil
 	}
+	return 0, false, fmt.Errorf("unsupported RSA algorithm %s", alg)
 }
 
 // RSAPSSOptions returns the PSS options for RSA-PSS signatures with the specified hash.

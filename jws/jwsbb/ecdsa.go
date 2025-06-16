@@ -9,7 +9,53 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
+
+var ecdsaHashFuncs = map[string]crypto.Hash{
+	"ES256":  crypto.SHA256,
+	"ES256K": crypto.SHA256,
+	"ES384":  crypto.SHA384,
+	"ES512":  crypto.SHA512,
+}
+
+func isSuppotedECDSAAlgorithm(alg string) bool {
+	_, ok := ecdsaHashFuncs[alg]
+	return ok
+}
+
+func ECDSAHashFuncFor(alg string) (crypto.Hash, error) {
+	if h, ok := ecdsaHashFuncs[alg]; ok {
+		return h, nil
+	}
+	return 0, fmt.Errorf(`unsupported ECDSA algorithm %s`, alg)
+}
+
+func ecdsaGetSignerKey(key any) (*ecdsa.PrivateKey, crypto.Signer, bool, error) {
+	cs, isCryptoSigner := key.(crypto.Signer)
+	if isCryptoSigner {
+		if !keytype.IsValidECDSAKey(key) {
+			return nil, nil, false, fmt.Errorf(`cannot use key of type %T`, key)
+		}
+		switch key.(type) {
+		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
+			// if it's ecdsa.PrivateKey, it's more efficient to
+			// go through the non-crypto.Signer route. Set isCryptoSigner to false
+			isCryptoSigner = false
+		}
+	}
+
+	if isCryptoSigner {
+		return nil, cs, true, nil
+	}
+
+	var privkey *ecdsa.PrivateKey
+	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+		return nil, nil, false, fmt.Errorf(`invalid key type %T. ecdsa.PrivateKey is required: %w`, key, err)
+	}
+	return privkey, nil, false, nil
+}
 
 // UnpackASN1ECDSASignature unpacks an ASN.1 encoded ECDSA signature into r and s values.
 // This is typically used when working with crypto.Signer interfaces that return ASN.1 encoded signatures.

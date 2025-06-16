@@ -53,24 +53,14 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 	}
 
 	combined := jwsbb.SignBuffer(nil, hdr, payload, base64.DefaultEncoder(), true)
+	signer, err := jws.SignerFor(alg)
+	if err != nil {
+		return nil, fmt.Errorf(`jwt.signFast: failed to get signer for %s: %w`, alg, err)
+	}
 
-	var signature []byte
-	if signer2, err := jws.SignerFor(alg); err == nil {
-		v, err := signer2.Sign(key, combined)
-		if err != nil {
-			return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
-		}
-		signature = v
-	} else {
-		legacySigner, err := jws.NewSigner(alg)
-		if err != nil {
-			return nil, fmt.Errorf(`jwt.signFastHMAC: failed to create signer for %s: %w`, alg, err)
-		}
-		v, err := legacySigner.Sign(combined, key)
-		if err != nil {
-			return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
-		}
-		signature = v
+	signature, err := signer.Sign(key, combined)
+	if err != nil {
+		return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
 	}
 
 	serialized, err := jwsbb.JoinCompact(nil, hdr, payload, signature, base64.DefaultEncoder(), true)

@@ -9,6 +9,10 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
 
+func isSupportedEdDSAAlgorithm(alg string) bool {
+	return alg == "EdDSA"
+}
+
 func eddsaGetSigner(key any) (crypto.Signer, error) {
 	// The ed25519.PrivateKey object implements crypto.Signer, so we should
 	// simply accept a crypto.Signer here.

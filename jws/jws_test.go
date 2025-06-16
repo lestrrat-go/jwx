@@ -571,20 +571,6 @@ func TestEncode(t *testing.T) {
 	})
 }
 
-func TestPublicHeaders(t *testing.T) {
-	key, err := jwxtest.GenerateRsaKey()
-	require.NoError(t, err, "GenerateKey should succeed")
-
-	signer, err := jws.SignerFor(jwa.RS256())
-	require.NoError(t, err, "jws.NewSigner should succeed")
-	_ = signer // TODO
-
-	pubkey := key.PublicKey
-	pubjwk, err := jwk.Import(&pubkey)
-	require.NoError(t, err, "NewRsaPublicKey should succeed")
-	_ = pubjwk // TODO
-}
-
 func TestReadFile(t *testing.T) {
 	t.Parallel()
 
