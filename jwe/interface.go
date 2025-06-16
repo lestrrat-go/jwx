@@ -189,7 +189,7 @@ type Message struct {
 	// TODO: Additional members can be present in both the JSON objects defined
 	// above; if not understood by implementations encountering them, they
 	// MUST be ignored.
-	// privateParams map[string]interface{}
+	// privateParams map[string]any
 
 	// These two fields below are not available for the public consumers of this object.
 	// rawProtectedHeaders stores the original protected header buffer

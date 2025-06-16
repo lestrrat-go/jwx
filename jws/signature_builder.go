@@ -32,7 +32,7 @@ type signatureBuilder struct {
 	alg       jwa.SignatureAlgorithm
 	signer    Signer
 	signer2   Signer2
-	key       interface{}
+	key       any
 	protected Headers
 	public    Headers
 }

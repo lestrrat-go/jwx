@@ -63,7 +63,7 @@ func TestVerifyCompactFastSecurityBypass(t *testing.T) {
 		require.NoError(t, err, `header decode should succeed`)
 
 		// Parse header JSON
-		var header map[string]interface{}
+		var header map[string]any
 		require.NoError(t, json.Unmarshal(headerBytes, &header), `header unmarshal should succeed`)
 
 		// Tamper with the algorithm in the header (change to "none")
@@ -221,7 +221,7 @@ func TestVerifyCompactFastSecurityBypass(t *testing.T) {
 		require.Len(t, parts, 3, `JWT should have 3 parts`)
 
 		// Create a new header with "alg": "none"
-		noneHeader := map[string]interface{}{
+		noneHeader := map[string]any{
 			"alg": "none",
 			"typ": "JWT",
 		}

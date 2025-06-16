@@ -20,12 +20,12 @@ func Example_jwt_filter_advanced_use_cases() {
 		Claim("userRole", "manager").
 		Claim("department", "sales").
 		Claim("permissions", []string{"read:reports", "write:orders", "approve:discounts"}).
-		Claim("profile", map[string]interface{}{
+		Claim("profile", map[string]any{
 			"name":  "John Doe",
 			"email": "john@example.com",
 			"phone": "+1-555-0123",
 		}).
-		Claim("sessionInfo", map[string]interface{}{
+		Claim("sessionInfo", map[string]any{
 			"loginIP":      "10.0.1.100",
 			"deviceType":   "desktop",
 			"browser":      "Chrome/91.0",

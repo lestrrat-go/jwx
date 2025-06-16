@@ -235,7 +235,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				set := jwk.NewSet()
 				set.AddKey(pkJwk)
 
-				var used interface{}
+				var used any
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
 				require.NoError(t, err)
 				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
@@ -328,7 +328,7 @@ func TestEncode_A128KW_A128CBC_HS256(t *testing.T) {
 }
 
 //nolint:thelper
-func testEncodeECDHWithKey(t *testing.T, privkey interface{}, pubkey interface{}) {
+func testEncodeECDHWithKey(t *testing.T, privkey any, pubkey any) {
 	plaintext := []byte("Lorem ipsum")
 
 	algorithms := []jwa.KeyEncryptionAlgorithm{
@@ -601,7 +601,7 @@ func TestCustomField(t *testing.T) {
 	const rfc3339Key = `x-test-rfc3339`
 	const rfc1123Key = `x-test-rfc1123`
 	jwe.RegisterCustomField(rfc3339Key, time.Time{})
-	jwe.RegisterCustomField(rfc1123Key, jwe.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+	jwe.RegisterCustomField(rfc1123Key, jwe.CustomDecodeFunc(func(data []byte) (any, error) {
 		var s string
 		if err := json.Unmarshal(data, &s); err != nil {
 			return nil, err

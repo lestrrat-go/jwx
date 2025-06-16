@@ -153,6 +153,6 @@ func (noneSigner) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.NoSignature()
 }
 
-func (noneSigner) Sign([]byte, interface{}) ([]byte, error) {
+func (noneSigner) Sign([]byte, any) ([]byte, error) {
 	return nil, nil
 }

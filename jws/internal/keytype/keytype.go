@@ -20,7 +20,7 @@ import (
 //
 // Notes: symmetric keys are obviously not part of this. for v2 OKP keys,
 // x25519 does not implement Sign()
-func IsValidRSAKey(key interface{}) bool {
+func IsValidRSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ecdsa.PrivateKey, *ecdsa.PrivateKey,
@@ -32,7 +32,7 @@ func IsValidRSAKey(key interface{}) bool {
 	return true
 }
 
-func IsValidECDSAKey(key interface{}) bool {
+func IsValidECDSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ed25519.PrivateKey,
@@ -44,7 +44,7 @@ func IsValidECDSAKey(key interface{}) bool {
 	return true
 }
 
-func IsValidEDDSAKey(key interface{}) bool {
+func IsValidEDDSAKey(key any) bool {
 	switch key.(type) {
 	case
 		ecdsa.PrivateKey, *ecdsa.PrivateKey,

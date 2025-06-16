@@ -18,7 +18,7 @@ import (
 // previous call.
 type Builder struct {
 	mu     sync.Mutex
-	claims map[string]interface{}
+	claims map[string]any
 }
 
 func NewBuilder() *Builder {
@@ -27,11 +27,11 @@ func NewBuilder() *Builder {
 
 func (b *Builder) init() {
 	if b.claims == nil {
-		b.claims = make(map[string]interface{})
+		b.claims = make(map[string]any)
 	}
 }
 
-func (b *Builder) Claim(name string, value interface{}) *Builder {
+func (b *Builder) Claim(name string, value any) *Builder {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.init()

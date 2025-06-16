@@ -54,7 +54,7 @@ func init() {
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
 //   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey creates an OKP based key
 //   - []byte creates a symmetric key
-func Import(raw interface{}) (Key, error) {
+func Import(raw any) (Key, error) {
 	if raw == nil {
 		return nil, importerr(`a non-nil key is required`)
 	}
@@ -108,7 +108,7 @@ func PublicSetOf(v Set) (Set, error) {
 // responsibility to remove any fields, if necessary
 //
 // If `v` is a raw key, the key is first converted to a `jwk.Key`
-func PublicKeyOf(v interface{}) (Key, error) {
+func PublicKeyOf(v any) (Key, error) {
 	// This should catch all jwk.Key instances
 	if pk, ok := v.(PublicKeyer); ok {
 		return pk.PublicKey()
@@ -132,7 +132,7 @@ func PublicKeyOf(v interface{}) (Key, error) {
 //
 // This function must go through converting the object once to a jwk.Key,
 // then back to a raw key, so it's not exactly efficient.
-func PublicRawKeyOf(v interface{}) (interface{}, error) {
+func PublicRawKeyOf(v any) (any, error) {
 	pk, ok := v.(PublicKeyer)
 	if !ok {
 		k, err := Import(v)
@@ -151,7 +151,7 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain public key from %T: %w`, v, err)
 	}
 
-	var raw interface{}
+	var raw any
 	if err := Export(pubk, &raw); err != nil {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
 	}
@@ -162,7 +162,7 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 // and assigns the "raw" key to the given parameter. The key must either be
 // a pointer to an empty interface, or a pointer to the actual raw key type
 // such as *rsa.PrivateKey, *ecdsa.PublicKey, *[]byte, etc.
-func ParseRawKey(data []byte, rawkey interface{}) error {
+func ParseRawKey(data []byte, rawkey any) error {
 	key, err := ParseKey(data)
 	if err != nil {
 		return fmt.Errorf(`failed to parse key: %w`, err)
@@ -434,7 +434,7 @@ func cloneKey(src Key) (Key, error) {
 
 	for _, k := range src.Keys() {
 		// It's absolutely
-		var v interface{}
+		var v any
 		if err := src.Get(k, &v); err != nil {
 			return nil, fmt.Errorf(`jwk.cloneKey: failed to get %q: %w`, k, err)
 		}
@@ -453,7 +453,7 @@ func cloneKey(src Key) (Key, error) {
 //
 // Currently only EC (including Ed25519) and RSA keys (and jwk.Set
 // comprised of these key types) are supported.
-func Pem(v interface{}) ([]byte, error) {
+func Pem(v any) ([]byte, error) {
 	var set Set
 	switch v := v.(type) {
 	case Key:
@@ -496,7 +496,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		}
 		return pmECPrivateKey, buf, nil
 	case RSAPrivateKey, OKPPrivateKey:
-		var rawkey interface{}
+		var rawkey any
 		if err := Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
@@ -506,7 +506,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		}
 		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		var rawkey interface{}
+		var rawkey any
 		if err := Export(key, &rawkey); err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
@@ -536,7 +536,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 //	jwk.RegisterCustomField(`x-birthday`, time.Time{})
 //
 // Then you can use a `time.Time` variable to extract the value
-// of `x-birthday` field, instead of having to use `interface{}`
+// of `x-birthday` field, instead of having to use `any`
 // and later convert it to `time.Time`
 //
 //	var bday time.Time
@@ -546,7 +546,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // you can register a `CustomDecoder`. For example, below shows
 // how to register a decoder that can parse RFC1123 format string:
 //
-//	jwk.RegisterCustomField(`x-birthday`, jwk.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+//	jwk.RegisterCustomField(`x-birthday`, jwk.CustomDecodeFunc(func(data []byte) (any, error) {
 //	  return time.Parse(time.RFC1123, string(data))
 //	}))
 //
@@ -559,7 +559,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 

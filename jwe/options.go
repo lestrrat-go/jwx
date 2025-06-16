@@ -17,7 +17,7 @@ func WithProtectedHeaders(h Headers) EncryptOption {
 
 type withKey struct {
 	alg     jwa.KeyAlgorithm
-	key     interface{}
+	key     any
 	headers Headers
 }
 
@@ -49,7 +49,7 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 //
 // Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
 // to be tried.
-func WithKey(alg jwa.KeyAlgorithm, key interface{}, options ...WithKeySuboption) EncryptDecryptOption {
+func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, option := range options {
 		switch option.Ident() {

@@ -45,7 +45,7 @@ type rsaPublicKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -56,7 +56,7 @@ var _ Key = &rsaPublicKey{}
 func newRSAPublicKey() *rsaPublicKey {
 	return &rsaPublicKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -175,7 +175,7 @@ func (h *rsaPublicKey) Has(name string) bool {
 	}
 }
 
-func (h *rsaPublicKey) Get(name string, dst interface{}) error {
+func (h *rsaPublicKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -275,13 +275,13 @@ func (h *rsaPublicKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *rsaPublicKey) Set(name string, value interface{}) error {
+func (h *rsaPublicKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
+func (h *rsaPublicKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -363,7 +363,7 @@ func (h *rsaPublicKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -540,7 +540,7 @@ LOOP:
 }
 
 func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 10)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
@@ -690,7 +690,7 @@ type rsaPrivateKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	privateParams          map[string]interface{}
+	privateParams          map[string]any
 	mu                     *sync.RWMutex
 	dc                     json.DecodeCtx
 }
@@ -701,7 +701,7 @@ var _ Key = &rsaPrivateKey{}
 func newRSAPrivateKey() *rsaPrivateKey {
 	return &rsaPrivateKey{
 		mu:            &sync.RWMutex{},
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
@@ -874,7 +874,7 @@ func (h *rsaPrivateKey) Has(name string) bool {
 	}
 }
 
-func (h *rsaPrivateKey) Get(name string, dst interface{}) error {
+func (h *rsaPrivateKey) Get(name string, dst any) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
@@ -1022,13 +1022,13 @@ func (h *rsaPrivateKey) Get(name string, dst interface{}) error {
 	return nil
 }
 
-func (h *rsaPrivateKey) Set(name string, value interface{}) error {
+func (h *rsaPrivateKey) Set(name string, value any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.setNoLock(name, value)
 }
 
-func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
+func (h *rsaPrivateKey) setNoLock(name string, value any) error {
 	switch name {
 	case "kty":
 		return nil
@@ -1146,7 +1146,7 @@ func (h *rsaPrivateKey) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
-			h.privateParams = map[string]interface{}{}
+			h.privateParams = map[string]any{}
 		}
 		h.privateParams[name] = value
 	}
@@ -1368,7 +1368,7 @@ LOOP:
 }
 
 func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	fields := make([]string, 0, 16)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)

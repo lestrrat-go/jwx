@@ -17,11 +17,11 @@ const keysKey = `keys` // appease linter
 // NewSet creates and empty `jwk.Set` object
 func NewSet() Set {
 	return &set{
-		privateParams: make(map[string]interface{}),
+		privateParams: make(map[string]any),
 	}
 }
 
-func (s *set) Set(n string, v interface{}) error {
+func (s *set) Set(n string, v any) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -38,7 +38,7 @@ func (s *set) Set(n string, v interface{}) error {
 	return nil
 }
 
-func (s *set) Get(name string, dst interface{}) error {
+func (s *set) Get(name string, dst any) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -134,7 +134,7 @@ func (s *set) Clear() error {
 	defer s.mu.Unlock()
 
 	s.keys = nil
-	s.privateParams = make(map[string]interface{})
+	s.privateParams = make(map[string]any)
 	return nil
 }
 
@@ -196,7 +196,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.privateParams = make(map[string]interface{})
+	s.privateParams = make(map[string]any)
 	s.keys = nil
 
 	var options []ParseOption
@@ -246,7 +246,7 @@ LOOP:
 					s.keys = append(s.keys, key)
 				}
 			default:
-				var v interface{}
+				var v any
 				if err := dec.Decode(&v); err != nil {
 					return fmt.Errorf(`failed to decode value for key %q: %w`, tok, err)
 				}

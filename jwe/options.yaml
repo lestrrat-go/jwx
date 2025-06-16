@@ -117,7 +117,7 @@ options:
       WithFS specifies the source `fs.FS` object to read the file from.
   - ident: KeyUsed
     interface: DecryptOption
-    argument_type: 'interface{}'
+    argument_type: 'any'
     comment: |
       WithKeyUsed allows you to specify the `jwe.Decrypt()` function to
       return the key used for decryption. This may be useful when
@@ -125,7 +125,7 @@ options:
       and you want to know which key was successful at decrypting the
       CEK.
       
-      `v` must be a pointer to an empty `interface{}`. Do not use
+      `v` must be a pointer to an empty `any`. Do not use
       `jwk.Key` here unless you are 100% sure that all keys that you
       have provided are instances of `jwk.Key` (remember that the
       jwx API allows users to specify a raw key such as *rsa.PublicKey)

@@ -95,7 +95,7 @@ func (t AddressClaim) Country() string {
 	return *(t.country)
 }
 
-func (t *AddressClaim) Get(s string) (interface{}, bool) {
+func (t *AddressClaim) Get(s string) (any, bool) {
 	switch s {
 	case AddressFormattedKey:
 		if t.formatted == nil {
@@ -132,7 +132,7 @@ func (t *AddressClaim) Get(s string) (interface{}, bool) {
 	return nil, false
 }
 
-func (t *AddressClaim) Set(key string, value interface{}) error {
+func (t *AddressClaim) Set(key string, value any) error {
 	switch key {
 	case AddressFormattedKey:
 		v, ok := value.(string)
@@ -181,7 +181,7 @@ func (t *AddressClaim) Set(key string, value interface{}) error {
 	}
 }
 
-func (t *AddressClaim) Accept(v interface{}) error {
+func (t *AddressClaim) Accept(v any) error {
 	switch v := v.(type) {
 	case AddressClaim:
 		*t = v
@@ -189,7 +189,7 @@ func (t *AddressClaim) Accept(v interface{}) error {
 	case *AddressClaim:
 		*t = *v
 		return nil
-	case map[string]interface{}:
+	case map[string]any:
 		for key, value := range v {
 			if err := t.Set(key, value); err != nil {
 				return fmt.Errorf(`failed to set header: %w`, err)

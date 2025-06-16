@@ -123,7 +123,7 @@ const (
 	EncryptedKeyKey         = "encrypted_key"
 )
 
-func (m *Message) Set(k string, v interface{}) error {
+func (m *Message) Set(k string, v any) error {
 	switch k {
 	case AuthenticatedDataKey:
 		buf, ok := v.([]byte)

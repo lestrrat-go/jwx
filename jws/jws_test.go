@@ -254,12 +254,12 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, _ crypto.S
 
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
 
-func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey interface{}, keys map[string]interface{}) {
+func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey any, keys map[string]any) {
 	jwkKey, err := jwk.Import(signKey)
 	require.NoError(t, err, `jwk.New should succeed`)
 	signKeys := []struct {
 		Name string
-		Key  interface{}
+		Key  any
 	}{
 		{
 			Name: "Raw Key",
@@ -281,7 +281,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 		k := &dummyECDSACryptoSigner{raw: es}
 		signKeys = append(signKeys, struct {
 			Name string
-			Key  interface{}
+			Key  any
 		}{
 			Name: "crypto.Signer",
 			Key:  k,
@@ -291,7 +291,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 		k := &dummyCryptoSigner{raw: cs}
 		signKeys = append(signKeys, struct {
 			Name string
-			Key  interface{}
+			Key  any
 		}{
 			Name: "crypto.Signer",
 			Key:  k,
@@ -337,7 +337,7 @@ func TestRoundtrip(t *testing.T) {
 		t.Parallel()
 		sharedkey := []byte("Avracadabra")
 		jwkKey, _ := jwk.Import(sharedkey)
-		keys := map[string]interface{}{
+		keys := map[string]any{
 			"[]byte":  sharedkey,
 			"jwk.Key": jwkKey,
 		}
@@ -354,7 +354,7 @@ func TestRoundtrip(t *testing.T) {
 		key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 		require.NoError(t, err, "ECDSA key generated")
 		jwkKey, _ := jwk.Import(key.PublicKey)
-		keys := map[string]interface{}{
+		keys := map[string]any{
 			"Verify(ecdsa.PublicKey)":  key.PublicKey,
 			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
 			"Verify(jwk.Key)":          jwkKey,
@@ -371,7 +371,7 @@ func TestRoundtrip(t *testing.T) {
 		key, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, "RSA key generated")
 		jwkKey, _ := jwk.Import(key.PublicKey)
-		keys := map[string]interface{}{
+		keys := map[string]any{
 			"Verify(rsa.PublicKey)":  key.PublicKey,
 			"Verify(*rsa.PublicKey)": &key.PublicKey,
 			"Verify(jwk.Key)":        jwkKey,
@@ -389,7 +389,7 @@ func TestRoundtrip(t *testing.T) {
 		require.NoError(t, err, "ed25519 key generated")
 		pubkey := key.Public()
 		jwkKey, _ := jwk.Import(pubkey)
-		keys := map[string]interface{}{
+		keys := map[string]any{
 			"Verify(ed25519.Public())": pubkey,
 			// Meh, this doesn't work
 			// "Verify(*ed25519.Public())": &pubkey,
@@ -438,7 +438,7 @@ func TestEncode(t *testing.T) {
 		require.NoError(t, err, "Parsing compact serialization")
 
 		{
-			v := map[string]interface{}{}
+			v := map[string]any{}
 			require.NoError(t, json.Unmarshal(m.Payload(), &v), "Unmarshal payload")
 			require.Equal(t, v["iss"], "joe", "iss matches")
 			require.Equal(t, int(v["exp"].(float64)), 1300819380, "exp matches")
@@ -745,7 +745,7 @@ func TestCustomField(t *testing.T) {
 	const rfc3339Key = `x-test-rfc3339`
 	const rfc1123Key = `x-test-rfc1123`
 	jws.RegisterCustomField(rfc3339Key, time.Time{})
-	jws.RegisterCustomField(rfc1123Key, jws.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+	jws.RegisterCustomField(rfc1123Key, jws.CustomDecodeFunc(func(data []byte) (any, error) {
 		var s string
 		if err := json.Unmarshal(data, &s); err != nil {
 			return nil, err
@@ -818,7 +818,7 @@ func TestCustomField(t *testing.T) {
 			msg, err := jws.Parse(signed)
 			require.NoError(t, err, `jws.Parse should succeed`)
 
-			var v interface{}
+			var v any
 			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
 
 			require.Equal(t, expected, v, `values should match`)
@@ -1236,7 +1236,7 @@ func TestAlgorithmsForKey(t *testing.T) {
 
 	testcases := []struct {
 		Name     string
-		Key      interface{}
+		Key      any
 		Expected []jwa.SignatureAlgorithm
 	}{
 		{
@@ -1440,12 +1440,12 @@ func (s256SignerVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return sha256Algo
 }
 
-func (s256SignerVerifier) Sign(payload []byte, _ interface{}) ([]byte, error) {
+func (s256SignerVerifier) Sign(payload []byte, _ any) ([]byte, error) {
 	h := sha256.Sum256(payload)
 	return h[:], nil
 }
 
-func (s256SignerVerifier) Verify(payload, signature []byte, _ interface{}) error {
+func (s256SignerVerifier) Verify(payload, signature []byte, _ any) error {
 	h := sha256.Sum256(payload)
 	if !bytes.Equal(h[:], signature) {
 		return fmt.Errorf("invalid signature: expected %q, got %q", base64.EncodeToString(h[:]), base64.EncodeToString(signature))

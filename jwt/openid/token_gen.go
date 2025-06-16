@@ -142,13 +142,13 @@ type Token interface {
 	// Note that fields of JWS/JWE are NOT accessible through this method. You need
 	// to use `jws.Parse` and `jwe.Parse` to obtain the JWS/JWE message (and NOT
 	// the payload, which presumably is the JWT), and then use their `Get` methods in their respective packages
-	Get(string, interface{}) error
+	Get(string, any) error
 
 	// Set assigns a value to the corresponding field in the token. Some
 	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
 	// be of a specific type. See the other getter methods in this interface
 	// for the types of each of these fields
-	Set(string, interface{}) error
+	Set(string, any) error
 
 	// Has returns true if the specified claim has a value, even if
 	// the value is empty-ish (e.g. 0, false, "")  as long as it has been
@@ -194,7 +194,7 @@ type stdToken struct {
 	updatedAt           *types.NumericDate
 	website             *string
 	zoneinfo            *string
-	privateClaims       map[string]interface{}
+	privateClaims       map[string]any
 }
 
 // New creates a standard token, with minimal knowledge of
@@ -203,7 +203,7 @@ type stdToken struct {
 func New() Token {
 	return &stdToken{
 		mu:            &sync.RWMutex{},
-		privateClaims: make(map[string]interface{}),
+		privateClaims: make(map[string]any),
 		options:       jwt.DefaultOptionSet(),
 	}
 }
@@ -274,7 +274,7 @@ func (t *stdToken) Has(name string) bool {
 	}
 }
 
-func (t *stdToken) Get(name string, dst interface{}) error {
+func (t *stdToken) Get(name string, dst any) error {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	switch name {
@@ -560,7 +560,7 @@ func (t *stdToken) Remove(key string) error {
 	return nil
 }
 
-func (t *stdToken) Set(name string, value interface{}) error {
+func (t *stdToken) Set(name string, value any) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.setNoLock(name, value)
@@ -578,7 +578,7 @@ func (t *stdToken) SetDecodeCtx(v DecodeCtx) {
 	t.dc = v
 }
 
-func (t *stdToken) setNoLock(name string, value interface{}) error {
+func (t *stdToken) setNoLock(name string, value any) error {
 	switch name {
 	case AddressKey:
 		var acceptor AddressClaim
@@ -745,7 +745,7 @@ func (t *stdToken) setNoLock(name string, value interface{}) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
 	default:
 		if t.privateClaims == nil {
-			t.privateClaims = map[string]interface{}{}
+			t.privateClaims = map[string]any{}
 		}
 		t.privateClaims[name] = value
 	}
@@ -986,7 +986,7 @@ func (t *stdToken) Zoneinfo() (string, bool) {
 	return "", false
 }
 
-func (t *stdToken) PrivateClaims() map[string]interface{} {
+func (t *stdToken) PrivateClaims() map[string]any {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.privateClaims
@@ -1275,11 +1275,11 @@ func (t *stdToken) Keys() []string {
 
 type claimPair struct {
 	Name  string
-	Value interface{}
+	Value any
 }
 
 var claimPairPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return make([]claimPair, 0, 26)
 	},
 }

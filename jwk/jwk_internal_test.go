@@ -43,7 +43,7 @@ func TestX509CertChain(t *testing.T) {
 }
 
 func TestIterator(t *testing.T) {
-	commonValues := map[string]interface{}{
+	commonValues := map[string]any{
 		AlgorithmKey: jwa.KeyAlgorithmFrom("dummy"),
 		KeyIDKey:     "dummy-kid",
 		KeyUsageKey:  "dummy-usage",
@@ -51,23 +51,23 @@ func TestIterator(t *testing.T) {
 		"private":    "dummy-private",
 	}
 
-	verifyIterators := func(t *testing.T, v Key, expected map[string]interface{}) {
+	verifyIterators := func(t *testing.T, v Key, expected map[string]any) {
 		t.Helper()
 		t.Run("Iterate", func(t *testing.T) {
-			seen := make(map[string]interface{})
+			seen := make(map[string]any)
 			for iter := v.Iterate(context.TODO()); iter.Next(context.TODO()); {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
 
-				var getV interface{}
+				var getV any
 				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
 				require.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`)
 			}
 			require.Equal(t, expected, seen, `values should match`)
 		})
 		t.Run("Walk", func(t *testing.T) {
-			seen := make(map[string]interface{})
-			v.Walk(context.TODO(), HeaderVisitorFunc(func(key string, value interface{}) error {
+			seen := make(map[string]any)
+			v.Walk(context.TODO(), HeaderVisitorFunc(func(key string, value any) error {
 				seen[key] = value
 				return nil
 			}))
@@ -81,13 +81,13 @@ func TestIterator(t *testing.T) {
 	}
 
 	type iterTestCase struct {
-		Extras map[string]interface{}
+		Extras map[string]any
 		Func   func() Key
 	}
 
 	testcases := []iterTestCase{
 		{
-			Extras: map[string]interface{}{
+			Extras: map[string]any{
 				RSANKey:  []byte("0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"),
 				RSAEKey:  []byte("AQAB"),
 				RSADKey:  []byte("X4cTteJY_gn4FYPsXB8rdXix5vwsg1FLN5E3EaG6RJoVH-HLLKD9M7dx5oo7GURknchnrRweUkC7hT5fJLM0WbFAKNLWY2vv7B6NqXSzUvxT0_YSfqijwp3RTzlBaCxWp4doFk5N2o8Gy_nHNKroADIkJ46pRUohsXywbReAdYaMwFs9tv8d_cPVY3i07a3t8MN6TNwm0dSawm9v47UiCl3Sk5ZiG7xojPLu4sbg1U2jx4IBTNBznbJSzFHK66jT8bgkuqsk0GjskDJk19Z4qwjwbsnn4j2WBii3RL-Us2lGVkY8fkFzme1z0HbIkfz0Y6mqnOYtqc0X4jfcKoAC8Q"),
@@ -102,7 +102,7 @@ func TestIterator(t *testing.T) {
 			},
 		},
 		{
-			Extras: map[string]interface{}{
+			Extras: map[string]any{
 				RSANKey: []byte("0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"),
 				RSAEKey: []byte("AQAB"),
 			},
@@ -111,7 +111,7 @@ func TestIterator(t *testing.T) {
 			},
 		},
 		{
-			Extras: map[string]interface{}{
+			Extras: map[string]any{
 				ECDSACrvKey: jwa.P256,
 				ECDSAXKey: (func() []byte {
 					s, _ := base64.DecodeString("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4")
@@ -131,7 +131,7 @@ func TestIterator(t *testing.T) {
 			},
 		},
 		{
-			Extras: map[string]interface{}{
+			Extras: map[string]any{
 				ECDSACrvKey: jwa.P256,
 				ECDSAXKey: (func() []byte {
 					s, _ := base64.DecodeString("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4")
@@ -147,7 +147,7 @@ func TestIterator(t *testing.T) {
 			},
 		},
 		{
-			Extras: map[string]interface{}{
+			Extras: map[string]any{
 				SymmetricOctetsKey: []byte("abcd"),
 			},
 			Func: func() Key {
@@ -158,7 +158,7 @@ func TestIterator(t *testing.T) {
 	for _, test := range testcases {
 		key := test.Func()
 		key2 := test.Func()
-		expected := make(map[string]interface{})
+		expected := make(map[string]any)
 		expected[KeyTypeKey] = key.KeyType()
 		for k, v := range commonValues {
 			require.NoError(t, key.Set(k, v), `key.Set %#v should succeed`, k)

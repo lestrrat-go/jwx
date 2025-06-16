@@ -14,7 +14,7 @@ import (
 // RSAPrivateKey assigns src to dst.
 // `dst` should be a pointer to a rsa.PrivateKey.
 // `src` may be rsa.PrivateKey, *rsa.PrivateKey, or a jwk.Key
-func RSAPrivateKey(dst, src interface{}) error {
+func RSAPrivateKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw rsa.PrivateKey
 		if err := jwk.Export(jwkKey, &raw); err != nil {
@@ -39,7 +39,7 @@ func RSAPrivateKey(dst, src interface{}) error {
 // RSAPublicKey assigns src to dst
 // `dst` should be a pointer to a non-zero rsa.PublicKey.
 // `src` may be rsa.PublicKey, *rsa.PublicKey, or a jwk.Key
-func RSAPublicKey(dst, src interface{}) error {
+func RSAPublicKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {
@@ -67,7 +67,7 @@ func RSAPublicKey(dst, src interface{}) error {
 
 // ECDSAPrivateKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
-func ECDSAPrivateKey(dst, src interface{}) error {
+func ECDSAPrivateKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ecdsa.PrivateKey
 		if err := jwk.Export(jwkKey, &raw); err != nil {
@@ -90,7 +90,7 @@ func ECDSAPrivateKey(dst, src interface{}) error {
 
 // ECDSAPublicKey assigns src to dst, converting its type from a
 // non-pointer to a pointer
-func ECDSAPublicKey(dst, src interface{}) error {
+func ECDSAPublicKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {
@@ -115,7 +115,7 @@ func ECDSAPublicKey(dst, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-func ByteSliceKey(dst, src interface{}) error {
+func ByteSliceKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw []byte
 		if err := jwk.Export(jwkKey, &raw); err != nil {
@@ -130,7 +130,7 @@ func ByteSliceKey(dst, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, src)
 }
 
-func Ed25519PrivateKey(dst, src interface{}) error {
+func Ed25519PrivateKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		var raw ed25519.PrivateKey
 		if err := jwk.Export(jwkKey, &raw); err != nil {
@@ -151,7 +151,7 @@ func Ed25519PrivateKey(dst, src interface{}) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-func Ed25519PublicKey(dst, src interface{}) error {
+func Ed25519PublicKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {

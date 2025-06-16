@@ -14,7 +14,7 @@ func TestHeader(t *testing.T) {
 	t.Run("Roundtrip", func(t *testing.T) {
 		t.Parallel()
 
-		values := map[string]interface{}{
+		values := map[string]any{
 			jwk.KeyIDKey:                  "helloworld01",
 			jwk.KeyOpsKey:                 jwk.KeyOperationList{jwk.KeyOpSign},
 			jwk.KeyUsageKey:               "sig",
@@ -30,7 +30,7 @@ func TestHeader(t *testing.T) {
 		for k, v := range values {
 			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
 
-			var got interface{}
+			var got any
 			require.NoError(t, h.Get(k, &got), "Get works for '%s'", k)
 			require.Equal(t, v, got, "values match '%s'", k)
 			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
@@ -50,7 +50,7 @@ func TestHeader(t *testing.T) {
 			dummy2 float64
 		}
 		dummy := &dummyStruct{1, 3.4}
-		values := map[string]interface{}{
+		values := map[string]any{
 			jwk.AlgorithmKey:              dummy,
 			jwk.KeyIDKey:                  dummy,
 			jwk.KeyUsageKey:               dummy,
@@ -92,7 +92,7 @@ func TestHeader(t *testing.T) {
 		t.Parallel()
 		h, err := jwk.Import([]byte("dummy"))
 		require.NoError(t, err, `jwk.New should succeed`)
-		for _, value := range []interface{}{jwa.RS256(), jwa.RSA1_5()} {
+		for _, value := range []any{jwa.RS256(), jwa.RSA1_5()} {
 			require.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed")
 
 			var got jwa.KeyAlgorithm

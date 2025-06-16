@@ -46,7 +46,7 @@ func yaml2json(fn string) ([]byte, error) {
 	}
 	defer in.Close()
 
-	var v interface{}
+	var v any
 	if err := yaml.NewDecoder(in).Decode(&v); err != nil {
 		return nil, fmt.Errorf(`failed to decode %q: %w`, fn, err)
 	}
@@ -115,8 +115,8 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("// an error if the field does not exist, or if the value cannot be assigned to")
 	o.L("// the destination variable. Note that a field is considered to \"exist\" even if")
 	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
-	o.L("Get(string, interface{}) error")
-	o.L("Set(string, interface{}) error")
+	o.L("Get(string, any) error")
+	o.L("Set(string, any) error")
 	o.L("Remove(string) error")
 	o.L("// Has returns true if the specified header has a value, even if")
 	o.L("// the value is empty-ish (e.g. 0, false, \"\")  as long as it has been")
@@ -145,7 +145,7 @@ func generateHeaders(obj *codegen.Object) error {
 		}
 	}
 
-	o.L("privateParams map[string]interface{}")
+	o.L("privateParams map[string]any")
 	o.L("mu *sync.RWMutex")
 	o.L("dc DecodeCtx")
 	o.L("raw []byte // stores the raw version of the header so it can be used later")
@@ -196,7 +196,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return h.raw")
 	o.L("}")
 
-	o.LL("func (h *stdHeaders) PrivateParams() map[string]interface{} {")
+	o.LL("func (h *stdHeaders) PrivateParams() map[string]any {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("return h.privateParams")
@@ -216,7 +216,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (h *stdHeaders) Get(name string, dst interface{}) error {")
+	o.LL("func (h *stdHeaders) Get(name string, dst any) error {")
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
@@ -246,15 +246,15 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 	o.L("}") // end switch name
 	o.L("return nil")
-	o.L("}") // func (h *stdHeaders) Get(name string) (interface{}, bool)
+	o.L("}") // func (h *stdHeaders) Get(name string) (any, bool)
 
-	o.LL("func (h *stdHeaders) Set(name string, value interface{}) error {")
+	o.LL("func (h *stdHeaders) Set(name string, value any) error {")
 	o.L("h.mu.Lock()")
 	o.L("defer h.mu.Unlock()")
 	o.L("return h.setNoLock(name, value)")
 	o.L("}")
 
-	o.LL("func (h *stdHeaders) setNoLock(name string, value interface{}) error {")
+	o.LL("func (h *stdHeaders) setNoLock(name string, value any) error {")
 	o.L("switch name {")
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
@@ -289,7 +289,7 @@ func generateHeaders(obj *codegen.Object) error {
 	}
 	o.L("default:")
 	o.L("if h.privateParams == nil {")
-	o.L("h.privateParams = map[string]interface{}{}")
+	o.L("h.privateParams = map[string]any{}")
 	o.L("}") // end if h.privateParams == nil
 	o.L("h.privateParams[name] = value")
 	o.L("}") // end switch name
@@ -411,7 +411,7 @@ func generateHeaders(obj *codegen.Object) error {
 
 	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("h.mu.RLock()")
-	o.L("data := make(map[string]interface{})")
+	o.L("data := make(map[string]any)")
 	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
 	for _, f := range obj.Fields() {
 		o.L("if h.%s != nil {", f.Name(false))

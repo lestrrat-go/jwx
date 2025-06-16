@@ -138,7 +138,7 @@ func (s LegacyCirclEdDSASignerVerifier) Algorithm() jwa.SignatureAlgorithm {
 	return jwa.EdDSA()
 }
 
-func (s LegacyCirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) ([]byte, error) {
+func (s LegacyCirclEdDSASignerVerifier) Sign(payload []byte, keyif any) ([]byte, error) {
 	fmt.Println("Custom signer called (legacy)")
 	switch key := keyif.(type) {
 	case ed25519.PrivateKey:
@@ -148,7 +148,7 @@ func (s LegacyCirclEdDSASignerVerifier) Sign(payload []byte, keyif interface{}) 
 	}
 }
 
-func (s LegacyCirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif interface{}) error {
+func (s LegacyCirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif any) error {
 	fmt.Println("Custom verifier called (legacy)")
 	switch key := keyif.(type) {
 	case ed25519.PublicKey:

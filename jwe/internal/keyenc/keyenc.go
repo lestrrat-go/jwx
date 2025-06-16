@@ -209,7 +209,7 @@ func (kw PBES2Encrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESEncrypt creates a new key encrypter based on ECDH-ES
-func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, keyif interface{}, apu, apv []byte) (*ECDHESEncrypt, error) {
+func NewECDHESEncrypt(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, keyif any, apu, apv []byte) (*ECDHESEncrypt, error) {
 	var generator keygen.Generator
 	var err error
 	switch key := keyif.(type) {
@@ -275,7 +275,7 @@ func (kw ECDHESEncrypt) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 }
 
 // NewECDHESDecrypt creates a new key decrypter using ECDH-ES
-func NewECDHESDecrypt(keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, pubkey interface{}, apu, apv []byte, privkey interface{}) *ECDHESDecrypt {
+func NewECDHESDecrypt(keyalg jwa.KeyEncryptionAlgorithm, contentalg jwa.ContentEncryptionAlgorithm, pubkey any, apu, apv []byte, privkey any) *ECDHESDecrypt {
 	return &ECDHESDecrypt{
 		keyalg:     keyalg,
 		contentalg: contentalg,
@@ -291,7 +291,7 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.keyalg
 }
 
-func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
+func DeriveZ(privkeyif any, pubkeyif any) ([]byte, error) {
 	switch privkeyif.(type) {
 	case *ecdh.PrivateKey:
 		privkey, ok := privkeyif.(*ecdh.PrivateKey)
@@ -325,7 +325,7 @@ func DeriveZ(privkeyif interface{}, pubkeyif interface{}) ([]byte, error) {
 	}
 }
 
-func DeriveECDHES(alg, apu, apv []byte, privkey interface{}, pubkey interface{}, keysize uint32) ([]byte, error) {
+func DeriveECDHES(alg, apu, apv []byte, privkey any, pubkey any, keysize uint32) ([]byte, error) {
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*8)
 	zBytes, err := DeriveZ(privkey, pubkey)

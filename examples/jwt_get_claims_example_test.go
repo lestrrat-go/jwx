@@ -35,17 +35,17 @@ func Example_jwt_get_claims() {
 	// But you can also get them via the generic `.Get()` method.
 	// However, you would need to decide for yourself what the
 	// return type is. If you don't need the exact type, you could
-	// use interface{}, or you could use the specific time.Time
+	// use any, or you could use the specific time.Time
 	// type
 	//
 	// For the key name you could also use jwt.IssuedAtKey constant
 	_ = tok.Get(`iat`, &iat)
 
-	// var iat interface{} would also work, but you would need to
+	// var iat any would also work, but you would need to
 	// convert the type if you need time.Time specific behavior
 
 	// Private claims
-	var dummy interface{}
+	var dummy any
 	_ = tok.Get(`claim1`, &dummy)
 	_ = tok.Get(`claim2`, &dummy)
 	_ = tok.Get(`claim3`, &dummy)
@@ -72,7 +72,7 @@ func Example_jwt_get_claims() {
 	// For example, in the case of `claim3`, it needs to call `jwk.ParseKey`
 	// which returns an interface that can't be instantiated like the
 	// `time.Time` value for `claim2`.
-	jwt.RegisterCustomField(`claim3`, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+	jwt.RegisterCustomField(`claim3`, jwt.CustomDecodeFunc(func(data []byte) (any, error) {
 		return jwk.ParseKey(data)
 	}))
 

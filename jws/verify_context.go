@@ -20,7 +20,7 @@ type verifyContext struct {
 	dst             *Message
 	detachedPayload []byte
 	keyProviders    []KeyProvider
-	keyUsed         interface{}
+	keyUsed         any
 	validateKey     bool
 	encoder         Base64Encoder
 	//nolint:containedctx
@@ -180,7 +180,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 	return nil, verifyerr(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }
 
-func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key interface{}, msg *Message, sig *Signature) error {
+func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
 	if vc.validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
 			return fmt.Errorf(`failed to validate key before signing: %w`, err)

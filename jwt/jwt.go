@@ -532,7 +532,7 @@ func (t *stdToken) Clone() (Token, error) {
 
 	dst.Options().Set(*(t.Options()))
 	for _, k := range t.Keys() {
-		var v interface{}
+		var v any
 		if err := t.Get(k, &v); err != nil {
 			return nil, fmt.Errorf(`jwt.Clone: failed to get %s: %w`, k, err)
 		}
@@ -559,7 +559,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 //	jwt.RegisterCustomField(`x-birthday`, time.Time{})
 //
 // Then you can use a `time.Time` variable to extract the value
-// of `x-birthday` field, instead of having to use `interface{}`
+// of `x-birthday` field, instead of having to use `any`
 // and later convert it to `time.Time`
 //
 //	var bday time.Time
@@ -569,7 +569,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // you can register a `CustomDecoder`. For example, below shows
 // how to register a decoder that can parse RFC822 format string:
 //
-//	jwt.RegisterCustomField(`x-birthday`, jwt.CustomDecodeFunc(func(data []byte) (interface{}, error) {
+//	jwt.RegisterCustomField(`x-birthday`, jwt.CustomDecodeFunc(func(data []byte) (any, error) {
 //	  return time.Parse(time.RFC822, string(data))
 //	}))
 //
@@ -582,7 +582,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // likes to do. To avoid this, it's always better to use a custom type
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object interface{}) {
+func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 

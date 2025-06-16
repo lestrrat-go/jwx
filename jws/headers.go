@@ -6,7 +6,7 @@ import (
 
 func (h *stdHeaders) Copy(dst Headers) error {
 	for _, k := range h.Keys() {
-		var v interface{}
+		var v any
 		if err := h.Get(k, &v); err != nil {
 			return fmt.Errorf(`failed to get header %q: %w`, k, err)
 		}

@@ -100,7 +100,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 	var accessCount int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		accessCount++
-		key := map[string]interface{}{
+		key := map[string]any{
 			"kty":         "EC",
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
@@ -155,7 +155,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		accessCount++
 
-		key := map[string]interface{}{
+		key := map[string]any{
 			"kty":         "EC",
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
@@ -220,7 +220,7 @@ func TestCache_backoff(t *testing.T) {
 			return
 		}
 
-		key := map[string]interface{}{
+		key := map[string]any{
 			"kty":         "EC",
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",

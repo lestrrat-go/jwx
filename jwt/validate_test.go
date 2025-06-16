@@ -838,7 +838,7 @@ func TestClaimValidator(t *testing.T) {
 			Name: "Successful validation",
 			MakeToken: func() jwt.Token {
 				t1 := jwt.New()
-				_ = t1.Set(myClaim, map[string]interface{}{"k": "v"})
+				_ = t1.Set(myClaim, map[string]any{"k": "v"})
 				return t1
 			},
 		},
@@ -846,7 +846,7 @@ func TestClaimValidator(t *testing.T) {
 			Name: "Target claim does not exist",
 			MakeToken: func() jwt.Token {
 				t1 := jwt.New()
-				_ = t1.Set("other-claim", map[string]interface{}{"k": "v"})
+				_ = t1.Set("other-claim", map[string]any{"k": "v"})
 				return t1
 			},
 			Error: err0,

@@ -89,7 +89,7 @@ func Example_jwt_parse_with_key_provider_use_token() {
 func Example_jwt_parse_with_key_provider() {
 	// Pretend that this is a storage somewhere (maybe a database) that maps
 	// a signature algorithm to a key
-	store := make(map[jwa.KeyAlgorithm]interface{})
+	store := make(map[jwa.KeyAlgorithm]any)
 	algorithms := []jwa.SignatureAlgorithm{
 		jwa.RS256(),
 		jwa.RS384(),
