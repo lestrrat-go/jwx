@@ -203,7 +203,7 @@ func ECDHPrivateKey(dst, src any) error {
 		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
 			privECDH = &rawECDH
 		} else {
-			// If we cannnot export the key as an ecdh.PrivateKey, we try to export it as an ecdsa.PrivateKey
+			// If we cannot export the key as an ecdh.PrivateKey, we try to export it as an ecdsa.PrivateKey
 			var rawECDSA ecdsa.PrivateKey
 			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
 				return fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey or ecdsa.PrivateKey from %T: %w`, src, err)
