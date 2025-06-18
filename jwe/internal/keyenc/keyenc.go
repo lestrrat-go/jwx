@@ -291,68 +291,74 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.keyalg
 }
 
-func DeriveZ(privkeyif, pubkeyif any) ([]byte, error) {
+func DeriveECDHES(alg, apu, apv []byte, privkeyif, pubkeyif any, keysize uint32) ([]byte, error) {
+	pubinfo := make([]byte, 4)
+	binary.BigEndian.PutUint32(pubinfo, keysize*8)
+
 	var privkey *ecdh.PrivateKey
 	var pubkey *ecdh.PublicKey
 	if err := keyconv.ECDHPrivateKey(&privkey, privkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveZ: %w`, err)
+		return nil, fmt.Errorf(`keyenc.DeriveECDHES: %w`, err)
 	}
 	if err := keyconv.ECDHPublicKey(&pubkey, pubkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveZ: %w`, err)
+		return nil, fmt.Errorf(`keyenc.DeriveECDHES: %w`, err)
 	}
-	return privkey.ECDH(pubkey)
-}
 
-func DeriveECDHES(alg, apu, apv []byte, privkey any, pubkey any, keysize uint32) ([]byte, error) {
-	pubinfo := make([]byte, 4)
-	binary.BigEndian.PutUint32(pubinfo, keysize*8)
-	zBytes, err := DeriveZ(privkey, pubkey)
+	zBytes, err := privkey.ECDH(pubkey)
 	if err != nil {
-		return nil, fmt.Errorf(`unable to determine Z: %w`, err)
+		return nil, fmt.Errorf(`keyenc.DeriveECDHES: unable to determine Z: %w`, err)
 	}
 	kdf := concatkdf.New(crypto.SHA256, alg, zBytes, apu, apv, pubinfo, []byte{})
 	key := make([]byte, keysize)
 	if _, err := kdf.Read(key); err != nil {
-		return nil, fmt.Errorf(`failed to read kdf: %w`, err)
+		return nil, fmt.Errorf(`keyenc.DeriveECDHES: failed to read kdf: %w`, err)
 	}
 
 	return key, nil
 }
 
+const (
+	KeySize16 = 16
+	KeySize24 = 24
+	KeySize32 = 32
+)
+
 // Decrypt decrypts the encrypted key using ECDH-ES
 func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
-	var algBytes []byte
+	// rearranging the types and what not in anticipation of migrating to
+	// function based decrypters
+	algString := kw.keyalg.String()
+	wrap := true
+
 	var keysize uint32
 
-	// Use keyalg except for when jwa.ECDH_ES
-	algBytes = []byte(kw.keyalg.String())
-
-	switch kw.keyalg {
-	case jwa.ECDH_ES():
+	switch algString {
+	case jwa.ECDH_ES().String():
+		// ECDH-ES does not wrap keys
+		wrap = false
 		// Create a content cipher from the content encryption algorithm
 		c, err := contentcipher.NewAES(kw.contentalg)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create content cipher for %s: %w`, kw.contentalg, err)
 		}
 		keysize = uint32(c.KeySize())
-		algBytes = []byte(kw.contentalg.String())
-	case jwa.ECDH_ES_A128KW():
-		keysize = 16
-	case jwa.ECDH_ES_A192KW():
-		keysize = 24
-	case jwa.ECDH_ES_A256KW():
-		keysize = 32
+		algString = kw.contentalg.String()
+	case jwa.ECDH_ES_A128KW().String():
+		keysize = KeySize16
+	case jwa.ECDH_ES_A192KW().String():
+		keysize = KeySize24
+	case jwa.ECDH_ES_A256KW().String():
+		keysize = KeySize32
 	default:
-		return nil, fmt.Errorf("invalid ECDH-ES key wrap algorithm (%s)", kw.keyalg)
+		return nil, fmt.Errorf("invalid ECDH-ES key wrap algorithm (%s)", algString)
 	}
 
-	key, err := DeriveECDHES(algBytes, kw.apu, kw.apv, kw.privkey, kw.pubkey, keysize)
+	key, err := DeriveECDHES([]byte(algString), kw.apu, kw.apv, kw.privkey, kw.pubkey, keysize)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to derive ECDHES encryption key: %w`, err)
 	}
 
-	// ECDH-ES does not wrap keys
-	if kw.keyalg == jwa.ECDH_ES() {
+	if !wrap {
 		return key, nil
 	}
 
