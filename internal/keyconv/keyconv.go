@@ -239,7 +239,7 @@ func ECDHPublicKey(dst, src any) error {
 		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
 			pubECDH = &rawECDH
 		} else {
-			// If we cannnot export the key as an ecdh.PublicKey, we try to export it as an ecdsa.PublicKey
+			// If we cannot export the key as an ecdh.PublicKey, we try to export it as an ecdsa.PublicKey
 			var rawECDSA ecdsa.PublicKey
 			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
 				return fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey or ecdsa.PublicKey from %T: %w`, src, err)
