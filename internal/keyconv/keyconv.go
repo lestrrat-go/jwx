@@ -2,6 +2,7 @@ package keyconv
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -189,4 +190,76 @@ func Ed25519PublicKey(dst, src any) error {
 		return fmt.Errorf(`expected ed25519.PublicKey or *ed25519.PublicKey, got %T`, src)
 	}
 	return blackmagic.AssignIfCompatible(dst, ptr)
+}
+
+type privECDHer interface {
+	ECDH() (*ecdh.PrivateKey, error)
+}
+
+func ECDHPrivateKey(dst, src any) error {
+	var privECDH *ecdh.PrivateKey
+	if jwkKey, ok := src.(jwk.Key); ok {
+		var rawECDH ecdh.PrivateKey
+		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
+			privECDH = &rawECDH
+		} else {
+			// If we cannnot export the key as an ecdh.PrivateKey, we try to export it as an ecdsa.PrivateKey
+			var rawECDSA ecdsa.PrivateKey
+			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
+				return fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey or ecdsa.PrivateKey from %T: %w`, src, err)
+			}
+			src = &rawECDSA
+		}
+	}
+
+	switch src := src.(type) {
+	case ecdh.PrivateKey:
+		privECDH = &src
+	case *ecdh.PrivateKey:
+		privECDH = src
+	case privECDHer:
+		priv, err := src.ECDH()
+		if err != nil {
+			return fmt.Errorf(`keyconv: failed to convert ecdsa.PrivateKey to ecdh.PrivateKey: %w`, err)
+		}
+		privECDH = priv
+	}
+
+	return blackmagic.AssignIfCompatible(dst, privECDH)
+}
+
+type pubECDHer interface {
+	ECDH() (*ecdh.PublicKey, error)
+}
+
+func ECDHPublicKey(dst, src any) error {
+	var pubECDH *ecdh.PublicKey
+	if jwkKey, ok := src.(jwk.Key); ok {
+		var rawECDH ecdh.PublicKey
+		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
+			pubECDH = &rawECDH
+		} else {
+			// If we cannnot export the key as an ecdh.PublicKey, we try to export it as an ecdsa.PublicKey
+			var rawECDSA ecdsa.PublicKey
+			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
+				return fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey or ecdsa.PublicKey from %T: %w`, src, err)
+			}
+			src = &rawECDSA
+		}
+	}
+
+	switch src := src.(type) {
+	case ecdh.PublicKey:
+		pubECDH = &src
+	case *ecdh.PublicKey:
+		pubECDH = src
+	case pubECDHer:
+		pub, err := src.ECDH()
+		if err != nil {
+			return fmt.Errorf(`keyconv: failed to convert ecdsa.PublicKey to ecdh.PublicKey: %w`, err)
+		}
+		pubECDH = pub
+	}
+
+	return blackmagic.AssignIfCompatible(dst, pubECDH)
 }

@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	contentcipher "github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
@@ -291,38 +291,16 @@ func (kw ECDHESDecrypt) Algorithm() jwa.KeyEncryptionAlgorithm {
 	return kw.keyalg
 }
 
-func DeriveZ(privkeyif any, pubkeyif any) ([]byte, error) {
-	switch privkeyif.(type) {
-	case *ecdh.PrivateKey:
-		privkey, ok := privkeyif.(*ecdh.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf(`private key must be *ecdh.PrivateKey, was: %T`, privkeyif)
-		}
-		pubkey, ok := pubkeyif.(*ecdh.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf(`public key must be *ecdh.PublicKey, was: %T`, pubkeyif)
-		}
-		return privkey.ECDH(pubkey)
-	default:
-		privkey, ok := privkeyif.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf(`private key must be *ecdsa.PrivateKey, was: %T`, privkeyif)
-		}
-		pubkey, ok := pubkeyif.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf(`public key must be *ecdsa.PublicKey, was: %T`, pubkeyif)
-		}
-		if !privkey.PublicKey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
-			return nil, fmt.Errorf(`public key must be on the same curve as private key`)
-		}
-
-		z, _ := privkey.PublicKey.Curve.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
-		zBytes := ecutil.AllocECPointBuffer(z, privkey.Curve)
-		defer ecutil.ReleaseECPointBuffer(zBytes)
-		zCopy := make([]byte, len(zBytes))
-		copy(zCopy, zBytes)
-		return zCopy, nil
+func DeriveZ(privkeyif, pubkeyif any) ([]byte, error) {
+	var privkey *ecdh.PrivateKey
+	var pubkey *ecdh.PublicKey
+	if err := keyconv.ECDHPrivateKey(&privkey, privkeyif); err != nil {
+		return nil, fmt.Errorf(`keyenc.DeriveZ: %w`, err)
 	}
+	if err := keyconv.ECDHPublicKey(&pubkey, pubkeyif); err != nil {
+		return nil, fmt.Errorf(`keyenc.DeriveZ: %w`, err)
+	}
+	return privkey.ECDH(pubkey)
 }
 
 func DeriveECDHES(alg, apu, apv []byte, privkey any, pubkey any, keysize uint32) ([]byte, error) {
