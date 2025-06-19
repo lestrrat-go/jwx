@@ -1,20 +1,12 @@
 package jwe
 
 import (
-	"crypto/aes"
-	cryptocipher "crypto/cipher"
-	"crypto/sha256"
-	"crypto/sha512"
 	"fmt"
-	"hash"
-
-	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 )
 
@@ -171,67 +163,6 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 	return plaintext, nil
 }
 
-func (d *decrypter) decryptSymmetricKey(recipientKey, cek []byte) ([]byte, error) {
-	switch d.keyalg {
-	case jwa.DIRECT():
-		return cek, nil
-	case jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
-		var hashFunc func() hash.Hash
-		var keylen int
-		switch d.keyalg {
-		case jwa.PBES2_HS256_A128KW():
-			hashFunc = sha256.New
-			keylen = 16
-		case jwa.PBES2_HS384_A192KW():
-			hashFunc = sha512.New384
-			keylen = 24
-		case jwa.PBES2_HS512_A256KW():
-			hashFunc = sha512.New
-			keylen = 32
-		}
-		salt := []byte(d.keyalg.String())
-		salt = append(salt, byte(0))
-		salt = append(salt, d.keysalt...)
-		cek = pbkdf2.Key(cek, salt, d.keycount, keylen, hashFunc)
-		fallthrough
-	case jwa.A128KW(), jwa.A192KW(), jwa.A256KW():
-		block, err := aes.NewCipher(cek)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
-		}
-
-		jek, err := keyenc.Unwrap(block, recipientKey)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to unwrap key: %w`, err)
-		}
-
-		return jek, nil
-	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
-		if len(d.keyiv) != 12 {
-			return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(d.keyiv)*8)
-		}
-		if len(d.keytag) != 16 {
-			return nil, fmt.Errorf("GCM requires 128-bit tag, got %d", len(d.keytag)*8)
-		}
-		block, err := aes.NewCipher(cek)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
-		}
-		aesgcm, err := cryptocipher.NewGCM(block)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create new GCM wrap: %w`, err)
-		}
-		ciphertext := recipientKey[:]
-		ciphertext = append(ciphertext, d.keytag...)
-		jek, err := aesgcm.Open(nil, d.keyiv, ciphertext, nil)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to decode key: %w`, err)
-		}
-		return jek, nil
-	default:
-		return nil, fmt.Errorf("decrypt key: unsupported algorithm %s", d.keyalg)
-	}
-}
 
 func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, err error) {
 	recipientKey := recipient.EncryptedKey()
@@ -239,14 +170,31 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		return kd.DecryptKey(d.keyalg, recipientKey, recipient, msg)
 	}
 
-	if d.keyalg.IsSymmetric() {
-		var ok bool
-		cek, ok = d.privkey.([]byte)
+	if jwebb.KeyEncryptionIsDirect(d.keyalg.String()) {
+		cek, ok := d.privkey.([]byte)
 		if !ok {
-			return nil, fmt.Errorf("decrypt key: []byte is required as the key to build %s key decrypter (got %T)", d.keyalg, d.privkey)
+			return nil, fmt.Errorf("decrypt key: []byte is required as the key for %s (got %T)", d.keyalg, d.privkey)
 		}
+		return jwebb.KeyDecryptDirect(recipientKey, recipientKey, d.keyalg.String(), cek)
+	}
 
-		return d.decryptSymmetricKey(recipientKey, cek)
+	if jwebb.KeyEncryptionIsPBES2(d.keyalg.String()) {
+		password, ok := d.privkey.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("decrypt key: []byte is required as the password for %s (got %T)", d.keyalg, d.privkey)
+		}
+		salt := []byte(d.keyalg.String())
+		salt = append(salt, byte(0))
+		salt = append(salt, d.keysalt...)
+		return jwebb.KeyDecryptPBES2(recipientKey, recipientKey, d.keyalg.String(), password, salt, d.keycount)
+	}
+
+	if jwebb.KeyEncryptionIsAESGCMKW(d.keyalg.String()) {
+		sharedkey, ok := d.privkey.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("decrypt key: []byte is required as the key for %s (got %T)", d.keyalg, d.privkey)
+		}
+		return jwebb.KeyDecryptAESGCMKW(recipientKey, recipientKey, d.keyalg.String(), sharedkey, d.keyiv, d.keytag)
 	}
 
 	if jwebb.KeyEncryptionIsECDHES(d.keyalg.String()) {
