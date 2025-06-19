@@ -278,6 +278,14 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		return jwebb.KeyDecryptRSAOAEP(recipientKey, recipientKey, d.keyalg.String(), d.privkey)
 	}
 
+	if jwebb.KeyEncryptionIsAESKW(d.keyalg.String()) {
+		sharedkey, ok := d.privkey.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("[]byte is required as the key to decrypt %s", d.keyalg.String())
+		}
+		return jwebb.KeyDecryptAESKW(recipientKey, recipientKey, d.keyalg.String(), sharedkey)
+	}
+
 	k, err := d.BuildKeyDecrypter()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to build key decrypter: %w`, err)
