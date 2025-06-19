@@ -265,6 +265,15 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, d.keyalg.String(), d.apu, d.apv, d.privkey, d.pubkey, keysize)
 	}
 
+	if jwebb.KeyEncryptionIsRSA15(d.keyalg.String()) {
+		cipher, err := d.ContentCipher()
+		if err != nil {
+			return nil, fmt.Errorf(`failed to fetch content crypt cipher: %w`, err)
+		}
+		keysize := cipher.KeySize() / 2
+		return jwebb.KeyDecryptRSA15(recipientKey, recipientKey, d.privkey, keysize)
+	}
+
 	k, err := d.BuildKeyDecrypter()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to build key decrypter: %w`, err)
