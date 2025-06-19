@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 )
 
 // decrypter is responsible for taking various components to decrypt a message.
@@ -250,6 +251,18 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		}
 
 		return d.decryptSymmetricKey(recipientKey, cek)
+	}
+
+	if jwebb.KeyEncryptionIsECDHES(d.keyalg.String()) {
+		alg, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(d.keyalg.String(), d.ctalg.String())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to determine ECDH-ES key size: %w`, err)
+		}
+
+		if !keywrap {
+			return jwebb.KeyDecryptECDHES(recipientKey, cek, alg, d.apu, d.apv, d.privkey, d.pubkey, keysize)
+		}
+		return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, d.keyalg.String(), d.apu, d.apv, d.privkey, d.pubkey, keysize)
 	}
 
 	k, err := d.BuildKeyDecrypter()
