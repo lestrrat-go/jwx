@@ -3,9 +3,6 @@ package jwe
 import (
 	"crypto/aes"
 	cryptocipher "crypto/cipher"
-	"crypto/ecdh"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
@@ -13,7 +10,6 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
@@ -286,65 +282,5 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		return jwebb.KeyDecryptAESKW(recipientKey, recipientKey, d.keyalg.String(), sharedkey)
 	}
 
-	k, err := d.BuildKeyDecrypter()
-	if err != nil {
-		return nil, fmt.Errorf(`failed to build key decrypter: %w`, err)
-	}
-
-	cek, err = k.Decrypt(recipientKey)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to decrypt key: %w`, err)
-	}
-
-	return cek, nil
-}
-
-func (d *decrypter) BuildKeyDecrypter() (keyenc.Decrypter, error) {
-	cipher, err := d.ContentCipher()
-	if err != nil {
-		return nil, fmt.Errorf(`failed to fetch content crypt cipher: %w`, err)
-	}
-
-	switch alg := d.keyalg; alg {
-	case jwa.RSA1_5():
-		var privkey rsa.PrivateKey
-		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
-			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
-		}
-
-		return keyenc.NewRSAPKCS15Decrypt(alg, &privkey, cipher.KeySize()/2), nil
-	case jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
-		var privkey rsa.PrivateKey
-		if err := keyconv.RSAPrivateKey(&privkey, d.privkey); err != nil {
-			return nil, fmt.Errorf(`*rsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
-		}
-
-		return keyenc.NewRSAOAEPDecrypt(alg, &privkey)
-	case jwa.A128KW(), jwa.A192KW(), jwa.A256KW():
-		sharedkey, ok := d.privkey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("[]byte is required as the key to build %s key decrypter", alg)
-		}
-
-		return keyenc.NewAES(alg, sharedkey)
-	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-		switch d.pubkey.(type) {
-		case *ecdh.PublicKey:
-			return keyenc.NewECDHESDecrypt(alg, d.ctalg, d.pubkey, d.apu, d.apv, d.privkey), nil
-		default:
-			var pubkey ecdsa.PublicKey
-			if err := keyconv.ECDSAPublicKey(&pubkey, d.pubkey); err != nil {
-				return nil, fmt.Errorf(`*ecdsa.PublicKey is required as the key to build %s key decrypter: %w`, alg, err)
-			}
-
-			var privkey ecdsa.PrivateKey
-			if err := keyconv.ECDSAPrivateKey(&privkey, d.privkey); err != nil {
-				return nil, fmt.Errorf(`*ecdsa.PrivateKey is required as the key to build %s key decrypter: %w`, alg, err)
-			}
-
-			return keyenc.NewECDHESDecrypt(alg, d.ctalg, &pubkey, d.apu, d.apv, &privkey), nil
-		}
-	default:
-		return nil, fmt.Errorf(`unsupported algorithm for key decryption (%s)`, alg)
-	}
+	return nil, fmt.Errorf(`unsupported algorithm for key decryption (%s)`, d.keyalg)
 }
