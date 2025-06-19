@@ -274,6 +274,10 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 		return jwebb.KeyDecryptRSA15(recipientKey, recipientKey, d.privkey, keysize)
 	}
 
+	if jwebb.KeyEncryptionIsRSAOAEP(d.keyalg.String()) {
+		return jwebb.KeyDecryptRSAOAEP(recipientKey, recipientKey, d.keyalg.String(), d.privkey)
+	}
+
 	k, err := d.BuildKeyDecrypter()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to build key decrypter: %w`, err)

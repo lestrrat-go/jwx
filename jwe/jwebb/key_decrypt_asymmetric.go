@@ -6,8 +6,12 @@ import (
 	"crypto/ecdh"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/binary"
 	"fmt"
+	"hash"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
@@ -123,14 +127,27 @@ func KeyDecryptECDHES(recipientKey, enckey []byte, alg string, apu, apv []byte, 
 	return key, nil
 }
 
-// RSA1_5 key decryption functions
+// RSA key decryption functions
 
 const (
-	RSA1_5 = "RSA1_5"
+	RSA1_5       = "RSA1_5"
+	RSA_OAEP     = "RSA-OAEP"
+	RSA_OAEP_256 = "RSA-OAEP-256"
+	RSA_OAEP_384 = "RSA-OAEP-384"
+	RSA_OAEP_512 = "RSA-OAEP-512"
 )
 
 func KeyEncryptionIsRSA15(alg string) bool {
 	return alg == RSA1_5
+}
+
+func KeyEncryptionIsRSAOAEP(alg string) bool {
+	switch alg {
+	case RSA_OAEP, RSA_OAEP_256, RSA_OAEP_384, RSA_OAEP_512:
+		return true
+	default:
+		return false
+	}
 }
 
 func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
@@ -178,4 +195,27 @@ func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([
 	_ = rsa.DecryptPKCS1v15SessionKey(rand.Reader, privkey, enckey, cek)
 
 	return cek, nil
+}
+
+func KeyDecryptRSAOAEP(recipientKey, enckey []byte, alg string, privkeyif any) ([]byte, error) {
+	var privkey *rsa.PrivateKey
+	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
+		return nil, fmt.Errorf(`keyenc.KeyDecryptRSAOAEP: %w`, err)
+	}
+
+	var hash hash.Hash
+	switch alg {
+	case RSA_OAEP:
+		hash = sha1.New()
+	case RSA_OAEP_256:
+		hash = sha256.New()
+	case RSA_OAEP_384:
+		hash = sha512.New384()
+	case RSA_OAEP_512:
+		hash = sha512.New()
+	default:
+		return nil, fmt.Errorf(`failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256/RSA_OAEP_384/RSA_OAEP_512 required`)
+	}
+
+	return rsa.DecryptOAEP(hash, rand.Reader, privkey, enckey, []byte{})
 }
