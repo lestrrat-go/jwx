@@ -11,33 +11,17 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
 // AES key wrap decryption functions
 
-const (
-	// AES Key Wrap algorithms
-	A128KW = "A128KW"
-	A192KW = "A192KW"
-	A256KW = "A256KW"
-	
-	// AES GCM Key Wrap algorithms
-	A128GCMKW = "A128GCMKW"
-	A192GCMKW = "A192GCMKW"
-	A256GCMKW = "A256GCMKW"
-	
-	// PBES2 algorithms
-	PBES2_HS256_A128KW = "PBES2-HS256+A128KW"
-	PBES2_HS384_A192KW = "PBES2-HS384+A192KW"
-	PBES2_HS512_A256KW = "PBES2-HS512+A256KW"
-	
-	// Direct key agreement
-	DIRECT = "dir"
-)
+// Use constants from tokens package
+// No need to redefine them here
 
 func KeyEncryptionIsAESKW(alg string) bool {
 	switch alg {
-	case A128KW, A192KW, A256KW:
+	case tokens.A128KW, tokens.A192KW, tokens.A256KW:
 		return true
 	default:
 		return false
@@ -46,7 +30,7 @@ func KeyEncryptionIsAESKW(alg string) bool {
 
 func KeyEncryptionIsAESGCMKW(alg string) bool {
 	switch alg {
-	case A128GCMKW, A192GCMKW, A256GCMKW:
+	case tokens.A128GCMKW, tokens.A192GCMKW, tokens.A256GCMKW:
 		return true
 	default:
 		return false
@@ -55,7 +39,7 @@ func KeyEncryptionIsAESGCMKW(alg string) bool {
 
 func KeyEncryptionIsPBES2(alg string) bool {
 	switch alg {
-	case PBES2_HS256_A128KW, PBES2_HS384_A192KW, PBES2_HS512_A256KW:
+	case tokens.PBES2_HS256_A128KW, tokens.PBES2_HS384_A192KW, tokens.PBES2_HS512_A256KW:
 		return true
 	default:
 		return false
@@ -63,7 +47,7 @@ func KeyEncryptionIsPBES2(alg string) bool {
 }
 
 func KeyEncryptionIsDirect(alg string) bool {
-	return alg == DIRECT
+	return alg == tokens.DIRECT
 }
 
 func KeyEncryptionIsSymmetric(alg string) bool {
@@ -92,13 +76,13 @@ func KeyDecryptPBES2(recipientKey, enckey []byte, alg string, password []byte, s
 	var keylen int
 	
 	switch alg {
-	case PBES2_HS256_A128KW:
+	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
 		keylen = 16
-	case PBES2_HS384_A192KW:
+	case tokens.PBES2_HS384_A192KW:
 		hashFunc = sha512.New384
 		keylen = 24
-	case PBES2_HS512_A256KW:
+	case tokens.PBES2_HS512_A256KW:
 		hashFunc = sha512.New
 		keylen = 32
 	default:

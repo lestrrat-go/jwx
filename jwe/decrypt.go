@@ -5,7 +5,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 )
@@ -118,16 +117,11 @@ func (d *decrypter) CEK(ptr *[]byte) *decrypter {
 
 func (d *decrypter) ContentCipher() (content_crypt.Cipher, error) {
 	if d.cipher == nil {
-		switch d.ctalg {
-		case jwa.A128GCM(), jwa.A192GCM(), jwa.A256GCM(), jwa.A128CBC_HS256(), jwa.A192CBC_HS384(), jwa.A256CBC_HS512():
-			cipher, err := cipher.NewAES(d.ctalg)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to build content cipher for %s: %w`, d.ctalg, err)
-			}
-			d.cipher = cipher
-		default:
-			return nil, fmt.Errorf(`invalid content cipher algorithm (%s)`, d.ctalg)
+		cipher, err := jwebb.CreateContentCipher(d.ctalg.String())
+		if err != nil {
+			return nil, err
 		}
+		d.cipher = cipher
 	}
 
 	return d.cipher, nil

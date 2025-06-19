@@ -17,6 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
 const (
@@ -25,16 +26,9 @@ const (
 	KeySize32 = 32
 )
 
-const (
-	ECDH_ES        = "ECDH-ES"
-	ECDH_ES_A128KW = "ECDH-ES+A128KW"
-	ECDH_ES_A192KW = "ECDH-ES+A192KW"
-	ECDH_ES_A256KW = "ECDH-ES+A256KW"
-)
-
 func KeyEncryptionIsECDHES(alg string) bool {
 	switch alg {
-	case ECDH_ES, ECDH_ES_A128KW, ECDH_ES_A192KW, ECDH_ES_A256KW:
+	case tokens.ECDH_ES, tokens.ECDH_ES_A128KW, tokens.ECDH_ES_A192KW, tokens.ECDH_ES_A256KW:
 		return true
 	default:
 		return false
@@ -43,17 +37,17 @@ func KeyEncryptionIsECDHES(alg string) bool {
 
 func contentEncryptionKeySize(ctalg string) (uint32, error) {
 	switch ctalg {
-	case "A128GCM":
+	case tokens.A128GCM:
 		return 16, nil
-	case "A192GCM":
+	case tokens.A192GCM:
 		return 24, nil
-	case "A256GCM":
+	case tokens.A256GCM:
 		return 32, nil
-	case "A128CBC-HS256":
+	case tokens.A128CBC_HS256:
 		return 32, nil
-	case "A192CBC-HS384":
+	case tokens.A192CBC_HS384:
 		return 48, nil
-	case "A256CBC-HS512":
+	case tokens.A256CBC_HS512:
 		return 64, nil
 	default:
 		return 0, fmt.Errorf(`unsupported content encryption algorithm %s`, ctalg)
@@ -62,17 +56,17 @@ func contentEncryptionKeySize(ctalg string) (uint32, error) {
 
 func KeyEncryptionECDHESKeySize(alg, ctalg string) (string, uint32, bool, error) {
 	switch alg {
-	case ECDH_ES:
+	case tokens.ECDH_ES:
 		keysize, err := contentEncryptionKeySize(ctalg)
 		if err != nil {
 			return "", 0, false, err
 		}
 		return ctalg, keysize, false, nil
-	case ECDH_ES_A128KW:
+	case tokens.ECDH_ES_A128KW:
 		return alg, KeySize16, true, nil
-	case ECDH_ES_A192KW:
+	case tokens.ECDH_ES_A192KW:
 		return alg, KeySize24, true, nil
-	case ECDH_ES_A256KW:
+	case tokens.ECDH_ES_A256KW:
 		return alg, KeySize32, true, nil
 	default:
 		return "", 0, false, fmt.Errorf(`unsupported key encryption algorithm %s`, alg)
@@ -129,21 +123,13 @@ func KeyDecryptECDHES(recipientKey, enckey []byte, alg string, apu, apv []byte, 
 
 // RSA key decryption functions
 
-const (
-	RSA1_5       = "RSA1_5"
-	RSA_OAEP     = "RSA-OAEP"
-	RSA_OAEP_256 = "RSA-OAEP-256"
-	RSA_OAEP_384 = "RSA-OAEP-384"
-	RSA_OAEP_512 = "RSA-OAEP-512"
-)
-
 func KeyEncryptionIsRSA15(alg string) bool {
-	return alg == RSA1_5
+	return alg == tokens.RSA1_5
 }
 
 func KeyEncryptionIsRSAOAEP(alg string) bool {
 	switch alg {
-	case RSA_OAEP, RSA_OAEP_256, RSA_OAEP_384, RSA_OAEP_512:
+	case tokens.RSA_OAEP, tokens.RSA_OAEP_256, tokens.RSA_OAEP_384, tokens.RSA_OAEP_512:
 		return true
 	default:
 		return false
@@ -205,13 +191,13 @@ func KeyDecryptRSAOAEP(recipientKey, enckey []byte, alg string, privkeyif any) (
 
 	var hash hash.Hash
 	switch alg {
-	case RSA_OAEP:
+	case tokens.RSA_OAEP:
 		hash = sha1.New()
-	case RSA_OAEP_256:
+	case tokens.RSA_OAEP_256:
 		hash = sha256.New()
-	case RSA_OAEP_384:
+	case tokens.RSA_OAEP_384:
 		hash = sha512.New384()
-	case RSA_OAEP_512:
+	case tokens.RSA_OAEP_512:
 		hash = sha512.New()
 	default:
 		return nil, fmt.Errorf(`failed to generate key encrypter for RSA-OAEP: RSA_OAEP/RSA_OAEP_256/RSA_OAEP_384/RSA_OAEP_512 required`)

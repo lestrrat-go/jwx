@@ -337,7 +337,7 @@ func (kw ECDHESDecrypt) Decrypt(enckey []byte) ([]byte, error) {
 		// ECDH-ES does not wrap keys
 		wrap = false
 		// Create a content cipher from the content encryption algorithm
-		c, err := contentcipher.NewAES(kw.contentalg)
+		c, err := contentcipher.NewAES(kw.contentalg.String())
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create content cipher for %s: %w`, kw.contentalg, err)
 		}

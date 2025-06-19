@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
 var gcm = &gcmFetcher{}
@@ -48,32 +48,32 @@ func (c AesContentCipher) TagSize() int {
 	return c.tagsize
 }
 
-func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
+func NewAES(alg string) (*AesContentCipher, error) {
 	var keysize int
 	var tagsize int
 	var fetcher Fetcher
 	switch alg {
-	case jwa.A128GCM():
+	case tokens.A128GCM:
 		keysize = 16
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A192GCM():
+	case tokens.A192GCM:
 		keysize = 24
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A256GCM():
+	case tokens.A256GCM:
 		keysize = 32
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A128CBC_HS256():
+	case tokens.A128CBC_HS256:
 		tagsize = 16
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A192CBC_HS384():
+	case tokens.A192CBC_HS384:
 		tagsize = 24
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A256CBC_HS512():
+	case tokens.A256CBC_HS512:
 		tagsize = 32
 		keysize = tagsize * 2
 		fetcher = cbc
