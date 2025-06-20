@@ -48,15 +48,10 @@ func KeyEncryptRSAOAEP(cek []byte, alg string, pubkey *rsa.PublicKey) (keygen.By
 	return keygen.ByteKey(encrypted), nil
 }
 
-// generateECDHESKeyECDSA creates an ECDH-ES key generator and generates the key material for ECDSA keys
+// generateECDHESKeyECDSA generates the key material for ECDSA keys using ECDH-ES
 func generateECDHESKeyECDSA(alg string, calg string, keysize uint32, pubkey *ecdsa.PublicKey, apu, apv []byte) (keygen.ByteWithECPublicKey, error) {
-	generator, err := keygen.NewEcdhes(alg, calg, int(keysize), pubkey, apu, apv)
-	if err != nil {
-		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to create ECDSA key generator: %w`, err)
-	}
-
-	// Generate the key
-	kg, err := generator.Generate()
+	// Generate the key directly
+	kg, err := keygen.Ecdhes(alg, calg, int(keysize), pubkey, apu, apv)
 	if err != nil {
 		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to generate ECDSA key: %w`, err)
 	}
@@ -69,15 +64,10 @@ func generateECDHESKeyECDSA(alg string, calg string, keysize uint32, pubkey *ecd
 	return bwpk, nil
 }
 
-// generateECDHESKeyX25519 creates an ECDH-ES key generator and generates the key material for X25519 keys
+// generateECDHESKeyX25519 generates the key material for X25519 keys using ECDH-ES
 func generateECDHESKeyX25519(alg string, calg string, keysize uint32, pubkey *ecdh.PublicKey) (keygen.ByteWithECPublicKey, error) {
-	generator, err := keygen.NewX25519(alg, calg, int(keysize), pubkey)
-	if err != nil {
-		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to create X25519 key generator: %w`, err)
-	}
-
-	// Generate the key
-	kg, err := generator.Generate()
+	// Generate the key directly
+	kg, err := keygen.X25519(alg, calg, int(keysize), pubkey)
 	if err != nil {
 		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to generate X25519 key: %w`, err)
 	}

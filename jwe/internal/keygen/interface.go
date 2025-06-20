@@ -1,37 +1,8 @@
 package keygen
 
-import (
-	"crypto/ecdh"
-	"crypto/ecdsa"
-)
 
-type Generator interface {
-	Size() int
-	Generate() (ByteSource, error)
-}
 
-// RandomGen generates random keys
-type RandomGen struct {
-	keysize int
-}
 
-// EcdhesKeyGenerate generates keys using ECDH-ES algorithm / EC-DSA curve
-type Ecdhes struct {
-	pubkey    *ecdsa.PublicKey
-	keysize   int
-	algorithm string
-	enc       string
-	apu       []byte
-	apv       []byte
-}
-
-// X25519KeyGenerate generates keys using ECDH-ES algorithm / X25519 curve
-type X25519 struct {
-	algorithm string
-	enc       string
-	keysize   int
-	pubkey    *ecdh.PublicKey
-}
 
 // ByteKey is a generated key that only has the key's byte buffer
 // as its instance data. If a key needs to do more, such as providing

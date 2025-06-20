@@ -2,8 +2,6 @@ package cipher
 
 import (
 	"crypto/cipher"
-
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
 
 const (
@@ -27,7 +25,7 @@ type cbcFetcher struct{}
 
 // AesContentCipher represents a cipher based on AES
 type AesContentCipher struct {
-	NonceGenerator keygen.Generator
+	NonceGenerator func(int) ([]byte, error)
 	fetch          Fetcher
 	keysize        int
 	tagsize        int

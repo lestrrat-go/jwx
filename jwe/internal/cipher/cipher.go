@@ -108,21 +108,18 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 		}
 	}()
 
-	var bs keygen.ByteSource
-	g := c.NonceGenerator
-	if g == nil {
-		// Silly hack
-		bs, err = keygen.Random(aead.NonceSize())
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf(`failed to generate random nonce: %w`, err)
-		}
-	} else {
-		bs, err = g.Generate()
+	if c.NonceGenerator != nil {
+		iv, err = c.NonceGenerator(aead.NonceSize())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
 		}
+	} else {
+		bs, err := keygen.Random(aead.NonceSize())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf(`failed to generate random nonce: %w`, err)
+		}
+		iv = bs.Bytes()
 	}
-	iv = bs.Bytes()
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()
