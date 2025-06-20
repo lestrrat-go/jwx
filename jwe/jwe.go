@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 
@@ -390,105 +391,90 @@ func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	}
 }
 
-type decryptCtx struct {
-	msg                     *Message
-	aad                     []byte
-	cek                     *[]byte
-	computedAad             []byte
+// decryptContext holds the state during JWE decryption, similar to JWS verifyContext
+type decryptContext struct {
 	keyProviders            []KeyProvider
-	protectedHeaders        Headers
+	keyUsed                 any
+	cek                     *[]byte
+	dst                     *Message
 	maxDecompressBufferSize int64
+	//nolint:containedctx
+	ctx context.Context
 }
 
-// Decrypt takes encrypted payload, and information required to decrypt the
-// payload (e.g. the key encryption algorithm and the corresponding
-// key to decrypt the JWE message) in its optional arguments. See
-// the examples and list of options that return a DecryptOption for possible
-// values. Upon successful decryptiond returns the decrypted payload.
-//
-// The JWE message can be either compact or full JSON format.
-//
-// When using `jwe.WithKeyEncryptionAlgorithm()`, you can pass a `jwa.KeyAlgorithm`
-// for convenience: this is mainly to allow you to directly pass the result of `(jwk.Key).Algorithm()`.
-// However, do note that while `(jwk.Key).Algorithm()` could very well contain key encryption
-// algorithms, it could also contain other types of values, such as _signature algorithms_.
-// In order for `jwe.Decrypt` to work properly, the `alg` parameter must be of type
-// `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
-//
-// When using `jwe.WithKey()`, the value must be a private key.
-// It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
-//
-// When the encrypted message is also compressed, the decompressed payload must be
-// smaller than the size specified by the `jwe.WithMaxDecompressBufferSize` setting,
-// which defaults to 10MB. If the decompressed payload is larger than this size,
-// an error is returned.
-//
-// You can opt to change the MaxDecompressBufferSize setting globally, or on a
-// per-call basis by passing the `jwe.WithMaxDecompressBufferSize` option to
-// either `jwe.Settings()` or `jwe.Decrypt()`:
-//
-//	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
-//	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
-func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
-	ret, err := decrypt(buf, options...)
-	if err != nil {
-		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, err)}
+var decryptContextPool = pool.New(allocDecryptContext, freeDecryptContext)
+
+func allocDecryptContext() *decryptContext {
+	return &decryptContext{
+		ctx: context.Background(),
 	}
-	return ret, nil
 }
 
-func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
-	var keyProviders []KeyProvider
-	var keyUsed any
-	var cek *[]byte
-	var dst *Message
-	perCallMaxDecompressBufferSize := maxDecompressBufferSize
-	ctx := context.Background()
+func freeDecryptContext(dc *decryptContext) *decryptContext {
+	dc.keyProviders = dc.keyProviders[:0]
+	dc.keyUsed = nil
+	dc.cek = nil
+	dc.dst = nil
+	dc.maxDecompressBufferSize = 0
+	dc.ctx = context.Background()
+	return dc
+}
+
+func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
+	// Set default max decompress buffer size
+	muSettings.RLock()
+	dc.maxDecompressBufferSize = maxDecompressBufferSize
+	muSettings.RUnlock()
+
 	for _, option := range options {
 		switch option.Ident() {
 		case identMessage{}:
-			if err := option.Value(&dst); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithMessage must be a *jwe.Message: %w", err)
+			if err := option.Value(&dc.dst); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMessage must be a *jwe.Message: %w", err)
 			}
 		case identKeyProvider{}:
 			var kp KeyProvider
 			if err := option.Value(&kp); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithKeyProvider must be a KeyProvider: %w", err)
+				return fmt.Errorf("jwe.decrypt: WithKeyProvider must be a KeyProvider: %w", err)
 			}
-			keyProviders = append(keyProviders, kp)
+			dc.keyProviders = append(dc.keyProviders, kp)
 		case identKeyUsed{}:
-			if err := option.Value(&keyUsed); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithKeyUsed must be an any: %w", err)
+			if err := option.Value(&dc.keyUsed); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithKeyUsed must be an any: %w", err)
 			}
 		case identKey{}:
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
+				return fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
 			}
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
+				return fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
 			}
-			keyProviders = append(keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
+			dc.keyProviders = append(dc.keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
-			if err := option.Value(&cek); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
+			if err := option.Value(&dc.cek); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
 			}
 		case identMaxDecompressBufferSize{}:
-			if err := option.Value(&perCallMaxDecompressBufferSize); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
+			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
 			}
 		case identContext{}:
-			if err := option.Value(&ctx); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithContext must be a context.Context: %w", err)
+			if err := option.Value(&dc.ctx); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithContext must be a context.Context: %w", err)
 			}
 		}
 	}
 
-	if len(keyProviders) < 1 {
-		return nil, fmt.Errorf(`jwe.Decrypt: no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
+	if len(dc.keyProviders) < 1 {
+		return fmt.Errorf(`jwe.Decrypt: no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
 	}
 
+	return nil
+}
+
+func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	msg, err := parseJSONOrCompact(buf, true)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse buffer for Decrypt: %w`, err)
@@ -532,39 +518,29 @@ func decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 		recipients = append(recipients, r)
 	}
 
-	var dctx decryptCtx
-
-	dctx.aad = aad
-	dctx.computedAad = computedAad
-	dctx.msg = msg
-	dctx.keyProviders = keyProviders
-	dctx.protectedHeaders = h
-	dctx.cek = cek
-	dctx.maxDecompressBufferSize = perCallMaxDecompressBufferSize
-
 	errs := make([]error, 0, len(recipients))
 	for _, recipient := range recipients {
-		decrypted, err := dctx.try(ctx, recipient, keyUsed)
+		decrypted, err := dc.tryRecipient(msg, recipient, h, aad, computedAad)
 		if err != nil {
 			errs = append(errs, recipientError{err})
 			continue
 		}
-		if dst != nil {
-			*dst = *msg
-			dst.rawProtectedHeaders = nil
-			dst.storeProtectedHeaders = false
+		if dc.dst != nil {
+			*dc.dst = *msg
+			dc.dst.rawProtectedHeaders = nil
+			dc.dst.storeProtectedHeaders = false
 		}
 		return decrypted, nil
 	}
 	return nil, fmt.Errorf(`failed to decrypt any of the recipients: %w`, errors.Join(errs...))
 }
 
-func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed any) ([]byte, error) {
+func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	var tried int
 	var lastError error
-	for i, kp := range dctx.keyProviders {
+	for i, kp := range dc.keyProviders {
 		var sink algKeySink
-		if err := kp.FetchKeys(ctx, &sink, recipient, dctx.msg); err != nil {
+		if err := kp.FetchKeys(dc.ctx, &sink, recipient, msg); err != nil {
 			return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 		}
 
@@ -577,15 +553,15 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed an
 			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			key := pair.key
 
-			decrypted, err := dctx.decryptContent(alg, key, recipient)
+			decrypted, err := dc.decryptContent(msg, alg, key, recipient, protectedHeaders, aad, computedAad)
 			if err != nil {
 				lastError = err
 				continue
 			}
 
-			if keyUsed != nil {
-				if err := blackmagic.AssignIfCompatible(keyUsed, key); err != nil {
-					return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, keyUsed, err)
+			if dc.keyUsed != nil {
+				if err := blackmagic.AssignIfCompatible(dc.keyUsed, key); err != nil {
+					return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, dc.keyUsed, err)
 				}
 			}
 			return decrypted, nil
@@ -594,7 +570,7 @@ func (dctx *decryptCtx) try(ctx context.Context, recipient Recipient, keyUsed an
 	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
 }
 
-func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient) ([]byte, error) {
+func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw any
 		if err := jwk.Export(jwkKey, &raw); err != nil {
@@ -603,23 +579,23 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key any, 
 		key = raw
 	}
 
-	ce, ok := dctx.msg.protectedHeaders.ContentEncryption()
+	ce, ok := msg.protectedHeaders.ContentEncryption()
 	if !ok {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to retrieve content encryption algorithm from protected headers`)
 	}
 	dec := newDecrypter(alg, ce, key).
-		AuthenticatedData(dctx.aad).
-		ComputedAuthenticatedData(dctx.computedAad).
-		InitializationVector(dctx.msg.initializationVector).
-		Tag(dctx.msg.tag).
-		CEK(dctx.cek)
+		AuthenticatedData(aad).
+		ComputedAuthenticatedData(computedAad).
+		InitializationVector(msg.initializationVector).
+		Tag(msg.tag).
+		CEK(dc.cek)
 
 	if v, ok := recipient.Headers().Algorithm(); !ok || v != alg {
 		// algorithms don't match
 		return nil, fmt.Errorf(`jwe.Decrypt: key (%q) and recipient (%q) algorithms do not match`, alg, v)
 	}
 
-	h2, err := dctx.protectedHeaders.Clone()
+	h2, err := protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
 	}
@@ -716,13 +692,13 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key any, 
 		dec.KeyCount(int(countFlt))
 	}
 
-	plaintext, err := dec.Decrypt(recipient, dctx.msg.cipherText, dctx.msg)
+	plaintext, err := dec.Decrypt(recipient, msg.cipherText, msg)
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: decryption failed: %w`, err)
 	}
 
 	if v, ok := h2.Compression(); ok && v == jwa.Deflate() {
-		buf, err := uncompress(plaintext, dctx.maxDecompressBufferSize)
+		buf, err := uncompress(plaintext, dc.maxDecompressBufferSize)
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Derypt: failed to uncompress payload: %w`, err)
 		}
@@ -735,6 +711,51 @@ func (dctx *decryptCtx) decryptContent(alg jwa.KeyEncryptionAlgorithm, key any, 
 
 	return plaintext, nil
 }
+
+// Decrypt takes encrypted payload, and information required to decrypt the
+// payload (e.g. the key encryption algorithm and the corresponding
+// key to decrypt the JWE message) in its optional arguments. See
+// the examples and list of options that return a DecryptOption for possible
+// values. Upon successful decryptiond returns the decrypted payload.
+//
+// The JWE message can be either compact or full JSON format.
+//
+// When using `jwe.WithKeyEncryptionAlgorithm()`, you can pass a `jwa.KeyAlgorithm`
+// for convenience: this is mainly to allow you to directly pass the result of `(jwk.Key).Algorithm()`.
+// However, do note that while `(jwk.Key).Algorithm()` could very well contain key encryption
+// algorithms, it could also contain other types of values, such as _signature algorithms_.
+// In order for `jwe.Decrypt` to work properly, the `alg` parameter must be of type
+// `jwa.KeyEncryptionAlgorithm` or otherwise it will cause an error.
+//
+// When using `jwe.WithKey()`, the value must be a private key.
+// It can be either in its raw format (e.g. *rsa.PrivateKey) or a jwk.Key
+//
+// When the encrypted message is also compressed, the decompressed payload must be
+// smaller than the size specified by the `jwe.WithMaxDecompressBufferSize` setting,
+// which defaults to 10MB. If the decompressed payload is larger than this size,
+// an error is returned.
+//
+// You can opt to change the MaxDecompressBufferSize setting globally, or on a
+// per-call basis by passing the `jwe.WithMaxDecompressBufferSize` option to
+// either `jwe.Settings()` or `jwe.Decrypt()`:
+//
+//	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
+//	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
+func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
+	dc := decryptContextPool.Get()
+	defer decryptContextPool.Put(dc)
+
+	if err := dc.ProcessOptions(options); err != nil {
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: failed to process options: %w`, err)}
+	}
+
+	ret, err := dc.DecryptMessage(buf)
+	if err != nil {
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, err)}
+	}
+	return ret, nil
+}
+
 
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
