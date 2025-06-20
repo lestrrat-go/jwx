@@ -5,6 +5,8 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
 
 var keywrapDefaultIV = []byte{0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6}
@@ -24,8 +26,16 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 		copy(r[i], cek[i*keywrapChunkLen:])
 	}
 
-	buffer := make([]byte, keywrapChunkLen*2)
-	tBytes := make([]byte, keywrapChunkLen)
+	buffer := pool.ByteSlice().GetCapacity(keywrapChunkLen * 2)
+	defer pool.ByteSlice().Put(buffer)
+	// the byte slice has the capacity, but len is 0
+	buffer = buffer[:keywrapChunkLen*2]
+
+	tBytes := pool.ByteSlice().GetCapacity(keywrapChunkLen)
+	defer pool.ByteSlice().Put(tBytes)
+	// the byte slice has the capacity, but len is 0
+	tBytes = tBytes[:keywrapChunkLen]
+
 	copy(buffer, keywrapDefaultIV)
 
 	for t := range 6 * n {
@@ -63,8 +73,16 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 		copy(r[i], ciphertxt[(i+1)*keywrapChunkLen:])
 	}
 
-	buffer := make([]byte, keywrapChunkLen*2)
-	tBytes := make([]byte, keywrapChunkLen)
+	buffer := pool.ByteSlice().GetCapacity(keywrapChunkLen * 2)
+	defer pool.ByteSlice().Put(buffer)
+	// the byte slice has the capacity, but len is 0
+	buffer = buffer[:keywrapChunkLen*2]
+
+	tBytes := pool.ByteSlice().GetCapacity(keywrapChunkLen)
+	defer pool.ByteSlice().Put(tBytes)
+	// the byte slice has the capacity, but len is 0
+	tBytes = tBytes[:keywrapChunkLen]
+
 	copy(buffer[:keywrapChunkLen], ciphertxt[:keywrapChunkLen])
 
 	for t := 6*n - 1; t >= 0; t-- {

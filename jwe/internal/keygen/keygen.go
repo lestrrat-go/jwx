@@ -20,20 +20,8 @@ func (k ByteKey) Bytes() []byte {
 	return []byte(k)
 }
 
-// NewRandom creates a new Generator that returns
-// random bytes
-func NewRandom(n int) Random {
-	return Random{keysize: n}
-}
-
-// Size returns the key size
-func (g Random) Size() int {
-	return g.keysize
-}
-
-// Generate generates a random new key
-func (g Random) Generate() (ByteSource, error) {
-	buf := make([]byte, g.keysize)
+func Random(n int) (ByteSource, error) {
+	buf := make([]byte, n)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 		return nil, fmt.Errorf(`failed to read from rand.Reader: %w`, err)
 	}

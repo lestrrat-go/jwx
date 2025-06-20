@@ -10,8 +10,8 @@ type Generator interface {
 	Generate() (ByteSource, error)
 }
 
-// RandomKeyGenerate generates random keys
-type Random struct {
+// RandomGen generates random keys
+type RandomGen struct {
 	keysize int
 }
 

@@ -875,3 +875,25 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 	copy(ret, buf.Bytes())
 	return ret, nil
 }
+
+func (h *stdHeaders) clear() {
+	h.mu.Lock()
+	h.agreementPartyUInfo = nil
+	h.agreementPartyVInfo = nil
+	h.algorithm = nil
+	h.compression = nil
+	h.contentEncryption = nil
+	h.contentType = nil
+	h.critical = nil
+	h.ephemeralPublicKey = nil
+	h.jwk = nil
+	h.jwkSetURL = nil
+	h.keyID = nil
+	h.typ = nil
+	h.x509CertChain = nil
+	h.x509CertThumbprint = nil
+	h.x509CertThumbprintS256 = nil
+	h.x509URL = nil
+	h.privateParams = map[string]any{}
+	h.mu.Unlock()
+}

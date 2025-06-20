@@ -74,7 +74,7 @@ type recipientBuilder struct {
 	headers Headers
 }
 
-func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) (Recipient, []byte, error) {
+func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) ([]byte, error) {
 	// we need the raw key for later use
 	rawKey := b.key
 
@@ -93,7 +93,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 
 		var raw any
 		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
+			return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
 		rawKey = raw
@@ -113,44 +113,43 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 	// Create the encrypter using the new jwebb pattern
 	enc, err := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create encrypter: %w`, err)
+		return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create encrypter: %w`, err)
 	}
 
-	r := NewRecipient()
 	if hdrs := b.headers; hdrs != nil {
 		_ = r.SetHeaders(hdrs)
 	}
 
 	if err := r.Headers().Set(AlgorithmKey, b.alg); err != nil {
-		return nil, nil, fmt.Errorf(`failed to set header: %w`, err)
+		return nil, fmt.Errorf(`failed to set header: %w`, err)
 	}
 
 	if keyID != "" {
 		if err := r.Headers().Set(KeyIDKey, keyID); err != nil {
-			return nil, nil, fmt.Errorf(`failed to set header: %w`, err)
+			return nil, fmt.Errorf(`failed to set header: %w`, err)
 		}
 	}
 
 	var rawCEK []byte
 	enckey, err := enc.EncryptKey(cek)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to encrypt key: %w`, err)
+		return nil, fmt.Errorf(`failed to encrypt key: %w`, err)
 	}
 	if b.alg == jwa.ECDH_ES() || b.alg == jwa.DIRECT() {
 		rawCEK = enckey.Bytes()
 	} else {
 		if err := r.SetEncryptedKey(enckey.Bytes()); err != nil {
-			return nil, nil, fmt.Errorf(`failed to set encrypted key: %w`, err)
+			return nil, fmt.Errorf(`failed to set encrypted key: %w`, err)
 		}
 	}
 
 	if hp, ok := enckey.(populater); ok {
 		if err := hp.Populate(r.Headers()); err != nil {
-			return nil, nil, fmt.Errorf(`failed to populate: %w`, err)
+			return nil, fmt.Errorf(`failed to populate: %w`, err)
 		}
 	}
 
-	return r, rawCEK, nil
+	return rawCEK, nil
 }
 
 // Encrypt generates a JWE message for the given payload and returns
@@ -540,7 +539,6 @@ type encryptContext struct {
 	format      int
 	builders    []*recipientBuilder
 	protected   Headers
-	cek         []byte
 }
 
 var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
@@ -559,7 +557,6 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 	ec.format = fmtCompact
 	ec.builders = ec.builders[:0]
 	ec.protected = nil
-	ec.cek = nil
 	return ec
 }
 
@@ -641,29 +638,90 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	return nil
 }
 
-func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, error) {
-	// Generate CEK if not provided
-	if len(cek) <= 0 {
-		// There is exactly one content encrypter.
-		contentcrypt, err := content_crypt.NewGeneric(ec.calg)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
-		}
+var msgPool = pool.New(allocMessage, freeMessage)
 
-		generator := keygen.NewRandom(contentcrypt.KeySize())
-		bk, err := generator.Generate()
-		if err != nil {
-			return nil, fmt.Errorf(`failed to generate key: %w`, err)
+func allocMessage() *Message {
+	return &Message{
+		recipients: make([]Recipient, 0, 1),
+	}
+}
+
+func freeMessage(msg *Message) *Message {
+	msg.cipherText = nil
+	msg.initializationVector = nil
+	if hdr := msg.protectedHeaders; hdr != nil {
+		headerPool.Put(hdr)
+	}
+	msg.protectedHeaders = nil
+	msg.unprotectedHeaders = nil
+	msg.recipients = nil // reuse should be done elsewhere
+	msg.authenticatedData = nil
+	msg.tag = nil
+	msg.rawProtectedHeaders = nil
+	msg.storeProtectedHeaders = false
+	return msg
+}
+
+var headerPool = pool.New(NewHeaders, freeHeaders)
+
+func freeHeaders(h Headers) Headers {
+	if c, ok := h.(interface{ clear() }); ok {
+		c.clear()
+	}
+	return h
+}
+
+var recipientPool = pool.New(NewRecipient, freeRecipient)
+
+func freeRecipient(r Recipient) Recipient {
+	if h := r.Headers(); h != nil {
+		if c, ok := h.(interface{ clear() }); ok {
+			c.clear()
 		}
-		ec.cek = bk.Bytes()
-	} else {
-		ec.cek = cek
+	}
+
+	if sr, ok := r.(*stdRecipient); ok {
+		sr.encryptedKey = nil
+	}
+	return r
+}
+
+var recipientSlicePool = pool.NewSlicePool(allocRecipientSlice, freeRecipientSlice)
+
+func allocRecipientSlice() []Recipient {
+	return make([]Recipient, 0, 1)
+}
+
+func freeRecipientSlice(rs []Recipient) []Recipient {
+	for _, r := range rs {
+		recipientPool.Put(r)
+	}
+	return rs[:0]
+}
+
+func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, error) {
+	// Get protected headers from pool and copy contents from context
+	protected := headerPool.Get()
+	if userSupplied := ec.protected; userSupplied != nil {
+		ec.protected = nil // Clear from context
+		if err := userSupplied.Copy(protected); err != nil {
+			return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
+		}
 	}
 
 	// There is exactly one content encrypter.
 	contentcrypt, err := content_crypt.NewGeneric(ec.calg)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
+	}
+
+	// Generate CEK if not provided
+	if len(cek) <= 0 {
+		bk, err := keygen.Random(contentcrypt.KeySize())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to generate key: %w`, err)
+		}
+		cek = bk.Bytes()
 	}
 
 	var useRawCEK bool
@@ -674,27 +732,28 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
-	recipients := make([]Recipient, len(ec.builders))
+	recipients := recipientSlicePool.GetCapacity(len(ec.builders))
+	defer recipientSlicePool.Put(recipients)
+
 	for i, builder := range ec.builders {
+		r := recipientPool.Get()
+		defer recipientPool.Put(r)
+
 		// some builders require hint from the contentcrypt object
-		r, rawCEK, err := builder.Build(ec.cek, ec.calg, contentcrypt)
+		rawCEK, err := builder.Build(r, cek, ec.calg, contentcrypt)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create recipient #%d: %w`, i, err)
 		}
-		recipients[i] = r
+		recipients = append(recipients, r)
 
 		// Kinda feels weird, but if useRawCEK == true, we asserted earlier
 		// that len(builders) == 1, so this is OK
 		if useRawCEK {
-			ec.cek = rawCEK
+			cek = rawCEK
 		}
 	}
 
-	if ec.protected == nil {
-		ec.protected = NewHeaders()
-	}
-
-	if err := ec.protected.Set(ContentEncryptionKey, ec.calg); err != nil {
+	if err := protected.Set(ContentEncryptionKey, ec.calg); err != nil {
 		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
 	}
 
@@ -703,7 +762,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		if err != nil {
 			return nil, fmt.Errorf(`failed to compress payload before encryption: %w`, err)
 		}
-		if err := ec.protected.Set(CompressionKey, ec.compression); err != nil {
+		if err := protected.Set(CompressionKey, ec.compression); err != nil {
 			return nil, fmt.Errorf(`failed to set "zip" in protected header: %w`, err)
 		}
 	}
@@ -711,24 +770,25 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	// If there's only one recipient, you want to include that in the
 	// protected header
 	if len(recipients) == 1 {
-		h, err := ec.protected.Merge(recipients[0].Headers())
+		h, err := protected.Merge(recipients[0].Headers())
 		if err != nil {
 			return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
 		}
-		ec.protected = h
+		protected = h
 	}
 
-	aad, err := ec.protected.Encode()
+	aad, err := protected.Encode()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to base64 encode protected headers: %w`, err)
 	}
 
-	iv, ciphertext, tag, err := contentcrypt.Encrypt(ec.cek, payload, aad)
+	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
-	msg := NewMessage()
+	msg := msgPool.Get()
+	defer msgPool.Put(msg)
 
 	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
 		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
@@ -736,7 +796,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	if err := msg.Set(InitializationVectorKey, iv); err != nil {
 		return nil, fmt.Errorf(`failed to set %s: %w`, InitializationVectorKey, err)
 	}
-	if err := msg.Set(ProtectedHeadersKey, ec.protected); err != nil {
+	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
 		return nil, fmt.Errorf(`failed to set %s: %w`, ProtectedHeadersKey, err)
 	}
 	if err := msg.Set(RecipientsKey, recipients); err != nil {

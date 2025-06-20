@@ -109,13 +109,18 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 	}()
 
 	var bs keygen.ByteSource
-	if c.NonceGenerator == nil {
-		bs, err = keygen.NewRandom(aead.NonceSize()).Generate()
+	g := c.NonceGenerator
+	if g == nil {
+		// Silly hack
+		bs, err = keygen.Random(aead.NonceSize())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf(`failed to generate random nonce: %w`, err)
+		}
 	} else {
-		bs, err = c.NonceGenerator.Generate()
-	}
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
+		bs, err = g.Generate()
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
+		}
 	}
 	iv = bs.Bytes()
 

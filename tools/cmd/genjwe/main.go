@@ -432,6 +432,15 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return ret, nil")
 	o.L("}")
 
+	o.LL("func (h *stdHeaders) clear() {")
+	o.L("h.mu.Lock()")
+	for _, f := range obj.Fields() {
+		o.L("h.%s = nil", f.Name(false))
+	}
+	o.L("h.privateParams = map[string]any{}")
+	o.L("h.mu.Unlock()")
+	o.L("}")
+
 	if err := o.WriteFile(`headers_gen.go`, codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())

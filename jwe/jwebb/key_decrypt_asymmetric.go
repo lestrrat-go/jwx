@@ -155,8 +155,7 @@ func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, erro
 	}
 
 	// Generate a random CEK of the required size
-	generator := keygen.NewRandom(keysize * 2)
-	bk, err := generator.Generate()
+	bk, err := keygen.Random(keysize * 2)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate key`)
 	}
