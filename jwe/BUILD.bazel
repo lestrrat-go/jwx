@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "compress.go",
         "decrypt.go",
+        "encrypt.go",
         "errors.go",
         "filter.go",
         "headers.go",
@@ -31,8 +32,9 @@ go_library(
         "//jwe/internal/aescbc",
         "//jwe/internal/cipher",
         "//jwe/internal/content_crypt",
-        "//jwe/internal/keyenc",
         "//jwe/internal/keygen",
+        "//jwe/internal/tokens",
+        "//jwe/jwebb",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
         "@com_github_lestrrat_go_option_v2//:option",

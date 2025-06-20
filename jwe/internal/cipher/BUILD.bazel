@@ -12,6 +12,7 @@ go_library(
         "//jwa",
         "//jwe/internal/aescbc",
         "//jwe/internal/keygen",
+        "//jwe/internal/tokens",
     ],
 )
 
@@ -21,6 +22,7 @@ go_test(
     deps = [
         ":cipher",
         "//jwa",
+        "//jwe/internal/tokens",
         "@com_github_stretchr_testify//require",
     ],
 )

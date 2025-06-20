@@ -12,6 +12,7 @@ go_library(
         "//internal/ecutil",
         "//jwa",
         "//jwe/internal/concatkdf",
+        "//jwe/internal/tokens",
         "//jwk",
     ],
 )
