@@ -10,8 +10,8 @@ import (
 	"io"
 
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
-	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
+	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
@@ -41,7 +41,7 @@ func (g Random) Generate() (ByteSource, error) {
 }
 
 // NewEcdhes creates a new key generator using ECDH-ES
-func NewEcdhes(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdsa.PublicKey, apu, apv []byte) (*Ecdhes, error) {
+func NewEcdhes(alg string, enc string, keysize int, pubkey *ecdsa.PublicKey, apu, apv []byte) (*Ecdhes, error) {
 	return &Ecdhes{
 		algorithm: alg,
 		enc:       enc,
@@ -65,10 +65,10 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 	}
 
 	var algorithm string
-	if g.algorithm == jwa.ECDH_ES() {
-		algorithm = g.enc.String()
+	if g.algorithm == tokens.ECDH_ES {
+		algorithm = g.enc
 	} else {
-		algorithm = g.algorithm.String()
+		algorithm = g.algorithm
 	}
 
 	pubinfo := make([]byte, 4)
@@ -93,7 +93,7 @@ func (g Ecdhes) Generate() (ByteSource, error) {
 }
 
 // NewX25519 creates a new key generator using ECDH-ES
-func NewX25519(alg jwa.KeyEncryptionAlgorithm, enc jwa.ContentEncryptionAlgorithm, keysize int, pubkey *ecdh.PublicKey) (*X25519, error) {
+func NewX25519(alg string, enc string, keysize int, pubkey *ecdh.PublicKey) (*X25519, error) {
 	return &X25519{
 		algorithm: alg,
 		enc:       enc,
@@ -115,10 +115,10 @@ func (g X25519) Generate() (ByteSource, error) {
 	}
 
 	var algorithm string
-	if g.algorithm == jwa.ECDH_ES() {
-		algorithm = g.enc.String()
+	if g.algorithm == tokens.ECDH_ES {
+		algorithm = g.enc
 	} else {
-		algorithm = g.algorithm.String()
+		algorithm = g.algorithm
 	}
 
 	pubinfo := make([]byte, 4)

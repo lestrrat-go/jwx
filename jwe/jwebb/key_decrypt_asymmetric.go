@@ -15,7 +15,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
@@ -80,20 +79,20 @@ func DeriveECDHES(alg string, apu, apv []byte, privkeyif, pubkeyif any, keysize 
 	var privkey *ecdh.PrivateKey
 	var pubkey *ecdh.PublicKey
 	if err := keyconv.ECDHPrivateKey(&privkey, privkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveECDHES: %w`, err)
+		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
 	}
 	if err := keyconv.ECDHPublicKey(&pubkey, pubkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveECDHES: %w`, err)
+		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
 	}
 
 	zBytes, err := privkey.ECDH(pubkey)
 	if err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveECDHES: unable to determine Z: %w`, err)
+		return nil, fmt.Errorf(`jwebb.DeriveECDHES: unable to determine Z: %w`, err)
 	}
 	kdf := concatkdf.New(crypto.SHA256, []byte(alg), zBytes, apu, apv, pubinfo, []byte{})
 	key := make([]byte, keysize)
 	if _, err := kdf.Read(key); err != nil {
-		return nil, fmt.Errorf(`keyenc.DeriveECDHES: failed to read kdf: %w`, err)
+		return nil, fmt.Errorf(`jwebb.DeriveECDHES: failed to read kdf: %w`, err)
 	}
 
 	return key, nil
@@ -110,7 +109,7 @@ func KeyDecryptECDHESKeyWrap(recipientKey, enckey []byte, alg string, apu, apv [
 		return nil, fmt.Errorf(`failed to create cipher for ECDH-ES key wrap: %w`, err)
 	}
 
-	return keyenc.Unwrap(block, enckey)
+	return Unwrap(block, enckey)
 }
 
 func KeyDecryptECDHES(recipientKey, enckey []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
@@ -139,7 +138,7 @@ func KeyEncryptionIsRSAOAEP(alg string) bool {
 func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.KeyDecryptRSA15: %w`, err)
+		return nil, fmt.Errorf(`jwebb.KeyDecryptRSA15: %w`, err)
 	}
 
 	// Perform some input validation.
@@ -186,7 +185,7 @@ func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([
 func KeyDecryptRSAOAEP(recipientKey, enckey []byte, alg string, privkeyif any) ([]byte, error) {
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
-		return nil, fmt.Errorf(`keyenc.KeyDecryptRSAOAEP: %w`, err)
+		return nil, fmt.Errorf(`jwebb.KeyDecryptRSAOAEP: %w`, err)
 	}
 
 	var hash hash.Hash

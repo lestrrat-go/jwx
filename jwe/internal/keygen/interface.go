@@ -3,8 +3,6 @@ package keygen
 import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
-
-	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 type Generator interface {
@@ -21,16 +19,16 @@ type Random struct {
 type Ecdhes struct {
 	pubkey    *ecdsa.PublicKey
 	keysize   int
-	algorithm jwa.KeyEncryptionAlgorithm
-	enc       jwa.ContentEncryptionAlgorithm
+	algorithm string
+	enc       string
 	apu       []byte
 	apv       []byte
 }
 
 // X25519KeyGenerate generates keys using ECDH-ES algorithm / X25519 curve
 type X25519 struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	enc       jwa.ContentEncryptionAlgorithm
+	algorithm string
+	enc       string
 	keysize   int
 	pubkey    *ecdh.PublicKey
 }

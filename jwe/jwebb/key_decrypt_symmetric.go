@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keyenc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
@@ -60,7 +59,7 @@ func KeyDecryptAESKW(recipientKey, enckey []byte, alg string, sharedkey []byte) 
 		return nil, fmt.Errorf(`failed to create cipher from shared key: %w`, err)
 	}
 
-	cek, err := keyenc.Unwrap(block, enckey)
+	cek, err := Unwrap(block, enckey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to unwrap data: %w`, err)
 	}
