@@ -174,7 +174,12 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
-	ret, err := encrypt(payload, nil, options...)
+	ec := encryptContextPool.Get()
+	defer encryptContextPool.Put(ec)
+	if err := ec.ProcessOptions(options); err != nil {
+		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: failed to process options: %w`, err)}
+	}
+	ret, err := ec.EncryptMessage(payload, nil)
 	if err != nil {
 		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: %w`, err)}
 	}
@@ -195,200 +200,16 @@ func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error
 	if len(cek) <= 0 {
 		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: empty CEK`)}
 	}
-	ret, err := encrypt(payload, cek, options...)
+	ec := encryptContextPool.Get()
+	defer encryptContextPool.Put(ec)
+	if err := ec.ProcessOptions(options); err != nil {
+		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: failed to process options: %w`, err)}
+	}
+	ret, err := ec.EncryptMessage(payload, cek)
 	if err != nil {
 		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: %w`, err)}
 	}
 	return ret, nil
-}
-
-// encrypt is separate, so it can receive cek from outside.
-// (but we don't want to receive it in the options slice)
-func encrypt(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
-	// default content encryption algorithm
-	calg := jwa.A256GCM()
-
-	// default compression is "none"
-	compression := jwa.NoCompress()
-
-	// default format is compact serialization
-	format := fmtCompact
-
-	// builds each "recipient" with encrypted_key and headers
-	var builders []*recipientBuilder
-
-	var protected Headers
-	var mergeProtected bool
-	var useRawCEK bool
-	for _, option := range options {
-		switch option.Ident() {
-		case identKey{}:
-			var wk *withKey
-			if err := option.Value(&wk); err != nil {
-				return nil, fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
-			}
-			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
-			if !ok {
-				return nil, fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
-			}
-			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
-				useRawCEK = true
-			}
-			builders = append(builders, &recipientBuilder{alg: v, key: wk.key, headers: wk.headers})
-		case identContentEncryptionAlgorithm{}:
-			var c jwa.ContentEncryptionAlgorithm
-			if err := option.Value(&c); err != nil {
-				return nil, err
-			}
-			calg = c
-		case identCompress{}:
-			var comp jwa.CompressionAlgorithm
-			if err := option.Value(&comp); err != nil {
-				return nil, err
-			}
-			compression = comp
-		case identMergeProtectedHeaders{}:
-			var mp bool
-			if err := option.Value(&mp); err != nil {
-				return nil, err
-			}
-			mergeProtected = mp
-		case identProtectedHeaders{}:
-			var hdrs Headers
-			if err := option.Value(&hdrs); err != nil {
-				return nil, err
-			}
-			if !mergeProtected || protected == nil {
-				protected = hdrs
-			} else {
-				merged, err := protected.Merge(hdrs)
-				if err != nil {
-					return nil, fmt.Errorf(`failed to merge headers: %w`, err)
-				}
-				protected = merged
-			}
-		case identSerialization{}:
-			var fmtOpt int
-			if err := option.Value(&fmtOpt); err != nil {
-				return nil, err
-			}
-			format = fmtOpt
-		}
-	}
-
-	// We need to have at least one builder
-	switch l := len(builders); {
-	case l == 0:
-		return nil, fmt.Errorf(`missing key encryption builders: use jwe.WithKey() to specify one`)
-	case l > 1:
-		if format == fmtCompact {
-			return nil, fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
-		}
-	}
-
-	if useRawCEK {
-		if len(builders) != 1 {
-			return nil, fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode supported`)
-		}
-	}
-
-	// There is exactly one content encrypter.
-	contentcrypt, err := content_crypt.NewGeneric(calg)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
-	}
-
-	if len(cek) <= 0 {
-		generator := keygen.NewRandom(contentcrypt.KeySize())
-		bk, err := generator.Generate()
-		if err != nil {
-			return nil, fmt.Errorf(`failed to generate key: %w`, err)
-		}
-		cek = bk.Bytes()
-	}
-
-	recipients := make([]Recipient, len(builders))
-	for i, builder := range builders {
-		// some builders require hint from the contentcrypt object
-		r, rawCEK, err := builder.Build(cek, calg, contentcrypt)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to create recipient #%d: %w`, i, err)
-		}
-		recipients[i] = r
-
-		// Kinda feels weird, but if useRawCEK == true, we asserted earlier
-		// that len(builders) == 1, so this is OK
-		if useRawCEK {
-			cek = rawCEK
-		}
-	}
-
-	if protected == nil {
-		protected = NewHeaders()
-	}
-
-	if err := protected.Set(ContentEncryptionKey, calg); err != nil {
-		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
-	}
-
-	if compression != jwa.NoCompress() {
-		payload, err = compress(payload)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to compress payload before encryption: %w`, err)
-		}
-		if err := protected.Set(CompressionKey, compression); err != nil {
-			return nil, fmt.Errorf(`failed to set "zip" in protected header: %w`, err)
-		}
-	}
-
-	// If there's only one recipient, you want to include that in the
-	// protected header
-	if len(recipients) == 1 {
-		h, err := protected.Merge(recipients[0].Headers())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
-		}
-		protected = h
-	}
-
-	aad, err := protected.Encode()
-	if err != nil {
-		return nil, fmt.Errorf(`failed to base64 encode protected headers: %w`, err)
-	}
-
-	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
-	}
-
-	msg := NewMessage()
-
-	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
-	}
-	if err := msg.Set(InitializationVectorKey, iv); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, InitializationVectorKey, err)
-	}
-	if err := msg.Set(ProtectedHeadersKey, protected); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, ProtectedHeadersKey, err)
-	}
-	if err := msg.Set(RecipientsKey, recipients); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, RecipientsKey, err)
-	}
-	if err := msg.Set(TagKey, tag); err != nil {
-		return nil, fmt.Errorf(`failed to set %s: %w`, TagKey, err)
-	}
-
-	switch format {
-	case fmtCompact:
-		return Compact(msg)
-	case fmtJSON:
-		return json.Marshal(msg)
-	case fmtJSONPretty:
-		return json.MarshalIndent(msg, "", "  ")
-	default:
-		return nil, fmt.Errorf(`invalid serialization`)
-	}
 }
 
 // decryptContext holds the state during JWE decryption, similar to JWS verifyContext
@@ -710,6 +531,231 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 	}
 
 	return plaintext, nil
+}
+
+// encryptContext holds the state during JWE encryption, similar to JWS signContext
+type encryptContext struct {
+	calg        jwa.ContentEncryptionAlgorithm
+	compression jwa.CompressionAlgorithm
+	format      int
+	builders    []*recipientBuilder
+	protected   Headers
+	cek         []byte
+}
+
+var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
+
+func allocEncryptContext() *encryptContext {
+	return &encryptContext{
+		calg:        jwa.A256GCM(),
+		compression: jwa.NoCompress(),
+		format:      fmtCompact,
+	}
+}
+
+func freeEncryptContext(ec *encryptContext) *encryptContext {
+	ec.calg = jwa.A256GCM()
+	ec.compression = jwa.NoCompress()
+	ec.format = fmtCompact
+	ec.builders = ec.builders[:0]
+	ec.protected = nil
+	ec.cek = nil
+	return ec
+}
+
+func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
+	var mergeProtected bool
+	var useRawCEK bool
+	for _, option := range options {
+		switch option.Ident() {
+		case identKey{}:
+			var wk *withKey
+			if err := option.Value(&wk); err != nil {
+				return fmt.Errorf("jwe.encrypt: WithKey must be a *withKey: %w", err)
+			}
+			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
+			if !ok {
+				return fmt.Errorf("jwe.encrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
+			}
+			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
+				useRawCEK = true
+			}
+			ec.builders = append(ec.builders, &recipientBuilder{alg: v, key: wk.key, headers: wk.headers})
+		case identContentEncryptionAlgorithm{}:
+			var c jwa.ContentEncryptionAlgorithm
+			if err := option.Value(&c); err != nil {
+				return err
+			}
+			ec.calg = c
+		case identCompress{}:
+			var comp jwa.CompressionAlgorithm
+			if err := option.Value(&comp); err != nil {
+				return err
+			}
+			ec.compression = comp
+		case identMergeProtectedHeaders{}:
+			var mp bool
+			if err := option.Value(&mp); err != nil {
+				return err
+			}
+			mergeProtected = mp
+		case identProtectedHeaders{}:
+			var hdrs Headers
+			if err := option.Value(&hdrs); err != nil {
+				return err
+			}
+			if !mergeProtected || ec.protected == nil {
+				ec.protected = hdrs
+			} else {
+				merged, err := ec.protected.Merge(hdrs)
+				if err != nil {
+					return fmt.Errorf(`failed to merge headers: %w`, err)
+				}
+				ec.protected = merged
+			}
+		case identSerialization{}:
+			var fmtOpt int
+			if err := option.Value(&fmtOpt); err != nil {
+				return err
+			}
+			ec.format = fmtOpt
+		}
+	}
+
+	// We need to have at least one builder
+	switch l := len(ec.builders); {
+	case l == 0:
+		return fmt.Errorf(`missing key encryption builders: use jwe.WithKey() to specify one`)
+	case l > 1:
+		if ec.format == fmtCompact {
+			return fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
+		}
+	}
+
+	if useRawCEK {
+		if len(ec.builders) != 1 {
+			return fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode supported`)
+		}
+	}
+
+	return nil
+}
+
+func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, error) {
+	// Generate CEK if not provided
+	if len(cek) <= 0 {
+		// There is exactly one content encrypter.
+		contentcrypt, err := content_crypt.NewGeneric(ec.calg)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
+		}
+
+		generator := keygen.NewRandom(contentcrypt.KeySize())
+		bk, err := generator.Generate()
+		if err != nil {
+			return nil, fmt.Errorf(`failed to generate key: %w`, err)
+		}
+		ec.cek = bk.Bytes()
+	} else {
+		ec.cek = cek
+	}
+
+	// There is exactly one content encrypter.
+	contentcrypt, err := content_crypt.NewGeneric(ec.calg)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to create AES encrypter: %w`, err)
+	}
+
+	var useRawCEK bool
+	for _, builder := range ec.builders {
+		if builder.alg == jwa.DIRECT() || builder.alg == jwa.ECDH_ES() {
+			useRawCEK = true
+			break
+		}
+	}
+
+	recipients := make([]Recipient, len(ec.builders))
+	for i, builder := range ec.builders {
+		// some builders require hint from the contentcrypt object
+		r, rawCEK, err := builder.Build(ec.cek, ec.calg, contentcrypt)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to create recipient #%d: %w`, i, err)
+		}
+		recipients[i] = r
+
+		// Kinda feels weird, but if useRawCEK == true, we asserted earlier
+		// that len(builders) == 1, so this is OK
+		if useRawCEK {
+			ec.cek = rawCEK
+		}
+	}
+
+	if ec.protected == nil {
+		ec.protected = NewHeaders()
+	}
+
+	if err := ec.protected.Set(ContentEncryptionKey, ec.calg); err != nil {
+		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
+	}
+
+	if ec.compression != jwa.NoCompress() {
+		payload, err = compress(payload)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to compress payload before encryption: %w`, err)
+		}
+		if err := ec.protected.Set(CompressionKey, ec.compression); err != nil {
+			return nil, fmt.Errorf(`failed to set "zip" in protected header: %w`, err)
+		}
+	}
+
+	// If there's only one recipient, you want to include that in the
+	// protected header
+	if len(recipients) == 1 {
+		h, err := ec.protected.Merge(recipients[0].Headers())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
+		}
+		ec.protected = h
+	}
+
+	aad, err := ec.protected.Encode()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to base64 encode protected headers: %w`, err)
+	}
+
+	iv, ciphertext, tag, err := contentcrypt.Encrypt(ec.cek, payload, aad)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
+	}
+
+	msg := NewMessage()
+
+	if err := msg.Set(CipherTextKey, ciphertext); err != nil {
+		return nil, fmt.Errorf(`failed to set %s: %w`, CipherTextKey, err)
+	}
+	if err := msg.Set(InitializationVectorKey, iv); err != nil {
+		return nil, fmt.Errorf(`failed to set %s: %w`, InitializationVectorKey, err)
+	}
+	if err := msg.Set(ProtectedHeadersKey, ec.protected); err != nil {
+		return nil, fmt.Errorf(`failed to set %s: %w`, ProtectedHeadersKey, err)
+	}
+	if err := msg.Set(RecipientsKey, recipients); err != nil {
+		return nil, fmt.Errorf(`failed to set %s: %w`, RecipientsKey, err)
+	}
+	if err := msg.Set(TagKey, tag); err != nil {
+		return nil, fmt.Errorf(`failed to set %s: %w`, TagKey, err)
+	}
+
+	switch ec.format {
+	case fmtCompact:
+		return Compact(msg)
+	case fmtJSON:
+		return json.Marshal(msg)
+	case fmtJSONPretty:
+		return json.MarshalIndent(msg, "", "  ")
+	default:
+		return nil, fmt.Errorf(`invalid serialization`)
+	}
 }
 
 // Decrypt takes encrypted payload, and information required to decrypt the
