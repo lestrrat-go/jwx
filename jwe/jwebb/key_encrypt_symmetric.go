@@ -17,7 +17,7 @@ import (
 )
 
 // KeyEncryptAESKW encrypts the CEK using AES key wrap
-func KeyEncryptAESKW(cek []byte, alg string, sharedkey []byte) (keygen.ByteSource, error) {
+func KeyEncryptAESKW(cek []byte, _ string, sharedkey []byte) (keygen.ByteSource, error) {
 	block, err := aes.NewCipher(sharedkey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create cipher from shared key: %w`, err)
@@ -31,7 +31,7 @@ func KeyEncryptAESKW(cek []byte, alg string, sharedkey []byte) (keygen.ByteSourc
 }
 
 // KeyEncryptDirect returns the CEK directly for DIRECT algorithm
-func KeyEncryptDirect(cek []byte, alg string, sharedkey []byte) (keygen.ByteSource, error) {
+func KeyEncryptDirect(_ []byte, _ string, sharedkey []byte) (keygen.ByteSource, error) {
 	return keygen.ByteKey(sharedkey), nil
 }
 
@@ -39,7 +39,7 @@ func KeyEncryptDirect(cek []byte, alg string, sharedkey []byte) (keygen.ByteSour
 func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource, error) {
 	var hashFunc func() hash.Hash
 	var keylen int
-	
+
 	switch alg {
 	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
@@ -53,7 +53,7 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 	default:
 		return nil, fmt.Errorf(`unsupported PBES2 algorithm: %s`, alg)
 	}
-	
+
 	count := 10000
 	salt := make([]byte, keylen)
 	_, err := io.ReadFull(rand.Reader, salt)
@@ -64,10 +64,10 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 	fullsalt := []byte(alg)
 	fullsalt = append(fullsalt, byte(0))
 	fullsalt = append(fullsalt, salt...)
-	
+
 	// Derive key using PBKDF2
 	derivedKey := pbkdf2.Key(password, fullsalt, count, keylen, hashFunc)
-	
+
 	// Use the derived key for AES key wrap
 	block, err := aes.NewCipher(derivedKey)
 	if err != nil {
@@ -77,7 +77,7 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 	if err != nil {
 		return nil, fmt.Errorf(`failed to wrap data: %w`, err)
 	}
-	
+
 	return keygen.ByteWithSaltAndCount{
 		ByteKey: encrypted,
 		Salt:    salt,
@@ -86,17 +86,17 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 }
 
 // KeyEncryptAESGCMKW encrypts the CEK using AES GCM key wrap
-func KeyEncryptAESGCMKW(cek []byte, alg string, sharedkey []byte) (keygen.ByteSource, error) {
+func KeyEncryptAESGCMKW(cek []byte, _ string, sharedkey []byte) (keygen.ByteSource, error) {
 	block, err := aes.NewCipher(sharedkey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
 	}
-	
+
 	aesgcm, err := cryptocipher.NewGCM(block)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create new GCM wrap: %w`, err)
 	}
-	
+
 	iv := make([]byte, aesgcm.NonceSize())
 	_, err = io.ReadFull(rand.Reader, iv)
 	if err != nil {
@@ -106,7 +106,7 @@ func KeyEncryptAESGCMKW(cek []byte, alg string, sharedkey []byte) (keygen.ByteSo
 	encrypted := aesgcm.Seal(nil, iv, cek, nil)
 	tag := encrypted[len(encrypted)-aesgcm.Overhead():]
 	ciphertext := encrypted[:len(encrypted)-aesgcm.Overhead()]
-	
+
 	return keygen.ByteWithIVAndTag{
 		ByteKey: ciphertext,
 		IV:      iv,

@@ -16,32 +16,32 @@ import (
 var (
 	// Test CEK (Content Encryption Key)
 	testCEK = []byte("0123456789abcdef")
-	
+
 	// Test shared keys of various sizes
-	testSharedKey16  = []byte("0123456789abcdef")                     // 16 bytes for A128KW/A128GCMKW
-	testSharedKey32  = []byte("0123456789abcdef0123456789abcdef")       // 32 bytes for A256KW
-	testSharedKeyStr = []byte("shared-key-bytes")                      // Generic shared key
-	
+	testSharedKey16  = []byte("0123456789abcdef")                 // 16 bytes for A128KW/A128GCMKW
+	testSharedKey32  = []byte("0123456789abcdef0123456789abcdef") // 32 bytes for A256KW
+	testSharedKeyStr = []byte("shared-key-bytes")                 // Generic shared key
+
 	// Test password
 	testPassword = []byte("password123")
-	
+
 	// ECDH-ES party info
 	testAPU = []byte("Alice")
 	testAPV = []byte("Bob")
-	
+
 	// Common test cases for algorithm validation
 	invalidAlgTestCase = struct {
 		name string
 		alg  string
 		want bool
 	}{"invalid", "invalid-alg", false}
-	
+
 	emptyAlgTestCase = struct {
 		name string
 		alg  string
 		want bool
 	}{"empty", "", false}
-	
+
 	aeskwFalseTestCase = struct {
 		name string
 		alg  string
@@ -245,7 +245,7 @@ func TestKeyEncryptAESGCMKW(t *testing.T) {
 
 func TestKeyEncryptRSA15(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate RSA key pair
 	_, pubkey, err := generateRSAKeyPair()
 	require.NoError(t, err)
@@ -258,7 +258,7 @@ func TestKeyEncryptRSA15(t *testing.T) {
 
 func TestKeyEncryptRSAOAEP(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate RSA key pair
 	_, pubkey, err := generateRSAKeyPair()
 	require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestKeyEncryptRSAOAEP(t *testing.T) {
 
 func TestKeyEncryptECDHESECDSA(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate ECDSA key pair
 	_, pubkey, err := generateECDSAKeyPair()
 	require.NoError(t, err)

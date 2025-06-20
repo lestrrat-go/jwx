@@ -74,7 +74,7 @@ type recipientBuilder struct {
 	headers Headers
 }
 
-func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm, cc *content_crypt.Generic) (Recipient, []byte, error) {
+func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) (Recipient, []byte, error) {
 	// we need the raw key for later use
 	rawKey := b.key
 
@@ -109,7 +109,7 @@ func (b *recipientBuilder) Build(cek []byte, calg jwa.ContentEncryptionAlgorithm
 			apv = val
 		}
 	}
-	
+
 	// Create the encrypter using the new jwebb pattern
 	enc, err := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
 	if err != nil {
@@ -755,7 +755,6 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	}
 	return ret, nil
 }
-
 
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.

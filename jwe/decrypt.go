@@ -157,7 +157,6 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 	return plaintext, nil
 }
 
-
 func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, err error) {
 	recipientKey := recipient.EncryptedKey()
 	if kd, ok := d.privkey.(KeyDecrypter); ok {

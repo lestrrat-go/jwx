@@ -53,7 +53,7 @@ func KeyEncryptionIsSymmetric(alg string) bool {
 	return KeyEncryptionIsAESKW(alg) || KeyEncryptionIsAESGCMKW(alg) || KeyEncryptionIsPBES2(alg) || KeyEncryptionIsDirect(alg)
 }
 
-func KeyDecryptAESKW(recipientKey, enckey []byte, alg string, sharedkey []byte) ([]byte, error) {
+func KeyDecryptAESKW(_, enckey []byte, _ string, sharedkey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(sharedkey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create cipher from shared key: %w`, err)
@@ -66,14 +66,14 @@ func KeyDecryptAESKW(recipientKey, enckey []byte, alg string, sharedkey []byte) 
 	return cek, nil
 }
 
-func KeyDecryptDirect(recipientKey, enckey []byte, alg string, cek []byte) ([]byte, error) {
+func KeyDecryptDirect(_, _ []byte, _ string, cek []byte) ([]byte, error) {
 	return cek, nil
 }
 
-func KeyDecryptPBES2(recipientKey, enckey []byte, alg string, password []byte, salt []byte, count int) ([]byte, error) {
+func KeyDecryptPBES2(_, enckey []byte, alg string, password []byte, salt []byte, count int) ([]byte, error) {
 	var hashFunc func() hash.Hash
 	var keylen int
-	
+
 	switch alg {
 	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
@@ -87,40 +87,40 @@ func KeyDecryptPBES2(recipientKey, enckey []byte, alg string, password []byte, s
 	default:
 		return nil, fmt.Errorf(`unsupported PBES2 algorithm: %s`, alg)
 	}
-	
+
 	// Derive key using PBKDF2
 	derivedKey := pbkdf2.Key(password, salt, count, keylen, hashFunc)
-	
+
 	// Use the derived key for AES key wrap
-	return KeyDecryptAESKW(recipientKey, enckey, alg, derivedKey)
+	return KeyDecryptAESKW(nil, enckey, alg, derivedKey)
 }
 
-func KeyDecryptAESGCMKW(recipientKey, enckey []byte, alg string, sharedkey []byte, iv []byte, tag []byte) ([]byte, error) {
+func KeyDecryptAESGCMKW(recipientKey, _ []byte, _ string, sharedkey []byte, iv []byte, tag []byte) ([]byte, error) {
 	if len(iv) != 12 {
 		return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(iv)*8)
 	}
 	if len(tag) != 16 {
 		return nil, fmt.Errorf("GCM requires 128-bit tag, got %d", len(tag)*8)
 	}
-	
+
 	block, err := aes.NewCipher(sharedkey)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create new AES cipher: %w`, err)
 	}
-	
+
 	aesgcm, err := cryptocipher.NewGCM(block)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to create new GCM wrap: %w`, err)
 	}
-	
+
 	// Combine recipient key and tag for GCM decryption
 	ciphertext := recipientKey[:]
 	ciphertext = append(ciphertext, tag...)
-	
+
 	jek, err := aesgcm.Open(nil, iv, ciphertext, nil)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode key: %w`, err)
 	}
-	
+
 	return jek, nil
 }

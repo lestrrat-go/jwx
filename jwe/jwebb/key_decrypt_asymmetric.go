@@ -98,7 +98,7 @@ func DeriveECDHES(alg string, apu, apv []byte, privkeyif, pubkeyif any, keysize 
 	return key, nil
 }
 
-func KeyDecryptECDHESKeyWrap(recipientKey, enckey []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
+func KeyDecryptECDHESKeyWrap(_, enckey []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
 	key, err := DeriveECDHES(alg, apu, apv, privkey, pubkey, keysize)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to derive ECDHES encryption key: %w`, err)
@@ -112,7 +112,7 @@ func KeyDecryptECDHESKeyWrap(recipientKey, enckey []byte, alg string, apu, apv [
 	return Unwrap(block, enckey)
 }
 
-func KeyDecryptECDHES(recipientKey, enckey []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
+func KeyDecryptECDHES(_, _ []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
 	key, err := DeriveECDHES(alg, apu, apv, privkey, pubkey, keysize)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to derive ECDHES encryption key: %w`, err)
@@ -135,7 +135,7 @@ func KeyEncryptionIsRSAOAEP(alg string) bool {
 	}
 }
 
-func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
+func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSA15: %w`, err)
@@ -182,7 +182,7 @@ func KeyDecryptRSA15(recipientKey, enckey []byte, privkeyif any, keysize int) ([
 	return cek, nil
 }
 
-func KeyDecryptRSAOAEP(recipientKey, enckey []byte, alg string, privkeyif any) ([]byte, error) {
+func KeyDecryptRSAOAEP(_, enckey []byte, alg string, privkeyif any) ([]byte, error) {
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSAOAEP: %w`, err)

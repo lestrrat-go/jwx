@@ -42,7 +42,7 @@ func TestKeyDecryptPBES2(t *testing.T) {
 	encrypted, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password)
 	require.NoError(t, err)
 	require.NotNil(t, encrypted)
-	
+
 	// Verify the result has the expected type with salt and count
 	_, ok := encrypted.(keygen.ByteWithSaltAndCount)
 	require.True(t, ok, "PBES2 encryption should return ByteWithSaltAndCount")
@@ -69,7 +69,7 @@ func TestKeyDecryptAESGCMKW(t *testing.T) {
 
 func TestKeyDecryptRSA15(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate RSA key pair
 	privkey, pubkey, err := generateRSAKeyPair()
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestKeyDecryptRSA15(t *testing.T) {
 
 func TestKeyDecryptRSAOAEP(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate RSA key pair
 	privkey, pubkey, err := generateRSAKeyPair()
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestKeyDecryptECDHES(t *testing.T) {
 
 func TestKeyDecryptECDHESKeyWrap(t *testing.T) {
 	cek := testCEK
-	
+
 	// Generate ECDSA key pairs - use the same key for both sides to ensure compatibility
 	privkey, pubkey, err := generateECDSAKeyPair()
 	require.NoError(t, err)

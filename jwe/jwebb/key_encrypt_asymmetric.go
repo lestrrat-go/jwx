@@ -17,7 +17,7 @@ import (
 )
 
 // KeyEncryptRSA15 encrypts the CEK using RSA PKCS#1 v1.5
-func KeyEncryptRSA15(cek []byte, alg string, pubkey *rsa.PublicKey) (keygen.ByteSource, error) {
+func KeyEncryptRSA15(cek []byte, _ string, pubkey *rsa.PublicKey) (keygen.ByteSource, error) {
 	encrypted, err := rsa.EncryptPKCS1v15(rand.Reader, pubkey, cek)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt using PKCS1v15: %w`, err)
@@ -54,7 +54,7 @@ func generateECDHESKeyECDSA(alg string, calg string, keysize uint32, pubkey *ecd
 	if err != nil {
 		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to create ECDSA key generator: %w`, err)
 	}
-	
+
 	// Generate the key
 	kg, err := generator.Generate()
 	if err != nil {
@@ -75,7 +75,7 @@ func generateECDHESKeyX25519(alg string, calg string, keysize uint32, pubkey *ec
 	if err != nil {
 		return keygen.ByteWithECPublicKey{}, fmt.Errorf(`failed to create X25519 key generator: %w`, err)
 	}
-	
+
 	// Generate the key
 	kg, err := generator.Generate()
 	if err != nil {
@@ -113,7 +113,7 @@ func KeyEncryptECDHESKeyWrapECDSA(cek []byte, alg string, apu, apv []byte, pubke
 }
 
 // KeyEncryptECDHESKeyWrapX25519 encrypts the CEK using ECDH-ES with key wrapping for X25519 keys
-func KeyEncryptECDHESKeyWrapX25519(cek []byte, alg string, apu, apv []byte, pubkey *ecdh.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
+func KeyEncryptECDHESKeyWrapX25519(cek []byte, alg string, _ []byte, _ []byte, pubkey *ecdh.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
 	bwpk, err := generateECDHESKeyX25519(alg, calg, keysize, pubkey)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func KeyEncryptECDHESKeyWrapX25519(cek []byte, alg string, apu, apv []byte, pubk
 }
 
 // KeyEncryptECDHESECDSA encrypts using ECDH-ES direct (no key wrapping) for ECDSA keys
-func KeyEncryptECDHESECDSA(cek []byte, alg string, apu, apv []byte, pubkey *ecdsa.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
+func KeyEncryptECDHESECDSA(_ []byte, alg string, apu, apv []byte, pubkey *ecdsa.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
 	bwpk, err := generateECDHESKeyECDSA(alg, calg, keysize, pubkey, apu, apv)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func KeyEncryptECDHESECDSA(cek []byte, alg string, apu, apv []byte, pubkey *ecds
 }
 
 // KeyEncryptECDHESX25519 encrypts using ECDH-ES direct (no key wrapping) for X25519 keys
-func KeyEncryptECDHESX25519(cek []byte, alg string, apu, apv []byte, pubkey *ecdh.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
+func KeyEncryptECDHESX25519(_ []byte, alg string, _, _ []byte, pubkey *ecdh.PublicKey, keysize uint32, calg string) (keygen.ByteSource, error) {
 	bwpk, err := generateECDHESKeyX25519(alg, calg, keysize, pubkey)
 	if err != nil {
 		return nil, err
@@ -155,4 +155,3 @@ func KeyEncryptECDHESX25519(cek []byte, alg string, apu, apv []byte, pubkey *ecd
 	// For direct ECDH-ES, return the generated key directly
 	return bwpk, nil
 }
-
