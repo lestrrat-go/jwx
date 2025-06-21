@@ -19,11 +19,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
 
-const (
-	KeySize16 = 16
-	KeySize24 = 24
-	KeySize32 = 32
-)
 
 func KeyEncryptionIsECDHES(alg string) bool {
 	switch alg {
@@ -37,17 +32,17 @@ func KeyEncryptionIsECDHES(alg string) bool {
 func contentEncryptionKeySize(ctalg string) (uint32, error) {
 	switch ctalg {
 	case tokens.A128GCM:
-		return 16, nil
+		return tokens.KeySize16, nil
 	case tokens.A192GCM:
-		return 24, nil
+		return tokens.KeySize24, nil
 	case tokens.A256GCM:
-		return 32, nil
+		return tokens.KeySize32, nil
 	case tokens.A128CBC_HS256:
-		return 32, nil
+		return tokens.KeySize32, nil
 	case tokens.A192CBC_HS384:
-		return 48, nil
+		return tokens.KeySize48, nil
 	case tokens.A256CBC_HS512:
-		return 64, nil
+		return tokens.KeySize64, nil
 	default:
 		return 0, fmt.Errorf(`unsupported content encryption algorithm %s`, ctalg)
 	}
@@ -62,11 +57,11 @@ func KeyEncryptionECDHESKeySize(alg, ctalg string) (string, uint32, bool, error)
 		}
 		return ctalg, keysize, false, nil
 	case tokens.ECDH_ES_A128KW:
-		return alg, KeySize16, true, nil
+		return alg, tokens.KeySize16, true, nil
 	case tokens.ECDH_ES_A192KW:
-		return alg, KeySize24, true, nil
+		return alg, tokens.KeySize24, true, nil
 	case tokens.ECDH_ES_A256KW:
-		return alg, KeySize32, true, nil
+		return alg, tokens.KeySize32, true, nil
 	default:
 		return "", 0, false, fmt.Errorf(`unsupported key encryption algorithm %s`, alg)
 	}
@@ -74,7 +69,7 @@ func KeyEncryptionECDHESKeySize(alg, ctalg string) (string, uint32, bool, error)
 
 func DeriveECDHES(alg string, apu, apv []byte, privkeyif, pubkeyif any, keysize uint32) ([]byte, error) {
 	pubinfo := make([]byte, 4)
-	binary.BigEndian.PutUint32(pubinfo, keysize*8)
+	binary.BigEndian.PutUint32(pubinfo, keysize*tokens.BitsPerByte)
 
 	var privkey *ecdh.PrivateKey
 	var pubkey *ecdh.PublicKey
@@ -142,7 +137,7 @@ func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, erro
 	}
 
 	// Perform some input validation.
-	expectedlen := privkey.PublicKey.N.BitLen() / 8
+	expectedlen := privkey.PublicKey.N.BitLen() / tokens.BitsPerByte
 	if expectedlen != len(enckey) {
 		// Input size is incorrect, the encrypted payload should always match
 		// the size of the public modulus (e.g. using a 2048 bit key will
@@ -155,7 +150,7 @@ func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, erro
 	}
 
 	// Generate a random CEK of the required size
-	bk, err := keygen.Random(keysize * 2)
+	bk, err := keygen.Random(keysize * tokens.RSAKeyGenMultiplier)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate key`)
 	}

@@ -77,13 +77,13 @@ func KeyDecryptPBES2(_, enckey []byte, alg string, password []byte, salt []byte,
 	switch alg {
 	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
-		keylen = 16
+		keylen = tokens.KeySize16
 	case tokens.PBES2_HS384_A192KW:
 		hashFunc = sha512.New384
-		keylen = 24
+		keylen = tokens.KeySize24
 	case tokens.PBES2_HS512_A256KW:
 		hashFunc = sha512.New
-		keylen = 32
+		keylen = tokens.KeySize32
 	default:
 		return nil, fmt.Errorf(`unsupported PBES2 algorithm: %s`, alg)
 	}
@@ -96,11 +96,11 @@ func KeyDecryptPBES2(_, enckey []byte, alg string, password []byte, salt []byte,
 }
 
 func KeyDecryptAESGCMKW(recipientKey, _ []byte, _ string, sharedkey []byte, iv []byte, tag []byte) ([]byte, error) {
-	if len(iv) != 12 {
-		return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(iv)*8)
+	if len(iv) != tokens.GCMIVSize {
+		return nil, fmt.Errorf("GCM requires 96-bit iv, got %d", len(iv)*tokens.BitsPerByte)
 	}
-	if len(tag) != 16 {
-		return nil, fmt.Errorf("GCM requires 128-bit tag, got %d", len(tag)*8)
+	if len(tag) != tokens.GCMTagSize {
+		return nil, fmt.Errorf("GCM requires 128-bit tag, got %d", len(tag)*tokens.BitsPerByte)
 	}
 
 	block, err := aes.NewCipher(sharedkey)

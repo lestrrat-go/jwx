@@ -43,18 +43,18 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 	switch alg {
 	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
-		keylen = 16
+		keylen = tokens.KeySize16
 	case tokens.PBES2_HS384_A192KW:
 		hashFunc = sha512.New384
-		keylen = 24
+		keylen = tokens.KeySize24
 	case tokens.PBES2_HS512_A256KW:
 		hashFunc = sha512.New
-		keylen = 32
+		keylen = tokens.KeySize32
 	default:
 		return nil, fmt.Errorf(`unsupported PBES2 algorithm: %s`, alg)
 	}
 
-	count := 10000
+	count := tokens.PBES2DefaultIterations
 	salt := make([]byte, keylen)
 	_, err := io.ReadFull(rand.Reader, salt)
 	if err != nil {
@@ -62,7 +62,7 @@ func KeyEncryptPBES2(cek []byte, alg string, password []byte) (keygen.ByteSource
 	}
 
 	fullsalt := []byte(alg)
-	fullsalt = append(fullsalt, byte(0))
+	fullsalt = append(fullsalt, byte(tokens.PBES2NullByteSeparator))
 	fullsalt = append(fullsalt, salt...)
 
 	// Derive key using PBKDF2
