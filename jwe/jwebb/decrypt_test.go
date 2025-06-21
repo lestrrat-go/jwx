@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 	"github.com/stretchr/testify/require"
 )

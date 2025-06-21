@@ -3,9 +3,9 @@ package jwebb
 import (
 	"fmt"
 
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
 // ContentEncryptionIsSupported checks if the content encryption algorithm is supported

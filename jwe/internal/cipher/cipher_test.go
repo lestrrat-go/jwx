@@ -3,8 +3,8 @@ package cipher_test
 import (
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/stretchr/testify/require"
 )
 

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +46,6 @@ var (
 		want bool
 	}{"A128KW", tokens.A128KW, false}
 )
-
 
 func TestKeyEncryptionIsAESKW(t *testing.T) {
 	tests := []struct {

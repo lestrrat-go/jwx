@@ -14,9 +14,9 @@ import (
 	"hash"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 )
 
 const (

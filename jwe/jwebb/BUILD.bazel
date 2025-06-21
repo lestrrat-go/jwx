@@ -19,7 +19,7 @@ go_library(
         "//jwe/internal/concatkdf",
         "//jwe/internal/content_crypt",
         "//jwe/internal/keygen",
-        "//jwe/internal/tokens",
+        "//internal/tokens",
         "@org_golang_x_crypto//pbkdf2",
     ],
 )
@@ -36,7 +36,7 @@ go_test(
         "//internal/jwxtest",
         "//jwa",
         "//jwe/internal/keygen",
-        "//jwe/internal/tokens",
+        "//internal/tokens",
         "@com_github_stretchr_testify//require",
     ],
 )

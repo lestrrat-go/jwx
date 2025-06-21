@@ -33,7 +33,6 @@ go_library(
         "//jwe/internal/cipher",
         "//jwe/internal/content_crypt",
         "//jwe/internal/keygen",
-        "//jwe/internal/tokens",
         "//jwe/jwebb",
         "//jwk",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",

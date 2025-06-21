@@ -98,7 +98,7 @@ linters:
         text: 'var-naming: '
       - linters:
           - revive
-        path: jwe/internal/tokens/tokens.go
+        path: internal/tokens/jwe_tokens.go
         text: "don't use ALL_CAPS in Go names"
     paths:
       - third_party$

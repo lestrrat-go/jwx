@@ -1,6 +1,6 @@
 package tokens
 
-// Key Encryption Algorithms
+// JWE Key Encryption Algorithms
 const (
 	// RSA algorithms
 	RSA1_5       = "RSA1_5"
@@ -34,7 +34,7 @@ const (
 	DIRECT = "dir"
 )
 
-// Content Encryption Algorithms
+// JWE Content Encryption Algorithms
 const (
 	// AES GCM algorithms
 	A128GCM = "A128GCM"
