@@ -3,6 +3,8 @@ package jwebb_test
 import (
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
@@ -71,7 +73,9 @@ func TestKeyDecryptRSA15(t *testing.T) {
 	cek := testCEK
 
 	// Generate RSA key pair
-	privkey, pubkey, err := generateRSAKeyPair()
+	privkey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 	require.NoError(t, err)
 
 	// First encrypt
@@ -89,7 +93,9 @@ func TestKeyDecryptRSAOAEP(t *testing.T) {
 	cek := testCEK
 
 	// Generate RSA key pair
-	privkey, pubkey, err := generateRSAKeyPair()
+	privkey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 	require.NoError(t, err)
 
 	// First encrypt
@@ -104,9 +110,9 @@ func TestKeyDecryptRSAOAEP(t *testing.T) {
 
 func TestKeyDecryptECDHES(t *testing.T) {
 	// Generate ECDSA key pairs for Alice and Bob
-	alicePriv, _, err := generateECDSAKeyPair()
+	alicePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
-	bobPriv, _, err := generateECDSAKeyPair()
+	bobPriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
 
 	apu := testAPU
@@ -123,8 +129,9 @@ func TestKeyDecryptECDHESKeyWrap(t *testing.T) {
 	cek := testCEK
 
 	// Generate ECDSA key pairs - use the same key for both sides to ensure compatibility
-	privkey, pubkey, err := generateECDSAKeyPair()
+	privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 
 	apu := testAPU
 	apv := testAPV
@@ -146,9 +153,9 @@ func TestKeyDecryptECDHESKeyWrap(t *testing.T) {
 
 func TestDeriveECDHES(t *testing.T) {
 	// Generate ECDSA key pairs
-	alicePriv, _, err := generateECDSAKeyPair()
+	alicePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
-	bobPriv, _, err := generateECDSAKeyPair()
+	bobPriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
 
 	apu := testAPU
@@ -165,7 +172,7 @@ func TestDeriveECDHES(t *testing.T) {
 	require.Equal(t, key1, key2)
 
 	// Test that different private keys produce different results
-	charliePriv, _, err := generateECDSAKeyPair()
+	charliePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
 	key3, err := jwebb.DeriveECDHES(tokens.A128GCM, apu, apv, charliePriv, &bobPriv.PublicKey, 16)
 	require.NoError(t, err)

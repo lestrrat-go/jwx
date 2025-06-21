@@ -1,12 +1,10 @@
 package jwebb_test
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 	"github.com/stretchr/testify/require"
@@ -49,22 +47,6 @@ var (
 	}{"A128KW", tokens.A128KW, false}
 )
 
-// Helper functions
-func generateRSAKeyPair() (*rsa.PrivateKey, *rsa.PublicKey, error) {
-	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, nil, err
-	}
-	return privkey, &privkey.PublicKey, nil
-}
-
-func generateECDSAKeyPair() (*ecdsa.PrivateKey, *ecdsa.PublicKey, error) {
-	privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, nil, err
-	}
-	return privkey, &privkey.PublicKey, nil
-}
 
 func TestKeyEncryptionIsAESKW(t *testing.T) {
 	tests := []struct {
@@ -247,8 +229,9 @@ func TestKeyEncryptRSA15(t *testing.T) {
 	cek := testCEK
 
 	// Generate RSA key pair
-	_, pubkey, err := generateRSAKeyPair()
+	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 
 	result, err := jwebb.KeyEncryptRSA15(cek, tokens.RSA1_5, pubkey)
 	require.NoError(t, err)
@@ -260,8 +243,9 @@ func TestKeyEncryptRSAOAEP(t *testing.T) {
 	cek := testCEK
 
 	// Generate RSA key pair
-	_, pubkey, err := generateRSAKeyPair()
+	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 
 	result, err := jwebb.KeyEncryptRSAOAEP(cek, tokens.RSA_OAEP, pubkey)
 	require.NoError(t, err)
@@ -273,8 +257,9 @@ func TestKeyEncryptECDHESECDSA(t *testing.T) {
 	cek := testCEK
 
 	// Generate ECDSA key pair
-	_, pubkey, err := generateECDSAKeyPair()
+	privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
+	pubkey := &privkey.PublicKey
 
 	apu := testAPU
 	apv := testAPV

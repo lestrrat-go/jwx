@@ -33,6 +33,9 @@ go_test(
     ],
     embed = [":jwebb"],
     deps = [
+        "//internal/jwxtest",
+        "//jwa",
+        "//jwe/internal/keygen",
         "//jwe/internal/tokens",
         "@com_github_stretchr_testify//require",
     ],
