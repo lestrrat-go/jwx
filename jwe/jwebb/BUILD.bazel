@@ -14,6 +14,7 @@ go_library(
     visibility = ["//jwe:__subpackages__"],
     deps = [
         "//internal/keyconv",
+        "//internal/pool",
         "//jwe/internal/cipher",
         "//jwe/internal/concatkdf",
         "//jwe/internal/content_crypt",

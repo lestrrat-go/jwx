@@ -5,6 +5,7 @@ go_library(
     srcs = ["aescbc.go"],
     importpath = "github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc",
     visibility = ["//:__subpackages__"],
+    deps = ["//internal/pool"],
 )
 
 go_test(

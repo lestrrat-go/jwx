@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"hash"
 	"sync/atomic"
+
+	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
 
 const (
@@ -248,7 +250,10 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	}
 
 	cbc := cipher.NewCBCDecrypter(c.blockCipher, nonce)
-	buf := make([]byte, tagOffset)
+	buf := pool.ByteSlice().GetCapacity(tagOffset)
+	defer pool.ByteSlice().Put(buf)
+	buf = buf[:tagOffset]
+
 	cbc.CryptBlocks(buf, ciphertext)
 
 	toRemove, good := extractPadding(buf)
