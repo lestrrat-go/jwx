@@ -60,7 +60,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return keygen.ByteKey(encrypted), nil
 	}
 
-	if jwebb.KeyEncryptionIsDirect(e.keyalg.String()) {
+	if jwebb.IsDirect(e.keyalg.String()) {
 		sharedkey, ok := e.rawKey.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("encrypt key: []byte is required as the key for %s (got %T)", e.keyalg, e.rawKey)
@@ -68,7 +68,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return jwebb.KeyEncryptDirect(cek, e.keyalg.String(), sharedkey)
 	}
 
-	if jwebb.KeyEncryptionIsPBES2(e.keyalg.String()) {
+	if jwebb.IsPBES2(e.keyalg.String()) {
 		password, ok := e.rawKey.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("encrypt key: []byte is required as the password for %s (got %T)", e.keyalg, e.rawKey)
@@ -76,7 +76,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return jwebb.KeyEncryptPBES2(cek, e.keyalg.String(), password)
 	}
 
-	if jwebb.KeyEncryptionIsAESGCMKW(e.keyalg.String()) {
+	if jwebb.IsAESGCMKW(e.keyalg.String()) {
 		sharedkey, ok := e.rawKey.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("encrypt key: []byte is required as the key for %s (got %T)", e.keyalg, e.rawKey)
@@ -84,7 +84,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return jwebb.KeyEncryptAESGCMKW(cek, e.keyalg.String(), sharedkey)
 	}
 
-	if jwebb.KeyEncryptionIsECDHES(e.keyalg.String()) {
+	if jwebb.IsECDHES(e.keyalg.String()) {
 		_, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(e.keyalg.String(), e.ctalg.String())
 		if err != nil {
 			return nil, fmt.Errorf(`failed to determine ECDH-ES key size: %w`, err)
@@ -118,7 +118,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		}
 	}
 
-	if jwebb.KeyEncryptionIsRSA15(e.keyalg.String()) {
+	if jwebb.IsRSA15(e.keyalg.String()) {
 		keyToUse := e.rawKey
 		if keyToUse == nil {
 			keyToUse = e.pubkey
@@ -137,7 +137,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return jwebb.KeyEncryptRSA15(cek, e.keyalg.String(), pubkey)
 	}
 
-	if jwebb.KeyEncryptionIsRSAOAEP(e.keyalg.String()) {
+	if jwebb.IsRSAOAEP(e.keyalg.String()) {
 		keyToUse := e.rawKey
 		if keyToUse == nil {
 			keyToUse = e.pubkey
@@ -156,7 +156,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return jwebb.KeyEncryptRSAOAEP(cek, e.keyalg.String(), pubkey)
 	}
 
-	if jwebb.KeyEncryptionIsAESKW(e.keyalg.String()) {
+	if jwebb.IsAESKW(e.keyalg.String()) {
 		sharedkey, ok := e.rawKey.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("[]byte is required as the key to encrypt %s", e.keyalg.String())

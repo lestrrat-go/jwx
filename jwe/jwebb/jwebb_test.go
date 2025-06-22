@@ -62,7 +62,7 @@ func TestKeyEncryptionIsAESKW(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsAESKW(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsAESKW(tt.alg))
 		})
 	}
 }
@@ -80,7 +80,7 @@ func TestKeyEncryptionIsDirect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsDirect(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsDirect(tt.alg))
 		})
 	}
 }
@@ -100,7 +100,7 @@ func TestKeyEncryptionIsPBES2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsPBES2(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsPBES2(tt.alg))
 		})
 	}
 }
@@ -120,7 +120,7 @@ func TestKeyEncryptionIsAESGCMKW(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsAESGCMKW(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsAESGCMKW(tt.alg))
 		})
 	}
 }
@@ -141,7 +141,7 @@ func TestKeyEncryptionIsECDHES(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsECDHES(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsECDHES(tt.alg))
 		})
 	}
 }
@@ -159,7 +159,7 @@ func TestKeyEncryptionIsRSA15(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsRSA15(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsRSA15(tt.alg))
 		})
 	}
 }
@@ -180,7 +180,7 @@ func TestKeyEncryptionIsRSAOAEP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, jwebb.KeyEncryptionIsRSAOAEP(tt.alg))
+			require.Equal(t, tt.want, jwebb.IsRSAOAEP(tt.alg))
 		})
 	}
 }

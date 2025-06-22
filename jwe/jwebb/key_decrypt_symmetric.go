@@ -18,41 +18,6 @@ import (
 // Use constants from tokens package
 // No need to redefine them here
 
-func KeyEncryptionIsAESKW(alg string) bool {
-	switch alg {
-	case tokens.A128KW, tokens.A192KW, tokens.A256KW:
-		return true
-	default:
-		return false
-	}
-}
-
-func KeyEncryptionIsAESGCMKW(alg string) bool {
-	switch alg {
-	case tokens.A128GCMKW, tokens.A192GCMKW, tokens.A256GCMKW:
-		return true
-	default:
-		return false
-	}
-}
-
-func KeyEncryptionIsPBES2(alg string) bool {
-	switch alg {
-	case tokens.PBES2_HS256_A128KW, tokens.PBES2_HS384_A192KW, tokens.PBES2_HS512_A256KW:
-		return true
-	default:
-		return false
-	}
-}
-
-func KeyEncryptionIsDirect(alg string) bool {
-	return alg == tokens.DIRECT
-}
-
-func KeyEncryptionIsSymmetric(alg string) bool {
-	return KeyEncryptionIsAESKW(alg) || KeyEncryptionIsAESGCMKW(alg) || KeyEncryptionIsPBES2(alg) || KeyEncryptionIsDirect(alg)
-}
-
 func KeyDecryptAESKW(_, enckey []byte, _ string, sharedkey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(sharedkey)
 	if err != nil {

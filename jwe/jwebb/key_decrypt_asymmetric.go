@@ -19,16 +19,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
 
-
-func KeyEncryptionIsECDHES(alg string) bool {
-	switch alg {
-	case tokens.ECDH_ES, tokens.ECDH_ES_A128KW, tokens.ECDH_ES_A192KW, tokens.ECDH_ES_A256KW:
-		return true
-	default:
-		return false
-	}
-}
-
 func contentEncryptionKeySize(ctalg string) (uint32, error) {
 	switch ctalg {
 	case tokens.A128GCM:
@@ -116,19 +106,6 @@ func KeyDecryptECDHES(_, _ []byte, alg string, apu, apv []byte, privkey, pubkey 
 }
 
 // RSA key decryption functions
-
-func KeyEncryptionIsRSA15(alg string) bool {
-	return alg == tokens.RSA1_5
-}
-
-func KeyEncryptionIsRSAOAEP(alg string) bool {
-	switch alg {
-	case tokens.RSA_OAEP, tokens.RSA_OAEP_256, tokens.RSA_OAEP_384, tokens.RSA_OAEP_512:
-		return true
-	default:
-		return false
-	}
-}
 
 func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
 	var privkey *rsa.PrivateKey
