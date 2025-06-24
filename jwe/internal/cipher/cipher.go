@@ -5,7 +5,7 @@ import (
 	"crypto/cipher"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 )
@@ -48,32 +48,32 @@ func (c AesContentCipher) TagSize() int {
 	return c.tagsize
 }
 
-func NewAES(alg jwa.ContentEncryptionAlgorithm) (*AesContentCipher, error) {
+func NewAES(alg string) (*AesContentCipher, error) {
 	var keysize int
 	var tagsize int
 	var fetcher Fetcher
 	switch alg {
-	case jwa.A128GCM():
+	case tokens.A128GCM:
 		keysize = 16
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A192GCM():
+	case tokens.A192GCM:
 		keysize = 24
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A256GCM():
+	case tokens.A256GCM:
 		keysize = 32
 		tagsize = 16
 		fetcher = gcm
-	case jwa.A128CBC_HS256():
+	case tokens.A128CBC_HS256:
 		tagsize = 16
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A192CBC_HS384():
+	case tokens.A192CBC_HS384:
 		tagsize = 24
 		keysize = tagsize * 2
 		fetcher = cbc
-	case jwa.A256CBC_HS512():
+	case tokens.A256CBC_HS512:
 		tagsize = 32
 		keysize = tagsize * 2
 		fetcher = cbc
@@ -108,16 +108,18 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 		}
 	}()
 
-	var bs keygen.ByteSource
-	if c.NonceGenerator == nil {
-		bs, err = keygen.NewRandom(aead.NonceSize()).Generate()
+	if c.NonceGenerator != nil {
+		iv, err = c.NonceGenerator(aead.NonceSize())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
+		}
 	} else {
-		bs, err = c.NonceGenerator.Generate()
+		bs, err := keygen.Random(aead.NonceSize())
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf(`failed to generate random nonce: %w`, err)
+		}
+		iv = bs.Bytes()
 	}
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf(`failed to generate nonce: %w`, err)
-	}
-	iv = bs.Bytes()
 
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()

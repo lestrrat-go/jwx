@@ -22,21 +22,27 @@ algorithms:
     elements:
       - name: A128CBC_HS256
         value: A128CBC-HS256
+        token_reference: tokens.A128CBC_HS256
         comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).
       - name: A192CBC_HS384
         value: A192CBC-HS384
+        token_reference: tokens.A192CBC_HS384
         comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA384 (192).
       - name: A256CBC_HS512
         value: A256CBC-HS512
+        token_reference: tokens.A256CBC_HS512
         comment: Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA512 (256).
       - name: A128GCM
         value: A128GCM
+        token_reference: tokens.A128GCM
         comment: Using this value specifies that the content should be encrypted using AES-GCM (128).
       - name: A192GCM
         value: A192GCM
+        token_reference: tokens.A192GCM
         comment: Using this value specifies that the content should be encrypted using AES-GCM (192).
       - name: A256GCM
         value: A256GCM
+        token_reference: tokens.A256GCM
         comment: Using this value specifies that the content should be encrypted using AES-GCM (256).
 
   - name: KeyType
@@ -153,69 +159,88 @@ algorithms:
     elements:
       - name: RSA1_5
         value: RSA1_5
+        token_reference: tokens.RSA1_5
         deprecated: true
         returnval_comment: RSA-PKCS1v1.5 key encryption algorithm
       - name: RSA_OAEP
         value: RSA-OAEP
+        token_reference: tokens.RSA_OAEP
         returnval_comment: RSA-OAEP-SHA1 key encryption algorithm
       - name: RSA_OAEP_256
         value: RSA-OAEP-256
+        token_reference: tokens.RSA_OAEP_256
         returnval_comment: RSA-OAEP-SHA256 key encryption algorithm
       - name: RSA_OAEP_384
         value: RSA-OAEP-384
+        token_reference: tokens.RSA_OAEP_384
         returnval_comment: RSA-OAEP-SHA384 key encryption algorithm
       - name: RSA_OAEP_512
         value: RSA-OAEP-512
+        token_reference: tokens.RSA_OAEP_512
         returnval_comment: RSA-OAEP-SHA512 key encryption algorithm
       - name: A128KW
         value: A128KW
+        token_reference: tokens.A128KW
         returnval_comment: AES key wrap (128) key encryption algorithm
         sym: true
       - name: A192KW
         value: A192KW
+        token_reference: tokens.A192KW
         returnval_comment: AES key wrap (192) key encryption algorithm
         sym: true
       - name: A256KW
         value: A256KW
+        token_reference: tokens.A256KW
         returnval_comment: AES key wrap (256) key encryption algorithm
         sym: true
       - name: DIRECT
         value: dir
+        token_reference: tokens.DIRECT
         returnval_comment: Direct key encryption algorithm
         sym: true
       - name: ECDH_ES
         value: ECDH-ES
+        token_reference: tokens.ECDH_ES
         returnval_comment: ECDH-ES key encryption algorithm
       - name: ECDH_ES_A128KW
         value: ECDH-ES+A128KW
+        token_reference: tokens.ECDH_ES_A128KW
         returnval_comment: ECDH-ES + AES key wrap (128) key encryption algorithm
       - name: ECDH_ES_A192KW
         value: ECDH-ES+A192KW
+        token_reference: tokens.ECDH_ES_A192KW
         returnval_comment: ECDH-ES + AES key wrap (192) key encryption algorithm
       - name: ECDH_ES_A256KW
         value: ECDH-ES+A256KW
+        token_reference: tokens.ECDH_ES_A256KW
         returnval_comment: ECDH-ES + AES key wrap (256) key encryption algorithm
       - name: A128GCMKW
         value: A128GCMKW
+        token_reference: tokens.A128GCMKW
         returnval_comment: AES-GCM key wrap (128) key encryption algorithm
         sym: true
       - name: A192GCMKW
         value: A192GCMKW
+        token_reference: tokens.A192GCMKW
         returnval_comment: AES-GCM key wrap (192) key encryption algorithm
         sym: true
       - name: A256GCMKW
         value: A256GCMKW
+        token_reference: tokens.A256GCMKW
         returnval_comment: AES-GCM key wrap (256) key encryption algorithm
         sym: true
       - name: PBES2_HS256_A128KW
         value: PBES2-HS256+A128KW
+        token_reference: tokens.PBES2_HS256_A128KW
         returnval_comment: PBES2 + HMAC-SHA256 + AES key wrap (128) key encryption algorithm
         sym: true
       - name: PBES2_HS384_A192KW
         value: PBES2-HS384+A192KW
+        token_reference: tokens.PBES2_HS384_A192KW
         returnval_comment: PBES2 + HMAC-SHA384 + AES key wrap (192) key encryption algorithm
         sym: true
       - name: PBES2_HS512_A256KW
         value: PBES2-HS512+A256KW
+        token_reference: tokens.PBES2_HS512_A256KW
         returnval_comment: PBES2 + HMAC-SHA512 + AES key wrap (256) key encryption algorithm
         sym: true

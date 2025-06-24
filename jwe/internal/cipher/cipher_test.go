@@ -3,19 +3,19 @@ package cipher_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/cipher"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAES(t *testing.T) {
-	algs := []jwa.ContentEncryptionAlgorithm{
-		jwa.A128GCM(),
-		jwa.A192GCM(),
-		jwa.A256GCM(),
-		jwa.A128CBC_HS256(),
-		jwa.A192CBC_HS384(),
-		jwa.A256CBC_HS512(),
+	algs := []string{
+		tokens.A128GCM,
+		tokens.A192GCM,
+		tokens.A256GCM,
+		tokens.A128CBC_HS256,
+		tokens.A192CBC_HS384,
+		tokens.A256CBC_HS512,
 	}
 	for _, alg := range algs {
 		c, err := cipher.NewAES(alg)

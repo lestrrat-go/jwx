@@ -30,6 +30,7 @@ type Algorithm struct {
 type Element struct {
 	Name             string `yaml:"name"`
 	Value            string `yaml:"value"`
+	TokenReference   string `yaml:"token_reference"`
 	ReturnvalComment string `yaml:"returnval_comment"`
 	Comment          string `yaml:"comment"`
 	Invalid          bool   `yaml:"invalid"`
@@ -101,11 +102,25 @@ func Generate(t Algorithm) error {
 
 	o.LL("import (")
 	pkgs := []string{
+		"encoding/json",
 		"fmt",
 		"sort",
 		"sync",
-		"strings",
 	}
+	
+	// Check if we need to import tokens package
+	needsTokens := false
+	for _, e := range t.Elements {
+		if e.TokenReference != "" {
+			needsTokens = true
+			break
+		}
+	}
+	
+	if needsTokens {
+		pkgs = append(pkgs, "github.com/lestrrat-go/jwx/v3/internal/tokens")
+	}
+	
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
 	}
@@ -133,7 +148,11 @@ func Generate(t Algorithm) error {
 		if e.Invalid {
 			continue
 		}
-		o.L("algorithms[%d] = New%s(%q", ecount, t.Name, e.Value)
+		valueRef := fmt.Sprintf("%q", e.Value)
+		if e.TokenReference != "" {
+			valueRef = e.TokenReference
+		}
+		o.L("algorithms[%d] = New%s(%s", ecount, t.Name, valueRef)
 		ecount++
 
 		if e.Deprecated {
@@ -169,7 +188,11 @@ func Generate(t Algorithm) error {
 		if e.Invalid {
 			o.L("return %s", fmt.Sprintf("%c%s", unicode.ToLower(rune(e.Name[0])), e.Name[1:]))
 		} else {
-			o.L("return lookupBuiltin%s(%q)", t.Name, e.Value)
+			valueRef := fmt.Sprintf("%q", e.Value)
+			if e.TokenReference != "" {
+				valueRef = e.TokenReference
+			}
+			o.L("return lookupBuiltin%s(%s)", t.Name, valueRef)
 		}
 		o.L("}")
 	}

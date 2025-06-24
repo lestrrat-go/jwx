@@ -1,40 +1,5 @@
 package keygen
 
-import (
-	"crypto/ecdh"
-	"crypto/ecdsa"
-
-	"github.com/lestrrat-go/jwx/v3/jwa"
-)
-
-type Generator interface {
-	Size() int
-	Generate() (ByteSource, error)
-}
-
-// RandomKeyGenerate generates random keys
-type Random struct {
-	keysize int
-}
-
-// EcdhesKeyGenerate generates keys using ECDH-ES algorithm / EC-DSA curve
-type Ecdhes struct {
-	pubkey    *ecdsa.PublicKey
-	keysize   int
-	algorithm jwa.KeyEncryptionAlgorithm
-	enc       jwa.ContentEncryptionAlgorithm
-	apu       []byte
-	apv       []byte
-}
-
-// X25519KeyGenerate generates keys using ECDH-ES algorithm / X25519 curve
-type X25519 struct {
-	algorithm jwa.KeyEncryptionAlgorithm
-	enc       jwa.ContentEncryptionAlgorithm
-	keysize   int
-	pubkey    *ecdh.PublicKey
-}
-
 // ByteKey is a generated key that only has the key's byte buffer
 // as its instance data. If a key needs to do more, such as providing
 // values to be set in a JWE header, that key type wraps a ByteKey

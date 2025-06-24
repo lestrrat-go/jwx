@@ -25,7 +25,7 @@ func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 }
 
 func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
-	c, err := cipher.NewAES(alg)
+	c, err := cipher.NewAES(alg.String())
 	if err != nil {
 		return nil, fmt.Errorf(`aes crypt: failed to create content cipher: %w`, err)
 	}
