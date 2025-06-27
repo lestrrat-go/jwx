@@ -40,6 +40,15 @@ func HeaderParseCompact(buf []byte) Header {
 	if err != nil {
 		return &header{err: err}
 	}
+	return HeaderParse(decoded)
+}
+
+// HeaderParse parses a JWS header from a byte slice containing the decoded JSON.
+// You will need to call HeaderGet* functions to extract the values from the header.
+//
+// Unlike HeaderParseCompact, this function does not perform any base64 decoding.
+// This function is experimental and may change or be removed in the future.
+func HeaderParse(decoded []byte) Header {
 	var p fastjson.Parser
 	v, err := p.ParseBytes(decoded)
 	if err != nil {
