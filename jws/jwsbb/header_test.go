@@ -118,7 +118,7 @@ func TestHeader(t *testing.T) {
 			signInput := jwsbb.SignBuffer(nil, []byte(headerJSON), payload, encoder, true)
 
 			// Sign with RSA using jwsbb.SignRSA
-			signature, err := jwsbb.SignRSA(rsaKey1, signInput, crypto.SHA256, false)
+			signature, err := jwsbb.SignRSA(rsaKey1, signInput, crypto.SHA256, false, nil)
 			require.NoError(t, err, "RSA signing should not error")
 
 			// Create full JWS compact format using JoinCompact

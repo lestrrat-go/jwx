@@ -10,7 +10,7 @@
 //
 // All bb packages in jwx follow the same design principles:
 // 1. Does minimal checking of input parameters (for performance); callers need to ensure that the parameters are valid.
-// 2. All exported functions are stringly typed (i.e. they do not take any parameters unless they absolutely have to).
+// 2. All exported functions are strongly typed (i.e. they do not take `any` types unless they absolutely have to).
 // 3. Does not rely on other public jwx packages (they are standalone, except for internal packages).
 package jwsbb
 

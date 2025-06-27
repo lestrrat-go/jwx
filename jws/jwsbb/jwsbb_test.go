@@ -102,7 +102,7 @@ func TestRSA(t *testing.T) {
 			header := []byte(sampleHeader)
 
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoding, tc.encodePayload)
-			sig, err := jwsbb.SignRSA(priv, signBuffer, tc.h, tc.pss)
+			sig, err := jwsbb.SignRSA(priv, signBuffer, tc.h, tc.pss, nil)
 			require.NoError(t, err, "SignRSA should not return error")
 			require.NoError(t, jwsbb.VerifyRSA(&priv.PublicKey, signBuffer, sig, tc.h, tc.pss), "VerifyRSA should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyRSA(&priv.PublicKey, signBuffer, sig[:len(sig)-1], tc.h, tc.pss), "VerifyRSA should fail for an invalid signature")
@@ -136,7 +136,7 @@ func TestECDSA(t *testing.T) {
 			header := []byte(sampleHeader)
 
 			signBuffer := jwsbb.SignBuffer(nil, header, payload, encoder, tc.encodePayload)
-			sig, err := jwsbb.SignECDSA(priv, signBuffer, tc.h)
+			sig, err := jwsbb.SignECDSA(priv, signBuffer, tc.h, nil)
 			require.NoError(t, err, "SignECDSA should not return error")
 			require.NoError(t, jwsbb.VerifyECDSA(&priv.PublicKey, signBuffer, sig, tc.h), "VerifyECDSA should succeed for a valid signature")
 			require.Error(t, jwsbb.VerifyECDSA(&priv.PublicKey, signBuffer, sig[:len(sig)-1], tc.h), "VerifyECDSA should fail for an invalid signature")
