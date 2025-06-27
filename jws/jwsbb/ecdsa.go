@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/asn1"
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
@@ -117,15 +118,21 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 
 // SignECDSA generates an ECDSA signature for the given payload using the specified private key and hash.
 // The raw parameter should be the pre-computed signing input (typically header.payload).
-func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash) ([]byte, error) {
+//
+// rr is an io.Reader that provides randomness for signing. if rr is nil, it defaults to rand.Reader.
+func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
 	hh := h.New()
 	if _, err := hh.Write(payload); err != nil {
 		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
 	}
 	digest := hh.Sum(nil)
 
+	if rr == nil {
+		rr = rand.Reader
+	}
+
 	// Sign and get r, s values
-	r, s, err := ecdsa.Sign(rand.Reader, key, digest)
+	r, s, err := ecdsa.Sign(rr, key, digest)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
 	}
@@ -136,8 +143,10 @@ func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash) ([]byte, er
 // SignECDSACryptoSigner generates an ECDSA signature using a crypto.Signer interface.
 // This function works with hardware security modules and other crypto.Signer implementations.
 // The signature is converted from ASN.1 format to JWS format (r||s).
-func SignECDSACryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash) ([]byte, error) {
-	signed, err := SignCryptoSigner(signer, raw, h, h)
+//
+// rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
+func SignECDSACryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
+	signed, err := SignCryptoSigner(signer, raw, h, h, rr)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload using crypto.Signer: %w`, err)
 	}

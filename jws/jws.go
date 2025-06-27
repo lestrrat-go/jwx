@@ -65,7 +65,7 @@ func (s defaultSigner) Algorithm() jwa.SignatureAlgorithm {
 }
 
 func (s defaultSigner) Sign(key any, payload []byte) ([]byte, error) {
-	return jwsbb.Sign(key, s.alg.String(), payload)
+	return jwsbb.Sign(key, s.alg.String(), payload, nil)
 }
 
 type signerAdapter struct {

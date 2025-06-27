@@ -4,12 +4,19 @@ import (
 	"crypto"
 	"crypto/rand"
 	"fmt"
+	"io"
 )
 
 // cryptosign is a low-level function that signs a payload using a crypto.Signer.
 // If hash is crypto.Hash(0), the payload is signed directly without hashing.
 // Otherwise, the payload is hashed using the specified hash function before signing.
-func cryptosign(signer crypto.Signer, payload []byte, hash crypto.Hash, opts crypto.SignerOpts) ([]byte, error) {
+//
+// rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
+func cryptosign(signer crypto.Signer, payload []byte, hash crypto.Hash, opts crypto.SignerOpts, rr io.Reader) ([]byte, error) {
+	if rr == nil {
+		rr = rand.Reader
+	}
+
 	var digest []byte
 	if hash == crypto.Hash(0) {
 		digest = payload
@@ -20,23 +27,19 @@ func cryptosign(signer crypto.Signer, payload []byte, hash crypto.Hash, opts cry
 		}
 		digest = h.Sum(nil)
 	}
-	return signer.Sign(rand.Reader, digest, opts)
+	return signer.Sign(rr, digest, opts)
 }
 
 // SignCryptoSigner generates a signature using a crypto.Signer interface.
-// This function is useful for integrating with hardware security modules, smart cards,
+// This function can be used for hardware security modules, smart cards,
 // and other implementations of the crypto.Signer interface.
 //
-// Parameters:
-//   - signer: The crypto.Signer implementation (must not be nil)
-//   - raw: The pre-computed signing input (typically header.payload)
-//   - h: The hash function to use (use crypto.Hash(0) for direct signing)
-//   - opts: Additional signing options specific to the signature algorithm
+// rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
 //
 // Returns the signature bytes or an error if signing fails.
-func SignCryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash, opts crypto.SignerOpts) ([]byte, error) {
+func SignCryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash, opts crypto.SignerOpts, rr io.Reader) ([]byte, error) {
 	if signer == nil {
 		return nil, fmt.Errorf("jwsbb.SignCryptoSignerRaw: signer is nil")
 	}
-	return cryptosign(signer, raw, h, opts)
+	return cryptosign(signer, raw, h, opts, rr)
 }

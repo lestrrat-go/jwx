@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"fmt"
+	"io"
 
 	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
@@ -58,13 +59,16 @@ func RSAPSSOptions(h crypto.Hash) rsa.PSSOptions {
 // SignRSA generates an RSA signature for the given payload using the specified private key and options.
 // The raw parameter should be the pre-computed signing input (typically header.payload).
 // If pss is true, RSA-PSS is used; otherwise, PKCS#1 v1.5 is used.
-func SignRSA(key *rsa.PrivateKey, payload []byte, h crypto.Hash, pss bool) ([]byte, error) {
+//
+// The rr parameter is an optional io.Reader that can be used to provide randomness for signing.
+// If rr is nil, it defaults to rand.Reader.
+func SignRSA(key *rsa.PrivateKey, payload []byte, h crypto.Hash, pss bool, rr io.Reader) ([]byte, error) {
 	var opts crypto.SignerOpts = h
 	if pss {
 		rsaopts := RSAPSSOptions(h)
 		opts = &rsaopts
 	}
-	return cryptosign(key, payload, h, opts)
+	return cryptosign(key, payload, h, opts, rr)
 }
 
 // VerifyRSA verifies an RSA signature for the given payload and header.
