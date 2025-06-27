@@ -6,8 +6,8 @@ v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jw
 
 v3.0.8 UNRELEASED
   * [jwe/jwebb] (EXPERIMENTAL) Add low-level functions for JWE operations
-  * [jws/jwsbb] (EXPERIMENTAL) Add io.Reader parameter so your choice of source
-    of randomness can be passed. Defaults to crypto/rand.Reader
+  * [jws/jwsbb] (EXPERIMENTAL/BREAKS COMPATIBILITY) Add io.Reader parameter
+    so your choice of source of randomness can be passed. Defaults to crypto/rand.Reader
 
 v3.0.7 16 Jun 2025
   * [jws/jwsbb] (EXPERIMENTAL) Add low-level fast access to JWS headers in compact
@@ -17,6 +17,7 @@ v3.0.7 16 Jun 2025
     * Known algorithms are now implemented completely in the jws/jwsbb package.
     * VerifierFor and SignerFor now always succeed, and will also return a Signer2
       or Verifier2 that wraps the legacy Signer or Verifier if one is registered.
+
 v3.0.6 13 Jun 2025
   * This release contains various performance improvements all over the code.
     No, this time for real. In particular, the most common case for signing
