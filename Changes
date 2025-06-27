@@ -4,7 +4,7 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.8 UNRELEASED
+v3.0.8 27 Jun 2025
   * [jwe/jwebb] (EXPERIMENTAL) Add low-level functions for JWE operations.
   * [jws/jwsbb] (EXPERIMENTAL/BREAKS COMPATIBILITY) Add io.Reader parameter
     so your choice of source of randomness can be passed. Defaults to crypto/rand.Reader.
@@ -12,6 +12,7 @@ v3.0.8 UNRELEASED
     which can be nil for 99% of use cases.
   * [jws/jwsbb] Add HeaderParse([]byte), where it is expected that the header
     is already in its base64 decoded format.
+  * misc: replace `interface{}` with `any`
 
 v3.0.7 16 Jun 2025
   * [jws/jwsbb] (EXPERIMENTAL) Add low-level fast access to JWS headers in compact
