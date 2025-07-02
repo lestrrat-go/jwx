@@ -228,12 +228,19 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if parsePEM {
-		if pemDecoder == nil {
-			pemDecoder = NewPEMDecoder()
-		}
-		raw, _, err := pemDecoder.Decode(data)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to parse PEM encoded key: %w`, err)
+		var raw any
+
+		// PEMDecoder should probably be deprecated, because of being a misnomer.
+		if pemDecoder != nil {
+			if err := decodeX509WithPEMDEcoder(&raw, data, pemDecoder); err != nil {
+				return nil, fmt.Errorf(`failed to decode PEM encoded key: %w`, err)
+			}
+		} else {
+			// This version takes into account the various X509 decoders that are
+			// pre-registered.
+			if err := decodeX509(&raw, data); err != nil {
+				return nil, fmt.Errorf(`failed to decode X.509 encoded key: %w`, err)
+			}
 		}
 		return Import(raw)
 	}

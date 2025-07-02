@@ -9,6 +9,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
@@ -22,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -2109,5 +2111,124 @@ func TestExportEmbeddedKey(t *testing.T) {
 		var rawKey rsa.PrivateKey
 		err = jwk.Export(doubleIndirectEmbed, &rawKey)
 		require.NoError(t, err, "jwk.Export should succeed with double indirect embed")
+	})
+}
+
+func TestWithPEMDecoder(t *testing.T) {
+	// Generate a valid RSA private key
+	privateKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	// Encode it to PEM format
+	pemData, err := jwk.EncodePEM(privateKey)
+	require.NoError(t, err)
+
+	// Create a PEM decoder
+	decoder := jwk.NewPEMDecoder()
+
+	// Test that Parse with WithPEMDecoder works correctly
+	parsedKey, err := jwk.Parse(pemData, jwk.WithPEM(true), jwk.WithPEMDecoder(decoder))
+	require.NoError(t, err, "Parse should succeed with valid PEM data and custom decoder")
+	require.NotNil(t, parsedKey, "Parsed key should not be nil")
+}
+
+func TestRegisterX509Decoder(t *testing.T) {
+	// Generate a real RSA key for testing
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	// Create a custom decoder that handles a custom PEM type and returns the test key
+	customIdent := "test-custom-decoder"
+	customDecoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+		if block.Type == "TEST CUSTOM KEY" {
+			// Use blackmagic to assign the key to the destination
+			return blackmagic.AssignIfCompatible(dst, testKey)
+		}
+		return fmt.Errorf("unsupported type or block")
+	})
+
+	// Register the custom decoder
+	jwk.RegisterX509Decoder(customIdent, customDecoder)
+
+	// Create test PEM data with our custom type
+	testPEMData := `-----BEGIN TEST CUSTOM KEY-----
+dGVzdCBkYXRh
+-----END TEST CUSTOM KEY-----`
+
+	// Test that our custom decoder can handle this via ParseKey
+	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	require.NoError(t, err)
+	require.NotNil(t, parsedKey)
+
+	// Verify we get back a valid RSA key
+	require.Equal(t, "RSA", parsedKey.KeyType().String())
+
+	// Clean up: unregister the decoder
+	jwk.UnregisterX509Decoder(customIdent)
+}
+
+func TestUnregisterX509Decoder(t *testing.T) {
+	// Generate a real RSA key for testing
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	// Create a custom decoder
+	customIdent := "test-unregister-decoder"
+	customDecoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+		if block.Type == "TEST UNREGISTER" {
+			// Use blackmagic to assign the key to the destination
+			return blackmagic.AssignIfCompatible(dst, testKey)
+		}
+		return fmt.Errorf("unsupported type or block")
+	})
+
+	// Register the decoder
+	jwk.RegisterX509Decoder(customIdent, customDecoder)
+
+	// Create test PEM data
+	testPEMData := `-----BEGIN TEST UNREGISTER-----
+dGVzdCBkYXRh
+-----END TEST UNREGISTER-----`
+
+	// Verify it works when registered
+	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	require.NoError(t, err)
+	require.NotNil(t, parsedKey1)
+
+	// Now unregister the decoder
+	jwk.UnregisterX509Decoder(customIdent)
+
+	// Verify it no longer works
+	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	require.Error(t, err)
+	require.Nil(t, parsedKey2)
+}
+
+func TestRegisterX509Decoder_NilPanic(t *testing.T) {
+	// Test that registering nil decoder panics
+	require.Panics(t, func() {
+		jwk.RegisterX509Decoder("test", nil)
+	})
+}
+
+func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
+	// Create a custom decoder
+	customIdent := "test-duplicate-decoder"
+	decoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+		return fmt.Errorf("test decoder")
+	})
+
+	// Register it twice - should be idempotent
+	jwk.RegisterX509Decoder(customIdent, decoder)
+	jwk.RegisterX509Decoder(customIdent, decoder) // Should not cause issues
+
+	// Clean up
+	jwk.UnregisterX509Decoder(customIdent)
+}
+
+func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
+	// Unregistering a non-existent decoder should be safe (no-op)
+	require.NotPanics(t, func() {
+		jwk.UnregisterX509Decoder("non-existent-decoder")
 	})
 }
