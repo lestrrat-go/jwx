@@ -177,6 +177,7 @@ func ParseRawKey(data []byte, rawkey any) error {
 
 type setDecodeCtx struct {
 	json.DecodeCtx
+
 	ignoreParseError bool
 }
 

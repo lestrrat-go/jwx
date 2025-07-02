@@ -42,6 +42,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - wsl_v5
   settings:
     govet:
       disable:
@@ -101,6 +102,10 @@ linters:
           - revive
         path: internal/tokens/jwe_tokens.go
         text: "don't use ALL_CAPS in Go names"
+      - linters:
+          - revive
+        path: jwt/internal/types/string.go
+        text: "var-naming: avoid meaningless package names"
     paths:
       - third_party$
       - builtin$

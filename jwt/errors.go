@@ -186,6 +186,7 @@ func InvalidAudienceError() error {
 
 type missingRequiredClaimError struct {
 	error
+
 	claim string
 }
 
