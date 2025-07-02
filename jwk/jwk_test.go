@@ -2212,15 +2212,43 @@ func TestRegisterX509Decoder_NilPanic(t *testing.T) {
 }
 
 func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
-	// Create a custom decoder
+	// Generate a test key for verification
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	// Create a custom decoder that handles a specific PEM type
 	customIdent := "test-duplicate-decoder"
+	callCount := 0
 	decoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
-		return fmt.Errorf("test decoder")
+		callCount++
+		if block.Type == "TEST DUPLICATE" {
+			return blackmagic.AssignIfCompatible(dst, testKey)
+		}
+		return fmt.Errorf("unsupported type")
 	})
 
-	// Register it twice - should be idempotent
+	// Register the decoder
 	jwk.RegisterX509Decoder(customIdent, decoder)
-	jwk.RegisterX509Decoder(customIdent, decoder) // Should not cause issues
+
+	// Create test PEM data
+	testPEMData := `-----BEGIN TEST DUPLICATE-----
+dGVzdCBkYXRh
+-----END TEST DUPLICATE-----`
+
+	// Verify it works after first registration
+	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	require.NoError(t, err)
+	require.NotNil(t, parsedKey1)
+	require.Equal(t, 1, callCount, "Decoder should be called once")
+
+	// Register it again (duplicate) - should be idempotent
+	jwk.RegisterX509Decoder(customIdent, decoder)
+
+	// Verify it still works after duplicate registration and decoder wasn't added twice
+	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	require.NoError(t, err)
+	require.NotNil(t, parsedKey2)
+	require.Equal(t, 2, callCount, "Decoder should be called once more, not duplicated")
 
 	// Clean up
 	jwk.UnregisterX509Decoder(customIdent)

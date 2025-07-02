@@ -21,7 +21,7 @@ const (
 )
 
 // EncodeX509 encodes the given value into ASN.1 DER format, and returns
-// the encoded bytes. The value must be be one of the following types:
+// the encoded bytes. The value must be one of the following types:
 // *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey,
 // *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey.
 //
