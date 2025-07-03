@@ -290,6 +290,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
+	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
@@ -298,6 +299,10 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		case identPEM{}:
 			if err := option.Value(&parsePEM); err != nil {
 				return nil, parseerr(`failed to retrieve PEM option value: %w`, err)
+			}
+		case identX509{}:
+			if err := option.Value(&parseX509); err != nil {
+				return nil, parseerr(`failed to retrieve X509 option value: %w`, err)
 			}
 		case identPEMDecoder{}:
 			if err := option.Value(&pemDecoder); err != nil {
@@ -321,7 +326,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	s := NewSet()
 
-	if parsePEM {
+	if parsePEM || parseX509 {
 		if pemDecoder == nil {
 			pemDecoder = NewPEMDecoder()
 		}

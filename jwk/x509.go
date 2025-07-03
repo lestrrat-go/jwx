@@ -107,7 +107,11 @@ const (
 )
 
 // NewPEMDecoder returns a PEMDecoder that decodes keys in PEM encoded ASN.1 DER format.
-// The use of this function is deprecated.
+// You can use it as argument to `jwk.WithPEMDecoder()` option.
+//
+// The use of this function is planned to be deprecated. The plan is to replace the
+// `jwk.WithPEMDecoder()` option with globally available custom X509 decoders which
+// can be registered via `jwk.RegisterX509Decoder()` function.
 func NewPEMDecoder() PEMDecoder {
 	return pemDecoder{}
 }
@@ -163,6 +167,8 @@ func init() {
 // RegisterX509Decoder registers a new X509Decoder that can decode PEM encoded ASN.1 DER format.
 // Because the decoder could be non-comparable, you must provide an identifier that can be used
 // as a map key to identify the decoder.
+//
+// This function is experimental, and may change in the future.
 func RegisterX509Decoder(ident any, decoder X509Decoder) {
 	if decoder == nil {
 		panic(`jwk.RegisterX509Decoder: decoder cannot be nil`)
@@ -178,6 +184,10 @@ func RegisterX509Decoder(ident any, decoder X509Decoder) {
 	x509DecoderList = append(x509DecoderList, decoder)
 }
 
+// UnregisterX509Decoder unregisters the X509Decoder identified by the given identifier.
+// If the identifier is not registered, it does nothing.
+//
+// This function is experimental, and may change in the future.
 func UnregisterX509Decoder(ident any) {
 	muX509Decoders.Lock()
 	defer muX509Decoders.Unlock()
