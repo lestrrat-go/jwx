@@ -19,4 +19,5 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithStrictKeyUsage", identStrictKeyUsage{}.String())
 	require.Equal(t, "WithThumbprintHash", identThumbprintHash{}.String())
 	require.Equal(t, "WithWaitReady", identWaitReady{}.String())
+	require.Equal(t, "WithX509", identX509{}.String())
 }

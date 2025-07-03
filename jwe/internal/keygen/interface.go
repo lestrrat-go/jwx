@@ -10,17 +10,20 @@ type ByteKey []byte
 // proper values in the JWE headers
 type ByteWithECPublicKey struct {
 	ByteKey
+
 	PublicKey any
 }
 
 type ByteWithIVAndTag struct {
 	ByteKey
+
 	IV  []byte
 	Tag []byte
 }
 
 type ByteWithSaltAndCount struct {
 	ByteKey
+
 	Salt  []byte
 	Count int
 }
