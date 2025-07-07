@@ -104,7 +104,7 @@ linters:
         text: "don't use ALL_CAPS in Go names"
       - linters:
           - revive
-        path: jwt/internal/types/string.go
+        path: jwt/internal/types/
         text: "var-naming: avoid meaningless package names"
     paths:
       - third_party$
