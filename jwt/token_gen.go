@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
@@ -158,67 +159,67 @@ func (t *stdToken) Get(name string, dst any) error {
 	switch name {
 	case AudienceKey:
 		if t.audience == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.audience.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case ExpirationKey:
 		if t.expiration == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.expiration.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case IssuedAtKey:
 		if t.issuedAt == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.issuedAt.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case IssuerKey:
 		if t.issuer == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.issuer)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case JwtIDKey:
 		if t.jwtID == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.jwtID)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case NotBeforeKey:
 		if t.notBefore == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.notBefore.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case SubjectKey:
 		if t.subject == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.subject)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	default:
 		v, ok := t.privateClaims[name]
 		if !ok {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	}

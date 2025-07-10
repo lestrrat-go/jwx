@@ -47,6 +47,28 @@ func TestOption(t *testing.T) {
 }
 */
 
+func TestToken_Get(t *testing.T) {
+	tok, _ := jwt.NewBuilder().
+		Issuer("github.com/lestrrat-go/jwx").
+		IssuedAt(time.Now().Round(0)).
+		Expiration(time.Now().Add(time.Hour * 24)).
+		Build()
+
+	for _, name := range []string{`aud`, `unknown`} {
+		var v any
+		err := tok.Get(name, v)
+		require.Error(t, err, `tok.Get should fail if value is not set`)
+		require.ErrorIs(t, err, jwt.ClaimNotFoundError(), `tok.Get should return ClaimNotFoundError if value is not set`)
+	}
+
+	for _, name := range []string{`iss`, `exp`} {
+		var i byte // a type that can't be assigned to from the fields
+		err := tok.Get(name, &i)
+		require.Error(t, err, `tok.Get should fail if value is not assignable`)
+		require.ErrorIs(t, err, jwt.ClaimAssignmentFailedError(), `tok.Get should return ClaimAssignmentFailedError if value is not assignable`)
+	}
+}
+
 func TestToken_Parse(t *testing.T) {
 	t.Parallel()
 

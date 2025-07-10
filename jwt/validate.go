@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 )
 
 type Clock interface {
@@ -115,14 +117,14 @@ func Validate(t Token, options ...ValidateOption) error {
 		validators = append(baseValidators, extraValidators...)
 	} else {
 		if len(extraValidators) == 0 {
-			return validateerr(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
+			return jwterrs.ValidateErrorf(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
 		}
 		validators = extraValidators
 	}
 
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
-			return validateerr(`validation failed: %w`, err)
+			return jwterrs.ValidateErrorf(`validation failed: %w`, err)
 		}
 	}
 
@@ -356,7 +358,7 @@ func audienceClaimContainsString(value string) Validator {
 	return claimContainsString{
 		name:    AudienceKey,
 		value:   value,
-		makeErr: auderr,
+		makeErr: jwterrs.AudienceErrorf,
 	}
 }
 
@@ -395,7 +397,7 @@ func issuerClaimValueIs(value string) Validator {
 	return &claimValueIs{
 		name:    IssuerKey,
 		value:   value,
-		makeErr: issuererr,
+		makeErr: jwterrs.IssuerErrorf,
 	}
 }
 
@@ -410,7 +412,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	name := string(ir)
 	if !t.Has(name) {
-		return errMissingRequiredClaim(name)
+		return jwterrs.MissingRequiredClaimErrorf(name)
 	}
 	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
@@ -108,7 +109,7 @@ var registry = json.NewRegistry()
 func ParseString(s string, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes([]byte(s), options...)
 	if err != nil {
-		return nil, parseerr(`jwt.ParseString`, `failed to parse string: %w`, err)
+		return nil, jwterrs.ParseErrorf(`jwt.ParseString`, `failed to parse string: %w`, err)
 	}
 	return tok, nil
 }
@@ -141,7 +142,7 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
-		return nil, parseerr(`jwt.Parse`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ParseErrorf(`jwt.Parse`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -156,14 +157,14 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
-			return nil, parseerr(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		}
 	}
 
 	options = append(options, WithVerify(false), WithValidate(false))
 	tok, err := Parse(s, options...)
 	if err != nil {
-		return nil, parseerr(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -173,11 +174,11 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := io.ReadAll(src)
 	if err != nil {
-		return nil, parseerr(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
+		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {
-		return nil, parseerr(`jwt.ParseReader`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
