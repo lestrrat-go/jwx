@@ -58,7 +58,7 @@ func TestToken_Get(t *testing.T) {
 		var v any
 		err := tok.Get(name, v)
 		require.Error(t, err, `tok.Get should fail if value is not set`)
-		require.ErrorIs(t, err, jwt.ClaimNotFoundError(), `tok.Get should return ErrClaimNotFound if value is not set`)
+		require.ErrorIs(t, err, jwt.ClaimNotFoundError(), `tok.Get should return ClaimNotFoundError if value is not set`)
 	}
 
 	for _, name := range []string{`iss`, `exp`} {
