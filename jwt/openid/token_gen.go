@@ -14,6 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
@@ -280,219 +281,219 @@ func (t *stdToken) Get(name string, dst any) error {
 	switch name {
 	case AddressKey:
 		if t.address == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.address); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case AudienceKey:
 		if t.audience == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.audience.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case BirthdateKey:
 		if t.birthdate == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.birthdate); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case EmailKey:
 		if t.email == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.email)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case EmailVerifiedKey:
 		if t.emailVerified == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.emailVerified)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case ExpirationKey:
 		if t.expiration == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.expiration.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case FamilyNameKey:
 		if t.familyName == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.familyName)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case GenderKey:
 		if t.gender == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.gender)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case GivenNameKey:
 		if t.givenName == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.givenName)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case IssuedAtKey:
 		if t.issuedAt == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.issuedAt.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case IssuerKey:
 		if t.issuer == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.issuer)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case JwtIDKey:
 		if t.jwtID == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.jwtID)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case LocaleKey:
 		if t.locale == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.locale)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case MiddleNameKey:
 		if t.middleName == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.middleName)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case NameKey:
 		if t.name == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.name)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case NicknameKey:
 		if t.nickname == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.nickname)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case NotBeforeKey:
 		if t.notBefore == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.notBefore.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case PhoneNumberKey:
 		if t.phoneNumber == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumber)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case PhoneNumberVerifiedKey:
 		if t.phoneNumberVerified == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumberVerified)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case PictureKey:
 		if t.picture == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.picture)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case PreferredUsernameKey:
 		if t.preferredUsername == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.preferredUsername)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case ProfileKey:
 		if t.profile == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.profile)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case SubjectKey:
 		if t.subject == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.subject)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case UpdatedAtKey:
 		if t.updatedAt == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, t.updatedAt.Get()); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case WebsiteKey:
 		if t.website == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.website)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	case ZoneinfoKey:
 		if t.zoneinfo == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(t.zoneinfo)); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	default:
 		v, ok := t.privateClaims[name]
 		if !ok {
-			return fmt.Errorf(`field %q not found`, name)
+			return jwterrs.ClaimNotFoundError{Name: name}
 		}
 		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`failed to assign value to dst: %w`, err)
+			return jwterrs.ClaimAssignmentFailedError{Err: err}
 		}
 		return nil
 	}
