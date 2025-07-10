@@ -4,6 +4,14 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.9 UNRELEASED
+  * [jwt] `(jwt.Token).Get` methods now return specific types of errors depending
+    on if a) the specified claim was not present, or b) the specified claim could
+    not be assigned to the destination variable.
+
+    You can distinguish these by using `errors.Is` against `jwt.ClaimNotFoundError()`
+    or `jwt.ClaimAssignmentFailedError()`
+
 v3.0.8 27 Jun 2025
   * [jwe/jwebb] (EXPERIMENTAL) Add low-level functions for JWE operations.
   * [jws/jwsbb] (EXPERIMENTAL/BREAKS COMPATIBILITY) Add io.Reader parameter
