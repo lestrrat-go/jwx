@@ -166,6 +166,7 @@ func AudienceErrorf(f string, args ...any) error {
 
 type MissingRequiredClaimError struct {
 	error
+
 	claim string
 }
 
