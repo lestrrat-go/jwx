@@ -65,7 +65,7 @@ func TestToken_Get(t *testing.T) {
 		var i byte // a type that can't be assigned to from the fields
 		err := tok.Get(name, &i)
 		require.Error(t, err, `tok.Get should fail if value is not assignable`)
-		require.ErrorIs(t, err, jwt.ClaimAssignmentFailedError(), `tok.Get should return ErrClaimNotFound if value is not assignable`)
+		require.ErrorIs(t, err, jwt.ClaimAssignmentFailedError(), `tok.Get should return ClaimAssignmentFailedError if value is not assignable`)
 	}
 }
 
