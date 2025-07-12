@@ -43,6 +43,6 @@ jobs:
       - name: Test with coverage
         run: make cover-${{ matrix.go_tags }}
       - uses: bazelbuild/setup-bazelisk@v3
-      - run: bazel run //:gazelle-update-repos
+      - run: bazel mod tidy
       - name: Check difference between generation code and commit code
         run: make check_diffs
