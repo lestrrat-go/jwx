@@ -1,0 +1,23 @@
+# Speed up all builds by not checking if external repository files have been modified.
+# Docs: https://github.com/bazelbuild/bazel/blob/1af61b21df99edc2fc66939cdf14449c2661f873/src/main/java/com/google/devtools/build/lib/bazel/repository/RepositoryOptions.java#L244
+common --noexperimental_check_external_repository_files
+
+# Don't report when the root module's lower bound for a dependency happens to be less than the resolved version.
+# This is expected and should NOT prompt an engineer to update our lower bound to match.
+# WARNING: For repository 'aspect_bazel_lib', the root module requires module version aspect_bazel_lib@1.30.2,
+# but got aspect_bazel_lib@1.31.2 in the resolved dependency graph.
+common --check_direct_dependencies=off
+
+# Directories used by sandboxed non-worker execution may be reused to avoid unnecessary setup costs.
+# Save time on Sandbox creation and deletion when many of the same kind of action run during the
+# build.
+# Docs: https://bazel.build/reference/command-line-reference#flag--reuse_sandbox_directories
+build --reuse_sandbox_directories
+
+# Do not build runfiles symlink forests for external repositories under
+# `.runfiles/wsname/external/repo` (in addition to `.runfiles/repo`). This reduces runfiles &
+# sandbox creation times & prevents accidentally depending on this feature which may flip to off by
+# default in the future. Note, some rules may fail under this flag, please file issues with the rule
+# author.
+# Docs: https://bazel.build/reference/command-line-reference#flag--legacy_external_runfiles
+build --nolegacy_external_runfiles

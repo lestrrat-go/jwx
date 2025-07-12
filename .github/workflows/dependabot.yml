@@ -17,7 +17,7 @@ jobs:
       - run: |
           make test
       - run: |
-          bazel run //:gazelle-update-repos
+          bazel mod tidy
       - run: |
           bazel build //...
       - run: |
