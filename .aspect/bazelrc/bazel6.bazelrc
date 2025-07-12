@@ -13,3 +13,42 @@ build --reuse_sandbox_directories
 # Avoid this flag being enabled by remote_download_minimal or remote_download_toplevel
 # See https://meroton.com/blog/bazel-6-errors-build-without-the-bytes/
 build --noexperimental_action_cache_store_output_metadata
+
+# Speed up all builds by not checking if output files have been modified. Lets you make changes to
+# the output tree without triggering a build for local debugging. For example, you can modify
+# [rules_js](https://github.com/aspect-build/rules_js) 3rd party npm packages in the output tree
+# when local debugging.
+# Docs: https://github.com/bazelbuild/bazel/blob/1af61b21df99edc2fc66939cdf14449c2661f873/src/main/java/com/google/devtools/build/lib/pkgcache/PackageOptions.java#L185
+# NB: This flag is in bazel6.bazelrc as when used in Bazel 7 is has been observed to break
+# "build without the bytes" --remote_download_outputs=toplevel. See https://github.com/bazel-contrib/bazel-lib/pull/711
+# for more info.
+build --noexperimental_check_output_files
+fetch --noexperimental_check_output_files
+query --noexperimental_check_output_files
+
+# Don't apply `--noremote_upload_local_results` and `--noremote_accept_cached` to the disk cache.
+# If you have both `--noremote_upload_local_results` and `--disk_cache`, then this fixes a bug where
+# Bazel doesn't write to the local disk cache as it treats as a remote cache.
+# Docs: https://bazel.build/reference/command-line-reference#flag--incompatible_remote_results_ignore_disk
+# NB: This flag is in bazel6.bazelrc because it became a no-op in Bazel 7 and has been removed
+# in Bazel 8.
+build --incompatible_remote_results_ignore_disk
+
+# Propagate tags from a target declaration to the actions' execution requirements.
+# Ensures that tags applied in your BUILD file, like `tags=["no-remote"]`
+# get propagated to actions created by the rule.
+# Without this option, you rely on rules authors to manually check the tags you passed
+# and apply relevant ones to the actions they create.
+# See https://github.com/bazelbuild/bazel/issues/8830 for details.
+# Docs: https://bazel.build/reference/command-line-reference#flag--experimental_allow_tags_propagation
+build --experimental_allow_tags_propagation
+fetch --experimental_allow_tags_propagation
+query --experimental_allow_tags_propagation
+
+# Do not build runfiles symlink forests for external repositories under
+# `.runfiles/wsname/external/repo` (in addition to `.runfiles/repo`). This reduces runfiles &
+# sandbox creation times & prevents accidentally depending on this feature which may flip to off by
+# default in the future. Note, some rules may fail under this flag, please file issues with the rule
+# author.
+# Docs: https://bazel.build/reference/command-line-reference#flag--legacy_external_runfiles
+build --nolegacy_external_runfiles

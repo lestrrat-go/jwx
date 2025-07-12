@@ -1,5 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/lestrrat-go/jwx/v3
 # gazelle:go_naming_convention import_alias
@@ -10,9 +10,7 @@ gazelle(
     name = "gazelle-update-repos",
     args = [
         "-from_file=go.mod",
-        "-to_macro=deps.bzl%go_dependencies",
         "-prune",
-        "-build_file_proto_mode=disable_global",
     ],
     command = "update-repos",
 )
