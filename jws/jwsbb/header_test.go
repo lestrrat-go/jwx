@@ -39,7 +39,7 @@ func TestHeader(t *testing.T) {
 
 		// Test non-existent field
 		nonExistent, err := jwsbb.HeaderGetString(header, "nonexistent")
-		require.NoError(t, err, "HeaderGetString should not return error for non-existent field")
+		require.Error(t, err, "HeaderGetString should not return error for non-existent field")
 		require.Equal(t, "", nonExistent, "non-existent field should return empty string")
 	})
 
