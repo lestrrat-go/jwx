@@ -1,9 +1,25 @@
 package jwsbb
 
 import (
+	"fmt"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/valyala/fastjson"
 )
+
+type headerNotFoundError struct {
+	key string
+}
+
+func (e headerNotFoundError) Error() string {
+	return fmt.Sprintf(`jwsbb: header "%s" not found`, e.key)
+}
+
+// ErrFieldNotFound returns an error that can be passed to `errors.Is` to check if the error is
+// the result of the field not being found
+func ErrFieldNotFound() error {
+	return headerNotFoundError{}
+}
 
 // Header is an object that allows you to access the JWS header in a quick and
 // dirty way. It does not verify anything, it does not know anything about what
@@ -59,115 +75,131 @@ func HeaderParse(decoded []byte) Header {
 	}
 }
 
-// HeaderGetString returns the string value for the given key from the JWS header.
-// This function is experimental and may change or be removed in the future.
-func HeaderGetString(h Header, key string) (string, error) {
+func headerGet(h Header, key string) (*fastjson.Value, error) {
 	//nolint:forcetypeassert
 	hh := h.(*header) // we _know_ this can't be another type
-
 	if hh.err != nil {
-		return "", hh.err
+		return nil, hh.err
 	}
-	v := hh.v.GetStringBytes(key)
+
+	v := hh.v.Get(key)
 	if v == nil {
-		return "", nil
+		return nil, headerNotFoundError{key: key}
 	}
-	return string(v), nil
+	return v, nil
+}
+
+// HeaderGetString returns the string value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a string.
+//
+// This function is experimental and may change or be removed in the future.
+func HeaderGetString(h Header, key string) (string, error) {
+	v, err := headerGet(h, key)
+	if err != nil {
+		return "", err
+	}
+
+	sb, err := v.StringBytes()
+	if err != nil {
+		return "", err
+	}
+
+	return string(sb), nil
 }
 
 // HeaderGetBool returns the boolean value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a boolean.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetBool(h Header, key string) (bool, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return false, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return false, err
 	}
-	v := hh.v.GetBool(key)
-	return v, nil
+	return v.Bool()
 }
 
 // HeaderGetFloat64 returns the float64 value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a float64.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetFloat64(h Header, key string) (float64, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return 0, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
 	}
-	v := hh.v.GetFloat64(key)
-	return v, nil
+	return v.Float64()
 }
 
 // HeaderGetInt returns the int value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not an int.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetInt(h Header, key string) (int, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return 0, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
 	}
-	v := hh.v.GetInt(key)
-	return v, nil
+	return v.Int()
 }
 
 // HeaderGetInt64 returns the int64 value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not an int64.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetInt64(h Header, key string) (int64, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return 0, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
 	}
-	v := hh.v.GetInt64(key)
-	return v, nil
+	return v.Int64()
 }
 
 // HeaderGetStringBytes returns the byte slice value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a byte slice.
+//
 // Because of limitations of the underlying library, you cannot use the return value
 // of this function after the parser is garbage collected.
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetStringBytes(h Header, key string) ([]byte, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
+	v, err := headerGet(h, key)
+	if err != nil {
+		return nil, err
+	}
 
-	if hh.err != nil {
-		return nil, hh.err
-	}
-	v := hh.v.GetStringBytes(key)
-	if len(v) == 0 {
-		return nil, nil
-	}
-	return v, nil
+	return v.StringBytes()
 }
 
 // HeaderGetUint returns the uint value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a uint.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetUint(h Header, key string) (uint, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return 0, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
 	}
-	v := hh.v.GetUint(key)
-	return v, nil
+	return v.Uint()
 }
 
 // HeaderGetUint64 returns the uint64 value for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a uint64.
+//
 // This function is experimental and may change or be removed in the future.
 func HeaderGetUint64(h Header, key string) (uint64, error) {
-	//nolint:forcetypeassert
-	hh := h.(*header) // we _know_ this can't be another type
-
-	if hh.err != nil {
-		return 0, hh.err
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
 	}
-	v := hh.v.GetUint64(key)
-	return v, nil
+
+	return v.Uint64()
 }
