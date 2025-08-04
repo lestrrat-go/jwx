@@ -160,31 +160,43 @@ func TestHeader(t *testing.T) {
 
 	t.Run("ErrorHandling", func(t *testing.T) {
 		t.Parallel()
-		// Test invalid JSON
-		invalidHeader := jwsbb.HeaderParseCompact([]byte("invalid-json"))
 
-		_, err := jwsbb.HeaderGetString(invalidHeader, "alg")
-		require.Error(t, err, "HeaderGetString should return error for invalid header")
+		t.Run("non-existent field", func(t *testing.T) {
+			t.Parallel()
+			headerJSON := `{"alg":"HS256","typ":"JWT"}`
+			h := jwsbb.HeaderParse([]byte(headerJSON))
+			_, err := jwsbb.HeaderGetString(h, "nonexistent")
+			require.Error(t, err, "HeaderGetString should return error for non-existent field")
+			require.ErrorIs(t, err, jwsbb.ErrHeaderNotFound(), "Error should be ErrHeaderNotFound")
+		})
+		t.Run("invalid JSON", func(t *testing.T) {
+			t.Parallel()
+			// Test invalid JSON
+			invalidHeader := jwsbb.HeaderParseCompact([]byte("invalid-json"))
 
-		_, err = jwsbb.HeaderGetBool(invalidHeader, "debug")
-		require.Error(t, err, "HeaderGetBool should return error for invalid header")
+			_, err := jwsbb.HeaderGetString(invalidHeader, "alg")
+			require.Error(t, err, "HeaderGetString should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetInt(invalidHeader, "count")
-		require.Error(t, err, "HeaderGetInt should return error for invalid header")
+			_, err = jwsbb.HeaderGetBool(invalidHeader, "debug")
+			require.Error(t, err, "HeaderGetBool should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetFloat64(invalidHeader, "pi")
-		require.Error(t, err, "HeaderGetFloat64 should return error for invalid header")
+			_, err = jwsbb.HeaderGetInt(invalidHeader, "count")
+			require.Error(t, err, "HeaderGetInt should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetStringBytes(invalidHeader, "data")
-		require.Error(t, err, "HeaderGetStringBytes should return error for invalid header")
+			_, err = jwsbb.HeaderGetFloat64(invalidHeader, "pi")
+			require.Error(t, err, "HeaderGetFloat64 should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetUint(invalidHeader, "count")
-		require.Error(t, err, "HeaderGetUint should return error for invalid header")
+			_, err = jwsbb.HeaderGetStringBytes(invalidHeader, "data")
+			require.Error(t, err, "HeaderGetStringBytes should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetInt64(invalidHeader, "timestamp")
-		require.Error(t, err, "HeaderGetInt64 should return error for invalid header")
+			_, err = jwsbb.HeaderGetUint(invalidHeader, "count")
+			require.Error(t, err, "HeaderGetUint should return error for invalid header")
 
-		_, err = jwsbb.HeaderGetUint64(invalidHeader, "timestamp")
-		require.Error(t, err, "HeaderGetUint64 should return error for invalid header")
+			_, err = jwsbb.HeaderGetInt64(invalidHeader, "timestamp")
+			require.Error(t, err, "HeaderGetInt64 should return error for invalid header")
+
+			_, err = jwsbb.HeaderGetUint64(invalidHeader, "timestamp")
+			require.Error(t, err, "HeaderGetUint64 should return error for invalid header")
+		})
 	})
 }
