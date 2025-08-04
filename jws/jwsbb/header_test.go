@@ -167,7 +167,7 @@ func TestHeader(t *testing.T) {
 			h := jwsbb.HeaderParse([]byte(headerJSON))
 			_, err := jwsbb.HeaderGetString(h, "nonexistent")
 			require.Error(t, err, "HeaderGetString should return error for non-existent field")
-			require.ErrorIs(t, err, jwsbb.ErrFieldNotFound(), "Error should be ErrFieldNotFound")
+			require.ErrorIs(t, err, jwsbb.ErrHeaderNotFound(), "Error should be ErrHeaderNotFound")
 		})
 		t.Run("invalid JSON", func(t *testing.T) {
 			t.Parallel()
