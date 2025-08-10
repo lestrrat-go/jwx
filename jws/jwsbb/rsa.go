@@ -6,35 +6,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
+	"github.com/lestrrat-go/dsig"
 )
-
-func rsaGetSignerCryptoSignerKey(key any) (crypto.Signer, bool, error) {
-	cs, isCryptoSigner := key.(crypto.Signer)
-	if isCryptoSigner {
-		if !keytype.IsValidRSAKey(key) {
-			return nil, false, fmt.Errorf(`cannot use key of type %T`, key)
-		}
-		return cs, true, nil
-	}
-	return nil, false, nil
-}
 
 var rsaHashFuncs = map[string]struct {
 	Hash crypto.Hash
 	PSS  bool // whether to use PSS padding
 }{
-	"RS256": {Hash: crypto.SHA256, PSS: false},
-	"RS384": {Hash: crypto.SHA384, PSS: false},
-	"RS512": {Hash: crypto.SHA512, PSS: false},
-	"PS256": {Hash: crypto.SHA256, PSS: true},
-	"PS384": {Hash: crypto.SHA384, PSS: true},
-	"PS512": {Hash: crypto.SHA512, PSS: true},
-}
-
-func isSuppotedRSAAlgorithm(alg string) bool {
-	_, ok := rsaHashFuncs[alg]
-	return ok
+	rs256: {Hash: crypto.SHA256, PSS: false},
+	rs384: {Hash: crypto.SHA384, PSS: false},
+	rs512: {Hash: crypto.SHA512, PSS: false},
+	ps256: {Hash: crypto.SHA256, PSS: true},
+	ps384: {Hash: crypto.SHA384, PSS: true},
+	ps512: {Hash: crypto.SHA512, PSS: true},
 }
 
 // RSAHashFuncFor returns the appropriate hash function and PSS flag for the given RSA algorithm.
@@ -56,6 +40,33 @@ func RSAPSSOptions(h crypto.Hash) rsa.PSSOptions {
 	}
 }
 
+// rsaAlgorithmForHash returns the appropriate dsig algorithm string for the given hash and PSS flag.
+func rsaAlgorithmForHash(h crypto.Hash, pss bool) (string, error) {
+	if pss {
+		switch h {
+		case crypto.SHA256:
+			return dsig.RSAPSSWithSHA256, nil
+		case crypto.SHA384:
+			return dsig.RSAPSSWithSHA384, nil
+		case crypto.SHA512:
+			return dsig.RSAPSSWithSHA512, nil
+		default:
+			return "", fmt.Errorf("unsupported hash function for RSA-PSS: %v", h)
+		}
+	} else {
+		switch h {
+		case crypto.SHA256:
+			return dsig.RSAPKCS1v15WithSHA256, nil
+		case crypto.SHA384:
+			return dsig.RSAPKCS1v15WithSHA384, nil
+		case crypto.SHA512:
+			return dsig.RSAPKCS1v15WithSHA512, nil
+		default:
+			return "", fmt.Errorf("unsupported hash function for RSA PKCS#1 v1.5: %v", h)
+		}
+	}
+}
+
 // SignRSA generates an RSA signature for the given payload using the specified private key and options.
 // The raw parameter should be the pre-computed signing input (typically header.payload).
 // If pss is true, RSA-PSS is used; otherwise, PKCS#1 v1.5 is used.
@@ -63,12 +74,13 @@ func RSAPSSOptions(h crypto.Hash) rsa.PSSOptions {
 // The rr parameter is an optional io.Reader that can be used to provide randomness for signing.
 // If rr is nil, it defaults to rand.Reader.
 func SignRSA(key *rsa.PrivateKey, payload []byte, h crypto.Hash, pss bool, rr io.Reader) ([]byte, error) {
-	var opts crypto.SignerOpts = h
-	if pss {
-		rsaopts := RSAPSSOptions(h)
-		opts = &rsaopts
+	alg, err := rsaAlgorithmForHash(h, pss)
+	if err != nil {
+		return nil, err
 	}
-	return cryptosign(key, payload, h, opts, rr)
+
+	// Use dsig.Sign
+	return dsig.Sign(key, alg, payload, rr)
 }
 
 // VerifyRSA verifies an RSA signature for the given payload and header.
@@ -76,11 +88,11 @@ func SignRSA(key *rsa.PrivateKey, payload []byte, h crypto.Hash, pss bool, rr io
 // then verifies the signature using the specified public key and hash algorithm.
 // If pss is true, RSA-PSS verification is used; otherwise, PKCS#1 v1.5 verification is used.
 func VerifyRSA(key *rsa.PublicKey, payload, signature []byte, h crypto.Hash, pss bool) error {
-	hasher := h.New()
-	hasher.Write(payload)
-	digest := hasher.Sum(nil)
-	if pss {
-		return rsa.VerifyPSS(key, h, digest, signature, &rsa.PSSOptions{Hash: h, SaltLength: rsa.PSSSaltLengthEqualsHash})
+	alg, err := rsaAlgorithmForHash(h, pss)
+	if err != nil {
+		return err
 	}
-	return rsa.VerifyPKCS1v15(key, h, digest, signature)
+
+	// Use dsig.Verify
+	return dsig.Verify(key, alg, payload, signature)
 }

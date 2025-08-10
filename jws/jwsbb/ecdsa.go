@@ -3,27 +3,27 @@ package jwsbb
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/asn1"
 	"fmt"
 	"io"
 	"math/big"
 
+	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
-	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
-	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
 
 var ecdsaHashFuncs = map[string]crypto.Hash{
-	"ES256":  crypto.SHA256,
-	"ES256K": crypto.SHA256,
-	"ES384":  crypto.SHA384,
-	"ES512":  crypto.SHA512,
+	es256: crypto.SHA256,
+	es384: crypto.SHA384,
+	es512: crypto.SHA512,
 }
 
-func isSuppotedECDSAAlgorithm(alg string) bool {
-	_, ok := ecdsaHashFuncs[alg]
-	return ok
+func RegisterECDSAHashFunc(alg string, h crypto.Hash) error {
+	if h == 0 {
+		return fmt.Errorf(`jwsbb.RegisterECDSAHashFunc: hash function cannot be zero`)
+	}
+	ecdsaHashFuncs[alg] = h
+	return nil
 }
 
 func ECDSAHashFuncFor(alg string) (crypto.Hash, error) {
@@ -33,29 +33,19 @@ func ECDSAHashFuncFor(alg string) (crypto.Hash, error) {
 	return 0, fmt.Errorf(`unsupported ECDSA algorithm %s`, alg)
 }
 
-func ecdsaGetSignerKey(key any) (*ecdsa.PrivateKey, crypto.Signer, bool, error) {
-	cs, isCryptoSigner := key.(crypto.Signer)
-	if isCryptoSigner {
-		if !keytype.IsValidECDSAKey(key) {
-			return nil, nil, false, fmt.Errorf(`cannot use key of type %T`, key)
-		}
-		switch key.(type) {
-		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
-			// if it's ecdsa.PrivateKey, it's more efficient to
-			// go through the non-crypto.Signer route. Set isCryptoSigner to false
-			isCryptoSigner = false
-		}
+// ecdsaAlgorithmForHash returns the appropriate dsig algorithm string for the given hash.
+func ecdsaAlgorithmForHash(h crypto.Hash) (string, error) {
+	switch h {
+	case crypto.SHA256:
+		// ES256K and ES256 both use SHA256, but for now we default to ES256
+		return dsig.ECDSAWithP256AndSHA256, nil
+	case crypto.SHA384:
+		return dsig.ECDSAWithP384AndSHA384, nil
+	case crypto.SHA512:
+		return dsig.ECDSAWithP521AndSHA512, nil
+	default:
+		return "", fmt.Errorf("unsupported hash function for ECDSA: %v", h)
 	}
-
-	if isCryptoSigner {
-		return nil, cs, true, nil
-	}
-
-	var privkey *ecdsa.PrivateKey
-	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
-		return nil, nil, false, fmt.Errorf(`invalid key type %T. ecdsa.PrivateKey is required: %w`, key, err)
-	}
-	return privkey, nil, false, nil
 }
 
 // UnpackASN1ECDSASignature unpacks an ASN.1 encoded ECDSA signature into r and s values.
@@ -121,23 +111,13 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 //
 // rr is an io.Reader that provides randomness for signing. if rr is nil, it defaults to rand.Reader.
 func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
-	hh := h.New()
-	if _, err := hh.Write(payload); err != nil {
-		return nil, fmt.Errorf(`failed to write payload using ecdsa: %w`, err)
-	}
-	digest := hh.Sum(nil)
-
-	if rr == nil {
-		rr = rand.Reader
-	}
-
-	// Sign and get r, s values
-	r, s, err := ecdsa.Sign(rr, key, digest)
+	alg, err := ecdsaAlgorithmForHash(h)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to sign payload using ecdsa: %w`, err)
+		return nil, err
 	}
 
-	return PackECDSASignature(r, s, key.Curve.Params().BitSize)
+	// Use dsig.Sign
+	return dsig.Sign(key, alg, payload, rr)
 }
 
 // SignECDSACryptoSigner generates an ECDSA signature using a crypto.Signer interface.
@@ -184,12 +164,13 @@ func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int)
 // This function verifies the signature using the specified public key and hash algorithm.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
 func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash) error {
-	var r, s big.Int
-	if err := UnpackECDSASignature(signature, key, &r, &s); err != nil {
-		return fmt.Errorf("jwsbb.ECDSAVerifier: failed to unpack ECDSA signature: %w", err)
+	alg, err := ecdsaAlgorithmForHash(h)
+	if err != nil {
+		return err
 	}
 
-	return ecdsaVerify(key, payload, h, &r, &s)
+	// Use dsig.Verify
+	return dsig.Verify(key, alg, payload, signature)
 }
 
 // VerifyECDSACryptoSigner verifies an ECDSA signature for crypto.Signer implementations.

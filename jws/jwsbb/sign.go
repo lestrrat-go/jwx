@@ -2,30 +2,32 @@ package jwsbb
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"fmt"
 	"io"
 
+	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 )
 
 // Sign generates a JWS signature using the specified key and algorithm.
 //
-// This function loads the signer registered in the hwsbb package _ONLY_.
+// This function loads the signer registered in the jwsbb package _ONLY_.
 // It does not support custom signers that the user might have registered.
 //
 // rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
 // Not all algorithms require this parameter, but it is included for consistency.
 // 99% of the time, you can pass nil for rr, and it will work fine.
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	switch {
-	case isSupportedHMACAlgorithm(alg):
+	if _, ok := hmacHashFuncs[alg]; ok {
 		return dispatchHMACSign(key, alg, payload)
-	case isSuppotedRSAAlgorithm(alg):
+	} else if _, ok := rsaHashFuncs[alg]; ok {
 		return dispatchRSASign(key, alg, payload, rr)
-	case isSuppotedECDSAAlgorithm(alg):
+	} else if _, ok := ecdsaHashFuncs[alg]; ok {
 		return dispatchECDSASign(key, alg, payload, rr)
-	case isSupportedEdDSAAlgorithm(alg):
+	} else if alg == edDSA {
 		return dispatchEdDSASign(key, alg, payload, rr)
 	}
 
@@ -33,63 +35,79 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 }
 
 func dispatchHMACSign(key any, alg string, payload []byte) ([]byte, error) {
-	h, err := HMACHashFuncFor(alg)
-	if err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: failed to get hash function for %s: %w`, alg, err)
+	dsigAlg, ok := jwsTodsigAlgMapping[alg]
+	if !ok {
+		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}
 
 	var hmackey []byte
-	if err := toHMACKey(&hmackey, key); err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. []byte is required: %w`, key, err)
 	}
-	return SignHMAC(hmackey, payload, h)
+
+	return dsig.Sign(hmackey, dsigAlg, payload, nil)
 }
 
 func dispatchRSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	h, pss, err := RSAHashFuncFor(alg)
-	if err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: failed to get hash function for %s: %w`, alg, err)
-	}
-	cs, isCryptoSigner, err := rsaGetSignerCryptoSignerKey(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
-	}
-	if isCryptoSigner {
-		var options crypto.SignerOpts = h
-		if pss {
-			rsaopts := RSAPSSOptions(h)
-			options = &rsaopts
-		}
-		return SignCryptoSigner(cs, payload, h, options, rr)
+	dsigAlg, ok := jwsTodsigAlgMapping[alg]
+	if !ok {
+		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}
 
+	// Try crypto.Signer first (dsig can handle it directly)
+	if signer, ok := key.(crypto.Signer); ok {
+		// Verify it's an RSA key
+		if _, ok := signer.Public().(*rsa.PublicKey); ok {
+			return dsig.Sign(signer, dsigAlg, payload, rr)
+		}
+	}
+
+	// Fall back to concrete key types
 	var privkey *rsa.PrivateKey
 	if err := keyconv.RSAPrivateKey(&privkey, key); err != nil {
-		return nil, fmt.Errorf(`jws.RSASigner: invalid key type %T. rsa.PrivateKey is required: %w`, key, err)
-	}
-	return SignRSA(privkey, payload, h, pss, rr)
-}
-
-func dispatchEdDSASign(key any, _ string, payload []byte, rr io.Reader) ([]byte, error) {
-	signer, err := eddsaGetSigner(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.EdDSASigner: %w`, err)
+		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *rsa.PrivateKey is required: %w`, key, err)
 	}
 
-	return SignCryptoSigner(signer, payload, crypto.Hash(0), crypto.Hash(0), rr)
+	return dsig.Sign(privkey, dsigAlg, payload, rr)
 }
 
 func dispatchECDSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	h, err := ECDSAHashFuncFor(alg)
-	if err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: failed to get hash function for %s: %w`, alg, err)
+	dsigAlg, ok := jwsTodsigAlgMapping[alg]
+	if !ok {
+		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}
-	privkey, cs, isCryptoSigner, err := ecdsaGetSignerKey(key)
-	if err != nil {
-		return nil, fmt.Errorf(`jws.ECDSASigner: %w`, err)
+
+	// Try crypto.Signer first (dsig can handle it directly)
+	if signer, ok := key.(crypto.Signer); ok {
+		// Verify it's an ECDSA key
+		if _, ok := signer.Public().(*ecdsa.PublicKey); ok {
+			return dsig.Sign(signer, dsigAlg, payload, rr)
+		}
 	}
-	if isCryptoSigner {
-		return SignECDSACryptoSigner(cs, payload, h, rr)
+
+	// Fall back to concrete key types
+	var privkey *ecdsa.PrivateKey
+	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *ecdsa.PrivateKey is required: %w`, key, err)
 	}
-	return SignECDSA(privkey, payload, h, rr)
+
+	return dsig.Sign(privkey, dsigAlg, payload, rr)
+}
+
+func dispatchEdDSASign(key any, _ string, payload []byte, rr io.Reader) ([]byte, error) {
+	// Try crypto.Signer first (dsig can handle it directly)
+	if signer, ok := key.(crypto.Signer); ok {
+		// Verify it's an EdDSA key
+		if _, ok := signer.Public().(ed25519.PublicKey); ok {
+			return dsig.Sign(signer, dsig.EdDSA, payload, rr)
+		}
+	}
+
+	// Fall back to concrete key types
+	var privkey ed25519.PrivateKey
+	if err := keyconv.Ed25519PrivateKey(&privkey, key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. ed25519.PrivateKey is required: %w`, key, err)
+	}
+
+	return dsig.Sign(privkey, dsig.EdDSA, payload, rr)
 }
