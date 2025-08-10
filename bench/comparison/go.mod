@@ -1,8 +1,6 @@
 module github.com/lestrrat-go/jwx/bench/comparison
 
-go 1.23.0
-
-toolchain go1.24.4
+go 1.24.4
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -13,6 +11,8 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/dsig v0.0.0-20250810012513-e85e096234ca // indirect
+	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250810033836-d69f49839ca4 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc/v3 v3.0.0 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
