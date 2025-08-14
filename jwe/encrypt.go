@@ -96,10 +96,23 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 			keyToUse = e.pubkey
 		}
 
-		// Handle ecdsa.PublicKey by value - convert to pointer
-		if pk, ok := keyToUse.(ecdsa.PublicKey); ok {
-			keyToUse = &pk
+		switch key := keyToUse.(type) {
+		case *ecdsa.PublicKey, *ecdh.PublicKey:
+			// no op
+		case ecdsa.PublicKey:
+			keyToUse = &key
+		case ecdh.PublicKey:
+			keyToUse = &key
+		case *ecdsa.PrivateKey:
+			keyToUse = &key.PublicKey
+		case ecdsa.PrivateKey:
+			keyToUse = &key.PublicKey
+		case ecdh.PrivateKey:
+			keyToUse = key.PublicKey()
+		case *ecdh.PrivateKey:
+			keyToUse = key.PublicKey()
 		}
+		fmt.Printf("keyToUse: %T\n", keyToUse)
 
 		// Determine key type and call appropriate function
 		switch key := keyToUse.(type) {

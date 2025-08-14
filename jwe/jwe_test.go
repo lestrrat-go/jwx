@@ -1008,3 +1008,18 @@ func BenchmarkParseCompat(b *testing.B) {
 		}
 	}
 }
+
+func TestGH1434(t *testing.T) {
+	// Test if we can use ecdh.PrivateKey to encrypt and decrypt
+
+	key, err := ecdh.P256().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.P256().GenerateKey should succeed`)
+
+	const payload = `hello, world!`
+	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A256KW(), key))
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.ECDH_ES_A256KW(), key))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+	require.Equal(t, []byte(payload), decrypted, `decrypted payload should match original payload`)
+}
