@@ -263,3 +263,8 @@ func ECDHPublicKey(dst, src any) error {
 
 	return blackmagic.AssignIfCompatible(dst, pubECDH)
 }
+
+func ECDHToECDSA(dst, src any) error {
+	// convert ecdh.PublicKey to ecdsa.PublicKey, ecdh.PrivateKey to ecdsa.PrivateKey
+
+}
