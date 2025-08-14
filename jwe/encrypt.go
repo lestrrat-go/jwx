@@ -129,11 +129,10 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 			if err := keyconv.ECDHToECDSA(&ecdsaKey, key); err != nil {
 				return nil, fmt.Errorf(`encrypt: failed to convert ECDH public key to ECDSA: %w`, err)
 			}
+			keyToUse = ecdsaKey
+		}
 
-			if !keywrap {
-				return jwebb.KeyEncryptECDHESECDSA(cek, e.keyalg.String(), e.apu, e.apv, ecdsaKey, keysize, e.ctalg.String())
-			}
-			return jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, e.keyalg.String(), e.apu, e.apv, ecdsaKey, keysize, e.ctalg.String())
+		switch key := keyToUse.(type) {
 		case *ecdsa.PublicKey:
 			if !keywrap {
 				return jwebb.KeyEncryptECDHESECDSA(cek, e.keyalg.String(), e.apu, e.apv, key, keysize, e.ctalg.String())
