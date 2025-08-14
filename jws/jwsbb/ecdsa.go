@@ -7,45 +7,25 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sync"
 
 	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 )
 
-var ecdsaHashFuncs = map[string]crypto.Hash{
-	es256: crypto.SHA256,
-	es384: crypto.SHA384,
-	es512: crypto.SHA512,
+type ECDSAFamilyMeta struct {
+	Hash crypto.Hash
 }
 
-func RegisterECDSAHashFunc(alg string, h crypto.Hash) error {
-	if h == 0 {
-		return fmt.Errorf(`jwsbb.RegisterECDSAHashFunc: hash function cannot be zero`)
-	}
-	ecdsaHashFuncs[alg] = h
-	return nil
-}
+var ecdsaReverseMap = make(map[ECDSAFamilyMeta]string)
+var muECDSAReverseMap sync.RWMutex
 
-func ECDSAHashFuncFor(alg string) (crypto.Hash, error) {
-	if h, ok := ecdsaHashFuncs[alg]; ok {
-		return h, nil
-	}
-	return 0, fmt.Errorf(`unsupported ECDSA algorithm %s`, alg)
-}
+func ecdsaReverseLookup(meta ECDSAFamilyMeta) (string, bool) {
+	muECDSAReverseMap.RLock()
+	defer muECDSAReverseMap.RUnlock()
 
-// ecdsaAlgorithmForHash returns the appropriate dsig algorithm string for the given hash.
-func ecdsaAlgorithmForHash(h crypto.Hash) (string, error) {
-	switch h {
-	case crypto.SHA256:
-		// ES256K and ES256 both use SHA256, but for now we default to ES256
-		return dsig.ECDSAWithP256AndSHA256, nil
-	case crypto.SHA384:
-		return dsig.ECDSAWithP384AndSHA384, nil
-	case crypto.SHA512:
-		return dsig.ECDSAWithP521AndSHA512, nil
-	default:
-		return "", fmt.Errorf("unsupported hash function for ECDSA: %v", h)
-	}
+	alg, ok := ecdsaReverseMap[meta]
+	return alg, ok
 }
 
 // UnpackASN1ECDSASignature unpacks an ASN.1 encoded ECDSA signature into r and s values.
@@ -111,9 +91,9 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 //
 // rr is an io.Reader that provides randomness for signing. if rr is nil, it defaults to rand.Reader.
 func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
-	alg, err := ecdsaAlgorithmForHash(h)
-	if err != nil {
-		return nil, err
+	alg, ok := ecdsaReverseLookup(ECDSAFamilyMeta{Hash: h})
+	if !ok {
+		return nil, fmt.Errorf("jwsbb.SignECDSA: unsupported ECDSA hash function")
 	}
 
 	// Use dsig.Sign
@@ -164,9 +144,9 @@ func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int)
 // This function verifies the signature using the specified public key and hash algorithm.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
 func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash) error {
-	alg, err := ecdsaAlgorithmForHash(h)
-	if err != nil {
-		return err
+	alg, ok := ecdsaReverseLookup(ECDSAFamilyMeta{Hash: h})
+	if !ok {
+		return fmt.Errorf("jwsbb.VerifyECDSA: unsupported ECDSA hash function")
 	}
 
 	// Use dsig.Verify

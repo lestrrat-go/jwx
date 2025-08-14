@@ -21,44 +21,40 @@ import (
 // Not all algorithms require this parameter, but it is included for consistency.
 // 99% of the time, you can pass nil for rr, and it will work fine.
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	if _, ok := hmacHashFuncs[alg]; ok {
-		return dispatchHMACSign(key, alg, payload)
-	} else if _, ok := rsaHashFuncs[alg]; ok {
-		return dispatchRSASign(key, alg, payload, rr)
-	} else if _, ok := ecdsaHashFuncs[alg]; ok {
-		return dispatchECDSASign(key, alg, payload, rr)
-	} else if alg == edDSA {
-		return dispatchEdDSASign(key, alg, payload, rr)
-	}
-
-	return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
-}
-
-func dispatchHMACSign(key any, alg string, payload []byte) ([]byte, error) {
-	dsigAlg, ok := jwsTodsigAlgMapping[alg]
+	info, ok := getAlgorithmInfo(alg)
 	if !ok {
 		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}
 
+	switch info.Family {
+	case HMAC:
+		return dispatchHMACSign(key, info.Dsig, payload)
+	case RSA:
+		return dispatchRSASign(key, info.Dsig, payload, rr)
+	case ECDSA:
+		return dispatchECDSASign(key, info.Dsig, payload, rr)
+	case EdDSA:
+		return dispatchEdDSASign(key, info.Dsig, payload, rr)
+	default:
+		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature family %q`, info.Family)
+	}
+}
+
+func dispatchHMACSign(key any, alg string, payload []byte) ([]byte, error) {
 	var hmackey []byte
 	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. []byte is required: %w`, key, err)
 	}
 
-	return dsig.Sign(hmackey, dsigAlg, payload, nil)
+	return dsig.Sign(hmackey, alg, payload, nil)
 }
 
 func dispatchRSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	dsigAlg, ok := jwsTodsigAlgMapping[alg]
-	if !ok {
-		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
-	}
-
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an RSA key
 		if _, ok := signer.Public().(*rsa.PublicKey); ok {
-			return dsig.Sign(signer, dsigAlg, payload, rr)
+			return dsig.Sign(signer, alg, payload, rr)
 		}
 	}
 
@@ -68,20 +64,15 @@ func dispatchRSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte,
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *rsa.PrivateKey is required: %w`, key, err)
 	}
 
-	return dsig.Sign(privkey, dsigAlg, payload, rr)
+	return dsig.Sign(privkey, alg, payload, rr)
 }
 
 func dispatchECDSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	dsigAlg, ok := jwsTodsigAlgMapping[alg]
-	if !ok {
-		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
-	}
-
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an ECDSA key
 		if _, ok := signer.Public().(*ecdsa.PublicKey); ok {
-			return dsig.Sign(signer, dsigAlg, payload, rr)
+			return dsig.Sign(signer, alg, payload, rr)
 		}
 	}
 
@@ -91,15 +82,15 @@ func dispatchECDSASign(key any, alg string, payload []byte, rr io.Reader) ([]byt
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *ecdsa.PrivateKey is required: %w`, key, err)
 	}
 
-	return dsig.Sign(privkey, dsigAlg, payload, rr)
+	return dsig.Sign(privkey, alg, payload, rr)
 }
 
-func dispatchEdDSASign(key any, _ string, payload []byte, rr io.Reader) ([]byte, error) {
+func dispatchEdDSASign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key
 		if _, ok := signer.Public().(ed25519.PublicKey); ok {
-			return dsig.Sign(signer, dsig.EdDSA, payload, rr)
+			return dsig.Sign(signer, alg, payload, rr)
 		}
 	}
 
@@ -109,5 +100,5 @@ func dispatchEdDSASign(key any, _ string, payload []byte, rr io.Reader) ([]byte,
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. ed25519.PrivateKey is required: %w`, key, err)
 	}
 
-	return dsig.Sign(privkey, dsig.EdDSA, payload, rr)
+	return dsig.Sign(privkey, alg, payload, rr)
 }

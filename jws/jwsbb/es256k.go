@@ -1,3 +1,5 @@
+//go:build jwx_es256k
+
 package jwsbb
 
 import (
@@ -9,8 +11,14 @@ import (
 func init() {
 	const RFC7518Alg = "ES256K"
 	// Register mapping for ES256K to dsig algorithm
-	_ = RegisterDsigAlgorithm(RFC7518Alg, dsigsecp256k1.ECDSAWithSecp256k1AndSHA256)
-
-	// Register ES256K to use crypto.SHA256
-	_ = RegisterECDSAHashFunc(RFC7518Alg, crypto.SHA256)
+	_ = RegisterAlgorithm(
+		RFC7518Alg,
+		AlgorithmInfo{
+			Family: ECDSA,
+			Dsig:   dsigsecp256k1.ECDSAWithSecp256k1AndSHA256,
+			Meta: ECDSAFamilyMeta{
+				Hash: crypto.SHA256,
+			},
+		},
+	)
 }
