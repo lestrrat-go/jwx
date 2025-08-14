@@ -336,7 +336,7 @@ func ECDHToECDSA(dst, src any) error {
 	// convert the public key
 	ecdsaPubKey, err := ecdhPublicKeyToECDSA(pubkey)
 	if err != nil {
-		return fmt.Errorf(`keyconv.ECDHToECDSA: failed to convert ECDH public key to ECDSA publick key: %w`, err)
+		return fmt.Errorf(`keyconv.ECDHToECDSA: failed to convert ECDH public key to ECDSA public key: %w`, err)
 	}
 
 	// return if we were being asked to convert *ecdh.PublicKey
