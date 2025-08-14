@@ -586,13 +586,13 @@ func TestGH1434(t *testing.T) {
 	}
 
 	expected := []byte("Hello, World! This tests ECDH-ES interoperability.")
-	
+
 	// Test with different elliptic curves and their corresponding ECDH-ES+KW algorithms
 	curves := []struct {
-		name     string
-		crv      string
+		name      string
+		crv       string
 		ecdhCurve ecdh.Curve
-		keyAlg   jwa.KeyEncryptionAlgorithm
+		keyAlg    jwa.KeyEncryptionAlgorithm
 	}{
 		{"P256", "P-256", ecdh.P256(), jwa.ECDH_ES_A128KW()},
 		{"P384", "P-384", ecdh.P384(), jwa.ECDH_ES_A192KW()},
@@ -618,7 +618,7 @@ func TestGH1434(t *testing.T) {
 			// Write the JWK to a temporary file for jose to use
 			jwkBytes, err := json.Marshal(jwxJwk)
 			require.NoError(t, err, `jwk JSON marshaling should succeed`)
-			
+
 			joseJwkFile, joseJwkCleanup, err := jwxtest.WriteFile(t.TempDir(), "ecdh-key-*.jwk", bytes.NewReader(jwkBytes))
 			require.NoError(t, err, `writing JWK file should succeed`)
 			defer joseJwkCleanup()
@@ -627,7 +627,7 @@ func TestGH1434(t *testing.T) {
 				// Test exporting as ECDH key (should work directly)
 				var ecdhKey ecdh.PrivateKey
 				require.NoError(t, jwk.Export(jwxJwk, &ecdhKey), `jwk.Export to ECDH should succeed`)
-				
+
 				// Test exporting as ECDSA key (should use ECDHToECDSA conversion)
 				var ecdsaKey ecdsa.PrivateKey
 				require.NoError(t, jwk.Export(jwxJwk, &ecdsaKey), `jwk.Export to ECDSA should succeed via ECDHToECDSA conversion`)
@@ -644,7 +644,7 @@ func TestGH1434(t *testing.T) {
 				// let jwx decrypt using the ECDH key (which internally should convert to ECDSA if needed)
 				encryptedData, err := jwxtest.ReadFile(joseCryptFile)
 				require.NoError(t, err, `reading encrypted file should succeed`)
-				
+
 				payload, err := jwe.Decrypt(encryptedData, jwe.WithKey(curve.keyAlg, ecdhPrivKey))
 				require.NoError(t, err, `jwe.Decrypt with ECDH key should succeed`)
 				require.Equal(t, expected, payload, `decrypted payloads should match`)
