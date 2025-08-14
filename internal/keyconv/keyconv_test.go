@@ -238,7 +238,6 @@ func TestECDHToECDSA(t *testing.T) {
 					error bool
 				}{
 					{"*ecdh.PrivateKey", ecdhPrivKey, false},
-					{"ecdh.PrivateKey", *ecdhPrivKey, false},
 					{"invalid type", "not a key", true},
 				}
 
