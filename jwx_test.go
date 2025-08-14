@@ -1,8 +1,11 @@
 package jwx_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"strings"
@@ -558,4 +561,109 @@ func TestGH1140(t *testing.T) {
 
 	_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
+}
+
+func TestGH1434(t *testing.T) {
+	if testing.Short() {
+		t.Logf("Skipped during short tests")
+		return
+	}
+
+	if !jose.Available() {
+		t.Logf("`jose` binary not available, skipping tests")
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Check if jose supports ECDH-ES algorithm
+	set, err := jose.Algorithms(ctx, t)
+	require.NoError(t, err)
+	if !set.Has("ECDH-ES") {
+		t.Logf("jose does not support ECDH-ES algorithm: skipping")
+		return
+	}
+
+	expected := []byte("Hello, World! This tests ECDH-ES interoperability.")
+	
+	// Test with different elliptic curves and their corresponding ECDH-ES+KW algorithms
+	curves := []struct {
+		name     string
+		crv      string
+		ecdhCurve ecdh.Curve
+		keyAlg   jwa.KeyEncryptionAlgorithm
+	}{
+		{"P256", "P-256", ecdh.P256(), jwa.ECDH_ES_A128KW()},
+		{"P384", "P-384", ecdh.P384(), jwa.ECDH_ES_A192KW()},
+		{"P521", "P-521", ecdh.P521(), jwa.ECDH_ES_A256KW()},
+	}
+
+	for _, curve := range curves {
+		t.Run(curve.name, func(t *testing.T) {
+			// Check if jose supports this key encryption algorithm
+			if !set.Has(curve.keyAlg.String()) {
+				t.Logf("jose does not support %s algorithm: skipping", curve.keyAlg.String())
+				return
+			}
+
+			// Generate an ECDH private key directly
+			ecdhPrivKey, err := curve.ecdhCurve.GenerateKey(rand.Reader)
+			require.NoError(t, err, `ECDH key generation should succeed`)
+
+			// Create a JWK from the ECDH private key
+			jwxJwk, err := jwk.Import(ecdhPrivKey)
+			require.NoError(t, err, `jwk.Import should succeed`)
+
+			// Write the JWK to a temporary file for jose to use
+			jwkBytes, err := json.Marshal(jwxJwk)
+			require.NoError(t, err, `jwk JSON marshaling should succeed`)
+			
+			joseJwkFile, joseJwkCleanup, err := jwxtest.WriteFile(t.TempDir(), "ecdh-key-*.jwk", bytes.NewReader(jwkBytes))
+			require.NoError(t, err, `writing JWK file should succeed`)
+			defer joseJwkCleanup()
+
+			t.Run("Parse ECDH JWK via jwx", func(t *testing.T) {
+				// Test exporting as ECDH key (should work directly)
+				var ecdhKey ecdh.PrivateKey
+				require.NoError(t, jwk.Export(jwxJwk, &ecdhKey), `jwk.Export to ECDH should succeed`)
+				
+				// Test exporting as ECDSA key (should use ECDHToECDSA conversion)
+				var ecdsaKey ecdsa.PrivateKey
+				require.NoError(t, jwk.Export(jwxJwk, &ecdsaKey), `jwk.Export to ECDSA should succeed via ECDHToECDSA conversion`)
+			})
+
+			t.Run("Encrypt with jose using ECDH key, Decrypt with jwx", func(t *testing.T) {
+				// let jose encrypt payload using ECDH-ES with key wrapping
+				joseCryptFile, joseCryptCleanup, err := jose.EncryptJwe(ctx, t, expected, curve.keyAlg.String(), joseJwkFile, jwa.A256GCM().String(), true)
+				require.NoError(t, err, `jose.EncryptJwe should succeed`)
+				defer joseCryptCleanup()
+
+				jwxtest.DumpFile(t, joseCryptFile)
+
+				// let jwx decrypt using the ECDH key (which internally should convert to ECDSA if needed)
+				encryptedData, err := jwxtest.ReadFile(joseCryptFile)
+				require.NoError(t, err, `reading encrypted file should succeed`)
+				
+				payload, err := jwe.Decrypt(encryptedData, jwe.WithKey(curve.keyAlg, ecdhPrivKey))
+				require.NoError(t, err, `jwe.Decrypt with ECDH key should succeed`)
+				require.Equal(t, expected, payload, `decrypted payloads should match`)
+			})
+
+			t.Run("Encrypt with jwx using ECDH key, Decrypt with jose", func(t *testing.T) {
+				// Encrypt using jwx with the ECDH key directly
+				encrypted, err := jwe.Encrypt(expected, jwe.WithKey(curve.keyAlg, ecdhPrivKey.PublicKey()), jwe.WithContentEncryption(jwa.A256GCM()))
+				require.NoError(t, err, `jwe.Encrypt with ECDH key should succeed`)
+
+				// Write encrypted data to file for jose
+				jwxCryptFile, jwxCryptCleanup, err := jwxtest.WriteFile(t.TempDir(), "jwx-encrypted-*.jwe", bytes.NewReader(encrypted))
+				require.NoError(t, err, `writing encrypted file should succeed`)
+				defer jwxCryptCleanup()
+
+				payload, err := jose.DecryptJwe(ctx, t, jwxCryptFile, joseJwkFile)
+				require.NoError(t, err, `jose.DecryptJwe should succeed`)
+				require.Equal(t, expected, payload, `decrypted payloads should match`)
+			})
+		})
+	}
 }
