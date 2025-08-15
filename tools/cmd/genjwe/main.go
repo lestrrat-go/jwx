@@ -84,6 +84,10 @@ func generateHeaders(obj *codegen.Object) error {
 	o.WriteImports(
 		"github.com/lestrrat-go/blackmagic",
 		"github.com/lestrrat-go/jwx/v3/cert",
+		"github.com/lestrrat-go/jwx/v3/internal/base64",
+		"github.com/lestrrat-go/jwx/v3/internal/json",
+		"github.com/lestrrat-go/jwx/v3/internal/pool",
+		"github.com/lestrrat-go/jwx/v3/internal/tokens",
 		"github.com/lestrrat-go/jwx/v3/jwa",
 		"github.com/lestrrat-go/jwx/v3/jwk",
 	)
