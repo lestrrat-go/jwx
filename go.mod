@@ -1,15 +1,13 @@
 module github.com/lestrrat-go/jwx/v3
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.24.4
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/goccy/go-json v0.10.3
 	github.com/lestrrat-go/blackmagic v1.0.4
 	github.com/lestrrat-go/dsig v0.0.0-20250811051707-aaa8da694c4e
-	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250810033836-d69f49839ca4
+	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815041810-c96ee2d41f5e
 	github.com/lestrrat-go/httprc/v3 v3.0.0
 	github.com/lestrrat-go/option/v2 v2.0.0
 	github.com/segmentio/asm v1.2.0
