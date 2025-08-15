@@ -5,6 +5,7 @@ linters:
     - cyclop
     - depguard
     - dupl
+    - embeddedstructfieldcheck
     - err113
     - errorlint
     - exhaustive
@@ -29,6 +30,7 @@ linters:
     - nakedret
     - nestif
     - nlreturn
+    - noinlineerr
     - nonamedreturns
     - paralleltest
     - perfsprint
@@ -41,6 +43,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - wsl_v5
   settings:
     govet:
       disable:
@@ -95,6 +98,10 @@ linters:
       - linters:
           - revive
         path: /*_test.go
+        text: 'var-naming: '
+      - linters:
+          - revive
+        path: /internal/*
         text: 'var-naming: '
     paths:
       - third_party$
