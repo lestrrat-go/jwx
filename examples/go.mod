@@ -14,7 +14,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
-	github.com/lestrrat-go/dsig v0.0.0-20250811051707-aaa8da694c4e // indirect
+	github.com/lestrrat-go/dsig v0.0.0-20250815061604-76113d026db6 // indirect
 	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815041810-c96ee2d41f5e // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect

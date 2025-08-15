@@ -6,8 +6,8 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
 	github.com/goccy/go-json v0.10.3
 	github.com/lestrrat-go/blackmagic v1.0.4
-	github.com/lestrrat-go/dsig v0.0.0-20250811051707-aaa8da694c4e
-	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815041810-c96ee2d41f5e
+	github.com/lestrrat-go/dsig v0.0.0-20250815061604-76113d026db6
+	github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815071612-0bde9f19b5b6
 	github.com/lestrrat-go/httprc/v3 v3.0.0
 	github.com/lestrrat-go/option/v2 v2.0.0
 	github.com/segmentio/asm v1.2.0
