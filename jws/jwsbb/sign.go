@@ -108,4 +108,3 @@ func dispatchEdDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([
 
 	return dsig.Sign(privkey, dsigAlg, payload, rr)
 }
-
