@@ -23,6 +23,8 @@ use_repo(
     "com_github_decred_dcrd_dcrec_secp256k1_v4",
     "com_github_goccy_go_json",
     "com_github_lestrrat_go_blackmagic",
+    "com_github_lestrrat_go_dsig",
+    "com_github_lestrrat_go_dsig_secp256k1",
     "com_github_lestrrat_go_httprc_v3",
     "com_github_lestrrat_go_option_v2",
     "com_github_segmentio_asm",
