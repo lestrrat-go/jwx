@@ -11,8 +11,8 @@ github.com/lestrrat-go/blackmagic v1.0.4 h1:IwQibdnf8l2KoO+qC3uT4OaTWsW7tuRQXy9T
 github.com/lestrrat-go/blackmagic v1.0.4/go.mod h1:6AWFyKNNj0zEXQYfTMPfZrAXUWUfTIZ5ECEUEJaijtw=
 github.com/lestrrat-go/dsig v1.0.0 h1:OE09s2r9Z81kxzJYRn07TFM9XA4akrUdoMwr0L8xj38=
 github.com/lestrrat-go/dsig v1.0.0/go.mod h1:dEgoOYYEJvW6XGbLasr8TFcAxoWrKlbQvmJgCR0qkDo=
-github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815072830-ce7d33eb3f36 h1:+Nnu0+RE4AeWACFvHjFetisBxyc53OXE0ntjpdpvTTw=
-github.com/lestrrat-go/dsig-secp256k1 v0.0.0-20250815072830-ce7d33eb3f36/go.mod h1:CxUgAhssb8FToqbL8NjSPoGQlnO4w3LG1P0qPWQm/NU=
+github.com/lestrrat-go/dsig-secp256k1 v1.0.0 h1:JpDe4Aybfl0soBvoVwjqDbp+9S1Y2OM7gcrVVMFPOzY=
+github.com/lestrrat-go/dsig-secp256k1 v1.0.0/go.mod h1:CxUgAhssb8FToqbL8NjSPoGQlnO4w3LG1P0qPWQm/NU=
 github.com/lestrrat-go/httpcc v1.0.1 h1:ydWCStUeJLkpYyjLDHihupbn2tYmZ7m22BGkcvZZrIE=
 github.com/lestrrat-go/httpcc v1.0.1/go.mod h1:qiltp3Mt56+55GPVCbTdM9MlqhvzyuL6W/NMDA8vA5E=
 github.com/lestrrat-go/httprc/v3 v3.0.0 h1:nZUx/zFg5uc2rhlu1L1DidGr5Sj02JbXvGSpnY4LMrc=
