@@ -12,7 +12,7 @@ require (
 	github.com/lestrrat-go/iter v1.0.2
 	github.com/lestrrat-go/option v1.0.1
 	github.com/segmentio/asm v1.2.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.32.0
 )
 
