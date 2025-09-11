@@ -1,8 +1,8 @@
 module github.com/lestrrat-go/jwx/v3/cmd/jwx
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.6
+toolchain go1.24.4
 
 require (
 	github.com/lestrrat-go/jwx/v3 v3.0.8
