@@ -4,7 +4,10 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.11 UNRELEASED
+v3.0.11 14 Sep 2025
+  * [jwk] Add `(jwk.Cache).Shutdown()` method that delegates to the httprc controller
+    object, to shutdown the cache.
+  * [jwk] Change timing of `res.Body.Close()` call
   * [jwe] Previously, ecdh.PrivateKey/ecdh.PublicKey were not properly handled
     when used for encryption, which has been fixed.
   * [jws/jwsbb] (EXPERIMENTAL/BREAKS COMPATIBILITY) Convert most functions into
