@@ -4,6 +4,21 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.0.12 UNRELEASED
+  * [jws] Load legacy signers by default (#1459). We did not intend `jws.NewSign`
+    to be used by end users, so we disabled legacy signers by default. However, in hindsight
+    we should have known that any API made public before will be used by _somebody_.
+    In light of this, legacy signers are no longer disabled. It will consume a bit more of
+    your memory, but your code should run even if you used `jws.NewSigner`. 
+
+    As a side effect, jws.Settings(jws.WithLegacySigners(...)) is now a no-op.
+
+    However, please do note that jws.Signer (and similar) objects were always intended to be
+    used for _registering_ new signing/verifying algorithms, and not for end users to actually
+    use them directly. If you are using them for other purposes, please consider changing
+    your code, as it is more than likely that we will somehow deprecate/remove/discouraged
+    their use in the future.
+
 v3.0.11 14 Sep 2025
   * [jwk] Add `(jwk.Cache).Shutdown()` method that delegates to the httprc controller
     object, to shutdown the cache.

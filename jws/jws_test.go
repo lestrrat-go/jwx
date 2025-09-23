@@ -1458,13 +1458,17 @@ func TestGH910(t *testing.T) {
 	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
 		return s256SignerVerifier{}, nil
 	}))
-	defer jws.UnregisterSigner(sha256Algo)
+	t.Cleanup(func() {
+		jws.UnregisterSigner(sha256Algo)
+	})
 
 	jws.RegisterVerifier(sha256Algo, jws.VerifierFactoryFn(func() (jws.Verifier, error) {
 		return s256SignerVerifier{}, nil
 	}))
-	defer jws.UnregisterVerifier(sha256Algo)
-	defer jwa.UnregisterSignatureAlgorithm(sha256Algo)
+	t.Cleanup(func() {
+		jws.UnregisterVerifier(sha256Algo)
+		jwa.UnregisterSignatureAlgorithm(sha256Algo)
+	})
 
 	// Now that we have established that the signature algorithm works,
 	// we can proceed with the test
@@ -1734,6 +1738,7 @@ func TestLegacySignatureSign(t *testing.T) {
 	// Clean up after test
 	t.Cleanup(func() {
 		jws.UnregisterSigner(hs256LegacyAlg)
+		jwa.UnregisterSignatureAlgorithm(hs256LegacyAlg)
 	})
 
 	// Test data
@@ -1761,4 +1766,18 @@ func TestLegacySignatureSign(t *testing.T) {
 
 	// Compare the signatures - they should be identical
 	require.Equal(t, jwsSignature, rawSig, "signatures from jws.Sign and jws.Signature.Sign should be identical")
+}
+
+func TestGH1459(t *testing.T) {
+	// Test all supported signature algorithms using NewSigner. Note that NewSigner
+	// is a deprecated API. When the right time comes, we should remove this test.
+	for _, sig := range jwa.SignatureAlgorithms() {
+		if sig == jwa.NoSignature() {
+			// Skip alg=none
+			continue
+		}
+		signer, err := jws.NewSigner(sig)
+		require.NoError(t, err, "jws.NewSigner should succeed")
+		require.NotNil(t, signer, "jws.NewSigner should return a valid signer")
+	}
 }

@@ -33,6 +33,17 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 	return fn()
 }
 
+func init() {
+	// register the signers using jwsbb. These will be used by default.
+	for _, alg := range jwa.SignatureAlgorithms() {
+		if alg == jwa.NoSignature() {
+			continue
+		}
+
+		RegisterSigner(alg, defaultSigner{alg: alg})
+	}
+}
+
 // SignerFor returns a Signer2 for the given signature algorithm.
 //
 // Currently, this function will never fail. It will always return a
@@ -42,6 +53,9 @@ func (fn SignerFactoryFn) Create() (Signer, error) {
 //     return a Signer2 that wraps the legacy Signer.
 //  3. If no Signer2 or legacy Signer(Factory) is registered, it will return a
 //     default signer that uses jwsbb.Sign.
+//
+// 1 and 2 will take care of 99% of the cases. The only time 3 will happen is
+// when you are using a custom algorithm that is not supported out of the box.
 //
 // jwsbb.Sign knows how to handle a static set of algorithms, so if the
 // algorithm is not supported, it will return an error when you call
