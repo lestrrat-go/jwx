@@ -112,7 +112,6 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f any) error {
 		signer2DB[alg] = s
 		muSigner2DB.Unlock()
 	case SignerFactory:
-		fmt.Println("Registering SignerFactory for ", alg)
 		muSignerDB.Lock()
 		signerDB[alg] = s
 		muSignerDB.Unlock()
@@ -150,7 +149,6 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 // This function only exists for backwards compatibility, but will not work
 // unless you enable the legacy support mode by calling jws.Settings(jws.WithLegacySigners(true)).
 func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
-	fmt.Println("jws.NewSigner ", alg)
 	muSignerDB.RLock()
 	f, ok := signerDB[alg]
 	muSignerDB.RUnlock()
