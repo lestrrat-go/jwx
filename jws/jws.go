@@ -553,6 +553,7 @@ func init() {
 		addAlgorithmForKeyType(jwa.EC(), alg)
 	}
 
+	fmt.Println("enabling legacy signers")
 	enableLegacySigners()
 }
 

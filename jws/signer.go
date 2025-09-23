@@ -96,6 +96,14 @@ var signerDB = make(map[jwa.SignatureAlgorithm]SignerFactory)
 // Unlike the `UnregisterSigner` function, this function automatically
 // calls `jwa.RegisterSignatureAlgorithm` to register the algorithm
 // in this module's algorithm database.
+//
+// For backwards compatibility, this function also accepts
+// `SignerFactory` implementations, but this usage is deprecated.
+// You should use `Signer2` implementations instead.
+//
+// If you want to completely remove an algorithm, you must call
+// `jwa.UnregisterSignatureAlgorithm` yourself after calling
+// `UnregisterSigner`.
 func RegisterSigner(alg jwa.SignatureAlgorithm, f any) error {
 	jwa.RegisterSignatureAlgorithm(alg)
 	switch s := f.(type) {
@@ -103,22 +111,11 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f any) error {
 		muSigner2DB.Lock()
 		signer2DB[alg] = s
 		muSigner2DB.Unlock()
-
-		// delete the other signer, if there was one
-		muSignerDB.Lock()
-		delete(signerDB, alg)
-		muSignerDB.Unlock()
 	case SignerFactory:
+		fmt.Println("Registering SignerFactory for ", alg)
 		muSignerDB.Lock()
 		signerDB[alg] = s
 		muSignerDB.Unlock()
-
-		// Remove previous signer, if there was one
-		removeSigner(alg)
-
-		muSigner2DB.Lock()
-		delete(signer2DB, alg)
-		muSigner2DB.Unlock()
 	default:
 		return fmt.Errorf(`jws.RegisterSigner: unsupported type %T for algorithm %q`, f, alg)
 	}
@@ -153,6 +150,7 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 // This function only exists for backwards compatibility, but will not work
 // unless you enable the legacy support mode by calling jws.Settings(jws.WithLegacySigners(true)).
 func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
+	fmt.Println("jws.NewSigner ", alg)
 	muSignerDB.RLock()
 	f, ok := signerDB[alg]
 	muSignerDB.RUnlock()
