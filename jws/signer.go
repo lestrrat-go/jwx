@@ -40,7 +40,9 @@ func init() {
 			continue
 		}
 
-		RegisterSigner(alg, defaultSigner{alg: alg})
+		if err := RegisterSigner(alg, defaultSigner{alg: alg}); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
 	}
 }
 
