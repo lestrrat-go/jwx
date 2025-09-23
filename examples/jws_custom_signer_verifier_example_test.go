@@ -10,63 +10,43 @@ import (
 )
 
 func Example_jws_custom_signer_verifier() {
-	// This example shows how to register external jws.Signer / jws.Verifier for
-	// a given algorithm.
-
-	for _, useLegacy := range []bool{false, true} {
-		if useLegacy {
-			// Legacy signer/verifier registration. DO NOT USE THIS IN NEW CODE.
-			if err := jws.RegisterSigner(jwa.EdDSA(), jws.SignerFactoryFn(LegacyNewCirclEdDSASigner)); err != nil {
-				fmt.Printf(`failed to register legacy signer: %s`, err)
-				return
-			}
-
-			if err := jws.RegisterVerifier(jwa.EdDSA(), jws.VerifierFactoryFn(LegacyNewCirclEdDSAVerifier)); err != nil {
-				fmt.Printf(`failed to register legacy verifier: %s`, err)
-				return
-			}
-		} else {
-			// Newer way of registering a custom signer/verifier
-			if err := jws.RegisterSigner(jwa.EdDSA(), CirclEdDSASigner{}); err != nil {
-				fmt.Printf(`failed to register signer: %s`, err)
-				return
-			}
-
-			if err := jws.RegisterVerifier(jwa.EdDSA(), CirclEdDSAVerifier{}); err != nil {
-				fmt.Printf(`failed to register verifier: %s`, err)
-				return
-			}
-		}
-
-		pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			fmt.Printf(`failed to generate keys: %s`, err)
-			return
-		}
-
-		const payload = "Lorem Ipsum"
-		signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA(), privkey))
-		if err != nil {
-			fmt.Printf(`failed to generate signed message: %s`, err)
-			return
-		}
-
-		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), pubkey))
-		if err != nil {
-			fmt.Printf(`failed to verify signed message: %s`, err)
-			return
-		}
-
-		if string(verified) != payload {
-			fmt.Printf(`got invalid payload: %s`, verified)
-			return
-		}
+	// Newer way of registering a custom signer/verifier
+	if err := jws.RegisterSigner(jwa.EdDSA(), CirclEdDSASigner{}); err != nil {
+		fmt.Printf(`failed to register signer: %s`, err)
+		return
 	}
+
+	if err := jws.RegisterVerifier(jwa.EdDSA(), CirclEdDSAVerifier{}); err != nil {
+		fmt.Printf(`failed to register verifier: %s`, err)
+		return
+	}
+	pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		fmt.Printf(`failed to generate keys: %s`, err)
+		return
+	}
+
+	const payload = "Lorem Ipsum"
+	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.EdDSA(), privkey))
+	if err != nil {
+		fmt.Printf(`failed to generate signed message: %s`, err)
+		return
+	}
+
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), pubkey))
+	if err != nil {
+		fmt.Printf(`failed to verify signed message: %s`, err)
+		return
+	}
+
+	if string(verified) != payload {
+		fmt.Printf(`got invalid payload: %s`, verified)
+		return
+	}
+
 	// OUTPUT:
 	// Custom signer called
 	// Custom verifier called
-	// Custom signer called (legacy)
-	// Custom verifier called (legacy)
 }
 
 type CirclEdDSASigner struct{}
