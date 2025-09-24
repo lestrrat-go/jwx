@@ -5,7 +5,7 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.12 UNRELEASED
-  * [jws] Load legacy signers by default (#1459). We did not intend `jws.NewSign`
+  * [jws] Load legacy signers by default (#1459). We did not intend `jws.NewSigner`
     to be used by end users, so we disabled legacy signers by default. However, in hindsight
     we should have known that any API made public before will be used by _somebody_.
     In light of this, legacy signers are no longer disabled. It will consume a bit more of
