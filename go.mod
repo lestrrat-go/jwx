@@ -12,7 +12,7 @@ require (
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0
 	github.com/lestrrat-go/httprc/v3 v3.0.1
 	github.com/lestrrat-go/option/v2 v2.0.0
-	github.com/segmentio/asm v1.2.0
+	github.com/segmentio/asm v1.2.1
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fastjson v1.6.4
 	golang.org/x/crypto v0.42.0
