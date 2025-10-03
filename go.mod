@@ -2,7 +2,7 @@ module github.com/lestrrat-go/jwx/v3
 
 go 1.24.0
 
-toolchain 1.24.4
+toolchain go1.24.4
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
