@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -144,11 +145,25 @@ func UnregisterSigner(alg jwa.SignatureAlgorithm) {
 }
 
 // NewSigner creates a signer that signs payloads using the given signature algorithm.
-// This function is deprecated. You should use `SignerFor()` instead.
+// This function is deprecated, and will either be removed to re-purposed using
+// a different signature.
 //
-// This function only exists for backwards compatibility, but will not work
-// unless you enable the legacy support mode by calling jws.Settings(jws.WithLegacySigners(true)).
+// When you want to load a Signer object, you should use `SignerFor()` instead.
 func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
+	s, err := newLegacySigner(alg)
+	if err == nil {
+		return s, nil
+	}
+
+	if strings.HasPrefix(err.Error(), `jws.NewSigner: unsupported signature algorithm`) {
+		// When newLegacySigner fails, automatically trigger to enable signers
+		enableLegacySignersOnce.Do(enableLegacySigners)
+		return newLegacySigner(alg)
+	}
+	return nil, err
+}
+
+func newLegacySigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 	muSignerDB.RLock()
 	f, ok := signerDB[alg]
 	muSignerDB.RUnlock()

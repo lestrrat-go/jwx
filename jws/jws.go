@@ -552,8 +552,6 @@ func init() {
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
 		addAlgorithmForKeyType(jwa.EC(), alg)
 	}
-
-	enableLegacySigners()
 }
 
 func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
@@ -590,9 +588,8 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 
 // Settings allows you to set global settings for this JWS operations.
 //
-// Currently, the only setting available is `jws.WithLegacySigners()`, which is
-// for backwards compatibility reasons is a no-op. In the future, this option
-// may be used to enable/disable legacy signers.
+// Currently, the only setting available is `jws.WithLegacySigners()`,
+// which for various reason is now a no-op.
 func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
