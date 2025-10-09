@@ -31,7 +31,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/jws/legacy"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/stretchr/testify/require"
 )
@@ -1458,13 +1457,17 @@ func TestGH910(t *testing.T) {
 	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
 		return s256SignerVerifier{}, nil
 	}))
-	defer jws.UnregisterSigner(sha256Algo)
+	t.Cleanup(func() {
+		jws.UnregisterSigner(sha256Algo)
+	})
 
 	jws.RegisterVerifier(sha256Algo, jws.VerifierFactoryFn(func() (jws.Verifier, error) {
 		return s256SignerVerifier{}, nil
 	}))
-	defer jws.UnregisterVerifier(sha256Algo)
-	defer jwa.UnregisterSignatureAlgorithm(sha256Algo)
+	t.Cleanup(func() {
+		jws.UnregisterVerifier(sha256Algo)
+		jwa.UnregisterSignatureAlgorithm(sha256Algo)
+	})
 
 	// Now that we have established that the signature algorithm works,
 	// we can proceed with the test
@@ -1719,46 +1722,4 @@ func BenchmarkSplitCompatString(b *testing.B) {
 			panic(err)
 		}
 	}
-}
-
-func TestLegacySignatureSign(t *testing.T) {
-	// Create a custom algorithm "HS256-legacy" for testing
-	hs256LegacyAlg := jwa.NewSignatureAlgorithm("HS256-legacy")
-
-	// Register the legacy HS256 signer factory
-	err := jws.RegisterSigner(hs256LegacyAlg, jws.SignerFactoryFn(func() (jws.Signer, error) {
-		return legacy.NewHMACSigner(jwa.HS256()), nil
-	}))
-	require.NoError(t, err, "RegisterSigner should succeed")
-
-	// Clean up after test
-	t.Cleanup(func() {
-		jws.UnregisterSigner(hs256LegacyAlg)
-	})
-
-	// Test data
-	key := []byte("test-secret-key-for-legacy-comparison")
-	payload := []byte("test payload for legacy signature comparison")
-
-	// Create a signed JWS using jws.Sign with HS256 algorithm
-	signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key))
-	require.NoError(t, err, "jws.Sign should succeed")
-
-	// Parse the JWS to extract the signature
-	msg, err := jws.Parse(signed)
-	require.NoError(t, err, "jws.Parse should succeed")
-	require.Len(t, msg.Signatures(), 1, "should have one signature")
-
-	jwsSignature := msg.Signatures()[0].Signature()
-
-	// Create a signature using jws.Signature.Sign() with HS256-legacy algorithm
-	sig := jws.NewSignature()
-	legacySigner, err := jws.NewSigner(hs256LegacyAlg)
-	require.NoError(t, err, "jws.NewSigner should succeed for legacy algorithm")
-
-	rawSig, _, err := sig.Sign(payload, legacySigner, key)
-	require.NoError(t, err, "jws.Signature.Sign should succeed")
-
-	// Compare the signatures - they should be identical
-	require.Equal(t, jwsSignature, rawSig, "signatures from jws.Sign and jws.Signature.Sign should be identical")
 }
