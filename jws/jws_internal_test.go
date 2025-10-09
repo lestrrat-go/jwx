@@ -19,7 +19,7 @@ func TestLegacySignatureSign(t *testing.T) {
 	// This test just ensures that the legacy API still works for those who, for some
 	// reason, decided to use this API.
 	t.Run("Test GH#1459", func(t *testing.T) {
-		// For this test, we need to do somethihng naughty, which is to wipe out the
+		// For this test, we need to do something naughty, which is to wipe out the
 		// legacy signature algorithm registry to make sure NewSigner works out
 		// of the box. This is why the test is in `jws` package, not `jws_test`.
 		wipeoutLegacySignatureRegistry()
