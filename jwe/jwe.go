@@ -154,7 +154,9 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 // Encrypt generates a JWE message for the given payload and returns
 // it in serialized form, which can be in either compact or
-// JSON format. Default is compact.
+// JSON format. Default is compact. When JSON format is specified and
+// and there is only one recipient, the resulting serialization is
+// automatically converted to flattened JSON serialization format.
 //
 // You must pass at least one key to `jwe.Encrypt()` by using `jwe.WithKey()`
 // option.
@@ -172,6 +174,20 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 //
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
+//
+// As of v3.0.12, users can specify `jwe.WithLegacyHeaderMerging()` to
+// disable header merging behavior that was the default prior to v3.0.12.
+// Before v3.0.12, per-recipient headers were merged into the protected header
+// when there was only one recipient. This would not be a problem when
+// per-recipient headers are not used, but could result in results that
+// vaiolate RFC 7516. When this option is explicitly set to `false`,
+// the per-recipient headers and protected headers are left as-is.
+// Users are responsible for ensuring that the protected headers contain
+// the correct values, except for those that are automatically set by this library
+// (e.g. `alg` and `enc`).
+//
+// This behavior will become the default in a future major release. New users
+// are encouraged to explicitly set this option to `false`.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
@@ -534,11 +550,12 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 // encryptContext holds the state during JWE encryption, similar to JWS signContext
 type encryptContext struct {
-	calg        jwa.ContentEncryptionAlgorithm
-	compression jwa.CompressionAlgorithm
-	format      int
-	builders    []*recipientBuilder
-	protected   Headers
+	calg                jwa.ContentEncryptionAlgorithm
+	compression         jwa.CompressionAlgorithm
+	format              int
+	builders            []*recipientBuilder
+	protected           Headers
+	legacyHeaderMerging *bool
 }
 
 var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
@@ -616,6 +633,12 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 				return err
 			}
 			ec.format = fmtOpt
+		case identLegacyHeaderMerging{}:
+			var v bool
+			if err := option.Value(&v); err != nil {
+				return err
+			}
+			ec.legacyHeaderMerging = &v
 		}
 	}
 
@@ -767,14 +790,20 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
-	// If there's only one recipient, you want to include that in the
-	// protected header
-	if len(recipients) == 1 {
-		h, err := protected.Merge(recipients[0].Headers())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
+	// For backwards compatibility, we do the legacy header merging
+	// by default, or when the user explicitly asks for it. If the
+	// user explicitly asks to NOT do legacy header merging, we just
+	// skip this process
+	if lhm := ec.legacyHeaderMerging; lhm == nil || *lhm {
+		// If there's only one recipient, you want to include that in the
+		// protected header
+		if len(recipients) == 1 {
+			h, err := protected.Merge(recipients[0].Headers())
+			if err != nil {
+				return nil, fmt.Errorf(`failed to merge protected headers: %w`, err)
+			}
+			protected = h
 		}
-		protected = h
 	}
 
 	aad, err := protected.Encode()

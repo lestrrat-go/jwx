@@ -170,3 +170,22 @@ options:
       In v2, this option was called MaxBufferSize.
 
       This option has a global effect.
+  - ident: LegacyHeaderMerging
+    interface: EncryptOption
+    argument_type: bool
+    option_name: WithLegacyHeaderMerging
+    comment: |
+      WithLegacyHeaderMerging specifies whether to perform legacy header merging
+      when encrypting a JWE message. This is enabled by default for backwards compatibility.
+      
+      Legacy header merging means that when there's only one recipient,
+      the recipient's headers are merged into the protected headers.
+      However, this behavior is problematic, as it modifies the ending result
+      depending on the serialization format. 
+
+      When this option is set to false, the recipient headers are NOT merged
+      into the protected headers, regardless of the number of recipients. The
+      protected headers will be used as-is for computing AAD.
+
+      In future versions, this option will default to false. New users are
+      encouraged to set this option to `false` now to avoid future issues.

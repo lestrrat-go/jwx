@@ -1023,3 +1023,71 @@ func TestGH1434(t *testing.T) {
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 	require.Equal(t, []byte(payload), decrypted, `decrypted payload should match original payload`)
 }
+
+type GH1470JWEFlattened struct {
+	Protected   string         `json:"protected,omitempty"`
+	Unprotected map[string]any `json:"unprotected,omitempty"`
+	Header      map[string]any `json:"header,omitempty"`
+}
+
+func TestGH1470(t *testing.T) {
+	privkey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+
+	pubkey, err := jwk.PublicKeyOf(privkey)
+	require.NoError(t, err)
+
+	// Per-recipient unprotected header includes kid
+	recipientHeaders := jwe.NewHeaders()
+	require.NoError(t, recipientHeaders.Set("kid", "recipient1"))
+
+	recipient := jwe.WithKey(
+		jwa.RSA_OAEP_256(),
+		pubkey,
+		jwe.WithPerRecipientHeaders(recipientHeaders),
+	)
+
+	TRUE := true
+	FALSE := false
+	for _, lhm := range []*bool{nil, &TRUE, &FALSE} {
+		var title string
+		if lhm == nil {
+			title = "legacy header merging left as default (nil)"
+		} else if *lhm {
+			title = "legacy header merging explicitly set to true"
+		} else {
+			title = "legacy header merging explicitly set to false"
+		}
+		t.Run(title, func(t *testing.T) {
+			options := []jwe.EncryptOption{jwe.WithJSON(), recipient}
+			if lhm != nil {
+				options = append(options, jwe.WithLegacyHeaderMerging(*lhm))
+			}
+
+			// Produce JSON Serialization (flattened for single recipient)
+			encrypted, err := jwe.Encrypt([]byte("Hello!"), options...)
+			require.NoError(t, err)
+
+			var object GH1470JWEFlattened
+			require.NoError(t, json.Unmarshal(encrypted, &object), `json.Unmarshal should succeed`)
+
+			protectedJSON, err := base64.RawURLEncoding.DecodeString(object.Protected)
+			require.NoError(t, err)
+
+			var protected map[string]any
+			require.NoError(t, json.Unmarshal(protectedJSON, &protected))
+
+			for _, key := range []string{"alg", "kid"} {
+				// Fail if the same names appear in both places (violates RFC 7516 §7.2.1)
+				if _, has := protected[key]; has {
+					_, also := object.Header[key]
+					if lhm == nil || *lhm {
+						require.True(t, also, `lhm = true, %q should exist`, key)
+					} else {
+						require.False(t, also, `lhm = false, %q should NOT exist`, key)
+					}
+				}
+			}
+		})
+	}
+}

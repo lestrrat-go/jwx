@@ -147,6 +147,7 @@ type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
+type identLegacyHeaderMerging struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
@@ -191,6 +192,10 @@ func (identKeyProvider) String() string {
 
 func (identKeyUsed) String() string {
 	return "WithKeyUsed"
+}
+
+func (identLegacyHeaderMerging) String() string {
+	return "WithLegacyHeaderMerging"
 }
 
 func (identMaxDecompressBufferSize) String() string {
@@ -290,6 +295,23 @@ func WithKeyProvider(v KeyProvider) DecryptOption {
 // jwx API allows users to specify a raw key such as *rsa.PublicKey)
 func WithKeyUsed(v any) DecryptOption {
 	return &decryptOption{option.New(identKeyUsed{}, v)}
+}
+
+// WithLegacyHeaderMerging specifies whether to perform legacy header merging
+// when encrypting a JWE message. This is enabled by default for backwards compatibility.
+//
+// Legacy header merging means that when there's only one recipient,
+// the recipient's headers are merged into the protected headers.
+// However, this behavior is problematic, as it modifies the ending result
+// depending on the serialization format.
+//
+// When this option is set to false, the recipient headers are NOT merged
+// into the protected headers, regardless of the number of recipients. The
+// protected headers will be used as-is for computing AAD.
+//
+// In future versions, this option will default to false.
+func WithLegacyHeaderMerging(v bool) EncryptOption {
+	return &encryptOption{option.New(identLegacyHeaderMerging{}, v)}
 }
 
 // WithMaxDecompressBufferSize specifies the maximum buffer size for used when
