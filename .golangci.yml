@@ -16,6 +16,7 @@ linters:
     - gocognit
     - gocritic
     - gocyclo
+    - godoclint # disable for v2.
     - godot
     - godox
     - gosec
