@@ -15,7 +15,6 @@ linters:
     - gocognit
     - gocritic
     - gocyclo
-    - godoclint
     - godot
     - godox
     - gosec
