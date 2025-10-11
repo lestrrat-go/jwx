@@ -164,7 +164,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // Encrypt generates a JWE message for the given payload and returns
 // it in serialized form, which can be in either compact or
 // JSON format. Default is compact. When JSON format is specified and
-// and there is only one recipient, the resulting serialization is
+// there is only one recipient, the resulting serialization is
 // automatically converted to flattened JSON serialization format.
 //
 // You must pass at least one key to `jwe.Encrypt()` by using `jwe.WithKey()`
