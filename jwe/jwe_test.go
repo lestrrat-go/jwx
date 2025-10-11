@@ -1037,57 +1037,106 @@ func TestGH1470(t *testing.T) {
 	pubkey, err := jwk.PublicKeyOf(privkey)
 	require.NoError(t, err)
 
-	// Per-recipient unprotected header includes kid
-	recipientHeaders := jwe.NewHeaders()
-	require.NoError(t, recipientHeaders.Set("kid", "recipient1"))
-
-	recipient := jwe.WithKey(
-		jwa.RSA_OAEP_256(),
-		pubkey,
-		jwe.WithPerRecipientHeaders(recipientHeaders),
-	)
+	const payload = "Lorem ipsum"
 
 	TRUE := true
 	FALSE := false
-	for _, lhm := range []*bool{nil, &TRUE, &FALSE} {
-		var title string
-		if lhm == nil {
-			title = "legacy header merging left as default (nil)"
-		} else if *lhm {
-			title = "legacy header merging explicitly set to true"
-		} else {
-			title = "legacy header merging explicitly set to false"
-		}
-		t.Run(title, func(t *testing.T) {
-			options := []jwe.EncryptOption{jwe.WithJSON(), recipient}
-			if lhm != nil {
-				options = append(options, jwe.WithLegacyHeaderMerging(*lhm))
+
+	t.Run("Flattened JSON serialization", func(t *testing.T) {
+		// Per-recipient unprotected header includes kid
+		recipientHeaders := jwe.NewHeaders()
+		require.NoError(t, recipientHeaders.Set("kid", "recipient1"))
+
+		recipient := jwe.WithKey(
+			jwa.RSA_OAEP_256(),
+			pubkey,
+			jwe.WithPerRecipientHeaders(recipientHeaders),
+		)
+
+		for _, lhm := range []*bool{nil, &TRUE, &FALSE} {
+			var title string
+			if lhm == nil {
+				title = "legacy header merging left as default (nil)"
+			} else if *lhm {
+				title = "legacy header merging explicitly set to true"
+			} else {
+				title = "legacy header merging explicitly set to false"
 			}
+			t.Run(title, func(t *testing.T) {
+				options := []jwe.EncryptOption{jwe.WithJSON(), recipient}
+				if lhm != nil {
+					options = append(options, jwe.WithLegacyHeaderMerging(*lhm))
+				}
 
-			// Produce JSON Serialization (flattened for single recipient)
-			encrypted, err := jwe.Encrypt([]byte("Hello!"), options...)
-			require.NoError(t, err)
+				// Produce JSON Serialization (flattened for single recipient)
+				encrypted, err := jwe.Encrypt([]byte(payload), options...)
+				require.NoError(t, err)
 
-			var object GH1470JWEFlattened
-			require.NoError(t, json.Unmarshal(encrypted, &object), `json.Unmarshal should succeed`)
+				var object GH1470JWEFlattened
+				require.NoError(t, json.Unmarshal(encrypted, &object), `json.Unmarshal should succeed`)
 
-			protectedJSON, err := base64.RawURLEncoding.DecodeString(object.Protected)
-			require.NoError(t, err)
+				protectedJSON, err := base64.RawURLEncoding.DecodeString(object.Protected)
+				require.NoError(t, err)
 
-			var protected map[string]any
-			require.NoError(t, json.Unmarshal(protectedJSON, &protected))
+				var protected map[string]any
+				require.NoError(t, json.Unmarshal(protectedJSON, &protected))
 
-			for _, key := range []string{"alg", "kid"} {
-				// Fail if the same names appear in both places (violates RFC 7516 §7.2.1)
-				if _, has := protected[key]; has {
-					_, also := object.Header[key]
-					if lhm == nil || *lhm {
-						require.True(t, also, `lhm = true, %q should exist`, key)
-					} else {
-						require.False(t, also, `lhm = false, %q should NOT exist`, key)
+				for _, key := range []string{"alg", "kid"} {
+					// Fail if the same names appear in both places (violates RFC 7516 §7.2.1)
+					if _, has := protected[key]; has {
+						_, also := object.Header[key]
+						if lhm == nil || *lhm {
+							require.True(t, also, `lhm = true, %q should exist`, key)
+						} else {
+							require.False(t, also, `lhm = false, %q should NOT exist`, key)
+						}
 					}
 				}
+			})
+		}
+	})
+
+	// one more test: we need to make sure what happens when we're using compact serialization
+	t.Run("Compact serialization", func(t *testing.T) {
+		for _, lhm := range []*bool{nil, &TRUE, &FALSE} {
+			var title string
+			if lhm == nil {
+				title = "legacy header merging left as default (nil)"
+			} else if *lhm {
+				title = "legacy header merging explicitly set to true"
+			} else {
+				title = "legacy header merging explicitly set to false"
 			}
-		})
-	}
+
+			for _, prh := range []bool{true, false} {
+				if prh {
+					title += " + per-recipient header is set"
+				} else {
+					title += " + per-recipient header is NOT set"
+				}
+
+				t.Run(title, func(t *testing.T) {
+					var options []jwe.EncryptOption
+					if prh {
+						hdr := jwe.NewHeaders()
+						_ = hdr.Set(jwe.KeyIDKey, "recipient1")
+						options = append(options, jwe.WithKey(
+							jwa.RSA_OAEP_256(),
+							pubkey,
+							jwe.WithPerRecipientHeaders(hdr),
+						))
+					} else {
+						options = append(options, jwe.WithKey(jwa.RSA_OAEP_256(), pubkey))
+					}
+
+					if lhm != nil {
+						options = append(options, jwe.WithLegacyHeaderMerging(*lhm))
+					}
+
+					_, err := jwe.Encrypt([]byte(payload), options...)
+					require.NoError(t, err, `jwe.Encrypt should succeed regardless`)
+				})
+			}
+		}
+	})
 }
