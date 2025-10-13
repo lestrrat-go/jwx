@@ -106,16 +106,13 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	if hdr == nil {
 		hdr = NewHeaders()
 	}
-	if apu == nil {
-		if val, ok := hdr.AgreementPartyUInfo(); ok {
-			apu = val
-		}
+
+	if val, ok := hdr.AgreementPartyUInfo(); ok {
+		apu = val
 	}
 
-	if apv == nil {
-		if val, ok := hdr.AgreementPartyVInfo(); ok {
-			apv = val
-		}
+	if val, ok := hdr.AgreementPartyVInfo(); ok {
+		apv = val
 	}
 
 	// Create the encrypter using the new jwebb pattern
