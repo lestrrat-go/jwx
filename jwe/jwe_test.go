@@ -1139,4 +1139,29 @@ func TestGH1470(t *testing.T) {
 			}
 		}
 	})
+
+	// Check for empty "`headers"`, for both parsing and serializing to
+	// flattened JSON serialization
+	t.Run("Make sure flattened JSON serialization with non-legacy header merging does not contain `headers`", func(t *testing.T) {
+		const payload = "Lorem ipsum"
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithJSON(), jwe.WithLegacyHeaderMerging(false), jwe.WithKey(jwa.RSA_OAEP_256(), privkey.PublicKey))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		require.NotContains(t, string(encrypted), `"header":`, `flattened JSON serialization should NOT contain "header"`)
+	})
+	t.Run("Parse Without Header for Flatted Token", func(t *testing.T) {
+		token := `{
+    "ciphertext": "NR5BBCPc",
+    "encrypted_key": "PENNLqJYzXYbKgiZCTe61Qhasls8wrqGQ7ytsvvm5_E6Yya79QyrtDaX_lYm2FitLPMkw4K-63NJf1Ltp9Ur-zZUJB2rQmGkhB4toBO-SkLSkSPhUr6lILKIFWrnbBjjy63g_Awfqb7tsWT1kD0rqO_xPhhN9s0xoHMpgFYY80QQxUBVYiADiu01H_o9tsh66Npch3HAI6t6bxUfVwyMjpWK7N6k74vc95l3-ZcAGxl6aeWAtUTD37bE5bVbvILfcb6HdK0Z81fmPcRe2o9W4wZ_SP2fEV67I-jrsx73rgL1a1c_9TB4vZX3XxppvBhwKHUBAksaq3aWQXr8gkWt-g",
+    "iv": "TPrbYWe0oUeC9Eop",
+    "protected": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoicmVjaXBpZW50MSJ9",
+    "tag": "tOk33fmFy80qZVNyb22s0g"
+}`
+
+		_, err := jwe.Parse([]byte(token))
+		require.NoError(t, err)
+	})
 }
