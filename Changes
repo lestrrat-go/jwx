@@ -5,6 +5,9 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.12 UNRELEASED
+  * [jwe] As part of the next change, now per-recipient headers that are empty
+    are no longer serialized in flattened JSON serialization.
+
   * [jwe] Introduce `jwe.WithLegacyHeaderMerging(bool)` option to control header
     merging behavior in during JWE encryption. This only applies to flattened
     JSON serialization.
