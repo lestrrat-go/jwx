@@ -29,7 +29,12 @@ func Example_jwe_encrypt_json() {
 	}
 
 	const payload = `Lorem ipsum`
-	encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithJSON(), jwe.WithKey(jwa.RSA_OAEP(), pubkey))
+	encrypted, err := jwe.Encrypt(
+		[]byte(payload),
+		jwe.WithJSON(),                      // Toggle JSON serialization. Because there's only one key (recipient), this will produce Flattened JSON serialization
+		jwe.WithLegacyHeaderMerging(false),  // Disable legacy header merging
+		jwe.WithKey(jwa.RSA_OAEP(), pubkey), // Public key for encryption
+	)
 	if err != nil {
 		fmt.Printf("failed to encrypt payload: %s\n", err)
 		return
