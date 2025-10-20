@@ -4,7 +4,7 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.12 UNRELEASED
+v3.0.12 20 Oct 2025
   * [jwe] As part of the next change, now per-recipient headers that are empty
     are no longer serialized in flattened JSON serialization.
 
