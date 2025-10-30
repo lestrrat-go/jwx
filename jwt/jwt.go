@@ -234,7 +234,6 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			}
 			verifyOpts = append(verifyOpts, o)
 		case identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}, identContext{}:
-			fmt.Printf("%#v\n", o)
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
 			var token Token

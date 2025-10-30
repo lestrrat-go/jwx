@@ -1623,7 +1623,7 @@ func TestGH1482(t *testing.T) {
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
 	var markerValue any
-	kp := jws.KeyProviderFunc(func(ctx context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+	kp := jws.KeyProviderFunc(func(ctx context.Context, sink jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
 		markerValue = ctx.Value("marker")
 		key, err := jwk.Import([]byte("secret"))
 		if err != nil {
@@ -1633,6 +1633,7 @@ func TestGH1482(t *testing.T) {
 		return nil
 	})
 
+	//nolint:revive
 	ctx := context.WithValue(context.Background(), "marker", "value")
 
 	_, err = jwt.Parse(signed, jwt.WithKeyProvider(kp), jwt.WithContext(ctx))
