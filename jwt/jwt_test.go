@@ -1616,3 +1616,26 @@ func TestGH1175(t *testing.T) {
 	require.Error(t, err, `jwt.ParseRequest should fail`)
 	require.ErrorIs(t, err, jwt.TokenExpiredError(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
 }
+
+func TestGH1482(t *testing.T) {
+	tok, _ := jwt.NewBuilder().Issuer("github.com/lestrrat-go/jwx").Build()
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), []byte("secret")))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	var markerValue any
+	kp := jws.KeyProviderFunc(func(ctx context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+		markerValue = ctx.Value("marker")
+		key, err := jwk.Import([]byte("secret"))
+		if err != nil {
+			return err
+		}
+		sink.Key(jwa.HS256(), key)
+		return nil
+	})
+
+	ctx := context.WithValue(context.Background(), "marker", "value")
+
+	_, err = jwt.Parse(signed, jwt.WithKeyProvider(kp), jwt.WithContext(ctx))
+	require.NoError(t, err, `jwt.Parse should succeed`)
+	require.NotEmpty(t, markerValue, "context value 'marker' should be present")
+}
