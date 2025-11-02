@@ -46,11 +46,16 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 }
 
 func ReadNextStringToken(dec *Decoder) (string, error) {
-	var val string
-	if err := dec.Decode(&val); err != nil {
-		return "", fmt.Errorf(`error reading next value: %w`, err)
+	token, err := dec.Token()
+	if err != nil {
+		return "", fmt.Errorf(`error reading next token: %w`, err)
 	}
-	return val, nil
+	switch v := token.(type) {
+	case string:
+		return v, nil
+	default:
+		return "", fmt.Errorf("invalid type: %T", token)
+	}
 }
 
 func AssignNextStringToken(dst **string, dec *Decoder) error {
