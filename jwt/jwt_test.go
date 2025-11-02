@@ -1640,3 +1640,76 @@ func TestGH1482(t *testing.T) {
 	require.NoError(t, err, `jwt.Parse should succeed`)
 	require.NotEmpty(t, markerValue, "context value 'marker' should be present")
 }
+
+func TestNullValues(t *testing.T) {
+	key, err := jwk.Import([]byte("abracadabra"))
+	require.NoError(t, err, "jwk key import should succeed")
+
+	testCases := []struct {
+		name   string
+		input  string
+		errStr string
+	}{
+		{
+			name:   `"iss"=null`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOm51bGx9.InW7D_-WdbeC_Ll648UvNT0JdK-vsJfNokfSsGmwgNo",
+			errStr: "invalid type: <nil>",
+		},
+		{
+			name:   `"iss"=null`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJudWxsIn0.RLP_AYuLW7T9NEz57VNO21Wf4R9abkM0zJwy1khek_I",
+			errStr: "",
+		},
+		{
+			name:   `"sub"="null"`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJudWxsIn0.0lf7ziytx1GVX6tK23EIn9aKpPZwR0cZv_M3WyOkQbs",
+			errStr: "",
+		},
+		{
+			name:   `"sub"=null`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOm51bGx9.Wab9LGF3D0_ogJ39wRk-Ga6SeFZCKAe3cU4s6xDL21o",
+			errStr: "invalid type: <nil>",
+		},
+		{
+			name:   `"aud"="null"`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJudWxsIn0.WvUIhQezORWlgJo6RYvXGUzUn8PcwiWVF0SalXEuCgM",
+			errStr: "",
+		},
+		{
+			name:   `"aud"=null`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOm51bGx9.ehhQNg6N1MGJ3ceEvMPMfHl2nZOQR_aCvAVMXXx8BOM",
+			errStr: "invalid type: <nil>",
+		},
+		{
+			name:   `"aud"=["null"]`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsibnVsbCJdfQ.yb_kfthZjrbckEmdl64mNrPuXPzABuHTFkJpbRIRXAU",
+			errStr: "",
+		},
+		{
+			name:   `"aud"=[null]`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltudWxsXX0.DcYKbix7tgsYJJNWgOIsOUavUdi3p1FJBg4zACi2788",
+			errStr: "invalid list element type <nil>",
+		},
+		{
+			name:   `"jti"="null"`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJudWxsIn0.NAj6ZCBR14yNFlNnRCOllsgHVDLBHAet6YritvMtFWc",
+			errStr: "",
+		},
+		{
+			name:   `"jti"=null`,
+			input:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOm51bGx9.hRxAmvM2XQtkpoO0Ag92XsNIqsMDU3MFQL8nsAGC4Ow",
+			errStr: "invalid type: <nil>",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := jwt.ParseString(testCase.input, jwt.WithKey(jwa.HS256(), key))
+			if testCase.errStr == "" {
+				require.NoError(t, err, "parse should succeed")
+			} else {
+				require.Error(t, err, "parse should fail")
+				require.ErrorContains(t, err, testCase.errStr, "parse should fail")
+			}
+		})
+	}
+}
