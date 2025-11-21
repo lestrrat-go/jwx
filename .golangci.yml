@@ -28,6 +28,7 @@ linters:
     - maintidx
     - makezero
     - mnd
+    - modernize
     - nakedret
     - nestif
     - nlreturn
