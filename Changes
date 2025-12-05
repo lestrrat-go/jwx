@@ -7,6 +7,8 @@ v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jw
 v3.0.13 UNRELEASED
   * [jwt] The `jwt.WithContext()` option is now properly being passed to `jws.Verify()` from
     `jwt.Parse()`.
+  * [jwx] github.com/lestrrat-go/httprc/v3 has been upgraded to remove dependency on 
+    github.com/lestrrat-go/option (v1)
 
 v3.0.12 20 Oct 2025
   * [jwe] As part of the next change, now per-recipient headers that are empty
