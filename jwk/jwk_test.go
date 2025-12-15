@@ -430,7 +430,7 @@ func TestParse(t *testing.T) {
 			"kty":"RSA",
       "n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.RSAPublicKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.RSAPublicKey]())
 	})
 	t.Run("RSA Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -447,7 +447,7 @@ func TestParse(t *testing.T) {
       "alg":"RS256",
       "kid":"2011-04-29"
      }`
-		verify(t, src, reflect.TypeOf((*jwk.RSAPrivateKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.RSAPrivateKey]())
 	})
 	t.Run("ECDSA Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -458,7 +458,7 @@ func TestParse(t *testing.T) {
 		  "y"   : "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
 		  "d"   : "0g5vAEKzugrXaRbgKG0Tj2qJ5lMP4Bezds1_sTybkfk"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.ECDSAPrivateKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.ECDSAPrivateKey]())
 	})
 	t.Run("Invalid ECDSA Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -479,7 +479,7 @@ func TestParse(t *testing.T) {
 		  "crv" : "Ed25519",
 		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.OKPPublicKey]())
 	})
 	t.Run("Ed25519 Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -490,7 +490,7 @@ func TestParse(t *testing.T) {
 		  "d"   : "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
 		  "x"   : "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.OKPPrivateKey]())
 	})
 	t.Run("X25519 Public Key", func(t *testing.T) {
 		t.Parallel()
@@ -500,7 +500,7 @@ func TestParse(t *testing.T) {
 		  "crv" : "X25519",
 		  "x"   : "3p7bfXt9wbTTW2HC7OQ1Nz-DQ8hbeGdNrfx-FG-IK08"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.OKPPublicKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.OKPPublicKey]())
 	})
 	t.Run("X25519 Private Key", func(t *testing.T) {
 		t.Parallel()
@@ -511,7 +511,7 @@ func TestParse(t *testing.T) {
 		  "d"   : "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo",
 		  "x"   : "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo"
 		}`
-		verify(t, src, reflect.TypeOf((*jwk.OKPPrivateKey)(nil)).Elem())
+		verify(t, src, reflect.TypeFor[jwk.OKPPrivateKey]())
 	})
 }
 
@@ -769,39 +769,39 @@ func TestPublicKeyOf(t *testing.T) {
 	}{
 		{
 			Key:           rsakey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[rsa.PublicKey]()),
 		},
 		{
 			Key:           *rsakey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[rsa.PublicKey]()),
 		},
 		{
 			Key:           rsakey.PublicKey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[rsa.PublicKey]()),
 		},
 		{
 			Key:           &rsakey.PublicKey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(rsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[rsa.PublicKey]()),
 		},
 		{
 			Key:           ecdsakey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[ecdsa.PublicKey]()),
 		},
 		{
 			Key:           *ecdsakey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[ecdsa.PublicKey]()),
 		},
 		{
 			Key:           ecdsakey.PublicKey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[ecdsa.PublicKey]()),
 		},
 		{
 			Key:           &ecdsakey.PublicKey,
-			PublicKeyType: reflect.PointerTo(reflect.TypeOf(ecdsakey.PublicKey)),
+			PublicKeyType: reflect.PointerTo(reflect.TypeFor[ecdsa.PublicKey]()),
 		},
 		{
 			Key:           octets,
-			PublicKeyType: reflect.TypeOf(octets),
+			PublicKeyType: reflect.TypeFor[[]byte](),
 		},
 		{
 			Key:           ed25519key,
@@ -813,11 +813,11 @@ func TestPublicKeyOf(t *testing.T) {
 		},
 		{
 			Key:           x25519key,
-			PublicKeyType: reflect.TypeOf(&ecdh.PublicKey{}),
+			PublicKeyType: reflect.TypeFor[*ecdh.PublicKey](),
 		},
 		{
 			Key:           x25519key.Public(),
-			PublicKeyType: reflect.TypeOf(&ecdh.PublicKey{}),
+			PublicKeyType: reflect.TypeFor[*ecdh.PublicKey](),
 		},
 	}
 
@@ -920,8 +920,7 @@ func TestReadFile(t *testing.T) {
 		t.SkipNow()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	fn, clean, err := jose.GenerateJwk(ctx, t, `{"alg": "RS256"}`)
 	require.NoError(t, err, `jose.GenerateJwk`)
@@ -1675,8 +1674,7 @@ func TestFetch(t *testing.T) {
 	defer srv.Close()
 
 	t.Run("HTTPClient", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		client := &http.Client{
 			Transport: &DummyRoundTripper{},
 		}
@@ -1726,8 +1724,7 @@ func TestFetch(t *testing.T) {
 
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
+				ctx := t.Context()
 
 				wl := tc.Whitelist()
 
@@ -1798,8 +1795,7 @@ func TestGH567(t *testing.T) {
 
 	for _, ignoreParseError := range []bool{true, false} {
 		t.Run(fmt.Sprintf(`Parse with ignoreParseError=%t`, ignoreParseError), func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 
 			c, err := jwk.NewCache(ctx, httprc.NewClient())
 			require.NoError(t, err, `jwk.NewCache should succeed`)

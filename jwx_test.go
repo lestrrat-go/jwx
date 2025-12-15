@@ -130,8 +130,7 @@ func TestJoseCompatibility(t *testing.T) {
 
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
+				ctx := t.Context()
 
 				keyfile, cleanup, err := jose.GenerateJwk(ctx, t, tc.Template)
 				require.NoError(t, err, `jose.GenerateJwk should succeed`)
@@ -153,8 +152,7 @@ func TestJoseCompatibility(t *testing.T) {
 		// In order to avoid doing this in an ad-hoc way, we're just going to
 		// ask our jose package for the algorithms that it supports, and generate
 		// the list dynamically
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 		set, err := jose.Algorithms(ctx, t)
 		require.NoError(t, err)
 
@@ -202,8 +200,7 @@ func TestJoseCompatibility(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(fmt.Sprintf("%s-%s", test.alg, test.enc), func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
+				ctx := t.Context()
 				joseInteropTest(ctx, test, t)
 			})
 		}
@@ -228,8 +225,7 @@ func TestJoseCompatibility(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.String(), func(t *testing.T) {
 				t.Parallel()
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
+				ctx := t.Context()
 				joseJwsInteropTest(ctx, test, t)
 			})
 		}
@@ -574,8 +570,7 @@ func TestGH1434(t *testing.T) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// Check if jose supports ECDH-ES algorithm
 	set, err := jose.Algorithms(ctx, t)

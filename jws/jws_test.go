@@ -3,7 +3,6 @@ package jws_test
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -14,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -272,9 +272,7 @@ func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, sig
 
 	verifyKeys := make(map[string]any)
 
-	for k, v := range keys {
-		verifyKeys[k] = v
-	}
+	maps.Copy(verifyKeys, keys)
 
 	if es, ok := signKey.(*ecdsa.PrivateKey); ok {
 		k := &dummyECDSACryptoSigner{raw: es}
@@ -1019,8 +1017,7 @@ func TestGH485(t *testing.T) {
 }
 
 func TestJKU(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
@@ -1636,7 +1633,7 @@ func TestEmptyProtectedField(t *testing.T) {
 	// This fails as well. we have a valid signature and a valid
 	// key to verify it, but no protected headers
 	_, err = jws.Verify(
-		[]byte(fmt.Sprintf(`{"signature": "%s"}`, signature)),
+		fmt.Appendf(nil, `{"signature": "%s"}`, signature),
 		jws.WithKey(jwa.RS256(), privKey),
 	)
 	require.Error(t, err, `jws.Verify should fail`)
@@ -1707,7 +1704,7 @@ func TestParseFormat(t *testing.T) {
 }
 
 func BenchmarkSplitCompat(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		_, _, _, err := jws.SplitCompact([]byte(exampleCompactSerialization))
 		if err != nil {
 			panic(err)
@@ -1716,7 +1713,7 @@ func BenchmarkSplitCompat(b *testing.B) {
 }
 
 func BenchmarkSplitCompatString(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		_, _, _, err := jws.SplitCompactString(exampleCompactSerialization)
 		if err != nil {
 			panic(err)
