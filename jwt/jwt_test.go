@@ -1219,8 +1219,8 @@ func TestBenHigginsByPassRegression(t *testing.T) {
   }`
 
 	testcases := [][]byte{
-		[]byte(fmt.Sprintf(tmpl, `"aud": ["test"],`, exp)),
-		[]byte(fmt.Sprintf(tmpl, ``, exp)),
+		fmt.Appendf(nil, tmpl, `"aud": ["test"],`, exp),
+		fmt.Appendf(nil, tmpl, ``, exp),
 	}
 
 	for _, tc := range testcases {
@@ -1238,8 +1238,7 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 }
 
 func TestVerifyAuto(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
@@ -1439,7 +1438,7 @@ func TestFractional(t *testing.T) {
 			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
 				jwt.Settings(jwt.WithNumericDateParsePrecision(tc.Precision))
 				tok, err := jwt.Parse(
-					[]byte(fmt.Sprintf(template, tc.Input)),
+					fmt.Appendf(nil, template, tc.Input),
 					jwt.WithVerify(false),
 					jwt.WithValidate(false),
 				)
