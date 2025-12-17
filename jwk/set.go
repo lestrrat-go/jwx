@@ -3,6 +3,7 @@ package jwk
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"reflect"
 	"sort"
 
@@ -312,9 +313,7 @@ func (s *set) Clone() (Set, error) {
 	s2.keys = make([]Key, len(s.keys))
 	copy(s2.keys, s.keys)
 
-	for k, v := range s.privateParams {
-		s2.privateParams[k] = v
-	}
+	maps.Copy(s2.privateParams, s.privateParams)
 
 	return s2, nil
 }
