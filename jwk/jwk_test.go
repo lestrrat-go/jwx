@@ -2256,3 +2256,28 @@ func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
 		jwk.UnregisterX509Decoder("non-existent-decoder")
 	})
 }
+
+func TestGH1529(t *testing.T) {
+	t.Run("Clone set with custom fields and modify", func(t *testing.T) {
+		set1 := jwk.NewSet()
+		require.NoError(t, set1.Set("foo", "bar"), `set1.Set should succeed`)
+
+		set2, err := set1.Clone()
+		require.NoError(t, err, `set1.Clone should succeed`)
+
+		// Verify the custom field was copied during clone
+		var v2Initial any
+		require.NoError(t, set2.Get("foo", &v2Initial), `set2.Get should succeed after clone`)
+		require.Equal(t, "bar", v2Initial, `set2 should have copied "foo" from set1`)
+
+		// This should not error - cloned set should allow modifying the same field
+		require.NoError(t, set2.Set("foo", "baz"), `set2.Set should succeed`)
+
+		// Verify the sets are independent (modifying set2 doesn't affect set1)
+		var v1, v2 any
+		require.NoError(t, set1.Get("foo", &v1), `set1.Get should succeed`)
+		require.NoError(t, set2.Get("foo", &v2), `set2.Get should succeed`)
+		require.Equal(t, "bar", v1, `set1.Get("foo") should still return "bar"`)
+		require.Equal(t, "baz", v2, `set2.Get("foo") should return "baz"`)
+	})
+}
