@@ -2281,3 +2281,20 @@ func TestGH1529(t *testing.T) {
 		require.Equal(t, "baz", v2, `set2.Get("foo") should return "baz"`)
 	})
 }
+
+func TestGH1487(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode([]byte("NOT JSON"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c, err := jwk.NewCache(t.Context(), httprc.NewClient())
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	t.Cleanup(cancel)
+
+	err = c.Register(ctx, srv.URL, jwk.WithHTTPClient(srv.Client()))
+	require.ErrorIs(t, err, httprc.ErrNotReady())
+}
