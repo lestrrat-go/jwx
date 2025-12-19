@@ -24,7 +24,7 @@ type TraceSink = httprc.TraceSink
 //	c := jwk.NewCache(ctx, httprc.NewClient())
 //	c.Register(ctx, url, options...)
 //
-// Once registered, you can call `Get()` to retrieve the Set object.
+// Once registered, you can call `Lookup()` to retrieve the Set object.
 //
 // All JWKS objects that are retrieved via this mechanism should be
 // treated read-only, as they are shared among all consumers, as well
@@ -199,7 +199,7 @@ func (c *Cache) Ready(ctx context.Context, u string) bool {
 	return true
 }
 
-// Refresh is identical to Get(), except it always fetches the
+// Refresh is identical to Lookup(), except it always fetches the
 // specified resource anew, and updates the cached content
 //
 // Please refer to the documentation for `(httprc.Cache).Refresh` for
