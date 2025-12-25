@@ -7,22 +7,24 @@
 package errors
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/errchain"
 )
 
 var (
 	ErrClaimNotFound               = ClaimNotFoundError{}
-	ErrClaimAssignmentFailed       = ClaimAssignmentFailedError{Err: errors.New(`claim assignment failed`)}
-	ErrUnknownPayloadType          = errors.New(`unknown payload type (payload is not JWT?)`)
-	ErrParse                       = ParseError{error: errors.New(`jwt.Parse: unknown error`)}
-	ErrValidateDefault             = ValidationError{errors.New(`unknown error`)}
-	ErrInvalidIssuerDefault        = InvalidIssuerError{errors.New(`"iss" not satisfied`)}
-	ErrTokenExpiredDefault         = TokenExpiredError{errors.New(`"exp" not satisfied: token is expired`)}
-	ErrInvalidIssuedAtDefault      = InvalidIssuedAtError{errors.New(`"iat" not satisfied`)}
-	ErrTokenNotYetValidDefault     = TokenNotYetValidError{errors.New(`"nbf" not satisfied: token is not yet valid`)}
-	ErrInvalidAudienceDefault      = InvalidAudienceError{errors.New(`"aud" not satisfied`)}
-	ErrMissingRequiredClaimDefault = &MissingRequiredClaimError{error: errors.New(`required claim is missing`)}
+	ErrClaimAssignmentFailed       = ClaimAssignmentFailedError{Err: stderrors.New(`claim assignment failed`)}
+	ErrUnknownPayloadType          = stderrors.New(`unknown payload type (payload is not JWT?)`)
+	ErrParse                       = ParseError{error: stderrors.New(`jwt.Parse: unknown error`)}
+	ErrValidateDefault             = ValidationError{stderrors.New(`unknown error`)}
+	ErrInvalidIssuerDefault        = InvalidIssuerError{stderrors.New(`"iss" not satisfied`)}
+	ErrTokenExpiredDefault         = TokenExpiredError{stderrors.New(`"exp" not satisfied: token is expired`)}
+	ErrInvalidIssuedAtDefault      = InvalidIssuedAtError{stderrors.New(`"iat" not satisfied`)}
+	ErrTokenNotYetValidDefault     = TokenNotYetValidError{stderrors.New(`"nbf" not satisfied: token is not yet valid`)}
+	ErrInvalidAudienceDefault      = InvalidAudienceError{stderrors.New(`"aud" not satisfied`)}
+	ErrMissingRequiredClaimDefault = &MissingRequiredClaimError{error: stderrors.New(`required claim is missing`)}
 )
 
 type ClaimNotFoundError struct {
@@ -72,8 +74,23 @@ func (ParseError) Is(err error) bool {
 	return ok
 }
 
+// ParseErrorf creates a ParseError by wrapping an error with context using errchain.
+// The prefix is the operation name (e.g., "jwt.Parse"), and the format string and args
+// are used to create the error message. Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//   ParseErrorf("jwt.Parse", "failed to parse token: %w", innerErr)
+//   -> Concise: "jwt.Parse: <innerErr message>"
+//   -> Verbose: "jwt.Parse: failed to parse token: <innerErr message>"
 func ParseErrorf(prefix, f string, args ...any) error {
-	return ParseError{fmt.Errorf(prefix+": "+f, args...)}
+	// Use fmt.Errorf to properly handle %w and create the wrapped error
+	innerErr := fmt.Errorf(f, args...)
+
+	// Wrap the prefix with the full formatted error (preserving developer's message)
+	return ParseError{errchain.Wrap(stderrors.New(prefix), innerErr)}
 }
 
 type ValidationError struct {
@@ -89,8 +106,22 @@ func (err ValidationError) Unwrap() error {
 	return err.error
 }
 
+// ValidateErrorf creates a ValidationError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//   ValidateErrorf("validation failed: %w", expCheckErr)
+//   -> Concise: "jwt.Validate: <expCheckErr message>"
+//   -> Verbose: "jwt.Validate: validation failed: <expCheckErr message>"
 func ValidateErrorf(f string, args ...any) error {
-	return ValidationError{fmt.Errorf(`jwt.Validate: `+f, args...)}
+	// Use fmt.Errorf to properly handle %w and create the wrapped error
+	innerErr := fmt.Errorf(f, args...)
+
+	// Wrap with the full formatted error (preserving developer's message)
+	return ValidationError{errchain.Wrap(stderrors.New("jwt.Validate"), innerErr)}
 }
 
 type InvalidIssuerError struct {
@@ -106,8 +137,9 @@ func (err InvalidIssuerError) Unwrap() error {
 	return err.error
 }
 
+// IssuerErrorf creates an InvalidIssuerError with the given format and args.
 func IssuerErrorf(f string, args ...any) error {
-	return InvalidIssuerError{fmt.Errorf(`"iss" not satisfied: `+f, args...)}
+	return InvalidIssuerError{stderrors.New(`"iss" not satisfied: ` + fmt.Sprintf(f, args...))}
 }
 
 type TokenExpiredError struct {
@@ -162,8 +194,9 @@ func (err InvalidAudienceError) Unwrap() error {
 	return err.error
 }
 
+// AudienceErrorf creates an InvalidAudienceError with the given format and args.
 func AudienceErrorf(f string, args ...any) error {
-	return InvalidAudienceError{fmt.Errorf(`"aud" not satisfied: `+f, args...)}
+	return InvalidAudienceError{stderrors.New(`"aud" not satisfied: ` + fmt.Sprintf(f, args...))}
 }
 
 type MissingRequiredClaimError struct {
@@ -180,6 +213,7 @@ func (err *MissingRequiredClaimError) Is(target error) bool {
 	return err1 == ErrMissingRequiredClaimDefault || err1.claim == err.claim
 }
 
+// MissingRequiredClaimErrorf creates a MissingRequiredClaimError for the given claim name.
 func MissingRequiredClaimErrorf(name string) error {
 	return &MissingRequiredClaimError{claim: name, error: fmt.Errorf(`required claim "%s" is missing`, name)}
 }

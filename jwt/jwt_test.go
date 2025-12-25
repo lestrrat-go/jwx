@@ -109,6 +109,7 @@ func TestToken_Parse(t *testing.T) {
 		t.Parallel()
 		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512(), &key.PublicKey))
 		require.Error(t, err, `jwt.Parse should fail`)
+		t.Logf("===> error: %s", err.Error())
 		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
 		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
 		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
