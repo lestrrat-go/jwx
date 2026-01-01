@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "errchain",
+    srcs = ["errchain.go"],
+    importpath = "github.com/lestrrat-go/jwx/v3/internal/errchain",
+    visibility = ["//:__subpackages__"],
+)
+
+go_test(
+    name = "errchain_test",
+    srcs = ["errchain_test.go"],
+    embed = [":errchain"],
+    deps = ["@com_github_stretchr_testify//require"],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":errchain",
+    visibility = ["//:__subpackages__"],
+)
