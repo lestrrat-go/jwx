@@ -2283,7 +2283,7 @@ func TestGH1529(t *testing.T) {
 }
 
 func TestGH1487(t *testing.T) {
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode([]byte("NOT JSON"))
 	}))

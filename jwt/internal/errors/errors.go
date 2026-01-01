@@ -82,9 +82,10 @@ func (ParseError) Is(err error) bool {
 // messages by default, but Verbose mode (%+v) will show the full chain.
 //
 // Example:
-//   ParseErrorf("jwt.Parse", "failed to parse token: %w", innerErr)
-//   -> Concise: "jwt.Parse: <innerErr message>"
-//   -> Verbose: "jwt.Parse: failed to parse token: <innerErr message>"
+//
+//	ParseErrorf("jwt.Parse", "failed to parse token: %w", innerErr)
+//	-> Concise: "jwt.Parse: <innerErr message>"
+//	-> Verbose: "jwt.Parse: failed to parse token: <innerErr message>"
 func ParseErrorf(prefix, f string, args ...any) error {
 	// Use fmt.Errorf to properly handle %w and create the wrapped error
 	innerErr := fmt.Errorf(f, args...)
@@ -113,9 +114,10 @@ func (err ValidationError) Unwrap() error {
 // messages by default, but Verbose mode (%+v) will show the full chain.
 //
 // Example:
-//   ValidateErrorf("validation failed: %w", expCheckErr)
-//   -> Concise: "jwt.Validate: <expCheckErr message>"
-//   -> Verbose: "jwt.Validate: validation failed: <expCheckErr message>"
+//
+//	ValidateErrorf("validation failed: %w", expCheckErr)
+//	-> Concise: "jwt.Validate: <expCheckErr message>"
+//	-> Verbose: "jwt.Validate: validation failed: <expCheckErr message>"
 func ValidateErrorf(f string, args ...any) error {
 	// Use fmt.Errorf to properly handle %w and create the wrapped error
 	innerErr := fmt.Errorf(f, args...)

@@ -51,9 +51,9 @@ type chainedError struct {
 //
 // To use Verbose format, use the package-level WithFormat function (recommended):
 //
-//     err := errchain.Wrap(parent, child)
-//     verboseErr := errchain.WithFormat(err, errchain.Verbose)
-//     fmt.Println(verboseErr) // Shows full chain
+//	err := errchain.Wrap(parent, child)
+//	verboseErr := errchain.WithFormat(err, errchain.Verbose)
+//	fmt.Println(verboseErr) // Shows full chain
 //
 // Circular reference protection: Error chains deeper than 1000 levels will
 // stop traversal to prevent infinite loops.
@@ -117,15 +117,16 @@ func Wrap(parent, child error) error {
 // assertion internally and works with any error type.
 //
 // Examples:
-//     // Apply verbose format for debugging
-//     log.Debug(errchain.WithFormat(err, errchain.Verbose))
 //
-//     // Use concise format for user display
-//     fmt.Println(errchain.WithFormat(err, errchain.Concise))
+//	// Apply verbose format for debugging
+//	log.Debug(errchain.WithFormat(err, errchain.Verbose))
 //
-//     // Works with non-ChainedError (passes through unchanged)
-//     regularErr := errors.New("test")
-//     sameErr := errchain.WithFormat(regularErr, errchain.Verbose)
+//	// Use concise format for user display
+//	fmt.Println(errchain.WithFormat(err, errchain.Concise))
+//
+//	// Works with non-ChainedError (passes through unchanged)
+//	regularErr := errors.New("test")
+//	sameErr := errchain.WithFormat(regularErr, errchain.Verbose)
 //
 // Format semantics: The format applies only to the current error level's
 // display, not recursively to the entire chain.
@@ -163,12 +164,13 @@ func (e *chainedError) Unwrap() error {
 // if calling repeatedly in performance-sensitive code.
 //
 // Example:
-//     err := errchain.Wrap(outer, inner)
-//     if ce, ok := err.(errchain.ChainedError); ok {
-//         verboseErr := ce.WithFormat(errchain.Verbose)
-//         fmt.Println(verboseErr) // Shows full chain
-//         fmt.Println(ce)         // Original still shows concise format
-//     }
+//
+//	err := errchain.Wrap(outer, inner)
+//	if ce, ok := err.(errchain.ChainedError); ok {
+//	    verboseErr := ce.WithFormat(errchain.Verbose)
+//	    fmt.Println(verboseErr) // Shows full chain
+//	    fmt.Println(ce)         // Original still shows concise format
+//	}
 func (e *chainedError) WithFormat(f Format) ChainedError {
 	return &chainedError{
 		parent:    e.parent,

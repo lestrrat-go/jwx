@@ -336,7 +336,7 @@ func TestInnermost_CircularReference(t *testing.T) {
 
 	// Create a chain deeper than 1000 to trigger depth limit
 	// We'll create 1100 levels to test the circular reference protection
-	for i := 0; i < 1100; i++ {
+	for i := range 1100 {
 		err = errchain.Wrap(fmt.Errorf("level %d", i), err)
 	}
 
@@ -354,7 +354,7 @@ func TestInnermost_CircularReference_DepthLimit(t *testing.T) {
 
 	// Create a chain of exactly 1001 levels
 	err := errors.New("root")
-	for i := 0; i < 1001; i++ {
+	for i := range 1001 {
 		err = errchain.Wrap(fmt.Errorf("level %d", i), err)
 	}
 
@@ -373,7 +373,7 @@ func TestInnermost_CircularReference_Behavior(t *testing.T) {
 	err := errors.New("base")
 
 	// Create very deep chain
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		err = errchain.Wrap(fmt.Errorf("wrap %d", i), err)
 	}
 
@@ -397,7 +397,7 @@ func TestError_Concurrent(t *testing.T) {
 
 	errors := make(chan string, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			defer wg.Done()
 			errors <- err.Error()
@@ -424,7 +424,7 @@ func TestWithFormat_Concurrent(t *testing.T) {
 
 	results := make(chan error, numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(format errchain.Format) {
 			defer wg.Done()
 			formatted := errchain.WithFormat(err, format)
