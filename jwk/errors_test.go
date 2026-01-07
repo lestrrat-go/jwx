@@ -20,9 +20,7 @@ func TestImportError(t *testing.T) {
 		}
 
 		// This test verifies the pattern works if an import error occurs
-		if errors.Is(err, jwk.ImportError()) {
-			// Good - errors.Is works
-		}
+		require.True(t, errors.Is(err, jwk.ImportError()), "errors.Is() not working with ImportError")
 	})
 
 	t.Run("format verbs", func(t *testing.T) {
