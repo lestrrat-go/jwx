@@ -188,11 +188,11 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
 	if err := ec.ProcessOptions(options); err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: failed to process options: %w`, err)}
+		return nil, errFromEncrypt("failed to process options: %w", err)
 	}
 	ret, err := ec.EncryptMessage(payload, nil)
 	if err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: %w`, err)}
+		return nil, errFromEncrypt("%w", err)
 	}
 	return ret, nil
 }
@@ -209,16 +209,16 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // future changes across minor/micro versions.
 func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	if len(cek) <= 0 {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: empty CEK`)}
+		return nil, errFromEncrypt("empty CEK")
 	}
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
 	if err := ec.ProcessOptions(options); err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: failed to process options: %w`, err)}
+		return nil, errFromEncrypt("failed to process options: %w", err)
 	}
 	ret, err := ec.EncryptMessage(payload, cek)
 	if err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: %w`, err)}
+		return nil, errFromEncrypt("%w", err)
 	}
 	return ret, nil
 }
@@ -262,45 +262,45 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 		switch option.Ident() {
 		case identMessage{}:
 			if err := option.Value(&dc.dst); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMessage must be a *jwe.Message: %w", err)
+				return errFromDecrypt("WithMessage must be a *jwe.Message: %w", err)
 			}
 		case identKeyProvider{}:
 			var kp KeyProvider
 			if err := option.Value(&kp); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKeyProvider must be a KeyProvider: %w", err)
+				return errFromDecrypt("WithKeyProvider must be a KeyProvider: %w", err)
 			}
 			dc.keyProviders = append(dc.keyProviders, kp)
 		case identKeyUsed{}:
 			if err := option.Value(&dc.keyUsed); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKeyUsed must be an any: %w", err)
+				return errFromDecrypt("WithKeyUsed must be an any: %w", err)
 			}
 		case identKey{}:
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
+				return errFromDecrypt("WithKey must be a *withKey: %w", err)
 			}
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
+				return errFromDecrypt("WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
 			}
 			dc.keyProviders = append(dc.keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
 			if err := option.Value(&dc.cek); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
+				return errFromDecrypt("WithCEK must be a *[]byte: %w", err)
 			}
 		case identMaxDecompressBufferSize{}:
 			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
+				return errFromDecrypt("WithMaxDecompressBufferSize must be int64: %w", err)
 			}
 		case identContext{}:
 			if err := option.Value(&dc.ctx); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithContext must be a context.Context: %w", err)
+				return errFromDecrypt("WithContext must be a context.Context: %w", err)
 			}
 		}
 	}
 
 	if len(dc.keyProviders) < 1 {
-		return fmt.Errorf(`jwe.Decrypt: no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
+		return errFromDecrypt(`no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
 	}
 
 	return nil
@@ -354,7 +354,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	for _, recipient := range recipients {
 		decrypted, err := dc.tryRecipient(msg, recipient, h, aad, computedAad)
 		if err != nil {
-			errs = append(errs, recipientError{err})
+			errs = append(errs, errFromRecipient("%w", err))
 			continue
 		}
 		if dc.dst != nil {
@@ -598,11 +598,11 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 		case identKey{}:
 			var wk *withKey
 			if err := option.Value(&wk); err != nil {
-				return fmt.Errorf("jwe.encrypt: WithKey must be a *withKey: %w", err)
+				return errFromEncrypt("WithKey must be a *withKey: %w", err)
 			}
 			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
-				return fmt.Errorf("jwe.encrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
+				return errFromEncrypt("WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
 			}
 			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
 				useRawCEK = true
@@ -640,7 +640,7 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 			} else {
 				merged, err := ec.protected.Merge(hdrs)
 				if err != nil {
-					return fmt.Errorf(`failed to merge headers: %w`, err)
+					return errFromEncrypt(`failed to merge protected headers: %w`, err)
 				}
 				ec.protected = merged
 			}
@@ -662,16 +662,16 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	// We need to have at least one builder
 	switch l := len(ec.builders); {
 	case l == 0:
-		return fmt.Errorf(`missing key encryption builders: use jwe.WithKey() to specify one`)
+		return errFromEncrypt(`missing key encryption builders: use jwe.WithKey() to specify one`)
 	case l > 1:
 		if ec.format == fmtCompact {
-			return fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
+			return errFromEncrypt(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
 		}
 	}
 
 	if useRawCEK {
 		if len(ec.builders) != 1 {
-			return fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode supported`)
+			return errFromEncrypt(`multiple recipients for ECDH-ES/DIRECT mode not supported`)
 		}
 	}
 
@@ -934,12 +934,12 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	defer decryptContextPool.Put(dc)
 
 	if err := dc.ProcessOptions(options); err != nil {
-		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: failed to process options: %w`, err)}
+		return nil, errFromDecrypt("failed to process options: %w", err)
 	}
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, err)}
+		return nil, errFromDecrypt("%w", err)
 	}
 	return ret, nil
 }
@@ -958,7 +958,7 @@ func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
-		return nil, parseError{fmt.Errorf(`jwe.Parse: empty buffer`)}
+		return nil, errFromParse(prefixParse, "empty buffer")
 	}
 
 	var msg *Message
@@ -970,7 +970,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 	}
 
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.Parse: %w`, err)}
+		return nil, errFromParse(prefixParse, "%w", err)
 	}
 	return msg, nil
 }
@@ -979,7 +979,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 func ParseString(s string) (*Message, error) {
 	msg, err := Parse([]byte(s))
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseString: %w`, err)}
+		return nil, errFromParse(prefixParseString, "%w", err)
 	}
 	return msg, nil
 }
@@ -988,11 +988,11 @@ func ParseString(s string) (*Message, error) {
 func ParseReader(src io.Reader) (*Message, error) {
 	buf, err := io.ReadAll(src)
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseReader: failed to read from io.Reader: %w`, err)}
+		return nil, errFromParse(prefixParseReader, "failed to read from io.Reader: %w", err)
 	}
 	msg, err := Parse(buf)
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseReader: %w`, err)}
+		return nil, errFromParse(prefixParseReader, "%w", err)
 	}
 	return msg, nil
 }

@@ -17,7 +17,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +32,7 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 	for _, e := range expected {
 		if v == float64(e) {
 			// We _know_ this is going to pass
-			assert.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
+			require.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
 			return
 		}
 	}

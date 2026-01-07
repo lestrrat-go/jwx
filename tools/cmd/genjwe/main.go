@@ -212,7 +212,7 @@ func generateHeaders(obj *codegen.Object) error {
 	for _, f := range obj.Fields() {
 		o.L("case %sKey:", f.Name(true))
 		o.L("if h.%s == nil {", f.Name(false))
-		o.L("return fmt.Errorf(`field %%q not found`, name)")
+		o.L("return errFromField(`field %%q not found`, name)")
 		o.L("}")
 
 		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
@@ -222,16 +222,16 @@ func generateHeaders(obj *codegen.Object) error {
 			o.R("h.%s", f.Name(false))
 		}
 		o.R("); err != nil {")
-		o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+		o.L("return errFromField(`failed to assign value for field %%q: %%w`, name, err)")
 		o.L("}")
 	}
 	o.L("default:")
 	o.L("v, ok := h.privateParams[name]")
 	o.L("if !ok {")
-	o.L("return fmt.Errorf(`field %%q not found`, name)")
+	o.L("return errFromField(`field %%q not found`, name)")
 	o.L("}")
 	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
-	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
+	o.L("return errFromField(`failed to assign value for field %%q: %%w`, name, err)")
 	o.L("}")
 	o.L("}") // end switch name
 	o.L("return nil")
@@ -250,7 +250,7 @@ func generateHeaders(obj *codegen.Object) error {
 		if f.Bool(`hasAccept`) {
 			o.L("var acceptor %s", PointerElem(f))
 			o.L("if err := acceptor.Accept(value); err != nil {")
-			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromField(`invalid value for %%s key: %%w`, %sKey, err)", f.Name(true))
 			o.L("}") // end if err := h.%s.Accept(value)
 			o.L("h.%s = &acceptor", f.Name(false))
 			o.L("return nil")
@@ -259,7 +259,7 @@ func generateHeaders(obj *codegen.Object) error {
 			if f.Name(false) == "contentEncryption" {
 				// check for non-empty string, because empty content encryption is just baaaaaad
 				o.L("if v == jwa.EmptyContentEncryptionAlgorithm() {")
-				o.L("return fmt.Errorf(`%#v field cannot be an empty string`)", f.JSON())
+				o.L("return errFromField(`%#v field cannot be an empty string`)", f.JSON())
 				o.L("}")
 			}
 
@@ -270,7 +270,7 @@ func generateHeaders(obj *codegen.Object) error {
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
-			o.L("return fmt.Errorf(`invalid value for %%s key: %%T`, %sKey, value)", f.Name(true))
+			o.L("return errFromField(`invalid value for %%s key: %%T`, %sKey, value)", f.Name(true))
 		}
 	}
 	o.L("default:")
@@ -306,7 +306,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("for {")
 	o.L("tok, err := dec.Token()")
 	o.L("if err != nil {")
-	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
+	o.L("return errFromParse(`jwe.Parse`, `error reading token: %%w`, err)")
 	o.L("}")
 	o.L("switch tok := tok.(type) {")
 	o.L("case json.Delim:")
@@ -315,7 +315,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("if tok == tokens.CloseCurlyBracket { // End of object")
 	o.L("break LOOP")
 	o.L("} else if tok != tokens.OpenCurlyBracket {")
-	o.L("return fmt.Errorf(`expected '%%c' but got '%%c'`, tokens.OpenCurlyBracket, tok)")
+	o.L("return errFromParse(`jwe.Parse`, `expected '%%c' but got '%%c'`, tokens.OpenCurlyBracket, tok)")
 	o.L("}")
 	o.L("case string: // Objects can only have string keys")
 	o.L("switch tok {")
@@ -324,29 +324,29 @@ func generateHeaders(obj *codegen.Object) error {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "[]byte" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextBytesToken(&h.%s, dec); err != nil {", f.Name(false))
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "jwk.Key" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var buf json.RawMessage")
 			o.L("if err := dec.Decode(&buf); err != nil {")
-			o.L("return fmt.Errorf(`failed to decode value for key %%s:%%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to decode value for key %%s:%%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("key, err := jwk.ParseKey(buf)")
 			o.L("if err != nil {")
-			o.L("return fmt.Errorf(`failed to parse JWK for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to parse JWK for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("h.%s = key", f.Name(false))
 		} else if strings.HasPrefix(f.Type(), "[]") {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("h.%s = decoded", f.Name(false))
 		} else {
@@ -357,7 +357,7 @@ func generateHeaders(obj *codegen.Object) error {
 				o.L("var decoded %s", f.Type())
 			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return errFromParse(`jwe.Parse`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("h.%s = &decoded", f.Name(false))
 		}
@@ -370,7 +370,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("h.setNoLock(tok, decoded)")
 	o.L("}")
 	o.L("default:")
-	o.L("return fmt.Errorf(`invalid token %%T`, tok)")
+	o.L("return errFromParse(`jwe.Parse`, `invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
 
@@ -432,7 +432,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("buf.WriteRune(tokens.DoubleQuote)")
 	o.L("default:")
 	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s`, k)")
+	o.L("return nil, errFromField(`failed to encode value for field %%s`, k)")
 	o.L("}")
 	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")

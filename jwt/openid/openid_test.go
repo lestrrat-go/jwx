@@ -19,7 +19,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 	"github.com/lestrrat-go/jwx/v3/jwt/openid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -110,12 +109,10 @@ func TestAdressClaim(t *testing.T) {
 }
 
 func TestOpenIDClaims(t *testing.T) {
-	getVerify := func(token openid.Token, key string, expected any) bool {
+	getVerify := func(token openid.Token, key string, expected any) {
 		var v any
-		if assert.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key) {
-			return false
-		}
-		return assert.Equal(t, v, expected)
+		require.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key)
+		require.Equal(t, v, expected)
 	}
 
 	var base = []struct {
@@ -483,9 +480,8 @@ func TestOpenIDClaims(t *testing.T) {
 			require.NoError(t, err, `parsing the token via jwt.Parse should succeed`)
 
 			// Check if token is an OpenID token
-			if _, ok := tokenTmp.(openid.Token); !assert.True(t, ok, `token should be a openid.Token (%T)`, tokenTmp) {
-				return
-			}
+			_, ok := tokenTmp.(openid.Token)
+			require.True(t, ok, `token should be a openid.Token (%T)`, tokenTmp)
 			token3 = tokenTmp.(openid.Token)
 		}
 
@@ -577,7 +573,7 @@ func TestBirthdateClaim(t *testing.T) {
 			t.Run(tc.Source, func(t *testing.T) {
 				var b openid.BirthdateClaim
 				if tc.Error {
-					assert.Error(t, json.Unmarshal([]byte(tc.Source), &b), `json.Unmarshal should fail`)
+					require.Error(t, json.Unmarshal([]byte(tc.Source), &b), `json.Unmarshal should fail`)
 					return
 				}
 
@@ -609,33 +605,32 @@ func TestBirthdateClaim(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	at := assert.New(t)
-	at.Equal(`address`, openid.AddressKey)
-	at.Equal(`aud`, openid.AudienceKey)
-	at.Equal(`birthdate`, openid.BirthdateKey)
-	at.Equal(`email`, openid.EmailKey)
-	at.Equal(`email_verified`, openid.EmailVerifiedKey)
-	at.Equal(`exp`, openid.ExpirationKey)
-	at.Equal(`family_name`, openid.FamilyNameKey)
-	at.Equal(`gender`, openid.GenderKey)
-	at.Equal(`given_name`, openid.GivenNameKey)
-	at.Equal(`iat`, openid.IssuedAtKey)
-	at.Equal(`iss`, openid.IssuerKey)
-	at.Equal(`jti`, openid.JwtIDKey)
-	at.Equal(`locale`, openid.LocaleKey)
-	at.Equal(`middle_name`, openid.MiddleNameKey)
-	at.Equal(`name`, openid.NameKey)
-	at.Equal(`nickname`, openid.NicknameKey)
-	at.Equal(`nbf`, openid.NotBeforeKey)
-	at.Equal(`phone_number`, openid.PhoneNumberKey)
-	at.Equal(`phone_number_verified`, openid.PhoneNumberVerifiedKey)
-	at.Equal(`picture`, openid.PictureKey)
-	at.Equal(`preferred_username`, openid.PreferredUsernameKey)
-	at.Equal(`profile`, openid.ProfileKey)
-	at.Equal(`sub`, openid.SubjectKey)
-	at.Equal(`updated_at`, openid.UpdatedAtKey)
-	at.Equal(`website`, openid.WebsiteKey)
-	at.Equal(`zoneinfo`, openid.ZoneinfoKey)
+	require.Equal(t, `address`, openid.AddressKey)
+	require.Equal(t, `aud`, openid.AudienceKey)
+	require.Equal(t, `birthdate`, openid.BirthdateKey)
+	require.Equal(t, `email`, openid.EmailKey)
+	require.Equal(t, `email_verified`, openid.EmailVerifiedKey)
+	require.Equal(t, `exp`, openid.ExpirationKey)
+	require.Equal(t, `family_name`, openid.FamilyNameKey)
+	require.Equal(t, `gender`, openid.GenderKey)
+	require.Equal(t, `given_name`, openid.GivenNameKey)
+	require.Equal(t, `iat`, openid.IssuedAtKey)
+	require.Equal(t, `iss`, openid.IssuerKey)
+	require.Equal(t, `jti`, openid.JwtIDKey)
+	require.Equal(t, `locale`, openid.LocaleKey)
+	require.Equal(t, `middle_name`, openid.MiddleNameKey)
+	require.Equal(t, `name`, openid.NameKey)
+	require.Equal(t, `nickname`, openid.NicknameKey)
+	require.Equal(t, `nbf`, openid.NotBeforeKey)
+	require.Equal(t, `phone_number`, openid.PhoneNumberKey)
+	require.Equal(t, `phone_number_verified`, openid.PhoneNumberVerifiedKey)
+	require.Equal(t, `picture`, openid.PictureKey)
+	require.Equal(t, `preferred_username`, openid.PreferredUsernameKey)
+	require.Equal(t, `profile`, openid.ProfileKey)
+	require.Equal(t, `sub`, openid.SubjectKey)
+	require.Equal(t, `updated_at`, openid.UpdatedAtKey)
+	require.Equal(t, `website`, openid.WebsiteKey)
+	require.Equal(t, `zoneinfo`, openid.ZoneinfoKey)
 }
 
 func TestGH734(t *testing.T) {

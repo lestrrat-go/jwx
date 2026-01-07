@@ -117,7 +117,7 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, f any) error {
 		signerDB[alg] = s
 		muSignerDB.Unlock()
 	default:
-		return fmt.Errorf(`jws.RegisterSigner: unsupported type %T for algorithm %q`, f, alg)
+		return errFromSign(`unsupported type %T for algorithm %q`, f, alg)
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func NewSigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 		return s, nil
 	}
 
-	if strings.HasPrefix(err.Error(), `jws.NewSigner: unsupported signature algorithm`) {
+	if strings.HasPrefix(err.Error(), `jws.Sign: unsupported signature algorithm`) {
 		// When newLegacySigner fails, automatically trigger to enable signers
 		enableLegacySignersOnce.Do(enableLegacySigners)
 		return newLegacySigner(alg)
@@ -171,7 +171,7 @@ func newLegacySigner(alg jwa.SignatureAlgorithm) (Signer, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, fmt.Errorf(`jws.NewSigner: unsupported signature algorithm "%s"`, alg)
+	return nil, errFromSign(`unsupported signature algorithm "%s"`, alg)
 }
 
 type noneSigner struct{}

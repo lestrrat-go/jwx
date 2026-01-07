@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//cert",
         "//internal/base64",
+        "//internal/errchain",
         "//transform",
         "//internal/json",
         "//internal/tokens",

@@ -1,11 +1,10 @@
 package jwt
 
 import (
-	"fmt"
-
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 )
 
 type SerializeCtx interface {
@@ -87,12 +86,12 @@ type jsonSerializer struct{}
 func (jsonSerializer) Serialize(_ SerializeCtx, v any) (any, error) {
 	token, ok := v.(Token)
 	if !ok {
-		return nil, fmt.Errorf(`invalid input: expected jwt.Token`)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, "invalid input: expected jwt.Token")
 	}
 
 	buf, err := json.Marshal(token)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to serialize as JSON: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, "failed to marshal token to JSON: %w", err)
 	}
 	return buf, nil
 }
@@ -113,7 +112,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 		// We are executed immediately after json marshaling
 		if !hdrs.Has(typKey) {
 			if err := hdrs.Set(typKey, `JWT`); err != nil {
-				return fmt.Errorf(`failed to set %s key to "JWT": %w`, typKey, err)
+				return jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `failed to set %s key to "JWT": %w`, typKey, err)
 			}
 		}
 	} else {
@@ -121,7 +120,7 @@ func setTypeOrCty(ctx SerializeCtx, hdrs genericHeader) error {
 			// If this is part of a nested sequence, we should set cty = 'JWT'
 			// https://datatracker.ietf.org/doc/html/rfc7519#section-5.2
 			if err := hdrs.Set(ctyKey, `JWT`); err != nil {
-				return fmt.Errorf(`failed to set %s key to "JWT": %w`, ctyKey, err)
+				return jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `failed to set %s key to "JWT": %w`, ctyKey, err)
 			}
 		}
 	}
@@ -135,7 +134,7 @@ type jwsSerializer struct {
 func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 	payload, ok := v.([]byte)
 	if !ok {
-		return nil, fmt.Errorf(`expected []byte as input`)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `expected []byte as input`)
 	}
 
 	for _, option := range s.options {
@@ -153,7 +152,7 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 		var b64 bool
 		if err := hdrs.Get("b64", &b64); err == nil {
 			if !b64 { // b64 = false
-				return nil, fmt.Errorf(`b64 cannot be false for JWTs`)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `b64 cannot be false for JWTs`)
 			}
 		}
 	}
@@ -172,7 +171,7 @@ func (s *Serializer) Sign(options ...SignOption) *Serializer {
 
 		converted, err := toSignOptions(rawoptions...)
 		if err != nil {
-			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Sign: failed to convert options into jws.SignOption: %w`, err)})
+			return s.Step(errStep{jwterrs.ErrFromParse(jwterrs.PrefixSerializerSign, `failed to convert options into jws.SignOption: %w`, err)})
 		}
 		soptions = converted
 	}
@@ -192,7 +191,7 @@ type jweSerializer struct {
 func (s *jweSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 	payload, ok := v.([]byte)
 	if !ok {
-		return nil, fmt.Errorf(`expected []byte as input`)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `expected []byte as input`)
 	}
 
 	hdrs := jwe.NewHeaders()
@@ -223,7 +222,7 @@ func (s *Serializer) Encrypt(options ...EncryptOption) *Serializer {
 
 		converted, err := toEncryptOptions(rawoptions...)
 		if err != nil {
-			return s.Step(errStep{fmt.Errorf(`(jwt.Serializer).Encrypt: failed to convert options into jwe.EncryptOption: %w`, err)})
+			return s.Step(errStep{jwterrs.ErrFromParse(jwterrs.PrefixSerializerEncrypt, `failed to convert options into jwe.EncryptOption: %w`, err)})
 		}
 		eoptions = converted
 	}
@@ -250,14 +249,14 @@ func (s *Serializer) Serialize(t Token) ([]byte, error) {
 		ctx.step = i
 		v, err := step.Serialize(&ctx, payload)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to serialize token at step #%d: %w`, i+1, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `failed to serialize token at step #%d: %w`, i+1, err)
 		}
 		payload = v
 	}
 
 	res, ok := payload.([]byte)
 	if !ok {
-		return nil, fmt.Errorf(`invalid serialization produced`)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixSerialize, `invalid serialization produced`)
 	}
 
 	return res, nil

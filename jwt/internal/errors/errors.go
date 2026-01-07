@@ -11,6 +11,25 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/errchain"
 )
 
+// Error prefixes for ErrFromParse calls
+const (
+	PrefixParse              = "jwt.Parse"
+	PrefixParseCookie        = "jwt.ParseCookie"
+	PrefixParseForm          = "jwt.ParseForm"
+	PrefixParseHeader        = "jwt.ParseHeader"
+	PrefixParseRequest       = "jwt.ParseRequest"
+	PrefixSerialize          = "jwt.Serialize"
+	PrefixSerializerEncrypt  = "jwt.Serializer.Encrypt"
+	PrefixSerializerSign     = "jwt.Serializer.Sign"
+	PrefixTokenUnmarshalJSON = "jwt.Token.UnmarshalJSON"
+	PrefixParseInsecure      = "jwt.ParseInsecure"
+	PrefixParseReader        = "jwt.ParseReader"
+	PrefixParseString        = "jwt.ParseString"
+	PrefixClone              = "jwt.Clone"
+	PrefixSign               = "jwt.Sign"
+	PrefixOpenIDClone        = "openid.Clone"
+)
+
 var (
 	ErrClaimNotFound               = ClaimNotFoundError{}
 	ErrClaimAssignmentFailed       = ClaimAssignmentFailedError{Err: stderrors.New(`claim assignment failed`)}
@@ -72,7 +91,7 @@ func (ParseError) Is(err error) bool {
 	return ok
 }
 
-// ParseErrorf creates a ParseError by wrapping an error with context using errchain.
+// ErrFromParse creates a ParseError by wrapping an error with context using errchain.
 // The prefix is the operation name (e.g., "jwt.Parse"), and the format string and args
 // are used to create the error message. Supports %w verb for error wrapping.
 //
@@ -81,10 +100,10 @@ func (ParseError) Is(err error) bool {
 //
 // Example:
 //
-//	ParseErrorf("jwt.Parse", "failed to parse token: %w", innerErr)
+//	ErrFromParse("jwt.Parse", "failed to parse token: %w", innerErr)
 //	-> Concise: "jwt.Parse: <innerErr message>"
 //	-> Verbose: "jwt.Parse: failed to parse token: <innerErr message>"
-func ParseErrorf(prefix, f string, args ...any) error {
+func ErrFromParse(prefix, f string, args ...any) error {
 	// Use fmt.Errorf to properly handle %w and create the wrapped error
 	innerErr := fmt.Errorf(f, args...)
 
@@ -105,7 +124,7 @@ func (err ValidationError) Unwrap() error {
 	return err.error
 }
 
-// ValidateErrorf creates a ValidationError by wrapping an error with context using errchain.
+// ErrFromValidate creates a ValidationError by wrapping an error with context using errchain.
 // Supports %w verb for error wrapping.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
@@ -113,10 +132,10 @@ func (err ValidationError) Unwrap() error {
 //
 // Example:
 //
-//	ValidateErrorf("validation failed: %w", expCheckErr)
+//	ErrFromValidate("validation failed: %w", expCheckErr)
 //	-> Concise: "jwt.Validate: <expCheckErr message>"
 //	-> Verbose: "jwt.Validate: validation failed: <expCheckErr message>"
-func ValidateErrorf(f string, args ...any) error {
+func ErrFromValidate(f string, args ...any) error {
 	// Use fmt.Errorf to properly handle %w and create the wrapped error
 	innerErr := fmt.Errorf(f, args...)
 
@@ -137,9 +156,20 @@ func (err InvalidIssuerError) Unwrap() error {
 	return err.error
 }
 
-// IssuerErrorf creates an InvalidIssuerError with the given format and args.
-func IssuerErrorf(f string, args ...any) error {
-	return InvalidIssuerError{stderrors.New(`"iss" not satisfied: ` + fmt.Sprintf(f, args...))}
+// ErrFromIssuer creates an InvalidIssuerError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//
+//	ErrFromIssuer("token issuer mismatch (expected %q, got %q)", expected, actual)
+//	-> Concise: "\"iss\" not satisfied: token issuer mismatch (expected X, got Y)"
+//	-> Verbose: "\"iss\" not satisfied: token issuer mismatch (expected X, got Y)"
+func ErrFromIssuer(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return InvalidIssuerError{errchain.Wrap(stderrors.New(`"iss" not satisfied`), innerErr)}
 }
 
 type TokenExpiredError struct {
@@ -155,6 +185,22 @@ func (err TokenExpiredError) Unwrap() error {
 	return err.error
 }
 
+// ErrFromTokenExpired creates a TokenExpiredError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//
+//	ErrFromTokenExpired("token is expired (now %d vs exp %d)", nowUnix, expUnix)
+//	-> Concise: "\"exp\" not satisfied: token is expired (now X vs exp Y)"
+//	-> Verbose: "\"exp\" not satisfied: token is expired (now X vs exp Y)"
+func ErrFromTokenExpired(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return TokenExpiredError{errchain.Wrap(stderrors.New(`"exp" not satisfied`), innerErr)}
+}
+
 type InvalidIssuedAtError struct {
 	error
 }
@@ -166,6 +212,22 @@ func (err InvalidIssuedAtError) Is(target error) bool {
 
 func (err InvalidIssuedAtError) Unwrap() error {
 	return err.error
+}
+
+// ErrFromInvalidIssuedAt creates an InvalidIssuedAtError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//
+//	ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", nowUnix, iatUnix)
+//	-> Concise: "\"iat\" not satisfied: token was issued in the future (now X vs iat Y)"
+//	-> Verbose: "\"iat\" not satisfied: token was issued in the future (now X vs iat Y)"
+func ErrFromInvalidIssuedAt(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return InvalidIssuedAtError{errchain.Wrap(stderrors.New(`"iat" not satisfied`), innerErr)}
 }
 
 type TokenNotYetValidError struct {
@@ -181,6 +243,22 @@ func (err TokenNotYetValidError) Unwrap() error {
 	return err.error
 }
 
+// ErrFromTokenNotYetValid creates a TokenNotYetValidError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//
+//	ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", nowUnix, nbfUnix)
+//	-> Concise: "\"nbf\" not satisfied: token not yet valid (now X vs nbf Y)"
+//	-> Verbose: "\"nbf\" not satisfied: token not yet valid (now X vs nbf Y)"
+func ErrFromTokenNotYetValid(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return TokenNotYetValidError{errchain.Wrap(stderrors.New(`"nbf" not satisfied`), innerErr)}
+}
+
 type InvalidAudienceError struct {
 	error
 }
@@ -194,9 +272,20 @@ func (err InvalidAudienceError) Unwrap() error {
 	return err.error
 }
 
-// AudienceErrorf creates an InvalidAudienceError with the given format and args.
-func AudienceErrorf(f string, args ...any) error {
-	return InvalidAudienceError{stderrors.New(`"aud" not satisfied: ` + fmt.Sprintf(f, args...))}
+// ErrFromAudience creates an InvalidAudienceError by wrapping an error with context using errchain.
+// Supports %w verb for error wrapping.
+//
+// The error chain is preserved intact. errchain's Concise mode will hide intermediate
+// messages by default, but Verbose mode (%+v) will show the full chain.
+//
+// Example:
+//
+//	ErrFromAudience("token audience not found (expected %q)", expected)
+//	-> Concise: "\"aud\" not satisfied: token audience not found (expected X)"
+//	-> Verbose: "\"aud\" not satisfied: token audience not found (expected X)"
+func ErrFromAudience(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return InvalidAudienceError{errchain.Wrap(stderrors.New(`"aud" not satisfied`), innerErr)}
 }
 
 type MissingRequiredClaimError struct {
@@ -213,7 +302,13 @@ func (err *MissingRequiredClaimError) Is(target error) bool {
 	return err1 == ErrMissingRequiredClaimDefault || err1.claim == err.claim
 }
 
-// MissingRequiredClaimErrorf creates a MissingRequiredClaimError for the given claim name.
-func MissingRequiredClaimErrorf(name string) error {
+// ErrFromMissingRequiredClaim creates a MissingRequiredClaimError for the given claim name.
+func ErrFromMissingRequiredClaim(name string) error {
 	return &MissingRequiredClaimError{claim: name, error: fmt.Errorf(`required claim "%s" is missing`, name)}
+}
+
+// ErrFromClaim wraps token claim access errors (used by Token.Set/UnmarshalJSON/MarshalJSON methods)
+func ErrFromClaim(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return errchain.Wrap(stderrors.New("jwt.Token"), innerErr)
 }

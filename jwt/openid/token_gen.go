@@ -584,21 +584,21 @@ func (t *stdToken) setNoLock(name string, value any) error {
 	case AddressKey:
 		var acceptor AddressClaim
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, AddressKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, AddressKey, err)
 		}
 		t.address = &acceptor
 		return nil
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, AudienceKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, AudienceKey, err)
 		}
 		t.audience = acceptor
 		return nil
 	case BirthdateKey:
 		var acceptor BirthdateClaim
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, BirthdateKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, BirthdateKey, err)
 		}
 		t.birthdate = &acceptor
 		return nil
@@ -607,17 +607,17 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.email = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, EmailKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, EmailKey, value)
 	case EmailVerifiedKey:
 		if v, ok := value.(bool); ok {
 			t.emailVerified = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, EmailVerifiedKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, EmailVerifiedKey, value)
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, ExpirationKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, ExpirationKey, err)
 		}
 		t.expiration = &acceptor
 		return nil
@@ -626,23 +626,23 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.familyName = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, FamilyNameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, FamilyNameKey, value)
 	case GenderKey:
 		if v, ok := value.(string); ok {
 			t.gender = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, GenderKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, GenderKey, value)
 	case GivenNameKey:
 		if v, ok := value.(string); ok {
 			t.givenName = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, GivenNameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, GivenNameKey, value)
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, IssuedAtKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, IssuedAtKey, err)
 		}
 		t.issuedAt = &acceptor
 		return nil
@@ -651,41 +651,41 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.issuer = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
 			t.jwtID = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, JwtIDKey, value)
 	case LocaleKey:
 		if v, ok := value.(string); ok {
 			t.locale = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, LocaleKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, LocaleKey, value)
 	case MiddleNameKey:
 		if v, ok := value.(string); ok {
 			t.middleName = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, MiddleNameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, MiddleNameKey, value)
 	case NameKey:
 		if v, ok := value.(string); ok {
 			t.name = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, NameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, NameKey, value)
 	case NicknameKey:
 		if v, ok := value.(string); ok {
 			t.nickname = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, NicknameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, NicknameKey, value)
 	case NotBeforeKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, NotBeforeKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, NotBeforeKey, err)
 		}
 		t.notBefore = &acceptor
 		return nil
@@ -694,41 +694,41 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.phoneNumber = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, PhoneNumberKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, PhoneNumberKey, value)
 	case PhoneNumberVerifiedKey:
 		if v, ok := value.(bool); ok {
 			t.phoneNumberVerified = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, PhoneNumberVerifiedKey, value)
 	case PictureKey:
 		if v, ok := value.(string); ok {
 			t.picture = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, PictureKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, PictureKey, value)
 	case PreferredUsernameKey:
 		if v, ok := value.(string); ok {
 			t.preferredUsername = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, PreferredUsernameKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, PreferredUsernameKey, value)
 	case ProfileKey:
 		if v, ok := value.(string); ok {
 			t.profile = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, ProfileKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, ProfileKey, value)
 	case SubjectKey:
 		if v, ok := value.(string); ok {
 			t.subject = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, SubjectKey, value)
 	case UpdatedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, UpdatedAtKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, UpdatedAtKey, err)
 		}
 		t.updatedAt = &acceptor
 		return nil
@@ -737,13 +737,13 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.website = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, WebsiteKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, WebsiteKey, value)
 	case ZoneinfoKey:
 		if v, ok := value.(string); ok {
 			t.zoneinfo = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, ZoneinfoKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, ZoneinfoKey, value)
 	default:
 		if t.privateClaims == nil {
 			t.privateClaims = map[string]any{}
@@ -1027,7 +1027,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return fmt.Errorf(`error reading token: %w`, err)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -1036,131 +1036,131 @@ LOOP:
 			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AddressKey:
 				var decoded AddressClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AddressKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, AddressKey, err)
 				}
 				t.address = &decoded
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, AudienceKey, err)
 				}
 				t.audience = decoded
 			case BirthdateKey:
 				var decoded BirthdateClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, BirthdateKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, BirthdateKey, err)
 				}
 				t.birthdate = &decoded
 			case EmailKey:
 				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, EmailKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, EmailKey, err)
 				}
 			case EmailVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, EmailVerifiedKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, EmailVerifiedKey, err)
 				}
 				t.emailVerified = &decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ExpirationKey, err)
 				}
 				t.expiration = &decoded
 			case FamilyNameKey:
 				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, FamilyNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, FamilyNameKey, err)
 				}
 			case GenderKey:
 				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, GenderKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, GenderKey, err)
 				}
 			case GivenNameKey:
 				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, GivenNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, GivenNameKey, err)
 				}
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuedAtKey, err)
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
 				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case LocaleKey:
 				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, LocaleKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, LocaleKey, err)
 				}
 			case MiddleNameKey:
 				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, MiddleNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, MiddleNameKey, err)
 				}
 			case NameKey:
 				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, NameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NameKey, err)
 				}
 			case NicknameKey:
 				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, NicknameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NicknameKey, err)
 				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NotBeforeKey, err)
 				}
 				t.notBefore = &decoded
 			case PhoneNumberKey:
 				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, PhoneNumberKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PhoneNumberKey, err)
 				}
 			case PhoneNumberVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, PhoneNumberVerifiedKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PhoneNumberVerifiedKey, err)
 				}
 				t.phoneNumberVerified = &decoded
 			case PictureKey:
 				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, PictureKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PictureKey, err)
 				}
 			case PreferredUsernameKey:
 				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, PreferredUsernameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PreferredUsernameKey, err)
 				}
 			case ProfileKey:
 				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ProfileKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ProfileKey, err)
 				}
 			case SubjectKey:
 				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			case UpdatedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, UpdatedAtKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, UpdatedAtKey, err)
 				}
 				t.updatedAt = &decoded
 			case WebsiteKey:
 				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, WebsiteKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, WebsiteKey, err)
 				}
 			case ZoneinfoKey:
 				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ZoneinfoKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ZoneinfoKey, err)
 				}
 			default:
 				if dc := t.dc; dc != nil {
@@ -1177,10 +1177,10 @@ LOOP:
 					t.setNoLock(tok, decoded)
 					continue
 				}
-				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return fmt.Errorf(`invalid token %T`, tok)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `invalid token %T`, tok)
 		}
 	}
 	return nil
@@ -1313,189 +1313,189 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 	if t.address != nil {
 		buf, err := json.Marshal(*(t.address))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "address": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "address": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: AddressKey, Value: buf})
 	}
 	if t.audience != nil {
 		buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(jwt.FlattenAudience))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "aud": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: AudienceKey, Value: buf})
 	}
 	if t.birthdate != nil {
 		buf, err := json.Marshal(*(t.birthdate))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "birthdate": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "birthdate": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: BirthdateKey, Value: buf})
 	}
 	if t.email != nil {
 		buf, err := json.Marshal(*(t.email))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "email": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "email": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: EmailKey, Value: buf})
 	}
 	if t.emailVerified != nil {
 		buf, err := json.Marshal(*(t.emailVerified))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "email_verified": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "email_verified": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: EmailVerifiedKey, Value: buf})
 	}
 	if t.expiration != nil {
 		buf, err := json.Marshal(t.expiration.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "exp": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
 	}
 	if t.familyName != nil {
 		buf, err := json.Marshal(*(t.familyName))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "family_name": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "family_name": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: FamilyNameKey, Value: buf})
 	}
 	if t.gender != nil {
 		buf, err := json.Marshal(*(t.gender))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "gender": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "gender": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: GenderKey, Value: buf})
 	}
 	if t.givenName != nil {
 		buf, err := json.Marshal(*(t.givenName))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "given_name": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "given_name": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: GivenNameKey, Value: buf})
 	}
 	if t.issuedAt != nil {
 		buf, err := json.Marshal(t.issuedAt.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "iat": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
 	}
 	if t.issuer != nil {
 		buf, err := json.Marshal(*(t.issuer))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "iss": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: IssuerKey, Value: buf})
 	}
 	if t.jwtID != nil {
 		buf, err := json.Marshal(*(t.jwtID))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "jti": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: buf})
 	}
 	if t.locale != nil {
 		buf, err := json.Marshal(*(t.locale))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "locale": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "locale": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: LocaleKey, Value: buf})
 	}
 	if t.middleName != nil {
 		buf, err := json.Marshal(*(t.middleName))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "middle_name": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "middle_name": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: MiddleNameKey, Value: buf})
 	}
 	if t.name != nil {
 		buf, err := json.Marshal(*(t.name))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "name": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "name": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: NameKey, Value: buf})
 	}
 	if t.nickname != nil {
 		buf, err := json.Marshal(*(t.nickname))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "nickname": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "nickname": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: NicknameKey, Value: buf})
 	}
 	if t.notBefore != nil {
 		buf, err := json.Marshal(t.notBefore.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "nbf": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
 	}
 	if t.phoneNumber != nil {
 		buf, err := json.Marshal(*(t.phoneNumber))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "phone_number": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "phone_number": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: PhoneNumberKey, Value: buf})
 	}
 	if t.phoneNumberVerified != nil {
 		buf, err := json.Marshal(*(t.phoneNumberVerified))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "phone_number_verified": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "phone_number_verified": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: PhoneNumberVerifiedKey, Value: buf})
 	}
 	if t.picture != nil {
 		buf, err := json.Marshal(*(t.picture))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "picture": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "picture": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: PictureKey, Value: buf})
 	}
 	if t.preferredUsername != nil {
 		buf, err := json.Marshal(*(t.preferredUsername))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "preferred_username": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "preferred_username": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: PreferredUsernameKey, Value: buf})
 	}
 	if t.profile != nil {
 		buf, err := json.Marshal(*(t.profile))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "profile": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "profile": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: ProfileKey, Value: buf})
 	}
 	if t.subject != nil {
 		buf, err := json.Marshal(*(t.subject))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "sub": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: SubjectKey, Value: buf})
 	}
 	if t.updatedAt != nil {
 		buf, err := json.Marshal(t.updatedAt.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "updated_at": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "updated_at": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: buf})
 	}
 	if t.website != nil {
 		buf, err := json.Marshal(*(t.website))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "website": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "website": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: WebsiteKey, Value: buf})
 	}
 	if t.zoneinfo != nil {
 		buf, err := json.Marshal(*(t.zoneinfo))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "zoneinfo": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "zoneinfo": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: ZoneinfoKey, Value: buf})
 	}
 	for k, v := range t.privateClaims {
 		buf, err := json.Marshal(v)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field %q: %w`, k, err)
 		}
 		pairs = append(pairs, claimPair{Name: k, Value: buf})
 	}
@@ -1512,7 +1512,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	defer pool.BytesBuffer().Put(buf)
 	pairs, err := t.makePairs()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+		return nil, jwterrs.ErrFromClaim(`failed to make pairs: %w`, err)
 	}
 	buf.WriteByte(tokens.OpenCurlyBracket)
 

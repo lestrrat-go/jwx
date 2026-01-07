@@ -1,14 +1,17 @@
 package jws
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/errchain"
 )
 
 type signError struct {
 	error
 }
 
-var errDefaultSignError = signerr(`unknown error`)
+var errDefaultSignError = errFromSign(`unknown error`)
 
 // SignError returns an error that can be passed to `errors.Is` to check if the error is a sign error.
 func SignError() error {
@@ -24,8 +27,9 @@ func (signError) Is(err error) bool {
 	return ok
 }
 
-func signerr(f string, args ...any) error {
-	return signError{fmt.Errorf(`jws.Sign: `+f, args...)}
+func errFromSign(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return signError{errchain.Wrap(errors.New("jws.Sign"), innerErr)}
 }
 
 // This error is returned when jws.Verify fails, but note that there's another type of
@@ -34,7 +38,7 @@ type verifyError struct {
 	error
 }
 
-var errDefaultVerifyError = verifyerr(`unknown error`)
+var errDefaultVerifyError = errFromVerify(`unknown error`)
 
 // VerifyError returns an error that can be passed to `errors.Is` to check if the error is a verify error.
 func VerifyError() error {
@@ -50,8 +54,9 @@ func (verifyError) Is(err error) bool {
 	return ok
 }
 
-func verifyerr(f string, args ...any) error {
-	return verifyError{fmt.Errorf(`jws.Verify: `+f, args...)}
+func errFromVerify(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return verifyError{errchain.Wrap(errors.New("jws.Verify"), innerErr)}
 }
 
 // verificationError is returned when the actual _verification_ of the key/payload fails.
@@ -59,7 +64,7 @@ type verificationError struct {
 	error
 }
 
-var errDefaultVerificationError = verificationError{fmt.Errorf(`unknown verification error`)}
+var errDefaultVerificationError = errFromVerification(`unknown verification error`)
 
 // VerificationError returns an error that can be passed to `errors.Is` to check if the error is a verification error.
 func VerificationError() error {
@@ -75,11 +80,16 @@ func (verificationError) Is(err error) bool {
 	return ok
 }
 
+func errFromVerification(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return verificationError{errchain.Wrap(errors.New("signature verification"), innerErr)}
+}
+
 type parseError struct {
 	error
 }
 
-var errDefaultParseError = parseerr(`unknown error`)
+var errDefaultParseError = errFromParse(prefixParse, `unknown error`)
 
 // ParseError returns an error that can be passed to `errors.Is` to check if the error is a parse error.
 func ParseError() error {
@@ -96,17 +106,23 @@ func (parseError) Is(err error) bool {
 }
 
 func bparseerr(prefix string, f string, args ...any) error {
-	return parseError{fmt.Errorf(prefix+": "+f, args...)}
+	innerErr := fmt.Errorf(f, args...)
+	return parseError{errchain.Wrap(errors.New(prefix), innerErr)}
 }
 
-func parseerr(f string, args ...any) error {
-	return bparseerr(`jws.Parse`, f, args...)
+// Error prefixes for errFromParse calls
+const (
+	prefixParse       = "jws.Parse"
+	prefixParseReader = "jws.ParseReader"
+	prefixParseString = "jws.ParseString"
+)
+
+func errFromParse(prefix, f string, args ...any) error {
+	return bparseerr(prefix, f, args...)
 }
 
-func sparseerr(f string, args ...any) error {
-	return bparseerr(`jws.ParseString`, f, args...)
-}
-
-func rparseerr(f string, args ...any) error {
-	return bparseerr(`jws.ParseReader`, f, args...)
+// errFromField wraps header field access errors (used by Headers.Get/Set methods)
+func errFromField(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return errchain.Wrap(errors.New("jws.Headers"), innerErr)
 }

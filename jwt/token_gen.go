@@ -272,21 +272,21 @@ func (t *stdToken) setNoLock(name string, value any) error {
 	case AudienceKey:
 		var acceptor types.StringList
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, AudienceKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, AudienceKey, err)
 		}
 		t.audience = acceptor
 		return nil
 	case ExpirationKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, ExpirationKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, ExpirationKey, err)
 		}
 		t.expiration = &acceptor
 		return nil
 	case IssuedAtKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, IssuedAtKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, IssuedAtKey, err)
 		}
 		t.issuedAt = &acceptor
 		return nil
@@ -295,17 +295,17 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.issuer = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, IssuerKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, IssuerKey, value)
 	case JwtIDKey:
 		if v, ok := value.(string); ok {
 			t.jwtID = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, JwtIDKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, JwtIDKey, value)
 	case NotBeforeKey:
 		var acceptor types.NumericDate
 		if err := acceptor.Accept(value); err != nil {
-			return fmt.Errorf(`invalid value for %s key: %w`, NotBeforeKey, err)
+			return jwterrs.ErrFromClaim(`invalid value for %s key: %w`, NotBeforeKey, err)
 		}
 		t.notBefore = &acceptor
 		return nil
@@ -314,7 +314,7 @@ func (t *stdToken) setNoLock(name string, value any) error {
 			t.subject = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, SubjectKey, value)
+		return jwterrs.ErrFromClaim(`invalid value for %s key: %T`, SubjectKey, value)
 	default:
 		if t.privateClaims == nil {
 			t.privateClaims = map[string]any{}
@@ -408,7 +408,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return fmt.Errorf(`error reading token: %w`, err)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -417,45 +417,45 @@ LOOP:
 			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, AudienceKey, err)
 				}
 				t.audience = decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ExpirationKey, err)
 				}
 				t.expiration = &decoded
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuedAtKey, err)
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
 				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NotBeforeKey, err)
 				}
 				t.notBefore = &decoded
 			case SubjectKey:
 				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			default:
 				if dc := t.dc; dc != nil {
@@ -472,10 +472,10 @@ LOOP:
 					t.setNoLock(tok, decoded)
 					continue
 				}
-				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return fmt.Errorf(`invalid token %T`, tok)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `invalid token %T`, tok)
 		}
 	}
 	return nil
@@ -551,56 +551,56 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 	if t.audience != nil {
 		buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(FlattenAudience))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "aud": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: AudienceKey, Value: buf})
 	}
 	if t.expiration != nil {
 		buf, err := json.Marshal(t.expiration.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "exp": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
 	}
 	if t.issuedAt != nil {
 		buf, err := json.Marshal(t.issuedAt.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "iat": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
 	}
 	if t.issuer != nil {
 		buf, err := json.Marshal(*(t.issuer))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "iss": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: IssuerKey, Value: buf})
 	}
 	if t.jwtID != nil {
 		buf, err := json.Marshal(*(t.jwtID))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "jti": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: buf})
 	}
 	if t.notBefore != nil {
 		buf, err := json.Marshal(t.notBefore.Unix())
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode "nbf": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
 	}
 	if t.subject != nil {
 		buf, err := json.Marshal(*(t.subject))
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field "sub": %w`, err)
 		}
 		pairs = append(pairs, claimPair{Name: SubjectKey, Value: buf})
 	}
 	for k, v := range t.privateClaims {
 		buf, err := json.Marshal(v)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
+			return nil, jwterrs.ErrFromClaim(`failed to encode field %q: %w`, k, err)
 		}
 		pairs = append(pairs, claimPair{Name: k, Value: buf})
 	}
@@ -617,7 +617,7 @@ func (t stdToken) MarshalJSON() ([]byte, error) {
 	defer pool.BytesBuffer().Put(buf)
 	pairs, err := t.makePairs()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+		return nil, jwterrs.ErrFromClaim(`failed to make pairs: %w`, err)
 	}
 	buf.WriteByte(tokens.OpenCurlyBracket)
 

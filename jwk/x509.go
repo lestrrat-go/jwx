@@ -88,7 +88,7 @@ func encodeX509(v any) (string, []byte, error) {
 func EncodePEM(v any) ([]byte, error) {
 	typ, marshaled, err := encodeX509(v)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to encode key in x509: %w`, err)
+		return nil, errFromExport(`failed to encode key in x509: %w`, err)
 	}
 
 	block := &pem.Block{
@@ -123,7 +123,7 @@ type pemDecoder struct{}
 func (pemDecoder) Decode(src []byte) (any, []byte, error) {
 	block, rest := pem.Decode(src)
 	if block == nil {
-		return nil, rest, fmt.Errorf(`failed to decode PEM data`)
+		return nil, rest, errFromParse(prefixParse, `failed to decode PEM data`)
 	}
 	var ret any
 	if err := jwkbb.DecodeX509(&ret, block); err != nil {

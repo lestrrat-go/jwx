@@ -4,7 +4,6 @@ package jwe
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 	"sync"
 
@@ -298,123 +297,123 @@ func (h *stdHeaders) Get(name string, dst any) error {
 	switch name {
 	case AgreementPartyUInfoKey:
 		if h.agreementPartyUInfo == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.agreementPartyUInfo); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case AgreementPartyVInfoKey:
 		if h.agreementPartyVInfo == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.agreementPartyVInfo); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case AlgorithmKey:
 		if h.algorithm == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.algorithm)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case CompressionKey:
 		if h.compression == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.compression)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case ContentEncryptionKey:
 		if h.contentEncryption == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.contentEncryption)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case ContentTypeKey:
 		if h.contentType == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.contentType)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case CriticalKey:
 		if h.critical == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.critical); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case EphemeralPublicKeyKey:
 		if h.ephemeralPublicKey == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.ephemeralPublicKey); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case JWKKey:
 		if h.jwk == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.jwk); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case JWKSetURLKey:
 		if h.jwkSetURL == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.jwkSetURL)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case KeyIDKey:
 		if h.keyID == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.keyID)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case TypeKey:
 		if h.typ == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.typ)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case X509CertChainKey:
 		if h.x509CertChain == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, h.x509CertChain); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprint)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case X509CertThumbprintS256Key:
 		if h.x509CertThumbprintS256 == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprintS256)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	case X509URLKey:
 		if h.x509URL == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, *(h.x509URL)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	default:
 		v, ok := h.privateParams[name]
 		if !ok {
-			return fmt.Errorf(`field %q not found`, name)
+			return errFromField(`field %q not found`, name)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
+			return errFromField(`failed to assign value for field %q: %w`, name, err)
 		}
 	}
 	return nil
@@ -433,100 +432,100 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 			h.agreementPartyUInfo = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, AgreementPartyUInfoKey, value)
+		return errFromField(`invalid value for %s key: %T`, AgreementPartyUInfoKey, value)
 	case AgreementPartyVInfoKey:
 		if v, ok := value.([]byte); ok {
 			h.agreementPartyVInfo = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, AgreementPartyVInfoKey, value)
+		return errFromField(`invalid value for %s key: %T`, AgreementPartyVInfoKey, value)
 	case AlgorithmKey:
 		if v, ok := value.(jwa.KeyEncryptionAlgorithm); ok {
 			h.algorithm = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, AlgorithmKey, value)
+		return errFromField(`invalid value for %s key: %T`, AlgorithmKey, value)
 	case CompressionKey:
 		if v, ok := value.(jwa.CompressionAlgorithm); ok {
 			h.compression = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, CompressionKey, value)
+		return errFromField(`invalid value for %s key: %T`, CompressionKey, value)
 	case ContentEncryptionKey:
 		if v, ok := value.(jwa.ContentEncryptionAlgorithm); ok {
 			if v == jwa.EmptyContentEncryptionAlgorithm() {
-				return fmt.Errorf(`"enc" field cannot be an empty string`)
+				return errFromField(`"enc" field cannot be an empty string`)
 			}
 			h.contentEncryption = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, ContentEncryptionKey, value)
+		return errFromField(`invalid value for %s key: %T`, ContentEncryptionKey, value)
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
 			h.contentType = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
+		return errFromField(`invalid value for %s key: %T`, ContentTypeKey, value)
 	case CriticalKey:
 		if v, ok := value.([]string); ok {
 			h.critical = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
+		return errFromField(`invalid value for %s key: %T`, CriticalKey, value)
 	case EphemeralPublicKeyKey:
 		if v, ok := value.(jwk.Key); ok {
 			h.ephemeralPublicKey = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, EphemeralPublicKeyKey, value)
+		return errFromField(`invalid value for %s key: %T`, EphemeralPublicKeyKey, value)
 	case JWKKey:
 		if v, ok := value.(jwk.Key); ok {
 			h.jwk = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, JWKKey, value)
+		return errFromField(`invalid value for %s key: %T`, JWKKey, value)
 	case JWKSetURLKey:
 		if v, ok := value.(string); ok {
 			h.jwkSetURL = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, JWKSetURLKey, value)
+		return errFromField(`invalid value for %s key: %T`, JWKSetURLKey, value)
 	case KeyIDKey:
 		if v, ok := value.(string); ok {
 			h.keyID = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
+		return errFromField(`invalid value for %s key: %T`, KeyIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
 			h.typ = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, TypeKey, value)
+		return errFromField(`invalid value for %s key: %T`, TypeKey, value)
 	case X509CertChainKey:
 		if v, ok := value.(*cert.Chain); ok {
 			h.x509CertChain = v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, X509CertChainKey, value)
+		return errFromField(`invalid value for %s key: %T`, X509CertChainKey, value)
 	case X509CertThumbprintKey:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprint = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
+		return errFromField(`invalid value for %s key: %T`, X509CertThumbprintKey, value)
 	case X509CertThumbprintS256Key:
 		if v, ok := value.(string); ok {
 			h.x509CertThumbprintS256 = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
+		return errFromField(`invalid value for %s key: %T`, X509CertThumbprintS256Key, value)
 	case X509URLKey:
 		if v, ok := value.(string); ok {
 			h.x509URL = &v
 			return nil
 		}
-		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
+		return errFromField(`invalid value for %s key: %T`, X509URLKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]any{}
@@ -600,7 +599,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return fmt.Errorf(`error reading token: %w`, err)
+			return errFromParse(prefixParse, `error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -609,95 +608,95 @@ LOOP:
 			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
+				return errFromParse(prefixParse, `expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AgreementPartyUInfoKey:
 				if err := json.AssignNextBytesToken(&h.agreementPartyUInfo, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AgreementPartyUInfoKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, AgreementPartyUInfoKey, err)
 				}
 			case AgreementPartyVInfoKey:
 				if err := json.AssignNextBytesToken(&h.agreementPartyVInfo, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AgreementPartyVInfoKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, AgreementPartyVInfoKey, err)
 				}
 			case AlgorithmKey:
 				var decoded jwa.KeyEncryptionAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, AlgorithmKey, err)
 				}
 				h.algorithm = &decoded
 			case CompressionKey:
 				var decoded jwa.CompressionAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, CompressionKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, CompressionKey, err)
 				}
 				h.compression = &decoded
 			case ContentEncryptionKey:
 				var decoded jwa.ContentEncryptionAlgorithm
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ContentEncryptionKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, ContentEncryptionKey, err)
 				}
 				h.contentEncryption = &decoded
 			case ContentTypeKey:
 				if err := json.AssignNextStringToken(&h.contentType, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ContentTypeKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, ContentTypeKey, err)
 				}
 			case CriticalKey:
 				var decoded []string
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, CriticalKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, CriticalKey, err)
 				}
 				h.critical = decoded
 			case EphemeralPublicKeyKey:
 				var buf json.RawMessage
 				if err := dec.Decode(&buf); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s:%w`, EphemeralPublicKeyKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s:%w`, EphemeralPublicKeyKey, err)
 				}
 				key, err := jwk.ParseKey(buf)
 				if err != nil {
-					return fmt.Errorf(`failed to parse JWK for key %s: %w`, EphemeralPublicKeyKey, err)
+					return errFromParse(prefixParse, `failed to parse JWK for key %s: %w`, EphemeralPublicKeyKey, err)
 				}
 				h.ephemeralPublicKey = key
 			case JWKKey:
 				var buf json.RawMessage
 				if err := dec.Decode(&buf); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s:%w`, JWKKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s:%w`, JWKKey, err)
 				}
 				key, err := jwk.ParseKey(buf)
 				if err != nil {
-					return fmt.Errorf(`failed to parse JWK for key %s: %w`, JWKKey, err)
+					return errFromParse(prefixParse, `failed to parse JWK for key %s: %w`, JWKKey, err)
 				}
 				h.jwk = key
 			case JWKSetURLKey:
 				if err := json.AssignNextStringToken(&h.jwkSetURL, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, JWKSetURLKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, JWKSetURLKey, err)
 				}
 			case KeyIDKey:
 				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case TypeKey:
 				if err := json.AssignNextStringToken(&h.typ, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, TypeKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, TypeKey, err)
 				}
 			case X509CertChainKey:
 				var decoded cert.Chain
 				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, X509CertChainKey, err)
 				}
 				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
 				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
 				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
+					return errFromParse(prefixParse, `failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:
 				decoded, err := registry.Decode(dec, tok)
@@ -707,7 +706,7 @@ LOOP:
 				h.setNoLock(tok, decoded)
 			}
 		default:
-			return fmt.Errorf(`invalid token %T`, tok)
+			return errFromParse(prefixParse, `invalid token %T`, tok)
 		}
 	}
 	return nil
@@ -865,7 +864,7 @@ func (h stdHeaders) MarshalJSON() ([]byte, error) {
 			buf.WriteRune(tokens.DoubleQuote)
 		default:
 			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s`, k)
+				return nil, errFromField(`failed to encode value for field %s`, k)
 			}
 			buf.Truncate(buf.Len() - 1)
 		}

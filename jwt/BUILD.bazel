@@ -43,6 +43,7 @@ go_library(
 go_test(
     name = "jwt_test",
     srcs = [
+        "filter_test.go",
         "jwt_test.go",
         "options_gen_test.go",
         "token_options_test.go",

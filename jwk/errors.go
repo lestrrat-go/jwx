@@ -3,6 +3,8 @@ package jwk
 import (
 	"errors"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/errchain"
 )
 
 var cpe = &continueError{}
@@ -33,14 +35,39 @@ func (importError) Is(err error) bool {
 	return ok
 }
 
-func importerr(f string, args ...any) error {
-	return importError{fmt.Errorf(`jwk.Import: `+f, args...)}
+func errFromImport(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return importError{errchain.Wrap(errors.New("jwk.Import"), innerErr)}
 }
 
 var errDefaultImportError = importError{errors.New(`import error`)}
 
 func ImportError() error {
 	return errDefaultImportError
+}
+
+type exportError struct {
+	error
+}
+
+func (e exportError) Unwrap() error {
+	return e.error
+}
+
+func (exportError) Is(err error) bool {
+	_, ok := err.(exportError)
+	return ok
+}
+
+func errFromExport(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return exportError{errchain.Wrap(errors.New("jwk.Export"), innerErr)}
+}
+
+var errDefaultExportError = exportError{errors.New(`export error`)}
+
+func ExportError() error {
+	return errDefaultExportError
 }
 
 type parseError struct {
@@ -57,19 +84,19 @@ func (parseError) Is(err error) bool {
 }
 
 func bparseerr(prefix string, f string, args ...any) error {
-	return parseError{fmt.Errorf(prefix+`: `+f, args...)}
+	innerErr := fmt.Errorf(f, args...)
+	return parseError{errchain.Wrap(errors.New(prefix), innerErr)}
 }
 
-func parseerr(f string, args ...any) error {
-	return bparseerr(`jwk.Parse`, f, args...)
-}
+// Error prefixes for errFromParse calls
+const (
+	prefixParse       = "jwk.Parse"
+	prefixParseReader = "jwk.ParseReader"
+	prefixParseString = "jwk.ParseString"
+)
 
-func rparseerr(f string, args ...any) error {
-	return bparseerr(`jwk.ParseReader`, f, args...)
-}
-
-func sparseerr(f string, args ...any) error {
-	return bparseerr(`jwk.ParseString`, f, args...)
+func errFromParse(prefix, f string, args ...any) error {
+	return bparseerr(prefix, f, args...)
 }
 
 var errDefaultParseError = parseError{errors.New(`parse error`)}

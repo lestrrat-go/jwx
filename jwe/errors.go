@@ -1,6 +1,11 @@
 package jwe
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/v3/internal/errchain"
+)
 
 type encryptError struct {
 	error
@@ -13,6 +18,11 @@ func (e encryptError) Unwrap() error {
 func (encryptError) Is(err error) bool {
 	_, ok := err.(encryptError)
 	return ok
+}
+
+func errFromEncrypt(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return encryptError{errchain.Wrap(errors.New("jwe.Encrypt"), innerErr)}
 }
 
 var errDefaultEncryptError = encryptError{errors.New(`encrypt error`)}
@@ -35,6 +45,11 @@ func (decryptError) Is(err error) bool {
 	return ok
 }
 
+func errFromDecrypt(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return decryptError{errchain.Wrap(errors.New("jwe.Decrypt"), innerErr)}
+}
+
 var errDefaultDecryptError = decryptError{errors.New(`decrypt error`)}
 
 // DecryptError returns an error that can be passed to `errors.Is` to check if the error is an error returned by `jwe.Decrypt`.
@@ -53,6 +68,11 @@ func (e recipientError) Unwrap() error {
 func (recipientError) Is(err error) bool {
 	_, ok := err.(recipientError)
 	return ok
+}
+
+func errFromRecipient(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return recipientError{errchain.Wrap(errors.New("jwe recipient"), innerErr)}
 }
 
 var errDefaultRecipientError = recipientError{errors.New(`recipient error`)}
@@ -81,10 +101,32 @@ func (parseError) Is(err error) bool {
 	return ok
 }
 
+func bparseerr(prefix string, f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return parseError{errchain.Wrap(errors.New(prefix), innerErr)}
+}
+
+// Error prefixes for errFromParse calls
+const (
+	prefixParse       = "jwe.Parse"
+	prefixParseReader = "jwe.ParseReader"
+	prefixParseString = "jwe.ParseString"
+)
+
+func errFromParse(prefix, f string, args ...any) error {
+	return bparseerr(prefix, f, args...)
+}
+
 var errDefaultParseError = parseError{errors.New(`parse error`)}
 
 // ParseError returns an error that can be passed to `errors.Is` to check if the error
 // is an error returned by `jwe.Parse` and related functions.
 func ParseError() error {
 	return errDefaultParseError
+}
+
+// errFromField wraps header field access errors (used by Headers.Get/Set methods)
+func errFromField(f string, args ...any) error {
+	innerErr := fmt.Errorf(f, args...)
+	return errchain.Wrap(errors.New("jwe.Headers"), innerErr)
 }

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "errors",
@@ -8,6 +8,17 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v3/jwt/internal/errors",
     visibility = ["//jwt:__subpackages__"],
     deps = ["//internal/errchain"],
+)
+
+go_test(
+    name = "errors_test",
+    srcs = [
+        "errors_test.go",
+    ],
+    embed = [":errors"],
+    deps = [
+        "@com_github_stretchr_testify//require",
+    ],
 )
 
 alias(

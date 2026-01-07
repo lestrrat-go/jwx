@@ -1,7 +1,6 @@
 package jwk
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -58,17 +57,17 @@ func (k *KeyUsageType) Accept(v any) error {
 	switch v := v.(type) {
 	case KeyUsageType:
 		if !isValidUsage(v.String()) {
-			return fmt.Errorf("invalid key usage type: %q", v)
+			return errFromParse(prefixParse, "invalid key usage type: %q", v)
 		}
 		*k = v
 		return nil
 	case string:
 		if !isValidUsage(v) {
-			return fmt.Errorf("invalid key usage type: %q", v)
+			return errFromParse(prefixParse, "invalid key usage type: %q", v)
 		}
 		*k = KeyUsageType(v)
 		return nil
 	}
 
-	return fmt.Errorf("invalid Go type for key usage type: %T", v)
+	return errFromParse(prefixParse, "invalid Go type for key usage type: %T", v)
 }

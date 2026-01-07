@@ -57,14 +57,14 @@ func init() {
 //   - []byte creates a symmetric key
 func Import(raw any) (Key, error) {
 	if raw == nil {
-		return nil, importerr(`a non-nil key is required`)
+		return nil, errFromImport(`a non-nil key is required`)
 	}
 
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
 	if !ok {
-		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		return nil, errFromImport(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
 	return conv.Import(raw)
@@ -86,14 +86,14 @@ func PublicSetOf(v Set) (Set, error) {
 	for i := range n {
 		k, ok := v.Key(i)
 		if !ok {
-			return nil, fmt.Errorf(`key not found`)
+			return nil, errFromParse(prefixParse, `key not found`)
 		}
 		pubKey, err := PublicKeyOf(k)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to get public key of %T: %w`, k, err)
+			return nil, errFromParse(prefixParse, `failed to get public key of %T: %w`, k, err)
 		}
 		if err := newSet.AddKey(pubKey); err != nil {
-			return nil, fmt.Errorf(`failed to add key to public key set: %w`, err)
+			return nil, errFromParse(prefixParse, `failed to add key to public key set: %w`, err)
 		}
 	}
 
@@ -117,7 +117,7 @@ func PublicKeyOf(v any) (Key, error) {
 
 	jk, err := Import(v)
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.PublicKeyOf: failed to convert key into JWK: %w`, err)
+		return nil, errFromImport(`failed to convert key into JWK: %w`, err)
 	}
 
 	return jk.PublicKey()
@@ -138,23 +138,23 @@ func PublicRawKeyOf(v any) (any, error) {
 	if !ok {
 		k, err := Import(v)
 		if err != nil {
-			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.Key: %w`, err)
+			return nil, errFromImport(`failed to convert key to jwk.Key: %w`, err)
 		}
 
 		pk, ok = k.(PublicKeyer)
 		if !ok {
-			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.PublicKeyer: %w`, err)
+			return nil, errFromImport(`failed to convert key to jwk.PublicKeyer: %w`, err)
 		}
 	}
 
 	pubk, err := pk.PublicKey()
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain public key from %T: %w`, v, err)
+		return nil, errFromExport(`failed to obtain public key from %T: %w`, v, err)
 	}
 
 	var raw any
 	if err := Export(pubk, &raw); err != nil {
-		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
+		return nil, errFromExport(`failed to obtain raw key from %T: %w`, pubk, err)
 	}
 	return raw, nil
 }
@@ -166,11 +166,11 @@ func PublicRawKeyOf(v any) (any, error) {
 func ParseRawKey(data []byte, rawkey any) error {
 	key, err := ParseKey(data)
 	if err != nil {
-		return fmt.Errorf(`failed to parse key: %w`, err)
+		return errFromParse(prefixParse, `failed to parse key: %w`, err)
 	}
 
 	if err := Export(key, rawkey); err != nil {
-		return fmt.Errorf(`failed to assign to raw key variable: %w`, err)
+		return errFromExport(`failed to assign to raw key variable: %w`, err)
 	}
 
 	return nil
@@ -205,27 +205,27 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		switch option.Ident() {
 		case identPEM{}:
 			if err := option.Value(&parsePEM); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve PEM option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve PEM option value: %w`, err)
 			}
 		case identPEMDecoder{}:
 			if err := option.Value(&pemDecoder); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve PEMDecoder option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve PEMDecoder option value: %w`, err)
 			}
 		case identLocalRegistry{}:
 			if err := option.Value(&localReg); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve local registry option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve local registry option value: %w`, err)
 			}
 		case identTypedField{}:
 			var pair typedFieldPair // temporary var needed for typed field
 			if err := option.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve typed field option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve typed field option value: %w`, err)
 			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
 			localReg.Register(pair.Name, pair.Value)
 		case identIgnoreParseError{}:
-			return nil, fmt.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
+			return nil, errFromParse(prefixParse, `jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
 		}
 	}
 
@@ -235,13 +235,13 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		// PEMDecoder should probably be deprecated, because of being a misnomer.
 		if pemDecoder != nil {
 			if err := decodeX509WithPEMDEcoder(&raw, data, pemDecoder); err != nil {
-				return nil, fmt.Errorf(`failed to decode PEM encoded key: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to decode PEM encoded key: %w`, err)
 			}
 		} else {
 			// This version takes into account the various X509 decoders that are
 			// pre-registered.
 			if err := decodeX509(&raw, data); err != nil {
-				return nil, fmt.Errorf(`failed to decode X.509 encoded key: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to decode X.509 encoded key: %w`, err)
 			}
 		}
 		return Import(raw)
@@ -249,7 +249,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 
 	probe, err := keyProbe.Probe(data)
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.Parse: failed to probe data: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to probe data: %w`, err)
 	}
 
 	unmarshaler := keyUnmarshaler{localReg: localReg}
@@ -272,7 +272,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 
 		return nil, err
 	}
-	return nil, fmt.Errorf(`jwk.Parse: no parser was able to parse the key`)
+	return nil, errFromParse(prefixParse, `no parser was able to parse the key`)
 }
 
 // Parse parses JWK from the incoming []byte.
@@ -299,24 +299,24 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		switch option.Ident() {
 		case identPEM{}:
 			if err := option.Value(&parsePEM); err != nil {
-				return nil, parseerr(`failed to retrieve PEM option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve PEM option value: %w`, err)
 			}
 		case identX509{}:
 			if err := option.Value(&parseX509); err != nil {
-				return nil, parseerr(`failed to retrieve X509 option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve X509 option value: %w`, err)
 			}
 		case identPEMDecoder{}:
 			if err := option.Value(&pemDecoder); err != nil {
-				return nil, parseerr(`failed to retrieve PEMDecoder option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve PEMDecoder option value: %w`, err)
 			}
 		case identIgnoreParseError{}:
 			if err := option.Value(&ignoreParseError); err != nil {
-				return nil, parseerr(`failed to retrieve IgnoreParseError option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve IgnoreParseError option value: %w`, err)
 			}
 		case identTypedField{}:
 			var pair typedFieldPair // temporary var needed for typed field
 			if err := option.Value(&pair); err != nil {
-				return nil, parseerr(`failed to retrieve typed field option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve typed field option value: %w`, err)
 			}
 			if localReg == nil {
 				localReg = json.NewRegistry()
@@ -335,14 +335,14 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		for len(src) > 0 {
 			raw, rest, err := pemDecoder.Decode(src)
 			if err != nil {
-				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to parse PEM encoded key: %w`, err)
 			}
 			key, err := Import(raw)
 			if err != nil {
-				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
+				return nil, errFromParse(prefixParse, `failed to create jwk.Key from %T: %w`, raw, err)
 			}
 			if err := s.AddKey(key); err != nil {
-				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to add jwk.Key to set: %w`, err)
 			}
 			src = bytes.TrimSpace(rest)
 		}
@@ -352,7 +352,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	if localReg != nil || ignoreParseError {
 		dcKs, ok := s.(KeyWithDecodeCtx)
 		if !ok {
-			return nil, parseerr(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
+			return nil, errFromParse(prefixParse, `typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
 		dc := &setDecodeCtx{
 			DecodeCtx:        json.NewDecodeCtx(localReg),
@@ -363,7 +363,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
-		return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to unmarshal JWK set: %w`, err)
 	}
 
 	return s, nil
@@ -375,12 +375,12 @@ func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 	// JWKs except when we encounter an EOF, so just... ReadAll
 	buf, err := io.ReadAll(src)
 	if err != nil {
-		return nil, rparseerr(`failed to read from io.Reader: %w`, err)
+		return nil, errFromParse(prefixParseReader, `failed to read from io.Reader: %w`, err)
 	}
 
 	set, err := Parse(buf, options...)
 	if err != nil {
-		return nil, rparseerr(`failed to parse reader: %w`, err)
+		return nil, errFromParse(prefixParseReader, `failed to parse reader: %w`, err)
 	}
 	return set, nil
 }
@@ -389,7 +389,7 @@ func ParseReader(src io.Reader, options ...ParseOption) (Set, error) {
 func ParseString(s string, options ...ParseOption) (Set, error) {
 	set, err := Parse([]byte(s), options...)
 	if err != nil {
-		return nil, sparseerr(`failed to parse string: %w`, err)
+		return nil, errFromParse(prefixParseString, `failed to parse string: %w`, err)
 	}
 	return set, nil
 }
@@ -407,18 +407,18 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			if err := option.Value(&hash); err != nil {
-				return fmt.Errorf(`failed to retrieve thumbprint hash option value: %w`, err)
+				return errFromParse(prefixParse, `failed to retrieve thumbprint hash option value: %w`, err)
 			}
 		}
 	}
 
 	h, err := key.Thumbprint(hash)
 	if err != nil {
-		return fmt.Errorf(`failed to generate thumbprint: %w`, err)
+		return errFromParse(prefixParse, `failed to generate thumbprint: %w`, err)
 	}
 
 	if err := key.Set(KeyIDKey, base64.EncodeToString(h)); err != nil {
-		return fmt.Errorf(`failed to set "kid": %w`, err)
+		return errFromParse(prefixParse, `failed to set "kid": %w`, err)
 	}
 
 	return nil
@@ -473,12 +473,12 @@ func Pem(v any) ([]byte, error) {
 	case Key:
 		set = NewSet()
 		if err := set.AddKey(v); err != nil {
-			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
+			return nil, errFromExport(`failed to add key to set: %w`, err)
 		}
 	case Set:
 		set = v
 	default:
-		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
+		return nil, errFromExport(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
 	}
 
 	var ret []byte
@@ -486,7 +486,7 @@ func Pem(v any) ([]byte, error) {
 		key, _ := set.Key(i)
 		typ, buf, err := asnEncode(key)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
+			return nil, errFromExport(`failed to encode content for key #%d: %w`, i, err)
 		}
 
 		var block pem.Block
@@ -502,35 +502,35 @@ func asnEncode(key Key) (string, []byte, error) {
 	case ECDSAPrivateKey:
 		var rawkey ecdsa.PrivateKey
 		if err := Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
+			return "", nil, errFromExport(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalECPrivateKey(&rawkey)
 		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
+			return "", nil, errFromExport(`failed to marshal PKCS8: %w`, err)
 		}
 		return pmECPrivateKey, buf, nil
 	case RSAPrivateKey, OKPPrivateKey:
 		var rawkey any
 		if err := Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
+			return "", nil, errFromExport(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
 		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
+			return "", nil, errFromExport(`failed to marshal PKCS8: %w`, err)
 		}
 		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		var rawkey any
 		if err := Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
+			return "", nil, errFromExport(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKIXPublicKey(rawkey)
 		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
+			return "", nil, errFromExport(`failed to marshal PKIX: %w`, err)
 		}
 		return pmPublicKey, buf, nil
 	default:
-		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
+		return "", nil, errFromExport(`unsupported key type %T`, key)
 	}
 }
 
@@ -604,7 +604,7 @@ func IsPrivateKey(k Key) (bool, error) {
 	if ok {
 		return asymmetric.IsPrivate(), nil
 	}
-	return false, fmt.Errorf("jwk.IsPrivateKey: %T is not an asymmetric key", k)
+	return false, errFromParse(prefixParse, "%T is not an asymmetric key", k)
 }
 
 type keyValidationError struct {

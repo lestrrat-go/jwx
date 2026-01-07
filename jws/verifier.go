@@ -1,7 +1,6 @@
 package jws
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -18,7 +17,7 @@ func (v defaultVerifier) Algorithm() jwa.SignatureAlgorithm {
 
 func (v defaultVerifier) Verify(key any, payload, signature []byte) error {
 	if err := jwsbb.Verify(key, v.alg.String(), payload, signature); err != nil {
-		return verifyError{verificationError{err}}
+		return errFromVerify("%w", errFromVerification("%w", err))
 	}
 	return nil
 }
@@ -36,7 +35,7 @@ type verifierAdapter struct {
 
 func (v verifierAdapter) Verify(key any, payload, signature []byte) error {
 	if err := v.v.Verify(payload, signature, key); err != nil {
-		return verifyError{verificationError{err}}
+		return errFromVerify("%w", errFromVerification("%w", err))
 	}
 	return nil
 }
@@ -117,7 +116,7 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, f any) error {
 		delete(verifier2DB, alg)
 		muVerifier2DB.Unlock()
 	default:
-		return fmt.Errorf(`jws.RegisterVerifier: unsupported type %T for algorithm %q`, f, alg)
+		return errFromVerify(`unsupported type %T for algorithm %q`, f, alg)
 	}
 	return nil
 }
@@ -150,5 +149,5 @@ func NewVerifier(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	if ok {
 		return f.Create()
 	}
-	return nil, fmt.Errorf(`jws.NewVerifier: unsupported signature algorithm "%s"`, alg)
+	return nil, errFromVerify(`unsupported signature algorithm "%s"`, alg)
 }

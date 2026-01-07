@@ -333,7 +333,7 @@ func generateToken(obj *codegen.Object) error {
 			o.L("tmp := v.String()")
 			o.L("t.algorithm = &tmp")
 			o.L("default:")
-			o.L("return fmt.Errorf(`invalid type for %%s key: %%T`, %s, value)", keyName)
+			o.L("return jwterrs.Claimer(`invalid type for %%s key: %%T`, %s, value)", keyName)
 			o.L("}")
 			o.L("return nil")
 		} else if f.Bool(`hasAccept`) {
@@ -344,7 +344,7 @@ func generateToken(obj *codegen.Object) error {
 			}
 
 			o.L("if err := acceptor.Accept(value); err != nil {")
-			o.L("return fmt.Errorf(`invalid value for %%s key: %%w`, %s, err)", keyName)
+			o.L("return jwterrs.Claimer(`invalid value for %%s key: %%w`, %s, err)", keyName)
 			o.L("}") // end if err := t.%s.Accept(value)
 			if fieldStorageTypeIsIndirect(f.Type()) || IsPointer(f) {
 				o.L("t.%s = &acceptor", f.Name(false))
@@ -361,7 +361,7 @@ func generateToken(obj *codegen.Object) error {
 			}
 			o.L("return nil")
 			o.L("}") // end if v, ok := value.(%s)
-			o.L("return fmt.Errorf(`invalid value for %%s key: %%T`, %s, value)", keyName)
+			o.L("return jwterrs.Claimer(`invalid value for %%s key: %%T`, %s, value)", keyName)
 		}
 	}
 	o.L("default:")
@@ -431,7 +431,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("for {")
 	o.L("tok, err := dec.Token()")
 	o.L("if err != nil {")
-	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
+	o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `error reading token: %%w`, err)")
 	o.L("}")
 	o.L("switch tok := tok.(type) {")
 	o.L("case json.Delim:")
@@ -440,7 +440,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("if tok == tokens.CloseCurlyBracket { // End of object")
 	o.L("break LOOP")
 	o.L("} else if tok != tokens.OpenCurlyBracket {")
-	o.L("return fmt.Errorf(`expected '%%c', but got '%%c'`, tokens.OpenCurlyBracket, tok)")
+	o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `expected '%%c', but got '%%c'`, tokens.OpenCurlyBracket, tok)")
 	o.L("}")
 	o.L("case string: // Objects can only have string keys")
 	o.L("switch tok {")
@@ -449,18 +449,18 @@ func generateToken(obj *codegen.Object) error {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.Name(false))
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == byteSliceType {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextBytesToken(&t.%s, dec); err != nil {", f.Name(false))
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "types.StringList" || strings.HasPrefix(f.Type(), "[]") {
 			o.L("case %sKey:", f.Name(true))
 			o.L("var decoded %s", f.Type())
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("t.%s = decoded", f.Name(false))
 		} else {
@@ -471,7 +471,7 @@ func generateToken(obj *codegen.Object) error {
 				o.L("var decoded %s", f.Type())
 			}
 			o.L("if err := dec.Decode(&decoded); err != nil {")
-			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 			o.L("t.%s = &decoded", f.Name(false))
 		}
@@ -494,10 +494,10 @@ func generateToken(obj *codegen.Object) error {
 	o.L("t.setNoLock(tok, decoded)")
 	o.L("continue")
 	o.L("}")
-	o.L("return fmt.Errorf(`could not decode field %%s: %%w`, tok, err)")
+	o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `could not decode field %%s: %%w`, tok, err)")
 	o.L("}")
 	o.L("default:")
-	o.L("return fmt.Errorf(`invalid token %%T`, tok)")
+	o.L("return jwterrs.ParseErrorf(`jwt.Token.UnmarshalJSON`, `invalid token %%T`, tok)")
 	o.L("}")
 	o.L("}")
 
@@ -560,13 +560,13 @@ func generateToken(obj *codegen.Object) error {
 		if f.Name(false) == `audience` {
 			o.L("buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(%sFlattenAudience))", pkgPrefix)
 			o.L("if err != nil {")
-			o.L("return nil, fmt.Errorf(`failed to encode \"aud\": %%w`, err)")
+			o.L("return nil, jwterrs.Claimer(`failed to encode \"aud\": %%w`, err)")
 			o.L("}")
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
 		} else if f.Type() == "types.NumericDate" {
 			o.L("buf, err := json.Marshal(t.%s.Unix())", f.Name(false))
 			o.L("if err != nil {")
-			o.L("return nil, fmt.Errorf(`failed to encode %q: %%w`, err)", f.JSON())
+			o.L("return nil, jwterrs.Claimer(`failed to encode %q: %%w`, err)", f.JSON())
 			o.L("}")
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
 		} else if f.Type() == "[]byte" {
@@ -575,7 +575,7 @@ func generateToken(obj *codegen.Object) error {
 		} else {
 			o.L("buf, err := json.Marshal(*(t.%s))", f.Name(false))
 			o.L("if err != nil {")
-			o.L("return nil, fmt.Errorf(`failed to encode field %q: %%w`, err)", f.JSON())
+			o.L("return nil, jwterrs.Claimer(`failed to encode field %q: %%w`, err)", f.JSON())
 			o.L("}")
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
 		}
@@ -585,7 +585,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("for k, v := range t.privateClaims {")
 	o.L("buf, err := json.Marshal(v)")
 	o.L("if err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode field %%q: %%w`, k, err)")
+	o.L("return nil, jwterrs.Claimer(`failed to encode field %%q: %%w`, k, err)")
 	o.L("}")
 	o.L("pairs = append(pairs, claimPair{Name: k, Value: buf})")
 	o.L("}")
@@ -600,7 +600,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("pairs, err := t.makePairs()")
 	o.L("if err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to make pairs: %%w`, err)")
+	o.L("return nil, jwterrs.Claimer(`failed to make pairs: %%w`, err)")
 	o.L("}")
 	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
 	o.LL("for i, pair := range pairs {")

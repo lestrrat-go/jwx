@@ -7,7 +7,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"errors"
-	"fmt"
 	"math/big"
 	"reflect"
 	"sync"
@@ -155,7 +154,7 @@ func ecdhPrivateKeyToJWK(src any) (Key, error) {
 	case ecdh.PrivateKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to ECDH jwk.Key`, src)
 	}
 
 	switch raw.Curve() {
@@ -168,7 +167,7 @@ func ecdhPrivateKeyToJWK(src any) (Key, error) {
 	case ecdh.P521():
 		return ecdhPrivateKeyToECJWK(raw, elliptic.P521())
 	default:
-		return nil, fmt.Errorf(`unsupported curve %s`, raw.Curve())
+		return nil, errFromImport(`unsupported curve %s`, raw.Curve())
 	}
 }
 
@@ -198,7 +197,7 @@ func ecdhPublicKeyToJWK(src any) (Key, error) {
 	case ecdh.PublicKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to ECDH jwk.Key`, src)
 	}
 
 	switch raw.Curve() {
@@ -211,7 +210,7 @@ func ecdhPublicKeyToJWK(src any) (Key, error) {
 	case ecdh.P521():
 		return ecdhPublicKeyToECJWK(raw, elliptic.P521())
 	default:
-		return nil, fmt.Errorf(`unsupported curve %s`, raw.Curve())
+		return nil, errFromImport(`unsupported curve %s`, raw.Curve())
 	}
 }
 
@@ -241,11 +240,11 @@ func rsaPrivateKeyToJWK(src any) (Key, error) {
 	case rsa.PrivateKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to RSA jwk.Key`, src)
 	}
 	k := newRSAPrivateKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -258,11 +257,11 @@ func rsaPublicKeyToJWK(src any) (Key, error) {
 	case rsa.PublicKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to RSA jwk.Key`, src)
 	}
 	k := newRSAPublicKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -275,11 +274,11 @@ func ecdsaPrivateKeyToJWK(src any) (Key, error) {
 	case ecdsa.PrivateKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
 	}
 	k := newECDSAPrivateKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -292,11 +291,11 @@ func ecdsaPublicKeyToJWK(src any) (Key, error) {
 	case ecdsa.PublicKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
 	}
 	k := newECDSAPublicKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -309,11 +308,11 @@ func okpPrivateKeyToJWK(src any) (Key, error) {
 	case ecdh.PrivateKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to OKP jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to OKP jwk.Key`, src)
 	}
 	k := newOKPPrivateKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -326,11 +325,11 @@ func okpPublicKeyToJWK(src any) (Key, error) {
 	case ecdh.PublicKey:
 		raw = &src
 	default:
-		return nil, fmt.Errorf(`jwk: convert raw to OKP jwk.Key: cannot convert key type '%T' to OKP jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to OKP jwk.Key`, src)
 	}
 	k := newOKPPublicKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -341,12 +340,12 @@ func bytesToKey(src any) (Key, error) {
 	case []byte:
 		raw = src
 	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to symmetric jwk.Key`, src)
+		return nil, errFromImport(`cannot convert key type '%T' to symmetric jwk.Key`, src)
 	}
 
 	k := newSymmetricKey()
 	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		return nil, errFromImport(`failed to initialize %T from %T: %w`, k, raw, err)
 	}
 	return k, nil
 }
@@ -374,13 +373,13 @@ func Export(key Key, dst any) error {
 	// dst better be a pointer
 	rv := reflect.ValueOf(dst)
 	if rv.Kind() != reflect.Ptr {
-		return fmt.Errorf(`jwk.Export: destination object must be a pointer`)
+		return errFromExport(`destination object must be a pointer`)
 	}
 	muKeyExporters.RLock()
 	exporters, ok := keyExporters[key.KeyType()]
 	muKeyExporters.RUnlock()
 	if !ok {
-		return fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
+		return errFromExport(`no exporters registered for key type '%T'`, key)
 	}
 	for _, conv := range exporters {
 		v, err := conv.Export(key, dst)
@@ -388,12 +387,12 @@ func Export(key Key, dst any) error {
 			if errors.Is(err, ContinueError()) {
 				continue
 			}
-			return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
+			return errFromExport(`failed to export jwk.Key to raw format: %w`, err)
 		}
 		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
+			return errFromExport(`failed to assign key: %w`, err)
 		}
 		return nil
 	}
-	return fmt.Errorf(`jwk.Export: no suitable exporter found for key type '%T'`, key)
+	return errFromExport(`no suitable exporter found for key type '%T'`, key)
 }

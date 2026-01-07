@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -49,7 +48,7 @@ func NewCachedFetcher(cache *Cache) *CachedFetcher {
 // the cache, an error is returned.
 func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (Set, error) {
 	if !f.cache.IsRegistered(ctx, u) {
-		return nil, fmt.Errorf(`jwk.CachedFetcher: url %q has not been registered`, u)
+		return nil, errFromParse(prefixParse, `url %q has not been registered`, u)
 	}
 	return f.cache.Lookup(ctx, u)
 }
@@ -80,37 +79,37 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		switch option.Ident() {
 		case identHTTPClient{}:
 			if err := option.Value(&client); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve HTTPClient option value: %w`, err)
 			}
 		case identFetchWhitelist{}:
 			if err := option.Value(&wl); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve fetch whitelist option value: %w`, err)
+				return nil, errFromParse(prefixParse, `failed to retrieve fetch whitelist option value: %w`, err)
 			}
 		}
 	}
 
 	if !wl.IsAllowed(u) {
-		return nil, fmt.Errorf(`jwk.Fetch: url %q has been rejected by whitelist`, u)
+		return nil, errFromParse(prefixParse, `url %q has been rejected by whitelist`, u)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.Fetch: failed to create new request: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to create new request: %w`, err)
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.Fetch: request failed: %w`, err)
+		return nil, errFromParse(prefixParse, `request failed: %w`, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(`jwk.Fetch: request returned status %d, expected 200`, res.StatusCode)
+		return nil, errFromParse(prefixParse, `request returned status %d, expected 200`, res.StatusCode)
 	}
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf(`jwk.Fetch: failed to read response body for %q: %w`, u, err)
+		return nil, errFromParse(prefixParse, `failed to read response body for %q: %w`, u, err)
 	}
 
 	return Parse(buf, parseOptions...)

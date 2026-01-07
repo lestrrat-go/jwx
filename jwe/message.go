@@ -45,13 +45,13 @@ func (r *stdRecipient) UnmarshalJSON(buf []byte) error {
 	var proxy recipientMarshalProxy
 	proxy.Headers = NewHeaders()
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return fmt.Errorf(`failed to unmarshal json into recipient: %w`, err)
+		return errFromParse(prefixParse, `failed to unmarshal json into recipient: %w`, err)
 	}
 
 	r.headers = proxy.Headers
 	decoded, err := base64.DecodeString(proxy.EncryptedKey)
 	if err != nil {
-		return fmt.Errorf(`failed to decode "encrypted_key": %w`, err)
+		return errFromParse(prefixParse, `failed to decode "encrypted_key": %w`, err)
 	}
 	r.encryptedKey = decoded
 	return nil
@@ -64,7 +64,7 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 	buf.WriteString(`{"header":`)
 	hdrbuf, err := json.Marshal(r.headers)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to marshal recipient header: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to marshal recipient header: %w`, err)
 	}
 	buf.Write(hdrbuf)
 	buf.WriteString(`,"encrypted_key":"`)
@@ -128,43 +128,43 @@ func (m *Message) Set(k string, v any) error {
 	case AuthenticatedDataKey:
 		buf, ok := v.([]byte)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, AuthenticatedDataKey)
+			return errFromField(`invalid value %T for %s key`, v, AuthenticatedDataKey)
 		}
 		m.authenticatedData = buf
 	case CipherTextKey:
 		buf, ok := v.([]byte)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, CipherTextKey)
+			return errFromField(`invalid value %T for %s key`, v, CipherTextKey)
 		}
 		m.cipherText = buf
 	case InitializationVectorKey:
 		buf, ok := v.([]byte)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, InitializationVectorKey)
+			return errFromField(`invalid value %T for %s key`, v, InitializationVectorKey)
 		}
 		m.initializationVector = buf
 	case ProtectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, ProtectedHeadersKey)
+			return errFromField(`invalid value %T for %s key`, v, ProtectedHeadersKey)
 		}
 		m.protectedHeaders = cv
 	case RecipientsKey:
 		cv, ok := v.([]Recipient)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, RecipientsKey)
+			return errFromField(`invalid value %T for %s key`, v, RecipientsKey)
 		}
 		m.recipients = cv
 	case TagKey:
 		buf, ok := v.([]byte)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, TagKey)
+			return errFromField(`invalid value %T for %s key`, v, TagKey)
 		}
 		m.tag = buf
 	case UnprotectedHeadersKey:
 		cv, ok := v.(Headers)
 		if !ok {
-			return fmt.Errorf(`invalid value %T for %s key`, v, UnprotectedHeadersKey)
+			return errFromField(`invalid value %T for %s key`, v, UnprotectedHeadersKey)
 		}
 		m.unprotectedHeaders = cv
 	default:
@@ -208,7 +208,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if cipherText := m.CipherText(); len(cipherText) > 0 {
 		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
-			return nil, fmt.Errorf(`failed to encode %s field: %w`, CipherTextKey, err)
+			return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, CipherTextKey, err)
 		}
 		fields = append(fields, jsonKV{
 			Key:   CipherTextKey,
@@ -219,7 +219,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if iv := m.InitializationVector(); len(iv) > 0 {
 		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
-			return nil, fmt.Errorf(`failed to encode %s field: %w`, InitializationVectorKey, err)
+			return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, InitializationVectorKey, err)
 		}
 		fields = append(fields, jsonKV{
 			Key:   InitializationVectorKey,
@@ -231,7 +231,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if h := m.ProtectedHeaders(); h != nil {
 		v, err := h.Encode()
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
+			return nil, errFromParse(prefixParse, `failed to encode protected headers: %w`, err)
 		}
 
 		encodedProtectedHeaders = v
@@ -254,7 +254,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 
 		buf.Reset()
 		if err := enc.Encode(aad); err != nil {
-			return nil, fmt.Errorf(`failed to encode %s field: %w`, AuthenticatedDataKey, err)
+			return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, AuthenticatedDataKey, err)
 		}
 		fields = append(fields, jsonKV{
 			Key:   AuthenticatedDataKey,
@@ -275,7 +275,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 				if !skipHeaders {
 					buf.Reset()
 					if err := enc.Encode(hdrs); err != nil {
-						return nil, fmt.Errorf(`failed to encode %s field: %w`, HeadersKey, err)
+						return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, HeadersKey, err)
 					}
 					fields = append(fields, jsonKV{
 						Key:   HeadersKey,
@@ -287,7 +287,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 			if ek := recipients[0].EncryptedKey(); len(ek) > 0 {
 				buf.Reset()
 				if err := enc.Encode(base64.EncodeToString(ek)); err != nil {
-					return nil, fmt.Errorf(`failed to encode %s field: %w`, EncryptedKeyKey, err)
+					return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, EncryptedKeyKey, err)
 				}
 				fields = append(fields, jsonKV{
 					Key:   EncryptedKeyKey,
@@ -297,7 +297,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		} else {
 			buf.Reset()
 			if err := enc.Encode(recipients); err != nil {
-				return nil, fmt.Errorf(`failed to encode %s field: %w`, RecipientsKey, err)
+				return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, RecipientsKey, err)
 			}
 			fields = append(fields, jsonKV{
 				Key:   RecipientsKey,
@@ -309,7 +309,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if tag := m.Tag(); len(tag) > 0 {
 		buf.Reset()
 		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
-			return nil, fmt.Errorf(`failed to encode %s field: %w`, TagKey, err)
+			return nil, errFromParse(prefixParse, `failed to encode %s field: %w`, TagKey, err)
 		}
 		fields = append(fields, jsonKV{
 			Key:   TagKey,
@@ -320,7 +320,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if h := m.UnprotectedHeaders(); h != nil {
 		unprotected, err := json.Marshal(h)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode unprotected headers: %w`, err)
+			return nil, errFromParse(prefixParse, `failed to encode unprotected headers: %w`, err)
 		}
 
 		if len(unprotected) > 2 {
@@ -354,24 +354,24 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	proxy.UnprotectedHeaders = NewHeaders()
 
 	if err := json.Unmarshal(buf, &proxy); err != nil {
-		return fmt.Errorf(`failed to unmashal JSON into message: %w`, err)
+		return errFromParse(prefixParse, `failed to unmashal JSON into message: %w`, err)
 	}
 
 	// Get the string value
 	var protectedHeadersStr string
 	if err := json.Unmarshal(proxy.ProtectedHeaders, &protectedHeadersStr); err != nil {
-		return fmt.Errorf(`failed to decode protected headers (1): %w`, err)
+		return errFromParse(prefixParse, `failed to decode protected headers (1): %w`, err)
 	}
 
 	// It's now in _quoted_ base64 string. Decode it
 	protectedHeadersRaw, err := base64.DecodeString(protectedHeadersStr)
 	if err != nil {
-		return fmt.Errorf(`failed to base64 decoded protected headers buffer: %w`, err)
+		return errFromParse(prefixParse, `failed to base64 decoded protected headers buffer: %w`, err)
 	}
 
 	h := NewHeaders()
 	if err := json.Unmarshal(protectedHeadersRaw, h); err != nil {
-		return fmt.Errorf(`failed to decode protected headers (2): %w`, err)
+		return errFromParse(prefixParse, `failed to decode protected headers (2): %w`, err)
 	}
 
 	// if this were a flattened message, we would see a "header" and "ciphertext"
@@ -384,21 +384,21 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		if proxy.Headers != nil {
 			hdrs := NewHeaders()
 			if err := json.Unmarshal(proxy.Headers, hdrs); err != nil {
-				return fmt.Errorf(`failed to decode headers field: %w`, err)
+				return errFromParse(prefixParse, `failed to decode headers field: %w`, err)
 			}
 
 			if err := recipient.SetHeaders(hdrs); err != nil {
-				return fmt.Errorf(`failed to set new headers: %w`, err)
+				return errFromParse(prefixParse, `failed to set new headers: %w`, err)
 			}
 		}
 
 		if v := proxy.EncryptedKey; len(v) > 0 {
 			buf, err := base64.DecodeString(v)
 			if err != nil {
-				return fmt.Errorf(`failed to decode encrypted key: %w`, err)
+				return errFromParse(prefixParse, `failed to decode encrypted key: %w`, err)
 			}
 			if err := recipient.SetEncryptedKey(buf); err != nil {
-				return fmt.Errorf(`failed to set encrypted key: %w`, err)
+				return errFromParse(prefixParse, `failed to set encrypted key: %w`, err)
 			}
 		}
 
@@ -407,7 +407,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		for i, recipientbuf := range proxy.Recipients {
 			recipient := NewRecipient()
 			if err := json.Unmarshal(recipientbuf, recipient); err != nil {
-				return fmt.Errorf(`failed to decode recipient at index %d: %w`, i, err)
+				return errFromParse(prefixParse, `failed to decode recipient at index %d: %w`, i, err)
 			}
 
 			m.recipients = append(m.recipients, recipient)
@@ -417,7 +417,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if src := proxy.AuthenticatedData; len(src) > 0 {
 		v, err := base64.DecodeString(src)
 		if err != nil {
-			return fmt.Errorf(`failed to decode "aad": %w`, err)
+			return errFromParse(prefixParse, `failed to decode "aad": %w`, err)
 		}
 		m.authenticatedData = v
 	}
@@ -425,7 +425,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if src := proxy.CipherText; len(src) > 0 {
 		v, err := base64.DecodeString(src)
 		if err != nil {
-			return fmt.Errorf(`failed to decode "ciphertext": %w`, err)
+			return errFromParse(prefixParse, `failed to decode "ciphertext": %w`, err)
 		}
 		m.cipherText = v
 	}
@@ -433,7 +433,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if src := proxy.InitializationVector; len(src) > 0 {
 		v, err := base64.DecodeString(src)
 		if err != nil {
-			return fmt.Errorf(`failed to decode "iv": %w`, err)
+			return errFromParse(prefixParse, `failed to decode "iv": %w`, err)
 		}
 		m.initializationVector = v
 	}
@@ -441,7 +441,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if src := proxy.Tag; len(src) > 0 {
 		v, err := base64.DecodeString(src)
 		if err != nil {
-			return fmt.Errorf(`failed to decode "tag": %w`, err)
+			return errFromParse(prefixParse, `failed to decode "tag": %w`, err)
 		}
 		m.tag = v
 	}
@@ -460,7 +460,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 
 	if len(m.recipients) == 0 {
 		if err := m.makeDummyRecipient(proxy.EncryptedKey, m.protectedHeaders); err != nil {
-			return fmt.Errorf(`failed to setup recipient: %w`, err)
+			return errFromParse(prefixParse, `failed to setup recipient: %w`, err)
 		}
 	}
 
@@ -503,7 +503,7 @@ func (m *Message) makeDummyRecipient(enckeybuf string, protected Headers) error 
 // signature contains `options` for possible future expansion of the API
 func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	if len(m.recipients) != 1 {
-		return nil, fmt.Errorf(`wrong number of recipients for compact serialization`)
+		return nil, errFromParse(prefixParse, `wrong number of recipients for compact serialization`)
 	}
 
 	recipient := m.recipients[0]
@@ -514,25 +514,25 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	// There's something wrong if m.protectedHeaders is nil, but
 	// it could happen
 	if m.protectedHeaders == nil {
-		return nil, fmt.Errorf(`invalid protected header`)
+		return nil, errFromParse(prefixParse, `invalid protected header`)
 	}
 
 	hcopy, err := m.protectedHeaders.Clone()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to copy protected header: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to copy protected header: %w`, err)
 	}
 	hcopy, err = hcopy.Merge(m.unprotectedHeaders)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to merge unprotected header: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to merge unprotected header: %w`, err)
 	}
 	hcopy, err = hcopy.Merge(recipient.Headers())
 	if err != nil {
-		return nil, fmt.Errorf(`failed to merge recipient header: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to merge recipient header: %w`, err)
 	}
 
 	protected, err := hcopy.Encode()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to encode header: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to encode header: %w`, err)
 	}
 
 	encryptedKey := base64.Encode(recipient.EncryptedKey())

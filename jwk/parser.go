@@ -197,11 +197,11 @@ type KeyProbe struct {
 func (kp *KeyProbe) Get(name string, dst any) error {
 	f := kp.data.Elem().FieldByName(name)
 	if !f.IsValid() {
-		return fmt.Errorf(`field %s not found`, name)
+		return errFromParse(prefixParse, `field %s not found`, name)
 	}
 
 	if err := blackmagic.AssignIfCompatible(dst, f.Addr().Interface()); err != nil {
-		return fmt.Errorf(`failed to assign value of field %q to %T: %w`, name, dst, err)
+		return errFromParse(prefixParse, `failed to assign value of field %q to %T: %w`, name, dst, err)
 	}
 	return nil
 }

@@ -1,7 +1,5 @@
 package jwk
 
-import "fmt"
-
 func (ops *KeyOperationList) Get() KeyOperationList {
 	if ops == nil {
 		return nil
@@ -19,7 +17,7 @@ func (ops *KeyOperationList) Accept(v any) error {
 			if es, ok := e.(string); ok {
 				l[i] = es
 			} else {
-				return fmt.Errorf(`invalid list element type: expected string, got %T`, v)
+				return errFromParse(prefixParse, `invalid list element type: expected string, got %T`, v)
 			}
 		}
 		return ops.Accept(l)
@@ -30,7 +28,7 @@ func (ops *KeyOperationList) Accept(v any) error {
 			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
 				list[i] = e
 			default:
-				return fmt.Errorf(`invalid keyoperation %v`, e)
+				return errFromParse(prefixParse, `invalid keyoperation %v`, e)
 			}
 		}
 
@@ -43,7 +41,7 @@ func (ops *KeyOperationList) Accept(v any) error {
 			case KeyOpSign, KeyOpVerify, KeyOpEncrypt, KeyOpDecrypt, KeyOpWrapKey, KeyOpUnwrapKey, KeyOpDeriveKey, KeyOpDeriveBits:
 				list[i] = e
 			default:
-				return fmt.Errorf(`invalid keyoperation %v`, e)
+				return errFromParse(prefixParse, `invalid keyoperation %v`, e)
 			}
 		}
 
@@ -53,6 +51,6 @@ func (ops *KeyOperationList) Accept(v any) error {
 		*ops = x
 		return nil
 	default:
-		return fmt.Errorf(`invalid value %T`, v)
+		return errFromParse(prefixParse, `invalid value %T`, v)
 	}
 }

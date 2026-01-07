@@ -24,7 +24,7 @@ func isSupportedTimeClaim(c string) error {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
 		return nil
 	}
-	return fmt.Errorf(`unsupported time claim %s`, strconv.Quote(c))
+	return jwterrs.ErrFromValidate(`unsupported time claim %s`, strconv.Quote(c))
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
@@ -67,28 +67,28 @@ func Validate(t Token, options ...ValidateOption) error {
 		switch o.Ident() {
 		case identClock{}:
 			if err := o.Value(&clock); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithClock() option must be jwt.Clock: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithClock() option must be jwt.Clock: %w`, err)
 			}
 		case identAcceptableSkew{}:
 			if err := o.Value(&skew); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithAcceptableSkew() option must be time.Duration: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithAcceptableSkew() option must be time.Duration: %w`, err)
 			}
 		case identTruncation{}:
 			if err := o.Value(&trunc); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithTruncation() option must be time.Duration: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithTruncation() option must be time.Duration: %w`, err)
 			}
 		case identContext{}:
 			if err := o.Value(&ctx); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithContext() option must be context.Context: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithContext() option must be context.Context: %w`, err)
 			}
 		case identResetValidators{}:
 			if err := o.Value(&resetValidators); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithResetValidators() option must be bool: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithResetValidators() option must be bool: %w`, err)
 			}
 		case identValidator{}:
 			var v Validator
 			if err := o.Value(&v); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithValidator() option must be jwt.Validator: %w`, err)
+				return jwterrs.ErrFromValidate(`value for WithValidator() option must be jwt.Validator: %w`, err)
 			}
 			switch v := v.(type) {
 			case *isInTimeRange:
@@ -118,14 +118,14 @@ func Validate(t Token, options ...ValidateOption) error {
 		validators = append(baseValidators, extraValidators...)
 	} else {
 		if len(extraValidators) == 0 {
-			return jwterrs.ValidateErrorf(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
+			return jwterrs.ErrFromValidate(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
 		}
 		validators = extraValidators
 	}
 
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
-			return jwterrs.ValidateErrorf(`validation failed: %w`, err)
+			return jwterrs.ErrFromValidate(`validation failed: %w`, err)
 		}
 	}
 
@@ -169,11 +169,11 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	if iitr.less { // t1 - t2 <= iitr.dur
 		// t1 - t2 < iitr.dur + skew
 		if t1.Sub(t2) > iitr.dur+skew {
-			return fmt.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+			return jwterrs.ErrFromValidate(`time delta between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 		}
 	} else {
 		if t1.Sub(t2) < iitr.dur-skew {
-			return fmt.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+			return jwterrs.ErrFromValidate(`time delta between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 		}
 	}
 	return nil
@@ -253,7 +253,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 
 	// expiration date must be after NOW
 	if !now.Before(ttv.Add(skew)) {
-		return TokenExpiredError()
+		return jwterrs.ErrFromTokenExpired("token is expired (now %d vs exp %d)", now.Unix(), ttv.Unix())
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
-		return InvalidIssuedAtError()
+		return jwterrs.ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", now.Unix(), ttv.Unix())
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func isNbfValid(ctx context.Context, t Token) error {
 	// "now" cannot be before t - skew, so we check for now > t - skew
 	ttv = ttv.Add(-1 * skew)
 	if now.Before(ttv) {
-		return TokenNotYetValidError()
+		return jwterrs.ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", now.Unix(), ttv.Unix())
 	}
 	return nil
 }
@@ -357,7 +357,7 @@ func audienceClaimContainsString(value string) Validator {
 	return claimContainsString{
 		name:    AudienceKey,
 		value:   value,
-		makeErr: jwterrs.AudienceErrorf,
+		makeErr: jwterrs.ErrFromAudience,
 	}
 }
 
@@ -396,7 +396,7 @@ func issuerClaimValueIs(value string) Validator {
 	return &claimValueIs{
 		name:    IssuerKey,
 		value:   value,
-		makeErr: jwterrs.IssuerErrorf,
+		makeErr: jwterrs.ErrFromIssuer,
 	}
 }
 
@@ -411,7 +411,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	name := string(ir)
 	if !t.Has(name) {
-		return jwterrs.MissingRequiredClaimErrorf(name)
+		return jwterrs.ErrFromMissingRequiredClaim(name)
 	}
 	return nil
 }

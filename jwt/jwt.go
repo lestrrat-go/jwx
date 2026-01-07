@@ -109,7 +109,7 @@ var registry = json.NewRegistry()
 func ParseString(s string, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes([]byte(s), options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseString`, `failed to parse string: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseString, `failed to parse string: %w`, err)
 	}
 	return tok, nil
 }
@@ -142,7 +142,7 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.Parse`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -157,14 +157,14 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
-			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseInsecure, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		}
 	}
 
 	options = append(options, WithVerify(false), WithValidate(false))
 	tok, err := Parse(s, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseInsecure, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -174,11 +174,11 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := io.ReadAll(src)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader, `failed to read from token data source: %w`, err)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to parse token: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -229,7 +229,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			ctx.withKeyCount++
 			if ctx.withKeyCount == 1 {
 				if err := o.Value(&ctx.withKey); err != nil {
-					return nil, fmt.Errorf("jws.parseBytes: value for WithKey option must be a *jwt.withKey: %w", err)
+					return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithKey option must be a *jwt.withKey: %w", err)
 				}
 			}
 			verifyOpts = append(verifyOpts, o)
@@ -238,25 +238,25 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identToken{}:
 			var token Token
 			if err := o.Value(&token); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithToken option must be a jwt.Token: %w", err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithToken option must be a jwt.Token: %w", err)
 			}
 			ctx.token = token
 		case identPedantic{}:
 			if err := o.Value(&ctx.pedantic); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithPedantic option must be a bool: %w", err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithPedantic option must be a bool: %w", err)
 			}
 		case identValidate{}:
 			if err := o.Value(&ctx.validate); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithValidate option must be a bool: %w", err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithValidate option must be a bool: %w", err)
 			}
 		case identVerify{}:
 			if err := o.Value(&verification); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithVerify option must be a bool: %w", err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithVerify option must be a bool: %w", err)
 			}
 		case identTypedClaim{}:
 			var pair claimPair
 			if err := o.Value(&pair); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithTypedClaim option must be claimPair: %w", err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, "value for WithTypedClaim option must be claimPair: %w", err)
 			}
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
@@ -271,13 +271,13 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 
 	lvo := len(verifyOpts)
 	if lvo == 0 && verification {
-		return nil, fmt.Errorf(`jwt.Parse: no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
 	}
 
 	if lvo > 0 {
 		converted, err := toVerifyOptions(verifyOpts...)
 		if err != nil {
-			return nil, fmt.Errorf(`jwt.Parse: failed to convert options into jws.VerifyOption: %w`, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `failed to convert options into jws.VerifyOption: %w`, err)
 		}
 		ctx.verifyOpts = converted
 	}
@@ -333,7 +333,7 @@ OUTER:
 		case jwx.JWT:
 			if ctx.pedantic {
 				if expectNested {
-					return nil, fmt.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
+					return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `expected nested encrypted/signed payload, got raw JWT`)
 				}
 			}
 
@@ -353,7 +353,7 @@ OUTER:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these
 			if ctx.pedantic {
-				return nil, fmt.Errorf(`unknown JWT format (pedantic)`)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `unknown JWT format (pedantic)`)
 			}
 
 			if i == 0 {
@@ -402,11 +402,11 @@ OUTER:
 			// No verification.
 			m, err := jws.Parse(data, jws.WithCompact())
 			if err != nil {
-				return nil, fmt.Errorf(`invalid jws message: %w`, err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `invalid jws message: %w`, err)
 			}
 			payload = m.Payload()
 		default:
-			return nil, fmt.Errorf(`unsupported format (layer: #%d)`, i+1)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `unsupported format (layer: #%d)`, i+1)
 		}
 		expectNested = false
 	}
@@ -418,7 +418,7 @@ OUTER:
 	if ctx.localReg != nil {
 		dcToken, ok := ctx.token.(TokenWithDecodeCtx)
 		if !ok {
-			return nil, fmt.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
 		}
 		dc := json.NewDecodeCtx(ctx.localReg)
 		dcToken.SetDecodeCtx(dc)
@@ -426,7 +426,7 @@ OUTER:
 	}
 
 	if err := json.Unmarshal(payload, ctx.token); err != nil {
-		return nil, fmt.Errorf(`failed to parse token: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse, `failed to parse token: %w`, err)
 	}
 
 	if ctx.validate {
@@ -470,7 +470,7 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 		if err := options[0].Value(&wk); err == nil {
 			alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign, `invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
 			}
 
 			// Check if option contains anything other than alg/key
@@ -494,7 +494,7 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 
 		converted, err := toSignOptions(rawoptions...)
 		if err != nil {
-			return nil, fmt.Errorf(`jwt.Sign: failed to convert options into jws.SignOption: %w`, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign, `failed to convert options into jws.SignOption: %w`, err)
 		}
 		soptions = converted
 	}
@@ -540,10 +540,10 @@ func (t *stdToken) Clone() (Token, error) {
 	for _, k := range t.Keys() {
 		var v any
 		if err := t.Get(k, &v); err != nil {
-			return nil, fmt.Errorf(`jwt.Clone: failed to get %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone, `failed to get %s: %w`, k, err)
 		}
 		if err := dst.Set(k, v); err != nil {
-			return nil, fmt.Errorf(`jwt.Clone failed to set %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone, `failed to set %s: %w`, k, err)
 		}
 	}
 	return dst, nil

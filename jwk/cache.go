@@ -87,12 +87,12 @@ type Transformer struct {
 func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, error) {
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to read response body status: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to read response body status: %w`, err)
 	}
 
 	set, err := Parse(buf, t.parseOptions...)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to parse JWK set at %q: %w`, res.Request.URL.String(), err)
+		return nil, errFromParse(prefixParse, `failed to parse JWK set at %q: %w`, res.Request.URL.String(), err)
 	}
 
 	return set, nil
@@ -110,7 +110,7 @@ func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, erro
 func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 	ctrl, err := client.Start(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to start httprc.Client: %w`, err)
+		return nil, errFromParse(prefixParse, `failed to start httprc.Client: %w`, err)
 	}
 
 	return &Cache{
@@ -133,7 +133,7 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 		case ResourceOption:
 			var v httprc.NewResourceOption
 			if err := option.Value(&v); err != nil {
-				return fmt.Errorf(`failed to retrieve NewResourceOption option value: %w`, err)
+				return errFromParse(prefixParse, `failed to retrieve NewResourceOption option value: %w`, err)
 			}
 			resourceOptions = append(resourceOptions, v)
 		default:
@@ -141,12 +141,12 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 			case identHTTPClient{}:
 				var cli HTTPClient
 				if err := option.Value(&cli); err != nil {
-					return fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
+					return errFromParse(prefixParse, `failed to retrieve HTTPClient option value: %w`, err)
 				}
 				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(cli))
 			case identWaitReady{}:
 				if err := option.Value(&waitReady); err != nil {
-					return fmt.Errorf(`failed to retrieve WaitReady option value: %w`, err)
+					return errFromParse(prefixParse, `failed to retrieve WaitReady option value: %w`, err)
 				}
 			}
 		}
@@ -156,10 +156,10 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 		parseOptions: parseOptions,
 	}, resourceOptions...)
 	if err != nil {
-		return fmt.Errorf(`failed to create httprc.Resource: %w`, err)
+		return errFromParse(prefixParse, `failed to create httprc.Resource: %w`, err)
 	}
 	if err := c.ctrl.Add(ctx, r, httprc.WithWaitReady(waitReady)); err != nil {
-		return fmt.Errorf(`failed to add resource to httprc.Client: %w`, err)
+		return errFromParse(prefixParse, `failed to add resource to httprc.Client: %w`, err)
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 func (c *Cache) LookupResource(ctx context.Context, u string) (*httprc.ResourceBase[Set], error) {
 	r, err := c.ctrl.Lookup(ctx, u)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
+		return nil, errFromParse(prefixParse, `failed to lookup resource %q: %w`, u, err)
 	}
 	//nolint:forcetypeassert
 	return r.(*httprc.ResourceBase[Set]), nil
@@ -179,11 +179,11 @@ func (c *Cache) LookupResource(ctx context.Context, u string) (*httprc.ResourceB
 func (c *Cache) Lookup(ctx context.Context, u string) (Set, error) {
 	r, err := c.LookupResource(ctx, u)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
+		return nil, errFromParse(prefixParse, `failed to lookup resource %q: %w`, u, err)
 	}
 	set := r.Resource()
 	if set == nil {
-		return nil, fmt.Errorf(`resource %q is not ready`, u)
+		return nil, errFromParse(prefixParse, `resource %q is not ready`, u)
 	}
 	return set, nil
 }
@@ -206,7 +206,7 @@ func (c *Cache) Ready(ctx context.Context, u string) bool {
 // more details
 func (c *Cache) Refresh(ctx context.Context, u string) (Set, error) {
 	if err := c.ctrl.Refresh(ctx, u); err != nil {
-		return nil, fmt.Errorf(`failed to refresh resource %q: %w`, u, err)
+		return nil, errFromParse(prefixParse, `failed to refresh resource %q: %w`, u, err)
 	}
 	return c.Lookup(ctx, u)
 }
@@ -252,7 +252,7 @@ type cachedSet struct {
 func (c *Cache) CachedSet(u string) (CachedSet, error) {
 	r, err := c.LookupResource(context.Background(), u)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to lookup resource %q: %w`, u, err)
+		return nil, errFromParse(prefixParse, `failed to lookup resource %q: %w`, u, err)
 	}
 	return NewCachedSet(r), nil
 }

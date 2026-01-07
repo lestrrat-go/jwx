@@ -27,6 +27,7 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/ecutil",
+        "//internal/errchain",
         "//internal/json",
         "//internal/jwxio",
         "//internal/tokens",

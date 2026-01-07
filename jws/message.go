@@ -2,7 +2,6 @@ package jws
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -60,7 +59,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	var sup signatureUnmarshalProbe
 	sup.Header = NewHeaders()
 	if err := json.Unmarshal(data, &sup); err != nil {
-		return fmt.Errorf(`failed to unmarshal signature into temporary struct: %w`, err)
+		return errFromParse(prefixParse, `failed to unmarshal signature into temporary struct: %w`, err)
 	}
 
 	s.headers = sup.Header
@@ -69,7 +68,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		if !bytes.HasPrefix(src, []byte{tokens.OpenCurlyBracket}) {
 			decoded, err := base64.Decode(src)
 			if err != nil {
-				return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
+				return errFromParse(prefixParse, `failed to base64 decode protected headers: %w`, err)
 			}
 			src = decoded
 		}
@@ -78,7 +77,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		//nolint:forcetypeassert
 		prt.(*stdHeaders).SetDecodeCtx(s.DecodeCtx())
 		if err := json.Unmarshal(src, prt); err != nil {
-			return fmt.Errorf(`failed to unmarshal protected headers: %w`, err)
+			return errFromParse(prefixParse, `failed to unmarshal protected headers: %w`, err)
 		}
 		//nolint:forcetypeassert
 		prt.(*stdHeaders).SetDecodeCtx(nil)
@@ -88,7 +87,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	if sup.Signature != nil {
 		decoded, err := base64.DecodeString(*sup.Signature)
 		if err != nil {
-			return fmt.Errorf(`failed to base decode signature: %w`, err)
+			return errFromParse(prefixParse, `failed to base decode signature: %w`, err)
 		}
 		s.signature = decoded
 	}
@@ -127,7 +126,7 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 	case Signer:
 		sb.signer = typedSigner
 	default:
-		return nil, nil, fmt.Errorf(`invalid signer type: %T`, signer)
+		return nil, nil, errFromSign(`invalid signer type: %T`, signer)
 	}
 
 	// Create a minimal sign context
@@ -145,7 +144,7 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 	// Build the signature using signatureBuilder
 	sig, err := sb.Build(sc, payload)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to build signature: %w`, err)
+		return nil, nil, errFromSign(`failed to build signature: %w`, err)
 	}
 
 	// Copy the signature result back to this signature instance
@@ -160,12 +159,12 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 	// Marshal the merged headers for the final output
 	hdrs, err := mergeHeaders(s.headers, s.protected)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to merge headers: %w`, err)
+		return nil, nil, errFromSign(`failed to merge headers: %w`, err)
 	}
 
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
+		return nil, nil, errFromSign(`failed to marshal headers: %w`, err)
 	}
 
 	buf.WriteString(encoder.EncodeToString(hdrbuf))
@@ -180,7 +179,7 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 	} else {
 		if !s.detached {
 			if bytes.Contains(payload, []byte{tokens.Period}) {
-				return nil, nil, fmt.Errorf(`payload must not contain a "."`)
+				return nil, nil, errFromSign(`payload must not contain a "."`)
 			}
 		}
 		plen = len(payload)
@@ -291,13 +290,13 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	var mup messageUnmarshalProbe
 	mup.Header = NewHeaders()
 	if err := json.Unmarshal(buf, &mup); err != nil {
-		return fmt.Errorf(`failed to unmarshal into temporary structure: %w`, err)
+		return errFromParse(prefixParse, `failed to unmarshal into temporary structure: %w`, err)
 	}
 
 	b64 := true
 	if mup.Signature == nil { // flattened signature is NOT present
 		if len(mup.Signatures) == 0 {
-			return fmt.Errorf(`required field "signatures" not present`)
+			return errFromParse(prefixParse, `required field "signatures" not present`)
 		}
 
 		m.signatures = make([]*Signature, 0, len(mup.Signatures))
@@ -305,7 +304,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			var sig Signature
 			sig.SetDecodeCtx(m.DecodeCtx())
 			if err := json.Unmarshal(rawsig, &sig); err != nil {
-				return fmt.Errorf(`failed to unmarshal signature #%d: %w`, i+1, err)
+				return errFromParse(prefixParse, `failed to unmarshal signature #%d: %w`, i+1, err)
 			}
 			sig.SetDecodeCtx(nil)
 
@@ -320,7 +319,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 				}
 			} else {
 				if b64 != getB64Value(sig.protected) {
-					return fmt.Errorf(`b64 value must be the same for all signatures`)
+					return errFromParse(prefixParse, `b64 value must be the same for all signatures`)
 				}
 			}
 
@@ -328,7 +327,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 	} else { // .signature is present, it's a flattened structure
 		if len(mup.Signatures) != 0 {
-			return fmt.Errorf(`invalid format ("signatures" and "signature" keys cannot both be present)`)
+			return errFromParse(prefixParse, `invalid format ("signatures" and "signature" keys cannot both be present)`)
 		}
 
 		var sig Signature
@@ -336,13 +335,13 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		if src := mup.Protected; src != nil {
 			decoded, err := base64.DecodeString(*src)
 			if err != nil {
-				return fmt.Errorf(`failed to base64 decode flattened protected headers: %w`, err)
+				return errFromParse(prefixParse, `failed to base64 decode flattened protected headers: %w`, err)
 			}
 			prt := NewHeaders()
 			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(m.DecodeCtx())
 			if err := json.Unmarshal(decoded, prt); err != nil {
-				return fmt.Errorf(`failed to unmarshal flattened protected headers: %w`, err)
+				return errFromParse(prefixParse, `failed to unmarshal flattened protected headers: %w`, err)
 			}
 			//nolint:forcetypeassert
 			prt.(*stdHeaders).SetDecodeCtx(nil)
@@ -356,7 +355,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 
 		decoded, err := base64.DecodeString(*mup.Signature)
 		if err != nil {
-			return fmt.Errorf(`failed to base64 decode flattened signature: %w`, err)
+			return errFromParse(prefixParse, `failed to base64 decode flattened signature: %w`, err)
 		}
 		sig.signature = decoded
 
@@ -370,7 +369,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		} else {
 			decoded, err := base64.DecodeString(*mup.Payload)
 			if err != nil {
-				return fmt.Errorf(`failed to base64 decode payload: %w`, err)
+				return errFromParse(prefixParse, `failed to base64 decode payload: %w`, err)
 			}
 			m.payload = decoded
 		}
@@ -398,7 +397,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	if hdr := sig.headers; hdr != nil {
 		hdrjs, err := json.Marshal(hdr)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal "header" (flattened format): %w`, err)
+			return nil, errFromParse(prefixParse, `failed to marshal "header" (flattened format): %w`, err)
 		}
 		buf.WriteString(`"header":`)
 		buf.Write(hdrjs)
@@ -415,7 +414,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	if protected := sig.protected; protected != nil {
 		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
+			return nil, errFromParse(prefixParse, `failed to marshal "protected" (flattened format): %w`, err)
 		}
 		buf.WriteString(`,"protected":"`)
 		buf.WriteString(base64.EncodeToString(protectedbuf))
@@ -449,7 +448,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		if hdr := sig.headers; hdr != nil {
 			hdrbuf, err := json.Marshal(hdr)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to marshal "header" for signature #%d: %w`, i+1, err)
+				return nil, errFromParse(prefixParse, `failed to marshal "header" for signature #%d: %w`, i+1, err)
 			}
 			buf.WriteString(`"header":`)
 			buf.Write(hdrbuf)
@@ -459,7 +458,7 @@ func (m Message) marshalFull() ([]byte, error) {
 		if protected := sig.protected; protected != nil {
 			protectedbuf, err := json.Marshal(protected)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)
+				return nil, errFromParse(prefixParse, `failed to marshal "protected" for signature #%d: %w`, i+1, err)
 			}
 			if wrote {
 				buf.WriteRune(tokens.Comma)
@@ -497,7 +496,7 @@ func (m Message) marshalFull() ([]byte, error) {
 // must be passed to the function.
 func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	if l := len(msg.signatures); l != 1 {
-		return nil, fmt.Errorf(`jws.Compact: cannot serialize message with %d signatures (must be one)`, l)
+		return nil, errFromParse(prefixParse, `jws.Compact: cannot serialize message with %d signatures (must be one)`, l)
 	}
 
 	var detached bool
@@ -506,11 +505,11 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		switch option.Ident() {
 		case identDetached{}:
 			if err := option.Value(&detached); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve detached option value: %w`, err)
+				return nil, errFromParse(prefixParse, `jws.Compact: failed to retrieve detached option value: %w`, err)
 			}
 		case identBase64Encoder{}:
 			if err := option.Value(&encoder); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve base64 encoder option value: %w`, err)
+				return nil, errFromParse(prefixParse, `jws.Compact: failed to retrieve base64 encoder option value: %w`, err)
 			}
 		}
 	}
@@ -521,7 +520,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
-		return nil, fmt.Errorf(`jws.Compress: failed to marshal headers: %w`, err)
+		return nil, errFromParse(prefixParse, `jws.Compress: failed to marshal headers: %w`, err)
 	}
 
 	buf := pool.BytesBuffer().Get()
@@ -536,7 +535,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 			buf.WriteString(encoded)
 		} else {
 			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
-				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
+				return nil, errFromParse(prefixParse, `jws.Compress: payload must not contain a "."`)
 			}
 			buf.Write(msg.payload)
 		}
