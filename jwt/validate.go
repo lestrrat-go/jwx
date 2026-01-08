@@ -253,7 +253,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 
 	// expiration date must be after NOW
 	if !now.Before(ttv.Add(skew)) {
-		return jwterrs.ErrFromTokenExpired("token is expired (now %d vs exp %d)", now.Unix(), ttv.Unix())
+		return jwterrs.ErrFromTokenExpired("token is expired")
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
-		return jwterrs.ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", now.Unix(), ttv.Unix())
+		return jwterrs.ErrFromInvalidIssuedAt("token was issued in the future")
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func isNbfValid(ctx context.Context, t Token) error {
 	// "now" cannot be before t - skew, so we check for now > t - skew
 	ttv = ttv.Add(-1 * skew)
 	if now.Before(ttv) {
-		return jwterrs.ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", now.Unix(), ttv.Unix())
+		return jwterrs.ErrFromTokenNotYetValid("token not yet valid")
 	}
 	return nil
 }

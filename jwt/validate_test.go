@@ -865,3 +865,56 @@ func TestClaimValidator(t *testing.T) {
 		})
 	}
 }
+
+func TestValidationErrorMessages(t *testing.T) {
+	t.Run("TokenExpiredError message format", func(t *testing.T) {
+		tok := jwt.New()
+		tok.Set(jwt.ExpirationKey, time.Now().Add(-time.Hour))
+
+		err := jwt.Validate(tok)
+		if err == nil {
+			t.Fatal("Expected validation to fail")
+		}
+
+		expected := `jwt.Validate: validation failed: "exp" not satisfied: token is expired`
+		actual := err.Error()
+
+		if actual != expected {
+			t.Errorf("Error message format changed\nExpected: %q\nGot:      %q", expected, actual)
+		}
+	})
+
+	t.Run("InvalidIssuedAtError message format", func(t *testing.T) {
+		tok := jwt.New()
+		tok.Set(jwt.IssuedAtKey, time.Now().Add(time.Hour))
+
+		err := jwt.Validate(tok)
+		if err == nil {
+			t.Fatal("Expected validation to fail")
+		}
+
+		expected := `jwt.Validate: validation failed: "iat" not satisfied: token was issued in the future`
+		actual := err.Error()
+
+		if actual != expected {
+			t.Errorf("Error message format changed\nExpected: %q\nGot:      %q", expected, actual)
+		}
+	})
+
+	t.Run("TokenNotYetValidError message format", func(t *testing.T) {
+		tok := jwt.New()
+		tok.Set(jwt.NotBeforeKey, time.Now().Add(time.Hour))
+
+		err := jwt.Validate(tok)
+		if err == nil {
+			t.Fatal("Expected validation to fail")
+		}
+
+		expected := `jwt.Validate: validation failed: "nbf" not satisfied: token not yet valid`
+		actual := err.Error()
+
+		if actual != expected {
+			t.Errorf("Error message format changed\nExpected: %q\nGot:      %q", expected, actual)
+		}
+	})
+}

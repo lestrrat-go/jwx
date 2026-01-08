@@ -193,9 +193,9 @@ func (err TokenExpiredError) Unwrap() error {
 //
 // Example:
 //
-//	ErrFromTokenExpired("token is expired (now %d vs exp %d)", nowUnix, expUnix)
-//	-> Concise: "\"exp\" not satisfied: token is expired (now X vs exp Y)"
-//	-> Verbose: "\"exp\" not satisfied: token is expired (now X vs exp Y)"
+//	ErrFromTokenExpired("token is expired")
+//	-> Concise: "\"exp\" not satisfied: token is expired"
+//	-> Verbose: "\"exp\" not satisfied: token is expired"
 func ErrFromTokenExpired(f string, args ...any) error {
 	innerErr := fmt.Errorf(f, args...)
 	return TokenExpiredError{errchain.Wrap(stderrors.New(`"exp" not satisfied`), innerErr)}
@@ -222,9 +222,9 @@ func (err InvalidIssuedAtError) Unwrap() error {
 //
 // Example:
 //
-//	ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", nowUnix, iatUnix)
-//	-> Concise: "\"iat\" not satisfied: token was issued in the future (now X vs iat Y)"
-//	-> Verbose: "\"iat\" not satisfied: token was issued in the future (now X vs iat Y)"
+//	ErrFromInvalidIssuedAt("token was issued in the future")
+//	-> Concise: "\"iat\" not satisfied: token was issued in the future"
+//	-> Verbose: "\"iat\" not satisfied: token was issued in the future"
 func ErrFromInvalidIssuedAt(f string, args ...any) error {
 	innerErr := fmt.Errorf(f, args...)
 	return InvalidIssuedAtError{errchain.Wrap(stderrors.New(`"iat" not satisfied`), innerErr)}
@@ -251,9 +251,9 @@ func (err TokenNotYetValidError) Unwrap() error {
 //
 // Example:
 //
-//	ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", nowUnix, nbfUnix)
-//	-> Concise: "\"nbf\" not satisfied: token not yet valid (now X vs nbf Y)"
-//	-> Verbose: "\"nbf\" not satisfied: token not yet valid (now X vs nbf Y)"
+//	ErrFromTokenNotYetValid("token not yet valid")
+//	-> Concise: "\"nbf\" not satisfied: token not yet valid"
+//	-> Verbose: "\"nbf\" not satisfied: token not yet valid"
 func ErrFromTokenNotYetValid(f string, args ...any) error {
 	innerErr := fmt.Errorf(f, args...)
 	return TokenNotYetValidError{errchain.Wrap(stderrors.New(`"nbf" not satisfied`), innerErr)}
