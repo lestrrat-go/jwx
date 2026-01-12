@@ -13,8 +13,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ERRCHAIN_DIR="$SCRIPT_DIR/.."
-V3012_DIR="$SCRIPT_DIR/../../../.worktrees/v3.0.12"
+ERRCHAIN_DIR="$SCRIPT_DIR/../../.."
+V3012_DIR="$SCRIPT_DIR/../../../../../.worktrees/v3.0.12"
 RESULTS_DIR="$SCRIPT_DIR/results"
 
 echo -e "${YELLOW}JWT Error Compatibility Test Suite${NC}"

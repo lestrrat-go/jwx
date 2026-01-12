@@ -27,6 +27,6 @@ require (
 )
 
 replace (
-	github.com/lestrrat-go/jwx-v3012/v3 => ../../../.worktrees/v3.0.12
-	github.com/lestrrat-go/jwx/v3 => ../
+	github.com/lestrrat-go/jwx-v3012/v3 => ../../../../../.worktrees/v3.0.12
+	github.com/lestrrat-go/jwx/v3 => ../../..
 )

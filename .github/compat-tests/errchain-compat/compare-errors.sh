@@ -14,8 +14,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ERRCHAIN_DIR="$SCRIPT_DIR/.."
-V3012_DIR="$SCRIPT_DIR/../../../.worktrees/v3.0.12"
+ERRCHAIN_DIR="$SCRIPT_DIR/../../.."
+V3012_DIR="$SCRIPT_DIR/../../../../../.worktrees/v3.0.12"
 RESULTS_DIR="$SCRIPT_DIR/results"
 
 echo -e "${BLUE}========================================${NC}"
@@ -28,8 +28,8 @@ mkdir -p "$RESULTS_DIR"
 
 # Copy test program to v3.0.12 worktree
 echo -e "${YELLOW}[1/4] Preparing test program...${NC}"
-mkdir -p "$V3012_DIR/compat-tests"
-cp "$SCRIPT_DIR/error_behavior.go" "$V3012_DIR/compat-tests/"
+mkdir -p "$V3012_DIR/.github/compat-tests/errchain-compat"
+cp "$SCRIPT_DIR/error_behavior.go" "$V3012_DIR/.github/compat-tests/errchain-compat/"
 echo -e "${GREEN}✓ Test program ready${NC}"
 echo ""
 
@@ -42,7 +42,7 @@ echo ""
 
 # Step 2: Test v3.0.12 version
 echo -e "${YELLOW}[3/4] Testing v3.0.12 version...${NC}"
-cd "$V3012_DIR/compat-tests"
+cd "$V3012_DIR/.github/compat-tests/errchain-compat"
 go run error_behavior.go > "$RESULTS_DIR/v3012.txt" 2>&1
 echo -e "${GREEN}✓ v3.0.12 tests complete${NC}"
 echo ""

@@ -95,7 +95,7 @@ git worktree add .worktrees/v3.0.12 v3.0.12
 ## Running the Compatibility Test
 
 ```bash
-cd /home/lestrrat/dev/src/github.com/lestrrat-go/jwx/.worktrees/errchain-migration/compat-tests
+cd /home/lestrrat/dev/src/github.com/lestrrat-go/jwx/.worktrees/errchain-migration/.github/compat-tests/errchain-compat
 ./compare-errors.sh
 ```
 
@@ -227,13 +227,13 @@ Error messages don't contain expected information. This is less critical but sho
 ## Troubleshooting
 
 ### "no such package 'github.com/lestrrat-go/jwx/v3-v3012'"
-Ensure the v3.0.12 worktree exists at `../../../.worktrees/v3.0.12`
+Ensure the v3.0.12 worktree exists at `../../../../../.worktrees/v3.0.12`
 
 ### "cannot find package"
-Run `go mod tidy` from the compat-tests directory.
+Run `go mod tidy` from the `.github/compat-tests/errchain-compat` directory.
 
 ### Import cycle errors
-Ensure you're running tests from the compat-tests directory, not the parent directory.
+Ensure you're running tests from the `.github/compat-tests/errchain-compat` directory, not the parent directory.
 
 ## Post-Migration Cleanup
 
@@ -242,7 +242,7 @@ After errchain-migration is merged and deployed, this test suite can be removed:
 ```bash
 # Remove compat tests
 cd /home/lestrrat/dev/src/github.com/lestrrat-go/jwx/.worktrees/errchain-migration
-rm -rf compat-tests
+rm -rf .github/compat-tests
 
 # Remove v3.0.12 worktree
 cd /home/lestrrat/dev/src/github.com/lestrrat-go/jwx
