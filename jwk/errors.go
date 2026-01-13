@@ -101,6 +101,12 @@ func errFromParse(prefix, f string, args ...any) error {
 
 var errDefaultParseError = parseError{errors.New(`parse error`)}
 
+// ParseError returns an error that can be passed to `errors.Is` to check if the error
+// is an error returned by `jwk.Parse` and related functions.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func ParseError() error {
 	return errDefaultParseError
 }

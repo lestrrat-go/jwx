@@ -41,6 +41,10 @@ type verifyError struct {
 var errDefaultVerifyError = errFromVerify(`unknown error`)
 
 // VerifyError returns an error that can be passed to `errors.Is` to check if the error is a verify error.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func VerifyError() error {
 	return errDefaultVerifyError
 }
@@ -92,6 +96,10 @@ type parseError struct {
 var errDefaultParseError = errFromParse(prefixParse, `unknown error`)
 
 // ParseError returns an error that can be passed to `errors.Is` to check if the error is a parse error.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func ParseError() error {
 	return errDefaultParseError
 }

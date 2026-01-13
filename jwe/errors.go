@@ -53,6 +53,10 @@ func errFromDecrypt(f string, args ...any) error {
 var errDefaultDecryptError = decryptError{errors.New(`decrypt error`)}
 
 // DecryptError returns an error that can be passed to `errors.Is` to check if the error is an error returned by `jwe.Decrypt`.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func DecryptError() error {
 	return errDefaultDecryptError
 }
@@ -121,6 +125,10 @@ var errDefaultParseError = parseError{errors.New(`parse error`)}
 
 // ParseError returns an error that can be passed to `errors.Is` to check if the error
 // is an error returned by `jwe.Parse` and related functions.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func ParseError() error {
 	return errDefaultParseError
 }

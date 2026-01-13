@@ -35,6 +35,10 @@ func UnknownPayloadTypeError() error {
 // the input is not a valid JWT.
 //
 // This value should only be used for comparison using `errors.Is()`.
+//
+// Errors from this package support standard error unwrapping via errors.Unwrap().
+// Use fmt.Printf("%+v", err) to display the full error chain for debugging,
+// or %s/%v for a concise user-friendly message.
 func ParseError() error {
 	return jwterrs.ErrParse
 }
