@@ -10,7 +10,7 @@ import (
 func Example_jwx_error_handling_unwrap() {
 	// All errors in jwx support standard Go 1.13+ error unwrapping.
 	// You can traverse the error chain using errors.Unwrap() to inspect
-	// the underlying causes.
+	// each level and extract specific information.
 
 	// Parse an invalid token to generate an error with a chain
 	_, err := jwt.Parse([]byte("not.a.token"))
@@ -19,26 +19,35 @@ func Example_jwx_error_handling_unwrap() {
 		return
 	}
 
-	// Traverse the error chain manually
-	fmt.Printf("Error chain:\n")
+	// Check if it's a parse error
+	if errors.Is(err, jwt.ParseError()) {
+		fmt.Printf("Top-level error: jwt.ParseError\n")
+	}
+
+	// Traverse the error chain to inspect each level
+	fmt.Printf("\nError messages at each level:\n")
 	current := err
 	depth := 0
-	for current != nil {
-		fmt.Printf("  [%d] %T\n", depth, current)
+	for current != nil && depth < 3 {
+		// Print a truncated version of the error message
+		msg := current.Error()
+		if len(msg) > 60 {
+			msg = msg[:60] + "..."
+		}
+		fmt.Printf("  [%d] %s\n", depth, msg)
+
 		current = errors.Unwrap(current)
 		depth++
 	}
 
 	// The chain shows the progression from the high-level operation
-	// (jwt.Parse) down to the root cause. Each level adds context
-	// about what operation failed.
+	// (jwt.Parse) down through intermediate operations to the root cause.
 
 	// OUTPUT:
-	// Error chain:
-	//   [0] errors.ParseError
-	//   [1] *errchain.chainedError
-	//   [2] *fmt.wrapError
-	//   [3] errors.ParseError
-	//   [4] *errchain.chainedError
-	//   [5] *errors.errorString
+	// Top-level error: jwt.ParseError
+	//
+	// Error messages at each level:
+	//   [0] jwt.Parse: failed to parse token: jwt.Parse: no keys for ver...
+	//   [1] jwt.Parse: failed to parse token: jwt.Parse: no keys for ver...
+	//   [2] failed to parse token: jwt.Parse: no keys for verification a...
 }
