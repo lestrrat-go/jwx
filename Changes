@@ -4,6 +4,44 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.1.0 13 UNRELEASED
+  * [all packages] Major revision of the error handling system across all packages
+    (jwe, jwk, jws, jwt). Errors are now designed to be concise by default, showing
+    only the broadest and most specific error messages, but allow querying for details
+    using `"%+v"` format specifier to display the entire error chain, or using
+    `errors.Is()/errors.As()` and `errors.Unwrap()` to query for specific error types.
+
+  * [jwe] Added sentinel error functions: `jwe.EncryptError()`, `jwe.DecryptError()`,
+    `jwe.RecipientError()`, and `jwe.ParseError()`. These should be used with
+    `errors.Is()` to check for specific error conditions.
+
+  * [jwk] Added sentinel error functions: `jwk.ImportError()`, `jwk.ExportError()`,
+    and `jwk.ParseError()`. These should be used with `errors.Is()` to check for
+    specific error conditions.
+
+  * [jws] Added sentinel error functions: `jws.SignError()`, `jws.VerifyError()`,
+    `jws.VerificationError()`, and `jws.ParseError()`. These should be used with
+    `errors.Is()` to check for specific error conditions.
+
+  * [jwt] Added sentinel error functions: `jwt.ParseError()`, `jwt.ValidateError()`,
+    `jwt.InvalidIssuerError()`, and `jwt.TokenExpiredError()`. These should be used
+    with `errors.Is()` to check for specific error conditions. Note that the previously
+    existing `jwt.ClaimNotFoundError()` and `jwt.ClaimAssignmentFailedError()` functions
+    from v3.0.9 continue to work as before.
+
+  * [all packages] All errors now support standard Go 1.13+ error unwrapping through
+    the `errors.Unwrap()` function. When operations fail, the error that occurred at
+    the lowest level is wrapped with additional context as it propagates back up through
+    the call stack.
+
+  * [all packages] Error formatting has been improved. Use `%s` or `%v` for standard
+    concise output, or `%+v` for verbose output that shows the complete error chain
+    with additional debugging information.
+
+  * [docs] Added comprehensive error handling documentation in `docs/05-error-handling.md`
+    with examples demonstrating error type checking, unwrapping error chains, error
+    formatting, and checking nested error types.
+
 v3.0.13 12 Jan 2026
   * [jwt] The `jwt.WithContext()` option is now properly being passed to `jws.Verify()` from
     `jwt.Parse()`.
