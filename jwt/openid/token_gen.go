@@ -1027,7 +1027,7 @@ LOOP:
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:error reading token: %w`, err)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `error reading token: %w`, err)
 		}
 		switch tok := tok.(type) {
 		case json.Delim:
@@ -1036,131 +1036,131 @@ LOOP:
 			if tok == tokens.CloseCurlyBracket { // End of object
 				break LOOP
 			} else if tok != tokens.OpenCurlyBracket {
-				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
 			}
 		case string: // Objects can only have string keys
 			switch tok {
 			case AddressKey:
 				var decoded AddressClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, AddressKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, AddressKey, err)
 				}
 				t.address = &decoded
 			case AudienceKey:
 				var decoded types.StringList
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, AudienceKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, AudienceKey, err)
 				}
 				t.audience = decoded
 			case BirthdateKey:
 				var decoded BirthdateClaim
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, BirthdateKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, BirthdateKey, err)
 				}
 				t.birthdate = &decoded
 			case EmailKey:
 				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, EmailKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, EmailKey, err)
 				}
 			case EmailVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, EmailVerifiedKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, EmailVerifiedKey, err)
 				}
 				t.emailVerified = &decoded
 			case ExpirationKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, ExpirationKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ExpirationKey, err)
 				}
 				t.expiration = &decoded
 			case FamilyNameKey:
 				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, FamilyNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, FamilyNameKey, err)
 				}
 			case GenderKey:
 				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, GenderKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, GenderKey, err)
 				}
 			case GivenNameKey:
 				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, GivenNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, GivenNameKey, err)
 				}
 			case IssuedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, IssuedAtKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuedAtKey, err)
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
 				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, IssuerKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
 				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, JwtIDKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case LocaleKey:
 				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, LocaleKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, LocaleKey, err)
 				}
 			case MiddleNameKey:
 				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, MiddleNameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, MiddleNameKey, err)
 				}
 			case NameKey:
 				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, NameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NameKey, err)
 				}
 			case NicknameKey:
 				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, NicknameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NicknameKey, err)
 				}
 			case NotBeforeKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, NotBeforeKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, NotBeforeKey, err)
 				}
 				t.notBefore = &decoded
 			case PhoneNumberKey:
 				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, PhoneNumberKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PhoneNumberKey, err)
 				}
 			case PhoneNumberVerifiedKey:
 				var decoded bool
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, PhoneNumberVerifiedKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PhoneNumberVerifiedKey, err)
 				}
 				t.phoneNumberVerified = &decoded
 			case PictureKey:
 				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, PictureKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PictureKey, err)
 				}
 			case PreferredUsernameKey:
 				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, PreferredUsernameKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, PreferredUsernameKey, err)
 				}
 			case ProfileKey:
 				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, ProfileKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ProfileKey, err)
 				}
 			case SubjectKey:
 				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, SubjectKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			case UpdatedAtKey:
 				var decoded types.NumericDate
 				if err := dec.Decode(&decoded); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, UpdatedAtKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, UpdatedAtKey, err)
 				}
 				t.updatedAt = &decoded
 			case WebsiteKey:
 				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, WebsiteKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, WebsiteKey, err)
 				}
 			case ZoneinfoKey:
 				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
-					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:failed to decode value for key %s: %w`, ZoneinfoKey, err)
+					return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `failed to decode value for key %s: %w`, ZoneinfoKey, err)
 				}
 			default:
 				if dc := t.dc; dc != nil {
@@ -1177,10 +1177,10 @@ LOOP:
 					t.setNoLock(tok, decoded)
 					continue
 				}
-				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:could not decode field %s: %w`, tok, err)
+				return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `could not decode field %s: %w`, tok, err)
 			}
 		default:
-			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON + `:invalid token %T`, tok)
+			return jwterrs.ErrFromParse(jwterrs.PrefixTokenUnmarshalJSON, `invalid token %T`, tok)
 		}
 	}
 	return nil
