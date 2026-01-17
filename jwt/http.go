@@ -19,7 +19,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 		switch option.Ident() {
 		case identCookie{}:
 			if err := option.Value(&dst); err != nil {
-				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseCookie + `: value to option WithCookie must be **http.Cookie: %w`, err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseCookie+`: value to option WithCookie must be **http.Cookie: %w`, err)
 			}
 		}
 	}
@@ -30,7 +30,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	}
 	tok, err := ParseString(cookie.Value, options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseCookie + `: failed to parse token stored in cookie: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseCookie+`: failed to parse token stored in cookie: %w`, err)
 	}
 
 	if dst != nil {
@@ -47,7 +47,7 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 	key := http.CanonicalHeaderKey(name)
 	v := strings.TrimSpace(hdr.Get(key))
 	if v == "" {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseHeader + `: empty header (%s)`, key)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseHeader+`: empty header (%s)`, key)
 	}
 
 	if key == "Authorization" {
@@ -58,7 +58,7 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 
 	tok, err := ParseString(v, options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseHeader + `: failed to parse token stored in header (%s): %w`, key, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseHeader+`: failed to parse token stored in header (%s): %w`, key, err)
 	}
 	return tok, nil
 }
@@ -67,7 +67,7 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 func ParseForm(values url.Values, name string, options ...ParseOption) (Token, error) {
 	v := strings.TrimSpace(values.Get(name))
 	if v == "" {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseForm + `: empty value (%s)`, name)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseForm+`: empty value (%s)`, name)
 	}
 
 	return ParseString(v, options...)
@@ -107,19 +107,19 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		case identHeaderKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest + `: value to option WithHeaderKey must be string: %w`, err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest+`: value to option WithHeaderKey must be string: %w`, err)
 			}
 			hdrkeys = append(hdrkeys, v)
 		case identFormKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest + `: value to option WithFormKey must be string: %w`, err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest+`: value to option WithFormKey must be string: %w`, err)
 			}
 			formkeys = append(formkeys, v)
 		case identCookieKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest + `: value to option WithCookieKey must be string: %w`, err)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest+`: value to option WithCookieKey must be string: %w`, err)
 			}
 			cookiekeys = append(cookiekeys, v)
 		default:
@@ -167,7 +167,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 
 	if cl := req.ContentLength; cl > 0 {
 		if err := req.ParseForm(); err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest + `: failed to parse form: %w`, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest+`: failed to parse form: %w`, err)
 		}
 	}
 
@@ -291,5 +291,5 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 			}
 		}
 	}
-	return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest + `: ` + b.String(), errors...)
+	return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseRequest+`: `+b.String(), errors...)
 }

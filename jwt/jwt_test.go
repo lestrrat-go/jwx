@@ -1649,6 +1649,7 @@ func TestRealWorldErrorDepth(t *testing.T) {
 
 	// Test 1: Parse invalid JWT
 	t.Run("InvalidFormat", func(t *testing.T) {
+		t.Parallel()
 		invalidJWT := []byte("invalid.jwt.token")
 		_, err := jwt.Parse(invalidJWT, jwt.WithVerify(false), jwt.WithValidate(false))
 
@@ -1672,6 +1673,7 @@ func TestRealWorldErrorDepth(t *testing.T) {
 
 	// Test 2: Parse malformed base64
 	t.Run("MalformedBase64", func(t *testing.T) {
+		t.Parallel()
 		malformedJWT := []byte("!!!.!!!.!!!")
 		_, err := jwt.Parse(malformedJWT, jwt.WithVerify(false), jwt.WithValidate(false))
 
@@ -1690,6 +1692,7 @@ func TestRealWorldErrorDepth(t *testing.T) {
 
 	// Test 3: Empty input
 	t.Run("EmptyInput", func(t *testing.T) {
+		t.Parallel()
 		_, err := jwt.Parse([]byte(""), jwt.WithVerify(false), jwt.WithValidate(false))
 
 		require.Error(t, err)
@@ -1708,6 +1711,7 @@ func TestRealWorldErrorDepth(t *testing.T) {
 
 	// Test 4: Validation error (not involving JWS parsing)
 	t.Run("ValidationError", func(t *testing.T) {
+		t.Parallel()
 		tok := jwt.New()
 		tok.Set("exp", time.Now().Add(-time.Hour).Unix()) // Expired token
 

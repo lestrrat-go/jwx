@@ -109,7 +109,7 @@ var registry = json.NewRegistry()
 func ParseString(s string, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes([]byte(s), options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseString + `: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseString+`: %w`, err)
 	}
 	return tok, nil
 }
@@ -142,7 +142,7 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse + `: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParse+`: %w`, err)
 	}
 	return tok, nil
 }
@@ -164,7 +164,7 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	options = append(options, WithVerify(false), WithValidate(false))
 	tok, err := Parse(s, options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseInsecure + `: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseInsecure+`: %w`, err)
 	}
 	return tok, nil
 }
@@ -174,11 +174,11 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	// We're going to need the raw bytes regardless. Read it.
 	data, err := io.ReadAll(src)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader + `: failed to read from token data source: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader+`: failed to read from token data source: %w`, err)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {
-		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader + `: %w`, err)
+		return nil, jwterrs.ErrFromParse(jwterrs.PrefixParseReader+`: %w`, err)
 	}
 	return tok, nil
 }
@@ -470,7 +470,7 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 		if err := options[0].Value(&wk); err == nil {
 			alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign + `: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
+				return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign+`: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
 			}
 
 			// Check if option contains anything other than alg/key
@@ -494,7 +494,7 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 
 		converted, err := toSignOptions(rawoptions...)
 		if err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign + `: failed to convert options into jws.SignOption: %w`, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixSign+`: failed to convert options into jws.SignOption: %w`, err)
 		}
 		soptions = converted
 	}
@@ -540,10 +540,10 @@ func (t *stdToken) Clone() (Token, error) {
 	for _, k := range t.Keys() {
 		var v any
 		if err := t.Get(k, &v); err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone + `: failed to get %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone+`: failed to get %s: %w`, k, err)
 		}
 		if err := dst.Set(k, v); err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone + `: failed to set %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixClone+`: failed to set %s: %w`, k, err)
 		}
 	}
 	return dst, nil
