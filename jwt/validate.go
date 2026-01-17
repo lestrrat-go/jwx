@@ -125,7 +125,7 @@ func Validate(t Token, options ...ValidateOption) error {
 
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
-			return jwterrs.ErrFromValidate(`validation failed: %w`, err)
+			return jwterrs.ErrFromValidate(`jwt.Validate: validation failed: %w`, err)
 		}
 	}
 
@@ -253,7 +253,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 
 	// expiration date must be after NOW
 	if !now.Before(ttv.Add(skew)) {
-		return jwterrs.ErrFromTokenExpired("token is expired")
+		return jwterrs.ErrFromTokenExpired(`"exp" not satisfied: token is expired`)
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
-		return jwterrs.ErrFromInvalidIssuedAt("token was issued in the future")
+		return jwterrs.ErrFromInvalidIssuedAt(`"iat" not satisfied: token was issued in the future`)
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func isNbfValid(ctx context.Context, t Token) error {
 	// "now" cannot be before t - skew, so we check for now > t - skew
 	ttv = ttv.Add(-1 * skew)
 	if now.Before(ttv) {
-		return jwterrs.ErrFromTokenNotYetValid("token not yet valid")
+		return jwterrs.ErrFromTokenNotYetValid(`"nbf" not satisfied: token not yet valid`)
 	}
 	return nil
 }

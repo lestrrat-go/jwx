@@ -7,11 +7,19 @@ package errors
 import (
 	stderrors "errors"
 	"fmt"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/errchain"
 )
 
-// Error prefixes for ErrFromParse calls
+// Prefix constants for error messages.
+// These should be concatenated with ": " and the message description.
+//
+// Example usage:
+//
+//	ErrFromParse(PrefixParse + `: failed to parse token: %w`, err)
+//
+// Always use these constants instead of hardcoded strings for consistency.
 const (
 	PrefixParse              = "jwt.Parse"
 	PrefixParseCookie        = "jwt.ParseCookie"
@@ -43,6 +51,52 @@ var (
 	ErrInvalidAudienceDefault      = InvalidAudienceError{stderrors.New(`"aud" not satisfied`)}
 	ErrMissingRequiredClaimDefault = &MissingRequiredClaimError{error: stderrors.New(`required claim is missing`)}
 )
+
+// removePercentW removes ALL occurrences of %w from the format string
+// and cleans up the resulting separators.
+//
+// This is necessary because errors are extracted separately from args,
+// so %w verbs must be removed from the message string before formatting.
+//
+// Examples:
+//
+//	"message: %w" → "message"
+//	"failed: %w: additional" → "failed: additional"
+//	"first: %w and second: %w" → "first: and second" (edge case)
+func removePercentW(message string) string {
+	result := message
+
+	// Remove ALL occurrences of %w (not just one)
+	// Use loop since there could be multiple (though unusual)
+	for {
+		wIndex := strings.Index(result, "%w")
+		if wIndex == -1 {
+			break // No more %w found
+		}
+		// Remove this occurrence
+		result = result[:wIndex] + result[wIndex+2:]
+	}
+
+	// Collapse multiple consecutive separators that may result from %w removal
+	// Example: "failed: %w: text" → "failed: : text" → "failed: text"
+	for strings.Contains(result, ": :") {
+		result = strings.ReplaceAll(result, ": :", ":")
+	}
+	for strings.Contains(result, "  ") {
+		result = strings.ReplaceAll(result, "  ", " ")
+	}
+
+	// Clean up trailing/leading separators
+	result = strings.TrimSpace(result)
+	result = strings.TrimSuffix(result, ":")
+	result = strings.TrimSpace(result)
+
+	// Final cleanup - trim colon again in case space trimming revealed one
+	result = strings.TrimSuffix(result, ":")
+	result = strings.TrimSpace(result)
+
+	return result
+}
 
 type ClaimNotFoundError struct {
 	Name string
@@ -91,24 +145,67 @@ func (ParseError) Is(err error) bool {
 	return ok
 }
 
-// ErrFromParse creates a ParseError by wrapping an error with context using errchain.
-// The prefix is the operation name (e.g., "jwt.Parse"), and the format string and args
-// are used to create the error message. Supports %w verb for error wrapping.
+// ErrFromParse creates a ParseError with a combined message and optional wrapped error.
+//
+// The message parameter should combine the operation prefix with the description.
+// Always use predefined constants (PrefixParse, PrefixParseString, etc.) for consistency.
+//
+// Examples:
+//
+//	// With wrapped error
+//	ErrFromParse(PrefixParse + `: invalid jws message: %w`, err)
+//
+//	// With format arguments
+//	ErrFromParse(PrefixParse + `: failed at layer #%d: %w`, layerNum, err)
+//
+//	// Without wrapped error
+//	ErrFromParse(PrefixParse + `: token is empty`)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromParse("jwt.Parse", "failed to parse token: %w", innerErr)
-//	-> Concise: "jwt.Parse: <innerErr message>"
-//	-> Verbose: "jwt.Parse: failed to parse token: <innerErr message>"
-func ErrFromParse(prefix, f string, args ...any) error {
-	// Use fmt.Errorf to properly handle %w and create the wrapped error
-	innerErr := fmt.Errorf(f, args...)
+func ErrFromParse(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
 
-	// Wrap the prefix with the full formatted error (preserving developer's message)
-	return ParseError{errchain.Wrap(stderrors.New(prefix), innerErr)}
+	// Separate error from non-error arguments
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+			// Don't add errors to formatArgs
+		} else {
+			formatArgs = append(formatArgs, arg) // Only non-error args
+		}
+	}
+
+	// No error to wrap - create simple error
+	if wrappedErr == nil {
+		// Remove %w from message since we're not wrapping anything
+		cleanMessage := removePercentW(message)
+
+		// Apply format arguments if any
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+
+		// Return simple error (not wrapped)
+		return ParseError{stderrors.New(cleanMessage)}
+	}
+
+	// Past this point, wrappedErr is not nil
+	message = removePercentW(message)
+
+	// Apply format arguments if any
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	// Single wrap with combined message
+	return ParseError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type ValidationError struct {
@@ -124,23 +221,62 @@ func (err ValidationError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromValidate creates a ValidationError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromValidate creates a ValidationError with a combined message and optional wrapped error.
+//
+// The message parameter should combine the operation prefix with the description.
+// Always use predefined constants for consistency.
+//
+// Examples:
+//
+//	// With wrapped error
+//	ErrFromValidate("jwt.Validate: validation failed: %w", expCheckErr)
+//
+//	// Without wrapped error
+//	ErrFromValidate("jwt.Validate: invalid validator option")
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromValidate("validation failed: %w", expCheckErr)
-//	-> Concise: "jwt.Validate: <expCheckErr message>"
-//	-> Verbose: "jwt.Validate: validation failed: <expCheckErr message>"
-func ErrFromValidate(f string, args ...any) error {
-	// Use fmt.Errorf to properly handle %w and create the wrapped error
-	innerErr := fmt.Errorf(f, args...)
+func ErrFromValidate(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
 
-	// Wrap with the full formatted error (preserving developer's message)
-	return ValidationError{errchain.Wrap(stderrors.New("jwt.Validate"), innerErr)}
+	// Separate error from non-error arguments
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		// Remove %w from message since we're not wrapping anything
+		cleanMessage := removePercentW(message)
+
+		// Apply format arguments if any
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+
+		// Return simple error (not wrapped)
+		return ValidationError{stderrors.New(cleanMessage)}
+	}
+
+	// Past this point, wrappedErr is not nil
+
+	// Remove %w verb from format string
+	message = removePercentW(message)
+
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return ValidationError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type InvalidIssuerError struct {
@@ -156,20 +292,58 @@ func (err InvalidIssuerError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromIssuer creates an InvalidIssuerError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromIssuer creates an InvalidIssuerError with a combined message and optional wrapped error.
+//
+// The message parameter should include the complete error description.
+//
+// Examples:
+//
+//	// With format arguments
+//	ErrFromIssuer(`"iss" not satisfied: token issuer mismatch (expected %q, got %q)`, expected, actual)
+//
+//	// With wrapped error
+//	ErrFromIssuer(`"iss" not satisfied: %w`, err)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromIssuer("token issuer mismatch (expected %q, got %q)", expected, actual)
-//	-> Concise: "\"iss\" not satisfied: token issuer mismatch (expected X, got Y)"
-//	-> Verbose: "\"iss\" not satisfied: token issuer mismatch (expected X, got Y)"
-func ErrFromIssuer(f string, args ...any) error {
-	innerErr := fmt.Errorf(f, args...)
-	return InvalidIssuerError{errchain.Wrap(stderrors.New(`"iss" not satisfied`), innerErr)}
+func ErrFromIssuer(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
+
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		// Remove %w from message since we're not wrapping anything
+		cleanMessage := removePercentW(message)
+
+		// Apply format arguments if any
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+
+		// Return simple error (not wrapped)
+		return InvalidIssuerError{stderrors.New(cleanMessage)}
+	}
+
+	// Past this point, wrappedErr is not nil
+
+	message = removePercentW(message)
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return InvalidIssuerError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type TokenExpiredError struct {
@@ -185,20 +359,51 @@ func (err TokenExpiredError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromTokenExpired creates a TokenExpiredError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromTokenExpired creates a TokenExpiredError with a combined message and optional wrapped error.
+//
+// The message parameter should include the complete error description.
+//
+// Examples:
+//
+//	// Simple expiration error
+//	ErrFromTokenExpired(`"exp" not satisfied: token is expired`)
+//
+//	// With wrapped error
+//	ErrFromTokenExpired(`"exp" not satisfied: %w`, err)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromTokenExpired("token is expired")
-//	-> Concise: "\"exp\" not satisfied: token is expired"
-//	-> Verbose: "\"exp\" not satisfied: token is expired"
-func ErrFromTokenExpired(f string, args ...any) error {
-	innerErr := fmt.Errorf(f, args...)
-	return TokenExpiredError{errchain.Wrap(stderrors.New(`"exp" not satisfied`), innerErr)}
+func ErrFromTokenExpired(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
+
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		cleanMessage := removePercentW(message)
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+		return TokenExpiredError{stderrors.New(cleanMessage)}
+	}
+
+	message = removePercentW(message)
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return TokenExpiredError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type InvalidIssuedAtError struct {
@@ -214,20 +419,51 @@ func (err InvalidIssuedAtError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromInvalidIssuedAt creates an InvalidIssuedAtError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromInvalidIssuedAt creates an InvalidIssuedAtError with a combined message and optional wrapped error.
+//
+// The message parameter should include the complete error description.
+//
+// Examples:
+//
+//	// Simple issuedAt error
+//	ErrFromInvalidIssuedAt(`"iat" not satisfied: token was issued in the future`)
+//
+//	// With wrapped error
+//	ErrFromInvalidIssuedAt(`"iat" not satisfied: %w`, err)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromInvalidIssuedAt("token was issued in the future")
-//	-> Concise: "\"iat\" not satisfied: token was issued in the future"
-//	-> Verbose: "\"iat\" not satisfied: token was issued in the future"
-func ErrFromInvalidIssuedAt(f string, args ...any) error {
-	innerErr := fmt.Errorf(f, args...)
-	return InvalidIssuedAtError{errchain.Wrap(stderrors.New(`"iat" not satisfied`), innerErr)}
+func ErrFromInvalidIssuedAt(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
+
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		cleanMessage := removePercentW(message)
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+		return InvalidIssuedAtError{stderrors.New(cleanMessage)}
+	}
+
+	message = removePercentW(message)
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return InvalidIssuedAtError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type TokenNotYetValidError struct {
@@ -243,20 +479,51 @@ func (err TokenNotYetValidError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromTokenNotYetValid creates a TokenNotYetValidError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromTokenNotYetValid creates a TokenNotYetValidError with a combined message and optional wrapped error.
+//
+// The message parameter should include the complete error description.
+//
+// Examples:
+//
+//	// Simple not-yet-valid error
+//	ErrFromTokenNotYetValid(`"nbf" not satisfied: token not yet valid`)
+//
+//	// With wrapped error
+//	ErrFromTokenNotYetValid(`"nbf" not satisfied: %w`, err)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromTokenNotYetValid("token not yet valid")
-//	-> Concise: "\"nbf\" not satisfied: token not yet valid"
-//	-> Verbose: "\"nbf\" not satisfied: token not yet valid"
-func ErrFromTokenNotYetValid(f string, args ...any) error {
-	innerErr := fmt.Errorf(f, args...)
-	return TokenNotYetValidError{errchain.Wrap(stderrors.New(`"nbf" not satisfied`), innerErr)}
+func ErrFromTokenNotYetValid(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
+
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		cleanMessage := removePercentW(message)
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+		return TokenNotYetValidError{stderrors.New(cleanMessage)}
+	}
+
+	message = removePercentW(message)
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return TokenNotYetValidError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type InvalidAudienceError struct {
@@ -272,20 +539,51 @@ func (err InvalidAudienceError) Unwrap() error {
 	return err.error
 }
 
-// ErrFromAudience creates an InvalidAudienceError by wrapping an error with context using errchain.
-// Supports %w verb for error wrapping.
+// ErrFromAudience creates an InvalidAudienceError with a combined message and optional wrapped error.
+//
+// The message parameter should include the complete error description.
+//
+// Examples:
+//
+//	// With format arguments
+//	ErrFromAudience(`"aud" not satisfied: token audience not found (expected %q)`, expected)
+//
+//	// With wrapped error
+//	ErrFromAudience(`"aud" not satisfied: %w`, err)
+//
+// The %w verb is automatically removed from the message before formatting.
+// If wrappedErr is nil, a simple error is returned instead of using errchain.
 //
 // The error chain is preserved intact. errchain's Concise mode will hide intermediate
 // messages by default, but Verbose mode (%+v) will show the full chain.
-//
-// Example:
-//
-//	ErrFromAudience("token audience not found (expected %q)", expected)
-//	-> Concise: "\"aud\" not satisfied: token audience not found (expected X)"
-//	-> Verbose: "\"aud\" not satisfied: token audience not found (expected X)"
-func ErrFromAudience(f string, args ...any) error {
-	innerErr := fmt.Errorf(f, args...)
-	return InvalidAudienceError{errchain.Wrap(stderrors.New(`"aud" not satisfied`), innerErr)}
+func ErrFromAudience(message string, args ...any) error {
+	var wrappedErr error
+	var formatArgs []any
+
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			if wrappedErr == nil {
+				wrappedErr = err
+			}
+		} else {
+			formatArgs = append(formatArgs, arg)
+		}
+	}
+
+	if wrappedErr == nil {
+		cleanMessage := removePercentW(message)
+		if len(formatArgs) > 0 && cleanMessage != "" {
+			cleanMessage = fmt.Sprintf(cleanMessage, formatArgs...)
+		}
+		return InvalidAudienceError{stderrors.New(cleanMessage)}
+	}
+
+	message = removePercentW(message)
+	if len(formatArgs) > 0 && message != "" {
+		message = fmt.Sprintf(message, formatArgs...)
+	}
+
+	return InvalidAudienceError{errchain.Wrap(stderrors.New(message), wrappedErr)}
 }
 
 type MissingRequiredClaimError struct {

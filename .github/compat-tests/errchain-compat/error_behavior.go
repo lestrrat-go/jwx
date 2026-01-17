@@ -25,6 +25,7 @@ type TestResult struct {
 	IsClaimAssignmentFailed  bool
 	IsUnknownPayloadType     bool
 	UnwrapDepth              int
+	VisibleErrorDepth        int
 }
 
 func main() {
@@ -69,6 +70,7 @@ func main() {
 			fmt.Printf("  IsClaimAssignmentFailed: %v\n", r.IsClaimAssignmentFailed)
 			fmt.Printf("  IsUnknownPayloadType: %v\n", r.IsUnknownPayloadType)
 			fmt.Printf("  UnwrapDepth: %d\n", r.UnwrapDepth)
+			fmt.Printf("  VisibleErrorDepth: %d\n", r.VisibleErrorDepth)
 		}
 		fmt.Println()
 	}
@@ -86,6 +88,7 @@ func testParseInvalidFormat() TestResult {
 		result.IsParseError = errors.Is(err, jwt.ParseError())
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -101,6 +104,7 @@ func testParseMalformedBase64() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsParseError = errors.Is(err, jwt.ParseError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -116,6 +120,7 @@ func testParseMalformedJSON() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsParseError = errors.Is(err, jwt.ParseError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -130,6 +135,7 @@ func testParseEmptyInput() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsParseError = errors.Is(err, jwt.ParseError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -145,6 +151,7 @@ func testParseIncompleteParts() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsParseError = errors.Is(err, jwt.ParseError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -166,6 +173,7 @@ func testTokenExpired() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsTokenExpired = errors.Is(err, jwt.TokenExpiredError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -184,6 +192,7 @@ func testTokenNotYetValid() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsTokenNotYetValid = errors.Is(err, jwt.TokenNotYetValidError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -203,6 +212,7 @@ func testInvalidIssuedAt() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsInvalidIssuedAt = errors.Is(err, jwt.InvalidIssuedAtError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -224,6 +234,7 @@ func testInvalidIssuer() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsInvalidIssuer = errors.Is(err, jwt.InvalidIssuerError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -242,6 +253,7 @@ func testInvalidAudience() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsInvalidAudience = errors.Is(err, jwt.InvalidAudienceError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -260,6 +272,7 @@ func testMissingRequiredClaim() TestResult {
 		result.IsValidateError = errors.Is(err, jwt.ValidateError())
 		result.IsMissingRequiredClaim = errors.Is(err, jwt.MissingRequiredClaimError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -279,6 +292,7 @@ func testClaimNotFound() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsClaimNotFound = errors.Is(err, jwt.ClaimNotFoundError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -297,6 +311,7 @@ func testClaimAssignmentFailed() TestResult {
 		result.ErrorMessage = err.Error()
 		result.IsClaimAssignmentFailed = errors.Is(err, jwt.ClaimAssignmentFailedError())
 		result.UnwrapDepth = countUnwraps(err)
+		result.VisibleErrorDepth = countVisibleErrorDepth(err)
 	}
 
 	return result
@@ -311,4 +326,30 @@ func countUnwraps(err error) int {
 		}
 	}
 	return count
+}
+
+// countVisibleErrorDepth counts the number of error message segments
+// by splitting on ": " delimiter. For example:
+// "jws.Verify: err 1: err 2" has a depth of 3
+func countVisibleErrorDepth(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	msg := err.Error()
+	if msg == "" {
+		return 0
+	}
+
+	// Count segments by splitting on ": "
+	// This represents the visible nesting depth in the error message
+	segments := 1
+	for i := 0; i < len(msg)-1; i++ {
+		if msg[i] == ':' && msg[i+1] == ' ' {
+			segments++
+			i++ // Skip the space after colon
+		}
+	}
+
+	return segments
 }

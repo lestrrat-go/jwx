@@ -21,10 +21,10 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	for _, k := range t.Keys() {
 		var v any
 		if err := t.Get(k, &v); err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixOpenIDClone, `failed to get %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixOpenIDClone + `: failed to get %s: %w`, k, err)
 		}
 		if err := dst.Set(k, v); err != nil {
-			return nil, jwterrs.ErrFromParse(jwterrs.PrefixOpenIDClone, `failed to set %s: %w`, k, err)
+			return nil, jwterrs.ErrFromParse(jwterrs.PrefixOpenIDClone + `: failed to set %s: %w`, k, err)
 		}
 	}
 	return dst, nil

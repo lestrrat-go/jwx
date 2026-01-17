@@ -13,18 +13,18 @@ import (
 // TestTokenExpiredErrorf tests the TokenExpiredErrorf helper function
 func TestTokenExpiredErrorf(t *testing.T) {
 	t.Run("errors.Is compatibility", func(t *testing.T) {
-		err := jwterrs.ErrFromTokenExpired("token is expired (now %d vs exp %d)", 1000, 900)
+		err := jwterrs.ErrFromTokenExpired(`"exp" not satisfied: token is expired (now %d vs exp %d)`, 1000, 900)
 		require.True(t, errors.Is(err, jwterrs.ErrTokenExpiredDefault), "errors.Is() broken - should match TokenExpiredError sentinel")
 	})
 
 	t.Run("Unwrap", func(t *testing.T) {
 		innerErr := errors.New("specific expiration error")
-		err := jwterrs.ErrFromTokenExpired("token is expired: %w", innerErr)
+		err := jwterrs.ErrFromTokenExpired(`"exp" not satisfied: token is expired: %w`, innerErr)
 		require.True(t, errors.Is(err, innerErr), "Unwrap broken - should find wrapped inner error")
 	})
 
 	t.Run("Concise format (%s)", func(t *testing.T) {
-		err := jwterrs.ErrFromTokenExpired("token is expired (now %d vs exp %d)", 1000, 900)
+		err := jwterrs.ErrFromTokenExpired(`"exp" not satisfied: token is expired (now %d vs exp %d)`, 1000, 900)
 		concise := fmt.Sprintf("%s", err)
 
 		require.True(t, strings.Contains(concise, `"exp" not satisfied`), "concise format missing operation context: %s", concise)
@@ -54,18 +54,18 @@ func TestTokenExpiredErrorf(t *testing.T) {
 // TestInvalidIssuedAtErrorf tests the InvalidIssuedAtErrorf helper function
 func TestInvalidIssuedAtErrorf(t *testing.T) {
 	t.Run("errors.Is compatibility", func(t *testing.T) {
-		err := jwterrs.ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", 1000, 1100)
+		err := jwterrs.ErrFromInvalidIssuedAt(`"iat" not satisfied: token was issued in the future (now %d vs iat %d)`, 1000, 1100)
 		require.True(t, errors.Is(err, jwterrs.ErrInvalidIssuedAtDefault), "errors.Is() broken - should match InvalidIssuedAtError sentinel")
 	})
 
 	t.Run("Unwrap", func(t *testing.T) {
 		innerErr := errors.New("specific iat error")
-		err := jwterrs.ErrFromInvalidIssuedAt("invalid issued at: %w", innerErr)
+		err := jwterrs.ErrFromInvalidIssuedAt(`"iat" not satisfied: invalid issued at: %w`, innerErr)
 		require.True(t, errors.Is(err, innerErr), "Unwrap broken - should find wrapped inner error")
 	})
 
 	t.Run("Concise format (%s)", func(t *testing.T) {
-		err := jwterrs.ErrFromInvalidIssuedAt("token was issued in the future (now %d vs iat %d)", 1000, 1100)
+		err := jwterrs.ErrFromInvalidIssuedAt(`"iat" not satisfied: token was issued in the future (now %d vs iat %d)`, 1000, 1100)
 		concise := fmt.Sprintf("%s", err)
 
 		require.True(t, strings.Contains(concise, `"iat" not satisfied`), "concise format missing operation context: %s", concise)
@@ -95,18 +95,18 @@ func TestInvalidIssuedAtErrorf(t *testing.T) {
 // TestTokenNotYetValidErrorf tests the TokenNotYetValidErrorf helper function
 func TestTokenNotYetValidErrorf(t *testing.T) {
 	t.Run("errors.Is compatibility", func(t *testing.T) {
-		err := jwterrs.ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", 1000, 1100)
+		err := jwterrs.ErrFromTokenNotYetValid(`"nbf" not satisfied: token not yet valid (now %d vs nbf %d)`, 1000, 1100)
 		require.True(t, errors.Is(err, jwterrs.ErrTokenNotYetValidDefault), "errors.Is() broken - should match TokenNotYetValidError sentinel")
 	})
 
 	t.Run("Unwrap", func(t *testing.T) {
 		innerErr := errors.New("specific nbf error")
-		err := jwterrs.ErrFromTokenNotYetValid("not yet valid: %w", innerErr)
+		err := jwterrs.ErrFromTokenNotYetValid(`"nbf" not satisfied: not yet valid: %w`, innerErr)
 		require.True(t, errors.Is(err, innerErr), "Unwrap broken - should find wrapped inner error")
 	})
 
 	t.Run("Concise format (%s)", func(t *testing.T) {
-		err := jwterrs.ErrFromTokenNotYetValid("token not yet valid (now %d vs nbf %d)", 1000, 1100)
+		err := jwterrs.ErrFromTokenNotYetValid(`"nbf" not satisfied: token not yet valid (now %d vs nbf %d)`, 1000, 1100)
 		concise := fmt.Sprintf("%s", err)
 
 		require.True(t, strings.Contains(concise, `"nbf" not satisfied`), "concise format missing operation context: %s", concise)

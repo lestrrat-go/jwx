@@ -66,6 +66,32 @@ func CompareUnwrap(testName string, v3012Err, errchainErr error) ComparisonResul
 	return result
 }
 
+// CompareVisibleDepth checks if both errors have the same visible error depth
+// (number of error message segments separated by ": ")
+func CompareVisibleDepth(testName string, v3012Err, errchainErr error) ComparisonResult {
+	v3012Depth := countVisibleErrorDepth(v3012Err)
+	errchainDepth := countVisibleErrorDepth(errchainErr)
+
+	passed := v3012Depth == errchainDepth
+
+	result := ComparisonResult{
+		TestName:      testName,
+		CheckType:     "visible_depth",
+		Passed:        passed,
+		V3012Value:    fmt.Sprintf("%d", v3012Depth),
+		ErrchainValue: fmt.Sprintf("%d", errchainDepth),
+	}
+
+	if !passed {
+		result.Details = fmt.Sprintf("Visible error depth differs: v3.0.12=%d segments, errchain=%d segments",
+			v3012Depth, errchainDepth)
+	} else {
+		result.Details = fmt.Sprintf("Visible error depth matches: both=%d segments", v3012Depth)
+	}
+
+	return result
+}
+
 // CompareMessageSemantics checks if both error messages contain operation context and root cause
 // Note: This does NOT check for exact string equality, only semantic equivalence
 func CompareMessageSemantics(testName string, v3012Err, errchainErr error, expectedContext string) ComparisonResult {
@@ -163,6 +189,32 @@ func countUnwrapDepth(err error) int {
 	}
 
 	return depth
+}
+
+// countVisibleErrorDepth counts the number of error message segments
+// by splitting on ": " delimiter. For example:
+// "jws.Verify: err 1: err 2" has a depth of 3
+func countVisibleErrorDepth(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	msg := err.Error()
+	if msg == "" {
+		return 0
+	}
+
+	// Count segments by splitting on ": "
+	// This represents the visible nesting depth in the error message
+	segments := 1
+	for i := 0; i < len(msg)-1; i++ {
+		if msg[i] == ':' && msg[i+1] == ' ' {
+			segments++
+			i++ // Skip the space after colon
+		}
+	}
+
+	return segments
 }
 
 // getRootError gets the innermost error in a chain
