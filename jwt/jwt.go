@@ -229,7 +229,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			ctx.withKeyCount++
 			if ctx.withKeyCount == 1 {
 				if err := o.Value(&ctx.withKey); err != nil {
-					return nil, jwterrs.ErrFromParse(`value for WithKey option must be a *jwt.withKey: %w`, err)
+					return nil, fmt.Errorf(`value for WithKey option must be a *jwt.withKey: %w`, err)
 				}
 			}
 			verifyOpts = append(verifyOpts, o)
@@ -238,25 +238,25 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identToken{}:
 			var token Token
 			if err := o.Value(&token); err != nil {
-				return nil, jwterrs.ErrFromParse(`value for WithToken option must be a jwt.Token: %w`, err)
+				return nil, fmt.Errorf(`value for WithToken option must be a jwt.Token: %w`, err)
 			}
 			ctx.token = token
 		case identPedantic{}:
 			if err := o.Value(&ctx.pedantic); err != nil {
-				return nil, jwterrs.ErrFromParse(`value for WithPedantic option must be a bool: %w`, err)
+				return nil, fmt.Errorf(`value for WithPedantic option must be a bool: %w`, err)
 			}
 		case identValidate{}:
 			if err := o.Value(&ctx.validate); err != nil {
-				return nil, jwterrs.ErrFromParse(`value for WithValidate option must be a bool: %w`, err)
+				return nil, fmt.Errorf(`value for WithValidate option must be a bool: %w`, err)
 			}
 		case identVerify{}:
 			if err := o.Value(&verification); err != nil {
-				return nil, jwterrs.ErrFromParse(`value for WithVerify option must be a bool: %w`, err)
+				return nil, fmt.Errorf(`value for WithVerify option must be a bool: %w`, err)
 			}
 		case identTypedClaim{}:
 			var pair claimPair
 			if err := o.Value(&pair); err != nil {
-				return nil, jwterrs.ErrFromParse(`value for WithTypedClaim option must be claimPair: %w`, err)
+				return nil, fmt.Errorf(`value for WithTypedClaim option must be claimPair: %w`, err)
 			}
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
@@ -271,13 +271,13 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 
 	lvo := len(verifyOpts)
 	if lvo == 0 && verification {
-		return nil, jwterrs.ErrFromParse(`no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
+		return nil, fmt.Errorf(`no keys for verification are provided (use jwt.WithVerify(false) to explicitly skip)`)
 	}
 
 	if lvo > 0 {
 		converted, err := toVerifyOptions(verifyOpts...)
 		if err != nil {
-			return nil, jwterrs.ErrFromParse(`failed to convert options into jws.VerifyOption: %w`, err)
+			return nil, fmt.Errorf(`failed to convert options into jws.VerifyOption: %w`, err)
 		}
 		ctx.verifyOpts = converted
 	}
@@ -333,7 +333,7 @@ OUTER:
 		case jwx.JWT:
 			if ctx.pedantic {
 				if expectNested {
-					return nil, jwterrs.ErrFromParse(`expected nested encrypted/signed payload, got raw JWT`)
+					return nil, fmt.Errorf(`expected nested encrypted/signed payload, got raw JWT`)
 				}
 			}
 
@@ -353,7 +353,7 @@ OUTER:
 			// "Unknown" may include invalid JWTs, for example, those who lack "aud"
 			// claim. We could be pedantic and reject these
 			if ctx.pedantic {
-				return nil, jwterrs.ErrFromParse(`unknown JWT format (pedantic)`)
+				return nil, fmt.Errorf(`unknown JWT format (pedantic)`)
 			}
 
 			if i == 0 {
@@ -402,11 +402,11 @@ OUTER:
 			// No verification.
 			m, err := jws.Parse(data, jws.WithCompact())
 			if err != nil {
-				return nil, jwterrs.ErrFromParse(`invalid jws message: %w`, err)
+				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}
 			payload = m.Payload()
 		default:
-			return nil, jwterrs.ErrFromParse(`unsupported format (layer: #%d)`, i+1)
+			return nil, fmt.Errorf(`unsupported format (layer: #%d)`, i+1)
 		}
 		expectNested = false
 	}
@@ -418,7 +418,7 @@ OUTER:
 	if ctx.localReg != nil {
 		dcToken, ok := ctx.token.(TokenWithDecodeCtx)
 		if !ok {
-			return nil, jwterrs.ErrFromParse(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
+			return nil, fmt.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
 		}
 		dc := json.NewDecodeCtx(ctx.localReg)
 		dcToken.SetDecodeCtx(dc)
@@ -426,7 +426,7 @@ OUTER:
 	}
 
 	if err := json.Unmarshal(payload, ctx.token); err != nil {
-		return nil, jwterrs.ErrFromParse(`failed to parse token: %w`, err)
+		return nil, fmt.Errorf(`failed to parse token: %w`, err)
 	}
 
 	if ctx.validate {
