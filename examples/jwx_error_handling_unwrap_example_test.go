@@ -40,8 +40,11 @@ func Example_jwx_error_handling_unwrap() {
 		depth++
 	}
 
-	// The chain shows the progression from the high-level operation
-	// (jwt.Parse) down through intermediate operations to the root cause.
+	// Notice that [0] and [1] show the same message. This is because
+	// ParseError is a transparent wrapper type - it just forwards its
+	// Error() call to the wrapped ChainedError. The actual error chain is:
+	//   ParseError → ChainedError → root error
+	// Both ParseError and ChainedError return the same string from Error().
 
 	// OUTPUT:
 	// Top-level error: jwt.ParseError
