@@ -47,5 +47,5 @@ func Example_jwt_validate() {
 	}
 	// OUTPUT:
 	// jwt.Validate: validation failed: "exp" not satisfied: token is expired
-	// jwt.Parse: jwt.Validate: validation failed: "exp" not satisfied: token is expired
+	// jwt.Parse: "exp" not satisfied: token is expired
 }

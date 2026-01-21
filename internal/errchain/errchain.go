@@ -75,30 +75,66 @@ func Wrap(parent, child error) error {
 		return nil
 	}
 
-	// Get the innermost error from the child by looking for the
-	// first non-ChainedError error in the chain.
+	// Get the innermost error from the child by traversing the entire unwrap chain.
+	// We use the standard Unwrap() interface (not ChainedError) to traverse through
+	// ALL error types including wrapper types like ParseError, verifyError, etc.
+	//
+	// The innermost error is the last error in the chain before:
+	// 1. An error that doesn't implement Unwrap(), OR
+	// 2. An error whose Unwrap() returns nil
+	//
 	// Use depth limit to prevent infinite loops from circular references.
+	//
+	// CYCLE DETECTION STRATEGY:
+	// We use a two-pronged approach to handle circular error references:
+	//
+	// 1. Immediate self-reference detection: `next == innermost` catches the case
+	//    where an error's Unwrap() returns itself directly.
+	//
+	// 2. maxDepth limit: This is the PRIMARY defense against longer cycles
+	//    (e.g., A->B->A or A->B->C->A). Full cycle detection with a seen map
+	//    was considered but rejected due to allocation overhead - tracking
+	//    visited errors would require a map allocation for every Wrap() call,
+	//    even though circular references are extremely rare in practice.
+	//
+	// This is a conscious design decision: we accept that chains with cycles
+	// longer than immediate self-reference will traverse up to maxDepth times
+	// before stopping, rather than incur allocation overhead on every call.
+	//
+	// maxDepth limits traversal to prevent DoS from circular references.
+	// 1000 is chosen to be far beyond any legitimate error chain (typical depth < 20)
+	// while still completing in microseconds on modern hardware.
 	innermost := child
 	depth := 0
 	const maxDepth = 1000
 
 	for {
-		unwrapped, ok := innermost.(ChainedError)
+		// Use standard Unwrap() interface to traverse ALL error types
+		// This is the key fix: we check for interface{ Unwrap() error }
+		// instead of ChainedError, so we can traverse through wrapper types
+		// like ParseError, verifyError, etc.
+		unwrapper, ok := innermost.(interface{ Unwrap() error })
 		if !ok {
+			// This error doesn't implement Unwrap() - it's the innermost
 			break
 		}
 
+		next := unwrapper.Unwrap()
+		if next == nil || next == innermost {
+			// Chain ends here - current error is the innermost
+			// Check for next == innermost to prevent immediate circular references
+			// (e.g., an error whose Unwrap() returns itself)
+			break
+		}
+
+		// Increment depth AFTER checking for nil/self-reference
+		// This ensures we don't break early at depth 1001 when the chain legitimately ends
 		depth++
 		if depth > maxDepth {
 			// Possible circular reference - stop traversal to prevent DoS
 			break
 		}
 
-		next := unwrapped.Unwrap()
-		if next == nil {
-			// Chain ends here - treat current as innermost
-			break
-		}
 		innermost = next
 	}
 
