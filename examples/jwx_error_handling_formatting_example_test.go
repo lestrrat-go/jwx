@@ -24,11 +24,11 @@ func Example_jwx_error_handling_formatting() {
 	err3 := errchain.Wrap(errors.New("jwt.Parse: failed to validate token"), err2)
 
 	// Concise format (%s) shows only outermost operation and innermost cause
-	// This skips intermediate steps for brevity
+	// Intermediate steps are omitted for brevity
 	fmt.Printf("Concise: %s\n", err3)
 
-	// Verbose format (%+v) shows the complete chain
-	// This includes all intermediate context
+	// Verbose format (%+v) shows one additional level of context
+	// For complete chain traversal, use errors.Unwrap() in a loop
 	fmt.Printf("Verbose: %+v\n", err3)
 
 	// The concise format is useful for user-facing errors where you want
