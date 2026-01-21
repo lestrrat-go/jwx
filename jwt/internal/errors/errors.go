@@ -145,6 +145,14 @@ func (ParseError) Is(err error) bool {
 	return ok
 }
 
+func (e ParseError) Format(s fmt.State, verb rune) {
+	if f, ok := e.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), e.error)
+	}
+}
+
 // ErrFromParse creates a ParseError with a combined message and optional wrapped error.
 //
 // The message parameter should combine the operation prefix with the description.
@@ -221,6 +229,14 @@ func (err ValidationError) Unwrap() error {
 	return err.error
 }
 
+func (err ValidationError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
+}
+
 // ErrFromValidate creates a ValidationError with a combined message and optional wrapped error.
 //
 // The message parameter should combine the operation prefix with the description.
@@ -292,6 +308,14 @@ func (err InvalidIssuerError) Unwrap() error {
 	return err.error
 }
 
+func (err InvalidIssuerError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
+}
+
 // ErrFromIssuer creates an InvalidIssuerError with a combined message and optional wrapped error.
 //
 // The message parameter should include the complete error description.
@@ -359,6 +383,14 @@ func (err TokenExpiredError) Unwrap() error {
 	return err.error
 }
 
+func (err TokenExpiredError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
+}
+
 // ErrFromTokenExpired creates a TokenExpiredError with a combined message and optional wrapped error.
 //
 // The message parameter should include the complete error description.
@@ -417,6 +449,14 @@ func (err InvalidIssuedAtError) Is(target error) bool {
 
 func (err InvalidIssuedAtError) Unwrap() error {
 	return err.error
+}
+
+func (err InvalidIssuedAtError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
 }
 
 // ErrFromInvalidIssuedAt creates an InvalidIssuedAtError with a combined message and optional wrapped error.
@@ -479,6 +519,14 @@ func (err TokenNotYetValidError) Unwrap() error {
 	return err.error
 }
 
+func (err TokenNotYetValidError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
+}
+
 // ErrFromTokenNotYetValid creates a TokenNotYetValidError with a combined message and optional wrapped error.
 //
 // The message parameter should include the complete error description.
@@ -537,6 +585,14 @@ func (err InvalidAudienceError) Is(target error) bool {
 
 func (err InvalidAudienceError) Unwrap() error {
 	return err.error
+}
+
+func (err InvalidAudienceError) Format(s fmt.State, verb rune) {
+	if f, ok := err.error.(fmt.Formatter); ok {
+		f.Format(s, verb)
+	} else {
+		fmt.Fprintf(s, "%"+string(verb), err.error)
+	}
 }
 
 // ErrFromAudience creates an InvalidAudienceError with a combined message and optional wrapped error.
