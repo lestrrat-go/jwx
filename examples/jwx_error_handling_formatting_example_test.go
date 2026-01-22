@@ -1,41 +1,52 @@
 package examples_test
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
+	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/errchain"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 func Example_jwx_error_handling_formatting() {
-	// Errors in jwx use a chained error system that supports two formatting modes:
+	// Errors in jwx support two formatting modes:
 	// - %s, %v: Concise format (shows outermost operation and innermost cause)
-	// - %+v: Verbose format (shows complete error chain with all intermediate steps)
+	// - %+v: Verbose format (shows additional intermediate context)
 	//
-	// This example demonstrates the difference using the underlying error chain mechanism.
+	// This example demonstrates the difference using a real JWT validation error.
 
-	// Build a multi-level error chain simulating a complex operation
-	// Root cause
-	rootErr := errors.New("connection refused")
+	// Create an expired token
+	tok, err := jwt.NewBuilder().
+		Issuer(`github.com/lestrrat-go/jwx`).
+		Expiration(time.Now().Add(-1 * time.Hour)). // Expired 1 hour ago
+		Build()
+	if err != nil {
+		fmt.Printf("failed to build token: %s\n", err)
+		return
+	}
 
-	// Intermediate errors add context
-	err1 := errchain.Wrap(errors.New("failed to connect to database"), rootErr)
-	err2 := errchain.Wrap(errors.New("failed to initialize session"), err1)
-	err3 := errchain.Wrap(errors.New("jwt.Parse: failed to validate token"), err2)
+	buf, err := json.Marshal(tok)
+	if err != nil {
+		fmt.Printf("failed to serialize token: %s\n", err)
+		return
+	}
+
+	// Parse with validation enabled (note: no signature verification for demo)
+	_, err = jwt.Parse(buf, jwt.WithVerify(false), jwt.WithValidate(true))
+	if err == nil {
+		fmt.Printf("expected validation to fail\n")
+		return
+	}
 
 	// Concise format (%s) shows only outermost operation and innermost cause
-	// Intermediate steps are omitted for brevity
-	fmt.Printf("Concise: %s\n", err3)
+	// This is ideal for user-facing error messages
+	fmt.Printf("Concise: %s\n", err)
 
-	// Verbose format (%+v) shows one additional level of context
-	// For complete chain traversal, use errors.Unwrap() in a loop
-	fmt.Printf("Verbose: %+v\n", err3)
-
-	// The concise format is useful for user-facing errors where you want
-	// to quickly communicate what failed and why. The verbose format is
-	// valuable during debugging when you need to understand the full call path.
+	// Verbose format (%+v) shows additional intermediate context
+	// This reveals that jwt.Validate was the intermediate step that failed
+	fmt.Printf("Verbose: %+v\n", err)
 
 	// OUTPUT:
-	// Concise: jwt.Parse: failed to validate token: connection refused
-	// Verbose: jwt.Parse: failed to validate token: failed to initialize session: connection refused
+	// Concise: jwt.Parse: "exp" not satisfied: token is expired
+	// Verbose: jwt.Parse: jwt.Validate: validation failed: "exp" not satisfied: token is expired
 }
