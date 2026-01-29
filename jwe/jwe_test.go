@@ -185,11 +185,11 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 		},
 	}
 
-	var testcases []struct {
+	testcases := make([]struct {
 		Name     string
 		Options  []jwe.EncryptOption
 		Expected string
-	}
+	}, 0, 2*len(templates))
 
 	for _, tmpl := range templates {
 		options := make([]jwe.EncryptOption, len(tmpl.Options))
