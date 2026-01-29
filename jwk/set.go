@@ -161,7 +161,8 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 
-	fields := []string{keysKey}
+	fields := make([]string, 0, 1+len(s.privateParams))
+	fields = append(fields, keysKey)
 	for k := range s.privateParams {
 		fields = append(fields, k)
 	}

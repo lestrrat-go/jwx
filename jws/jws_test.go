@@ -405,7 +405,8 @@ func TestSignMulti2(t *testing.T) {
 	sharedkey := []byte("Avracadabra")
 	payload := []byte("Lorem ipsum")
 	hmacAlgorithms := []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()}
-	var options = []jws.SignOption{jws.WithJSON()}
+	options := make([]jws.SignOption, 0, 1+len(hmacAlgorithms))
+	options = append(options, jws.WithJSON())
 	for _, alg := range hmacAlgorithms {
 		options = append(options, jws.WithKey(alg, sharedkey)) // (signer, sharedkey, nil, nil))
 	}
@@ -532,7 +533,7 @@ func TestEncode(t *testing.T) {
 			t.Run(tc.Name, func(t *testing.T) {
 				t.Parallel()
 				// Create payload with X.Y.Z
-				var payload []byte
+				payload := make([]byte, 0, size+1+size+1+size)
 				for range size {
 					payload = append(payload, 'X')
 				}
@@ -1117,7 +1118,7 @@ func TestJKU(t *testing.T) {
 		// 1st and 3rd signatures are valid, but signed using keys that are not
 		// present in the JWKS.
 		// Only the second signature uses a key found in the JWKS
-		var keys []jwk.Key
+		keys := make([]jwk.Key, 0, 3)
 		for i := range 3 {
 			key, err := jwxtest.GenerateRsaJwk()
 			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
@@ -1125,7 +1126,7 @@ func TestJKU(t *testing.T) {
 			keys = append(keys, key)
 		}
 
-		var unusedKeys []jwk.Key
+		unusedKeys := make([]jwk.Key, 0, 2)
 		for i := range 2 {
 			key, err := jwxtest.GenerateRsaJwk()
 			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
@@ -1156,7 +1157,8 @@ func TestJKU(t *testing.T) {
 		defer srv.Close()
 
 		// Sign the payload using the three keys
-		var signOptions = []jws.SignOption{jws.WithJSON()}
+		signOptions := make([]jws.SignOption, 0, 1+len(keys))
+		signOptions = append(signOptions, jws.WithJSON())
 		for _, key := range keys {
 			hdr := jws.NewHeaders()
 			hdr.Set(jws.JWKSetURLKey, srv.URL)

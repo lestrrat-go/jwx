@@ -44,7 +44,7 @@ func SplitManual(parts [][]byte, buf []byte) {
 		}
 	}
 
-	if i := bytes.IndexByte(buf, tokens.Period); i != -1 {
+	if bytes.Contains(buf, []byte{tokens.Period}) {
 		return
 	}
 
