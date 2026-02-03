@@ -20,8 +20,8 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/valyala/fastjson v1.6.7 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
