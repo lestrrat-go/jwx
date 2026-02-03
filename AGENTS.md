@@ -227,6 +227,27 @@ Naming convention: `{package}_xxx_example_test.go`
 Examples are included in `docs/` via autodoc markers:
 ```markdown
 <!-- INCLUDE(examples/jwt_parse_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v3/jwa"
+  "github.com/lestrrat-go/jwx/v3/jwt"
+)
+
+func Example_jwt_parse() {
+  tok, err := jwt.Parse(jwtSignedWithHS256, jwt.WithKey(jwa.HS256(), jwkSymmetricKey))
+  if err != nil {
+    fmt.Printf("%s\n", err)
+    return
+  }
+  _ = tok
+  // OUTPUT:
+}
+```
+source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 ```
 
