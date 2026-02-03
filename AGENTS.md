@@ -220,7 +220,9 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 Naming convention: `{package}_xxx_example_test.go`
 - `jwt_parse_example_test.go`
 - `jws_sign_example_test.go`
-- `jwx_general_example_test.go` (cross-package)
+- `jwx_example_test.go` (cross-package)
+- `jwx_readme_example_test.go` (cross-package, used in README)
+- `jwx_register_ec_and_key_example_test.go` (cross-package, key registration)
 
 Examples are included in `docs/` via autodoc markers:
 ```markdown
