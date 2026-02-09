@@ -265,6 +265,66 @@ func TestCache_backoff(t *testing.T) {
 	checkAccessCount(t, ks, 4, 5)
 }
 
+// TestGH1551 reproduces the deadlock described in
+// https://github.com/lestrrat-go/jwx/issues/1551.
+//
+// When jwk.Cache.Refresh() calls fail (e.g. HTTP 500), each failure kills
+// the httprc worker goroutine that processed it. After N failures (where
+// N = number of workers), all workers are dead and subsequent Refresh()
+// calls block forever.
+func TestGH1551(t *testing.T) {
+	t.Parallel()
+
+	const numWorkers = 3
+
+	// Server that always returns HTTP 500
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}))
+	t.Cleanup(srv.Close)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var errSink accumulateErrs
+	c, err := jwk.NewCache(ctx, httprc.NewClient(
+		httprc.WithWorkers(numWorkers),
+		httprc.WithErrorSink(&errSink),
+	))
+	require.NoError(t, err, `jwk.NewCache should succeed`)
+
+	// Register with WithWaitReady(false) since the server always fails
+	require.NoError(t, c.Register(ctx, srv.URL,
+		jwk.WithWaitReady(false),
+		jwk.WithConstantInterval(time.Hour),
+	), `c.Register should succeed`)
+
+	// Fire numWorkers Refresh() calls that all fail.
+	// Each one kills a worker goroutine (before the fix).
+	for i := range numWorkers {
+		refreshCtx, refreshCancel := context.WithTimeout(ctx, 5*time.Second)
+		_, err := c.Refresh(refreshCtx, srv.URL)
+		refreshCancel()
+		require.Error(t, err, "Refresh #%d should return an error", i)
+		t.Logf("Refresh #%d failed as expected: %v", i, err)
+	}
+
+	// At this point, before the fix, all workers are dead.
+	// The next Refresh() call will deadlock.
+	t.Log("All workers exhausted. Attempting one more Refresh()...")
+
+	deadlockCtx, deadlockCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer deadlockCancel()
+
+	_, err = c.Refresh(deadlockCtx, srv.URL)
+	// Before the fix: blocks until deadlockCtx expires (context.DeadlineExceeded).
+	// After the fix: returns promptly with the HTTP 500 error.
+	require.Error(t, err, "Refresh after all workers failed should still return an error")
+	require.NotErrorIs(t, err, context.DeadlineExceeded,
+		"Refresh should not deadlock (got context deadline exceeded, indicating workers are stuck)")
+	t.Logf("Post-failure Refresh returned: %v", err)
+}
+
 type accumulateErrs struct {
 	mu   sync.RWMutex
 	errs []error
