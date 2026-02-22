@@ -194,8 +194,7 @@ func (s *Signature) sign2(payload []byte, signer interface{ Algorithm() jwa.Sign
 
 	buf.WriteByte(tokens.Period)
 	buf.WriteString(encoder.EncodeToString(s.signature))
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 
 	return s.signature, ret, nil
 }
@@ -427,8 +426,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 	buf.WriteRune('"')
 	buf.WriteRune(tokens.CloseCurlyBracket)
 
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
 
@@ -483,8 +481,7 @@ func (m Message) marshalFull() ([]byte, error) {
 	}
 	buf.WriteString(`]}`)
 
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
 
@@ -544,7 +541,6 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 
 	buf.WriteByte(tokens.Period)
 	buf.WriteString(encoder.EncodeToString(s.signature))
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
