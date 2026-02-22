@@ -42,11 +42,13 @@ func New(hash crypto.Hash, alg, Z, apu, apv, pubinfo, privinfo []byte) *KDF {
 func (k *KDF) Read(out []byte) (int, error) {
 	var round uint32 = 1
 	h := k.hash.New()
+	var roundBuf [4]byte
 
 	for len(out) > len(k.buf) {
 		h.Reset()
 
-		if err := binary.Write(h, binary.BigEndian, round); err != nil {
+		binary.BigEndian.PutUint32(roundBuf[:], round)
+		if _, err := h.Write(roundBuf[:]); err != nil {
 			return 0, fmt.Errorf(`failed to write round using kdf: %w`, err)
 		}
 		if _, err := h.Write(k.z); err != nil {
@@ -56,7 +58,7 @@ func (k *KDF) Read(out []byte) (int, error) {
 			return 0, fmt.Errorf(`failed to write other info using kdf: %w`, err)
 		}
 
-		k.buf = append(k.buf, h.Sum(nil)...)
+		k.buf = h.Sum(k.buf)
 		round++
 	}
 
