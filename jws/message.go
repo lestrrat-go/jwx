@@ -409,7 +409,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		buf.WriteRune(tokens.Comma)
 	}
 	buf.WriteString(`"payload":"`)
-	buf.WriteString(base64.EncodeToString(m.payload))
+	buf.Write(base64.Encode(m.payload))
 	buf.WriteRune('"')
 
 	if protected := sig.protected; protected != nil {
@@ -418,12 +418,12 @@ func (m Message) marshalFlattened() ([]byte, error) {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
 		}
 		buf.WriteString(`,"protected":"`)
-		buf.WriteString(base64.EncodeToString(protectedbuf))
+		buf.Write(base64.Encode(protectedbuf))
 		buf.WriteRune('"')
 	}
 
 	buf.WriteString(`,"signature":"`)
-	buf.WriteString(base64.EncodeToString(sig.signature))
+	buf.Write(base64.Encode(sig.signature))
 	buf.WriteRune('"')
 	buf.WriteRune(tokens.CloseCurlyBracket)
 
@@ -437,7 +437,7 @@ func (m Message) marshalFull() ([]byte, error) {
 	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"payload":"`)
-	buf.WriteString(base64.EncodeToString(m.payload))
+	buf.Write(base64.Encode(m.payload))
 	buf.WriteString(`","signatures":[`)
 	for i, sig := range m.signatures {
 		if i > 0 {
@@ -465,7 +465,7 @@ func (m Message) marshalFull() ([]byte, error) {
 				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"protected":"`)
-			buf.WriteString(base64.EncodeToString(protectedbuf))
+			buf.Write(base64.Encode(protectedbuf))
 			buf.WriteRune('"')
 			wrote = true
 		}
@@ -476,7 +476,7 @@ func (m Message) marshalFull() ([]byte, error) {
 				buf.WriteRune(tokens.Comma)
 			}
 			buf.WriteString(`"signature":"`)
-			buf.WriteString(base64.EncodeToString(sig.signature))
+			buf.Write(base64.Encode(sig.signature))
 			buf.WriteString(`"`)
 		}
 		buf.WriteString(`}`)
