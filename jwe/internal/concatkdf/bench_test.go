@@ -18,7 +18,7 @@ func BenchmarkRead(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		kdf := concatkdf.New(hash, alg, z, apu, apv, pubinfo, privinfo)
 		out := make([]byte, 32)
 		if _, err := kdf.Read(out); err != nil {
