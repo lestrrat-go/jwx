@@ -30,7 +30,7 @@ func BenchmarkMarshalFlattened(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := msg.MarshalJSON()
 		if err != nil {
 			b.Fatal(err)
@@ -66,7 +66,7 @@ func BenchmarkMarshalFull(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := msg.MarshalJSON()
 		if err != nil {
 			b.Fatal(err)
