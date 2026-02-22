@@ -55,7 +55,7 @@ func BenchmarkEncryptKey(b *testing.B) {
 	for _, tc := range testcases {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, err := Encrypt(payload,
 					WithKey(tc.alg, tc.key),
 					WithContentEncryption(tc.enc),
@@ -126,7 +126,7 @@ func BenchmarkDecryptKey(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, err := Decrypt(encrypted, WithKey(tc.alg, tc.decKey))
 				if err != nil {
 					b.Fatal(err)
