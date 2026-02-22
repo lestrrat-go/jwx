@@ -280,11 +280,7 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	for i := range s.Len() {
-		key, ok := s.Key(i)
-		if !ok {
-			return nil, false
-		}
+	for _, key := range s.keys {
 		gotkid, ok := key.KeyID()
 		if ok && gotkid == kid {
 			return key, true
