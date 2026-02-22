@@ -1,6 +1,7 @@
 package jwe
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -71,8 +72,7 @@ func (r *stdRecipient) MarshalJSON() ([]byte, error) {
 	buf.WriteString(base64.EncodeToString(r.encryptedKey))
 	buf.WriteString(`"}`)
 
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
 
@@ -344,8 +344,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	}
 	fmt.Fprintf(buf, `}`)
 
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
 
@@ -554,7 +553,6 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	buf.WriteByte(tokens.Period)
 	buf.Write(tag)
 
-	result := make([]byte, buf.Len())
-	copy(result, buf.Bytes())
+	result := bytes.Clone(buf.Bytes())
 	return result, nil
 }

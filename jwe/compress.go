@@ -56,7 +56,6 @@ func compress(plaintext []byte) ([]byte, error) {
 		return nil, fmt.Errorf(`failed to close compression writer: %w`, err)
 	}
 
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
+	ret := bytes.Clone(buf.Bytes())
 	return ret, nil
 }
