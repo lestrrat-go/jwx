@@ -110,34 +110,34 @@ def go_dependencies():
         name = "org_golang_x_crypto",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/crypto",
-        sum = "h1:euUpcYgM8WcP71gNpTqQCn6rC2t6ULUPiOzfWaXVVfc=",
-        version = "v0.32.0",
+        sum = "h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=",
+        version = "v0.48.0",
     )
     go_repository(
         name = "org_golang_x_net",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/net",
-        sum = "h1:AQyQV4dYCvJ7vGmJyKki9+PBdyvhkSd8EIx/qb0AYv4=",
-        version = "v0.21.0",
+        sum = "h1:eeHFmOGUTtaaPSGNmjBKpbng9MulQsJURQUAfUwY++o=",
+        version = "v0.49.0",
     )
     go_repository(
         name = "org_golang_x_sys",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/sys",
-        sum = "h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=",
-        version = "v0.31.0",
+        sum = "h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=",
+        version = "v0.41.0",
     )
     go_repository(
         name = "org_golang_x_term",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/term",
-        sum = "h1:/Ts8HFuMR2E6IP/jlo7QVLZHggjKQbhu/7H0LJFr3Gg=",
-        version = "v0.28.0",
+        sum = "h1:36e4zGLqU4yhjlmxEaagx2KuYbJq3EwY8K943ZsHcvg=",
+        version = "v0.40.0",
     )
     go_repository(
         name = "org_golang_x_text",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/text",
-        sum = "h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=",
-        version = "v0.21.0",
+        sum = "h1:oL/Qq0Kdaqxa1KbNeMKwQq0reLCCaFtqu2eNuSeNHbk=",
+        version = "v0.34.0",
     )
