@@ -107,7 +107,7 @@ linters:
         text: 'var-naming: '
       - linters:
           - revive
-        path: internal/json/*
+        path: internal/*
         text: 'var-naming: avoid package names that conflict'
     paths:
       - third_party$
