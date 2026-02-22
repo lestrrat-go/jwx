@@ -14,7 +14,7 @@ require (
 	github.com/lestrrat-go/option/v2 v2.0.0
 	github.com/segmentio/asm v1.2.1
 	github.com/stretchr/testify v1.11.1
-	github.com/valyala/fastjson v1.6.7
+	github.com/valyala/fastjson v1.6.9
 	golang.org/x/crypto v0.47.0
 )
 
