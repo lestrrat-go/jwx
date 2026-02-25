@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.4
 
 require (
-	github.com/cloudflare/circl v1.6.1
+	github.com/cloudflare/circl v1.6.3
 	github.com/emmansun/gmsm v0.21.5
 	github.com/lestrrat-go/httprc/v3 v3.0.4
 	github.com/lestrrat-go/jwx/v3 v3.0.0
