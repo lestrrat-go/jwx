@@ -9,17 +9,17 @@ permissions:
 
 jobs:
   merge:
-    if: ${{github.event.label.name == 'dependabot'}}
+    if: ${{ github.event.label.name == 'dependabot' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
 
     steps:
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+          persist-credentials: false
       - run: |
           make tidy
       - run: |
@@ -34,7 +34,7 @@ jobs:
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Run tidy / bazel+gazelle"
-            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${PR_HEAD_REF}"
           else
             echo "No changes to commit"
           fi
@@ -42,5 +42,6 @@ jobs:
           gh pr merge --auto --merge "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
+          PR_HEAD_REF: ${{github.event.pull_request.head.ref}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
