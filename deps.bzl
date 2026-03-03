@@ -19,8 +19,8 @@ def go_dependencies():
         name = "com_github_decred_dcrd_dcrec_secp256k1_v4",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/decred/dcrd/dcrec/secp256k1/v4",
-        sum = "h1:NMZiJj8QnKe1LgsbDayM4UoHwbvwDRwnI3hwNaAHRnc=",
-        version = "v4.4.0",
+        sum = "h1:5RVFMOWjMyRy8cARdy79nAmgYw3hK/4HUq48LQ6Wwqo=",
+        version = "v4.4.1",
     )
     go_repository(
         name = "com_github_goccy_go_json",
