@@ -188,11 +188,11 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
 	if err := ec.ProcessOptions(options); err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: failed to process options: %w`, err)}
+		return nil, makeEncryptError(`jwe.Encrypt`, `failed to process options: %w`, err)
 	}
 	ret, err := ec.EncryptMessage(payload, nil)
 	if err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.Encrypt: %w`, err)}
+		return nil, makeEncryptError(`jwe.Encrypt`, `%w`, err)
 	}
 	return ret, nil
 }
@@ -209,16 +209,16 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // future changes across minor/micro versions.
 func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error) {
 	if len(cek) <= 0 {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: empty CEK`)}
+		return nil, makeEncryptError(`jwe.EncryptStatic`, `empty CEK`)
 	}
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
 	if err := ec.ProcessOptions(options); err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: failed to process options: %w`, err)}
+		return nil, makeEncryptError(`jwe.EncryptStatic`, `failed to process options: %w`, err)
 	}
 	ret, err := ec.EncryptMessage(payload, cek)
 	if err != nil {
-		return nil, encryptError{fmt.Errorf(`jwe.EncryptStatic: %w`, err)}
+		return nil, makeEncryptError(`jwe.EncryptStatic`, `%w`, err)
 	}
 	return ret, nil
 }
@@ -354,7 +354,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	for _, recipient := range recipients {
 		decrypted, err := dc.tryRecipient(msg, recipient, h, aad, computedAad)
 		if err != nil {
-			errs = append(errs, recipientError{err})
+			errs = append(errs, makeRecipientError(err))
 			continue
 		}
 		if dc.dst != nil {
@@ -934,12 +934,12 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	defer decryptContextPool.Put(dc)
 
 	if err := dc.ProcessOptions(options); err != nil {
-		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: failed to process options: %w`, err)}
+		return nil, makeDecryptError(`jwe.Decrypt`, `failed to process options: %w`, err)
 	}
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, err)}
+		return nil, makeDecryptError(`jwe.Decrypt`, `%w`, err)
 	}
 	return ret, nil
 }
@@ -958,7 +958,7 @@ func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
-		return nil, parseError{fmt.Errorf(`jwe.Parse: empty buffer`)}
+		return nil, makeParseError(`jwe.Parse`, `empty buffer`)
 	}
 
 	var msg *Message
@@ -970,7 +970,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 	}
 
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.Parse: %w`, err)}
+		return nil, makeParseError(`jwe.Parse`, `%w`, err)
 	}
 	return msg, nil
 }
@@ -979,7 +979,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 func ParseString(s string) (*Message, error) {
 	msg, err := Parse([]byte(s))
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseString: %w`, err)}
+		return nil, makeParseError(`jwe.ParseString`, `%w`, err)
 	}
 	return msg, nil
 }
@@ -988,11 +988,11 @@ func ParseString(s string) (*Message, error) {
 func ParseReader(src io.Reader) (*Message, error) {
 	buf, err := io.ReadAll(src)
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseReader: failed to read from io.Reader: %w`, err)}
+		return nil, makeParseError(`jwe.ParseReader`, `failed to read from io.Reader: %w`, err)
 	}
 	msg, err := Parse(buf)
 	if err != nil {
-		return nil, parseError{fmt.Errorf(`jwe.ParseReader: %w`, err)}
+		return nil, makeParseError(`jwe.ParseReader`, `%w`, err)
 	}
 	return msg, nil
 }

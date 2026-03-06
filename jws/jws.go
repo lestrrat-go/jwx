@@ -154,12 +154,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	sc.payload = payload
 
 	if err := sc.ProcessOptions(options); err != nil {
-		return nil, signerr(`failed to process options: %w`, err)
+		return nil, makeSignError(`failed to process options: %w`, err)
 	}
 
 	lsigner := len(sc.sigbuilders)
 	if lsigner == 0 {
-		return nil, signerr(`no signers available. Specify an algorithm and a key using jws.WithKey()`)
+		return nil, makeSignError(`no signers available. Specify an algorithm and a key using jws.WithKey()`)
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when
@@ -171,7 +171,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	// Therefore, instead of making implicit format conversions, we force the
 	// user to spell it out as `jws.Sign(..., jws.WithJSON(), jws.WithKey(...), jws.WithKey(...))`
 	if sc.format == fmtCompact && lsigner != 1 {
-		return nil, signerr(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+		return nil, makeSignError(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
 	// Create a Message object with all the bits and bobs, and we'll
@@ -179,7 +179,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var result Message
 
 	if err := sc.PopulateMessage(&result); err != nil {
-		return nil, signerr(`failed to populate message: %w`, err)
+		return nil, makeSignError(`failed to populate message: %w`, err)
 	}
 	switch sc.format {
 	case fmtJSON:
@@ -200,7 +200,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 		return Compact(&result, compactOpts...)
 	default:
-		return nil, signerr(`invalid serialization format`)
+		return nil, makeSignError(`invalid serialization format`)
 	}
 }
 
@@ -235,7 +235,7 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	defer verifyContextPool.Put(vc)
 
 	if err := vc.ProcessOptions(options); err != nil {
-		return nil, verifyerr(`failed to process options: %w`, err)
+		return nil, makeVerifyError(`failed to process options: %w`, err)
 	}
 
 	return vc.VerifyMessage(buf)
@@ -269,7 +269,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 		case identSerialization{}:
 			var v int
 			if err := option.Value(&v); err != nil {
-				return nil, parseerr(`failed to retrieve serialization option value: %w`, err)
+				return nil, makeParseError(`jws.Parse`, `failed to retrieve serialization option value: %w`, err)
 			}
 			switch v {
 			case fmtJSON:
@@ -302,18 +302,18 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	if formats&fmtCompact == fmtCompact {
 		msg, err := parseCompact(src)
 		if err != nil {
-			return nil, parseerr(`failed to parse compact format: %w`, err)
+			return nil, makeParseError(`jws.Parse`, `failed to parse compact format: %w`, err)
 		}
 		return msg, nil
 	} else if formats&fmtJSON == fmtJSON {
 		msg, err := parseJSON(src)
 		if err != nil {
-			return nil, parseerr(`failed to parse JSON format: %w`, err)
+			return nil, makeParseError(`jws.Parse`, `failed to parse JSON format: %w`, err)
 		}
 		return msg, nil
 	}
 
-	return nil, parseerr(`invalid byte sequence`)
+	return nil, makeParseError(`jws.Parse`, `invalid byte sequence`)
 }
 
 // ParseString parses contents from the given source and creates a jws.Message
@@ -323,7 +323,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 func ParseString(src string) (*Message, error) {
 	msg, err := Parse([]byte(src))
 	if err != nil {
-		return nil, sparseerr(`failed to parse string: %w`, err)
+		return nil, makeParseError(`jws.ParseString`, `failed to parse string: %w`, err)
 	}
 	return msg, nil
 }
@@ -339,7 +339,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
-		return nil, rparseerr(`failed to read from finite source: %w`, err)
+		return nil, makeParseError(`jws.ParseReader`, `failed to read from finite source: %w`, err)
 	}
 
 	rdr := bufio.NewReader(src)
@@ -347,12 +347,12 @@ func ParseReader(src io.Reader) (*Message, error) {
 	for {
 		r, _, err := rdr.ReadRune()
 		if err != nil {
-			return nil, rparseerr(`failed to read rune: %w`, err)
+			return nil, makeParseError(`jws.ParseReader`, `failed to read rune: %w`, err)
 		}
 		if !unicode.IsSpace(r) {
 			first = r
 			if err := rdr.UnreadRune(); err != nil {
-				return nil, rparseerr(`failed to unread rune: %w`, err)
+				return nil, makeParseError(`jws.ParseReader`, `failed to unread rune: %w`, err)
 			}
 
 			break
@@ -368,7 +368,7 @@ func ParseReader(src io.Reader) (*Message, error) {
 
 	m, err := parser(rdr)
 	if err != nil {
-		return nil, rparseerr(`failed to parse reader: %w`, err)
+		return nil, makeParseError(`jws.ParseReader`, `failed to parse reader: %w`, err)
 	}
 
 	return m, nil
@@ -399,7 +399,7 @@ func parseJSON(data []byte) (result *Message, err error) {
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompact(src)
 	if err != nil {
-		return nil, nil, nil, parseerr(`%w`, err)
+		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
 	}
 	return hdr, payload, signature, nil
 }
@@ -413,7 +413,7 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompactString(src)
 	if err != nil {
-		return nil, nil, nil, parseerr(`%w`, err)
+		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
 	}
 	return hdr, payload, signature, nil
 }
@@ -427,7 +427,7 @@ func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompactReader(rdr)
 	if err != nil {
-		return nil, nil, nil, parseerr(`%w`, err)
+		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
 	}
 	return hdr, payload, signature, nil
 }
@@ -650,7 +650,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	} else {
 		legacyVerifier, err := NewVerifier(alg)
 		if err != nil {
-			return nil, verifyerr("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
+			return nil, makeVerifyError("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
 		}
 		if err := legacyVerifier.Verify(verifyBuf, signature, key); err != nil {
 			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
@@ -659,7 +659,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 
 	decoded, err := base64.Decode(payload)
 	if err != nil {
-		return nil, verifyerr("jwt.VerifyCompact: failed to decode payload: %w", err)
+		return nil, makeVerifyError("jwt.VerifyCompact: failed to decode payload: %w", err)
 	}
 	return decoded, nil
 }
