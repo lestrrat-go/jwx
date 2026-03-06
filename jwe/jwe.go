@@ -548,7 +548,7 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 	if v, ok := h2.Compression(); ok && v == jwa.Deflate() {
 		buf, err := uncompress(plaintext, dc.maxDecompressBufferSize)
 		if err != nil {
-			return nil, fmt.Errorf(`jwe.Derypt: failed to uncompress payload: %w`, err)
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to uncompress payload: %w`, err)
 		}
 		plaintext = buf
 	}
