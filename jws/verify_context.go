@@ -54,16 +54,16 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		switch option.Ident() {
 		case identMessage{}:
 			if err := option.Value(&vc.dst); err != nil {
-				return verifyerr(`invalid value for option WithMessage: %w`, err)
+				return makeVerifyError(`invalid value for option WithMessage: %w`, err)
 			}
 		case identDetachedPayload{}:
 			if err := option.Value(&vc.detachedPayload); err != nil {
-				return verifyerr(`invalid value for option WithDetachedPayload: %w`, err)
+				return makeVerifyError(`invalid value for option WithDetachedPayload: %w`, err)
 			}
 		case identKey{}:
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
-				return verifyerr(`invalid value for option WithKey: %w`, err)
+				return makeVerifyError(`invalid value for option WithKey: %w`, err)
 			}
 			vc.keyProviders = append(vc.keyProviders, &staticKeyProvider{
 				alg: pair.alg.(jwa.SignatureAlgorithm),
@@ -72,34 +72,34 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identKeyProvider{}:
 			var kp KeyProvider
 			if err := option.Value(&kp); err != nil {
-				return verifyerr(`failed to retrieve key-provider option value: %w`, err)
+				return makeVerifyError(`failed to retrieve key-provider option value: %w`, err)
 			}
 			vc.keyProviders = append(vc.keyProviders, kp)
 		case identKeyUsed{}:
 			if err := option.Value(&vc.keyUsed); err != nil {
-				return verifyerr(`failed to retrieve key-used option value: %w`, err)
+				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
 			}
 		case identContext{}:
 			if err := option.Value(&vc.ctx); err != nil {
-				return verifyerr(`failed to retrieve context option value: %w`, err)
+				return makeVerifyError(`failed to retrieve context option value: %w`, err)
 			}
 		case identValidateKey{}:
 			if err := option.Value(&vc.validateKey); err != nil {
-				return verifyerr(`failed to retrieve validate-key option value: %w`, err)
+				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
 			}
 		case identSerialization{}:
 			vc.parseOptions = append(vc.parseOptions, option.(ParseOption))
 		case identBase64Encoder{}:
 			if err := option.Value(&vc.encoder); err != nil {
-				return verifyerr(`failed to retrieve base64-encoder option value: %w`, err)
+				return makeVerifyError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
 		default:
-			return verifyerr(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
 	if len(vc.keyProviders) < 1 {
-		return verifyerr(`no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
+		return makeVerifyError(`no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
 	}
 
 	return nil
@@ -108,13 +108,13 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 	msg, err := Parse(buf, vc.parseOptions...)
 	if err != nil {
-		return nil, verifyerr(`failed to parse jws: %w`, err)
+		return nil, makeVerifyError(`failed to parse jws: %w`, err)
 	}
 	defer msg.clearRaw()
 
 	if vc.detachedPayload != nil {
 		if len(msg.payload) != 0 {
-			return nil, verifyerr(`can't specify detached payload for JWS with payload`)
+			return nil, makeVerifyError(`can't specify detached payload for JWS with payload`)
 		}
 
 		msg.payload = vc.detachedPayload
@@ -146,7 +146,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		if rawHeaders == nil {
 			protected, err := json.Marshal(sig.protected)
 			if err != nil {
-				return nil, verifyerr(`failed to marshal "protected" for signature #%d: %w`, idx+1, err)
+				return nil, makeVerifyError(`failed to marshal "protected" for signature #%d: %w`, idx+1, err)
 			}
 			rawHeaders = protected
 		}
@@ -156,7 +156,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		for i, kp := range vc.keyProviders {
 			var sink algKeySink
 			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
-				return nil, verifyerr(`key provider %d failed: %w`, i, err)
+				return nil, makeVerifyError(`key provider %d failed: %w`, i, err)
 			}
 
 			for _, pair := range sink.list {
@@ -168,16 +168,16 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 				key := pair.key
 
 				if err := vc.tryKey(verifyBuf, alg, key, msg, sig); err != nil {
-					errs = append(errs, verifyerr(`failed to verify signature #%d with key %T: %w`, idx+1, key, err))
+					errs = append(errs, makeVerifyError(`failed to verify signature #%d with key %T: %w`, idx+1, key, err))
 					continue
 				}
 
 				return msg.payload, nil
 			}
 		}
-		errs = append(errs, verifyerr(`signature #%d could not be verified with any of the keys`, idx+1))
+		errs = append(errs, makeVerifyError(`signature #%d could not be verified with any of the keys`, idx+1))
 	}
-	return nil, verifyerr(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
+	return nil, makeVerifyError(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }
 
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {

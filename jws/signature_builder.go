@@ -58,20 +58,20 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	}
 
 	if err := protected.Set(AlgorithmKey, sb.alg); err != nil {
-		return nil, signerr(`failed to set "alg" header: %w`, err)
+		return nil, makeSignError(`failed to set "alg" header: %w`, err)
 	}
 
 	if key, ok := sb.key.(jwk.Key); ok {
 		if kid, ok := key.KeyID(); ok && kid != "" {
 			if err := protected.Set(KeyIDKey, kid); err != nil {
-				return nil, signerr(`failed to set "kid" header: %w`, err)
+				return nil, makeSignError(`failed to set "kid" header: %w`, err)
 			}
 		}
 	}
 
 	hdrs, err := mergeHeaders(sb.public, protected)
 	if err != nil {
-		return nil, signerr(`failed to merge headers: %w`, err)
+		return nil, makeSignError(`failed to merge headers: %w`, err)
 	}
 
 	// raw, json format headers
