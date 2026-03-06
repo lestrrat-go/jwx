@@ -117,7 +117,7 @@ While a lot of documentation in the wild treats as if a JWT message encoded in b
 
 Below sample code extracts the `kid` field of a single-signature JWS message:
 
-<!-- INCLUDE(examples/jws_use_jws_header_test.go) -->
+<!-- INCLUDE(examples/jws_use_jws_header_example_test.go) -->
 ```go
 package examples_test
 
@@ -171,7 +171,7 @@ func Example_jws_use_jws_header() {
   // "secret-key"
 }
 ```
-source: [examples/jws_use_jws_header_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_use_jws_header_test.go)
+source: [examples/jws_use_jws_header_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_use_jws_header_example_test.go)
 <!-- END INCLUDE -->
 
 # Signing
