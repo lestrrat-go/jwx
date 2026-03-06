@@ -8,7 +8,7 @@ type signError struct {
 	error
 }
 
-var errDefaultSignError = signerr(`unknown error`)
+var errDefaultSignError = makeSignError(`unknown error`)
 
 // SignError returns an error that can be passed to `errors.Is` to check if the error is a sign error.
 func SignError() error {
@@ -24,7 +24,7 @@ func (signError) Is(err error) bool {
 	return ok
 }
 
-func signerr(f string, args ...any) error {
+func makeSignError(f string, args ...any) error {
 	return signError{fmt.Errorf(`jws.Sign: `+f, args...)}
 }
 
@@ -34,7 +34,7 @@ type verifyError struct {
 	error
 }
 
-var errDefaultVerifyError = verifyerr(`unknown error`)
+var errDefaultVerifyError = makeVerifyError(`unknown error`)
 
 // VerifyError returns an error that can be passed to `errors.Is` to check if the error is a verify error.
 func VerifyError() error {
@@ -50,7 +50,7 @@ func (verifyError) Is(err error) bool {
 	return ok
 }
 
-func verifyerr(f string, args ...any) error {
+func makeVerifyError(f string, args ...any) error {
 	return verifyError{fmt.Errorf(`jws.Verify: `+f, args...)}
 }
 
@@ -79,7 +79,7 @@ type parseError struct {
 	error
 }
 
-var errDefaultParseError = parseerr(`unknown error`)
+var errDefaultParseError = makeParseError(`jws.Parse`, `unknown error`)
 
 // ParseError returns an error that can be passed to `errors.Is` to check if the error is a parse error.
 func ParseError() error {
@@ -95,18 +95,6 @@ func (parseError) Is(err error) bool {
 	return ok
 }
 
-func bparseerr(prefix string, f string, args ...any) error {
+func makeParseError(prefix string, f string, args ...any) error {
 	return parseError{fmt.Errorf(prefix+": "+f, args...)}
-}
-
-func parseerr(f string, args ...any) error {
-	return bparseerr(`jws.Parse`, f, args...)
-}
-
-func sparseerr(f string, args ...any) error {
-	return bparseerr(`jws.ParseString`, f, args...)
-}
-
-func rparseerr(f string, args ...any) error {
-	return bparseerr(`jws.ParseReader`, f, args...)
 }
