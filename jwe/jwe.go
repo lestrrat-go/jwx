@@ -63,9 +63,6 @@ const (
 	fmtMax
 )
 
-var _ = fmtInvalid
-var _ = fmtMax
-
 var registry = json.NewRegistry()
 
 type recipientBuilder struct {

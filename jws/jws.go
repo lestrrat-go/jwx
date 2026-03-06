@@ -92,10 +92,6 @@ const (
 	fmtMax
 )
 
-// silence linters
-var _ = fmtInvalid
-var _ = fmtMax
-
 func validateKeyBeforeUse(key any) error {
 	jwkKey, ok := key.(jwk.Key)
 	if !ok {
