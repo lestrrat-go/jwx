@@ -90,7 +90,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	}
 
 	if !wl.IsAllowed(u) {
-		return nil, fmt.Errorf(`jwk.Fetch: url %q has been rejected by whitelist`, u)
+		return nil, whitelistError{fmt.Errorf(`jwk.Fetch: url %q has been rejected by whitelist`, u)}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)

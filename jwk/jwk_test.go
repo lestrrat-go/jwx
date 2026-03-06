@@ -1731,7 +1731,7 @@ func TestFetch(t *testing.T) {
 				_, err = jwk.Fetch(ctx, `https://github.com/lestrrat-go/jwx/`, jwk.WithFetchWhitelist(wl))
 				if tc.Error {
 					require.Error(t, err, `jwk.Fetch should fail`)
-					require.True(t, strings.Contains(err.Error(), `rejected by whitelist`), `error should be whitelist error`)
+					require.ErrorIs(t, err, jwk.WhitelistError(), `error should be whitelist error`)
 				}
 
 				fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithFetchWhitelist(wl))
