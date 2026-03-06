@@ -133,7 +133,7 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		}
 
 		locker, ok := key.(rlocker)
-		if !ok {
+		if ok {
 			locker.rlock()
 			defer locker.runlock()
 		}
@@ -213,7 +213,7 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		}
 
 		locker, ok := key.(rlocker)
-		if !ok {
+		if ok {
 			locker.rlock()
 			defer locker.runlock()
 		}
