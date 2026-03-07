@@ -16,7 +16,7 @@ func FuzzParse(f *testing.F) {
 	f.Add([]byte(``))
 	f.Add([]byte(`not-a-token`))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		_, _ = jwt.ParseInsecure(data)
 	})
 }

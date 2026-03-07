@@ -16,7 +16,7 @@ func FuzzParseKey(f *testing.F) {
 	f.Add([]byte(``))
 	f.Add([]byte(`not-json`))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		_, _ = jwk.ParseKey(data)
 	})
 }
@@ -27,7 +27,7 @@ func FuzzParse(f *testing.F) {
 	f.Add([]byte(``))
 	f.Add([]byte(`not-json`))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		_, _ = jwk.Parse(data)
 	})
 }

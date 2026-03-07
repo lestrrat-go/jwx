@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwe"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +15,7 @@ func FuzzParse(f *testing.F) {
 	f.Add([]byte(``))
 	f.Add([]byte(`not-a-jwe`))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		_, _ = jwe.Parse(data)
 	})
 }
