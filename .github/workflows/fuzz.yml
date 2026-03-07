@@ -1,0 +1,43 @@
+name: Fuzz
+on:
+  schedule:
+    - cron: '0 3 * * 3' # Weekly on Wednesday at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      fuzz-time:
+        description: 'Duration per fuzz target (e.g. 5m, 10m)'
+        required: false
+        default: '5m'
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ['jwt', 'jws', 'jwe', 'jwk']
+    name: "Fuzz ${{ matrix.package }}"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install Go stable version
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: '1.25'
+          check-latest: true
+          cache: false
+      - name: Restore fuzz cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ~/.cache/go-build/fuzz
+          key: fuzz-${{ matrix.package }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-${{ matrix.package }}-
+      - name: Run fuzz tests
+        run: |
+          FUZZTIME="${{ github.event.inputs.fuzz-time || '5m' }}"
+          for target in $(go test ./${{ matrix.package }}/ -list 'Fuzz.*' -run '^$' 2>/dev/null | grep '^Fuzz'); do
+            echo "::group::${target}"
+            go test ./${{ matrix.package }}/ -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}"
+            echo "::endgroup::"
+          done
