@@ -54,8 +54,9 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
+- Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`
-- Imports: jwa, jwk, cert, internal/{base64,json,pool,tokens}
+- Imports: jwa, jwk, cert, internal/{base64,json,jwxio,pool,tokens}
 
 ## jwe/
 

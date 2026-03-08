@@ -21,6 +21,10 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 | `jwt` | `ValidateError()` | Generic validation failure |
 | `jwt` | `ParseError()` | Parse failed |
 | `jwt` | `ClaimNotFoundError()` | Claim not present |
+| `jwt` | `ClaimAssignmentFailedError()` | Claim value assignment failed |
+| `jwt` | `UnknownPayloadTypeError()` | Unrecognized payload format |
+| `jwt` | `InvalidIssuedAtError()` | `iat` claim not satisfied |
+| `jwt` | `MissingRequiredClaimError()` | Required claim missing |
 | `jws` | `SignError()` | Signing failed |
 | `jws` | `VerifyError()` | Verification process error |
 | `jws` | `VerificationError()` | Signature mismatch |
@@ -33,8 +37,11 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 | `jwk` | `ParseError()` | Key parse failed |
 | `jwk` | `WhitelistError()` | URL not whitelisted |
 | `jwk` | `ContinueError()` | Skip key (used by parsers) |
-| `jwk` | `IsKeyValidationError()` | Key validation failure check |
 | `jwa` | `ErrInvalidKeyAlgorithm()` | Invalid algorithm |
+
+## Error Helpers
+
+- `jwk.IsKeyValidationError(err error) bool` — returns `true` if `err` indicates a key validation failure.
 
 ## Error Wrapping
 

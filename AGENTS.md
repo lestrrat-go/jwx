@@ -251,9 +251,9 @@ These docs cache repository state. Still read source before modifying code.
 
 | Doc | Update trigger |
 |-----|----------------|
-| `packages.md` | New/renamed/removed exported functions, types, or packages |
-| `testing.md` | Changes to test infrastructure, build tags, test helpers, fuzz targets |
-| `dependencies.md` | New internal imports between packages, new external dependencies |
-| `error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
-| `internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
+| `.claude/docs/packages.md` | New/renamed/removed exported functions, types, or packages |
+| `.claude/docs/testing.md` | Changes to test infrastructure, build tags, test helpers, fuzz targets |
+| `.claude/docs/dependencies.md` | New internal imports between packages, new external dependencies |
+| `.claude/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
+| `.claude/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
 

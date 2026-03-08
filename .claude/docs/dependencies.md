@@ -16,7 +16,8 @@ Composition Layer
   jwt/openid → jwt, internal/{json,tokens,pool}
 
 Processing Layer
-  jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
+  jws → jwa, jwk, cert, internal/{base64,json,jwxio,pool,tokens}
+       → jws/jwsbb
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
 
