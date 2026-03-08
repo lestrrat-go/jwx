@@ -100,15 +100,6 @@ func TestTimeValidation(t *testing.T) {
 				},
 			},
 			{
-				// This works because the sub-second difference is rounded
-				Name:  `clock is set to some sub-seconds before iat`,
-				Error: true,
-				Options: []jwt.ValidateOption{
-					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
-					jwt.WithTruncation(0),
-				},
-			},
-			{
 				Name:  `clock is set to some sub-seconds before iat (trunc = 0)`,
 				Error: true,
 				Options: []jwt.ValidateOption{
@@ -220,15 +211,7 @@ func TestTimeValidation(t *testing.T) {
 				},
 			},
 			{
-				Name:  `clock is set to some sub-seconds before nbf`,
-				Error: true,
-				Options: []jwt.ValidateOption{
-					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
-					jwt.WithTruncation(0),
-				},
-			},
-			{
-				Name:  `clock is set to some sub-seconds before nbf (but truncation = default)`,
+				Name:  `clock is set to some sub-seconds before nbf (trunc = 0)`,
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),

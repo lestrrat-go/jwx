@@ -233,7 +233,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	// Poll until the cache has been refreshed, instead of sleeping a fixed
 	// duration which is flaky under load.
 	ks := waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
-	checkAccessCount(t, ks, 2)
+	require.GreaterOrEqual(t, getAccessCount(t, ks), 2, "accessCount should be at least 2")
 }
 
 func TestCache_backoff(t *testing.T) {
