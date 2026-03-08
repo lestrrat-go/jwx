@@ -61,7 +61,7 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 
 // waitForAccessCountAtLeast polls the cache until the cached key set's
 // accessCount field is >= minCount, or the timeout expires.
-func waitForAccessCountAtLeast(ctx context.Context, t *testing.T, c *jwk.Cache, url string, minCount int, timeout time.Duration) jwk.Set {
+func waitForAccessCountAtLeast(ctx context.Context, t *testing.T, c *jwk.Cache, url string, minCount int, timeout time.Duration) {
 	t.Helper()
 
 	deadline := time.Now().Add(timeout)
@@ -69,14 +69,13 @@ func waitForAccessCountAtLeast(ctx context.Context, t *testing.T, c *jwk.Cache, 
 		ks, err := c.Lookup(ctx, url)
 		if err == nil {
 			if v := getAccessCount(t, ks); v >= minCount {
-				return ks
+				return
 			}
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
 
 	require.Failf(t, `timed out`, `timed out waiting for accessCount >= %d`, minCount)
-	return nil
 }
 
 func TestCachedSet(t *testing.T) {
@@ -171,7 +170,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 
 	// Poll until the cache has been refreshed at least once, instead of
 	// sleeping a fixed duration which is inherently flaky.
-	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_calculate_interval_from_cache_control(t *testing.T) {
@@ -230,7 +229,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 
 	// Poll until the cache has been refreshed, instead of sleeping a fixed
 	// duration which is flaky under load.
-	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_backoff(t *testing.T) {
@@ -286,7 +285,7 @@ func TestCache_backoff(t *testing.T) {
 
 	// Poll until the server has recovered (access >= 4) and the cache
 	// has been updated with the new data.
-	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
 }
 
 // TestGH1551 reproduces the deadlock described in
