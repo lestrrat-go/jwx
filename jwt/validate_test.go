@@ -105,6 +105,7 @@ func TestTimeValidation(t *testing.T) {
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
 				},
 			},
 			{
@@ -112,6 +113,7 @@ func TestTimeValidation(t *testing.T) {
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
 				},
 			},
 		}
@@ -222,6 +224,7 @@ func TestTimeValidation(t *testing.T) {
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
 				},
 			},
 			{
@@ -229,6 +232,7 @@ func TestTimeValidation(t *testing.T) {
 				Error: true,
 				Options: []jwt.ValidateOption{
 					jwt.WithClock(jwt.ClockFunc(func() time.Time { return tm.Add(-1 * time.Millisecond) })),
+					jwt.WithTruncation(0),
 				},
 			},
 			{
