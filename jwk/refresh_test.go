@@ -61,7 +61,7 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 
 // waitForAccessCountAtLeast polls the cache until the cached key set's
 // accessCount field is >= minCount, or the timeout expires.
-func waitForAccessCountAtLeast(t *testing.T, ctx context.Context, c *jwk.Cache, url string, minCount int, timeout time.Duration) jwk.Set {
+func waitForAccessCountAtLeast(ctx context.Context, t *testing.T, c *jwk.Cache, url string, minCount int, timeout time.Duration) jwk.Set {
 	t.Helper()
 
 	deadline := time.Now().Add(timeout)
@@ -171,7 +171,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 
 	// Poll until the cache has been refreshed at least once, instead of
 	// sleeping a fixed duration which is inherently flaky.
-	ks := waitForAccessCountAtLeast(t, ctx, c, srv.URL, 2, 15*time.Second)
+	ks := waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 	v := getAccessCount(t, ks)
 	require.GreaterOrEqual(t, v, 2, `accessCount should be at least 2 after refresh`)
 }
@@ -232,7 +232,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 
 	// Poll until the cache has been refreshed, instead of sleeping a fixed
 	// duration which is flaky under load.
-	ks := waitForAccessCountAtLeast(t, ctx, c, srv.URL, 2, 15*time.Second)
+	ks := waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 	checkAccessCount(t, ks, 2)
 }
 
@@ -289,7 +289,7 @@ func TestCache_backoff(t *testing.T) {
 
 	// Poll until the server has recovered (access >= 4) and the cache
 	// has been updated with the new data.
-	ks = waitForAccessCountAtLeast(t, ctx, c, srv.URL, 4, 15*time.Second)
+	ks = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
 	v := getAccessCount(t, ks)
 	require.GreaterOrEqual(t, v, 4, `accessCount should be >= 4 after recovery`)
 }
