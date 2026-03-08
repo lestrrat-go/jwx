@@ -20,9 +20,11 @@ Processing Layer
        → jws/jwsbb
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
+       → jwe/jwebb
 
 Core Layer
   jwk → jwa, cert, transform, internal/{base64,json,ecutil}
+       → jwk/ecdsa, jwk/jwkbb
   jwx (root) → internal/json
 
 Leaf Packages (no internal deps)
@@ -40,6 +42,8 @@ Leaf Packages (no internal deps)
 | `cert` | internal/{base64,tokens} |
 | `transform` | (none — external only: blackmagic) |
 | `jwk` | jwa, cert, transform |
+| `jwk/ecdsa` | jwa |
+| `jwk/jwkbb` | (external only: blackmagic) |
 | `jws` | jwa, jwk, cert |
 | `jwe` | jwa, jwk, cert, transform |
 | `jwt` | jwa, jws, jwe, jwk, transform |
