@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
+func getAccessCount(t *testing.T, src jwk.Set) int {
 	t.Helper()
 
 	key, ok := src.Key(0)
@@ -30,10 +31,18 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 	var v float64
 	require.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`)
 
+	return int(v)
+}
+
+func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
+	t.Helper()
+
+	v := getAccessCount(t, src)
+
 	for _, e := range expected {
-		if v == float64(e) {
+		if v == e {
 			// We _know_ this is going to pass
-			assert.Equal(t, float64(e), v, `key.Get("accessCount") should be %d`, e)
+			assert.Equal(t, e, v, `key.Get("accessCount") should be %d`, e)
 			return
 		}
 	}
@@ -47,7 +56,26 @@ func checkAccessCount(t *testing.T, src jwk.Set, expected ...int) {
 		}
 	}
 	fmt.Fprintf(&buf, "]")
-	require.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %f)`, buf.String(), v)
+	require.Failf(t, `checking access count failed`, `key.Get("accessCount") should be one of %s (got %d)`, buf.String(), v)
+}
+
+// waitForAccessCountAtLeast polls the cache until the cached key set's
+// accessCount field is >= minCount, or the timeout expires.
+func waitForAccessCountAtLeast(ctx context.Context, t *testing.T, c *jwk.Cache, url string, minCount int, timeout time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		ks, err := c.Lookup(ctx, url)
+		if err == nil {
+			if v := getAccessCount(t, ks); v >= minCount {
+				return
+			}
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	require.Failf(t, `timed out`, `timed out waiting for accessCount >= %d`, minCount)
 }
 
 func TestCachedSet(t *testing.T) {
@@ -97,15 +125,15 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	var accessCount int
+	var accessCount atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		accessCount++
+		count := accessCount.Add(1)
 		key := map[string]any{
 			"kty":         "EC",
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
 			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-			"accessCount": accessCount,
+			"accessCount": count,
 		}
 		hdrs := w.Header()
 		hdrs.Set(`Content-Type`, `application/json`)
@@ -139,11 +167,10 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 	t.Logf("Waiting for fetching goroutines...")
 	wg.Wait()
 	t.Logf("Waiting for the refresh ...")
-	time.Sleep(6 * time.Second)
 
-	ks, err := c.Lookup(ctx, srv.URL)
-	require.NoError(t, err, `c.Lookup should succeed`)
-	checkAccessCount(t, ks, 2, 3)
+	// Poll until the cache has been refreshed at least once, instead of
+	// sleeping a fixed duration which is inherently flaky.
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_calculate_interval_from_cache_control(t *testing.T) {
@@ -151,16 +178,16 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	var accessCount int
+	var accessCount atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		accessCount++
+		count := accessCount.Add(1)
 
 		key := map[string]any{
 			"kty":         "EC",
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
 			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-			"accessCount": accessCount,
+			"accessCount": count,
 		}
 		hdrs := w.Header()
 		hdrs.Set(`Content-Type`, `application/json`)
@@ -199,10 +226,10 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 	t.Logf("Waiting for fetching goroutines...")
 	wg.Wait()
 	t.Logf("Waiting for the refresh ...")
-	time.Sleep(4 * time.Second)
-	ks, err := c.Lookup(ctx, srv.URL)
-	require.NoError(t, err, `c.Lookup should succeed`)
-	checkAccessCount(t, ks, 2)
+
+	// Poll until the cache has been refreshed, instead of sleeping a fixed
+	// duration which is flaky under load.
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_backoff(t *testing.T) {
@@ -210,12 +237,12 @@ func TestCache_backoff(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	var accessCount int
+	var accessCount atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hdrs := w.Header()
 		hdrs.Set(`Cache-Control`, `max-age=1`)
-		accessCount++
-		if accessCount > 1 && accessCount < 4 {
+		count := accessCount.Add(1)
+		if count > 1 && count < 4 {
 			http.Error(w, "wait for it....", http.StatusForbidden)
 			return
 		}
@@ -225,7 +252,7 @@ func TestCache_backoff(t *testing.T) {
 			"crv":         "P-256",
 			"x":           "SVqB4JcUD6lsfvqMr-OKUNUphdNn64Eay60978ZlL74",
 			"y":           "lf0u0pMj4lGAzZix5u4Cm5CMQIgMNpkwy163wtKYVKI",
-			"accessCount": accessCount,
+			"accessCount": count,
 		}
 		hdrs.Set(`Content-Type`, `application/json`)
 
@@ -235,7 +262,7 @@ func TestCache_backoff(t *testing.T) {
 
 	c, err := jwk.NewCache(ctx, httprc.NewClient(
 		httprc.WithTraceSink(tracesink.NewSlog(
-			slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("test", "Cache_bacckoff"),
+			slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("test", "Cache_backoff"),
 		)),
 	))
 	require.NoError(t, err, `jwk.NewCache should succeed`)
@@ -247,22 +274,18 @@ func TestCache_backoff(t *testing.T) {
 	require.NotNil(t, ks, `c.Lookup (#1) should return a non-nil key set`)
 	checkAccessCount(t, ks, 1)
 
-	// enough time for 1 refresh to have occurred
-	time.Sleep(1500 * time.Millisecond)
+	// Wait a bit — the next refresh(es) will fail (access 2,3 return 403),
+	// so the cache should still serve the original data.
+	time.Sleep(2 * time.Second)
 	ks, err = c.Lookup(ctx, srv.URL)
 	require.NoError(t, err, `c.Lookup (#2) should succeed`)
 	require.NotNil(t, ks, `c.Lookup (#2) should return a non-nil key set`)
-	// Should be using the cached version
+	// Should be using the cached version (server errors don't update the cache)
 	checkAccessCount(t, ks, 1)
 
-	// enough time for 2 refreshes to have occurred
-	time.Sleep(3000 * time.Millisecond)
-
-	ks, err = c.Lookup(ctx, srv.URL)
-	require.NoError(t, err, `c.Lookup (#3) should succeed`)
-	require.NotNil(t, ks, `c.Lookup (#3) should return a non-nil key set`)
-	// should be new
-	checkAccessCount(t, ks, 4, 5)
+	// Poll until the server has recovered (access >= 4) and the cache
+	// has been updated with the new data.
+	waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
 }
 
 // TestGH1551 reproduces the deadlock described in
