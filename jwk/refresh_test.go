@@ -171,9 +171,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 
 	// Poll until the cache has been refreshed at least once, instead of
 	// sleeping a fixed duration which is inherently flaky.
-	ks := waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
-	v := getAccessCount(t, ks)
-	require.GreaterOrEqual(t, v, 2, `accessCount should be at least 2 after refresh`)
+	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_calculate_interval_from_cache_control(t *testing.T) {
@@ -232,8 +230,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 
 	// Poll until the cache has been refreshed, instead of sleeping a fixed
 	// duration which is flaky under load.
-	ks := waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
-	require.GreaterOrEqual(t, getAccessCount(t, ks), 2, "accessCount should be at least 2")
+	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 2, 15*time.Second)
 }
 
 func TestCache_backoff(t *testing.T) {
@@ -289,9 +286,7 @@ func TestCache_backoff(t *testing.T) {
 
 	// Poll until the server has recovered (access >= 4) and the cache
 	// has been updated with the new data.
-	ks = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
-	v := getAccessCount(t, ks)
-	require.GreaterOrEqual(t, v, 4, `accessCount should be >= 4 after recovery`)
+	_ = waitForAccessCountAtLeast(ctx, t, c, srv.URL, 4, 15*time.Second)
 }
 
 // TestGH1551 reproduces the deadlock described in
