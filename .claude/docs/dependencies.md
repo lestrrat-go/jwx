@@ -50,7 +50,7 @@ Leaf Packages (no internal deps)
 | Dependency | Used by | Purpose |
 |------------|---------|---------|
 | `lestrrat-go/httprc/v3` | jwk | HTTP resource caching for JWKS |
-| `lestrrat-go/blackmagic` | jwk, jws, jwe | Type reflection/assertion |
+| `lestrrat-go/blackmagic` | jwk, jws, jwe, transform | Type reflection/assertion |
 | `lestrrat-go/option/v2` | all packages | Functional options pattern |
 | `goccy/go-json` | internal/json | Optional fast JSON (build tag) |
 | `segmentio/asm` | internal/base64 | Optional fast base64 (build tag) |
