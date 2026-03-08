@@ -108,8 +108,8 @@ Generic filtering utilities using Go generics.
 - **Reject[T Filterable[T]](object T, logic FilterLogic) (T, error)** — exclude matching fields
 - **AsMap(m Mappable, dst map[string]any) error** — convert to map (EXPERIMENTAL)
 - Key types: `FilterLogic`, `FilterLogicFunc`, `Filterable[T]`, `NameBasedFilter[T]`, `Mappable`
-- Files: `transform.go`
-- No internal imports
+- Files: `filter.go`, `map.go`
+- Imports: (external only: blackmagic)
 
 ## cert/
 
@@ -120,7 +120,7 @@ X.509 certificate chain support for `x5c` JWK fields.
 - **EncodeBase64(der []byte) ([]byte, error)** — encode DER to base64
 - Key types: `Chain` (Get, Len, Add, MarshalJSON, UnmarshalJSON)
 - Files: `cert.go`, `chain.go`
-- No internal imports
+- Imports: internal/{base64, tokens}
 
 ## internal/
 

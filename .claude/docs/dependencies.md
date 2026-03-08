@@ -27,8 +27,8 @@ Core Layer
 
 Leaf Packages (no internal deps)
   jwa → internal/tokens
-  cert → (stdlib only)
-  transform → (stdlib only)
+  cert → internal/{base64,tokens}
+  transform → (stdlib + blackmagic)
   internal/{base64,json,ecutil,pool,tokens,jwxio}
 ```
 
@@ -37,8 +37,8 @@ Leaf Packages (no internal deps)
 | Package | Imports from jwx |
 |---------|-----------------|
 | `jwa` | internal/tokens |
-| `cert` | (none) |
-| `transform` | (none) |
+| `cert` | internal/{base64,tokens} |
+| `transform` | (none — external only: blackmagic) |
 | `jwk` | jwa, cert, transform |
 | `jws` | jwa, jwk, cert |
 | `jwe` | jwa, jwk, cert, transform |
@@ -54,6 +54,8 @@ Leaf Packages (no internal deps)
 | `lestrrat-go/option/v2` | all packages | Functional options pattern |
 | `goccy/go-json` | internal/json | Optional fast JSON (build tag) |
 | `segmentio/asm` | internal/base64 | Optional fast base64 (build tag) |
-| `decred/secp256k1` | jwa, jwk, jws | ES256K support (build tag) |
+| `decred/secp256k1` | jwk (direct); jwa, jws (via build tag) | ES256K support (build tag) |
 | `valyala/fastjson` | jwk | Fast JSON parsing for key probing |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |
+| `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
+| `lestrrat-go/dsig-secp256k1` | jws/jwsbb | ES256K/secp256k1 signature support (build tag) |
